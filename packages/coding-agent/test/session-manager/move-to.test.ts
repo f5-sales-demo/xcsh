@@ -1,10 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import {
+	getConfigRootDir,
+	getProjectDir,
+	getShellPwd,
+	setAgentDir,
+	setProjectDir,
+	setShellPwd,
+} from "@f5-sales-demo/pi-utils";
+import { CommandController } from "../../src/modes/controllers/command-controller";
+import { getThemeByName, setThemeInstance } from "../../src/modes/theme/theme";
+import type { InteractiveModeContext } from "../../src/modes/types";
 import { loadEntriesFromFile, type SessionHeader, SessionManager } from "../../src/session/session-manager";
+import { FileSessionStorage } from "../../src/session/session-storage";
 import { stripOuterDoubleQuotes } from "../../src/tools/path-utils";
 
 // -- helpers ----------------------------------------------------------------
@@ -123,6 +135,180 @@ describe("SessionManager.moveTo", () => {
 		const header = getHeader(entries);
 		expect(header?.cwd).toBe(path.resolve(cwdB));
 		expect(hasAssistantEntry(entries)).toBe(true);
+	});
+	it("review preview does not create its destination, and reviewed move preserves identity and artifacts", async () => {
+		const session = SessionManager.create(cwdA);
+		session.appendMessage({ role: "user", content: "synthetic", timestamp: 1 });
+		await session.ensureOnDisk();
+		await session.flush();
+		const identity = session.getSessionId();
+		const oldFile = session.getSessionFile()!;
+		await fsp.mkdir(oldFile.slice(0, -6));
+		await fsp.writeFile(path.join(oldFile.slice(0, -6), "fixture.txt"), "synthetic artifact");
+		const preview = session.previewMoveTo(cwdB);
+		expect(fs.existsSync(preview.sessionDir)).toBe(false);
+		expect(session.getCwd()).toBe(cwdA);
+		await session.moveToReviewed(cwdB, preview);
+		await session.flush();
+		expect(fs.existsSync(oldFile)).toBe(false);
+		expect((await SessionManager.open(preview.sessionFile!)).getSessionId()).toBe(identity);
+		expect(await fsp.readFile(path.join(preview.artifactDir!, "fixture.txt"), "utf8")).toBe("synthetic artifact");
+	});
+	it("interactive typed and argument-free cancellation perform no move or destination creation", async () => {
+		setThemeInstance((await getThemeByName("xcsh-dark"))!);
+		const manager = SessionManager.create(cwdA);
+		await manager.ensureOnDisk();
+		const before = await fsp.readFile(manager.getSessionFile()!, "utf8");
+		const destination = manager.previewMoveTo(cwdB);
+		const move = vi.spyOn(manager, "moveToReviewed");
+		const screens: string[] = [];
+		const ctx = {
+			sessionManager: manager,
+			session: { isStreaming: false },
+			showStatus: vi.fn(),
+			showError: vi.fn(),
+			showHookCustom: (
+				factory: (ui: unknown, theme: unknown, keys: unknown, done: (value: unknown) => void) => Component,
+			) =>
+				new Promise(resolve => {
+					const component = factory({ terminal: { rows: 24 }, requestRender() {} }, {}, {}, resolve);
+					screens.push(Bun.stripANSI(component.render(80).join("\n")));
+					component.handleInput?.("\x1b");
+				}),
+		} as unknown as InteractiveModeContext;
+		const controller = new CommandController(ctx);
+		await controller.handleMoveCommand(cwdB);
+		await controller.handleMoveCommand("");
+		expect(screens[0]).toContain("Review session move");
+		expect(screens[1]).toContain("Move session");
+		expect(move).not.toHaveBeenCalled();
+		expect(ctx.showError).not.toHaveBeenCalled();
+		expect(fs.existsSync(destination.sessionDir)).toBe(false);
+		expect(await fsp.readFile(manager.getSessionFile()!, "utf8")).toBe(before);
+	});
+	it("confirmed interactive move synchronizes shell and status cwd and persists the same session", async () => {
+		setThemeInstance((await getThemeByName("xcsh-dark"))!);
+		const originalProject = getProjectDir();
+		const originalShell = getShellPwd();
+		const manager = SessionManager.create(cwdA);
+		manager.appendMessage({ role: "user", content: "Synthetic move fixture", timestamp: 1 });
+		await manager.ensureOnDisk();
+		const identity = manager.getSessionId();
+		const oldFile = manager.getSessionFile()!;
+		const setCwd = vi.fn();
+		const refresh = vi.fn(async (cwd: string) => {
+			expect(cwd).toBe(cwdB);
+			expect(getShellPwd()).toBe(cwdB);
+			expect(getProjectDir()).toBe(cwdB);
+			expect(setCwd).toHaveBeenLastCalledWith(cwdB);
+			const reopened = await SessionManager.open(manager.getSessionFile()!);
+			expect(reopened.getSessionId()).toBe(identity);
+			expect(reopened.getCwd()).toBe(cwdB);
+			expect(reopened.getEntries()).toHaveLength(1);
+		});
+		const ctx = {
+			sessionManager: manager,
+			session: { isStreaming: false },
+			statusLine: { setCwd },
+			updateEditorTopBorder: vi.fn(),
+			refreshSlashCommandState: refresh,
+			ui: { requestRender() {} },
+			showStatus: vi.fn(),
+			showError: vi.fn(),
+			showHookCustom: (
+				factory: (ui: unknown, theme: unknown, keys: unknown, done: (value: unknown) => void) => Component,
+			) =>
+				new Promise(resolve => {
+					const component = factory({ terminal: { rows: 24 }, requestRender() {} }, {}, {}, resolve);
+					expect(manager.getCwd()).toBe(cwdA);
+					expect(fs.existsSync(oldFile)).toBe(true);
+					component.handleInput?.("\x1b[B");
+					component.handleInput?.("\r");
+				}),
+		} as unknown as InteractiveModeContext;
+		try {
+			await new CommandController(ctx).handleMoveCommand(cwdB);
+			expect(ctx.showError).not.toHaveBeenCalled();
+			expect(refresh).toHaveBeenCalledTimes(1);
+			expect(ctx.showStatus).toHaveBeenCalledWith(`Session moved to ${cwdB}.`);
+			expect(fs.existsSync(oldFile)).toBe(false);
+		} finally {
+			setProjectDir(originalProject);
+			setShellPwd(originalShell);
+		}
+	});
+	it("reviewed move refuses occupied and changed destinations without altering the original", async () => {
+		const session = SessionManager.create(cwdA);
+		await session.ensureOnDisk();
+		const oldFile = session.getSessionFile()!;
+		const before = await fsp.readFile(oldFile, "utf8");
+		const preview = session.previewMoveTo(cwdB);
+		await expect(session.moveToReviewed(cwdB, { ...preview, sessionDir: "different" })).rejects.toThrow(
+			"destination changed",
+		);
+		expect(fs.existsSync(preview.sessionDir)).toBe(false);
+		await fsp.mkdir(preview.sessionDir, { recursive: true });
+		await fsp.writeFile(preview.sessionFile!, "existing destination");
+		await expect(session.moveToReviewed(cwdB, preview)).rejects.toThrow("already exists");
+		expect(await fsp.readFile(oldFile, "utf8")).toBe(before);
+		expect(await fsp.readFile(preview.sessionFile!, "utf8")).toBe("existing destination");
+		expect(session.getCwd()).toBe(cwdA);
+	});
+	it("real failed move-header writes remain latched until explicit snapshot recovery succeeds", async () => {
+		const storage = new FileSessionStorage();
+		const session = SessionManager.create(cwdA, undefined, storage);
+		session.appendMessage({ role: "user", content: "Before move", timestamp: 1 });
+		await session.ensureOnDisk();
+		const identity = session.getSessionId();
+		const destination = session.previewMoveTo(cwdB);
+		const rename = vi.spyOn(storage, "rename").mockRejectedValueOnce(new Error("Fixture atomic rename failure"));
+		await expect(session.moveToReviewed(cwdB, destination)).rejects.toThrow("Fixture atomic rename failure");
+		expect(session.getCwd()).toBe(cwdB);
+		await expect(session.flush()).rejects.toThrow("Fixture atomic rename failure");
+		const incomplete = await fsp.readFile(destination.sessionFile!, "utf8");
+		rename.mockRejectedValueOnce(new Error("Fixture retry still offline"));
+		await expect(session.retryPersistence()).rejects.toThrow("Fixture retry still offline");
+		expect(await fsp.readFile(destination.sessionFile!, "utf8")).toBe(incomplete);
+		await expect(session.flush()).rejects.toThrow();
+		await session.retryPersistence();
+		await session.flush();
+		const reopened = await SessionManager.open(destination.sessionFile!);
+		expect(reopened.getSessionId()).toBe(identity);
+		expect(reopened.getCwd()).toBe(cwdB);
+		expect(reopened.getEntries()).toHaveLength(1);
+		session.appendMessage({ role: "user", content: "After recovery", timestamp: 2 });
+		await session.flush();
+		expect((await SessionManager.open(destination.sessionFile!)).getEntries()).toHaveLength(2);
+	});
+	it("snapshot recovery drains a failed append writer and does not duplicate messages", async () => {
+		const storage = new FileSessionStorage();
+		const open = storage.openWriter.bind(storage);
+		let failNextSync = false;
+		vi.spyOn(storage, "openWriter").mockImplementation((file, options) => {
+			const writer = open(file, options);
+			return {
+				writeLine: value => writer.writeLine(value),
+				flush: () => writer.flush(),
+				close: () => writer.close(),
+				getError: () => writer.getError(),
+				fsync: async () => {
+					if (failNextSync) {
+						failNextSync = false;
+						throw new Error("Fixture append fsync failure");
+					}
+					await writer.fsync();
+				},
+			};
+		});
+		const session = SessionManager.create(cwdA, undefined, storage);
+		await session.ensureOnDisk();
+		session.appendMessage({ role: "user", content: "Exactly once", timestamp: 1 });
+		failNextSync = true;
+		await expect(session.flush()).rejects.toThrow("Fixture append fsync failure");
+		await session.retryPersistence();
+		session.appendMessage({ role: "user", content: "After recovery", timestamp: 2 });
+		await session.flush();
+		expect((await SessionManager.open(session.getSessionFile()!)).getEntries()).toHaveLength(2);
 	});
 
 	it("succeeds on fresh session without ENOENT, then deferred persistence works", async () => {

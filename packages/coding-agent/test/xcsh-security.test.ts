@@ -40,7 +40,7 @@ function createMockCtx() {
 	};
 }
 
-describe("XCSH security: token never in output", () => {
+describe("xcsh security: token never in output", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -175,7 +175,7 @@ describe("XCSH security: token never in output", () => {
 	});
 });
 
-describe("XCSH security: sensitive env var masking", () => {
+describe("xcsh security: sensitive env var masking", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -251,7 +251,7 @@ describe("XCSH security: sensitive env var masking", () => {
 	});
 });
 
-describe("XCSH security: TUI sanitization", () => {
+describe("xcsh security: TUI sanitization", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let xcshContextsDir: string;
@@ -346,7 +346,7 @@ describe("XCSH security: TUI sanitization", () => {
 	});
 });
 
-describe("XCSH security: path traversal prevention", () => {
+describe("xcsh security: path traversal prevention", () => {
 	let testDir: string;
 	let xcshConfigDir: string;
 	let _xcshContextsDir: string;

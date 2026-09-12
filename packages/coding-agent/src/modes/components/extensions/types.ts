@@ -167,6 +167,16 @@ export function makeExtensionId(kind: ExtensionKind, name: string): string {
 	return `${kind}:${name}`;
 }
 
+/** New writes qualify identity without migrating legacy kind:name disable entries. */
+export function makeQualifiedExtensionId(
+	kind: ExtensionKind,
+	name: string,
+	source: Pick<Extension["source"], "provider" | "level">,
+	path: string,
+): string {
+	return `qualified:${JSON.stringify([kind, name, source.provider, source.level, path])}`;
+}
+
 /**
  * Parse extension ID into kind and name.
  */

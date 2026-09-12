@@ -15,7 +15,6 @@ describe("MCPCommandController OAuth presentation", () => {
 	it("uses the shared short link, preserves instructions, and opens the exact URL", () => {
 		const addedComponents: Array<{ render(width: number): string[] }> = [];
 		const openUrl = vi.fn();
-		const copy = vi.fn(async () => undefined);
 		const ctx = {
 			chatContainer: {
 				addChild: (component: { render(width: number): string[] }) => addedComponents.push(component),
@@ -28,20 +27,19 @@ describe("MCPCommandController OAuth presentation", () => {
 			{ url: LONG_AUTH_URL, instructions: "Approve the synthetic MCP request." },
 			{
 				openUrl,
-				presentLink: (container, url) => presentAuthLink(container, url, { copy, platform: "linux" }),
+				presentLink: (container, url) => presentAuthLink(container, url, { platform: "linux" }),
 			},
 		);
 
 		const visible = Bun.stripANSI(addedComponents.flatMap(component => component.render(32)).join("\n"))
 			.replace(/\s+/g, " ")
 			.trim();
-		expect(visible).toContain("OAuth Authorization Required");
+		expect(visible).toContain("OAuth authorization");
 		expect(visible).toContain("Open sign-in page");
-		expect(visible).toContain("Approve the synthetic MCP request.");
+		expect(visible).toContain("Approve the synthetic MCP");
+		expect(visible).toContain("request.");
 		expect(visible).toContain("Waiting for authorization");
 		expect(visible).not.toContain(LONG_AUTH_URL);
-		expect(copy).toHaveBeenCalledTimes(1);
-		expect(copy).toHaveBeenCalledWith(LONG_AUTH_URL);
 		expect(openUrl).toHaveBeenCalledTimes(1);
 		expect(openUrl).toHaveBeenCalledWith(LONG_AUTH_URL);
 		expect(ctx.ui.requestRender).toHaveBeenCalled();

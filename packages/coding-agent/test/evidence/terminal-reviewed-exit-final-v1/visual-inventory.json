@@ -1,0 +1,592 @@
+{
+  "directory": "terminal-reviewed-exit-final-v1",
+  "historicalDirectory": "terminal-reviewed-exit-v1",
+  "fixture": "reviewed-exit",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 96,
+  "contactSheets": 6,
+  "exactPngMatches": 0,
+  "normalizedTextMatches": 32,
+  "changedText": 64,
+  "missingHistorical": 0,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/exit-active.png",
+      "sha256": "5da691ae05cf02d13e82a54f095d325fe5ccc2f329aa1e26370622513665a6ed",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/exit-cancelled.png",
+      "sha256": "fa450dbf2d7892aaa2c1fdd76ddb921e14f3825a55407d67afc6e656281b0fe8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/exit-completed.png",
+      "sha256": "6e618942da86028bf8ec3d5b28e1ab682cb1054db290093c6ea8aad08f2c8f75",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/exit-editor.png",
+      "sha256": "dfa321d84dd06085ad31101f9af04859f3d890b9a96282d19fc92b0c0247ccf2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/exit-review.png",
+      "sha256": "566849b738129896c4a60ab7c765bcf88fd228f48a0ff142f35fa9c1b85fcd80",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/quit-review.png",
+      "sha256": "566849b738129896c4a60ab7c765bcf88fd228f48a0ff142f35fa9c1b85fcd80",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/exit-active.png",
+      "sha256": "11fb66e5c1e54330e56dcd1d7705857a33a413cd46b9b13fd2998d0d72cbb082",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/exit-cancelled.png",
+      "sha256": "1a5ee164471511bd9ef54d34ed8ceea6d5445401acf5b6d59a1a68c8c9721085",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/exit-completed.png",
+      "sha256": "7f59388892075f4ba6f97862b3f4919ae3707afa74df165dcc0ea14bc49e5122",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/exit-editor.png",
+      "sha256": "ebf841f74da2cbe1748bad9a5f54f583850a35ee87e8e2d1a07f363e8a1b1261",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/exit-review.png",
+      "sha256": "c31de7bf772376ef4814125d611610b199336537cd0e6edfd5f4c2dd05fbe33c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/quit-review.png",
+      "sha256": "c31de7bf772376ef4814125d611610b199336537cd0e6edfd5f4c2dd05fbe33c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/exit-active.png",
+      "sha256": "19b0e95f79e22dc5616453d12ba1bb3cb1bb61969684cde0790fed37c3341a2c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/exit-cancelled.png",
+      "sha256": "ad92733fe763e12ea3c44e1b28a39426fefe2904e88fb04eeed7232ce51660e8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/exit-completed.png",
+      "sha256": "237451c8c8cea9f4201f919ea29028a8c2f6d315110b112a459400450c89bf4b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/exit-editor.png",
+      "sha256": "c7692c303f14218d084cdfa00533596ed21815f02696bec063e6f724b119dfaa",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/exit-review.png",
+      "sha256": "420a2bdcad5ab036c69cb6907a12235deaf9bce30ca9e4c814be59d2f995e62c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/quit-review.png",
+      "sha256": "420a2bdcad5ab036c69cb6907a12235deaf9bce30ca9e4c814be59d2f995e62c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/exit-active.png",
+      "sha256": "d647ce291abb7e43a90e5ed604077ea9471119daf00ce13563a13e911dc6c7ac",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/exit-cancelled.png",
+      "sha256": "ce849e065b5f19bbe82a14a0259e288a1a0dd3af6a8ce7fe7132413407b731a6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/exit-completed.png",
+      "sha256": "93ce28aca30645a1ce22a620376b126f7165855015fcc9bed39feaeeb193b2cd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/exit-editor.png",
+      "sha256": "1b0d983704f4bb9582c9db5152fce21ec64ccacf0b996f67c1adcf81cd20b9a0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/exit-review.png",
+      "sha256": "6000c5cca61c80fc3eb1d22b1303dba6b3ace30628dd8267d1013a0696ece1f9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/quit-review.png",
+      "sha256": "6000c5cca61c80fc3eb1d22b1303dba6b3ace30628dd8267d1013a0696ece1f9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/exit-active.png",
+      "sha256": "fa0d9c618303349036a4a82c6c09273ef385642c5a75ad7ee53f40bf8fa25dcc",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/exit-cancelled.png",
+      "sha256": "ca46627e51ae6b27dbc32edc6072cdf107cd6b6aa9bedfaa62b225ef8d5a89d7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/exit-completed.png",
+      "sha256": "137a52abb468df404057e92105bad79e13586dbe7906b49e1450b5e9c3d34a38",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/exit-editor.png",
+      "sha256": "379d77857ebcd901af40e9bcc3ff3f6f7076eafdb914aec9555cd4306662dda4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/exit-review.png",
+      "sha256": "1139db9de83d7ea3ca9b2019e760b17de017426939f22a44b4b67856ff79a425",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/quit-review.png",
+      "sha256": "1139db9de83d7ea3ca9b2019e760b17de017426939f22a44b4b67856ff79a425",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/exit-active.png",
+      "sha256": "89623202bf26d2b67a7b27795708423199a5822b1e627b79c597290ba2ff919e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/exit-cancelled.png",
+      "sha256": "96ceb2c3177ac0cbc913a34b8cf33267d6326165c49eb75f255dc0f24b382321",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/exit-completed.png",
+      "sha256": "b27ace240004c116f145a500fab94d2f60eb020262985e4c981555a5a1f120d4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/exit-editor.png",
+      "sha256": "5731ed2917c59d8d69de0b04391c0b8753914083abb22fbf502535b045050b97",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/exit-review.png",
+      "sha256": "33d2286d6e828494b9eae11b5b8aa89b86d3e5e2a5181da91d3e2f100639c08f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/quit-review.png",
+      "sha256": "33d2286d6e828494b9eae11b5b8aa89b86d3e5e2a5181da91d3e2f100639c08f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/exit-active.png",
+      "sha256": "9c915524183a9c0ada58a6b1867e24b74e52ad611fec7a3389dfdcdaaba7fd0f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/exit-cancelled.png",
+      "sha256": "cfe9d7f3acef43bb7b2974b33c3b30a30e087d31a6c686a7e3cf6727b8943175",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/exit-completed.png",
+      "sha256": "9e33899d1c7d96fbcccd0bd206965f0e9fa71a9581ba17e9c1d7d7e91ee1e5e4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/exit-editor.png",
+      "sha256": "9898c9ecfd408f2bdb7d59883ca6fe10edb1bf5c392bef671565c57b96986d38",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/exit-review.png",
+      "sha256": "51957bcf021ae866755eda2018a34ed29b5dbcf10856a61844c486bb42081435",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/quit-review.png",
+      "sha256": "51957bcf021ae866755eda2018a34ed29b5dbcf10856a61844c486bb42081435",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/exit-active.png",
+      "sha256": "a3f82190bdae5d0cb6d05f86e9a97214c494bbf016f87a5911cb8368e251e576",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/exit-cancelled.png",
+      "sha256": "4eb9853601d051cf4f3d0311ecd5bc7c290a57908a00ae3966b3ec9b403d2c70",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/exit-completed.png",
+      "sha256": "b26308566b1d978f94cb6add4e8b7c21dc2acdf991467e49b1588679c54ce733",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/exit-editor.png",
+      "sha256": "fe440ebc09138893db2afd52619f7a5475705289691d3e5dabb5716dffe045fe",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/exit-review.png",
+      "sha256": "8b11d4ee2cb2c5c94fbacebd5d3ed2338ddcd5705a63843b8020a241bc425a58",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/quit-review.png",
+      "sha256": "8b11d4ee2cb2c5c94fbacebd5d3ed2338ddcd5705a63843b8020a241bc425a58",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/exit-active.png",
+      "sha256": "548e48c5537aa03d8fb8457453426215b4b343728762913059efcc566d1f872f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/exit-cancelled.png",
+      "sha256": "dcf6dae5cc6afbc5794dd8c31f0a265a007b4c2fcb204abc67d639bcc7fbe8b4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/exit-completed.png",
+      "sha256": "645e7805c6697a90c69980385427ff4cb8077159728bcd5e5e2ccc0467e588e9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/exit-editor.png",
+      "sha256": "a2e46431ef88dd1b6f952843fe4ff6790ef1c3a8bbbe2a7a4415b6842b0489c5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/exit-review.png",
+      "sha256": "626068b86f54142ff03a7f5094d3f62c30a1d0090c64f6216ae3c7646cf32481",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/quit-review.png",
+      "sha256": "626068b86f54142ff03a7f5094d3f62c30a1d0090c64f6216ae3c7646cf32481",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/exit-active.png",
+      "sha256": "a44dd8cfcce0bf16634e5d7adb0d5f1a04f7e981d2c58e41051abfa262da093d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/exit-cancelled.png",
+      "sha256": "d8d9edebc25724819a668f05e8fc94783b85f25ed4a98ad9490ba6ee08422e5f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/exit-completed.png",
+      "sha256": "079cbfc11a6947b2c29e5745aafacebf5e38020f72aa5316ae5b48165cce66d8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/exit-editor.png",
+      "sha256": "b30fd907c5eb880da0e3c1b7c2906984ce9af6ab1f2952ab1511084728d3ff94",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/exit-review.png",
+      "sha256": "0dbb25f2da1d4d3f96ef174101c508a693fbc3b4e276fafd8ab146e780fcbd6d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/quit-review.png",
+      "sha256": "0dbb25f2da1d4d3f96ef174101c508a693fbc3b4e276fafd8ab146e780fcbd6d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/exit-active.png",
+      "sha256": "d5b8ecee79041eed336b4f7b425e890426d2307f4ac5d7fc8f6b47759bb5b0da",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/exit-cancelled.png",
+      "sha256": "7ea1917e52fce7c3113b0f9733727f16f43388eb922a6208af47ecdbf9fd6d21",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/exit-completed.png",
+      "sha256": "425a631e2e07f15993d0d0e827f237e98d767ee3111b0dfcf7b1ce38b582a040",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/exit-editor.png",
+      "sha256": "22a4e04f4bb6c08032ad704a01a9128e0a5ca8b490c7ceec26ae6c7f3c99909b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/exit-review.png",
+      "sha256": "3ede71c658d8001bdb81afc37bd8a77bd3fea7195a67cf94bb6b971c62f67ffc",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/quit-review.png",
+      "sha256": "3ede71c658d8001bdb81afc37bd8a77bd3fea7195a67cf94bb6b971c62f67ffc",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/exit-active.png",
+      "sha256": "e06099e9c4d251ca5d9d3d698f34e98f1055b35b820c8f666b563bf79b79d041",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/exit-cancelled.png",
+      "sha256": "3f1348a4a98b1a5902c3d139c016bcce28f23d5794fc4c05205615f13eb8a4ad",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/exit-completed.png",
+      "sha256": "300aa32fa50cc152e88bb2e25cd8d4a89a377bf3bd55b2abe0325cc10369de02",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/exit-editor.png",
+      "sha256": "821073536b32e463170c02e99155e9851893e7611823bfe9e58b1ef122936a57",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/exit-review.png",
+      "sha256": "059ce1ddd19b74cdfcb88b630a18e37d3ca51e5641aa548b0ba1487d1e968cc5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/quit-review.png",
+      "sha256": "059ce1ddd19b74cdfcb88b630a18e37d3ca51e5641aa548b0ba1487d1e968cc5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/exit-active.png",
+      "sha256": "789c1217b44294a24545064d2b28a8d352a1d63273569b24bc3a5cc80547797d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/exit-cancelled.png",
+      "sha256": "789c1217b44294a24545064d2b28a8d352a1d63273569b24bc3a5cc80547797d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/exit-completed.png",
+      "sha256": "d8eedaeb39b7a8fb7aa5f5c1643e7b484c9b9d7054e5ddf7715ffaccf1d443b2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/exit-editor.png",
+      "sha256": "e09e1721467811c6bf0cf83f59eeb83d202c1620536c2c90dfe457168a0b2f36",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/exit-review.png",
+      "sha256": "6b82f71894cff93aa1c3c38cd81454caeae138d1e43d26168175a99304216871",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/quit-review.png",
+      "sha256": "6b82f71894cff93aa1c3c38cd81454caeae138d1e43d26168175a99304216871",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/exit-active.png",
+      "sha256": "b22a47db6bf6e68a6c24300bf06ec24643cb8d95039910aea0d61ba505bf125b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/exit-cancelled.png",
+      "sha256": "6f13357bee0f8db37790e9da1bbf0bdf66c99616fb22727736bf78c2a21b9d29",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/exit-completed.png",
+      "sha256": "3a32951c5a5b6cde13fccb93639fecda4a2b3c582b234c5639e41722395332cd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/exit-editor.png",
+      "sha256": "f0b8cd3e90e8efdabfe687a25706954cc73258618c9dfe9ab538ebf0973268ed",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/exit-review.png",
+      "sha256": "fad4c247f11725ab898b9b7ec57713b61a33b05e76b2e48ab707af7fd203b52f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/quit-review.png",
+      "sha256": "fad4c247f11725ab898b9b7ec57713b61a33b05e76b2e48ab707af7fd203b52f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/exit-active.png",
+      "sha256": "357f3d91e6090a2517ae09ee2600417d61faae343b6de5a6bcd1c9bfe060b5f1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/exit-cancelled.png",
+      "sha256": "357f3d91e6090a2517ae09ee2600417d61faae343b6de5a6bcd1c9bfe060b5f1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/exit-completed.png",
+      "sha256": "d0b00eb1397e78c087d5383b75f23393addbd350f8e9bd13a25fcfb98d0ffd86",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/exit-editor.png",
+      "sha256": "78f7327971b1e5fa2918dcf289f8ebfb61193c3e99a17a6afcd21028c7a6fdff",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/exit-review.png",
+      "sha256": "8319a40d90f6ee061049006233500e3831c48833aefbd7ca38322e41f4775618",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/quit-review.png",
+      "sha256": "8319a40d90f6ee061049006233500e3831c48833aefbd7ca38322e41f4775618",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/exit-active.png",
+      "sha256": "dd6c6a071a92548284bb9b05a753ad71a1e0ddf7e35045aaf717f7ff46ee1267",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/exit-cancelled.png",
+      "sha256": "c3b78874a899305e5cffae952cff953ab625b2a381c6616382ef2c4d77bba457",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/exit-completed.png",
+      "sha256": "0dd910844e90a32d009977e9dae0337a85ba11736f9f1bed795da9e90b5cdb95",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/exit-editor.png",
+      "sha256": "228fdc9c5fe47feaa45c1e137a37bdb10eb426ee233a8f7f95fb5c940f52386d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/exit-review.png",
+      "sha256": "301ab49a358ba2b8b24ca5287bdd25a06fd0f1bec8f568bf8693cadf49cfafdd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/quit-review.png",
+      "sha256": "301ab49a358ba2b8b24ca5287bdd25a06fd0f1bec8f568bf8693cadf49cfafdd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    }
+  ]
+}

@@ -4,6 +4,26 @@ import { CdpBrowserProvider } from "../../src/browser/provider";
 const settings = { get: (k: string) => (k === "browser.allowChromeRelaunch" ? false : undefined) };
 
 describe("CdpBrowserProvider.status", () => {
+	it("probes the configured loopback endpoint instead of the unrelated default port", async () => {
+		const requests: string[] = [];
+		const server = Bun.serve({
+			hostname: "127.0.0.1",
+			port: 0,
+			fetch(request) {
+				requests.push(new URL(request.url).pathname);
+				return Response.json({ Browser: "Synthetic Chrome" });
+			},
+		});
+		try {
+			const provider = new CdpBrowserProvider({
+				get: key => (key === "browser.connectUrl" ? server.url.toString() : undefined),
+			});
+			expect((await provider.status()).debuggableNow).toBe(true);
+			expect(requests).toEqual(["/json/version"]);
+		} finally {
+			await server.stop(true);
+		}
+	});
 	it("reports plannedAction=dedicated when Chrome runs without a port and relaunch is off", async () => {
 		const p = new CdpBrowserProvider(settings as never, {
 			probeDebuggable: async () => false,

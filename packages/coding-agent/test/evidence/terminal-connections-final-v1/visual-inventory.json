@@ -1,0 +1,1552 @@
+{
+  "directory": "terminal-connections-final-v1",
+  "historicalDirectory": "terminal-connections-v1",
+  "fixture": "connections",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 256,
+  "contactSheets": 16,
+  "exactPngMatches": 60,
+  "normalizedTextMatches": 100,
+  "changedText": 96,
+  "missingHistorical": 0,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/connections-editor.png",
+      "sha256": "c7f9b9a06652a9587e270f48e6f8ce0b8fe2190c87c563fa3d4d3115c2ef11e8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/context-activated.png",
+      "sha256": "e3d91e51d92f54b1307afa59e53105b20d86f065ed959190e0fa001ed64c3206",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/context-activation-review.png",
+      "sha256": "4768cc85ac99f4827dfdce3eed1d98e93ffeebdbaaf4e76cd05795f6a2894a2c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/context-list.png",
+      "sha256": "2c82bf6998deab4bd3dc39b27c8ccfbb0a28c4d1d65c2e6a534c09e22a712394",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/context-unlink-review.png",
+      "sha256": "1c1c65b27484d0a227b5c1af04d8fe1e28f0446e0e31adbc2c8303e4104d2d67",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/context-validation.png",
+      "sha256": "07376c35c60a9f72217d18861ffe02ddad7a4f31542245bce3f65e474f6645c5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/mcp-add-review.png",
+      "sha256": "b76061d5f0561314ac65d99cd9de6b314624604ffa089b933d84e97f5b49ed85",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/mcp-add-saved.png",
+      "sha256": "ebe19e68500c0ed9d6ef5de5e43a4ac98bb64657ef746cb13cf0555f6ba34923",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/mcp-list.png",
+      "sha256": "6c911e5e38d275938b4febd447353f33e66a4a42239af8d3cb404aeeb504bc0f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "12e4b0fd40e67d480bd39079a04f66939e5bc491b16afe7a9f219f3ecde0f992",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/mcp-test-loading.png",
+      "sha256": "5f964bb4f0b1ee6cce64f53c21be0aa14530729a6e36b15baf129f91dae1bbbb",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/mcp-test-success.png",
+      "sha256": "76f6d9e663a24a2c4d106d0cb5388401d1e29a10ac72c6c2117d4fcfaa63590f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/ssh-add-review.png",
+      "sha256": "17e5cd47679df617f415bfda690690adca58c7cd60f7504ec67e410bae10548c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/ssh-add-saved.png",
+      "sha256": "7a735863ceea29f19077192389fb9c0fd498cf9bdb48561983576e9bb29cd0b1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/ssh-list.png",
+      "sha256": "c0e663d291f76e68517ec2bd473175bbcae077b7af295bc771c3646a57f4c411",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "aabb2c86e45b877f4d855fd63a3c476ae79b48515ee450333442e110a525db89",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/connections-editor.png",
+      "sha256": "e7baa7f1f0d6fb4da38de582f90dfec329c351b9e0c8838ed0dd3f7ad715086a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/context-activated.png",
+      "sha256": "375e21be20a0f39ec63d8b7e23d8a3f28aa72a23cbcdf64206712e4f87f94362",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/context-activation-review.png",
+      "sha256": "1017938dd00c5814bf2a57b8e733fa2fef6d4ded5d0bfbfd6377d1af990eb9d5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/context-list.png",
+      "sha256": "90f0f93e73ff38945cd56b21a28ac673343677067167632b56fdb84815fdce01",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/context-unlink-review.png",
+      "sha256": "78f9efa8177d30a830e5d2ffc88d06a8186e687e26b11a0caf734ea5231a34cd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/context-validation.png",
+      "sha256": "86430f1949d14573c5c73f666c0a1b9955d2d2422b237e0c9a7222daddecf1d0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/mcp-add-review.png",
+      "sha256": "f71fabb130f3a95666975d1fade9e504c08bc52bb9d1733fd149cdfd9ae3f3ee",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/mcp-add-saved.png",
+      "sha256": "22689a81f52b80d28a5a5b7e4be4f45779531a66fabc7e13043dfafc6fa9a860",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/mcp-list.png",
+      "sha256": "cfd1848c06e423bf1b50e8e2a0bb1b6651256a6f3738fc0a7fb7da13c9389775",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "27229d318cec5f016fea8d43706c3ca38a0ce598d190cd7cb8aa47f438276571",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/mcp-test-loading.png",
+      "sha256": "e2047fa086d011ea7c9b2b58df2dd8eafb48a34b097e89ce6545fc7a59c26fa5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/mcp-test-success.png",
+      "sha256": "2cd6cb860db723217420e6e853ca16a7af86e7e4226a1e2c1228fac67d0b70d0",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/ssh-add-review.png",
+      "sha256": "f6340496ec1279146a25659f790ed10eb7339bb540335ccabba767d31836fd8e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/ssh-add-saved.png",
+      "sha256": "3cb3cf35d9bca9758689c22415c928904d24dd91324a1bf4e77e128f920554c2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/ssh-list.png",
+      "sha256": "9cdbecb4a612073c58b302dc9ee682fd74354c4f512c7575afca43eca0937358",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "16a9bf0cf9c0dbb6f32f068454f7d4ca2af320e9edc1994757b3a63fa3ca0f02",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/connections-editor.png",
+      "sha256": "4731790a74503f9b7fda8a17bed0ec4dc5ab72997e2875f53807e21b9218180e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/context-activated.png",
+      "sha256": "3040d21af76957d6b645675bb61ceaa89927c3a0bb3b1217811633bf168f55d4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/context-activation-review.png",
+      "sha256": "ab57999c64a3dfb2b549a706ed49f0670843525623643fe0fb2d62559334c20d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/context-list.png",
+      "sha256": "e5b1bdba3e24e1f432489e96ab5be3cf4761e0807ba6b4d9ba3c3b11a1c000cf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/context-unlink-review.png",
+      "sha256": "363428f606717807f16030747af5af946a79380b1f4ee57a7907a20384d30832",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/context-validation.png",
+      "sha256": "3862133165cd611109e25130dcd0f3692cf0096ff8353d3d1dfb951b9ad4a043",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/mcp-add-review.png",
+      "sha256": "5cbe578780e0093b6be2c813e0e021d85c4bac34b0abf02013e29f1e1be257a7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/mcp-add-saved.png",
+      "sha256": "ec072fd30e1a7324f7fcb6083f9940bbc0f18820b7964fc6144a1cc0e67df5b6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/mcp-list.png",
+      "sha256": "4f19eb91c6e7a3347470b7da11ba45bc9d2c1705681ed8cbe4c7e03eb8776b2f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "5a757abeb5a80bcf70b28301c33af00ee16a9bce3d5a0ca726178e96cd2c025c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/mcp-test-loading.png",
+      "sha256": "5d21f0212606d75bcba855439540a9ed3a0ce6871df01c51d925d86a4dc738c3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/mcp-test-success.png",
+      "sha256": "add9ee817090328ec9ee4625c607d056e9e1383f5650e636c50e3ce14843beca",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/ssh-add-review.png",
+      "sha256": "22381a6d128c5f85f0e380e5d89ce5c5e204fca3bb8335a9f6cc2c4c28acde5e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/ssh-add-saved.png",
+      "sha256": "e851148a34a8996edbfd1c9a3b0616eb8785bf1080058bd87d184ecea1271068",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/ssh-list.png",
+      "sha256": "b739a5593719912537ac35f07ae8d946ce32c91e0a1e2edb229e3e54e12f9516",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "ce6bcf8280eb651dac99da228d58704ceee467f99deb44a81c7b9861d56e8841",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/connections-editor.png",
+      "sha256": "8c4c92196021fef444b5f9c50562b6e3281603afd91f801cfc91f5b7f836c230",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/context-activated.png",
+      "sha256": "6b32fd8dee22f64dce857a082418474f0ea70ad27f1f56c2f31f43b2cc69d588",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/context-activation-review.png",
+      "sha256": "5c9dfc4f6e3c6e3103b148e276c19eb7083e842f768942796df77aba61aed5e5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/context-list.png",
+      "sha256": "8e3ac3cd2d6341c40bdb4f6c2b4a921d18055809cc9f0924116e121539a8c072",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/context-unlink-review.png",
+      "sha256": "bbda82fe6cf22e9a3fab12502f2934a259990d01e4c2578d5a5ebcedfa2e33d4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/context-validation.png",
+      "sha256": "54a131cf1c4317e8ebb254bb74704b391649012dfd6788d16019f69fe751e1df",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/mcp-add-review.png",
+      "sha256": "207430893766430b9ff06f3f393fb4f210a9cf51565d43714a26d5077a2e1d08",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/mcp-add-saved.png",
+      "sha256": "3de5289505975e7d84e17307ccd540ef1a85b08aad4189aa70aac3b1e53490ab",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/mcp-list.png",
+      "sha256": "f8cdc191cc5b975389ef5830aee4ebdde13637a41b238364cc92997127ad6914",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "b3a9726d98f8a33ad207b3ea1fe297e7dd6a070e5add173e1fb8515de4cc0db0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/mcp-test-loading.png",
+      "sha256": "eeb0b3802baa8e10deaebd3bc9bc48074977e7aa516f446e625b242432aa943a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/mcp-test-success.png",
+      "sha256": "5dbcfcdf5c844bf31a38a4dfd26aaa2271e3fa4a08392ba402b2b76ee7133747",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/ssh-add-review.png",
+      "sha256": "2e09e996d9e30db9b90919a99d0292147e33ff564a3845ab698c272210b2ce74",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/ssh-add-saved.png",
+      "sha256": "b32a100fb6dfa57e32263144cd6b6e0a4614f1d1ca9df824d9c9678210515067",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/ssh-list.png",
+      "sha256": "f61ecfda98867400224887def46a40b30d590e6b4d2b14551b453aedf741c54f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "26fc9d3c4f8994fd5ea685b49b1453012315383b95b4d7645a28fb31ae3176f0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/connections-editor.png",
+      "sha256": "dd682f79f1c16ac700f7fcff146e714a8930731374c1ddd0c1f7e55babc085cd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/context-activated.png",
+      "sha256": "4169f5d03f4793b91ace7c35843219eccc268ed9e4bde80d4a89d2dbd6291e1d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/context-activation-review.png",
+      "sha256": "1485007ebdfdbc7e7518c07cb1575dfcb699d2304a89e0a3c6c64b1d4b329636",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/context-list.png",
+      "sha256": "4c47a945e0ece429236d642e6216309206048cf3c812ae72943eb169e9466705",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/context-unlink-review.png",
+      "sha256": "1ccd346d3f9683c4c895c3730b986e41d03441099a471d792926b857647703fc",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/context-validation.png",
+      "sha256": "d9d56bd837f57be9fdd56854bc24e37138ace978fe94b6a0354def7d6478f6bb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/mcp-add-review.png",
+      "sha256": "a3a8ccaf00de5e0ff1c5e30b9c332fccb3a129237dfbb38eeeb8fc564460d073",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/mcp-add-saved.png",
+      "sha256": "7094db0e684ece9680338d286ef107cfa99b1bdfd5d1c2ae1c36d5282610108c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/mcp-list.png",
+      "sha256": "37ff97dcd7d1f9d642075765ee59b5a0adee0c80938be92c03f4dca229c584cc",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "4f9fe03566b26c2eb274d19b39fd527d95da38fefdac77f0133c058460a029af",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/mcp-test-loading.png",
+      "sha256": "91d0840f4a8a0f365024577d62f48b8a411beeea33608bf7eb39dcf17066e78f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/mcp-test-success.png",
+      "sha256": "414349ed9ed507c832aec2b4f21bd1082e821556d58bf3eb6a9492268aa69455",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/ssh-add-review.png",
+      "sha256": "3186c9656b12b4ad0fd27ff7f76c0991ff6f9008c678c19e5276fffa4b0678ca",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/ssh-add-saved.png",
+      "sha256": "ca846057b60e5395fc7e70f6f4eae1d7d267639e95a618ce0e705990b26b0444",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/ssh-list.png",
+      "sha256": "c578cb8a260535fb74cb880aa2e0ec36bd07cfa81c6c869f59c95d36121037f4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "2b8146db0bfa57f5fdd7eb54a166849dc6075b141f7698a9c2d1e767d5425b8d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/connections-editor.png",
+      "sha256": "1ec2b82e0be226ab404525a3e1cf3ce037a13a1ea46584712ddc004c35e274d3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/context-activated.png",
+      "sha256": "ad19a53525a35f746b1e1ad143717bb6a475bedc9c3ca9dfb208143d4ce49cd2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/context-activation-review.png",
+      "sha256": "e0e34cd3be01103f7648cedd30519f62cd9f0c9d14d9d6f3de15655c67940024",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/context-list.png",
+      "sha256": "8fdf9870b72b52b68a8215f4dfd97ead00d4662859cfa6bac815a3926c689759",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/context-unlink-review.png",
+      "sha256": "c81960bfd1dfe65ff3c10bc1ff584c1b46eaed6e6454693dabb44a4fc9637109",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/context-validation.png",
+      "sha256": "1515b04bf1faffdb1699210d0951b09f5cd249c11bed5dfd8bdf6b219ecc6e7b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/mcp-add-review.png",
+      "sha256": "031f697ecac4500125ad94bdbd5122a9bd59a809738ca4206b1c97a6811ba223",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/mcp-add-saved.png",
+      "sha256": "1660fedd7ece1ac7460a1806e0c05e8d31a1694780a92564827bf1ee448d626f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/mcp-list.png",
+      "sha256": "3164a9f81a5c34056454d8ffa873f9402073e53566ea2cbc7589aff8ca57568f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "ac16e838bfcf678762dbf14e4539debc0d9c7566a403af3f6c14937c52678a24",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/mcp-test-loading.png",
+      "sha256": "cfe7605a3c623ef800c53bd8b3e4d7e5910c3455b0a4ddc7c2e1f9538d74e18d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/mcp-test-success.png",
+      "sha256": "886e9893a1cc8e619b22e04bae96f2e417b4a4ae4465875c92a5cc7933dfb04f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/ssh-add-review.png",
+      "sha256": "082442df76492a54e0eece3a1326bdf0806f6cafae57b6de69279b91f9f6be4b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/ssh-add-saved.png",
+      "sha256": "979809e0178f653e2beecb13499edd154b4badc7359cc31e0f816c1f13ce0eec",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/ssh-list.png",
+      "sha256": "adfd911a0202d4f647747116e388a793b9110a924c3cc807c08f28d7cd618e73",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "dd742836d37cff66d37577f5fb7e45c301ec477d2f5946ef07792a83964a4d56",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/connections-editor.png",
+      "sha256": "0f0c46ade3ee39d318e67df2b3e0bb72910ae685b8edd23c3bf61510a5ac0802",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/context-activated.png",
+      "sha256": "532b9b8e7d61af989de2928e20e28dd8f1c00b5c57aa9297813f0dcb00a54319",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/context-activation-review.png",
+      "sha256": "540e29713b5e668472f23a412704d0f6fade5ee940e74fb96cad0efa22d53758",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/context-list.png",
+      "sha256": "af07d0fc415039c7eb496b2551175d5ef034f58414926d955382620ef5009af2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/context-unlink-review.png",
+      "sha256": "90bac2a602a5ff2d2e5c79b1bbcb43c8591bf9b7e435005a3af24ecb75a06d4a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/context-validation.png",
+      "sha256": "bd6199e9203bf860a46268897912518a84e6487e32199c586c5b73deeb6ea196",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/mcp-add-review.png",
+      "sha256": "9f774853c62d27c571b4b516a94b211fc67c9dee69566bd3cfeb3589f8b3472f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/mcp-add-saved.png",
+      "sha256": "513851306fb358b8bcf4044dc783da080814ba2841e9dacc1fe0b6031442dbac",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/mcp-list.png",
+      "sha256": "9fd220750c770a1914e9f97b393fc8e9233b60b322cf6ee87de22792afd14334",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "37f28c37b4ecfd15cb6ea7f77815cb5cc761bf2383152e8c5fd32bc3a1b54cd2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/mcp-test-loading.png",
+      "sha256": "86a68c26a84b803b33b8ebd22f88fe8cbad0fb0107785ea9d55f6d2153dfc0d9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/mcp-test-success.png",
+      "sha256": "3bb13c7e14260ae8f5090abf824ebd2c0ee65566aedb6580097b8671e1b3ce96",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/ssh-add-review.png",
+      "sha256": "f2c036fc208e78229f60c9275e8017286d8a989a740fcd0997567d8614233133",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/ssh-add-saved.png",
+      "sha256": "f71d5686f48cfee2e338e009954d6979d79a846da9ea53183844c9c657ad3c92",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/ssh-list.png",
+      "sha256": "9ce0cb53786f899fd337334564d0effd61a1873a471888fa6e00d74b62347ead",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "90a74ee6690a331f6d49fda0e8cdddad7fbddfa75884a9eaee3e695da6b24e26",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/connections-editor.png",
+      "sha256": "79d5d2c6906a4289d6e3fa720d507bae0c840d2c2a75e1a85577ea2cb36d5ec3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/context-activated.png",
+      "sha256": "c9974070dc805c640777f090e6baeaab75ba6d1f7221ddbbdda54311307cf780",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/context-activation-review.png",
+      "sha256": "cdddcac0b6c6dec8fb14bbf37647e42824d8fa78a4428c2d5ccd404c2cd2ff5f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/context-list.png",
+      "sha256": "d07aa156a1822d3f8ca02250a83506c41d03777848b0353198b14d31fba8ad66",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/context-unlink-review.png",
+      "sha256": "84feec897d4ded1a2712b5608b27548a1f61fdef49b6d2fc719cb44f4636b726",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/context-validation.png",
+      "sha256": "bfd056be75b7282e5f3e51cfa1991439bd347540a79644aa561959c8e2fa032f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/mcp-add-review.png",
+      "sha256": "adb4e76eb79ff58f3f1342f39a126c82f67adf5c0b7df880c1ed95580e2caa7a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/mcp-add-saved.png",
+      "sha256": "69776bf539342452d0624ab8069043930b7db7d20f3588a0cdce6f28594d9de7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/mcp-list.png",
+      "sha256": "da52336e7b1c019abb6370c04b3133d26750d24b0eff8da3bac32e3fb5e4a388",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "c8c561376f91d893df9376cc5aaa7e8ddba6a786dc905e549ace7fd6688d3c69",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/mcp-test-loading.png",
+      "sha256": "0fc5fd2b77fc4a899229771b2d44af89ab07dd5468b18ff49ed0f69069d39b8a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/mcp-test-success.png",
+      "sha256": "8f6371f4b304d719828b1ac6a9b501e65bf18ad017b7da013dec5448d2a9399e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/ssh-add-review.png",
+      "sha256": "3b91c6d9d327c167c30476df99c5005ac06a506b9e4224e23c36ae892e5fed60",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/ssh-add-saved.png",
+      "sha256": "031428bfbd1ab8d9c41da1f2f3d82b81679e979eb99794529b865486c41ec071",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/ssh-list.png",
+      "sha256": "195c607e88ab9cc12a15d94afd172fc9bbcf0169d4eb50cd13578383752f7c60",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "f82b337c00d93cb5c9ea296862c1fbccddd9f093f85b94b3f5c1583516ae7860",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/connections-editor.png",
+      "sha256": "861dca6b4406e94e3a9cd34afd6e7ed0212f804a979d15d05d2199338d6bfa85",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/context-activated.png",
+      "sha256": "a72cc2668dbfea69202faac70cc9e828cc33c7e3e0236e9594292e1bd49225e2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/context-activation-review.png",
+      "sha256": "147f630715f7bcf21a37cfd71dcde2e12b0c9965ab82b4d8163fa446cc691026",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/context-list.png",
+      "sha256": "b3c1bd84e1bc960b7e5975e10870b812efc46b99b503dfc16c98f36558ae328e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/context-unlink-review.png",
+      "sha256": "8390c2ddb5931e8782dcc8bb626d3432ec939208c6c5e87be7578794367340ac",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/context-validation.png",
+      "sha256": "a6ba79d7fd2f8ed50c2d5dbefdf9e254f24c139a5ba9186e1b57ac8c4c6a4d8e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/mcp-add-review.png",
+      "sha256": "cf840b313f0d81a57a08cc12fdf20ee081f449421e780a5dbd89b53593b8d71f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/mcp-add-saved.png",
+      "sha256": "737443cc8a84998f2b26330b9b7d94bf3eb0e17f18f4a28db4b5e15a80e0533d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/mcp-list.png",
+      "sha256": "412f05c657439c2dc7483f4be71d0fa1ac35ce547c12cde7d9c16ee600996969",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "9beb89886d28557cee6ee4e611599934a41877e7c5e5fe41bc6dfc4e087e4181",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/mcp-test-loading.png",
+      "sha256": "5b65ffa9075fdccfb0f53663e3e189f7b1d82117b93bacfb3d10f94d15a8ff1f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/mcp-test-success.png",
+      "sha256": "ce1814a2678653388087f6e112851f72e674cc4dd8665b676975e1abaf17a640",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/ssh-add-review.png",
+      "sha256": "0c97062d66859f33b28996ea647440898de50de378e4772ea91ae17b31f6669d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/ssh-add-saved.png",
+      "sha256": "71d5a941e90929cd62800e406012f3ccdc89f3f8a309be02ca5b0ff916edbf69",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/ssh-list.png",
+      "sha256": "45ed677cfe4d63598b5b2e51618483455f18897936ef1e5fe7a51c7f0dd741ac",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "cc25697a56f857cdd97edad51b99343646f43ea5e1b80f9df6e93bafdb481ef0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/connections-editor.png",
+      "sha256": "bd8499511b7874335e216716e1efd1752782ccfee436988822b4484530b1878d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/context-activated.png",
+      "sha256": "c4aaafd8b4413c965cb8e9deaebf1e243ff7a99693549a2e30e103648ef87dbe",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/context-activation-review.png",
+      "sha256": "38fe3f15d353805e3162ff89a08eca6e12467910a9cd7a8947276c670962b0ce",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/context-list.png",
+      "sha256": "4b50c858d2568ae7d4d70be6905a4d42adf6c0372d3e8dc60499b27222e50561",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/context-unlink-review.png",
+      "sha256": "22866c2d2e3a865d0020e923a872fdcdb9b560b6879fbba303f316f68875704c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/context-validation.png",
+      "sha256": "4b4e8ca539f52a171250431d428254f919faddd2e1f27971c533edeba1df5a10",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/mcp-add-review.png",
+      "sha256": "e01d38f55e6c0694e1fed03c976b5970c203da9b6cdb4572f9d69d47da00fff5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/mcp-add-saved.png",
+      "sha256": "69b72f3067ca6c4d8333c1bddd427c62d6c363eb09084693306ed634abb37e8b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/mcp-list.png",
+      "sha256": "8f42d45ce6eede37ca1bf3fbb9be35ce35f647dc8e24754be6d9435e9919480e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "93d48e4f00341168ae2c49f8f7c30bde92389d18913aeb566abcf91944c0846f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/mcp-test-loading.png",
+      "sha256": "32800f4754af0829c39160d5ccc8ad1c7c9767a55e5eb3df9a16d554ea679fff",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/mcp-test-success.png",
+      "sha256": "3cf2b824659ff13b5a1b72fccea3703b0947c67ac475f9044821d272ffcfa93b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/ssh-add-review.png",
+      "sha256": "2b755e6c8a715c1c2cd9da5db0b0968b5f869fd554d190920e151cd656083b4b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/ssh-add-saved.png",
+      "sha256": "8d34ea932054905bffaead132a9c9326177fa33e7584aedacf45e1efac29d6f0",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/ssh-list.png",
+      "sha256": "fa0bab69965847d18f7826e7723a088874184ddb8bcdc20bb6d1c03370facd43",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "59ae9f9a25345d97be83b7ba89019b3d431fdca2f0caf6a1d9c7b2a73fb51c84",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/connections-editor.png",
+      "sha256": "cd4e89bc0a725aea9d7e4aee813fe422fecbbdb5635000cef2961721a7ae4539",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/context-activated.png",
+      "sha256": "1b7f8190548a06453e7b6aa21daebdd99dfdd21c3c87231840ee0fe987caaccf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/context-activation-review.png",
+      "sha256": "fff1aa62c2792179e57bf220d2f7b5e01376dff17414008ed74161e83ee189c4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/context-list.png",
+      "sha256": "7066d77aa457da111dd7e593a2c8841bc02617e00695e448e9532ade54770df7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/context-unlink-review.png",
+      "sha256": "fc4ba344413bc44f66ef31bb07ed7c9af1d9f21f603692d8b94329a5c845554d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/context-validation.png",
+      "sha256": "dbe383941f5753b2855fdff4f471db671c299993322316d9fcf75dd227c247db",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/mcp-add-review.png",
+      "sha256": "079b9096d12619c56afaac1bc402a47b3864843014793383f096b85407d006a7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/mcp-add-saved.png",
+      "sha256": "a8521d6e86baaa7b6d2264ff8c505026c4daa0d3b11964aee765b61a7ec83514",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/mcp-list.png",
+      "sha256": "6b9a96b866fa0c3542317be3cde9a73664daa061b8ca1c53bfa53ff0793653f2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "7c92ca8a520970b040924087a3f1188c9d03f2cc19a3d5694248d1b3b5943266",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/mcp-test-loading.png",
+      "sha256": "488acad97e0cad452207919fa56e91e28a3ef330c8761e55c67277ab1e16b112",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/mcp-test-success.png",
+      "sha256": "08fa50dc26de15edc3148ce9198ad5e330737bb53309225366b85e5b847ff044",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/ssh-add-review.png",
+      "sha256": "34fa05b899b5818c0ebe8c49cc441031203ba02dbea9914931865ed9faacbf10",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/ssh-add-saved.png",
+      "sha256": "d52b9f9583fe30119156cc35bcef7e12c46c69d85833c82ab0bfaea1ca64e3b9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/ssh-list.png",
+      "sha256": "1268ed6486ae22b9d9adc69a8f038e0bd708c2d8c5ab85ee980861229713df15",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "c0c476a3ec0bacce9f9573daba4a82169c27b09d3236ef0bd35cf02b35ec7fe0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/connections-editor.png",
+      "sha256": "59168827ea8741cce094b998109f0c0fdaf78cdd91cf2515df979e1038d6ef66",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/context-activated.png",
+      "sha256": "90c18dc020470099336f7b043a6ef39406e04b5a7770b6f49bc8297807589c67",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/context-activation-review.png",
+      "sha256": "31cec3b42832908b35eee9a97f53a230d3b0d63781396a13258186ae214b7669",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/context-list.png",
+      "sha256": "53d09f2e1fae136126d6cb375d06ad40d6da77e36615f0efb9dd7d0114307123",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/context-unlink-review.png",
+      "sha256": "63c494e9b0e1f91537aabf2cd9df99e6d8de7af2915297deb6419842529b1fff",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/context-validation.png",
+      "sha256": "6719d940f1e80a42edd8573d9a894fcf2eec1620338f42500f7ef254d400d207",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/mcp-add-review.png",
+      "sha256": "06d777ae23a85490640b2cf94cd2f0edf62f01eb6044cdf71001245b8d12422d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/mcp-add-saved.png",
+      "sha256": "34d68349d0eb41a51e734e8254e8a95597394c2c2cbe5de8f97bf957bce36b5a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/mcp-list.png",
+      "sha256": "dd17c7fd110ef16ce4b52e5d69cfef867f6361de5a192db75903e6d8e4da5abb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "928863691779ab4d74631a98b521e52f599557bc6c2bf2e803bdd05ff652edc1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/mcp-test-loading.png",
+      "sha256": "57d1d5df63179bc06316d9491fb8d1ae82ee4ec0885f7690b35d3a9469ff4541",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/mcp-test-success.png",
+      "sha256": "a0dffd46426ec0dfc195683068df687fb4c51ccf8b831943d96b2570ae84d7f8",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/ssh-add-review.png",
+      "sha256": "6346a32c32dbc21f2f8bfe99448cf50428e1bf121e250aae9c183545110d0ab0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/ssh-add-saved.png",
+      "sha256": "05d9872ae83ba50d7624714fb4db971d4f85e72220bb3bca75ce1d51205abb79",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/ssh-list.png",
+      "sha256": "9020b1e3c3ecaf5711815237ba09ec220d954608638d215f79a6efa4b700b0e6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "b2a6cf8f3310fd08169dfe62f3586484b464149e08c459ed8884aee368eaedb7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/connections-editor.png",
+      "sha256": "f7613756e681c51752b873226fd18f886a15148663b754a17af9dfd4a75e9cf8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/context-activated.png",
+      "sha256": "6aae7e303a07288521d6e3e25f469040a70c64e1de8a641585415e18c5f92f20",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/context-activation-review.png",
+      "sha256": "5ba7acd77ac2afbe2e7c9ff1906ace785eb5b477c7e7ec32ca314b3fb0e44f39",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/context-list.png",
+      "sha256": "2bf8f99ab42cec04b98ccc731152db5edd23893062c954e82b7da48d91afc8a8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/context-unlink-review.png",
+      "sha256": "d33024769f9d2bbf63fca7c8d0db4e340ba3f347ab0df5e185aae1fcb572c033",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/context-validation.png",
+      "sha256": "2dfb881b4bad92dd79d9ab512305794e7296bf5a498c3f59839b2febfa15f9b9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/mcp-add-review.png",
+      "sha256": "e01efd85745263338ab216c4f72b2eb216029dab0eabe44762921e2d982fd0a2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/mcp-add-saved.png",
+      "sha256": "70f67093c52b08c0bb090027800f0bd7654ed4956b6569eb9cc43cf06667ede1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/mcp-list.png",
+      "sha256": "a9b70e87480bb8ebc36d7d139d6ad258271b8bdc24f6957200f2cd98ae7c0627",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "bb4dc462fa32ca61fdbdcd72f419ec34d63a70d91af9dfc48bab534624d2b5c5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/mcp-test-loading.png",
+      "sha256": "8169ec765d6b4052bfdf5c063c9fd68c71d7f2ca8ea1484f62e408498ee4f8d2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/mcp-test-success.png",
+      "sha256": "6bafa4b51f58380be75d663fa6a95fa0b0ba82dfde3f3ad311615dcae809aece",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/ssh-add-review.png",
+      "sha256": "87e9b067f24bb81cd9196aad19bebca32e50ab3719ef2501cd4ef36b669185e8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/ssh-add-saved.png",
+      "sha256": "d1ffa77d8a6aadabec39d154cdfbe1d5e65db40c943498ac15e2b27940dd78c1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/ssh-list.png",
+      "sha256": "04d29343d993768b887d124e67d2794aa50a9ebd7b177a6a65ed1df880f16ee3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "ae5ba067e234fab15c34c1ca2ea82b5daa34ce9e87f3c32aa9f5f9bb0a8b6c6b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/connections-editor.png",
+      "sha256": "0b7bdc3b0130388c552630c7bbd4a81817fe7515a9677287d33af130eb4ac25f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/context-activated.png",
+      "sha256": "4ba3ee161770df2b7e26ebb41dbdbd9477f685f39f801edb8e6f17c0326f7cf7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/context-activation-review.png",
+      "sha256": "d965d90f68b1e47fadd60c5fe50c9e2dfdc9a5e5ef9558f7da98b2182383022c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/context-list.png",
+      "sha256": "a89e9d994f4e8d4235d17750aee4603e9c0901a6da07bbb62bfb5f78f12757c9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/context-unlink-review.png",
+      "sha256": "69a377d81c976ea9bac4beb241cd503ff83581d2b6b235d7f3c58f32e9408028",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/context-validation.png",
+      "sha256": "018e7de570121f8d971116d2ac3aa94568171cf7bdbb94fa7f6fbd7237102782",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/mcp-add-review.png",
+      "sha256": "61a595b7b67497539e9a292f933dc16f7953ca9608b7ef5de304712307f1edb6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/mcp-add-saved.png",
+      "sha256": "f4ddb3af4f3502dfdc2a7f9d548b85a284671835cd8258eea42f7059023d2bcd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/mcp-list.png",
+      "sha256": "80365f21f234f047b2b26e2cb5a01db294b1c5dd23a6de20e0ac383d429c393b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "1b143a44d8abb6c935b829eb278af972f28c4114b560af33b7bedffda8e90b2e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/mcp-test-loading.png",
+      "sha256": "379e06dc8bc15c3d9a5be31e19397a65b3f2ca598943507d24f80e83aeef0165",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/mcp-test-success.png",
+      "sha256": "7a91e6706c34ce86102ce5b4c68959723418926dfbf6e3978e4497a6788bb00e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/ssh-add-review.png",
+      "sha256": "79a158c10e4246ea9a655457d1c8c45ff8ce5718b24dad5c5f99649664c830ea",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/ssh-add-saved.png",
+      "sha256": "7df0d1ed4cdbac02549543254667dafd0f788ebbe831df604556f0c18b3f2b28",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/ssh-list.png",
+      "sha256": "3c5fda889713aac469c53188d0cf5a0417b5d80a1042777ffb2e8d37a4e6ebb9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "1ec1a33cdde87125ba47dce9d7ece6db1c4b958d80a814b36aae46a07cfd6c99",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/connections-editor.png",
+      "sha256": "91b8cdf3371734ba7ef6844dc0ff97bd4f95690a314f3d14787ae9bcbed031cb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/context-activated.png",
+      "sha256": "7b9814e5e9ab7b160d6baf915169b8adc16aa6549e9be2da762f550a406b8c3c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/context-activation-review.png",
+      "sha256": "a35bf0600a79d699bf4bfa289fc742b4752f3f36b39c00526225e5100a9edc49",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/context-list.png",
+      "sha256": "7cb5fecde8707d9a9306c9bd99fc7348c572e139f48217efa5ffa4f0967ef652",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/context-unlink-review.png",
+      "sha256": "b4441f545aae9f310a0472714e44b79893d3c73a56c4241676cb0c7be7db6f51",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/context-validation.png",
+      "sha256": "29344d441ec57e4b697c4647dd90acf7d06ecd19b62a7d3d7b53a55f95036004",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/mcp-add-review.png",
+      "sha256": "02613a5f847cd5db6a7de498747a4e7b96b70114ccc23cfd712fd28aef9ee46d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/mcp-add-saved.png",
+      "sha256": "bb39cbe96d9beb20aa19ce22b87158e5cdd9f565263ecadc57fbedbf70e674f1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/mcp-list.png",
+      "sha256": "393f2d944eb53d6e0ed5caca197b96cd3e86c04da4fd551dc8c7f536c83fe5bf",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/mcp-remove-stale.png",
+      "sha256": "32a7f117c70fcf8368750f66426f530a74018b57a93ba286ceb3bc3215b901b0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/mcp-test-loading.png",
+      "sha256": "55212b55c42e30733744002ca630e0cebc15383fa4705f9309096678ed154d8a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/mcp-test-success.png",
+      "sha256": "213caeabc60b1adbde4f398a554333805d09ebdd9c6953db4dd2d12d8fb2c0b3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/ssh-add-review.png",
+      "sha256": "894596acbbb3e48ce7b9117231174e749dc654fef78215b7df3a8ca90da0e459",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/ssh-add-saved.png",
+      "sha256": "a130b15bfa2dff4f9ac0dc7bcc39dea0f1c0dc4a98cb352d2a21b6c489f0d98e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/ssh-list.png",
+      "sha256": "26cac926b66d82c582a2f9a7c84d6d716a771ccd1cfb30e3f27f73ab35d55fcd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/ssh-remove-stale.png",
+      "sha256": "de52a5ddc0d942047f400d7ef8d8ec18ebfaa50d35fa8293065143708b1e71b2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/connections-editor.png",
+      "sha256": "cb454c79c29c949eccc367d16fd5622cdb6d76c67b384b0589d0156e4ecf9d28",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/context-activated.png",
+      "sha256": "89e24a4eab8fe629c037c4c26b1d5a19c89c760ce3bf9449355a93410a6933e5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/context-activation-review.png",
+      "sha256": "5f9cf1a607a06055dbea782371ccd68db0f66861ad2f2d0926118e3fc94de4b2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/context-list.png",
+      "sha256": "0d76352a05ae84767d5437226c466c1315cd94be933275d5de5571b8f9551a00",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/context-unlink-review.png",
+      "sha256": "c0bf551d21840054995ca95e62ab1d78c95fd6c20cae10c8882105aea2055c5f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/context-validation.png",
+      "sha256": "ef55f909f84f41eedf76fe1f1522c607e54246a464e09edc7ac00cb0d5622527",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/mcp-add-review.png",
+      "sha256": "d21a94ffdc683d011a0a54cf73a27b82662d5cf5b0731d08d5d4bfeb8dda4caa",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/mcp-add-saved.png",
+      "sha256": "94eeb9a1aa37b70ab9f2e86b74600dcf8c06d16d7adb7ceb4706daabb85a774f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/mcp-list.png",
+      "sha256": "2af8ff92104a0fb059928ca11e9b1fa61fe2b1043295711227de3438a7eadd01",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/mcp-remove-stale.png",
+      "sha256": "00f6ca0e82b4b27ebbd1ac2f7b646b7a42e4669fe24b0ed6e6edb81187228e08",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/mcp-test-loading.png",
+      "sha256": "6ee75f4ce779ef130c8b91cbf20ad412de8c88a8807ec01037377c7cb86d12b7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/mcp-test-success.png",
+      "sha256": "e2627928eefd5a36df216140add97c8e85a086b8de0aa2988b54e1a44fcbf454",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/ssh-add-review.png",
+      "sha256": "5cf7d90f1a98c2f5f9f1306e2cd46bb020257fda2215329cf8a6520928988524",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/ssh-add-saved.png",
+      "sha256": "806ee9289e56e7259a084b19c212de0518020f5910852018f9802febc06b9871",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/ssh-list.png",
+      "sha256": "9342879049d9c45588bac29fc00042fae5eddaf88327d7b9531217eccab3216d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/ssh-remove-stale.png",
+      "sha256": "dded3e1e3d6813e61a719c66f4b621e4404a35ee791301f95910d0f3fa68cacf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    }
+  ]
+}

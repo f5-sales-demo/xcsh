@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test, vi } from "bun:test";
 import { Container } from "@f5-sales-demo/pi-tui";
-import { initTheme } from "../src/modes/theme/theme";
+import { initTheme, setTheme, theme } from "../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../src/modes/types";
 import { UiHelpers } from "../src/modes/utils/ui-helpers";
 import { buildSessionContext } from "../src/session/session-manager";
@@ -15,6 +15,23 @@ describe("InteractiveMode.showStatus", () => {
 	beforeAll(() => {
 		// showStatus uses the global theme instance
 		initTheme();
+	});
+
+	test("ordinary status uses readable text while explicit diagnostic dim remains available", async () => {
+		const ctx = {
+			chatContainer: new Container(),
+			ui: { requestRender: vi.fn() },
+			isBackgrounded: false,
+		} as unknown as InteractiveModeContext;
+		const helpers = new UiHelpers(ctx);
+		for (const name of ["xcsh-dark", "xcsh-light"]) {
+			await setTheme(name);
+			helpers.showStatus("Saved change");
+			expect(renderLastLine(ctx.chatContainer)).toContain(theme.fg("text", "Saved change"));
+			helpers.showStatus("Diagnostic detail", { dim: true });
+			expect(renderLastLine(ctx.chatContainer)).toContain(theme.fg("dim", "Diagnostic detail"));
+		}
+		await setTheme("xcsh-dark");
 	});
 
 	test("coalesces immediately-sequential status messages", () => {

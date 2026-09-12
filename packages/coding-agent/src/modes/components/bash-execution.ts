@@ -97,7 +97,7 @@ export class BashExecutionComponent extends Container {
 			ui,
 			spinner => theme.fg(colorKey, spinner),
 			text => theme.fg("muted", text),
-			`Running… (esc to cancel)`,
+			`Running… (${appInterruptHint()})`,
 			getSymbolTheme().spinnerFrames,
 		);
 		this.#contentContainer.addChild(this.#loader);
@@ -343,3 +343,5 @@ export class BashExecutionComponent extends Container {
 		return this.command;
 	}
 }
+
+import { appInterruptHint } from "../utils/keybinding-matchers";

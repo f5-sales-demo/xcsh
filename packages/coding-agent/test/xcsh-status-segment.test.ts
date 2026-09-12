@@ -78,7 +78,7 @@ describe("context.xcsh status line segment", () => {
 	});
 
 	it("returns visible: false when ContextService is not initialized (crash isolation)", () => {
-		// Do NOT call ContextService.init() — simulates startup without XCSH config
+		// Do NOT call ContextService.init() — simulates startup without xcsh config
 		ContextService._resetForTest();
 		const result = renderXCSHContextSegment();
 		expect(result.visible).toBe(false);

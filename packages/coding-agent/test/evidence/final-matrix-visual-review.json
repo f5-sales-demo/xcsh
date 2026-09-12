@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "reviewedAt": "2026-09-12",
+  "reviewedBy": "Codex direct image inspection in Herdr goal 01a092fc-4bec-7980-b6fd-2c37fda9f01a",
+  "inspectionMode": "manual-direct-image-review",
+  "rubric": [
+    "hierarchy",
+    "density",
+    "alignment",
+    "frame-and-highlight-integrity",
+    "state-semantics",
+    "discoverability",
+    "reachable-details",
+    "recovery-and-responsive-parity"
+  ],
+  "reviewPagesInspected": 86,
+  "overallVerdict": "pass-actual-terminal",
+  "matrices": [
+    { "directory": "terminal-memory-fast-final-v1", "fixture": "memory-fast", "imagesRepresented": 192, "contactSheetsInspected": 12, "reviewPagesInspected": 3, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-force-final-v1", "fixture": "force-read", "imagesRepresented": 64, "contactSheetsInspected": 4, "reviewPagesInspected": 1, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-route-mode-final-v1", "fixture": "route-mode", "imagesRepresented": 328, "contactSheetsInspected": 26, "reviewPagesInspected": 7, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-plan-mode-final-v1", "fixture": "plan-mode", "imagesRepresented": 236, "contactSheetsInspected": 20, "reviewPagesInspected": 5, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-publication-launcher-final-v1", "fixture": "publication-launcher", "imagesRepresented": 224, "contactSheetsInspected": 14, "reviewPagesInspected": 4, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-copy-clipboard-final-v1", "fixture": "copy-clipboard", "imagesRepresented": 312, "contactSheetsInspected": 21, "reviewPagesInspected": 6, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-memory-actions-final-v1", "fixture": "memory-actions", "imagesRepresented": 232, "contactSheetsInspected": 16, "reviewPagesInspected": 4, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-manual-compaction-final-v1", "fixture": "manual-compaction", "imagesRepresented": 100, "contactSheetsInspected": 7, "reviewPagesInspected": 2, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-plugin-metadata-refresh-final-v1", "fixture": "plugin-metadata-refresh", "imagesRepresented": 48, "contactSheetsInspected": 3, "reviewPagesInspected": 1, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-background-transfer-final-v1", "fixture": "background-transfer", "imagesRepresented": 64, "contactSheetsInspected": 4, "reviewPagesInspected": 1, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-reviewed-exit-final-v1", "fixture": "reviewed-exit", "imagesRepresented": 96, "contactSheetsInspected": 6, "reviewPagesInspected": 2, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-browser-chrome-final-v1", "fixture": "browser-chrome", "imagesRepresented": 232, "contactSheetsInspected": 16, "reviewPagesInspected": 4, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-reports-final-v1", "fixture": "reports", "imagesRepresented": 536, "contactSheetsInspected": 34, "reviewPagesInspected": 9, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-foundation-login-model-final-v1", "fixture": "foundation-login-model", "imagesRepresented": 500, "contactSheetsInspected": 32, "reviewPagesInspected": 8, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-plugin-lifecycle-final-v1", "fixture": "plugin-lifecycle", "imagesRepresented": 384, "contactSheetsInspected": 24, "reviewPagesInspected": 6, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-settings-inventories-final-v1", "fixture": "settings-inventories", "imagesRepresented": 276, "contactSheetsInspected": 18, "reviewPagesInspected": 5, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-sessions-final-v1", "fixture": "sessions", "imagesRepresented": 464, "contactSheetsInspected": 29, "reviewPagesInspected": 8, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-resources-artifacts-final-v1", "fixture": "resources-artifacts", "imagesRepresented": 336, "contactSheetsInspected": 21, "reviewPagesInspected": 6, "verdict": "pass-actual-terminal" },
+    { "directory": "terminal-connections-final-v1", "fixture": "connections", "imagesRepresented": 256, "contactSheetsInspected": 16, "reviewPagesInspected": 4, "verdict": "pass-actual-terminal" }
+  ]
+}

@@ -530,18 +530,18 @@ export class StatusLineComponent implements Component {
 		}
 
 		rightParts.push({
-			content: theme.fg("dim", this.#turnPhase),
+			content: theme.fg("statusLineContext", this.#turnPhase),
 			bg: defaultBg,
 			fg: defaultFg,
 		});
 
-		// Chord-pending indicator: rightmost segment, dim style. Appended last
+		// Chord-pending indicator: rightmost segment, status-background-aware color. Appended last
 		// so it visually sits at the far right of the top border (after any
 		// background-jobs indicator). Swallowed by truncation-from-right in the
 		// sizing loop below if the terminal is too narrow, which is acceptable.
 		if (this.#chordPending !== null) {
 			rightParts.push({
-				content: theme.fg("dim", this.#chordPending),
+				content: theme.fg("statusLineContext", this.#chordPending),
 				bg: defaultBg,
 				fg: defaultFg,
 			});

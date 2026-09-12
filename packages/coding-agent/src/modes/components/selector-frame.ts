@@ -2,6 +2,7 @@ import {
 	Container,
 	getKeybindings,
 	matchesKey,
+	type SgrMouseEvent,
 	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
@@ -24,6 +25,8 @@ export interface SelectorFrameOptions {
 	maxBodyRows?: number;
 	/** Intentional stable detail area for asynchronous status updates. Empty caller entries are still discarded. */
 	minimumDetailRows?: number;
+	/** Contextual paging controls, included only when the body actually overflows. */
+	overflowHint?: string;
 }
 
 function selectorFrameColumns(width: number): number {
@@ -157,6 +160,19 @@ export function selectorFrame(
 			Math.max(0, options.stickyBodyRows ?? 0),
 		);
 	}
+	if (options.overflowHint && visibleBody.length < normalizedBody.length) {
+		return selectorFrame(
+			width,
+			height,
+			title,
+			purpose,
+			navigation,
+			body,
+			details,
+			[...footer, options.overflowHint],
+			{ ...options, overflowHint: undefined },
+		);
+	}
 
 	return [
 		top,
@@ -213,7 +229,17 @@ export function matchesSelectorKey(data: string, action: SelectorAction): boolea
 	);
 }
 export function selectorNavigationHint(confirm = "select"): string {
-	return `${selectorKeys("up")}/${selectorKeys("down")}: navigate · ${selectorKeys("confirm")}: ${confirm}`;
+	const bindings = getKeybindings();
+	const standard = (action: SelectorAction, key: string) => {
+		const keys = bindings.getKeys(`tui.select.${action}`);
+		return keys.length === 1 && keys[0] === key;
+	};
+	return [
+		...(!standard("up", "up") || !standard("down", "down")
+			? [`${selectorKeys("up")}/${selectorKeys("down")}: navigate`]
+			: []),
+		...(!standard("confirm", "enter") ? [`${selectorKeys("confirm")}: ${confirm}`] : []),
+	].join(" · ");
 }
 export function selectorCancelHint(action = "back"): string {
 	return `${selectorKeys("cancel")}: ${action}`;
@@ -223,6 +249,91 @@ export interface SelectorChoice {
 	label: string;
 	description?: string;
 }
+
+/** Bounded read-only report; long content remains reachable without changing the transcript. */
+export class ReportDetailsComponent extends Container {
+	#offset = 0;
+	#capacity = 1;
+	#length = 0;
+	#closed = false;
+	#width = 0;
+	#sourceLines: number[] = [];
+	constructor(
+		private title: string,
+		private purpose: string,
+		private content: string,
+		private onClose: () => void,
+		private rows: () => number = () => process.stdout.rows || 24,
+		private renderContent?: (content: string, width: number) => string[],
+	) {
+		super();
+	}
+	override render(width: number): string[] {
+		const inner = selectorFrameContentWidth(width);
+		const anchor = this.#sourceLines[this.#offset];
+		const sources: number[] = [];
+		const sourceLines = this.renderContent
+			? this.renderContent(this.content, inner)
+			: this.content.split("\n").flatMap((line, index) => {
+					const wrapped = line ? wrapTextWithAnsi(line, inner) : [""];
+					sources.push(...wrapped.map(() => index));
+					return wrapped;
+				});
+		const lines = sourceLines.flatMap((line, index) => {
+			if (!this.renderContent) return [line];
+			const wrapped = line ? wrapTextWithAnsi(line, inner) : [""];
+			sources.push(...wrapped.map(() => index));
+			return wrapped;
+		});
+		if (inner !== this.#width && anchor !== undefined) this.#offset = Math.max(0, sources.indexOf(anchor));
+		this.#width = inner;
+		this.#sourceLines = sources;
+		this.#length = lines.length;
+		this.#capacity = Math.max(1, this.rows() - 10);
+		this.#offset = Math.min(this.#offset, Math.max(0, this.#length - this.#capacity));
+		const overflow = this.#length > this.#capacity;
+		return selectorFrame(
+			width,
+			this.rows(),
+			this.title,
+			this.purpose,
+			[],
+			lines.slice(this.#offset, this.#offset + this.#capacity).map(content => ({ content, selected: false })),
+			[],
+			[
+				...(overflow
+					? [
+							`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: details ${this.#offset + 1}–${Math.min(this.#length, this.#offset + this.#capacity)} of ${this.#length}`,
+						]
+					: []),
+				selectorCancelHint("close"),
+			],
+		);
+	}
+	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
+		if (!this.#closed && event.wheel !== null && !event.release)
+			this.#offset = Math.max(0, Math.min(Math.max(0, this.#length - this.#capacity), this.#offset + event.wheel));
+	}
+	handleInput(data: string): void {
+		if (this.#closed) return;
+		if (matchesSelectorKey(data, "cancel")) {
+			this.#closed = true;
+			this.onClose();
+			return;
+		}
+		const delta = matchesSelectorKey(data, "pageDown")
+			? this.#capacity
+			: matchesSelectorKey(data, "pageUp")
+				? -this.#capacity
+				: matchesSelectorKey(data, "down")
+					? 1
+					: matchesSelectorKey(data, "up")
+						? -1
+						: 0;
+		this.#offset = Math.max(0, Math.min(Math.max(0, this.#length - this.#capacity), this.#offset + delta));
+	}
+}
+
 export class ConnectionChoiceComponent extends Container {
 	#selected = 0;
 	constructor(
@@ -279,7 +390,7 @@ export class ConnectionInputComponent extends Container {
 			[],
 			this.content.render(inner),
 			[...wrapTextWithAnsi(this.purpose, inner).slice(0, 3), ...this.input.render(inner)],
-			[`${selectorKeys("confirm")}: submit · ${selectorCancelHint("cancel")}`],
+			[selectorNavigationHint("submit"), selectorCancelHint("cancel")],
 		);
 	}
 	handleInput(data: string): void {

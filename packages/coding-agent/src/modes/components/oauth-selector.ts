@@ -11,6 +11,7 @@ import {
 	selectorCancelHint,
 	selectorFrame,
 	selectorFrameContentWidth,
+	selectorKeys,
 	selectorNavigationHint,
 	selectorRow,
 } from "./selector-frame";
@@ -104,6 +105,9 @@ export class OAuthSelectorComponent extends Container {
 	stopValidation(): void {
 		this.#validationGeneration += 1;
 		this.#stopSpinner();
+	}
+	resumeValidation(): void {
+		this.#startValidation();
 	}
 	#loadProviders(providers?: LoginOption[], catalogProviders?: LoginOption[]): void {
 		const defaultProviders =
@@ -361,7 +365,13 @@ export class OAuthSelectorComponent extends Container {
 			body,
 			details,
 			[selectorNavigationHint(), selectorCancelHint(this.#searchInput.getValue() ? "clear search" : "back")],
-			{ selectedBodyIndex, stickyBodyRows },
+			{
+				selectedBodyIndex,
+				stickyBodyRows,
+				overflowHint: this.#detailsProvider
+					? undefined
+					: `${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: page`,
+			},
 		);
 	}
 

@@ -1,4 +1,5 @@
 import { logger } from "@f5-sales-demo/pi-utils";
+import { resolveBrowserConnectUrl } from "../tools/browser";
 import {
 	type AcquireAction,
 	acquirePage,
@@ -35,10 +36,11 @@ export interface BrowserProvider {
 type Settings = { get(key: string): unknown };
 const DEBUG_PORT = 9222;
 
-/** Probe the loopback debug endpoint without attaching. */
-async function probeDebuggableDefault(): Promise<boolean> {
+/** Probe the selected loopback debug endpoint without attaching. */
+async function probeDebuggableDefault(settings: Settings): Promise<boolean> {
 	try {
-		const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`);
+		const endpoint = resolveBrowserConnectUrl(settings) ?? `http://127.0.0.1:${DEBUG_PORT}`;
+		const r = await fetch(new URL("/json/version", endpoint));
 		return r.ok;
 	} catch {
 		return false;
@@ -46,7 +48,7 @@ async function probeDebuggableDefault(): Promise<boolean> {
 }
 
 const DETAIL: Record<AcquireAction, string> = {
-	attach: "A debuggable Chrome is reachable on 127.0.0.1:9222 — xcsh will attach and co-drive it.",
+	attach: "A debuggable Chrome is reachable on the selected loopback endpoint — xcsh will attach and co-drive it.",
 	launch: "Chrome is installed and not running — xcsh will launch it on your real profile with a loopback debug port.",
 	relaunch:
 		"Your Chrome is running without a debug port — xcsh will gracefully quit and reopen it on your real profile (consent granted).",
@@ -80,7 +82,7 @@ export class CdpBrowserProvider implements BrowserProvider {
 	) {
 		this.#settings = settings;
 		this.#probes = probes ?? {
-			probeDebuggable: probeDebuggableDefault,
+			probeDebuggable: () => probeDebuggableDefault(settings),
 			chromeRunning: () => isChromeRunning(),
 			chromeInstalled: () => locateChrome({ settings }) != null,
 		};

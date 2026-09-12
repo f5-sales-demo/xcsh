@@ -327,7 +327,7 @@ describe("OAuthSelectorComponent provider search", () => {
 
 		expect(rendered).toContain(`Search providers (1/${providerCount})`);
 		expect(rendered).toContain("Search providers");
-		expect(rendered).toContain("Enter: select");
+		expect(rendered).not.toContain("Enter: select");
 		expect(rendered).toContain("Subscriptions");
 	});
 
@@ -373,7 +373,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (let index = 0; index < 11; index += 1) selector.handleInput("\x1b[B");
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Enter: select");
+		expect(rendered).not.toContain("Enter: select");
 		expect(rendered).not.toContain("Anthropic");
 		expect(rendered).toContain(`Search providers (12/${getLoginOptions().length})`);
 	});

@@ -144,7 +144,9 @@ export interface FileSlashCommand {
 	content: string;
 	source: string; // e.g., "via xcsh (User)"
 	/** Source metadata for display */
-	_source?: { providerName: string; level: "user" | "project" | "native" };
+	_source?: { providerName: string; level: "user" | "project" | "native"; path: string };
+	/** Lower-precedence prompt definitions hidden by this active command. */
+	shadowedSources?: string[];
 }
 
 /** A slash command as a CLIENT sees it: enough to render a menu entry, nothing more. */
@@ -200,6 +202,13 @@ export interface LoadSlashCommandsOptions {
  */
 export async function loadSlashCommands(options: LoadSlashCommandsOptions = {}): Promise<FileSlashCommand[]> {
 	const result = await loadCapability<SlashCommand>(slashCommandCapability.id, { cwd: options.cwd });
+	const shadowedByName = new Map<string, string[]>();
+	for (const command of result.all) {
+		if (!command._shadowed) continue;
+		const sources = shadowedByName.get(command.name) ?? [];
+		sources.push(`${command._source.providerName} (${command.level} prompt expansion)`);
+		shadowedByName.set(command.name, sources);
+	}
 
 	const fileCommands: FileSlashCommand[] = result.items.map(cmd => {
 		const { description, body } = parseCommandTemplate(cmd.content, {
@@ -216,14 +225,21 @@ export async function loadSlashCommands(options: LoadSlashCommandsOptions = {}):
 			description,
 			content: body,
 			source: sourceStr,
-			_source: { providerName: cmd._source.providerName, level: cmd.level },
+			_source: { providerName: cmd._source.providerName, level: cmd.level, path: cmd._source.path },
+			...(shadowedByName.has(cmd.name) ? { shadowedSources: shadowedByName.get(cmd.name) } : {}),
 		};
 	});
 
 	const seenNames = new Set(fileCommands.map(cmd => cmd.name));
 	for (const cmd of EMBEDDED_SLASH_COMMANDS) {
 		const name = cmd.name.replace(/\.md$/, "");
-		if (seenNames.has(name)) continue;
+		if (seenNames.has(name)) {
+			const active = fileCommands.find(command => command.name === name);
+			if (active) {
+				active.shadowedSources = [...(active.shadowedSources ?? []), "xcsh bundled (native prompt expansion)"];
+			}
+			continue;
+		}
 
 		const { description, body } = parseCommandTemplate(cmd.content, {
 			source: `embedded:${cmd.name}`,
@@ -234,6 +250,7 @@ export async function loadSlashCommands(options: LoadSlashCommandsOptions = {}):
 			description,
 			content: body,
 			source: "bundled",
+			_source: { providerName: "xcsh", level: "native", path: `embedded:${cmd.name}` },
 		});
 		seenNames.add(name);
 	}

@@ -133,6 +133,7 @@ export interface InteractiveModeContext {
 
 	// Event handling
 	handleBackgroundEvent(event: AgentSessionEvent): Promise<void>;
+	beginBackgroundCompletionTracking(): void;
 
 	// UI helpers
 	showStatus(message: string, options?: { dim?: boolean }): void;
@@ -173,16 +174,16 @@ export interface InteractiveModeContext {
 	// Command handling
 	handleExportCommand(text: string): Promise<void>;
 	handleShareCommand(): Promise<void>;
-	handleCopyCommand(sub?: string): void;
+	handleCopyCommand(sub?: string): Promise<void>;
 	handleOpenCommand(args?: string): Promise<void>;
 	handleMediaCommand(text: string): void;
 	handleSessionCommand(): Promise<void>;
 	handleJobsCommand(): Promise<void>;
 	handleUsageCommand(reports?: UsageReport[] | null): Promise<void>;
 	handleChangelogCommand(showFull?: boolean): Promise<void>;
-	handleHotkeysCommand(): void;
-	handleToolsCommand(): void;
-	handleDumpCommand(): void;
+	handleHotkeysCommand(): Promise<void>;
+	handleToolsCommand(): Promise<void>;
+	handleDumpCommand(): Promise<void>;
 	handleDebugTranscriptCommand(): Promise<void>;
 	handleClearCommand(): Promise<void>;
 	handleForkCommand(): Promise<void>;
@@ -208,8 +209,7 @@ export interface InteractiveModeContext {
 	showExtensionsDashboard(): void;
 	showAgentsDashboard(): void;
 	showModelSelector(options?: { temporaryOnly?: boolean }): void;
-	showPluginSelector(mode?: "install" | "uninstall"): void;
-	showPluginDashboard(): void;
+	showPluginDashboard(initialTab?: "installed" | "discover"): void;
 	showUserMessageSelector(): void;
 	showTreeSelector(): void;
 	showSessionSelector(): void;
@@ -232,6 +232,8 @@ export interface InteractiveModeContext {
 	handleBtwCommand(question: string): Promise<void>;
 	hasActiveBtw(): boolean;
 	handleBtwEscape(): boolean;
+	handleBtwInterrupt(): boolean;
+	prepareBtwForBackground(): boolean;
 	cycleThinkingLevel(): void;
 	cycleRoleModel(options?: { temporary?: boolean }): Promise<void>;
 	toggleToolOutputExpansion(): void;
@@ -273,7 +275,7 @@ export interface InteractiveModeContext {
 			keybindings: KeybindingsManager,
 			done: (result: T) => void,
 		) => (Component & { dispose?(): void }) | Promise<Component & { dispose?(): void }>,
-		options?: { overlay?: boolean },
+		options?: { overlay?: boolean; fullscreen?: boolean },
 	): Promise<T>;
 	showExtensionError(extensionPath: string, error: string): void;
 	showToolError(toolName: string, error: string): void;

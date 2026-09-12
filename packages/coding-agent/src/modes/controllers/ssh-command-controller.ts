@@ -3,21 +3,90 @@
  *
  * Handles /ssh subcommands for managing SSH host configurations.
  */
-import { Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getProjectDir, getSSHConfigPath, t } from "@f5-sales-demo/pi-utils";
 import { type SSHHost, sshCapability } from "../../capability/ssh";
 import { loadCapability } from "../../discovery";
 import { addSSHHost, readSSHConfigFile, removeSSHHost, type SSHHostConfig } from "../../ssh/config-writer";
 import { shortenPath } from "../../tools/render-utils";
-import { DynamicBorder } from "../components/dynamic-border";
+import type { ActionReview } from "../components/reviewed-action";
+import { runReviewedAction } from "../components/reviewed-action-dialog";
+import { ReportDetailsComponent } from "../components/selector-frame";
 import { parseCommandArgs } from "../shared";
 import { theme } from "../theme/theme";
 import type { InteractiveModeContext } from "../types";
 
 type SSHAddScope = "user" | "project";
 
+export interface SSHCommandDependencies {
+	projectDir(): string;
+	configPath(scope: SSHAddScope, cwd: string): string;
+	readConfig(filePath: string): ReturnType<typeof readSSHConfigFile>;
+	addHost(filePath: string, name: string, config: SSHHostConfig): Promise<void>;
+	removeHost(filePath: string, name: string): Promise<void>;
+	loadHosts(cwd: string): ReturnType<typeof loadCapability<SSHHost>>;
+}
+
+const defaultDependencies: SSHCommandDependencies = {
+	projectDir: getProjectDir,
+	configPath: getSSHConfigPath,
+	readConfig: readSSHConfigFile,
+	addHost: addSSHHost,
+	removeHost: removeSSHHost,
+	loadHosts: cwd => loadCapability<SSHHost>(sshCapability.id, { cwd }),
+};
+
+interface SSHReviewTarget {
+	filePath: string;
+	name: string;
+	scope: SSHAddScope;
+	config: SSHHostConfig;
+}
+
+function sshConfigSummary(config: SSHHostConfig): string {
+	return [
+		config.username ? `${config.username}@${config.host}` : config.host,
+		`port ${config.port ?? 22}`,
+		config.keyPath ? `key ${config.keyPath}` : "default SSH identity",
+		config.compat ? "compatibility mode" : "standard mode",
+	].join(" · ");
+}
+
+function sshReview(action: "add" | "remove", target: SSHReviewTarget, fileState: unknown): ActionReview {
+	const adding = action === "add";
+	return {
+		identity: `ssh-host:${target.scope}:${target.name}`,
+		scope: `${target.scope === "user" ? "User" : "Project"} SSH configuration · ${target.filePath}`,
+		revision: JSON.stringify({ action, fileState, target }),
+		changes: [
+			{
+				field: "Saved host",
+				before: adding ? "Absent" : sshConfigSummary(target.config),
+				after: adding ? sshConfigSummary(target.config) : "Removed",
+			},
+			...(target.config.description
+				? [
+						{
+							field: "Description",
+							before: adding ? "Absent" : target.config.description,
+							after: adding ? target.config.description : "Removed",
+						},
+					]
+				: []),
+		],
+		consequence: adding
+			? "Writes the named host to the selected configuration scope. This saves configuration only; it does not test connectivity, authenticate, or open a remote connection."
+			: "Removes only this saved host from the selected configuration scope. Existing processes or connections are not terminated.",
+	};
+}
+
 export class SSHCommandController {
-	constructor(private ctx: InteractiveModeContext) {}
+	private readonly dependencies: SSHCommandDependencies;
+	constructor(
+		private ctx: InteractiveModeContext,
+		dependencies: Partial<SSHCommandDependencies> = {},
+	) {
+		this.dependencies = { ...defaultDependencies, ...dependencies };
+	}
 
 	/**
 	 * Handle /ssh command and route to subcommands
@@ -27,7 +96,7 @@ export class SSHCommandController {
 		const subcommand = parts[1]?.toLowerCase();
 
 		if (!subcommand || subcommand === "help") {
-			this.#showHelp();
+			await this.#showHelp();
 			return;
 		}
 
@@ -50,7 +119,7 @@ export class SSHCommandController {
 	/**
 	 * Show help text
 	 */
-	#showHelp(): void {
+	async #showHelp(): Promise<void> {
 		const helpText = [
 			"",
 			theme.bold("SSH Host Management"),
@@ -65,7 +134,7 @@ export class SSHCommandController {
 			"",
 		].join("\n");
 
-		this.#showMessage(helpText);
+		await this.#showReport("SSH host management", "Commands and saved-configuration behavior", helpText);
 	}
 
 	/**
@@ -187,35 +256,30 @@ export class SSHCommandController {
 		}
 
 		try {
-			const cwd = getProjectDir();
-			const filePath = getSSHConfigPath(scope, cwd);
-
 			const hostConfig: SSHHostConfig = { host };
 			if (username) hostConfig.username = username;
 			if (port) hostConfig.port = port;
 			if (keyPath) hostConfig.keyPath = keyPath;
 			if (description) hostConfig.description = description;
 			if (compat) hostConfig.compat = true;
-
-			await addSSHHost(filePath, name, hostConfig);
-
-			const scopeLabel = scope === "user" ? "user" : "project";
-			const lines = [
-				"",
-				theme.fg("success", `✓ Added SSH host "${name}" to ${scopeLabel} config`),
-				"",
-				`  Host: ${host}`,
-			];
-			if (username) lines.push(`  User: ${username}`);
-			if (port) lines.push(`  Port: ${port}`);
-			if (keyPath) lines.push(`  Key:  ${keyPath}`);
-			if (description) lines.push(`  Desc: ${description}`);
-			if (compat) lines.push(`  Compat: true`);
-			lines.push("");
-			lines.push(theme.fg("muted", `Run ${theme.fg("contentAccent", "/ssh list")} to see all configured hosts.`));
-			lines.push("");
-
-			this.#showMessage(lines.join("\n"));
+			const prepare = async (): Promise<{ review: ActionReview; target: SSHReviewTarget }> => {
+				const filePath = this.dependencies.configPath(scope, this.dependencies.projectDir());
+				const current = await this.dependencies.readConfig(filePath);
+				if (current.hosts?.[name]) throw new Error(`SSH host "${name}" already exists in ${scope} scope.`);
+				const target = { filePath, name, scope, config: hostConfig };
+				return { review: sshReview("add", target, current), target };
+			};
+			const prepared = await prepare();
+			const outcome = await runReviewedAction(this.ctx, "SSH host addition", {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => this.dependencies.addHost(target.filePath, target.name, target.config),
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "succeeded")
+				this.ctx.showStatus(`Saved SSH host "${name}" in ${scope} configuration. Connectivity was not tested.`);
+			else if (outcome === "unresolved")
+				this.ctx.showError(`SSH host addition for "${name}" remains unresolved. Reopen the command to retry.`);
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
 
@@ -233,15 +297,15 @@ export class SSHCommandController {
 	 */
 	async #handleList(): Promise<void> {
 		try {
-			const cwd = getProjectDir();
+			const cwd = this.dependencies.projectDir();
 
 			// Load from both user and project configs
-			const userPath = getSSHConfigPath("user", cwd);
-			const projectPath = getSSHConfigPath("project", cwd);
+			const userPath = this.dependencies.configPath("user", cwd);
+			const projectPath = this.dependencies.configPath("project", cwd);
 
 			const [userConfig, projectConfig] = await Promise.all([
-				readSSHConfigFile(userPath),
-				readSSHConfigFile(projectPath),
+				this.dependencies.readConfig(userPath),
+				this.dependencies.readConfig(projectPath),
 			]);
 
 			const userHosts = Object.keys(userConfig.hosts ?? {});
@@ -251,20 +315,19 @@ export class SSHCommandController {
 			const configHostNames = new Set([...userHosts, ...projectHosts]);
 			let discoveredHosts: SSHHost[] = [];
 			try {
-				const result = await loadCapability<SSHHost>(sshCapability.id, { cwd });
+				const result = await this.dependencies.loadHosts(cwd);
 				discoveredHosts = result.items.filter(h => !configHostNames.has(h.name));
 			} catch {
 				// Ignore discovery errors
 			}
 
 			if (userHosts.length === 0 && projectHosts.length === 0 && discoveredHosts.length === 0) {
-				this.#showMessage(
+				await this.#showReport(
+					t("ssh.list.title"),
+					"Saved and discovered SSH hosts",
 					[
-						"",
 						theme.fg("muted", t("ssh.list.noneConfigured")),
-						"",
 						`Use ${theme.fg("contentAccent", "/ssh add")} to add a host.`,
-						"",
 					].join("\n"),
 				);
 				return;
@@ -332,7 +395,7 @@ export class SSHCommandController {
 				}
 			}
 
-			this.#showMessage(lines.join("\n"));
+			await this.#showReport(t("ssh.list.title"), "Saved scope, source, and connection target", lines.join("\n"));
 		} catch (error) {
 			this.ctx.showError(t("ssh.list.failed", { message: error instanceof Error ? error.message : String(error) }));
 		}
@@ -388,19 +451,25 @@ export class SSHCommandController {
 		}
 
 		try {
-			const cwd = getProjectDir();
-			const filePath = getSSHConfigPath(scope, cwd);
-			const config = await readSSHConfigFile(filePath);
-			if (!config.hosts?.[name]) {
-				this.ctx.showError(t("ssh.remove.notFound", { name, scope }));
-				return;
-			}
-
-			await removeSSHHost(filePath, name);
-
-			this.#showMessage(
-				["", theme.fg("success", `✓ Removed SSH host "${name}" from ${scope} config`), ""].join("\n"),
-			);
+			const prepare = async (): Promise<{ review: ActionReview; target: SSHReviewTarget }> => {
+				const filePath = this.dependencies.configPath(scope, this.dependencies.projectDir());
+				const current = await this.dependencies.readConfig(filePath);
+				const host = current.hosts?.[name];
+				if (!host) throw new Error(t("ssh.remove.notFound", { name, scope }));
+				const target = { filePath, name, scope, config: host };
+				return { review: sshReview("remove", target, current), target };
+			};
+			const prepared = await prepare();
+			const outcome = await runReviewedAction(this.ctx, "SSH host removal", {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => this.dependencies.removeHost(target.filePath, target.name),
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "succeeded")
+				this.ctx.showStatus(`Removed SSH host "${name}" from ${scope} configuration.`);
+			else if (outcome === "unresolved")
+				this.ctx.showError(`SSH host removal for "${name}" remains unresolved. Reopen the command to retry.`);
 		} catch (error) {
 			this.ctx.showError(
 				t("ssh.remove.failed", { message: error instanceof Error ? error.message : String(error) }),
@@ -411,11 +480,16 @@ export class SSHCommandController {
 	/**
 	 * Show a message in the chat
 	 */
-	#showMessage(text: string): void {
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.chatContainer.addChild(new Text(text, 1, 1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.ui.requestRender();
+	async #showReport(title: string, purpose: string, text: string): Promise<void> {
+		await this.ctx.showHookCustom<void>(
+			(ui, _theme, _keys, done) =>
+				new ReportDetailsComponent(
+					title,
+					purpose,
+					text.trim(),
+					() => done(),
+					() => ui.terminal.rows,
+				),
+		);
 	}
 }

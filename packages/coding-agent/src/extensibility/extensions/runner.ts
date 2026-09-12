@@ -60,6 +60,16 @@ interface BeforeAgentStartCombinedResult {
 
 export type ExtensionErrorListener = (error: ExtensionError) => void;
 
+/** Internal command-discovery metadata used by the terminal autocomplete. */
+export interface RegisteredCommandEntry {
+	command: RegisteredCommand;
+	extensionPath: string;
+	extensionLabel?: string;
+	/** Later-loaded extensions have runtime precedence for the same command name. */
+	shadowed: boolean;
+	shadowedBy?: string;
+}
+
 /**
  * Events handled by the generic emit() method.
  * Events with dedicated emitXxx() methods are excluded for stronger type safety.
@@ -358,10 +368,25 @@ export class ExtensionRunner {
 	}
 
 	getRegisteredCommands(reserved?: Set<string>): RegisteredCommand[] {
+		return this.getRegisteredCommandEntries(reserved)
+			.filter(entry => !entry.shadowed)
+			.map(entry => entry.command);
+	}
+
+	/**
+	 * Return command registrations in runtime-precedence order with their owning
+	 * extension identity. This is deliberately separate from the public command
+	 * callback shape: discovery UIs need provenance and shadowing, while plugins
+	 * continue to register the same `RegisteredCommand` contract.
+	 */
+	getRegisteredCommandEntries(reserved?: Set<string>): RegisteredCommandEntry[] {
 		this.#commandDiagnostics = [];
 
-		const commands = new Map<string, RegisteredCommand>();
-		for (const ext of this.extensions) {
+		const entries: RegisteredCommandEntry[] = [];
+		const winners = new Map<string, RegisteredCommandEntry>();
+		for (let index = this.extensions.length - 1; index >= 0; index -= 1) {
+			const ext = this.extensions[index];
+			if (!ext) continue;
 			for (const command of ext.commands.values()) {
 				if (reserved?.has(command.name)) {
 					const message = `Extension command '${command.name}' from ${ext.path} conflicts with built-in commands. Skipping.`;
@@ -372,10 +397,19 @@ export class ExtensionRunner {
 					continue;
 				}
 
-				commands.set(command.name, command);
+				const winner = winners.get(command.name);
+				const entry: RegisteredCommandEntry = {
+					command,
+					extensionPath: ext.path,
+					extensionLabel: ext.label,
+					shadowed: winner !== undefined,
+					...(winner ? { shadowedBy: winner.extensionLabel ?? winner.extensionPath } : {}),
+				};
+				entries.push(entry);
+				if (!winner) winners.set(command.name, entry);
 			}
 		}
-		return [...commands.values()];
+		return entries;
 	}
 
 	getCommandDiagnostics(): Array<{ type: string; message: string; path: string }> {

@@ -1,141 +1,159 @@
-import { type Component, Container, matchesKey, Spacer, Text, truncateToWidth } from "@f5-sales-demo/pi-tui";
+import {
+	Container,
+	Input,
+	type MouseRoutable,
+	matchesKey,
+	type SgrMouseEvent,
+	wrapTextWithAnsi,
+} from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
-import { matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
-import { DynamicBorder } from "./dynamic-border";
+import { fuzzyFilter } from "../../utils/fuzzy";
+import {
+	matchesSelectorKey,
+	type SelectorFrameLine,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+	selectorRow,
+} from "./selector-frame";
 
 interface UserMessageItem {
-	id: string; // Entry ID in the session
-	text: string; // The message text
-	timestamp?: string; // Optional timestamp if available
+	id: string;
+	text: string;
+	timestamp?: string;
 }
 
-/**
- * Custom user message list component with selection
- */
-class UserMessageList implements Component {
-	#selectedIndex: number = 0;
-	onSelect?: (entryId: string) => void;
-	onCancel?: () => void;
-	#maxVisible: number = 10; // Max messages visible
-
-	constructor(private readonly messages: UserMessageItem[]) {
-		// Store messages in chronological order (oldest to newest)
-		// Start with the last (most recent) message selected
-		this.#selectedIndex = Math.max(0, this.messages.length - 1);
+export class UserMessageSelectorComponent extends Container implements MouseRoutable {
+	#filtered: UserMessageItem[];
+	#selected = 0;
+	#search = new Input();
+	#detail: UserMessageItem | undefined;
+	#capacity = 1;
+	#hitRows = new Map<number, number>();
+	constructor(
+		private readonly messages: UserMessageItem[],
+		private readonly onSelect: (entryId: string) => void | Promise<void>,
+		private readonly onCancel: () => void,
+		private readonly rows: () => number = () => process.stdout.rows || 24,
+	) {
+		super();
+		this.#filtered = messages;
+		this.#selected = Math.max(0, messages.length - 1);
+		this.#search.onEscape = () => {};
+		if (messages.length === 0) setTimeout(onCancel, 100);
 	}
 
-	invalidate(): void {
-		// No cached state to invalidate currently
+	#filter(): void {
+		this.#filtered = fuzzyFilter(this.messages, this.#search.getValue(), message => `${message.id} ${message.text}`);
+		this.#selected = Math.min(this.#selected, Math.max(0, this.#filtered.length - 1));
 	}
 
-	render(width: number): string[] {
-		const lines: string[] = [];
-
-		if (this.messages.length === 0) {
-			lines.push(theme.fg("muted", "  No user messages found"));
-			return lines;
+	override render(width: number): string[] {
+		const inner = selectorFrameContentWidth(width);
+		if (this.#detail) {
+			return selectorFrame(
+				width,
+				this.rows(),
+				"Branch point details",
+				`Session node · ${this.#detail.id}`,
+				[],
+				[selectorRow(["Create branch here"], [inner - 2], true)],
+				wrapTextWithAnsi(this.#detail.text, inner),
+				[selectorCancelHint("back")],
+				{ selectedBodyIndex: 0 },
+			);
 		}
-
-		// Calculate visible range with scrolling
-		const startIndex = Math.max(
+		this.#capacity = Math.max(1, this.rows() - 10);
+		const start = Math.max(
 			0,
-			Math.min(this.#selectedIndex - Math.floor(this.#maxVisible / 2), this.messages.length - this.#maxVisible),
+			Math.min(this.#selected - Math.floor(this.#capacity / 2), this.#filtered.length - this.#capacity),
 		);
-		const endIndex = Math.min(startIndex + this.#maxVisible, this.messages.length);
-
-		// Render visible messages (2 lines per message + blank line)
-		for (let i = startIndex; i < endIndex; i++) {
-			const message = this.messages[i];
-			const isSelected = i === this.#selectedIndex;
-
-			// Normalize message to single line
-			const normalizedMessage = message.text.replace(/\n/g, " ").trim();
-
-			// First line: cursor + message
-			const cursor = isSelected ? theme.fg("chromeAccent", "› ") : "  ";
-			const maxMsgWidth = width - 2; // Account for cursor (2 chars)
-			const truncatedMsg = truncateToWidth(normalizedMessage, maxMsgWidth);
-			const messageLine = cursor + (isSelected ? theme.bold(truncatedMsg) : truncatedMsg);
-
-			lines.push(messageLine);
-
-			// Second line: metadata (position in history)
-			const position = i + 1;
-			const metadata = `  Message ${position} of ${this.messages.length}`;
-			const metadataLine = theme.fg("muted", metadata);
-			lines.push(metadataLine);
-			lines.push(""); // Blank line between messages
+		const end = Math.min(this.#filtered.length, start + this.#capacity);
+		const body: SelectorFrameLine[] = [
+			`Search: ${theme.nav.cursor} ${this.#search.render(Math.max(1, inner - 10))[0] ?? ""}`,
+		];
+		if (this.#filtered.length === 0)
+			body.push(theme.fg("muted", this.#search.getValue() ? "No matching branch points" : "No user messages"));
+		else
+			body.push(
+				...this.#filtered
+					.slice(start, end)
+					.map((message, index) =>
+						selectorRow(
+							[`${start + index + 1}. ${message.text.replace(/\s+/g, " ").trim()}`, message.id.slice(-8)],
+							[Math.max(8, inner - 14), 10],
+							start + index === this.#selected,
+						),
+					),
+			);
+		const lines = selectorFrame(
+			width,
+			this.rows(),
+			"Branch from message",
+			"Inspect an exact user-message node before creating a new session branch",
+			[],
+			body,
+			[],
+			[
+				selectorCancelHint("back"),
+				...(this.#filtered.length > this.#capacity
+					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: page`]
+					: []),
+			],
+			{ selectedBodyIndex: this.#selected - start + 1, stickyBodyRows: 1 },
+		);
+		this.#hitRows.clear();
+		for (let index = start; index < end; index++) {
+			const marker = this.#filtered[index].id.slice(-8);
+			const row = lines.findIndex(line => Bun.stripANSI(line).includes(marker));
+			if (row >= 0) this.#hitRows.set(row, index);
 		}
-
-		// Add scroll indicator if needed
-		if (startIndex > 0 || endIndex < this.messages.length) {
-			const scrollInfo = theme.fg("muted", `  (${this.#selectedIndex + 1}/${this.messages.length})`);
-			lines.push(scrollInfo);
-		}
-
 		return lines;
 	}
 
-	handleInput(keyData: string): void {
-		// Up arrow - go to previous (older) message, wrap to bottom when at top
-		if (matchesKey(keyData, "up")) {
-			this.#selectedIndex = this.#selectedIndex === 0 ? this.messages.length - 1 : this.#selectedIndex - 1;
+	handleInput(data: string): void {
+		if (this.#detail) {
+			if (matchesSelectorKey(data, "cancel")) this.#detail = undefined;
+			else if (matchesSelectorKey(data, "confirm")) void this.onSelect(this.#detail.id);
+			return;
 		}
-		// Down arrow - go to next (newer) message, wrap to top when at bottom
-		else if (matchesKey(keyData, "down")) {
-			this.#selectedIndex = this.#selectedIndex === this.messages.length - 1 ? 0 : this.#selectedIndex + 1;
+		if (matchesSelectorKey(data, "cancel")) {
+			if (this.#search.getValue()) {
+				this.#search.setValue("");
+				this.#filter();
+			} else this.onCancel();
+			return;
 		}
-		// Enter - select message and branch
-		else if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
-			const selected = this.messages[this.#selectedIndex];
-			if (selected && this.onSelect) {
-				this.onSelect(selected.id);
-			}
+		if (matchesKey(data, "ctrl+c")) return;
+		if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
+			if (this.#filtered.length === 0) return;
+			const delta = matchesSelectorKey(data, "up") ? -1 : 1;
+			this.#selected = (this.#selected + delta + this.#filtered.length) % this.#filtered.length;
+			return;
 		}
-		// Escape / cancel
-		else if (matchesSelectCancel(keyData)) {
-			if (this.onCancel) {
-				this.onCancel();
-			}
+		if (matchesSelectorKey(data, "pageUp") || matchesSelectorKey(data, "pageDown")) {
+			const delta = matchesSelectorKey(data, "pageUp") ? -this.#capacity : this.#capacity;
+			this.#selected = Math.max(0, Math.min(this.#filtered.length - 1, this.#selected + delta));
+			return;
 		}
-	}
-}
-
-/**
- * Component that renders a user message selector for branching
- */
-export class UserMessageSelectorComponent extends Container {
-	#messageList: UserMessageList;
-
-	constructor(messages: UserMessageItem[], onSelect: (entryId: string) => void, onCancel: () => void) {
-		super();
-
-		// Add header
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.bold("Branch from Message"), 1, 0));
-		this.addChild(new Text(theme.fg("muted", "Select a message to create a new branch from that point"), 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
-		this.addChild(new Spacer(1));
-
-		// Create message list
-		this.#messageList = new UserMessageList(messages);
-		this.#messageList.onSelect = onSelect;
-		this.#messageList.onCancel = onCancel;
-
-		this.addChild(this.#messageList);
-
-		// Add bottom border
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
-
-		// Auto-cancel if no messages
-		if (messages.length === 0) {
-			setTimeout(() => onCancel(), 100);
+		if (matchesSelectorKey(data, "confirm")) {
+			this.#detail = this.#filtered[this.#selected];
+			return;
 		}
+		this.#search.handleInput(data);
+		this.#filter();
 	}
 
-	getMessageList(): UserMessageList {
-		return this.#messageList;
+	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
+		if (this.#detail || !event.leftClick) return;
+		const index = this.#hitRows.get(event.row);
+		if (index === undefined) return;
+		this.#selected = index;
+		this.#detail = this.#filtered[index];
+	}
+
+	getMessageList(): UserMessageSelectorComponent {
+		return this;
 	}
 }

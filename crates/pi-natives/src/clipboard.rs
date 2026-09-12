@@ -5,6 +5,8 @@
 //! This avoids worker-thread `AppKit` pasteboard warnings in CLI contexts.
 
 use std::io::Cursor;
+#[cfg(target_os = "linux")]
+use std::{cell::RefCell, collections::HashMap};
 
 use arboard::{Clipboard, Error as ClipboardError, ImageData};
 use image::{DynamicImage, ImageFormat, RgbaImage};
@@ -12,6 +14,13 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
 use crate::task;
+
+// X11 and Wayland serve copied data from the owning application. Dropping the
+// last Clipboard immediately after set_text discards ownership without a manager.
+#[cfg(target_os = "linux")]
+thread_local! {
+	static TEXT_CLIPBOARDS: RefCell<HashMap<usize, Clipboard>> = RefCell::new(HashMap::new());
+}
 
 /// Clipboard image payload encoded as PNG bytes.
 #[napi(object)]
@@ -46,13 +55,39 @@ fn encode_png(image: ImageData<'_>) -> Result<Vec<u8>> {
 /// # Errors
 /// Returns an error if clipboard access fails.
 #[napi]
-pub fn copy_to_clipboard(text: String) -> Result<()> {
-	let mut clipboard = Clipboard::new()
-		.map_err(|err| Error::from_reason(format!("Failed to access clipboard: {err}")))?;
-	clipboard
-		.set_text(text)
-		.map_err(|err| Error::from_reason(format!("Failed to copy to clipboard: {err}")))?;
-	Ok(())
+pub fn copy_to_clipboard(env: Env, text: String) -> Result<()> {
+	#[cfg(target_os = "linux")]
+	{
+		TEXT_CLIPBOARDS.with(|clipboards| {
+			let mut clipboards = clipboards.borrow_mut();
+			let id = env.raw() as usize;
+			if let std::collections::hash_map::Entry::Vacant(entry) = clipboards.entry(id) {
+				let clipboard = Clipboard::new()
+					.map_err(|err| Error::from_reason(format!("Failed to access clipboard: {err}")))?;
+				env.add_env_cleanup_hook(id, |id| {
+					TEXT_CLIPBOARDS.with(|clipboards| {
+						clipboards.borrow_mut().remove(&id);
+					});
+				})?;
+				entry.insert(clipboard);
+			}
+			clipboards
+				.get_mut(&id)
+				.expect("clipboard inserted")
+				.set_text(text)
+				.map_err(|err| Error::from_reason(format!("Failed to copy to clipboard: {err}")))
+		})
+	}
+	#[cfg(not(target_os = "linux"))]
+	{
+		let _ = env;
+		let mut clipboard = Clipboard::new()
+			.map_err(|err| Error::from_reason(format!("Failed to access clipboard: {err}")))?;
+		clipboard
+			.set_text(text)
+			.map_err(|err| Error::from_reason(format!("Failed to copy to clipboard: {err}")))?;
+		Ok(())
+	}
 }
 
 /// Read an image from the system clipboard.

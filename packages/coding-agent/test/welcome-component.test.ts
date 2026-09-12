@@ -23,10 +23,17 @@ describe("WelcomeComponent", () => {
 		expect(renderPlain(c).join("\n")).toContain("xcsh v15.15.0");
 	});
 
-	it("renders the F5 logo", () => {
-		const c = new WelcomeComponent("15.15.0");
+	it("renders the full F5 logo when the terminal has room", () => {
+		const c = new WelcomeComponent("15.15.0", () => 80);
 		// The logo is drawn with block glyphs; #f5ColorLine keeps █ after ANSI strip.
 		expect(renderPlain(c).join("\n")).toContain("█");
+	});
+	it("renders the compact F5 mark on a standard-height terminal", () => {
+		const c = new WelcomeComponent("15.15.0", () => 24);
+		const lines = renderPlain(c);
+		expect(lines.join("\n")).toContain("F5");
+		expect(lines.join("\n")).not.toContain("█");
+		expect(lines.length).toBeLessThanOrEqual(6);
 	});
 
 	it("returns empty for a narrow terminal", () => {

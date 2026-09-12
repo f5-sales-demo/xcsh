@@ -728,9 +728,9 @@ describe("statusline tracks the session root, not global shellPwd (PR #120 regre
 			"utf8",
 		);
 		// /move must sync the global shellPwd so getShellPwd() stays current
-		expect(src).toContain("setShellPwd(resolvedPath)");
+		expect(src).toContain("setShellPwd(destination)");
 		// /move must update the statusline's #cwd directly
-		expect(src).toContain("this.ctx.statusLine.setCwd(resolvedPath)");
+		expect(src).toContain("this.ctx.statusLine.setCwd(destination)");
 	});
 
 	it("status-line.ts git queries resolve against this.#cwd, not getShellPwd()", async () => {

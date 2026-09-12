@@ -7,7 +7,7 @@ import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { ModelRegistry } from "../src/config/model-registry";
 import { _resetSettingsForTest, Settings } from "../src/config/settings";
-import { applyModelSelection } from "../src/modes/controllers/model-selection";
+import { applyModelSelection, prepareModelSelection } from "../src/modes/controllers/model-selection";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
@@ -17,7 +17,7 @@ afterEach(async () => {
 	for (const close of cleanups.splice(0).reverse()) await close();
 	_resetSettingsForTest();
 });
-async function harness() {
+async function harness(options?: { persistentSession?: boolean }) {
 	_resetSettingsForTest();
 	const dir = mkdtempSync(join(tmpdir(), "model-selection-session-"));
 	cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
@@ -82,11 +82,57 @@ async function harness() {
 		agent,
 		modelRegistry: registry,
 		settings,
-		sessionManager: SessionManager.inMemory(dir),
+		sessionManager: options?.persistentSession
+			? SessionManager.create(dir, join(dir, "sessions"))
+			: SessionManager.inMemory(dir),
 	});
 	cleanups.push(() => session.dispose());
 	return { session, settings, models, requests, dir };
 }
+test("model selection proposals identify exact scope and resolve catalog identity before review", async () => {
+	const { session, models } = await harness();
+	const role = prepareModelSelection(
+		session,
+		{
+			scope: "role",
+			role: "smol",
+			model: models[1],
+			selector: "google-vertex/gemini-2.5-pro",
+			thinkingLevel: ThinkingLevel.High,
+		},
+		"fixture-session",
+	);
+	expect(role?.review.identity).toBe("model-role:smol");
+	expect(role?.review.scope).toBe("User settings · role smol");
+	expect(role?.review.changes).toEqual([
+		{ field: "User role smol", before: "Unset", after: "google-vertex/gemini-2.5-pro:high" },
+	]);
+	expect(role?.review.consequence).toContain("active conversation model is unchanged");
+
+	const conversation = prepareModelSelection(
+		session,
+		{
+			scope: "conversation",
+			model: models[1],
+			selector: "google-vertex/gemini-2.5-pro",
+			thinkingLevel: ThinkingLevel.High,
+		},
+		"fixture-session",
+	);
+	expect(conversation?.review.identity).toBe("session:fixture-session:active-model");
+	expect(conversation?.review.changes.map(change => change.field)).toEqual([
+		"Active model / reasoning",
+		"Manual routing pin",
+	]);
+	expect(
+		prepareModelSelection(session, {
+			scope: "conversation",
+			model: { ...models[1], id: "removed-model" },
+			selector: "google-vertex/removed-model",
+			thinkingLevel: ThinkingLevel.High,
+		}),
+	).toBeUndefined();
+});
 test("conversation switches route actual turns across providers and retain conversation and saved default", async () => {
 	const { session, settings, models, requests } = await harness();
 	for (const model of [models[0], models[1], models[2], models[0]]) {
@@ -144,8 +190,7 @@ test("strict settings flush surfaces real filesystem errors and retries after re
 });
 
 test("resume restores a conversation selection made before its first request", async () => {
-	const { session, models } = await harness();
-	session.sessionManager.appendModelChange("anthropic/claude-sonnet-4-5");
+	const { session, models } = await harness({ persistentSession: true });
 	await applyModelSelection(session, {
 		scope: "conversation",
 		model: models[1],
@@ -153,6 +198,13 @@ test("resume restores a conversation selection made before its first request", a
 		thinkingLevel: ThinkingLevel.High,
 	});
 	expect(session.sessionManager.buildSessionContext().models.default).toBe("google-vertex/gemini-2.5-pro");
+	const sessionFile = session.sessionManager.getSessionFile();
+	expect(sessionFile).toBeDefined();
+	expect(await Bun.file(sessionFile!).exists()).toBe(true);
+	const reopenedManager = await SessionManager.open(sessionFile!);
+	expect(reopenedManager.buildSessionContext().models.default).toBe("google-vertex/gemini-2.5-pro");
+	expect(JSON.stringify(reopenedManager.getEntries())).toContain("user_model_pin");
+	await reopenedManager.close();
 	const resumed = new AgentSession({
 		agent: new Agent({ initialState: { model: models[1], tools: [], messages: [], systemPrompt: "Test" } }),
 		settings: session.settings,
@@ -175,6 +227,39 @@ test("saving default changes current and future selections without altering othe
 	expect(session.thinkingLevel).toBe(ThinkingLevel.High);
 	expect(settings.getModelRole("default")).toBe("google-vertex/gemini-2.5-pro:high");
 	expect(await Bun.file(join(dir, "config.yml")).text()).toContain("default: google-vertex/gemini-2.5-pro:high");
+	await applyModelSelection(session, {
+		scope: "role",
+		role: "smol",
+		model: models[0],
+		selector: "anthropic/claude-sonnet-4-5",
+		thinkingLevel: ThinkingLevel.Low,
+	});
+	const sequential = Bun.YAML.parse(await Bun.file(join(dir, "config.yml")).text()) as {
+		modelRoles?: Record<string, string>;
+	};
+	expect(sequential.modelRoles?.default).toBe("google-vertex/gemini-2.5-pro:high");
+	expect(sequential.modelRoles?.smol).toBe("anthropic/claude-sonnet-4-5:low");
+});
+
+test("role saves preserve a concurrently written sibling role", async () => {
+	const { settings, dir } = await harness();
+	settings.setModelRole("default", "google-vertex/gemini-2.5-pro:high");
+	await settings.flush({ throwOnError: true });
+	const configPath = join(dir, "config.yml");
+	const external = Bun.YAML.parse(await Bun.file(configPath).text()) as Record<string, unknown>;
+	external.modelRoles = {
+		...((external.modelRoles as Record<string, string>) ?? {}),
+		slow: "anthropic/external:high",
+	};
+	await Bun.write(configPath, Bun.YAML.stringify(external));
+	settings.setModelRole("smol", "anthropic/claude-sonnet-4-5:low");
+	await settings.flush({ throwOnError: true });
+	const saved = Bun.YAML.parse(await Bun.file(configPath).text()) as { modelRoles?: Record<string, string> };
+	expect(saved.modelRoles).toMatchObject({
+		default: "google-vertex/gemini-2.5-pro:high",
+		slow: "anthropic/external:high",
+		smol: "anthropic/claude-sonnet-4-5:low",
+	});
 });
 
 test("session persistence failure restores the previous active model and routing pin", async () => {

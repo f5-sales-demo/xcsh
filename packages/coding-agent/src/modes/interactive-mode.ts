@@ -2,7 +2,9 @@
  * Interactive mode for the coding agent.
  * Handles TUI rendering and user interaction, delegating business logic to AgentSession.
  */
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import type { Agent, AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
@@ -13,8 +15,8 @@ import {
 	modelsAreEqual,
 	type UsageReport,
 } from "@f5-sales-demo/pi-ai";
-import type { Component, SlashCommand } from "@f5-sales-demo/pi-tui";
-import { Container, Loader, Markdown, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
+import type { Component } from "@f5-sales-demo/pi-tui";
+import { Container, Loader, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { KeybindingsManager } from "../config/keybindings";
@@ -45,11 +47,11 @@ import { popTerminalTitle, pushTerminalTitle, setSessionTerminalTitle } from "..
 import type { AssistantMessageComponent } from "./components/assistant-message";
 import type { BashExecutionComponent } from "./components/bash-execution";
 import { CustomEditor } from "./components/custom-editor";
-import { DynamicBorder } from "./components/dynamic-border";
 import { DisposableContainer, type GutterBlock } from "./components/gutter-block";
 import type { HookEditorComponent } from "./components/hook-editor";
 import type { HookInputComponent } from "./components/hook-input";
 import type { HookSelectorComponent } from "./components/hook-selector";
+import { PlanPreviewComponent } from "./components/plan-preview";
 import type { PythonExecutionComponent } from "./components/python-execution";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
@@ -66,22 +68,26 @@ import { SSHCommandController } from "./controllers/ssh-command-controller";
 import { OAuthManualInputManager } from "./oauth-manual-input";
 import { SessionObserverRegistry } from "./session-observer-registry";
 import { createSessionTeardown, type SessionTeardown } from "./session-teardown";
+import {
+	inferSlashCommandScope,
+	resolveSlashCommandDiscovery,
+	type SlashCommandDiscoveryCandidate,
+} from "./slash-command-discovery";
+import { suppressTerminalRestoreForBackgroundShutdown } from "./terminal-restore";
 import { setMermaidRenderCallback } from "./theme/mermaid-cache";
 import type { Theme } from "./theme/theme";
-import {
-	getEditorTheme,
-	getMarkdownTheme,
-	getSymbolTheme,
-	onTerminalAppearanceChange,
-	onThemeChange,
-	theme,
-} from "./theme/theme";
+import { getEditorTheme, getSymbolTheme, onTerminalAppearanceChange, onThemeChange, theme } from "./theme/theme";
 import type { CompactionQueuedMessage, InteractiveModeContext, SubmittedUserInput, TodoItem, TodoPhase } from "./types";
+import { appInterruptHint } from "./utils/keybinding-matchers";
 import { UiHelpers } from "./utils/ui-helpers";
 
 const EDITOR_MAX_HEIGHT_MIN = 6;
 const EDITOR_MAX_HEIGHT_MAX = 18;
 const EDITOR_RESERVED_ROWS = 12;
+
+import type { ActionReview } from "./components/reviewed-action";
+import { runReviewedAction } from "./components/reviewed-action-dialog";
+
 const EDITOR_FALLBACK_ROWS = 24;
 
 export function shouldAutoLaunchProviderLogin(
@@ -150,7 +156,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	autoCompactionLoader: Loader | undefined = undefined;
 	retryLoader: Loader | undefined = undefined;
 	#pendingWorkingMessage: string | undefined;
-	readonly #defaultWorkingMessage = `Working… (esc to interrupt)`;
+	readonly #defaultWorkingMessage = `Working… (${appInterruptHint()})`;
 	autoCompactionEscapeHandler?: () => void;
 	retryEscapeHandler?: () => void;
 	unsubscribe?: () => void;
@@ -170,7 +176,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	skillCommands: Map<string, string> = new Map();
 	oauthManualInput: OAuthManualInputManager = new OAuthManualInputManager();
 
-	#pendingSlashCommands: SlashCommand[] = [];
+	#pendingSlashCommands: SlashCommandDiscoveryCandidate[] = [];
 	#cleanupUnsubscribe?: () => void;
 	#signalTeardown?: SessionTeardown;
 	readonly #version: string;
@@ -178,6 +184,16 @@ export class InteractiveMode implements InteractiveModeContext {
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#planModeHasEntered = false;
+	#planCommandActive = false;
+	#pendingPlanSave?: {
+		session: AgentSession;
+		manager: SessionManager;
+		sessionId: string;
+		wasEnabled: boolean;
+		prompt?: string;
+		resumeAfterPause?: boolean;
+		revision: string;
+	};
 	#planReviewContainer: Container | undefined;
 	lspServers?: import("../tools").LspStartupServerInfo[];
 	mcpManager?: import("../mcp").MCPManager;
@@ -265,33 +281,64 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		this.hideThinkingBlock = settings.get("hideThinkingBlock");
 
-		const builtinCommandNames = new Set(BUILTIN_SLASH_COMMANDS.map(c => c.name));
-		const hookCommands: SlashCommand[] = (
-			this.session.extensionRunner?.getRegisteredCommands(builtinCommandNames) ?? []
-		).map(cmd => ({
-			name: cmd.name,
-			description: cmd.description ?? "(hook command)",
-			getArgumentCompletions: cmd.getArgumentCompletions,
+		const builtinCommands: SlashCommandDiscoveryCandidate[] = BUILTIN_SLASH_COMMANDS.map(command => ({
+			...command,
+			discovery: { behavior: "execution", provenance: "xcsh built-in", scope: "native" },
+		}));
+		const builtinCommandNames = new Set(builtinCommands.map(c => c.name));
+		const extensionCommands: SlashCommandDiscoveryCandidate[] = (
+			this.session.extensionRunner?.getRegisteredCommandEntries(builtinCommandNames) ?? []
+		).map(entry => ({
+			name: entry.command.name,
+			description: entry.command.description ?? "Extension command",
+			getArgumentCompletions: entry.command.getArgumentCompletions,
+			discovery: {
+				behavior: "execution",
+				provenance: entry.extensionLabel
+					? `extension ${entry.extensionLabel} (${entry.extensionPath})`
+					: `extension ${entry.extensionPath}`,
+				scope: inferSlashCommandScope(entry.extensionPath, this.sessionManager.getCwd(), os.homedir()),
+			},
 		}));
 
 		// Convert custom commands (TypeScript) to SlashCommand format
-		const customCommands: SlashCommand[] = this.session.customCommands.map(loaded => ({
-			name: loaded.command.name,
-			description: `${loaded.command.description} (${loaded.source})`,
-		}));
+		const customCommands: SlashCommandDiscoveryCandidate[] = this.session.customCommands.map(loaded => {
+			const isMcpPrompt = loaded.resolvedPath.startsWith("mcp:");
+			return {
+				name: loaded.command.name,
+				description: loaded.command.description,
+				discovery: {
+					behavior: isMcpPrompt ? "prompt expansion" : "execution",
+					provenance: isMcpPrompt
+						? `MCP prompt ${loaded.resolvedPath.slice("mcp:".length)}`
+						: `TypeScript command ${loaded.resolvedPath}`,
+					scope: isMcpPrompt ? "session" : loaded.source === "bundled" ? "native" : loaded.source,
+				},
+			};
+		});
 
 		// Build skill commands from session.skills (if enabled)
-		const skillCommandList: SlashCommand[] = [];
+		const skillCommandList: SlashCommandDiscoveryCandidate[] = [];
 		if (settings.get("skills.enableSkillCommands")) {
 			for (const skill of this.session.skills) {
 				const commandName = `skill:${skill.name}`;
 				this.skillCommands.set(commandName, skill.filePath);
-				skillCommandList.push({ name: commandName, description: skill.description });
+				skillCommandList.push({
+					name: commandName,
+					description: skill.description,
+					discovery: {
+						behavior: "prompt expansion",
+						provenance: `skill ${skill._source?.providerName ?? skill.source} (${skill.filePath})`,
+						scope:
+							skill._source?.level ??
+							inferSlashCommandScope(skill.filePath, this.sessionManager.getCwd(), os.homedir()),
+					},
+				});
 			}
 		}
 
 		// Store pending commands for init() where file commands are loaded async
-		this.#pendingSlashCommands = [...BUILTIN_SLASH_COMMANDS, ...hookCommands, ...customCommands, ...skillCommandList];
+		this.#pendingSlashCommands = [...builtinCommands, ...extensionCommands, ...customCommands, ...skillCommandList];
 
 		this.#uiHelpers = new UiHelpers(this);
 		this.#btwController = new BtwController(this);
@@ -344,7 +391,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		);
 
 		if (!startupQuiet) {
-			this.#welcomeComponent = new WelcomeComponent(this.#version);
+			this.#welcomeComponent = new WelcomeComponent(this.#version, () => this.ui.terminal.rows);
 			this.ui.addChild(new Spacer(1));
 			this.ui.addChild(this.#welcomeComponent);
 			this.ui.addChild(new Spacer(1));
@@ -408,7 +455,9 @@ export class InteractiveMode implements InteractiveModeContext {
 				const draft = await this.sessionManager.consumeDraft();
 				if (draft && this.editor.getText().length === 0) this.editor.setText(draft);
 			} catch (error) {
-				logger.warn("Failed to restore session draft", { error: String(error) });
+				logger.warn("Failed to restore session draft", {
+					error: String(error),
+				});
 			}
 		}
 
@@ -470,12 +519,20 @@ export class InteractiveMode implements InteractiveModeContext {
 		const basePath = cwd ?? this.sessionManager.getCwd();
 		const fileCommands = await loadSlashCommands({ cwd: basePath });
 		this.fileSlashCommands = new Set(fileCommands.map(cmd => cmd.name));
-		const fileSlashCommands: SlashCommand[] = fileCommands.map(cmd => ({
+		const fileSlashCommands: SlashCommandDiscoveryCandidate[] = fileCommands.map(cmd => ({
 			name: cmd.name,
 			description: cmd.description,
+			discovery: {
+				behavior: "prompt expansion",
+				provenance: cmd._source
+					? `${cmd._source.providerName} prompt (${cmd._source.path})`
+					: `prompt ${cmd.source}`,
+				scope: cmd._source?.level ?? "path",
+				shadowed: cmd.shadowedSources,
+			},
 		}));
 		const autocompleteProvider = this.#inputController.createAutocompleteProvider(
-			[...this.#pendingSlashCommands, ...fileSlashCommands],
+			resolveSlashCommandDiscovery([...this.#pendingSlashCommands, ...fileSlashCommands]),
 			basePath,
 		);
 		this.editor.setAutocompleteProvider(autocompleteProvider);
@@ -704,7 +761,10 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		if (!sameModel) {
 			if (this.session.isStreaming) {
-				this.#pendingModelSwitch = { model: resolved.model, thinkingLevel: planThinkingLevel };
+				this.#pendingModelSwitch = {
+					model: resolved.model,
+					thinkingLevel: planThinkingLevel,
+				};
 				return;
 			}
 			try {
@@ -746,12 +806,14 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
-	async #enterPlanMode(options?: { planFilePath?: string; workflow?: "parallel" | "iterative" }): Promise<void> {
+	async #enterPlanMode(options?: {
+		planFilePath?: string;
+		workflow?: "parallel" | "iterative";
+		silent?: boolean;
+	}): Promise<void> {
 		if (this.planModeEnabled) {
 			return;
 		}
-
-		this.planModePaused = false;
 
 		const planFilePath = options?.planFilePath ?? (await this.#getPlanFilePath());
 		const previousTools = this.session.getActiveToolNames();
@@ -759,11 +821,12 @@ export class InteractiveMode implements InteractiveModeContext {
 		const planTools = hasExitTool ? [...previousTools, "exit_plan_mode"] : previousTools;
 		const uniquePlanTools = [...new Set(planTools)];
 
+		await this.session.setActiveToolsByName(uniquePlanTools);
+		this.planModePaused = false;
 		this.#planModePreviousTools = previousTools;
 		this.planModePlanFilePath = planFilePath;
 		this.planModeEnabled = true;
 
-		await this.session.setActiveToolsByName(uniquePlanTools);
 		this.session.setPlanModeState({
 			enabled: true,
 			planFilePath,
@@ -777,7 +840,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		await this.#applyPlanModeModel();
 		this.#updatePlanModeStatus();
 		this.sessionManager.appendModeChange("plan", { planFilePath });
-		this.showStatus(`Plan mode enabled. Plan file: ${planFilePath}`);
+		if (!options?.silent) this.showStatus(`Plan mode enabled. Plan file: ${planFilePath}`);
 	}
 
 	async #exitPlanMode(options?: { silent?: boolean; paused?: boolean }): Promise<void> {
@@ -786,7 +849,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		const previousTools = this.#planModePreviousTools;
-		if (previousTools && previousTools.length > 0) {
+		if (previousTools !== undefined) {
 			await this.session.setActiveToolsByName(previousTools);
 		}
 		if (this.#planModePreviousModelState) {
@@ -797,7 +860,10 @@ export class InteractiveMode implements InteractiveModeContext {
 				// break conversation continuity.
 				this.session.setThinkingLevel(prev.thinkingLevel);
 			} else if (this.session.isStreaming) {
-				this.#pendingModelSwitch = { model: prev.model, thinkingLevel: prev.thinkingLevel };
+				this.#pendingModelSwitch = {
+					model: prev.model,
+					thinkingLevel: prev.thinkingLevel,
+				};
 			} else {
 				await this.session.setModelTemporary(prev.model, prev.thinkingLevel);
 			}
@@ -837,11 +903,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 		planReviewContainer.clear();
 		planReviewContainer.addChild(new Spacer(1));
-		planReviewContainer.addChild(new DynamicBorder());
-		planReviewContainer.addChild(new Text(theme.bold(theme.fg("contentAccent", "Plan Review")), 1, 1));
-		planReviewContainer.addChild(new Spacer(1));
-		planReviewContainer.addChild(new Markdown(planContent, 1, 1, getMarkdownTheme()));
-		planReviewContainer.addChild(new DynamicBorder());
+		planReviewContainer.addChild(new PlanPreviewComponent(planContent));
 		this.chatContainer.addChild(planReviewContainer);
 		this.#planReviewContainer = planReviewContainer;
 		this.ui.requestRender();
@@ -869,12 +931,20 @@ export class InteractiveMode implements InteractiveModeContext {
 	#getPlanReviewHelpText(): string {
 		const externalEditorKey = this.keybindings.getDisplayString("app.editor.external");
 		if (!externalEditorKey) {
-			return "up/down navigate  enter select  esc cancel";
+			return "";
 		}
-		return `up/down navigate  enter select  ${externalEditorKey.toLowerCase()} open in editor  esc cancel`;
+		return `${externalEditorKey}: open in editor`;
 	}
 
 	async #openPlanInExternalEditor(planFilePath: string): Promise<void> {
+		const session = this.session;
+		const manager = this.sessionManager;
+		const sessionId = manager.getSessionId();
+		const current = () =>
+			this.session === session &&
+			this.sessionManager === manager &&
+			manager.getSessionId() === sessionId &&
+			this.planModeEnabled;
 		const editorCmd = getEditorCommand();
 		if (!editorCmd) {
 			this.showWarning("No editor configured. Set $VISUAL or $EDITOR environment variable.");
@@ -895,6 +965,19 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		let ttyHandle: fs.FileHandle | null = null;
+		let resumed = false;
+		const resumeTerminal = async () => {
+			try {
+				await ttyHandle?.close();
+			} finally {
+				ttyHandle = null;
+				if (!resumed) {
+					resumed = true;
+					this.ui.start(settings.get("startup.clearScreen"));
+					this.ui.requestRender(true);
+				}
+			}
+		};
 		try {
 			ttyHandle = await this.#openEditorTerminalHandle();
 			this.ui.stop();
@@ -908,68 +991,598 @@ export class InteractiveMode implements InteractiveModeContext {
 				stdio,
 				trimTrailingNewline: false,
 			});
+			if (!current()) {
+				this.showWarning("The plan editor session changed; returned edits were not saved.");
+				return;
+			}
+			if (result === currentText) return;
 			if (result !== null) {
-				await Bun.write(resolvedPath, result);
-				this.#renderPlanPreview(result);
-				this.showStatus("Plan updated in external editor.");
+				await resumeTerminal();
+				const reviewFor = (before: string): ActionReview => ({
+					identity: `plan-file:${sessionId}:${resolvedPath}`,
+					scope: `Current session plan · ${resolvedPath}`,
+					revision: before,
+					changes: [{ field: "File content", before, after: result }],
+					consequence: "Overwrite this plan file with the edited text. This does not approve or execute the plan.",
+				});
+				await runReviewedAction(this, "plan file edit", {
+					review: reviewFor(currentText),
+					resolve: async () => {
+						if (!current()) return undefined;
+						const latest = await Bun.file(resolvedPath).text();
+						return current() ? { review: reviewFor(latest), target: resolvedPath } : undefined;
+					},
+					execute: async destination => {
+						await Bun.write(destination, result);
+						if (current()) this.#renderPlanPreview(result);
+						this.showStatus("Plan file updated from external editor.");
+					},
+				});
 			}
 		} catch (error) {
 			this.showWarning(`Failed to open external editor: ${error instanceof Error ? error.message : String(error)}`);
 		} finally {
-			if (ttyHandle) {
-				await ttyHandle.close();
-			}
-			const clearScreen = settings.get("startup.clearScreen");
-			this.ui.start(clearScreen);
-			this.ui.requestRender(true);
+			await resumeTerminal();
 		}
 	}
 
-	async #approvePlan(
-		planContent: string,
-		options: { planFilePath: string; finalPlanFilePath: string },
-	): Promise<void> {
-		await renameApprovedPlanFile({
-			planFilePath: options.planFilePath,
-			finalPlanFilePath: options.finalPlanFilePath,
-			getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-			getSessionId: () => this.sessionManager.getSessionId(),
-		});
-		const previousTools = this.#planModePreviousTools ?? this.session.getActiveToolNames();
-		await this.#exitPlanMode({ silent: true, paused: false });
-		await this.handleClearCommand();
-		// The new session has a fresh local:// root — persist the approved plan there
-		// so `local://<title>.md` resolves correctly in the execution session.
-		const newLocalPath = resolveLocalUrlToPath(options.finalPlanFilePath, {
-			getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-			getSessionId: () => this.sessionManager.getSessionId(),
-		});
-		await Bun.write(newLocalPath, planContent);
-		if (previousTools.length > 0) {
-			await this.session.setActiveToolsByName(previousTools);
+	async #approvePlan(options: { planFilePath: string; finalPlanFilePath: string }): Promise<void> {
+		if (!options.planFilePath.startsWith("local://") || !options.finalPlanFilePath.startsWith("local://")) {
+			this.showError("Plan approval requires local:// source and destination paths.");
+			return;
 		}
-		this.session.setPlanReferencePath(options.finalPlanFilePath);
-		this.session.markPlanReferenceSent();
-		const planModePrompt = prompt.render(planModeApprovedPrompt, {
-			planContent,
-			finalPlanFilePath: options.finalPlanFilePath,
+		const reviewedSession = this.session;
+		const reviewedManager = this.sessionManager;
+		const reviewedSessionId = reviewedManager.getSessionId();
+		const executionSessionPreview = reviewedManager.previewNewSession();
+		const reviewedArtifactsDir = reviewedManager.getArtifactsDir();
+		const previousTools = this.#planModePreviousTools ?? reviewedSession.getActiveToolNames();
+		const resolveReviewedPath = (value: string) =>
+			resolveLocalUrlToPath(value, {
+				getArtifactsDir: () => reviewedArtifactsDir,
+				getSessionId: () => reviewedSessionId,
+			});
+		const sourcePath = resolveReviewedPath(options.planFilePath);
+		const approvedPath = resolveReviewedPath(options.finalPlanFilePath);
+		let preparationStarted = false;
+		let renamed = sourcePath === approvedPath;
+		let executionSessionId: string | undefined;
+		let executionSessionReady = false;
+		let viewReset = false;
+		let planWritten = false;
+		let toolsRestored = false;
+		let promptStarted = false;
+		let promptCompleted = false;
+		let promptStartEntryCount = 0;
+		let approvedSnapshot:
+			| {
+					content: string;
+					destinationBlocked: boolean;
+					review: ActionReview;
+			  }
+			| undefined;
+
+		const readCurrentPlan = async (): Promise<string | undefined> => {
+			try {
+				return await fs.readFile(renamed ? approvedPath : sourcePath, "utf8");
+			} catch (error) {
+				if (isEnoent(error)) return undefined;
+				throw error;
+			}
+		};
+		const inspect = async () => {
+			const content = await readCurrentPlan();
+			if (content === undefined) return undefined;
+			let destinationBlocked = false;
+			let destinationState = renamed ? "approved plan already staged" : "available";
+			if (!renamed && sourcePath !== approvedPath) {
+				try {
+					const stat = await fs.lstat(approvedPath);
+					destinationBlocked = true;
+					destinationState = stat.isFile()
+						? `occupied file (${stat.size} bytes)`
+						: stat.isDirectory()
+							? "occupied directory"
+							: "occupied non-regular path";
+				} catch (error) {
+					if (!isEnoent(error)) throw error;
+				}
+			}
+			const contentDigest = createHash("sha256").update(content).digest("hex");
+			const sessionRevision = createHash("sha256")
+				.update(
+					JSON.stringify({
+						entries: reviewedManager.getEntries(),
+						planMode: reviewedSession.getPlanModeState(),
+						activeTools: reviewedSession.getActiveToolNames(),
+						model: reviewedSession.model,
+						thinking: reviewedSession.thinkingLevel,
+					}),
+				)
+				.digest("hex");
+			const review: ActionReview = {
+				identity: `plan-approval:${reviewedSessionId}:${executionSessionPreview.targetSessionId}:${options.finalPlanFilePath}`,
+				scope: `Planning session ${reviewedSessionId} → execution session ${executionSessionPreview.targetSessionId}`,
+				revision: JSON.stringify({
+					contentDigest,
+					sessionRevision,
+					destinationState,
+					executionSessionPreview,
+				}),
+				changes: [
+					{
+						field: "Approved plan",
+						before: `${options.planFilePath} · ${Buffer.byteLength(content, "utf8")} bytes · sha256:${contentDigest.slice(0, 12)}`,
+						after: `${options.finalPlanFilePath} in both planning and execution sessions`,
+					},
+					{
+						field: "Plan destination",
+						before: destinationState,
+						after: "approved plan file",
+					},
+					{
+						field: "Active session",
+						before: reviewedSessionId,
+						after: executionSessionPreview.targetSessionId,
+					},
+					{
+						field: "Execution session file",
+						before: "Not created",
+						after: executionSessionPreview.targetSessionFile ?? "In-memory",
+					},
+					{
+						field: "Plan mode",
+						before: "on",
+						after: "off in the execution session",
+					},
+					{
+						field: "Active tools",
+						before: reviewedSession.getActiveToolNames().join(", ") || "none",
+						after: previousTools.join(", ") || "none",
+					},
+					{
+						field: "Execution prompt",
+						before: "not submitted",
+						after: `submit approved ${options.finalPlanFilePath} after the new session is saved`,
+					},
+				],
+				consequence: destinationBlocked
+					? "The approved-plan destination is occupied. No change can be applied; choose another plan title and review again."
+					: "Preserves the planning conversation, finalizes its plan filename, starts and saves a new execution session, restores execution tools, copies the approved plan there, then submits it for execution. Execution can use model tokens, tools and configured remote services. The transition is tracked until submission settles and is not interruptible as one atomic action.",
+			};
+			return { content, destinationBlocked, review };
+		};
+
+		const initial = await inspect();
+		if (!initial) {
+			this.showError(`Plan file not found at ${options.planFilePath}`);
+			return;
+		}
+		if (initial.destinationBlocked) {
+			this.showError(
+				`Plan destination already exists at ${options.finalPlanFilePath}. Choose a different title and call exit_plan_mode again.`,
+			);
+			return;
+		}
+
+		const outcome = await runReviewedAction(this, "plan approval", {
+			review: initial.review,
+			resolve: async () => {
+				if (
+					this.session !== reviewedSession ||
+					this.sessionManager !== reviewedManager ||
+					(reviewedManager.getSessionId() !== reviewedSessionId &&
+						reviewedManager.getSessionId() !== executionSessionId)
+				)
+					return undefined;
+				if (preparationStarted || executionSessionId) {
+					if (!approvedSnapshot || (await readCurrentPlan()) !== approvedSnapshot.content) return undefined;
+					return { review: approvedSnapshot.review, target: approvedSnapshot };
+				}
+				const current = await inspect();
+				return current ? { review: current.review, target: current } : undefined;
+			},
+			execute: async target => {
+				if (target.destinationBlocked)
+					throw new Error(
+						`Plan destination is occupied at ${options.finalPlanFilePath}; choose a different title before retrying.`,
+					);
+				approvedSnapshot = target;
+				if (!executionSessionReady) {
+					try {
+						executionSessionId = await this.#commandController.executeReviewedNewSession(
+							reviewedSessionId,
+							async () => {
+								preparationStarted = true;
+								if (!renamed) {
+									await renameApprovedPlanFile({
+										planFilePath: options.planFilePath,
+										finalPlanFilePath: options.finalPlanFilePath,
+										getArtifactsDir: () => reviewedArtifactsDir,
+										getSessionId: () => reviewedSessionId,
+									});
+									renamed = true;
+								}
+								await this.#exitPlanMode({ silent: true, paused: false });
+							},
+							executionSessionPreview,
+						);
+						executionSessionReady = true;
+					} finally {
+						if (reviewedManager.getSessionId() !== reviewedSessionId)
+							executionSessionId = reviewedManager.getSessionId();
+					}
+				}
+				if (!viewReset) {
+					await this.#commandController.resetNewSessionView();
+					this.#planReviewContainer = undefined;
+					viewReset = true;
+				}
+
+				const executionPlanPath = resolveLocalUrlToPath(options.finalPlanFilePath, {
+					getArtifactsDir: () => reviewedManager.getArtifactsDir(),
+					getSessionId: () => reviewedManager.getSessionId(),
+				});
+				if (!planWritten) {
+					try {
+						const existing = await fs.readFile(executionPlanPath, "utf8");
+						if (existing !== target.content)
+							throw new Error(`Execution-session plan destination changed at ${options.finalPlanFilePath}.`);
+					} catch (error) {
+						if (!isEnoent(error)) throw error;
+						await fs.mkdir(path.dirname(executionPlanPath), {
+							recursive: true,
+						});
+						await fs.writeFile(executionPlanPath, target.content, {
+							flag: "wx",
+						});
+					}
+					planWritten = true;
+				}
+				if (!toolsRestored) {
+					await reviewedSession.setActiveToolsByName(previousTools);
+					toolsRestored = true;
+				}
+				reviewedSession.setPlanReferencePath(options.finalPlanFilePath);
+				reviewedSession.markPlanReferenceSent();
+				await reviewedManager.retryPersistence();
+				const planModePrompt = prompt.render(planModeApprovedPrompt, {
+					planContent: target.content,
+					finalPlanFilePath: options.finalPlanFilePath,
+				});
+				if (promptStarted && !promptCompleted) {
+					if (reviewedManager.getEntries().length > promptStartEntryCount)
+						throw new Error(
+							"The execution prompt may already have been accepted. Inspect the execution session before submitting it again.",
+						);
+					promptStarted = false;
+				}
+				if (!promptCompleted) {
+					promptStartEntryCount = reviewedManager.getEntries().length;
+					promptStarted = true;
+					await reviewedSession.prompt(planModePrompt, { synthetic: true });
+					promptCompleted = true;
+					await reviewedManager.flush();
+				}
+			},
 		});
-		await this.session.prompt(planModePrompt, { synthetic: true });
+		if (outcome === "succeeded")
+			this.showStatus(
+				`Approved plan saved and submitted in execution session ${executionSessionId ?? reviewedManager.getSessionId()}.`,
+			);
+		else if (outcome === "unresolved")
+			this.showError(
+				executionSessionId
+					? `Plan approval is unresolved in execution session ${executionSessionId}. Inspect its saved plan and prompt state before retrying.`
+					: "Plan approval is unresolved in the planning session. Review the current plan before retrying.",
+			);
 	}
 
 	async handlePlanModeCommand(initialPrompt?: string): Promise<void> {
-		if (this.planModeEnabled) {
-			const confirmed = await this.showHookConfirm(
-				"Exit plan mode?",
-				"This exits plan mode without approving a plan.",
-			);
-			if (!confirmed) return;
-			await this.#exitPlanMode({ paused: true });
+		if (this.#planCommandActive) {
+			this.showWarning("A plan mode change is already open.");
 			return;
 		}
-		await this.#enterPlanMode();
-		if (initialPrompt && this.onInputCallback) {
-			this.onInputCallback(this.startPendingSubmission({ text: initialPrompt }));
+		this.#planCommandActive = true;
+		const session = this.session;
+		const manager = this.sessionManager;
+		const sessionId = manager.getSessionId();
+		const pending = this.#pendingPlanSave;
+		const ownsPending = () =>
+			this.#pendingPlanSave?.session === session &&
+			this.#pendingPlanSave?.manager === manager &&
+			this.#pendingPlanSave?.sessionId === sessionId;
+		const wasEnabled = ownsPending() ? pending!.wasEnabled : this.planModeEnabled;
+		const proposedPendingPrompt = !wasEnabled
+			? (initialPrompt ?? (ownsPending() ? pending!.prompt : undefined))
+			: undefined;
+		const stateRevision = () =>
+			JSON.stringify({
+				mode: session.getPlanModeState(),
+				enabled: this.planModeEnabled,
+				paused: this.planModePaused,
+				model: session.model,
+				thinking: session.thinkingLevel,
+				tools: session.getActiveToolNames(),
+				entries: manager.getEntries(),
+			});
+		try {
+			if (ownsPending() && ((pending!.wasEnabled && initialPrompt) || pending!.resumeAfterPause)) {
+				const submit = this.onInputCallback;
+				const requestedPrompt = initialPrompt ?? pending!.prompt;
+				if (!requestedPrompt) {
+					this.showWarning("The pending plan-mode recovery has no planning prompt. Open /plan again.");
+					return;
+				}
+				const review = (): ActionReview => {
+					const recovery = this.#pendingPlanSave!;
+					const savingPause = recovery.wasEnabled && !recovery.resumeAfterPause;
+					return {
+						identity: `plan-mode:${sessionId}`,
+						scope: "Current session · recover paused plan mode and submit a reviewed prompt",
+						revision: stateRevision(),
+						changes: [
+							{
+								field: "Persistence",
+								before: savingPause ? "Paused state save unresolved" : "Plan re-enable save unresolved",
+								after: savingPause ? "Save pending pause, then re-enable" : "Retry saving only",
+							},
+							{
+								field: "Plan mode",
+								before: this.planModeEnabled ? "on" : "paused",
+								after: "on",
+							},
+							{
+								field:
+									recovery.prompt && recovery.prompt !== requestedPrompt
+										? "Pending planning prompt"
+										: "Planning prompt",
+								before:
+									recovery.prompt && recovery.prompt !== requestedPrompt ? recovery.prompt : "not submitted",
+								after: requestedPrompt,
+							},
+						],
+						consequence:
+							"Persist the already-applied pause, restore plan mode without approving a plan, persist the restored mode, then queue only this reviewed prompt. The model request can use tokens and remains pending after it is queued.",
+					};
+				};
+				const outcome = await runReviewedAction(this, "plan mode recovery", {
+					review: review(),
+					resolve: async () => {
+						if (
+							this.session !== session ||
+							this.sessionManager !== manager ||
+							manager.getSessionId() !== sessionId ||
+							!ownsPending() ||
+							this.onInputCallback !== submit
+						)
+							return undefined;
+						return { review: review(), target: requestedPrompt };
+					},
+					execute: async text => {
+						const recovery = this.#pendingPlanSave!;
+						if (recovery.wasEnabled && !recovery.resumeAfterPause) {
+							await manager.retryPersistence();
+							this.#pendingPlanSave = {
+								session,
+								manager,
+								sessionId,
+								wasEnabled: false,
+								prompt: text,
+								resumeAfterPause: true,
+								revision: stateRevision(),
+							};
+						}
+						if (!this.planModeEnabled) {
+							try {
+								await this.#enterPlanMode({ silent: true });
+							} finally {
+								if (ownsPending()) this.#pendingPlanSave!.revision = stateRevision();
+							}
+						}
+						await manager.retryPersistence();
+						this.#pendingPlanSave = undefined;
+						if (submit) submit(this.startPendingSubmission({ text }));
+						else this.editor.setText(text);
+					},
+				});
+				if (outcome === "succeeded")
+					this.showStatus(
+						submit
+							? "Plan mode restored and planning prompt queued. Model completion is pending."
+							: "Plan mode restored; the reviewed prompt was returned to the editor.",
+					);
+				return;
+			}
+			if (initialPrompt && wasEnabled && !ownsPending()) {
+				const submit = this.onInputCallback;
+				const review = (): ActionReview => ({
+					identity: `plan-prompt:${sessionId}`,
+					scope: `Current planning session ${sessionId} · ${this.planModePlanFilePath ?? "local://PLAN.md"}`,
+					revision: stateRevision(),
+					changes: [
+						{ field: "Plan mode", before: "on", after: "on" },
+						{
+							field: "Planning prompt",
+							before: "not submitted",
+							after: initialPrompt,
+						},
+					],
+					consequence:
+						"Keeps the current plan mode, model, tools and plan path unchanged. Saves outstanding session state, then queues this prompt for the active planning conversation. The subsequent model request can use tokens but is not claimed complete by this review.",
+				});
+				const outcome = await runReviewedAction(this, "planning prompt", {
+					review: review(),
+					resolve: async () =>
+						this.session === session &&
+						this.sessionManager === manager &&
+						manager.getSessionId() === sessionId &&
+						this.planModeEnabled &&
+						this.onInputCallback === submit
+							? { review: review(), target: initialPrompt }
+							: undefined,
+					execute: async text => {
+						await manager.retryPersistence();
+						if (submit) submit(this.startPendingSubmission({ text }));
+						else this.editor.setText(text);
+					},
+				});
+				if (outcome === "succeeded")
+					this.showStatus(
+						submit
+							? "Planning prompt queued in the active plan-mode session. Model completion is pending."
+							: "Planning prompt reviewed and restored to the editor; it was not submitted.",
+					);
+				return;
+			}
+			if (!initialPrompt) {
+				const label = ownsPending()
+					? "Retry saving plan mode"
+					: wasEnabled
+						? "Pause plan mode without approval"
+						: "Enable plan mode";
+				if ((await this.showHookSelector("Plan mode", ["Cancel", label])) !== label) return;
+			}
+			const current = () =>
+				this.session === session &&
+				this.sessionManager === manager &&
+				manager.getSessionId() === sessionId &&
+				(ownsPending() ? this.#pendingPlanSave!.revision === stateRevision() : this.planModeEnabled === wasEnabled);
+			if (!current()) {
+				this.showWarning("The plan mode target changed. Open /plan again.");
+				return;
+			}
+			const prepare = (): ActionReview => {
+				if (ownsPending())
+					return {
+						identity: `plan-mode:${sessionId}`,
+						scope: "Current session · persisted mode and tool state",
+						revision: stateRevision(),
+						changes: [
+							{
+								field: "Persistence",
+								before: "Mode applied; save unresolved",
+								after: "Retry saving only",
+							},
+							{
+								field: "Plan mode",
+								before: this.planModeEnabled ? "on" : "paused",
+								after: this.planModeEnabled ? "on" : "paused",
+							},
+							...(!wasEnabled && proposedPendingPrompt
+								? [
+										{
+											field: initialPrompt ? "Pending planning prompt" : "Submit after saving",
+											before: initialPrompt ? (this.#pendingPlanSave?.prompt ?? "none") : "not submitted",
+											after: proposedPendingPrompt,
+										},
+									]
+								: []),
+						],
+						consequence: `Save the already-applied session state without repeating mode, tool or model changes.${proposedPendingPrompt ? " Queue the reviewed pending planning prompt only after that save succeeds." : ""}`,
+					};
+				const role = session.resolveRoleModelWithThinking("plan");
+				const nextModel = wasEnabled
+					? (this.#planModePreviousModelState?.model ?? session.model)
+					: (role.model ?? session.model);
+				const modelName = (model: typeof nextModel) => (model ? `${model.provider}/${model.id}` : "none");
+				const nextTools = wasEnabled
+					? (this.#planModePreviousTools ?? session.getActiveToolNames())
+					: [
+							...new Set([
+								...session.getActiveToolNames(),
+								...(session.getToolByName("exit_plan_mode") ? ["exit_plan_mode"] : []),
+							]),
+						];
+				return {
+					identity: `plan-mode:${sessionId}`,
+					scope: "Current session · persisted mode and tool state",
+					revision: JSON.stringify({
+						enabled: this.planModeEnabled,
+						paused: this.planModePaused,
+						model: session.model,
+						thinking: session.thinkingLevel,
+						role,
+						tools: session.getActiveToolNames(),
+						previous: this.#planModePreviousModelState,
+						nextTools,
+						streaming: session.isStreaming,
+					}),
+					changes: [
+						{
+							field: "Plan mode",
+							before: wasEnabled ? "on" : "off",
+							after: wasEnabled ? "paused" : "on",
+						},
+						{
+							field: "Active tools",
+							before: session.getActiveToolNames().join(", ") || "none",
+							after: nextTools.join(", ") || "none",
+						},
+						{
+							field: "Requested model",
+							before: modelName(session.model),
+							after: modelName(nextModel),
+						},
+						{
+							field: "Requested thinking",
+							before: session.thinkingLevel ?? "model default",
+							after: wasEnabled
+								? (this.#planModePreviousModelState?.thinkingLevel ?? session.thinkingLevel ?? "model default")
+								: role.model && role.explicitThinkingLevel
+									? (role.thinkingLevel ?? "model default")
+									: modelsAreEqual(session.model, nextModel)
+										? (session.thinkingLevel ?? "model default")
+										: "model default",
+						},
+						{
+							field: "Plan reference",
+							before: this.planModePlanFilePath ?? "none",
+							after: wasEnabled ? "none" : "local://PLAN.md",
+						},
+						...(!wasEnabled && initialPrompt
+							? [
+									{
+										field: "Submit after saving",
+										before: "not submitted",
+										after: initialPrompt,
+									},
+								]
+							: []),
+					],
+					consequence: `${wasEnabled ? "Pause without approving or executing a plan." : "Enable planning and record the mode in this session. No plan file is created by this change."} Model changes may affect costs${session.isStreaming ? " and are queued until the current stream ends" : ""}.${initialPrompt && !wasEnabled ? " Submit the supplied planning prompt after enabling." : ""}`,
+				};
+			};
+			await runReviewedAction(this, "plan mode", {
+				review: prepare(),
+				resolve: async () => (current() ? { review: prepare(), target: wasEnabled } : undefined),
+				execute: async enabled => {
+					if (!ownsPending()) {
+						if (enabled) await this.#exitPlanMode({ paused: true, silent: true });
+						else await this.#enterPlanMode({ silent: true });
+						this.#pendingPlanSave = {
+							session,
+							manager,
+							sessionId,
+							wasEnabled: enabled,
+							prompt: initialPrompt,
+							revision: stateRevision(),
+						};
+					}
+					await manager.retryPersistence();
+					const savedPrompt = ownsPending() && !enabled ? proposedPendingPrompt : this.#pendingPlanSave?.prompt;
+					this.#pendingPlanSave = undefined;
+					this.showStatus(
+						enabled ? "Plan mode paused and saved." : "Plan mode enabled and saved. Plan file: local://PLAN.md",
+					);
+					if (!enabled && savedPrompt && this.onInputCallback)
+						this.onInputCallback(this.startPendingSubmission({ text: savedPrompt }));
+				},
+			});
+		} catch (error) {
+			this.showError(`Plan mode change failed: ${error instanceof Error ? error.message : String(error)}`);
+		} finally {
+			this.#planCommandActive = false;
 		}
 	}
 
@@ -978,16 +1591,33 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.showWarning("Plan mode is not active.");
 			return;
 		}
+		const reviewedSession = this.session;
+		const reviewedManager = this.sessionManager;
+		const reviewedSessionId = reviewedManager.getSessionId();
+		const currentReview = () => {
+			if (
+				this.session === reviewedSession &&
+				this.sessionManager === reviewedManager &&
+				reviewedManager.getSessionId() === reviewedSessionId &&
+				this.planModeEnabled
+			)
+				return true;
+			this.showWarning("The plan review session changed. Open a new review before continuing.");
+			return false;
+		};
 
 		// Abort the agent to prevent it from continuing (e.g., calling exit_plan_mode
 		// again) while the popup is showing. The event listener fires asynchronously
 		// (agent's #emit is fire-and-forget), so without this the model sees "Plan
 		// ready for approval." and immediately calls exit_plan_mode in a loop.
 		await this.session.abort();
+		if (!currentReview()) return;
 
 		const planFilePath = details.planFilePath || this.planModePlanFilePath || (await this.#getPlanFilePath());
+		if (!currentReview()) return;
 		this.planModePlanFilePath = planFilePath;
 		const planContent = await this.#readPlanFile(planFilePath);
+		if (!currentReview()) return;
 		if (!planContent) {
 			this.showError(`Plan file not found at ${planFilePath}`);
 			return;
@@ -998,20 +1628,32 @@ export class InteractiveMode implements InteractiveModeContext {
 			"Plan mode - next step",
 			["Approve and execute", "Refine plan", "Stay in plan mode"],
 			{
+				initialIndex: 2,
 				helpText: this.#getPlanReviewHelpText(),
-				onExternalEditor: () => void this.#openPlanInExternalEditor(planFilePath),
+				onExternalEditor: () => {
+					if (currentReview()) void this.#openPlanInExternalEditor(planFilePath);
+				},
 			},
 		);
 
+		if (!currentReview()) return;
 		if (choice === "Approve and execute") {
 			const finalPlanFilePath = details.finalPlanFilePath || planFilePath;
 			try {
 				const latestPlanContent = await this.#readPlanFile(planFilePath);
+				if (!currentReview()) return;
 				if (!latestPlanContent) {
 					this.showError(`Plan file not found at ${planFilePath}`);
 					return;
 				}
-				await this.#approvePlan(latestPlanContent, { planFilePath, finalPlanFilePath });
+				if (latestPlanContent !== planContent) {
+					this.showWarning(
+						"The plan changed while awaiting approval. Review the updated content before executing.",
+					);
+					await this.handleExitPlanModeTool({ ...details, planFilePath });
+					return;
+				}
+				await this.#approvePlan({ planFilePath, finalPlanFilePath });
 			} catch (error) {
 				this.showError(
 					`Failed to finalize approved plan: ${error instanceof Error ? error.message : String(error)}`,
@@ -1021,6 +1663,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 		if (choice === "Refine plan") {
 			const refinement = (await this.showHookInput("What should be refined?"))?.trim();
+			if (!currentReview()) return;
 			if (refinement) {
 				if (this.onInputCallback) {
 					this.onInputCallback(this.startPendingSubmission({ text: refinement }));
@@ -1069,12 +1712,33 @@ export class InteractiveMode implements InteractiveModeContext {
 	async shutdown(): Promise<void> {
 		if (this.#isShuttingDown) return;
 		this.#isShuttingDown = true;
+		const wasBackgrounded = this.isBackgrounded;
 
 		this.#btwController.dispose();
+
+		// A POSIX shell stops background process groups that write terminal
+		// control sequences. Background mode already restored/stopped the TUI
+		// and cleared its submitted command before SIGTSTP. Dispose the session
+		// directly, then finish headlessly instead of entering foreground-only
+		// draft, drain, title, and prompt restoration paths.
+		if (wasBackgrounded) {
+			this.session.beginDispose();
+			await this.session.dispose();
+			this.stop();
+			suppressTerminalRestoreForBackgroundShutdown();
+			await postmortem.quit(0);
+			return;
+		}
 
 		await (this.#signalTeardown?.() ?? this.session.dispose());
 
 		if (this.isInitialized) {
+			if (this.loadingAnimation) {
+				this.loadingAnimation.stop();
+				this.loadingAnimation = undefined;
+			}
+			this.statusContainer.clear();
+			this.editor.setText("");
 			this.ui.requestRender();
 		}
 
@@ -1117,6 +1781,10 @@ export class InteractiveMode implements InteractiveModeContext {
 	// Event handling
 	async handleBackgroundEvent(event: AgentSessionEvent): Promise<void> {
 		await this.#eventController.handleBackgroundEvent(event);
+	}
+
+	beginBackgroundCompletionTracking(): void {
+		this.#eventController.beginBackgroundCompletionTracking();
 	}
 
 	// UI helpers
@@ -1287,12 +1955,12 @@ export class InteractiveMode implements InteractiveModeContext {
 		await this.#commandController.handleChangelogCommand(showFull);
 	}
 
-	handleHotkeysCommand(): void {
-		this.#commandController.handleHotkeysCommand();
+	handleHotkeysCommand(): Promise<void> {
+		return this.#commandController.handleHotkeysCommand();
 	}
 
-	handleToolsCommand(): void {
-		this.#commandController.handleToolsCommand();
+	handleToolsCommand(): Promise<void> {
+		return this.#commandController.handleToolsCommand();
 	}
 
 	handleClearCommand(): Promise<void> {
@@ -1485,12 +2153,8 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#selectorController.showModelSelector(options);
 	}
 
-	showPluginSelector(mode?: "install" | "uninstall"): void {
-		void this.#selectorController.showPluginSelector(mode);
-	}
-
-	showPluginDashboard(): void {
-		void this.#selectorController.showPluginDashboard();
+	showPluginDashboard(initialTab?: "installed" | "discover"): void {
+		void this.#selectorController.showPluginDashboard(initialTab);
 	}
 
 	showUserMessageSelector(): void {
@@ -1558,6 +2222,14 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	handleBtwEscape(): boolean {
 		return this.#btwController.handleEscape();
+	}
+
+	handleBtwInterrupt(): boolean {
+		return this.#btwController.handleInterrupt();
+	}
+
+	prepareBtwForBackground(): boolean {
+		return this.#btwController.prepareForBackground();
 	}
 
 	cycleThinkingLevel(): void {
@@ -1679,7 +2351,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			keybindings: KeybindingsManager,
 			done: (result: T) => void,
 		) => (Component & { dispose?(): void }) | Promise<Component & { dispose?(): void }>,
-		options?: { overlay?: boolean },
+		options?: { overlay?: boolean; fullscreen?: boolean },
 	): Promise<T> {
 		return this.#extensionUiController.showHookCustom(factory, options);
 	}

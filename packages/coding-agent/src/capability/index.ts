@@ -303,11 +303,16 @@ export function getDisabledProviders(): string[] {
  * Set disabled providers from a list (replaces current set).
  */
 export function setDisabledProviders(providerIds: string[]): void {
+	setDisabledProvidersRuntime(providerIds);
+	persistDisabledProviders();
+}
+
+/** Update runtime discovery state after an independently durable reviewed save. */
+export function setDisabledProvidersRuntime(providerIds: string[]): void {
 	disabledProviders.clear();
 	for (const id of providerIds) {
 		disabledProviders.add(id);
 	}
-	persistDisabledProviders();
 }
 
 // =============================================================================

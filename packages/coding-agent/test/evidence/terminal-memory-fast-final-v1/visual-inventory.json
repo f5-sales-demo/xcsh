@@ -1,0 +1,1168 @@
+{
+  "directory": "terminal-memory-fast-final-v1",
+  "historicalDirectory": "terminal-memory-fast-v2",
+  "fixture": "memory-fast",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 192,
+  "contactSheets": 12,
+  "exactPngMatches": 64,
+  "normalizedTextMatches": 112,
+  "changedText": 16,
+  "missingHistorical": 0,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/fast-choices.png",
+      "sha256": "cbef977f2e40e21c8f8d25ec72a0bf8df0c977ae5db2e68f5a3f6233e67902d0",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-disabled.png",
+      "sha256": "530f6314e6889ed37d782fb94b93076f3e5a601ef1a0247ec13f600c77712cba",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-noop.png",
+      "sha256": "6aede2b47221e0fcd62215aaa432134f292cd8cd1698ffe57367535c69b66d9e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-off-review.png",
+      "sha256": "9c47612006421fda1f66da3a794e03116a262f30f1983b8c4a2b577e016229f8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-review.png",
+      "sha256": "ca4b6579be02ffc6491ce37a27f96e0f4fb9707b23769839fb7473b1be47c8f6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-saved.png",
+      "sha256": "f956e3a5365f7a1c381973e8fe0ec10cf5aefedaba578b30194a495bf92eb367",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-status.png",
+      "sha256": "deab37f4fc8b60b969412b55c4f7e421428ecec3247e4924f111ac4ded0da3f9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/fast-toggle-review.png",
+      "sha256": "9c47612006421fda1f66da3a794e03116a262f30f1983b8c4a2b577e016229f8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-missing.png",
+      "sha256": "458aa316ff960079a2d8d88952ef7eccec8425aa211b8aeb9629cbbe31e1411f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "c6b55ea486bdaa0d20896c7cb1386f51e07976ab3c59ec1b2fc384218780a337",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "69c73517a72127402b3fb75b594e0659913c08ded4ec4e07bcdb99e3591bf1b7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/provider-paged.png",
+      "sha256": "a6f7f650883c9acd820cbca0dfcc4ddf5e9ea8cbe0fe99e2bd462b9a2c2aa483",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-choices.png",
+      "sha256": "d8dcf1bebc909c9bc427d2985b41b821c1952cc4028bfe466333714b44a10103",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-disabled.png",
+      "sha256": "f1184cd811357a501b016ddfdb3261839abaaa986105eda3e029c86072b96ecf",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-noop.png",
+      "sha256": "8dd178bbb574a7554add13abcef5f295ee45f984bdbdcd10e50db88ab6b48176",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-off-review.png",
+      "sha256": "13e5bf38a1ddd59f85d8958cf6a96ada18cdb2e46ef9b95bf30bd179c205207a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-review.png",
+      "sha256": "c89f1f4aa820d686a1204918d02726b4e6c19d9c55fe22feaff51d4b6295256b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-saved.png",
+      "sha256": "534b3e1537c52c3848799fb46e7962855c5268f5ebd8f760e92cec80d4950476",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-status.png",
+      "sha256": "c29bbfb9a5984ab74e7b5eabe8199422672d2646261c5fb0a7f857055db9378f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/fast-toggle-review.png",
+      "sha256": "13e5bf38a1ddd59f85d8958cf6a96ada18cdb2e46ef9b95bf30bd179c205207a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-missing.png",
+      "sha256": "c3e58efa240e5a6f971c54a3e1f837aa4ad8b80b71fbdaa8e599912cd6b576b7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "9969e2ef7b6db31047eb5c3568a25cad1ee5fe430d4a6184e3e1e3e90051c57f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "ab41d63710d0b43c351b434e1affefdb88d57d976f8048d98bdcb5ff15584126",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/provider-paged.png",
+      "sha256": "c50407f68e63cd4d36fba6b70676937b522d89fe1428b0cbbd08895c425cf113",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-choices.png",
+      "sha256": "7f986c063e4ba2fa0e05af0c5151d048da01e8392f012a43ae23430ecc34b42f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-disabled.png",
+      "sha256": "9a49f3a86705e01087e1e87254780fc2a793f25d30259916f09cf94a22431d9a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-noop.png",
+      "sha256": "30308ae47caa5c69b9b6083408d1495b2424e29c102a23382c309bc9bd69b749",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-off-review.png",
+      "sha256": "549e906874e0738f6846d17e68b8ffcd63bf806b9c3629910c898081278e404e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-review.png",
+      "sha256": "ce43c87e1f257fa29c99279a1ddcb87d5897ca2c101f60ca49de6a24a4773a82",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-saved.png",
+      "sha256": "3a24e8a9044ba4ccf7c9fa4cc8361fc6e66c42bba698aedca457d6f4c5ab6463",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-status.png",
+      "sha256": "7f78e84fad4df7085898b1bd2f080c22eb94d25805353d4fcb458361b1b33dc1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/fast-toggle-review.png",
+      "sha256": "549e906874e0738f6846d17e68b8ffcd63bf806b9c3629910c898081278e404e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-missing.png",
+      "sha256": "84268779ec6e79d53215eb35a73fa4eb25833d1e849fea01e1e1118224c717c2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/provider-no-match.png",
+      "sha256": "78971afa23efac6ae341bafa70a9b8f7f652b8949022d4bc48a13af363548e36",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "494d141275159a4efa2332a7a1f94fcd0cb3732175a8e5dbd0804ba5b040a8a2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/provider-paged.png",
+      "sha256": "fcf9302885ce17ff6944cfe396ed5c0ee744d914d36819ec4de5e0725c90c006",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-choices.png",
+      "sha256": "ba9fd955a30dfb5abf6016639a6192893c24357999f6efb53a2854024bd97ce1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-disabled.png",
+      "sha256": "f3140fd872dd9df5441d43eb9f43a40788d202560d406b73157688dfeba97ddc",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-noop.png",
+      "sha256": "f681ba8f558abf4c9deac3ac67de4af585c350c03c5c9f8ea9767f3ccd2b80d2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-off-review.png",
+      "sha256": "3ac38f83c44e459605c4fe50a6a3b2b1402f7bedb7a3db278c60bd0ea9c45d99",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-review.png",
+      "sha256": "2efaf7526078af3ec2042d4298f449e843ae785bfa763944af793c4ab25e3cde",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-saved.png",
+      "sha256": "77714338b58f5a865eb90858b43b290b380d81222fc7bb761f17d4734a99463b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-status.png",
+      "sha256": "b515050ae971975e00755504eec4be74b4f9a38c2d15e49ad47ee05af35c146c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/fast-toggle-review.png",
+      "sha256": "3ac38f83c44e459605c4fe50a6a3b2b1402f7bedb7a3db278c60bd0ea9c45d99",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-missing.png",
+      "sha256": "78b42ee25281bb2f923bcf6c7a5b43faae783fd7da746c92baff3eae56dc6879",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/provider-no-match.png",
+      "sha256": "f9e4502b2464ccbc860ffd03d17dae9667852c081ba88337217064aa81e87e20",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "10654b5d6564632186d2c7344d9b2cedd06b4b9defe254c06afee81c471122f4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/provider-paged.png",
+      "sha256": "35c0c2568aca73da785dbfbd4fa6b4bef3718f79b2c914b233b83753b2250cf2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-choices.png",
+      "sha256": "fad7f9908e177075c70c2d5271a7e268deeb5d60509a35983ecb2e783b71bff5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-disabled.png",
+      "sha256": "9154cb5849caca74083416e664ea1f43367b0d373469b9226169d4cae43f884c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-noop.png",
+      "sha256": "7902325c91024ed85cc5c0cf2f211246208efa8b4229604cfcae853f1ef17078",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-off-review.png",
+      "sha256": "66b6fe1dc92c63b524fba97c19932767e3f01334559d8e1959944a1c1d15cf89",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-review.png",
+      "sha256": "5e7485880f1e047441f97ffe4dfd936ba4bc284aa275f2802ba0a66c2d67824e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-saved.png",
+      "sha256": "f9e1cc7139991c73cf2a34dd689ca58d15cb22fa3beeb7a883aa7e558cf61463",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-status.png",
+      "sha256": "637de415b04ca2ed256dbfe251cc7f8214611e8c4b6c763b050d7576d7e6a9da",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/fast-toggle-review.png",
+      "sha256": "66b6fe1dc92c63b524fba97c19932767e3f01334559d8e1959944a1c1d15cf89",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-missing.png",
+      "sha256": "3140958b215d803d71755096658d2b96d83bad3880f0b3a0ddeef4ce5d4ba8cd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "7c85f49b488106640aa38ec847e07ad6a52e74eafb7b02b6fe14a000bb2228b2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "bc7187076be69d1c3d97bc9f2346ce8c51ca3a1015a66cab9212f9ecebbc7ef4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/provider-paged.png",
+      "sha256": "c778ca9bf5d0b520c038c4d266aef73b5319ac9b7368bd9f287de992b8caff44",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-choices.png",
+      "sha256": "f854f53acf7a2a37dfb13edc3923c0a642025988ea8e2e91fdfa2b12640c43ef",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-disabled.png",
+      "sha256": "e1fb6c6dfccfc4234ff170a5727a10117fc8fdf1941e36d33c75a8cf13e648b8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-noop.png",
+      "sha256": "d543fe88f78d118bcb1e7a1e69b32cf0c335214ef278bfa348287fc85ed56ef2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-off-review.png",
+      "sha256": "ac6f36a1705e4411653ca1120d3cafb90d9d791b9136407fd1856075b14d970b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-review.png",
+      "sha256": "871f0489ad0754579147e10be0cc54ae70f53c271e30c10b47a6505e4a610a79",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-saved.png",
+      "sha256": "6702217025b63e67f18ec7a8de3286ecfe0ec572cc1ac9f630135068bb37e051",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-status.png",
+      "sha256": "0cc673698e4f86b7b7ab8428fadfa632b6bb414c88fe99f448260cfc47c9b1a5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/fast-toggle-review.png",
+      "sha256": "ac6f36a1705e4411653ca1120d3cafb90d9d791b9136407fd1856075b14d970b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-missing.png",
+      "sha256": "ffbbe31fcfb5b2843ab06f3120e10cfafd9f374325d25bb1444b373532250d4d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "9f07b31c5ae8e7e8b19d44e9c9639df37b88bdd2b6e2273c06fdeaa680c7eea8",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "3f31385617fe256ec4dc5b37492c5babd0ed1d6d83de235e29d8f0e79dd827b9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/provider-paged.png",
+      "sha256": "8f3839001eb90b565de729aff3339375f11a1b91e20eea84216a02a7bba55bee",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-choices.png",
+      "sha256": "3b00e792936c5b4642f77cb51d95ecd1fc0e839a19497a9c44fa1da2863d58e3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-disabled.png",
+      "sha256": "a16986878b97411bd4871cf208dee92b88cd98849dfbb20124dce9a70da67401",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-noop.png",
+      "sha256": "cad7559f6bab61068c5ef68f38eb30411b9239dc5d9d1a2b9fd157499cf8bdba",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-off-review.png",
+      "sha256": "884465044d618c21c3c4b1fbb9a3b7970b5518ce459836366db93fc8303bf69f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-review.png",
+      "sha256": "7920dd72175827bd9be9194807b54b08df6483584c0b5e4dee7911607b81990c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-saved.png",
+      "sha256": "6bcc620e80efd8d2de0986a56e84e0eb0f2d1e1cd4b9f7e911c820d59bdb102c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-status.png",
+      "sha256": "fa09faf0d80f0ccb63035ccd7ffebe2876750366ff589f1fae801ea716b415ca",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/fast-toggle-review.png",
+      "sha256": "884465044d618c21c3c4b1fbb9a3b7970b5518ce459836366db93fc8303bf69f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-missing.png",
+      "sha256": "403a93b365bea957826b2462d02ad5ed50f86a622dc06df1800705f49a4555c2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/provider-no-match.png",
+      "sha256": "066e55d1185eb5188355528e51d1a4f1c2d567b8542e35d20c27fd0c80f107e1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "272bb035cac8958f43bdcb8340ee9428ebeafa57d380bb32141748a08458dea7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/provider-paged.png",
+      "sha256": "bac424fea4acfddfb9c56d99c212104fd447ebd16f11519cd615825c3a136e16",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-choices.png",
+      "sha256": "5f8ddde7a2828e804284af366c67ef13442c5e508d47118065bdf3f0bcb2b371",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-disabled.png",
+      "sha256": "25a7d316b73456742720dc9a25facb9a8b2c86fcfbbaa1fd53757e270073e55b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-noop.png",
+      "sha256": "865119bb868590be000bfa5204542d3907b7a555a6c1a8b8003dd7b71bae32a8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-off-review.png",
+      "sha256": "b81e6b252a0c5bd1942fbaa85a847806b9b67662ff98c3b6380a1de3085050a5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-review.png",
+      "sha256": "d736e793a7faadaa36506759707ab56b304a48ab79c77c04cf45cb1468354594",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-saved.png",
+      "sha256": "1260989a54734215fae9f99c2444aee45c90fe1d1b8985b37fc034f2184a12cc",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-status.png",
+      "sha256": "cdd858f543d468c77df07227793ec881aee79161f21ab3633c316c1ac6864e75",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/fast-toggle-review.png",
+      "sha256": "b81e6b252a0c5bd1942fbaa85a847806b9b67662ff98c3b6380a1de3085050a5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-missing.png",
+      "sha256": "bf2afc97baba3f930df9f74ecdd2c510107bc0095c940e441409cf390c662dc6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/provider-no-match.png",
+      "sha256": "b780674119407f394afa4abeb9a55ecc8cc59369a0fe72236f5e4a811b9f87ca",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "bd3dfb6ccbebbdb42a9bccd84ff92f9748a2eeedce1a6becb2cbb1826339e42f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/provider-paged.png",
+      "sha256": "f5e97962912eb22d2a73bf3fe8d5016f667a22cb8366b2ff2a4f7ab909574307",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-choices.png",
+      "sha256": "88f4533f0663ba157acc871a6b59392dd8dcc469804a105401d49779f0166241",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-disabled.png",
+      "sha256": "14254960d30d7bf781b93d3ac588df677523f23ffb9c15169fb1eef8f68d4aee",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-noop.png",
+      "sha256": "78cd750064ffbc9db2d703e2b4f8e2d36b627cf27c572327eff9f38fc4a43ac1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-off-review.png",
+      "sha256": "e72e096bf10bccff80053cc02c7c764a6f2a9581e9ff8edfa2ca83cbc4bef152",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-review.png",
+      "sha256": "25a33a99b6f4b7ee7cdd44c2731ada79c5416325bf0930bc4d990711db0a61bf",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-saved.png",
+      "sha256": "5d1a6257afcd92334e56fb8a92971a398590035d4902bd412a947c79381a0a03",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-status.png",
+      "sha256": "89ea60e769b5f581c59321fdf0299c66a3a0cb07a6a8b854864987d6b2c385f9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/fast-toggle-review.png",
+      "sha256": "e72e096bf10bccff80053cc02c7c764a6f2a9581e9ff8edfa2ca83cbc4bef152",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-missing.png",
+      "sha256": "af7939762b9209b2d021fe9ab17c1792c2777fe67e47f501edf962d9e20782b0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "0173cd4573c4af4e599c4a558285b4d96d1e54faacb786d401151b7b749cd5ac",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "c54e7f56175414cb298228d81f38f4bd00fc8714ab91cf3f9627f1621f35f985",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/provider-paged.png",
+      "sha256": "264faaf9adee04bb045ccffddbb218f08373f94c753c0c87c0ee91102a572485",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-choices.png",
+      "sha256": "de9a04000d018348a02f4c6bd2f4c90dace50bcfdd9bb4df9c89194c6a5fbe2d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-disabled.png",
+      "sha256": "450c12b8de284a902829cef5105f032deebceea05caf4571e0f8118f9e206d05",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-noop.png",
+      "sha256": "6f59841f1639ab3156bb17830d57c0394375e5089dbfdc5b5441fe0b4f253a3a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-off-review.png",
+      "sha256": "ebf6270f739edfbd04b85ae6424ca584b9cfdcb6b55f91983a97d1fec5c39e22",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-review.png",
+      "sha256": "2cc7814e92c5e7e6a1304bc44949dd1419788034bd73c5df6df7f4d66a9f2567",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-saved.png",
+      "sha256": "0099f328e1103a705db35349060037066a7b339acbe06d9a9623112bea4a578e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-status.png",
+      "sha256": "7f381498f0ece7291b958f3acf81225edb24a0a5034ba4367255dab1aaa50c0a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/fast-toggle-review.png",
+      "sha256": "ebf6270f739edfbd04b85ae6424ca584b9cfdcb6b55f91983a97d1fec5c39e22",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-missing.png",
+      "sha256": "f08a9e494320a7e56583f00f887cd3d65d72392cc4f50e1c3817a310b0850392",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "550bf4ddb55c79af69f726af34b1a8e0b8669ba191694b203bf430b67378c6f3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "08039cdc856ae40825c1cbfe108c94ac3c5b71f2e307700348de307753217c80",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/provider-paged.png",
+      "sha256": "cb6f4b0ac889cd52a04e430e4c128878a5cd4498a310dc6402aec515d17edc52",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-choices.png",
+      "sha256": "2656ccaf5c492568a1621497cc4dca6bf81de0b84dbbed6d6ddcdbae2eeed48a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-disabled.png",
+      "sha256": "04ca6a8c7a89bd480802e543bf35d69ce74bdc526286cb049bc7e31ff76e8e13",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-noop.png",
+      "sha256": "6c62bf0ee6aced3be746b133d0c5719346a4d2e8e27e948a129ad23e7d887b00",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-off-review.png",
+      "sha256": "a73ec2033885bdfc78787e231bc28894d3b189673aa78b1f160145c9d5880f90",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-review.png",
+      "sha256": "b8465f9fc5bec7eaca31976320d084c7fd11bf81e2cf31f3ebf2ec7fba28ad85",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-saved.png",
+      "sha256": "c676b90ff4a31ccc4461791bdf435d9b19ff3ee257a73dfec1e8f1e6338f36fa",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-status.png",
+      "sha256": "412f104f5de9384b7b6fde83c70bf2b0159b84c5061e4de4fb5b18aa442d0466",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/fast-toggle-review.png",
+      "sha256": "a73ec2033885bdfc78787e231bc28894d3b189673aa78b1f160145c9d5880f90",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-missing.png",
+      "sha256": "93e0569962249f39b447ef5282174dde339624e3afccab6323e060870cb3a11e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/provider-no-match.png",
+      "sha256": "8f0292d48df8b6cf501fd9b9387a0acc89abba4d7e30daf2480088f57510135e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "546a48c62f875949783e045632674c26438b299fc2200d3d4636164cc41fd593",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/provider-paged.png",
+      "sha256": "3d6ee6c8e9707e3d80ced4f3f7e44e869f541c63afb5b423f07b4faa2bf38a05",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-choices.png",
+      "sha256": "21930825dd0d359a2bfa7aa0fc55e5024132048e3eb69c0fc5a5c8d70dbf389d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-disabled.png",
+      "sha256": "8e009b3c55344f3c5d64fe4dcfb9450b198f5d490532d0c86b5ce4c68f02b688",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-noop.png",
+      "sha256": "67bf351daede223a0af54f019710e3ffea9e237793f0cf17016952c850b39a47",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-off-review.png",
+      "sha256": "ab0d9502deb10eb39acd4b0e4a0fc017289a830c50cc283c0a3287c2edc5eaa6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-review.png",
+      "sha256": "8d4a65ac70de8a0c2f713d6219dc90c8e74e3084d79caef1262bf3907ee4a01c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-saved.png",
+      "sha256": "9bb95a67f418ee3da5f08509d963cfed5fc5f1a8a1ea05520bf82a56e40fd3ab",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-status.png",
+      "sha256": "2f58cf806a75dbf2faf11a1eee6ba71dd0568fb726c4d492b52ae89ca802a1e1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/fast-toggle-review.png",
+      "sha256": "ab0d9502deb10eb39acd4b0e4a0fc017289a830c50cc283c0a3287c2edc5eaa6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-missing.png",
+      "sha256": "19e099be81b6e17ad5a01c3940dd3e8977d2055ed62d358fd024a7208b13449a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/provider-no-match.png",
+      "sha256": "890275736f5e63788852200decc3523d829185a3192d042a502128c3ab0387a4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "4a2432edb9e2aa5591aacd9f454d2385e84ebebbfad682cc04d7bd2173bdbc99",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/provider-paged.png",
+      "sha256": "0734ebbb2d261c8e7005ea93d74e506e7dfd35dfa842b5f1bca3e99c9cb8ab7b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-choices.png",
+      "sha256": "635419a71de5c75d161a95dcddb825a3c16a499991e304278a8bdd7e2fca2c0c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-disabled.png",
+      "sha256": "c6d744f72010f5ce3959c0a473c02f4ab144d77201ccabe46bd2ad19550da1ee",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-noop.png",
+      "sha256": "5ba96ccfcc1fa56e79aa3c2fd72eb5f8d5f3187a0833aa5608a46dff11fc6f8d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-off-review.png",
+      "sha256": "1b347599ff65b6e3b4dc8ed6c6da2eeaff32dd584322ab8d1f456beceb444617",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-review.png",
+      "sha256": "3480ed62ef29c22a2e0f54320fe74b744f8e156b4c87455713b60f85edea537e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-saved.png",
+      "sha256": "21a4c9473ecd1f4b778e5274bbaa86316d3fb050552112b813558fe25f4cd59d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-status.png",
+      "sha256": "1addcfcf33f128a07c95a9388ac07e760f46930483af2f57f77e247ce64de06d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/fast-toggle-review.png",
+      "sha256": "1b347599ff65b6e3b4dc8ed6c6da2eeaff32dd584322ab8d1f456beceb444617",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-missing.png",
+      "sha256": "eac2deeb360f4191a6200b0aafd39e64ea6c551eeb66759947ed666f0d4ebd99",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "4171a21e38a99ec2af582c6de8bd06dd2e41600954d284a58b04181cb9301e44",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "4652a6f9054c0ee4ad9da767058047c868c81d2b762c55124d7bf4b53a5a1622",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/provider-paged.png",
+      "sha256": "a5f80a158dd7d9b7ec682612e68798d2d8f7a898d327e86aa58b16591dfaf46f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-choices.png",
+      "sha256": "751208678a0f8ec6a8ac59a331be2f5a4c19687e64ff27dda8a25e85df1bd363",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-disabled.png",
+      "sha256": "5215990b94b9819d70675d2c9e470ba83f68b134111c53653ef3a80c8d489da6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-noop.png",
+      "sha256": "6f7b46e3193e87101a13c1a40062d30089cde3a2a11df714c5112097057a3335",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-off-review.png",
+      "sha256": "02ae7fd1cf7baff074487218535be6fab9c73a1b0d246b7592288e6a6cf562e3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-review.png",
+      "sha256": "9eaba807634674bfe160bc9e24fd2dcec3760263e65469a219fbdd548aa4483c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-saved.png",
+      "sha256": "94e183a45de00436679417b66f55108a60c1438471a102cdf7a3872a0201fd87",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-status.png",
+      "sha256": "d27dc4f282c3dae02c0aba2f649e60151cae8c1def507415b8839b32d61a1399",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/fast-toggle-review.png",
+      "sha256": "02ae7fd1cf7baff074487218535be6fab9c73a1b0d246b7592288e6a6cf562e3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-missing.png",
+      "sha256": "6f753eca897dba68e1a1502624682503a2e31ed02ebdd91d6e746c875cb175bf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "1a52a08895ba3f838cbebfc7f2d5e3c72dbcd013b952b6bd83e82b893ad07bdc",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "8ae2055988c1c88f61d9846c8342f36d204aee5422fbceb8eb2493a20d4523d0",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/provider-paged.png",
+      "sha256": "733a675eed86e256dcba6b0f91db66809603a5aa3e72873c38f2ab143b7419ab",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-choices.png",
+      "sha256": "b1a09f7d851fc738967978736baf1cdda7b64702f05091d0aaaf02285beee9d6",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-disabled.png",
+      "sha256": "282f16e9e7f66b64b59ef2b0c803727f7b5e4ec77f2523f7eec3d1d76bba3458",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-noop.png",
+      "sha256": "69dc2c763443c0da6b32ef4beec1dc0ad4b30153fa60f2acc1e40f0e75b9871b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-off-review.png",
+      "sha256": "4787d5ce8b394ff4738af3c44644c966c9bb4fe7f15d91ca85012bb9e5720a59",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-review.png",
+      "sha256": "9e964d5f35d38762bd496403ae78b088fab6753aba69368403d94ad9a6e9d9a7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-saved.png",
+      "sha256": "cabf411909e677ea5e0b8123a671ac62af856666cf0f702f891519c40d33a56c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-status.png",
+      "sha256": "7fe3fcb0270a4ee5a166b0f31c2e83555fbf829a75127110184c3fcd387e40bb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/fast-toggle-review.png",
+      "sha256": "4787d5ce8b394ff4738af3c44644c966c9bb4fe7f15d91ca85012bb9e5720a59",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-missing.png",
+      "sha256": "7bfadd43664821c8f74769d369201c8874c9a47e5a338a5533f134fa7ac2219d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/provider-no-match.png",
+      "sha256": "d9519ca2bc6fdbc4410be64996c0adf90e67aa4f7a69827122e682beff591424",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "d6e783f7780e1b17c258a518e092f64340768fa111a45abe01c710d93bdf7c83",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/provider-paged.png",
+      "sha256": "f1d35678ae2afa836b142782826bb7d51ca91becb5ed5f1e4500854b03bf187d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-choices.png",
+      "sha256": "13ad206b8aedba724d631b4e7bf99dafed0ef292df7e28321679cb2b67d9e831",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-disabled.png",
+      "sha256": "712b9af3cd18146b657f6dcf45a77a47f31d7bc4a00bc1c7c75dd2da75fa7167",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-noop.png",
+      "sha256": "207dffa35d3b8c7a943b50c933de6b0d2a0dde75f5e789a8ed5effcbac74da06",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-off-review.png",
+      "sha256": "4ad79daef6c847dec55f6f21131c634546bb3b2d247b3eab37d6f25eb0d2e427",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-review.png",
+      "sha256": "97aaa7f30dc436dc7c26887d645f2109006cc4027ce0bca21f38ecb03a96a71d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-saved.png",
+      "sha256": "696cce1d93d506322588ad243e47b3798a21cf3db975cc85170531fbd13a6474",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-status.png",
+      "sha256": "af292d146f1ecc5474918ad7784e3792f118607c7765daf9d403a280856300a6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/fast-toggle-review.png",
+      "sha256": "4ad79daef6c847dec55f6f21131c634546bb3b2d247b3eab37d6f25eb0d2e427",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-missing.png",
+      "sha256": "521422c419adf70c7f39b93173a37ff31c892197808cf507c88b0c5f41b746a8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/provider-no-match.png",
+      "sha256": "7de2dcb92249f6ca3547aae91e987e57cdbf4247e65505fbbc7c460b9863795c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "3ed2a8e2e89a7cdee167899b59eb592fb212b534e237baaa699dcf77d7f6a307",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/provider-paged.png",
+      "sha256": "6485e8e3822fc687d803a1370ff17e908e7d2a2f88b3ed114560304c25ec2564",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    }
+  ]
+}

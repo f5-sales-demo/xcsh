@@ -1,0 +1,400 @@
+{
+  "directory": "terminal-background-transfer-final-v1",
+  "historicalDirectory": "terminal-background-transfer-v1",
+  "fixture": "background-transfer",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 64,
+  "contactSheets": 4,
+  "exactPngMatches": 0,
+  "normalizedTextMatches": 0,
+  "changedText": 64,
+  "missingHistorical": 0,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/background-active.png",
+      "sha256": "d338f33280a0f1e380d056e49e6bc1e399da4bd5f82224327e9759acfe5610d9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/background-completed.png",
+      "sha256": "6d45b5f3e61622f913da4d11a2ccdaf35f941f6e639c0c14ced49030bc4c5081",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/background-editor.png",
+      "sha256": "fd7f832cc129bcd36f2b351ac25f75f5024ae9b32129795e58d8302b9ca87f28",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/background-suspended.png",
+      "sha256": "4dd3d798a55cb8fc7e0924544c2397f4760e272d0984ed3577bf2b7ba4ce65bb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/background-active.png",
+      "sha256": "46c5ead2ef9af27dd1e10034f5d8ff763a39b6cd17d073e40dae829e01137575",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/background-completed.png",
+      "sha256": "16cc7cb3e6938d69e16a2683ef1ef796bc6ad3e7b75d18d3b57dcfe114dcacdf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/background-editor.png",
+      "sha256": "e5367b5b8ddabf161558b2477f07a2f54e426ca242efce3e3d8e6a5269f44b52",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/background-suspended.png",
+      "sha256": "75fe0417968eb5eefb869e710f2c928a59d68496640bdc03bad20b89bd3f5f70",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/background-active.png",
+      "sha256": "68f3066c824ee2234abe1bf118c641d6f04d1b3ec525783dfce2f29ee4dfa74e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/background-completed.png",
+      "sha256": "7c1219549ae51f28a6e71c1d29a674d1c496b4d4763aefcf34e85dd35479f12f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/background-editor.png",
+      "sha256": "b58253a3c4c69e285c75c9e294a664685dfc8a1f8f5fcae4c74ce26efce77825",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/background-suspended.png",
+      "sha256": "23413278acf233e2b4d3e58d133265a6fd20cd4e0b285905af496d7ceafed4dc",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/background-active.png",
+      "sha256": "f1b6aea1834e46e4ab7c66c3bd880f32676d1413851246a07ca5e4973bd29fad",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/background-completed.png",
+      "sha256": "3ee3194adf5534c9617637e9d17b167b0dccb50fe89e258dfa9665b929a2c427",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/background-editor.png",
+      "sha256": "1077a90b9b0fe35bedc6e78ac4c5d560786fbdfd61c3294a1331c22673017cfa",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/background-suspended.png",
+      "sha256": "7736d25c61a1915ea593674f7366bb90ae1228289db3ce174e0af5fa9344bcb8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/background-active.png",
+      "sha256": "b45f8b69f838bcac17151c36a1fa157122bf63133476a0dc25f197a3d80f69d7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/background-completed.png",
+      "sha256": "335c6627838725db37a790847ff2469e2461c2bf059e5964dd029a4b332ae20f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/background-editor.png",
+      "sha256": "663a3e0f4083a4318ba6912fbe25a9ac794bae351ca1926ee87153c6800283d3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/background-suspended.png",
+      "sha256": "cadb15091a3c606250978830660f5745b22fc3fde80bc6ddc516cf52b589b867",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/background-active.png",
+      "sha256": "580808f71f6aa87215d8417fa7f722cc270e677d3a030b3772cbcb07d8fc6593",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/background-completed.png",
+      "sha256": "ed4acbd7a3359c2bb14152f9175e19eb719a689d0303dc2be35d2343e71d4f93",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/background-editor.png",
+      "sha256": "f40dc77d69fce4879c02f91b40530a8f735368b796bf93f453e97e09e8dc514d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/background-suspended.png",
+      "sha256": "c4485f156916cb662f59658ec5e8e1d4ec63ab7935de35c9a83f5a9d8afee0f6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/background-active.png",
+      "sha256": "8541f1b925b8e8474fbf7b380a1e9d1cd22d3d353d4b5e95a417a4cfbd16c07f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/background-completed.png",
+      "sha256": "c1aff87879497080b47d68e89e3ecf0b3d0eba13dbcbbce99b3e1808e966d2f3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/background-editor.png",
+      "sha256": "357600d5d847eff642f96ebaa1566005413a7f616a4f0768a488e612a1899493",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/background-suspended.png",
+      "sha256": "52747a665a0ada7e78b3ef90dca8e32e9c7c8fbb5963193bca6a818adb1d1417",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/background-active.png",
+      "sha256": "6f4389b09b5c32d1560c0c26ec2a4723a7277ffe12f510a93394dce40d271303",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/background-completed.png",
+      "sha256": "fc1cc14c7da6c1e9b0d721951dcb0123c42e298f941dcc41a0b558c47e3d642c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/background-editor.png",
+      "sha256": "8a6343c5d240bfcf243d7cf2362904254a08a0a1f743d52e6e2decc5bb34f377",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/background-suspended.png",
+      "sha256": "2c84bfbd9e25cc9ce8dab98563df33958e20997d4d8a8ebf715e171c0b068855",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/background-active.png",
+      "sha256": "359e06c5d20eea331aa26b3498d139d8ba70df94665441e279d8fc07fdfdff6b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/background-completed.png",
+      "sha256": "e2874cca58de929ecf9c9506b276fe48f763abeb47f63234dfe082d9e121b58e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/background-editor.png",
+      "sha256": "33400b8c927350da1065db599e63b4bc0279fc9b2a50ffbc79f87caa04ee4264",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/background-suspended.png",
+      "sha256": "238c6bac7457aa0c4d1c4d9cf552d449b920094389b4693f638af649f90ee266",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/background-active.png",
+      "sha256": "91564a037d9ba8e646eb85a478316528ee2de9bd1769aa39c696969e59fab655",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/background-completed.png",
+      "sha256": "8da274790090b2ce0c7120d52cd74b7c81bbb0e1617afb4e587f6173e99b5b71",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/background-editor.png",
+      "sha256": "7c69050d3637bc869e6779fb17e313269c065b27e7a394cd39fb8f7fc1f4a6d9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/background-suspended.png",
+      "sha256": "e34505a11ef3b4b46a794e1a54012c603d00ea57445a50a0bcf45cf774942449",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/background-active.png",
+      "sha256": "f6e1d6fe0634a2c203061d0df4e334f41d5312475b049fd666fe68e13b67fc0a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/background-completed.png",
+      "sha256": "ac2218524788cd5539fbc12e30a2313067a75d162cc96e8ac77ea6efb3cace6f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/background-editor.png",
+      "sha256": "63192dbb9c8ed6643dddb7e1db2908afb9f95f24a1061078c44827f7a99aa384",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/background-suspended.png",
+      "sha256": "bbb9c8841313fbcfa8dd11b3521ea0f5321f1278ad43773d115c218fed08c7ad",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/background-active.png",
+      "sha256": "73945c70dc13ba3c08f518d02df08dbc803fc5c32951defabb0eed38fd18e031",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/background-completed.png",
+      "sha256": "e078c1b594f515f0fcd113ad30bab51dec1dbe6cce7ce8361724867e53b88106",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/background-editor.png",
+      "sha256": "8f877871d8bba8c58bba03aba79e651d7ca74eeecbf013e454053a8e4d424ac7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/background-suspended.png",
+      "sha256": "bf76b472a109d9fd8889c0133d19ebf39e5c6799abd32903cc5b51ba56810e94",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/background-active.png",
+      "sha256": "dc7de7763080e2e53c8aabcf694d3afa6ddcec6229b0f0fc7445b824cce3629e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/background-completed.png",
+      "sha256": "ba0ecaa461976f253782ce37b1c7e1883a77e02d0e398543cc97e3933c414741",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/background-editor.png",
+      "sha256": "1da69597056e5aa8501c6b7feddf5efb2984b1f56068b822217e5a141dacb674",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/background-suspended.png",
+      "sha256": "3d4c5d5578ec92281efadd8843a4ce0a80a7d74bac2d030751d4f814f3fa22a4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/background-active.png",
+      "sha256": "9e5e86e969f8d5cec63c1f563a3bb7490da7e94eabdcce7801eea13ae2410c26",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/background-completed.png",
+      "sha256": "c58a4c517ffa717139d6846dad8653f5f571ba0bf251621227fbea5bdf207012",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/background-editor.png",
+      "sha256": "88151e8361f7836e4bc2bd1f5122be10d21768f91e96e5f978d850ed9100056a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/background-suspended.png",
+      "sha256": "6b6ef7f9b58d8f314c2a02e07de58472784881fb7e6128542026582dc21f0f6c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/background-active.png",
+      "sha256": "c06165c73428e81d746604251d52f9b64dbf7f3a1d6d0485fd7e9dd1befa3eb3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/background-completed.png",
+      "sha256": "fb3474366d2ff23cc34b274b370c03820d96e0e59cdf660b7fdf60e6cc759f84",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/background-editor.png",
+      "sha256": "f0693935bbf8534a75280128074b4d0b9aa04d58455da60f4eea7465138cfa30",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/background-suspended.png",
+      "sha256": "4d99bcf9c487f5161fe3b789fd0b2602f8c409e3cf167e17e0dab9e89945d3fe",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/background-active.png",
+      "sha256": "2b579a58bf8115162e975ac7ca8f7e9bacee1aeeb3acd55c26fd62eaca6cab6d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/background-completed.png",
+      "sha256": "8895f4edf33c14aa979f01f474efed1a221f941b5316fd53f873efc87a3fd97b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/background-editor.png",
+      "sha256": "aa42d79fd8bc6fdc9ec70095c425c90c08e4fac5dbd0260404cc725563fd86bb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/background-suspended.png",
+      "sha256": "e0f94169c39318774441d3b7db2890d979dd1449395af6bdeeda415ef5b8423c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    }
+  ]
+}

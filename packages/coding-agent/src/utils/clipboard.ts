@@ -21,51 +21,47 @@ export type CopyToClipboardResult = { ok: true } | { ok: false; error: string };
 
 /** Copy text while preserving an actionable failure result for interactive workflows. */
 export async function copyToClipboardWithResult(text: string): Promise<CopyToClipboardResult> {
-	let osc52Accepted = false;
-	if (process.stdout.isTTY) {
-		const onError = (err: unknown) => {
-			process.stdout.off("error", onError);
-			// Prevent unhandled 'error' from crashing the process when stdout is a closed pipe.
-			if ((err as NodeJS.ErrnoException | null | undefined)?.code === "EPIPE") {
-				return;
-			}
-		};
-		try {
-			const encoded = Buffer.from(text).toString("base64");
-			const osc52 = `\x1b]52;c;${encoded}\x07`;
-			process.stdout.on("error", onError);
-			process.stdout.write(osc52, err => {
-				process.stdout.off("error", onError);
-				// If stdout is closed (e.g. piped to a process that exits early),
-				// ignore EPIPE and proceed with native clipboard best-effort.
-				if ((err as NodeJS.ErrnoException | null | undefined)?.code === "EPIPE") {
-					return;
+	const result = await copyToClipboardWithDelivery(text);
+	return result.ok ? { ok: true } : result;
+}
+
+export type ClipboardDeliveryResult = { ok: true; delivery: "copied" | "requested" } | { ok: false; error: string };
+
+/** OSC 52 has no delivery acknowledgement; only a completed native copy confirms delivery. */
+export async function copyToClipboardWithDelivery(text: string): Promise<ClipboardDeliveryResult> {
+	const osc52Accepted = process.stdout.isTTY
+		? await new Promise<boolean>(resolve => {
+				const finish = (accepted: boolean) => {
+					// A failed write callback can precede the stream's error event.
+					if (accepted) process.stdout.off("error", onError);
+					else setImmediate(() => process.stdout.off("error", onError));
+					resolve(accepted);
+				};
+				const onError = () => finish(false);
+				process.stdout.on("error", onError);
+				try {
+					process.stdout.write(`\x1b]52;c;${Buffer.from(text).toString("base64")}\x07`, error => finish(!error));
+				} catch {
+					finish(false);
 				}
-			});
-			osc52Accepted = true;
-		} catch (err) {
-			process.stdout.off("error", onError);
-			if ((err as NodeJS.ErrnoException | null | undefined)?.code !== "EPIPE") {
-				// Ignore all write failures (OSC 52 is best-effort).
-			}
-		}
-	}
+			})
+		: false;
 
 	// Also try native tools (best effort for local sessions)
 	try {
 		if (process.env.TERMUX_VERSION) {
 			try {
 				execSync("termux-clipboard-set", { input: text, timeout: 5000 });
-				return { ok: true };
+				return { ok: true, delivery: "copied" };
 			} catch {
 				// Fall through to native
 			}
 		}
 
 		await native.copyToClipboard(text);
-		return { ok: true };
+		return { ok: true, delivery: "copied" };
 	} catch (error) {
-		if (osc52Accepted) return { ok: true };
+		if (osc52Accepted) return { ok: true, delivery: "requested" };
 		return { ok: false, error: error instanceof Error ? error.message : String(error) };
 	}
 }

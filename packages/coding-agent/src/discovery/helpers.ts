@@ -682,9 +682,9 @@ export async function resolveActiveProjectRegistryPath(cwd: string): Promise<str
 	let dir = path.resolve(cwd);
 	while (dir !== homeDir) {
 		try {
-			const stat = await fs.promises.stat(path.join(dir, getConfigDirName()));
+			const stat = await fs.promises.stat(path.join(dir, CONFIG_DIR_NAME));
 			if (stat.isDirectory()) {
-				return path.join(dir, getConfigDirName(), "plugins", "installed_plugins.json");
+				return path.join(dir, CONFIG_DIR_NAME, "plugins", "installed_plugins.json");
 			}
 		} catch {
 			// not found at this level — continue up
@@ -699,7 +699,7 @@ export async function resolveActiveProjectRegistryPath(cwd: string): Promise<str
 	while (dir !== homeDir) {
 		try {
 			await fs.promises.stat(path.join(dir, ".git"));
-			return path.join(dir, getConfigDirName(), "plugins", "installed_plugins.json");
+			return path.join(dir, CONFIG_DIR_NAME, "plugins", "installed_plugins.json");
 		} catch {
 			// not found at this level — continue up
 		}
@@ -729,7 +729,7 @@ export async function resolveOrDefaultProjectRegistryPath(cwd: string): Promise<
 	// getInstalledPluginsRegistryPath(), causing MarketplaceManager to load the same file
 	// as both user and project registry and producing duplicates / disambiguation errors.
 	if (path.resolve(cwd) === os.homedir()) return undefined;
-	return path.join(cwd, getConfigDirName(), "plugins", "installed_plugins.json");
+	return path.join(cwd, CONFIG_DIR_NAME, "plugins", "installed_plugins.json");
 }
 
 const pluginRootsCache = new Map<string, { roots: XcshPluginRoot[]; warnings: string[] }>();

@@ -4,10 +4,15 @@ import { setKeybindings, type TUI } from "@f5-sales-demo/pi-tui";
 import { KeybindingsManager } from "../src/config/keybindings";
 import type { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
+import { ContextAddWizard } from "../src/modes/components/context-add-wizard";
+import { HistorySearchComponent } from "../src/modes/components/history-search";
+import { MCPAddWizard } from "../src/modes/components/mcp-add-wizard";
 import { ModelSelectorComponent } from "../src/modes/components/model-selector";
 import { SessionSelectorComponent } from "../src/modes/components/session-selector";
+import { TreeSelectorComponent } from "../src/modes/components/tree-selector";
 import { initTheme } from "../src/modes/theme/theme";
-import type { SessionInfo } from "../src/session/session-manager";
+import type { HistoryStorage } from "../src/session/history-storage";
+import type { SessionInfo, SessionTreeNode } from "../src/session/session-manager";
 
 beforeAll(() => {
 	initTheme();
@@ -33,9 +38,10 @@ function createSession(id: string, title: string): SessionInfo {
 }
 
 describe("component escape bindings", () => {
-	it("uses app.interrupt for session selector cancel without changing Ctrl+C exit", () => {
+	it("honors the session back binding without treating Ctrl+C as menu exit", () => {
 		const keybindings = KeybindingsManager.inMemory({
-			"app.interrupt": "alt+x",
+			"app.interrupt": "ctrl+c",
+			"tui.select.cancel": "alt+x",
 		});
 		setKeybindings(keybindings);
 
@@ -55,7 +61,106 @@ describe("component escape bindings", () => {
 		expect(onCancel).toHaveBeenCalledTimes(1);
 
 		selector.handleInput("\x03");
-		expect(onExit).toHaveBeenCalledTimes(1);
+		expect(onExit).not.toHaveBeenCalled();
+		expect(onCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("clears an active session search before closing", () => {
+		const onCancel = vi.fn();
+		const selector = new SessionSelectorComponent(
+			[createSession("session-a", "Alpha"), createSession("session-b", "Beta")],
+			() => {},
+			onCancel,
+			() => {},
+		);
+
+		selector.handleInput("A");
+		selector.handleInput("\x1b");
+		expect(onCancel).not.toHaveBeenCalled();
+		selector.handleInput("\x1b");
+		expect(onCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("separates Back from Ctrl+C in context and MCP add wizards", () => {
+		setKeybindings(
+			KeybindingsManager.inMemory({
+				"app.interrupt": "ctrl+c",
+				"tui.select.cancel": "alt+x",
+			}),
+		);
+		const contextCancel = vi.fn();
+		const context = new ContextAddWizard(
+			() => {},
+			contextCancel,
+			() => {},
+		);
+		const mcpCancel = vi.fn();
+		const mcp = new MCPAddWizard(() => {}, mcpCancel);
+
+		for (const component of [context, mcp]) {
+			component.handleInput("\x03");
+			component.handleInput("\x1b");
+		}
+		expect(contextCancel).not.toHaveBeenCalled();
+		expect(mcpCancel).not.toHaveBeenCalled();
+
+		context.handleInput("\x1bx");
+		mcp.handleInput("\x1bx");
+		expect(contextCancel).toHaveBeenCalledTimes(1);
+		expect(mcpCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("clears history search before Back and never treats Ctrl+C as Back", () => {
+		setKeybindings(
+			KeybindingsManager.inMemory({
+				"app.interrupt": "ctrl+c",
+				"tui.select.cancel": "alt+x",
+			}),
+		);
+		const onCancel = vi.fn();
+		const storage = {
+			getRecent: () => [{ id: 1, prompt: "Alpha", created_at: 1 }],
+			search: () => [{ id: 1, prompt: "Alpha", created_at: 1 }],
+		} as unknown as HistoryStorage;
+		const component = new HistorySearchComponent(storage, () => {}, onCancel);
+
+		component.handleInput("A");
+		component.handleInput("\x03");
+		component.handleInput("\x1b");
+		expect(onCancel).not.toHaveBeenCalled();
+		component.handleInput("\x1bx");
+		expect(onCancel).not.toHaveBeenCalled();
+		component.handleInput("\x1bx");
+		expect(onCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("uses selector Back rather than app interruption in the tree", () => {
+		setKeybindings(
+			KeybindingsManager.inMemory({
+				"app.interrupt": "ctrl+c",
+				"tui.select.cancel": "alt+x",
+			}),
+		);
+		const onCancel = vi.fn();
+		const tree = [
+			{
+				entry: {
+					type: "message",
+					id: "root",
+					parentId: null,
+					timestamp: "2026-01-01T00:00:00.000Z",
+					message: { role: "user", content: "Root" },
+				},
+				children: [],
+			},
+		] as unknown as SessionTreeNode[];
+		const component = new TreeSelectorComponent(tree, "root", 24, () => {}, onCancel);
+
+		component.handleInput("\x03");
+		component.handleInput("\x1b");
+		expect(onCancel).not.toHaveBeenCalled();
+		component.handleInput("\x1bx");
+		expect(onCancel).toHaveBeenCalledTimes(1);
 	});
 
 	it("uses tui.select.cancel for model selector cancellation", async () => {

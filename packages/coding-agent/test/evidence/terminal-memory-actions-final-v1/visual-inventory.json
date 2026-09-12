@@ -1,0 +1,1408 @@
+{
+  "directory": "terminal-memory-actions-final-v1",
+  "historicalDirectory": "terminal-memory-actions-v1",
+  "fixture": "memory-actions",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 232,
+  "contactSheets": 16,
+  "exactPngMatches": 45,
+  "normalizedTextMatches": 107,
+  "changedText": 80,
+  "missingHistorical": 0,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/memory-clear-review.png",
+      "sha256": "b1b9bb97e0ce63993edfecebe2af57b939c7eae5840c5644d4a2d00b644e0588",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-clear-saved.png",
+      "sha256": "69e15e3a482b46242f11053eba4915eec5361db4e1f489686e04ad106e94a0b4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-empty.png",
+      "sha256": "67870ba1a116db7768da785fa600029956d18dad6fcad084c0b65a3be887406b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "651d458deeb5f1eca99785913a67704cd20cb1eb04bea2c80f541dedbebdc1e8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-enqueued.png",
+      "sha256": "7cf4199fc9da4897a1422d0511c7ada3c2c1633bfdf1f781b0b671f0fb198dd8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-invalid.png",
+      "sha256": "d8f6ddabbc7f9069e4c72d27d6d929e2273c1490470eeb9acfadee28c6b7ee2d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-populated-paged.png",
+      "sha256": "449a2ec1b31d37e511e89907fcdcdafd3261da45276069fcb4d6d36664c4e885",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-populated.png",
+      "sha256": "d7b822ac556a196d68c17d1839930591294bffc5618949f69f97597043e3bdab",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "651d458deeb5f1eca99785913a67704cd20cb1eb04bea2c80f541dedbebdc1e8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-reset-review.png",
+      "sha256": "a1143d766fa02a0cfeec7de9b34171cca2d9d7786506c2f316a7e399f0cf67e7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/memory-reset-saved.png",
+      "sha256": "69e15e3a482b46242f11053eba4915eec5361db4e1f489686e04ad106e94a0b4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "c6b55ea486bdaa0d20896c7cb1386f51e07976ab3c59ec1b2fc384218780a337",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "69c73517a72127402b3fb75b594e0659913c08ded4ec4e07bcdb99e3591bf1b7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/provider-paged.png",
+      "sha256": "a6f7f650883c9acd820cbca0dfcc4ddf5e9ea8cbe0fe99e2bd462b9a2c2aa483",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-clear-review.png",
+      "sha256": "27832d51f1ea91cb362d0fe80d86d051ea493104ad94ef64f87d202371795982",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-clear-saved.png",
+      "sha256": "7b137fcace7620313218b94e42c1bcd1f1ae9d73a7dae8b8588064ceaab5a8d2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-empty.png",
+      "sha256": "4ba64178b45303d7817d82f26076d075360a28e40a79a5f47e3ef8157d4ec01f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "18cf835a25818651df835ca8e854c19afc28d623d9302517ee299d4c4466c736",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-enqueued.png",
+      "sha256": "6c453a1f40cf2e2dcb69c680a9157571ab96d5af36b28822ec7438d8125a9d45",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-invalid.png",
+      "sha256": "805ee6020b71e2870dac05b50c1909a1a6ff0885f8f442edb2c37e8f0d8d7d69",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-populated-paged.png",
+      "sha256": "f7484df4d4a0fafd0d4c54d5f6ef44f903421d0cba6071fc48addd65c0006e3f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-populated.png",
+      "sha256": "9f4b588b8788fade44895a56c5d4a15be704519c8c8c60306d35b838b2fd948d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "18cf835a25818651df835ca8e854c19afc28d623d9302517ee299d4c4466c736",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-reset-review.png",
+      "sha256": "39f415400ebe61f7ad673d72ce15c89e7dc0ccb749ff939a56b3f2b35fd6f4c5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/memory-reset-saved.png",
+      "sha256": "7b137fcace7620313218b94e42c1bcd1f1ae9d73a7dae8b8588064ceaab5a8d2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "9969e2ef7b6db31047eb5c3568a25cad1ee5fe430d4a6184e3e1e3e90051c57f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "ab41d63710d0b43c351b434e1affefdb88d57d976f8048d98bdcb5ff15584126",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/provider-paged.png",
+      "sha256": "c50407f68e63cd4d36fba6b70676937b522d89fe1428b0cbbd08895c425cf113",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-clear-review.png",
+      "sha256": "25fc3d2cbb07a19f86f94a0ffab1d68f7572e9a1c3c44134ff30fa40b2f80356",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-clear-saved.png",
+      "sha256": "0c6eccf156288ad5fd15caba6b11dc24199e9ec64e89d3d65184e34a76186c93",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-empty.png",
+      "sha256": "6bfa65fc24f2ea859e9f06f580ae5b2a30cf586a5a715e3db8b61abdccc97009",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "9da1bf48fa96074adbf100634478e0ce1f589265c0d0d3a45d5ef9be69025e18",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-enqueued.png",
+      "sha256": "e27289e8744a33f8533d9697fa1339a0b6e254a039f08f2e08675a056a7007ae",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-invalid.png",
+      "sha256": "5799f717dbad67363887d3cc1c845929387e24e304ee3cd2ef34007f3111abfd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-populated-paged.png",
+      "sha256": "e7cf3dd1a7774783ee5da6055630fd0d48c34dce999cb9f582119b12b423448e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-populated.png",
+      "sha256": "34f3ab795dcacfea48ed32455458c55214275697ddd76b691dc03cebf0835b7f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "9da1bf48fa96074adbf100634478e0ce1f589265c0d0d3a45d5ef9be69025e18",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-reset-review.png",
+      "sha256": "4da1954ef374ff0b1a56e263d290dc2cd27c19616cb4b5d66c20748e23240ba6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/memory-reset-saved.png",
+      "sha256": "0c6eccf156288ad5fd15caba6b11dc24199e9ec64e89d3d65184e34a76186c93",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/provider-no-match.png",
+      "sha256": "78971afa23efac6ae341bafa70a9b8f7f652b8949022d4bc48a13af363548e36",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "494d141275159a4efa2332a7a1f94fcd0cb3732175a8e5dbd0804ba5b040a8a2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/provider-paged.png",
+      "sha256": "fcf9302885ce17ff6944cfe396ed5c0ee744d914d36819ec4de5e0725c90c006",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-clear-review.png",
+      "sha256": "40933a8eb3569da93d004c579e9e1399c4bbf66362ee232157b94811a4ed7613",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-clear-saved.png",
+      "sha256": "baec49e3a5a9635983b74a856b8a338ee15e8870ec0467f3ab9e5045adbbadf2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-empty.png",
+      "sha256": "b0ea7e672b976a0cea498813948d442297afb73bd806c9e484c499584c85202f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "8088c85522aef855ce14925cf03ae6343ed707e6bc08dcb0557318ee015877e4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-enqueued.png",
+      "sha256": "a939e08bc6058554ae9ab15eccb37dc92f58dc1c4f9a8a651456b60ffe7638cb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-invalid.png",
+      "sha256": "e78aaf0de06651ea978bdf215c690c9460378771aa789041ec4541e6c9cd63a3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-populated-paged.png",
+      "sha256": "e0d4f212b6f0e26d3ca79393a6a20a88988e3c830b3f7c982bb4c75db23493a1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-populated.png",
+      "sha256": "f733b9a257b2532464033b6ca9edf178e9bd92ecfda8b1daa2e2ae7d90b823af",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "8088c85522aef855ce14925cf03ae6343ed707e6bc08dcb0557318ee015877e4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-reset-review.png",
+      "sha256": "93812cd9ec30448938db074bd98b151e7914eb9518fff1cf505d273806808dd7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/memory-reset-saved.png",
+      "sha256": "baec49e3a5a9635983b74a856b8a338ee15e8870ec0467f3ab9e5045adbbadf2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/provider-no-match.png",
+      "sha256": "f9e4502b2464ccbc860ffd03d17dae9667852c081ba88337217064aa81e87e20",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "10654b5d6564632186d2c7344d9b2cedd06b4b9defe254c06afee81c471122f4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/provider-paged.png",
+      "sha256": "35c0c2568aca73da785dbfbd4fa6b4bef3718f79b2c914b233b83753b2250cf2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-clear-review.png",
+      "sha256": "d823969e2b22d9f933d08c33333ff573412cd53c0c7a62605051274200053940",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-clear-saved.png",
+      "sha256": "05984b623d391f16a73ca5d7c434289bfa1a9b0311af0420ef53df4f58d09ecf",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-empty.png",
+      "sha256": "184e5f8a89740debc854b50f6d355a6009528921e1d13c2d8f66015336224535",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "57bcd051cc3f4b940e37b74592c078c38c510036d5a16d4efeea8a880a2688e0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-enqueued.png",
+      "sha256": "98d95374a8610198987b0297f4375f27867b37a07479b7e79071b10cafd4193d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-invalid.png",
+      "sha256": "1398632e7f374eb17e628022efebf3e7bb9de6d8b72dcfb79156d08ae8950b32",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-populated-paged.png",
+      "sha256": "53fd5355652cbf319b3c8a804ed506714c108463acaaa8e7fa4ffe3e5990cd0c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-populated.png",
+      "sha256": "d25dca0198e7306219a19438d9124ed9850aef3d61c18c493967f6d22104f979",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "57bcd051cc3f4b940e37b74592c078c38c510036d5a16d4efeea8a880a2688e0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-reset-review.png",
+      "sha256": "a0c91cfd843792c1081784a12a3036da1728fae9fb6135f7c0a3d7e1353a05a1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/memory-reset-saved.png",
+      "sha256": "05984b623d391f16a73ca5d7c434289bfa1a9b0311af0420ef53df4f58d09ecf",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "7c85f49b488106640aa38ec847e07ad6a52e74eafb7b02b6fe14a000bb2228b2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "bc7187076be69d1c3d97bc9f2346ce8c51ca3a1015a66cab9212f9ecebbc7ef4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/provider-paged.png",
+      "sha256": "c778ca9bf5d0b520c038c4d266aef73b5319ac9b7368bd9f287de992b8caff44",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-clear-review.png",
+      "sha256": "d664ff2c0e190c77211b7aff1702a21feda99abddea3486b60890db8d31e8143",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-clear-saved.png",
+      "sha256": "c584a24971bbddccf6ad8d4183a47dfd2ff3527042b8897621396ba19e165c53",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-empty.png",
+      "sha256": "dce60f104115e0d46402443c1411b51230ce659fe10cd26272deb6b397bb3cd0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "6a32416ead72d9d6ebf1ecdea71ef43607ef898766a45915ff6f59b2e221f350",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-enqueued.png",
+      "sha256": "2415c7233edc723711be9aabad38305275571bbcce067b12443182889aaf6aa3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-invalid.png",
+      "sha256": "56e6e9f1b848494c68aac089cbb01bddd215aab15e8f1484721a6c9a8e0dfde1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-populated-paged.png",
+      "sha256": "94f5d4a6116fca776acc1b58aedcb3e47b1e19fc5af0fd31e70df9bb48080b99",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-populated.png",
+      "sha256": "4bc4cd53ca362fa255ae3a3e7599d0d7834d2f50b9512fd9350d29a17bb5c07a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "6a32416ead72d9d6ebf1ecdea71ef43607ef898766a45915ff6f59b2e221f350",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-reset-review.png",
+      "sha256": "aa0eb500f256d939611ce75debd7270dca89f9e6d54bb42dda5c48f08fda9272",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/memory-reset-saved.png",
+      "sha256": "c584a24971bbddccf6ad8d4183a47dfd2ff3527042b8897621396ba19e165c53",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "9f07b31c5ae8e7e8b19d44e9c9639df37b88bdd2b6e2273c06fdeaa680c7eea8",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "3f31385617fe256ec4dc5b37492c5babd0ed1d6d83de235e29d8f0e79dd827b9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/provider-paged.png",
+      "sha256": "8f3839001eb90b565de729aff3339375f11a1b91e20eea84216a02a7bba55bee",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-clear-review.png",
+      "sha256": "47774b01683f89b2920fcaa7b4c8f44925da6279405a0430b49caa3414b13b5a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-clear-saved.png",
+      "sha256": "cdb7cff30181282892f7afebed3ef5c3bbb6505f618fa177e8e35be291366e01",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-empty.png",
+      "sha256": "045875990f9cd35c40f3fdcd0c3acf2bedc5e34ea040813543780672b04c032c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "4088d8bea15052551a17efbf98da56ce2ac686438283f7c4814c5e887f7f3cb9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-enqueued.png",
+      "sha256": "c843820fa65d19f99668a88df1e1609ac1b237b49ec47dab1dafc6e294652d26",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-invalid.png",
+      "sha256": "d18b969e5a684192aa038aeca6fcc7c227b8794d2962c63a90a3133102dd7cd6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-populated-paged.png",
+      "sha256": "57dc8aa7cdbbf23b54f8ebdb5a023edd04b73d2bc1505b6b889d69cebc47ce25",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-populated.png",
+      "sha256": "433cbdaa76310c01741304e7adf629195333da301f4ce48a494a204e05877b92",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "4088d8bea15052551a17efbf98da56ce2ac686438283f7c4814c5e887f7f3cb9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-reset-review.png",
+      "sha256": "f8e237ddc7a63e3dfc93f65b77cda23298e34b726ed2dd5c58fad6fee0e41370",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/memory-reset-saved.png",
+      "sha256": "cdb7cff30181282892f7afebed3ef5c3bbb6505f618fa177e8e35be291366e01",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/provider-no-match.png",
+      "sha256": "066e55d1185eb5188355528e51d1a4f1c2d567b8542e35d20c27fd0c80f107e1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "272bb035cac8958f43bdcb8340ee9428ebeafa57d380bb32141748a08458dea7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/provider-paged.png",
+      "sha256": "bac424fea4acfddfb9c56d99c212104fd447ebd16f11519cd615825c3a136e16",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-clear-review.png",
+      "sha256": "39bcc73b402544c4c10e065d11a7aed96981e29dc6fc28cebcbd3bec6d0a7c71",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-clear-saved.png",
+      "sha256": "d6a9607942260ebb7f528bfb72a33d50b9c88bf6b7b4e5c5a4cc936178ca76f2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-empty.png",
+      "sha256": "a13bab77dad84eb66ea6bd128a22c3884c45c2e1868451faf6b4f8916f434556",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "64eacf749484577f63f181f33268acefa9f9645a39b5165dedeaf70fe5d9f520",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-enqueued.png",
+      "sha256": "2a9300d6dc88a359ef4b8f2caa1fb83611727fbd62f50cff61f91580613dc04f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-invalid.png",
+      "sha256": "7fe07a95374817a4ff7bcef3235bc586575cab7e5affaf0cd1cd9baa2655a2be",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-populated-paged.png",
+      "sha256": "1c899acabaa93148c616fad675bdf3c74aef4366818b350bc0b29b5d12e607e0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-populated.png",
+      "sha256": "5f8ac111c43ae5fe5c4f9ff81dd9ac1cafef45a81e27986f1af983f7e367449e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "64eacf749484577f63f181f33268acefa9f9645a39b5165dedeaf70fe5d9f520",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-reset-review.png",
+      "sha256": "cfe50de86ff6425cd61525ab23a01f478523b79c2357c3d5bb3e0920761b1408",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/memory-reset-saved.png",
+      "sha256": "d6a9607942260ebb7f528bfb72a33d50b9c88bf6b7b4e5c5a4cc936178ca76f2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/provider-no-match.png",
+      "sha256": "b780674119407f394afa4abeb9a55ecc8cc59369a0fe72236f5e4a811b9f87ca",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "bd3dfb6ccbebbdb42a9bccd84ff92f9748a2eeedce1a6becb2cbb1826339e42f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/provider-paged.png",
+      "sha256": "f5e97962912eb22d2a73bf3fe8d5016f667a22cb8366b2ff2a4f7ab909574307",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-clear-review-paged-1.png",
+      "sha256": "a4085d5a3e527e228b37c648659b42bb5a41f6a2ae081a35740900dc2bb48a5e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-clear-review-paged-2.png",
+      "sha256": "50c22dfb32050a8b6d75460d49715a67c474280805417ee7d8c0df2182b895de",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-clear-review.png",
+      "sha256": "297ec0d23431808dae6a584632e7e5d641fad6020d49e2f6ebee5b1bbb2140fb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-clear-saved.png",
+      "sha256": "fecfb89a072d9625fccef12ccbd9a13b6c7562f5b3d1deb8ad979f01cf389242",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-empty.png",
+      "sha256": "bd2e11bc0cb141a0575643c1a6b29c7361e96fa0b7a81faf824891c28a5238cb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "1f202b7cfb67ba19b067b32a9026ef382f45a9fa1ae2956b31e22835c312d916",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-enqueued.png",
+      "sha256": "56ff7a0ff4adca248a0eb9334fa29265ec88f64f8840c91d6899971d24bb859f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-invalid.png",
+      "sha256": "39c2a6d66108a7460c3e77f904f7fffe349dfb882666b33cdc353b9a1ad45d74",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-populated-paged.png",
+      "sha256": "a290e230125a0a71c31eb137ab3dac959bb68a0a6adaf73b5fe032b84806b501",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-populated.png",
+      "sha256": "5e607d08a7b2e4f6fd243c8e2e2747dc6691e96aa182c7f41f2d206c6b6febba",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "1f202b7cfb67ba19b067b32a9026ef382f45a9fa1ae2956b31e22835c312d916",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-reset-review.png",
+      "sha256": "07534a8b61204a6f62aa9d2b531be51173758ba483bc2c7279194a514f77e08a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/memory-reset-saved.png",
+      "sha256": "fecfb89a072d9625fccef12ccbd9a13b6c7562f5b3d1deb8ad979f01cf389242",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "0173cd4573c4af4e599c4a558285b4d96d1e54faacb786d401151b7b749cd5ac",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "c54e7f56175414cb298228d81f38f4bd00fc8714ab91cf3f9627f1621f35f985",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/provider-paged.png",
+      "sha256": "264faaf9adee04bb045ccffddbb218f08373f94c753c0c87c0ee91102a572485",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-clear-review-paged-1.png",
+      "sha256": "7616e1777a23cf112eb022f872aa158635e04978d816e3c3fe198c264c186cd8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-clear-review-paged-2.png",
+      "sha256": "fd33cfaed540ed06e0a7cdc21212de589cedad2eabc02e7e6efbd8f0662be982",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-clear-review.png",
+      "sha256": "dd79438dc6159bd88e1248405929ca686e86eba601ee81a556c175ec71b6df05",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-clear-saved.png",
+      "sha256": "d129265aaeeef20927953caf14755d41f0779b6b3f265725c56e4dd63d461eb4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-empty.png",
+      "sha256": "59975ee8111c0cbf3b91391de44b7e099f6d561a91dd4c2b3f984f71c8eaf6ba",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "61d7114a1d65cf6af094e283fb14aae0baf2ea9d4fd97c6d2a966f3ecdf0363c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-enqueued.png",
+      "sha256": "1d23803a8ecfc958935c349c459c9a65ffaeb553c83b1eb4e67edf486d2d4a5c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-invalid.png",
+      "sha256": "de8b332d9f9305253d45ef94dba7b45d4316a57521ee18203b8accc0df266d0e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-populated-paged.png",
+      "sha256": "4a46b7ff74eab7997ff4611d7dd4f4315d47a59a490806bc1755cd0a263395af",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-populated.png",
+      "sha256": "fed2be85992eb4c27017bf559e52be9a3a923807075f8862aa550918aca569cb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "61d7114a1d65cf6af094e283fb14aae0baf2ea9d4fd97c6d2a966f3ecdf0363c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-reset-review.png",
+      "sha256": "3fd38574b92097dfa9c2ec6fe7946b4c52787b7953a06bcd078b878533d03ef4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/memory-reset-saved.png",
+      "sha256": "d129265aaeeef20927953caf14755d41f0779b6b3f265725c56e4dd63d461eb4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "550bf4ddb55c79af69f726af34b1a8e0b8669ba191694b203bf430b67378c6f3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "08039cdc856ae40825c1cbfe108c94ac3c5b71f2e307700348de307753217c80",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/provider-paged.png",
+      "sha256": "cb6f4b0ac889cd52a04e430e4c128878a5cd4498a310dc6402aec515d17edc52",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-clear-review-paged-1.png",
+      "sha256": "dcb3c56f1fabae3c4feead7cdb67bad8127b1c3b8bad6e8eec42c61debf63a20",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-clear-review-paged-2.png",
+      "sha256": "c5bdfe79716e82489f0cac570ecc55519a23a3a98645afdbba2d4f0aef8eccc4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-clear-review.png",
+      "sha256": "183627ca15dae6ef7afe60c794837a4ce8c6ccb53e3cc2829660a26f5c985cd0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-clear-saved.png",
+      "sha256": "aff91404ae9974c50baee647703a7e4d2b44c3b91cc6a3c8ca8f6bb5adabde3f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-empty.png",
+      "sha256": "e90b8466887b909c187f4f4cbc74cb1cc5c97dfc75d30942c7444ef512fe3175",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "55317553ead38ff2e4e373774e8e4fa8ad6870225d49bfbea7098abc92a9a772",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-enqueued.png",
+      "sha256": "b817fa3712fe30458eec539245ebd7dd862aabc6150a5d4df7e3a193f5728fa7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-invalid.png",
+      "sha256": "026accff69d0cb06d11cf67c1eb4c93b8538723a3c1cd74fd0a345c9a19195af",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-populated-paged.png",
+      "sha256": "a9630554ddee99ec8ab0af98919a8a5cfb936d6d19626d9f1724fd238a260a32",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-populated.png",
+      "sha256": "09d04eedde0c60938b594a65881637fe74caeb235f0c760f64ff94d8dd01fe11",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "55317553ead38ff2e4e373774e8e4fa8ad6870225d49bfbea7098abc92a9a772",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-reset-review.png",
+      "sha256": "2dfc248ca7ebfb924fd83db68b0e053cbe1f56a93be999ce2669a9a78af49bd3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/memory-reset-saved.png",
+      "sha256": "aff91404ae9974c50baee647703a7e4d2b44c3b91cc6a3c8ca8f6bb5adabde3f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/provider-no-match.png",
+      "sha256": "8f0292d48df8b6cf501fd9b9387a0acc89abba4d7e30daf2480088f57510135e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "546a48c62f875949783e045632674c26438b299fc2200d3d4636164cc41fd593",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/provider-paged.png",
+      "sha256": "3d6ee6c8e9707e3d80ced4f3f7e44e869f541c63afb5b423f07b4faa2bf38a05",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-clear-review-paged-1.png",
+      "sha256": "0604d5ca5248b729948a6274c307a06c806f2b482a9be0b08d3410eb70aae2d0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-clear-review-paged-2.png",
+      "sha256": "f64d816f4948685f27b94d0aabf72e13e429e5c002dd2f8d7b5169876d41394d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-clear-review.png",
+      "sha256": "8dcb8df1b0fe14bac0e3e274ec577eeab402c72e4bc43f552abb8c0de0d4341d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-clear-saved.png",
+      "sha256": "22aa224d13eab5ae461ad906d34c8c4efd6c2e38385804fa51c0d4e1f2b3bf2b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-empty.png",
+      "sha256": "7d4a6bc8685f7288c161fd112491913e56ecaa19a23d7ddb69b58d8011606bb6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "cda4d2f7ea6deb5577f21a0a5f4b147a8388a8bbc8d82caaa61cc9ba2be56a18",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-enqueued.png",
+      "sha256": "5376fa63e8404f385b73a94e79cca874be962510c7be78b2af72a333dda39d47",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-invalid.png",
+      "sha256": "ecbd1913bf7fda9ce7be307b29ab56c4168897a18e2756b71ab89df50d991a26",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-populated-paged.png",
+      "sha256": "9b309358291943c523d99a98ff4a8ca73ea30ee70ab638cb69d8f42aca2bf04a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-populated.png",
+      "sha256": "e5b1dd993671584caf5fb4dae6e568acf9a26b53318f3afc63cddcc213c5ec0b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "cda4d2f7ea6deb5577f21a0a5f4b147a8388a8bbc8d82caaa61cc9ba2be56a18",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-reset-review.png",
+      "sha256": "5fa89f3d98c46b2550ceb6f9eea93161bc4ba2069e57aac48998c3c3d26fc854",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/memory-reset-saved.png",
+      "sha256": "22aa224d13eab5ae461ad906d34c8c4efd6c2e38385804fa51c0d4e1f2b3bf2b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/provider-no-match.png",
+      "sha256": "890275736f5e63788852200decc3523d829185a3192d042a502128c3ab0387a4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "4a2432edb9e2aa5591aacd9f454d2385e84ebebbfad682cc04d7bd2173bdbc99",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/provider-paged.png",
+      "sha256": "0734ebbb2d261c8e7005ea93d74e506e7dfd35dfa842b5f1bca3e99c9cb8ab7b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-clear-review.png",
+      "sha256": "0a3436bf6b8373618baf6bef6b32a5d1831e4de21237dbd0664d88275ae04753",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-clear-saved.png",
+      "sha256": "c3e0f836dd0af3891e12204807806d31d54818466426d4f5b9067cef583e20c3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-empty.png",
+      "sha256": "e024e88d382c58897602ec3c575678e73f4b59956581002087c14589345ec3aa",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "17d427ded3fa98453c7f18bce69c7c97a38e207ab750b0338421be4e27af184f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-enqueued.png",
+      "sha256": "64d0e21ef6081486996984cfc9b9c69e1dffa170a7a4d1b957869e286e9e0de4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-invalid.png",
+      "sha256": "23723c4d9e143d49c4696d7f22afeb52586838b768c823a90d8f81ca4a4a2060",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-populated-paged.png",
+      "sha256": "0dc80b7868dad7b417abd5bcb539a2b51739465c046d63ca0362c2a7e31a2f66",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-populated.png",
+      "sha256": "441c7cccf857b7853d14e71c126fcffc80643b635a1c71673db10985df44273b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "17d427ded3fa98453c7f18bce69c7c97a38e207ab750b0338421be4e27af184f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-reset-review.png",
+      "sha256": "83a821364bb0224a38f0c749abada31218ebe6833410d9b41e7974d5f275cf34",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/memory-reset-saved.png",
+      "sha256": "c3e0f836dd0af3891e12204807806d31d54818466426d4f5b9067cef583e20c3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/provider-no-match.png",
+      "sha256": "4171a21e38a99ec2af582c6de8bd06dd2e41600954d284a58b04181cb9301e44",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/provider-onboarding.png",
+      "sha256": "4652a6f9054c0ee4ad9da767058047c868c81d2b762c55124d7bf4b53a5a1622",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/provider-paged.png",
+      "sha256": "a5f80a158dd7d9b7ec682612e68798d2d8f7a898d327e86aa58b16591dfaf46f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-clear-review.png",
+      "sha256": "2e57c899c266e51390f45bb9dce36aac41d708b54a66befb8fc4543a6d7d8419",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-clear-saved.png",
+      "sha256": "aadedb42289cb7da3d858454132a437244dbb1806ccb912e4957d6c78f7c970f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-empty.png",
+      "sha256": "655e4922b6dc5ea5a267db1a0c7c87a09afe059b9bfe4e5dec2ecd482cc91bf7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "fd8f1eaa93903dbdb2257b7f9cac47d408b09dcd759d058e8ddd627356eebfc2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-enqueued.png",
+      "sha256": "39756effc5a3fd91769201a42f644ad3d7a29c6db9eac1370927bb32db8edf30",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-invalid.png",
+      "sha256": "960c537e6ddcfe9e5bf50ce835b4d857efa67f2bd4cf34c191c7031e94e3d184",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-populated-paged.png",
+      "sha256": "2ff699b1ae642a871bb0c53ddcdbf37daf7bbb114d9ab41062b4f3f1f6c7b97a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-populated.png",
+      "sha256": "afedc1c8eb23a01114bd6db39375dd0154faeecfc5ea373509ed4d53e0741de7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "fd8f1eaa93903dbdb2257b7f9cac47d408b09dcd759d058e8ddd627356eebfc2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-reset-review.png",
+      "sha256": "ee67cae552b7539d8e72b2fab804d09238fad8f69b0319949eceb8fe6945472d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/memory-reset-saved.png",
+      "sha256": "aadedb42289cb7da3d858454132a437244dbb1806ccb912e4957d6c78f7c970f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/provider-no-match.png",
+      "sha256": "1a52a08895ba3f838cbebfc7f2d5e3c72dbcd013b952b6bd83e82b893ad07bdc",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/provider-onboarding.png",
+      "sha256": "8ae2055988c1c88f61d9846c8342f36d204aee5422fbceb8eb2493a20d4523d0",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/provider-paged.png",
+      "sha256": "733a675eed86e256dcba6b0f91db66809603a5aa3e72873c38f2ab143b7419ab",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-clear-review.png",
+      "sha256": "a5532b82ab8ce84fd3afb3d3f7194838cb52d308ccc30a4a843f74dc4450d077",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-clear-saved.png",
+      "sha256": "d9a67f3d86bbdc7da4965cefae0363df11a1f1831ae54466f4364ad3650a15d4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-empty.png",
+      "sha256": "5296860212fa409c67586f18e4dd967d88b7e69f9e82d9431cd79e6df3efb007",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-enqueue-review.png",
+      "sha256": "1ab48936b04ebad8e43d885b0a2f65bb28b950fce24ddf13c6bd9f377403912e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-enqueued.png",
+      "sha256": "c3cf1475c062843278c84597955c8993b1f06f1987f69be876e4cc14ebbf7ba1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-invalid.png",
+      "sha256": "032d3624bf695f86635eb7f651819f7db4b56d851b9bdb1640f21636fc0c1f57",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-populated-paged.png",
+      "sha256": "294dbc230233dd446e36df8f271fa960513c6a1d7f882210915dc959603cceaa",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-populated.png",
+      "sha256": "f21ac70a3391354e19860f07381c130f4f7add4e3cc8fb5b4171b63026feb857",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-rebuild-review.png",
+      "sha256": "1ab48936b04ebad8e43d885b0a2f65bb28b950fce24ddf13c6bd9f377403912e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-reset-review.png",
+      "sha256": "57c6c888559c3c66498c59266fef1779fb0e3cf6402d1f3b180d75e4a2ffbc39",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/memory-reset-saved.png",
+      "sha256": "d9a67f3d86bbdc7da4965cefae0363df11a1f1831ae54466f4364ad3650a15d4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/provider-no-match.png",
+      "sha256": "d9519ca2bc6fdbc4410be64996c0adf90e67aa4f7a69827122e682beff591424",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/provider-onboarding.png",
+      "sha256": "d6e783f7780e1b17c258a518e092f64340768fa111a45abe01c710d93bdf7c83",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/provider-paged.png",
+      "sha256": "f1d35678ae2afa836b142782826bb7d51ca91becb5ed5f1e4500854b03bf187d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-clear-review.png",
+      "sha256": "204ba128a6da69f5bf4cc06525a47fd9cffc28957e0d73ba0e6bc1b40852662e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-clear-saved.png",
+      "sha256": "a6ec26666a36dfd07c035085d288e3b7fbedd3b306df19835aaf1171be1a815b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-empty.png",
+      "sha256": "45b9de13637b16e3dd60e188bcfeffd81730a01533e044b452bbbaf5e3d974ef",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-enqueue-review.png",
+      "sha256": "088d03c6e9697b6ec376a981e3ed17cf9189344aba64776962bda4d686fe92fb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-enqueued.png",
+      "sha256": "3147865b5171efbdeab6ee94845e23e4096b743c710f77f0317236f3f694a7d3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-invalid.png",
+      "sha256": "92b12046830e442f837bcf4d65d95c9c433d4740e3ff7904f521c8462ee68ed7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-populated-paged.png",
+      "sha256": "c20a5ea83c6b9302dfeb6d93712aac4590cbea6991266852a80003e97cfcc0ef",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-populated.png",
+      "sha256": "d5145788e6d776d3db61d437049116e6fdc9e4394d1722d80c8b7d877a6c342a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-rebuild-review.png",
+      "sha256": "088d03c6e9697b6ec376a981e3ed17cf9189344aba64776962bda4d686fe92fb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-reset-review.png",
+      "sha256": "f961eac8584ce8568463a34c70446374669da85018b9ead86f5d0a399a6de465",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/memory-reset-saved.png",
+      "sha256": "a6ec26666a36dfd07c035085d288e3b7fbedd3b306df19835aaf1171be1a815b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/provider-no-match.png",
+      "sha256": "7de2dcb92249f6ca3547aae91e987e57cdbf4247e65505fbbc7c460b9863795c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/provider-onboarding.png",
+      "sha256": "3ed2a8e2e89a7cdee167899b59eb592fb212b534e237baaa699dcf77d7f6a307",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/provider-paged.png",
+      "sha256": "6485e8e3822fc687d803a1370ff17e908e7d2a2f88b3ed114560304c25ec2564",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    }
+  ]
+}

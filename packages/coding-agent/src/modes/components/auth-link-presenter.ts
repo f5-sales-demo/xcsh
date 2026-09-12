@@ -1,12 +1,10 @@
 import { type Container, Text } from "@f5-sales-demo/pi-tui";
 import { recoveryUrlHyperlink } from "../../tui/hyperlink";
-import { copyToClipboard } from "../../utils/clipboard";
 import { theme } from "../theme/theme";
 
 type AuthLinkContainer = Pick<Container, "addChild">;
 
 export interface AuthLinkPresenterOptions {
-	copy?: (url: string) => void | Promise<void>;
 	platform?: NodeJS.Platform;
 }
 
@@ -22,19 +20,8 @@ export function presentAuthLink(
 	container.addChild(new Text(`${theme.fg("accent", hyperlink)} ${theme.fg("dim", `(${clickHint})`)}`, 1, 0));
 	if (hyperlink === "Open sign-in page") container.addChild(new Text(theme.fg("accent", url), 1, 0));
 	container.addChild(
-		new Text(
-			theme.fg("dim", "Sign-in URL copied when supported. Clipboard availability depends on terminal support."),
-			1,
-			0,
-		),
+		new Text(theme.fg("dim", "The full URL remains visible when terminal hyperlinks are unavailable."), 1, 0),
 	);
-
-	const copy = options.copy ?? copyToClipboard;
-	try {
-		void Promise.resolve(copy(url)).catch(() => undefined);
-	} catch {
-		// Clipboard access is best-effort; the OSC 8 link remains available.
-	}
 }
 
 /** Render device verification details so they remain usable without hyperlink or clipboard support. */

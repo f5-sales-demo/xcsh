@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterEach, beforeAll, describe, expect, test, vi } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -6,7 +6,9 @@ import { Container, TUI } from "@f5-sales-demo/pi-tui";
 import { VirtualTerminal } from "../../tui/test/virtual-terminal";
 import type { MediaMessage } from "../src/media/types";
 import { controlMediaPlayback, MediaMessageComponent } from "../src/modes/components/media-message";
+import { CommandController } from "../src/modes/controllers/command-controller";
 import { initTheme } from "../src/modes/theme/theme";
+import type { InteractiveModeContext } from "../src/modes/types";
 import { BlobStore } from "../src/session/blob-store";
 
 let root: string | undefined;
@@ -62,8 +64,22 @@ describe("MediaMessageComponent playback", () => {
 		expect(controlMediaPlayback("stop", message.media.id)?.state).toBe("stopped");
 		expect(component.render(40).join("\n")).toContain("frame-one");
 
+		const showStatus = vi.fn();
+		const showError = vi.fn();
+		const controller = new CommandController({ showStatus, showError } as unknown as InteractiveModeContext);
+		controller.handleMediaCommand("/media play latest");
+		expect(showStatus).toHaveBeenLastCalledWith(`Media ${message.media.id}: playing`);
+		controller.handleMediaCommand(`/media pause ${message.media.id}`);
+		expect(showStatus).toHaveBeenLastCalledWith(`Media ${message.media.id}: paused`);
+		controller.handleMediaCommand("/media rewind latest");
+		expect(showError).toHaveBeenLastCalledWith("Usage: /media play|pause|stop <latest|media-id>");
+		controller.handleMediaCommand("/media stop media_missing");
+		expect(showError).toHaveBeenLastCalledWith("Media not found: media_missing");
+
 		container.clear();
 		expect(controlMediaPlayback("play", message.media.id)).toBeNull();
+		controller.handleMediaCommand("/media play latest");
+		expect(showError).toHaveBeenLastCalledWith("No media is available in this transcript.");
 		tui.stop();
 	});
 });

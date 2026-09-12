@@ -1,0 +1,838 @@
+{
+  "fixture": "manual-compaction",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-qoNJvo/sessions/2026-09-12T07-28-35-720Z_157c6e7ce1e33e96.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-gGBshs/sessions/2026-09-12T07-28-42-032Z_157c6e830c0e72dd.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-CyWFvb/sessions/2026-09-12T07-28-48-068Z_157c6e88f1110482.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-b6Gj3D/sessions/2026-09-12T07-28-54-261Z_157c6e8efd51918d.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-s4QRgn/sessions/2026-09-12T07-29-00-319Z_157c6e94e7d49a88.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-EkRwfm/sessions/2026-09-12T07-29-06-332Z_157c6e9ac719ce12.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-7WMGqO/sessions/2026-09-12T07-29-12-287Z_157c6ea097fa1ac8.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-2utlWo/sessions/2026-09-12T07-29-18-261Z_157c6ea66d765154.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-wE9Zjx/sessions/2026-09-12T07-29-24-169Z_157c6eac324ca3de.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-dRCDRa/sessions/2026-09-12T07-29-30-260Z_157c6eb2250243c7.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-CnaebD/sessions/2026-09-12T07-29-36-347Z_157c6eb816e09f4d.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-dPoV8B/sessions/2026-09-12T07-29-42-487Z_157c6ebe15e98048.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-8nPuOu/sessions/2026-09-12T07-29-48-598Z_157c6ec40d8a28ec.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-WYQ09T/sessions/2026-09-12T07-29-54-918Z_157c6eca39b6fafa.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-BbC8qp/sessions/2026-09-12T07-30-01-251Z_157c6ed068d514c1.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-uakULE/sessions/2026-09-12T07-30-07-684Z_157c6ed6b100f074.jsonl",
+          "cancelledBytesUnchanged": true,
+          "cancelledProviderRequests": 0,
+          "interruptedBytesUnchanged": true,
+          "escapeDidNotInterrupt": true,
+          "ctrlCInterrupted": true,
+          "compactionEntries": 1,
+          "reopenedSummaryVerified": true,
+          "noopBytesAndProviderRequestsUnchanged": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

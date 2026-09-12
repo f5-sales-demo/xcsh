@@ -22,7 +22,7 @@ type ConfigurableEditorAction = Extract<
 >;
 
 const DEFAULT_ACTION_KEYS: Record<ConfigurableEditorAction, KeyId[]> = {
-	"app.interrupt": ["escape"],
+	"app.interrupt": ["ctrl+c"],
 	"app.clear": ["ctrl+c"],
 	"app.exit": ["ctrl+d"],
 	"app.suspend": ["ctrl+z"],
@@ -45,6 +45,7 @@ const DEFAULT_ACTION_KEYS: Record<ConfigurableEditorAction, KeyId[]> = {
  */
 export class CustomEditor extends Editor {
 	onEscape?: () => void;
+	onNavigateBack?: () => void;
 	shouldBypassAutocompleteOnEscape?: () => boolean;
 	onClear?: () => void;
 	onExit?: () => void;
@@ -192,6 +193,10 @@ export class CustomEditor extends Editor {
 		}
 
 		// Intercept configured clear shortcut
+		if (matchesKey(data, "escape") && !this.isShowingAutocomplete() && this.onNavigateBack) {
+			this.onNavigateBack();
+			return;
+		}
 		if (this.#matchesAction(data, "app.clear") && this.onClear) {
 			this.onClear();
 			return;

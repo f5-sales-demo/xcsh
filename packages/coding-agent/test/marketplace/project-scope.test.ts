@@ -130,6 +130,22 @@ describe("resolveActiveProjectRegistryPath", () => {
 		expect(fromRoot).not.toBeNull();
 		expect(fromRoot).toBe(fromSrc);
 	});
+
+	it("keeps project storage under .xcsh when PI_CONFIG_DIR redirects isolated user storage", async () => {
+		const previous = process.env.PI_CONFIG_DIR;
+		process.env.PI_CONFIG_DIR = "../../tmp/disposable-user-config";
+		try {
+			fs.mkdirSync(path.join(tmpDir, ".xcsh"), { recursive: true });
+			const cwd = path.join(tmpDir, "nested");
+			fs.mkdirSync(cwd, { recursive: true });
+			expect(await resolveActiveProjectRegistryPath(cwd)).toBe(
+				path.join(tmpDir, ".xcsh", "plugins", "installed_plugins.json"),
+			);
+		} finally {
+			if (previous === undefined) delete process.env.PI_CONFIG_DIR;
+			else process.env.PI_CONFIG_DIR = previous;
+		}
+	});
 });
 
 // ── listXcshPluginRoots: project shadows user ───────────────────────────────

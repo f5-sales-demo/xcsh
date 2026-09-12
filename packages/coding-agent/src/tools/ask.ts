@@ -182,9 +182,7 @@ async function askSingleQuestion(
 			timeoutTriggered = true;
 		};
 		let navigationAction: "back" | "forward" | undefined;
-		const helpText = navigation
-			? "up/down navigate  enter select  ←/→ question  esc cancel"
-			: "up/down navigate  enter select  esc cancel";
+		const helpText = navigation ? "Tab/Shift+Tab: question" : undefined;
 		const dialogOptions = {
 			initialIndex,
 			timeout,

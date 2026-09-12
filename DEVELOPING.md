@@ -129,14 +129,35 @@ cd ".worktrees/${BRANCH}"
 # Install dependencies with Bun
 bun install
 
-# Build the source-matched native addon before tests or direct CLI invocation
-bun run build:native
+# Verify/build the source-matched native addon before a direct CLI invocation
+# (bun run dev, test:ts, and coding-agent tests already run this automatically)
+bun scripts/ensure-dev-native.ts
 
 # Capture test baseline
 bun run test 2>&1 | tee .worktree-test-baseline.txt
 ```
 
 ---
+
+### Native development readiness
+
+Use the normal development/test entry points; do not hand-edit the generated native JavaScript
+stub to add missing exports such as `PowerAssertion`. The readiness bootstrap compares native
+sources, generated bindings, the host artifact and build settings, then probes every declared
+runtime export in a fresh Bun process. Missing, incompatible or changed artifacts trigger a
+build and a second probe. A matching readiness receipt avoids another build.
+
+Concurrent preparation in one worktree is serialized through
+`node_modules/.cache/xcsh-native-ready.json.lock`. A waiting process checks readiness again after
+the owner finishes. Normal success and failure release the lock. An abruptly terminated owner
+can leave an abandoned lock: the waiter reports its PID/start time and times out after ten
+minutes. Verify that **both the preparation process and its build subprocesses have ended**
+before removing that exact lock; never delete a live owner's lock or assume age proves it is stale.
+Do not remove the native artifact or change generated bindings to bypass a lock or probe failure.
+
+If preparation fails, fix the reported Rust/build prerequisite and rerun the same entry point.
+If sources changed during preparation, rerun it to build the current sources. Cross-compilation
+targets are rejected for development tests; these need the host platform/architecture addon.
 
 ## Development workflow
 

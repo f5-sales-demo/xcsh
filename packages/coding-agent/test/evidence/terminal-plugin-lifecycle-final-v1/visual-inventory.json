@@ -1,0 +1,2320 @@
+{
+  "directory": "terminal-plugin-lifecycle-final-v1",
+  "historicalDirectory": "terminal-plugin-lifecycle-v2",
+  "fixture": "plugin-lifecycle",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 384,
+  "contactSheets": 24,
+  "exactPngMatches": 132,
+  "normalizedTextMatches": 56,
+  "changedText": 196,
+  "missingHistorical": 0,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "4bb4d028d75046fc0db26f34a92ba75c20847eacd91f74a6c6e714ef8143e51f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "c4300f292e9d10be9f79e0eb925dc5ce76552251b9ea65102929df749a1644b9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-browse.png",
+      "sha256": "c0e5d7ff2a56a1b96318691cf393638813bd845992adf782036816ad984908da",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-details.png",
+      "sha256": "f457934fb0d1363faa2b7fd05c2a086dcc89d72d3f56c26115c5e6ee3f6b450e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "3b260c1d652dcf7ba3e22f655b1df921c0321d17bd9a177e412e3a6255b8c396",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-disable-review.png",
+      "sha256": "dc4da2faa3a2d7c9597161bbd296eacc002717a9b5a2b39cf46e16c281f89be8",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-disable-success.png",
+      "sha256": "0ac6ae50769b2a4ce5c245381c0e9f26ae103c16139ba34061040c078a539f11",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "6d221699fbfaefacab7c5256f445036c3073cfafe0cb423d50c5ec7f18c70291",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-editor.png",
+      "sha256": "99a77d32bd88730a367ea28e907ae2187627f2d1104170de98ae73b7e5efe1b1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "02bb5a00151634deb86a18c7c602cdbb8a0af79e0fa3cefb37ab605b75bec49f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "fae174038776f5b43e30ef98d4bf169925ca8080bb0112f932e753d69cec40c0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "3dd566dbf6157372bce92991af705026a8653e9f1aa0d107319db91d25c65f57",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-install-review.png",
+      "sha256": "2eb613f5ea9f48f2dac60f90f6f0216f6399a26b9407504e856fcb1580feb652",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-install-success.png",
+      "sha256": "783c14e5e7c125d3934d521b820ec8c0ba4a844c885a2714ba50ca45dfe8522d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-no-match.png",
+      "sha256": "220540e19f2709a0a5d03a7917994ec516b866592923532ae2f9840fdaa8956e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-removal-review.png",
+      "sha256": "e99790bfd34df9955c287522d8f403a51ce752d6898aa6366e62c3c0d4036684",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-removal-success.png",
+      "sha256": "906c029d628c6991119df4a2e2f2c18b0c6366596caf1485be71766089fda572",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "b8b2597433310bb4146a923c3e7263ec738a22d891096deb7abfea7c90c0d8fa",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "93516a28b48e8ffc044e9e25ff34e8ab6ec66aabe94c4582932e78934d2804b4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "c0e5d7ff2a56a1b96318691cf393638813bd845992adf782036816ad984908da",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-search-retained.png",
+      "sha256": "29d33fe53e9e65b21a8f054bdb2c6688ebbac717351e11aa7609f3bba338ff4b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-search.png",
+      "sha256": "29d33fe53e9e65b21a8f054bdb2c6688ebbac717351e11aa7609f3bba338ff4b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "21cf47d55fd86fd4c781df860cfd1af7a5cd50517b9dbb0c22b0ad9b763e6930",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "5ca5d586fbc0e1da190c866881ac97c9b4da6a63bf64eb5293fabc67df9cacbb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "2503a9e092e9dcfd55919471940f09a2e419a37d55664f63290ee6e6bef9b30f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "e9b590104119df9340e1b7886e9e04c393771a4f959edcd4872279edccbb1163",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-browse.png",
+      "sha256": "3298ec8fb6dad6db0ec971fb604b84a5716d15fb29199f4dc1ffe7bdcf37a122",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-details.png",
+      "sha256": "4a392fe237a829cf5ce429aa0d8a88a45a2381d5735611581b735c5cbf05fd0f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "d8a14e7887069112006c7c74ef83980c433f700356c3153a611062aec86fa0f6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-disable-review.png",
+      "sha256": "b5eee81f1920a7e771ab535e03072ef5b97eeff90bd8726a24f9f7e22a5be596",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-disable-success.png",
+      "sha256": "fb5ed5f27b5273087bd3839e5ff1942d864eb83acbb1a8c3253598b9ec79e5d2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "65d4b5aef49f3e159e3c2b2e428c2a3c4774c2abb65036bdbd8b87689e714e03",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-editor.png",
+      "sha256": "f647bc93e9cafee6a82ad4cef37e8fd72814af93d64498327e3f6f0f1f3d50b7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "ec58c9fef64fe72e5c269c191a1e8551bf6fb02a1a4f86694e15f89a09c374cd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "1b09a6c29b6054cc4f4c78ed8436ba8a459ffef794d9c7433f15e4b549fd7243",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "1bd2f89d9c6adb0ee6f6888963e94e63e676b94fc644db08cf43d29b82016b83",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-install-review.png",
+      "sha256": "78fc1eedfa0db21ee119e0484c6efe805f92d90f5ee2d9ef2db5b586a4db34f9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-install-success.png",
+      "sha256": "55d73974e67564c426ea3e01c42258f9d420308cd6d9b140134a6ca921c5114c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-no-match.png",
+      "sha256": "53fecd67c484590ed7ac7f3e2c33c3c7dd716043dd97bb8f3a3b39dfa4564d49",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-removal-review.png",
+      "sha256": "87b7af735e71df61633cd9364f2cfa1a61961770f19faa9cdb201672ba999f91",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-removal-success.png",
+      "sha256": "4dc0f7b2a89e024984f1bb2918b1ce6848f4fc582e08ad0a945b2f08c241a2bf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "aae6f448f30f393f44028a7ced55795c678db43b3fe22f723c13ece42b7e83a0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "a70744c0e81cf286d2e91c8580b75b86febd39ce2f379249a44d8a299e1d58b6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "3298ec8fb6dad6db0ec971fb604b84a5716d15fb29199f4dc1ffe7bdcf37a122",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-search-retained.png",
+      "sha256": "6fc3021507acf248c47ceb205fab3a306f728afabe72b6cf55ffcefe0eeced0d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-search.png",
+      "sha256": "6fc3021507acf248c47ceb205fab3a306f728afabe72b6cf55ffcefe0eeced0d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "8e0d4740c590cc4a201d03cb4a7853e71524273c07a7e3cc676d64138f5086f9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "90120bb56742a59d9ed0d1c314480b742fa8b0c2cc857f49ebdd4aebfbf884fc",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "20ca31ce3e6359e18930f136419fd3dc04211f562532c60c4ccba595e6932bba",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "669985cf00f2b9a625d5c8c89298c2aaf2aa01101a0840d09c98fcd3d412c124",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-browse.png",
+      "sha256": "7c79b1502a607594fef4d06f24012e350d37937706bb8a7d8103c92e2e2aa382",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-details.png",
+      "sha256": "159526cda77999c737ebe2ac0d309d927e6baf9a3e92039de2cd4e9a0d6a6364",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "e0eb1d10aa2ac3c0dca65fd6d8f895c56ec7d812093dbd72acd09ea55402362c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-disable-review.png",
+      "sha256": "24ac9b0dfc1cb0ce45253623dfd23ec95280b6467002d9ee0e97fe7e0828e0da",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-disable-success.png",
+      "sha256": "1151587b00d0b475f2af0e64b64f9f6030d591b1aea92815c733c10f9bd8651c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "8c29519198ab6b7970e807315ffb961014a0cd0e5f0e49190d29e7c91e376e6d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-editor.png",
+      "sha256": "c48ba23177033d20bbd3ed93fd0f8b5d1f7fa7e68a695ee0313e385f0d454303",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "54c9a06dad39f700332c5e7d5d7d3d02612f489931f8f42d6d9dc2ccba715c65",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "063fd9812b0f330c008d9210629ae9689dc07bd73107c7570850e03b730cb060",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "d4ffb69201acd251c49969d55ac766c8cfd6298d57714f687c2b1bd7d9933349",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-install-review.png",
+      "sha256": "3d3e4968510d5eb914c63b2f3731b027d4965128b9eb24e8fc641463609567a3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-install-success.png",
+      "sha256": "775e74f5534f8c0377309c4a395214e98c768109a0f04fe213ff42fe4b733808",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-no-match.png",
+      "sha256": "1e1a27273a6299ebcf743e64470e21ad71478718d89e2f1cc604b79fc74b6cf5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-removal-review.png",
+      "sha256": "2532ece5d0bc48a8fe01c6a8946a2b0175912a35dd03a849a8868421b2a0c20b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-removal-success.png",
+      "sha256": "121a8d2ce8e4d8f3e850b40da6b52caf1d24575ae2ff5ef9c27ab2f87cddf659",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "ed9234ec44ab9626507220cf88e25e7c1e0408ecea5f2ddb1067c3e96dcbbd8b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "8ccf3aa1a3e1c10ef531fc68ed146adcd759925e6d09fd63147da9bae5aaf8bd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "7c79b1502a607594fef4d06f24012e350d37937706bb8a7d8103c92e2e2aa382",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-search-retained.png",
+      "sha256": "67087823c30e9fb88cb84f2b4dbf81ff2e84d550da7eca8090b729698259385c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-search.png",
+      "sha256": "67087823c30e9fb88cb84f2b4dbf81ff2e84d550da7eca8090b729698259385c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "658e5e59bfe1ad3044bdcdd7ed909277ca78c4225f64ee54751c4fda40319f62",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "eb4952786ed82e83d2184b54ae4b66cacec1ff6a06a6c55cda8e8edd08f2954c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "ff9c68d8a2730502910849af9b9b12bcc4a7f89b27abae6737aa6f6df3c4de16",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "932148707e7a36d654a3aa6afb59fb697e068abc26a927f5b7cfc0f2896c0732",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-browse.png",
+      "sha256": "ff5ddced67e8e5383af2957d698a01eeaa999c84936c821a852869027b7dce21",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-details.png",
+      "sha256": "dac4c29d09677902de1e038672faab394490eed9112a976594dcebe073f22e1c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "15c25c04f5bed22379e7a8488d2ddd2fdf7a2f9d38c8b84f136276872738a936",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-disable-review.png",
+      "sha256": "87756419d1b43b40d36ff625ace2dc2a1f3ea10db546aee3af9c9e8e9f27ea6c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-disable-success.png",
+      "sha256": "6eec865c75ce9fd763501d71666392f53488cefbe8bf346609732bf21c36e02f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "b8003c08708444f8ac2424823c6e07a68b9089662a955d4c226fe76784cd4d22",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-editor.png",
+      "sha256": "fb22c04bc5cc743cc34f6c414c47a629f366f67ae0d24ce4632eda534576587c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "c13da318a799eac190f5a2947104c2116ba816428e365ccc4df195def055f6cf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "cb5e26e7387c98e8ab161c5979851fd0456e457243d64458a64d9afa079860d2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "fdd37a7567511de17fc3f5c1a0169c963519a4ad573f5c1f447f3b4b60af7091",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-install-review.png",
+      "sha256": "8fd68c514950bb3d80d4383551a237715fd13ae20c3aa1cc7666f3b5aa240db5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-install-success.png",
+      "sha256": "9de57196210558d88605f60b5699709ae03de3867c8bf614ea961c1e5d0f74cb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-no-match.png",
+      "sha256": "e9a70dcf95af854f6d345b6acdcbd49fe818e53605dd83ddcb82ce728e5a42fe",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-removal-review.png",
+      "sha256": "83b14f3e93ce87fbbbcbf64a80eb0f94012cccc17425154fc0b83809c3ad6cfa",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-removal-success.png",
+      "sha256": "7a9dc49a1eb2193303c90e4b047ca80da00915b23cab28d59fafbe0397214b75",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "52d70da5ab3c9a0fc533c8c9d488b8dd4cf50d9224399ad8e019d6744e1b334e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "5b4e4347e66e1a3b692f841265c4f66edf2454fd48d3fc32512e327508ac3fe9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "ff5ddced67e8e5383af2957d698a01eeaa999c84936c821a852869027b7dce21",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-search-retained.png",
+      "sha256": "41e5ce06bcb2e05c20cdd6d312a5b353c1ad92f227b89bc8d4eaf7120604821e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-search.png",
+      "sha256": "41e5ce06bcb2e05c20cdd6d312a5b353c1ad92f227b89bc8d4eaf7120604821e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "3c79136622da5d377aecc09eaad2e93e1370291c1a450538f1b3139af43f8bb8",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "3dacd5970e094e089760f267da7e7987350e8330bd97699f6fecfea2533ca8d1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "f0a0174d49ea88db28817da9b0a8d7dedcebd1202837c3d6ecb56f1f387d4c5e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "ae85edee577eb2a00a862fbc4bb6598927fd54373d57135065dae93dd923aa43",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-browse.png",
+      "sha256": "13a5c7edc15aa89c225e367132d3d955c0610c817db9027647cc92d43dde549f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-details.png",
+      "sha256": "4d64049159e7cd6df19a608a15162399d4406a23a8bf8feae3ed30820a6fd284",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "e75d6eff2631ccf1699a7587de56dbee04e935d8f48cb051dce9a10908e52638",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-disable-review.png",
+      "sha256": "acc82bcb4b289a7666b23b9dcfb6cc3bd83c9eb3643006f15b03a3b29829ccd4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-disable-success.png",
+      "sha256": "c72dfacd90bb6886030017d9c4b3e471475e1bcea46b04dc7c848a100a35faea",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "9780e6c738bdca86a5c75b3864f01726ecac5170d32811529b6f53a123664d64",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-editor.png",
+      "sha256": "5181cb934b4eedbbdde1a2076c4674babbea7b2bb3acbfa6cc4ef830f5fa8005",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "18699296f84a9730dcafdfeb04e9ddc1d1b2cc0d74cad3504b08fda27e54cc43",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "7815e34caafe2463ddbeff68e1bb484e8c6260bfd1ed7378fe6826abc25b0d98",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "9bf99dec21e1bced5366887238ef85e2afcfe71a755575cd607f8679ef5eb80b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-install-review.png",
+      "sha256": "ebdcb5f5dfa21e601149e38f4dc67f01713a58dc74c5181d48f75a899b6807eb",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-install-success.png",
+      "sha256": "8b5e5952c3f1bb8a80f773a3fafc35dedbffe82a73926aa0462d68ed6e24ddb2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-no-match.png",
+      "sha256": "8086d7663fd3c56ac75bc32f9ade49f8b08f01b0c1e3d05e79318b1f4b80863e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-removal-review.png",
+      "sha256": "534db885c22f7e1282775a6833e85af5106f13b61373d71f31387912de23a29c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-removal-success.png",
+      "sha256": "d4abf5c319fcd0381c46518b9d75c8598b0ff7a88742451de8ee79638d551a0d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "d9fd79683721a3de7c115320691625ac59ef4ec2d82027aa24b4e395782822c0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "39de1410470d4122da25bcd998a908e5f7608dd4a5b2605351b80e595b2031c3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "13a5c7edc15aa89c225e367132d3d955c0610c817db9027647cc92d43dde549f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-search-retained.png",
+      "sha256": "4eb8ac90c19dd2d7ed16e4088cdf883f00774e0f7a53bedeacf45246c9840f49",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-search.png",
+      "sha256": "4eb8ac90c19dd2d7ed16e4088cdf883f00774e0f7a53bedeacf45246c9840f49",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "6451c8c59691f206ab9b53ce3bbf9a85e96b0f3694066e518b1b65aa53ed8dec",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "0ca249b802b3f5cbc25c0a48ed03fd1281b61ceed83d711d46a33ccd0fa8eb10",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "f4e9eef162b9cc3c861bf52aeea38a8fb8222c70779a9850fa58127156b04dbb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "380c119445a5efbabb3154c48fb740eb9b86de8ba8085ab2c7fdbd3518c6de15",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-browse.png",
+      "sha256": "7aaa6f7cfdc07b5aafbe301de6da45e0407ccf9c54b529b0b9feafb66cd05046",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-details.png",
+      "sha256": "7bc21e6f15d1c42771e41efd286e70623c7d845eb8f5e51830c49f38c22422fb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "226a69a2792f7692865ab49bc98090b008aec48ad9a895b2be04694968818c79",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-disable-review.png",
+      "sha256": "44ca19d9d5d6823ca28201f0a4df422b1f1c44045fbec1c8cc6cace8a9d925da",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-disable-success.png",
+      "sha256": "0b79145476aebc34b133e8e71404357671457f3c5cf9364daa34a4258336142c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "74d955750ac77247497bf5a27c650282fd06f46daf4249420b28cdb877bdf18b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-editor.png",
+      "sha256": "d1b2f3fc023dc2a44c120cc0b10311c75733b49a656c29a395b6ca7603eb6f12",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "aad09e986f5a7b6a15376f8d8dab1722bd95933b4b6417162cd614ec4f92fed4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "d844af1f99409bd1e25774501418ba2d62c99a89115fde84bfa5cf4094cdfa43",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "8bb716f244681a044ac070c63bfe631c00cc55c4befb179247531e26a59b46f3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-install-review.png",
+      "sha256": "853cd68422c7a848f475b9dd1fff1b34affbd2aff15cddf83f743599fc0a6e7e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-install-success.png",
+      "sha256": "9f8fc9bd1b28f1dd71e69e02d057d9be5a7425f6505d1bf3040d8955dcb7ff12",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-no-match.png",
+      "sha256": "bd7ec237e8c75a62daf3500786a5d51243cad7d8487c6461d57090c947f58b39",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-removal-review.png",
+      "sha256": "7e0987730010336e60c07ce2d33cc5ce9c6a076cb09b489bc3ef0640c8ef90b2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-removal-success.png",
+      "sha256": "ed160a174d8a28e7807c69d18a6ced14961e7e91e1837f7657a554554f91b7c6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "75e3863303cfc3c2338467c2de51b9e44442e5b1e7fe251c06b8630add53a65d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "0ae53a19dd275baaec4e6b4d0e839077dc6cef6fe06ff575c2079087383074f6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "7aaa6f7cfdc07b5aafbe301de6da45e0407ccf9c54b529b0b9feafb66cd05046",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-search-retained.png",
+      "sha256": "9ffb8a711f29f25f7c802f3efe34aad6894d0b7b3d41b705dbc7fe577f80f32b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-search.png",
+      "sha256": "9ffb8a711f29f25f7c802f3efe34aad6894d0b7b3d41b705dbc7fe577f80f32b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "f03b055d9eaa51444a7b97b68f8dc73d25d175810d4e54a81cd5d2d6a803e7e6",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "0d652a7b23cb50f4c011958120fec1a225242f9e609675eb1e23f60be2e11913",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "f0b16e385a8332fa0b0f7d6370e6eaa444fae96dd94d09732f6fb58a1f070a5e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "1f302c32a453cddb70a36cec02f242092bb3f122384afea97831e4b741f3bfd7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-browse.png",
+      "sha256": "98fc7b38fa94d745a27c2aa5c39e70ecdf06c56691469bacc38ceb738f1b1c5a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-details.png",
+      "sha256": "8cd262ff091ef01742551e506d0d29590d4d5b2ed4fdf5ffa345d3ea1eef9514",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "850df1017d75ec26cb1b3b9cebacf28023e1f1ed97ceeac1df4dd6afa3a8b9f7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-disable-review.png",
+      "sha256": "27f4268de39eba68605e3dabbdf472ec76e860f574f8b4ef6294a52023d37522",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-disable-success.png",
+      "sha256": "5474c0587db70c3b124619eaa48ac814c61447a7548f21d056d083d292cd327b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "ca9810ef00846cd18711a4ddbbf5d5ddc5838438005e962d23ac690817253b8b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-editor.png",
+      "sha256": "498c3a1adf94c87835af19c39c41b85da9e941c6fa9e7beaaee233000b8f3ad4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "c9c0ebe7c97643c2adb5081104e86b3fee8dfec207b24e34d59c11be05a563c7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "08decd88a65922baa1d1c31cd8d536887f5338bb4914839764dff9bc819f8710",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "b2c7204c47f347c29ecdf373b6f15693d0f4ef07bc64f09560a28551f2d5afc3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-install-review.png",
+      "sha256": "4cc04d58f2da76bb92835ac2d45ec95ceb86cb17eef1122968a782c6ef6f8749",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-install-success.png",
+      "sha256": "bc92027b66ce9154a4534ff3e08c78f0add1466537d53aa76e4cb76eb5c0cb7a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-no-match.png",
+      "sha256": "2d69f4763619f9db24bd382c7b36d9689e2ace000ea5c96a35d6cb3c13c68347",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-removal-review.png",
+      "sha256": "85a462e1c49a543e16abc1b31fc182abee0907f43264d65703d9b08c4d1e7c37",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-removal-success.png",
+      "sha256": "653c46afe00c505d5ff3558721eeec375e79499e3d414f9d01103f3aee5ed753",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "c984ff95a4f4d0bce23365eaa88f3a83963fc33c983b4f3413d20660bc6ef041",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "82ab2d65390bf1b705f0cf66cf07acf6896c639b57109ab7bc28fa0298cc95bc",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "98fc7b38fa94d745a27c2aa5c39e70ecdf06c56691469bacc38ceb738f1b1c5a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-search-retained.png",
+      "sha256": "9ebfc624a3493f1b669e826d6c4b4912a0a0bcd34516165d6ae6a730d9890ca3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-search.png",
+      "sha256": "9ebfc624a3493f1b669e826d6c4b4912a0a0bcd34516165d6ae6a730d9890ca3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "0ded918f4e660f9d6246c7c2e644b28b9e5ab0b5a72cfb47c1cbdc2434f36e45",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "2057c253aed5beb2ae4b22ae9d48ea0e0be68c8ebf73068c7c164900ba729b0b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "3c68597887cba5b8e3b300c3fdf35481fc86e1bd6f98ed8337041f5600967586",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "a3e2fa7b38cbc50652127033a6c12601dbfe5e55c69026c271660e1b6d4692b8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-browse.png",
+      "sha256": "c943c45a72bfa38572efb9873bb002ce2c8e3a9924c41123653f76f4b572bbb6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-details.png",
+      "sha256": "e8f580c19b8ecb612606bae7249a14e9ddaa086075bf29f10bd1d9d7531c4ba0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "ddf382a6ed7f105c7517b17e5dcc715927dcbd454b5f710c0336acad01e0585b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-disable-review.png",
+      "sha256": "3470140343ea691b68c94705af826433b51e3eb58a8ddf46c8e6a504d1463708",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-disable-success.png",
+      "sha256": "6dacb7ee03dc953299081ea1e0c6cdf34107273cef412fd1a98044653debd66d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "456eb128829dd12c4ca869cd76a3a2b85e63f6fd7d65fddaff035b5959d7d2f7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-editor.png",
+      "sha256": "9c9d0eb9c3929879f5b4a851ebae1bb6888dac3857b233306b7fb0d2f27d3121",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "9b976dfae84ace7ef8a61cc4be740f2553dd5f8c1c003e169e6227fd2772c1f3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "ab6f10f335cf19880354394b615fea19037bc89c482ead5fe10b3ebf3ad17987",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "8a491d307f25780466110bc74b1bbaf465674b72ece952ef56e730d69db7336d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-install-review.png",
+      "sha256": "8a3063004ea1a8ae39af16abe20e866574698ffe6ac6bc2e020060f1b7584456",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-install-success.png",
+      "sha256": "c7a97c4d5c13549c070841cbbe7813b3db4c813a72d9819a3ff23040d3f24f66",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-no-match.png",
+      "sha256": "331d49cf326050bef684095fd0da64d8622a171a4973a16c0008cc3b64bb00f6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-removal-review.png",
+      "sha256": "df494d30e69939a6262646bf564eac57c316c265ac59ab678d904a475a460293",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-removal-success.png",
+      "sha256": "d18ff45d07ab488394acd9670ff01512174eb02112ded63996ad4079e2d1d17d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "445ce89bb4a7e79930ee52a3c76677c436a4dec466e8dd7252776a9bf9d1cb87",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "be2f1d31f9229142700968661fbc2b8776fcda89bc00651ab35c45f5fd65b4ae",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "c943c45a72bfa38572efb9873bb002ce2c8e3a9924c41123653f76f4b572bbb6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-search-retained.png",
+      "sha256": "4832ef4ea12c3756cab23c675e757b9b35b82495a56527a0ecfcdae1ea39cc41",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-search.png",
+      "sha256": "4832ef4ea12c3756cab23c675e757b9b35b82495a56527a0ecfcdae1ea39cc41",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "cc015241025ee7771ff0c4ce9f7617e7cb560e5676c2cbcbfb10b5032f905629",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "9f5f2467d92b2a40d3cd3d497f0bf5660a8a54ead0ec46adeeb2916b729804cb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "f1a7ec3e3f8f280263d59ab0ea04d8f28fed656ebcbf7384f78ec563dd90f0b9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "122e91cbe85ba18eb77901ecf44833065acd593c803794db7b4134f9361cdb66",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-browse.png",
+      "sha256": "06fd9a3cdbfb69b9c616d639ebcdacb2bd4130bbefd7c772b2d1077e527fc081",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-details.png",
+      "sha256": "1d90175295ff8c221476e0b75c1239e5dc3476b11a8e4c1d42e672b8d1775b45",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "ee60a3aa5274b65ec56dd7cc3200d39f1da7556915db454c42a3ad817a38c5c8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-disable-review.png",
+      "sha256": "16f16703d992323e76436aa21b59fc87ff3c7e37776951f81b3b21b7773d5d92",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-disable-success.png",
+      "sha256": "7c316e5717ff980ea25533048f3319d452654428d0a716f59bb0da51daf4d35b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "72642096d675f666477c6cabfc261b9dbf36fb8d30e52acc0aec6e088af584c8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-editor.png",
+      "sha256": "1963993a86b89cdbfa44ed0942b055b3945af7931c263b9eced54c97fa9b1f74",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "9dabc8b24e987e506e5f720e14912f4eb0dcd311b91b61e93d9e062f84071eaf",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "3ba25b043be100d2b810050328cc12d6c626c63242ab893d081cabb8decb3fcb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "c207e6e1042e210f0c8bcc1a955688444559ca9906211880c7d95f74391787b5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-install-review.png",
+      "sha256": "70a541e885a508807596d965e5bae8209654e21d7e5f3984db71e7a23b359149",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-install-success.png",
+      "sha256": "535682212ec9e6290c9657f1b3ccfc4b301d636767b8c301e9ade01e8d5414fd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-no-match.png",
+      "sha256": "4b28df03a046367334922b6c9c0b3f743dd57578167abf4f463a178d29783a37",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-removal-review.png",
+      "sha256": "60ee9f8b2ff34fa9a0897acc5c9c1e879ba8bef558770612079510913a07023b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-removal-success.png",
+      "sha256": "17fcd05d6b692eeff8d932f579a3c34fadc6e86cea727a041d1206e15aca9e56",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "7894c8b12847acf0c90611ab532e855ba634a2807a140d96d39c20cd8ac5b663",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "1b6121762f8663758d97f690d874207c13dfcf523b41b77bc725eb2bcd80be6a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "24085253de62c588ebc0cc70c7701bc6e6cc56bda56030e7a2c35a687c753c97",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-search-retained.png",
+      "sha256": "a386b60e27026503e20c054977ad3620890f80e8e0d759c906b4824a816f9b70",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-search.png",
+      "sha256": "e87cecd145f73e74b38ac031e66aebc0a5dfcca72ec12d17455c2bfb444bb77f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "631f1e8c4b539b6a872a81bcec140c40db5d62909ddc538870fac8909cd30f58",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "82416a0d5b9c1a0e68bc0b91d5441692320fc7843dac01324d27291294aebde0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "91b31e569d6c3245f59401bd6586843997e2786b098f71bcc6a9c0aff751fced",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "b9a6b91d7bc625e5a8a06ea1658a7fc2c11fcd63ac75623fdf7c910cf470bfce",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-browse.png",
+      "sha256": "6d72dd5cf0315de557e56f1277026185e4bc88c2c909fcfc5a7de948d9d427cc",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-details.png",
+      "sha256": "7cea08d548a7f59f5398dbafd9a97e18165203fd69a7fcdb780449ae67456e34",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "60d56379605da41263fc24687e570dc50f3f48b0b874cdd410aa5bfed75d0b6f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-disable-review.png",
+      "sha256": "73da1f4de254bc01f3cd8797ba36694a5fafd99d1d1658734974212218346772",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-disable-success.png",
+      "sha256": "9a8e32c847b9a65da01769b86e9ed24fe37b6bb7fb752242e251576b144d36b5",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "69f9c7e139fde25bc6e2075dd0c06740bb162aa3c9ca1b3eb917da18b6d65b18",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-editor.png",
+      "sha256": "b7cf32ad8d8cf9d6a35b905f6a6a7e54b8fed41f169b9a114312879498a45cd3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "bf15931065782fe06d2c135bf151c74e7ace92fd9e3061e2cafd10820266fee4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "f2fd2cd12fd3288e5ef37fbbc3655ae2f243a87fd6e47657fbe7cc83bfce2ad9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "b0bc121db487c4af89cb22504abbff6c963f5a3c3b805635ff9c27355dbf7736",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-install-review.png",
+      "sha256": "22288a3ad63bd87d313d1a986cd3f170fed76b9ca7e6fb2ed3fd4f1bc96bbe2f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-install-success.png",
+      "sha256": "daff7880309b6a41d2a020b78929a8115806a73bb715c827bd36bf868d45d88c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-no-match.png",
+      "sha256": "e43cf20b87464ef3322c864b8861455842f45433ac49eb49cac7998abdb11faa",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-removal-review.png",
+      "sha256": "72d074794c9f20d5bd304de277ed39a579007bb3ac16821e5657ad751ba23169",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-removal-success.png",
+      "sha256": "9d9705a3a3cfe09a4b858c0beb283b55b9875884a73d1d3abbd93d649861460e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "496b1ff69ce222414aaeaacd06b08bd2adbbf2e2d3c3276ae4df4d1d98b6ba5d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "b971d0e0f17713dd88f5782cb373e8d3d4aba3999080417c142daba7269bbe95",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "be533728c9c0420a63f8f17d60731bd58eac8e1ede24c2e30cd32b3b73adb689",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-search-retained.png",
+      "sha256": "931ba6a97c48bbf142bf0a4cd21ceae6d3190c032377b9f0197e9cbe755df17b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-search.png",
+      "sha256": "9018a39e222fc1ecaf3e32c4cff80058da329f04cb592b38b967773ce0dcf12d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "af3d59383f6f8cd739239888ffd5ef48e29e3b2c43c98397f3a739104213b7a7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "a25a2999e92d03f9577e3d77f582cacb66c880c865e5a8d4574f2e1a0d0a56b1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "c5eb028ad15fa4dccf827b2546e1694272324690236b37dd4581214ee501586d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "ad66eea5c2c45de24288836e9bbd2c61e111ac88a10e65d8a96ad824f39e8b0e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-browse.png",
+      "sha256": "84072e4c83a9de9e2d800738066de5cf1f6f48a9691c6568b29d31d0e8900b37",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-details.png",
+      "sha256": "f4c19a89f7d67a3946f13e8edf3a631778bb11f4b75587535611fb757ee5d811",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "5691bf30c61985b29d715b185fa7aef34e122ad9b04ffbd2d68bdaf18191bda4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-disable-review.png",
+      "sha256": "bcc7fa27fca4ad0a64e316b06f15b05c0109822704b38419066d36a5df7d715c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-disable-success.png",
+      "sha256": "e01481ed0ff2487fb17a3d2c4c554fbf5c910ec85ee7914764b97fd305cd8255",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "011d3388b970cd7ecfe268665c6a542a368b4e4d817bb00530410ee62b4ccb49",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-editor.png",
+      "sha256": "cf167629f2edfbdaae1c90a20cb3d98f2ccc79ed89531463135fd52187dc4fdf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "722af1eda9ffbd4f7178efc16f73ceaaf45d842c08af7e7889a71d8862a71ca1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "0ab7075061af8ba12582c4c27ddb86c4db13dd5b54480c2ba20031aab44496f6",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "8d5d2bcd83259052901afa2f0f04cd7558fef914244b591557b34565a0bcc6f9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-install-review.png",
+      "sha256": "e7f924ae39a6e685c3679416af372b59416516bd7562c432b32280817d828195",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-install-success.png",
+      "sha256": "52463fe5ea1a4a84bce3f0206d9a5d6c76b20613e6a4b39216c1e838bf373835",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-no-match.png",
+      "sha256": "956ceeee3f4858a3f633b5c5e2983f0bf3cf1397f1cec1267900ea308e738e7f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-removal-review.png",
+      "sha256": "f66c0998093976e143687708b5ab9d8a8b4803b08e4ca044081cf76c7d565d64",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-removal-success.png",
+      "sha256": "63afa4e44f2f3205e0b8d4d9ea9c79d3b3ac8f643fa72503022cf737da154264",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "9fe07fcf41a5a3534a00ebb63aa4ab5fd2e4243429b6e8d5a7dd946ce830013f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "6cea7e16647d0adb7d241901ec3b5d71f4676dc03fa9ce268286c60999281f3f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "17d252f931235c2f10242c1ddfc93f139b02c9efe60b0c5988e192abb3949ef3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-search-retained.png",
+      "sha256": "19d749e774c845ee5e283d21133d1c57723d2ccdd79729118ef61fc67ea715f4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-search.png",
+      "sha256": "9d381dff60685a8b9379a3f378826ae91a4d0e17ec2970260700e0e49cbc6557",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "4ddd376bfb09581820170c500a8aabf872cdb83a154f45c0b4557e3622ca12b3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "ff2aff34cb235e36de59b832bfe628105de7532931f9dd4b674752499da978f1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "b2b55f22cca490832a8f2f23fdbd7a13386add26a82da1f5899861a95c2a0372",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "64ed5a14b6f9a361609f5685674806801b634254f41a249b01a35ded3b3b5a28",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-browse.png",
+      "sha256": "9cc825b612a7750cf5626fb97437b9179add1a60b80b276ab568f60a6b75e196",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-details.png",
+      "sha256": "a26f31026ec44e933554a465515c44174366eeff9e18b97fb41dde230aa34b53",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "9c648d5eeb61027d7ed1668665127fcd1691ca1019812f69f951d556c39774c1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-disable-review.png",
+      "sha256": "4ea041b88cc67e5c4958248082aede2842d4d8731c63f56c497e26f2fa72e3b4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-disable-success.png",
+      "sha256": "571896e58ec2dea4c7c9866bd1c8bb52b4ff01cb540937664694bf6a60c837f3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "65dd3277301be3d73af0a94069881c95b2948afac97912ef7bd6ddabdab443cd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-editor.png",
+      "sha256": "5f5cd28444b9691b8f4ce61db81c5d3e18949039081b6000eea3c4efaf8771c6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "8e225f95bb24b030bd5c72e7eb68aa073bcfa74068c526d1b7c090b6d507d92c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "bbb821103a360e6f724182eda7522eb5980400221345b95e159035b27977bc08",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "b562b26f44b697095140d0939d937238aec5a54721da5fd091e6bc5892c32373",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-install-review.png",
+      "sha256": "067de346f92dd92fedef8390ea148c43bac37a5d1493db4ade88003dc7885372",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-install-success.png",
+      "sha256": "b8f926afccaa6243bfe3fc913693b246bea9dbb7aad23c54758e25f30ba288eb",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-no-match.png",
+      "sha256": "e970a2abbd47ca18573af6405b3eef0a521a4312fccfbebef06d6e2e57981dfb",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-removal-review.png",
+      "sha256": "484689b88918d7f24676d8590eb19b407d38d5d9a8fc1a138ae2678e423f64a2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-removal-success.png",
+      "sha256": "e01b1ad15802fea51dcbf93c4f5584e8b14f972d7c5ffe5e537e555e8b0b484d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "985c820efdcc6e05c3fe5850e580d2ab2806bf7763bfd8a2fd8213cfc27cb968",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "f05923459f6e616056f650d212233140012dfd87c2b88311c9e00f55a4ef3011",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "a29e2c69b9bdd7ba7dfee63f389d19b20bc3336d9a369f4bc492ae307da51b5d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-search-retained.png",
+      "sha256": "da7ae23de9d01a2723f5d488baf24dffcb051a48bc70bf6be5b05e29bf384115",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-search.png",
+      "sha256": "f97f4cabe367c4e6ec7a844565afaa9803400223a9b66848657e5d00fca7c383",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "be8e692db4078364214992c89e6fbf144834d75bbd564875852cd915684c968c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "2f49139c20ca5febd9f5fd376a06d3e13e7ef65a08eff8325e5f9d45d27c4311",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "a7675dd6030d0937e90789a293362add1db92513554f974e5cd48bce9427562a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "ed17fcd8018af3f7c3b39dd113060b9ea555dc5d2430f8a0673a2050fc77096b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-browse.png",
+      "sha256": "2a59a1fee2b5c031851a485200d123f862a1ba9bc34f08566a66206b8473bab9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-details.png",
+      "sha256": "b835990f71fe275b47ab152c7cccef9b5c0473319d99d8a23602c63b40038caf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "1f08cc45f9f57230b4ab13f88796f91d6384415b47e9eb633bda85faa3aabb77",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-disable-review.png",
+      "sha256": "7fa14c2f1a45c840df40bb0fbcf7385abaac68639dc543d96ee80ef5a9835048",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-disable-success.png",
+      "sha256": "e7b32dc2b61ff34e6c5effbcb3abf3e9cce26f54708415ab9f13e5862dda1165",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "a60a77d83c9cf90b134537f6dbdfc94a789e99ae38cb00af4af245911dd2fe0b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-editor.png",
+      "sha256": "211728c789b19b41dc16432819a3768b2e333427796265ee95e493b211aebf42",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "93a78c20d72448ddb0fd2712bedcdb110b69ab6b2b48c5539459f6ac9272a165",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "db901272490c328c1e85940a1a1b096ad299c632c68c1216c03237c233a6a648",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "c05cf27e2364020cb59827e2b4b18ffa824bbca0924132bea1edb14f5d53df4a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-install-review.png",
+      "sha256": "51bba39fa089f0d2818c0c664f35646092497d1da1734c77e02388fb2ab7c281",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-install-success.png",
+      "sha256": "c03aeee9e98b6bd8e6f9e526c85b624fc0535f8e2ec2efef62a96eb82ea4ab87",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-no-match.png",
+      "sha256": "62a0a04560d57bb250ff6f53304f795a8dbbef18a19cc2012f01159ef2615c46",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-removal-review.png",
+      "sha256": "f0bca321bfe25ce02054d914bcf229613732442a5b372685b8faa9644cfcd26f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-removal-success.png",
+      "sha256": "928ee6f8234b5fc93f1a1e9242f1f7593bc37fbe90d66bea701edf34a5eead08",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "f5426b722e6e07e1ad5ac3cd7ef3ccc2eb79591839655d6bfe78cccc6d709596",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "199d771f733f6db8fa1c01d906c9c8be7c5e02f8e66df8cb14b7d55d72d86026",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "270de2f0257098a2023ec554e1a038195217a1a13ba6bee4d5036454bc8cea6b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-search-retained.png",
+      "sha256": "49a008f9e011b89237cdc2ebeb511a18905751bd3cb06fbdddfd2df01ad91a96",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-search.png",
+      "sha256": "0d2d83758b8343edbadaf34def819653d1f116d496a37db8662e3f3c04c7acb1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "5639a83a51af9e9bb284cd6202e00e89e08b1dfdea3410f13e53e8a522f5839f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "4c9419ab7674173a4a1f8a461779fd25971966246875b12f5403ab6cc55caa78",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "68a8730d9ed82779f9af964e36b377964078fbe8ed4accbe8e296594d7883456",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "d43bf2cd9738a331770116f1a4a463fa242b9f0c9fe0718a56e09db1ce878c6c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-browse.png",
+      "sha256": "beab23a27bd940ae98e1ae8241936740f56cf1b94e9ee2c257ed45b114fe12a3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-details.png",
+      "sha256": "ebcc1b52c907e5ca8deb8a9fc4c7f6daffffd35987bee17407bd2dcac8ec1f40",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "4c3fd4984e2e6b5ee03d95619411af337e2420f4699ac0fef169505dfbe3ec55",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-disable-review.png",
+      "sha256": "7f5085743b2b3bb9af60504ed48c44222900a3531b7efeaa23d9c9d5be72ac1e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-disable-success.png",
+      "sha256": "4c6cce5a07fda0094e12f9c4f6095d9400a7278ec333f935b327f32a8a0fcdec",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "d4746acbcaf84d0950e4eb8360de0d745e6e4f2056845af29762a050767fd683",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-editor.png",
+      "sha256": "03bef99d2fb4eb414afe6438cb1543c13b943616d37d215702fefba938fd593a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "cbba32f8c2d59a68257a326ae090f0749a7210676e3640a8d83755a60717dce4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "bd7f469ef8d1e5a3800390be741b64eab6a21b8ff66050d4edc40c7dadeef1d3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "76baa513dd296e7f0b2987747b4139ff76af1c78c6f5870a7e118b01ff39e51c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-install-review.png",
+      "sha256": "7e6e44db03d5e5dacfe20ce2feaf3bb7ce8618520f72a9e7bcbac205d92b8ac6",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-install-success.png",
+      "sha256": "d1be6d870e93d144e55d1bd8e6950def750016f9f1a3e189f428eab2a2d16d68",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-no-match.png",
+      "sha256": "8a573d6ddbafccb3dddac5151d84c7f00273e3fa3439d64d77eaafc37220db44",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-removal-review.png",
+      "sha256": "6b895f32bb712659dd9e5094af268e2e6b0a7d2b45884d7c22d44189cfcc01b7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-removal-success.png",
+      "sha256": "3437b8dd70a95e28bc6984184ebfc33b7925913c7bf8cf40fe6bd5ed5c9e8e81",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "6784f7a72ffdbb0948d0071ba867fc07a202981e3df919459805cf32f1ef3bc7",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "96caab478b36f544c98ebcdf7ba2b715c8b536d7d1a0ca9f49312372232ee199",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "8771f7361e79812ba62efc1803a3e23d8855d4d16832489d3d92d4c6a05ad091",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-search-retained.png",
+      "sha256": "131117009961e9b1a99d8d8dc7acf4c0a5ca53b9a42f1bb3b5bf322c2a5db873",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-search.png",
+      "sha256": "51663d8cb62239905300e7339e0698f1948da09ba9d704f6594b4768471bae3d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "32531b62a4584232b93d0ceb9be2bc30622dace1da7092210ec37abab2bec350",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "35e88e2cb8577f347f7be0a74b5f50396ff6347ed1256ea4b29a5db2c1736219",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/marketplace-removal-review.png",
+      "sha256": "33afca0c6c1dc19c7759eeac76eb3623c7a356d874798099d39e81d1cb1e761e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/marketplace-removal-success.png",
+      "sha256": "24b1ca43675d9f83cb5cae53d002265c3f3f5df7b490627bdf2759aa7e2cf5b9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-browse.png",
+      "sha256": "561939e94e023ec4a72c2b6d7dd9375dee735e4f17cfa2653ca85104e19de34e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-details.png",
+      "sha256": "c023b9d5d12078f7e27f802d0478f995f7fe9f4183492e4dee272dfc79e21c1c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-disable-noop.png",
+      "sha256": "d6ba00c34ef61a891beee6776369af3731a960f81a06dfb53636b8aebcb7a2f6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-disable-review.png",
+      "sha256": "9d7204202340a506c1cc339943845242fb21e0c5aa630a129d393c41742e6d39",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-disable-success.png",
+      "sha256": "d6fd0734dfb9196ae43d958da930c51b951b51fa24c4bbbca7dd09bd0f6d7612",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-discover-after-removal.png",
+      "sha256": "4728150ae9cba1f256cef7dd37a4f1ec3bce44ebf06f2065c4ceec48c1614df3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-editor.png",
+      "sha256": "dfd4ee85b028f21a20de7093a369397979a05691430cec0f09be5c6a4f5965f5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "b86d35cff835d0b014a821f6acb1bd8fa8f7d9fbcb349f3aaf8288702c9d16a8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-empty-installed.png",
+      "sha256": "8170282332d2782dc215c109cd6eaa243cab4eaee30171c86bfdf8b626f5c901",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-force-reinstall-review.png",
+      "sha256": "105b26eb0de1f9545312418d6be9ef186635e661e8ac57bf651e3f79691097bd",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-install-review.png",
+      "sha256": "5674a2d19da4089126f75a4e8ff98cfa8759434fe381f856c967361b9cd3a02a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-install-success.png",
+      "sha256": "5d59daac151ec53576bbfa1a177149208ce381c713ae1c2b58b022ac7115a77c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-no-match.png",
+      "sha256": "5024df3a0b8e72a15a82265a2d47aef52798778c3f558806f549060fe6653d01",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-removal-review.png",
+      "sha256": "c8483dae8398948aadcb8b838bd1f0e541fa316b2f5ea2b72e66e031c2031726",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-removal-success.png",
+      "sha256": "cb64fe6f3c169e1f0625b9042892c5688ca47defe7645ddae275e80615d80611",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-reopened-details.png",
+      "sha256": "342fefce20db4befcce9c8ee211d5dffe774cb78d177d5ec1cc9302d001b17f1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-reopened-installed.png",
+      "sha256": "ffc5deb5c8b59302c4153ac1c92384fe25ed69c62c0a020d6a8e58102506b871",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-search-cleared.png",
+      "sha256": "9f365bb8811be871f179909b57e6217213078beb6bf33ebac3e16e21f8fcb7e4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-search-retained.png",
+      "sha256": "0f00ac3f928c0a59c2dca01cbcd610515a7300b9fec53b4f1327ce5294b8a754",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-search.png",
+      "sha256": "9d9ea2537485cafdfcf0821b9c4b3f07cc1e92b95bd423dd5a43f2ed42dff1e1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-upgrade-review.png",
+      "sha256": "9d2fda3a3366ab86efe0c4316dfccd15da2f23adedc5ce5afbdae127ff0b8d10",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plugin-upgrade-success.png",
+      "sha256": "0c2889368a045260eeac27136cc566f10519ba9fbccfef6aef2cf8afc5cc8bc0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/marketplace-removal-review.png",
+      "sha256": "8eeb8ed4149826b571ab990634691d21246014de3b371b37d1e4c03a46f43c94",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/marketplace-removal-success.png",
+      "sha256": "c8eb008f5e0f3a2f286d95e7112a626e2ce5669ff0f9a93a0c8bc5bca703f6a4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-browse.png",
+      "sha256": "4c66f4301e637742ef2d4da3d5a8a1955cfbfd10e951706484f47114898d5cb5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-details.png",
+      "sha256": "c6dfb54358ed6b38dd8713fc2bb4a73614c524919c540c4b061d5118f3b4d332",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-disable-noop.png",
+      "sha256": "4deecf61734f0b0100c15d183b507381c0d44202192432e30f302ac3b13b6545",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-disable-review.png",
+      "sha256": "436d7d2545fd92b76de9572a7c88d776b4b75d5d90d1dde32137d201f4b0d68a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-disable-success.png",
+      "sha256": "135edf720f13f12a156180790371c387894027a5e26188b9f1082ea26796649b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-discover-after-removal.png",
+      "sha256": "9a18f33de24aae6f584f566e4de6e445d6c3dc1f003381e31af5228f43ef8e66",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-editor.png",
+      "sha256": "b95f72e4a2a38823d7d5ee53ef344fbdddae36d553b0bd1b8376cb7999889fef",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-empty-installed-before-lifecycle.png",
+      "sha256": "6b7dbad37874dfc7582d8c05798532014d281d2e3f1c2c242266c501c9cf3ad2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-empty-installed.png",
+      "sha256": "a6282eb25cd0d61cfc336d5e445962fdad9a8b889bfe9107d32a27faaef499b3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-force-reinstall-review.png",
+      "sha256": "e8e8ba3e88292b92a6b1529d725cba02a2d737e4a4cc09cc5296fdcd9e13caa4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-install-review.png",
+      "sha256": "dcdb422266a523caecf3a4317157b2384ea40c76f2e8e0bf977caee2a5932969",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-install-success.png",
+      "sha256": "8a46198b4c4b8354adecfdc1e2c770fbf81cf92a066a61d2c0429fd7712b7f2c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-no-match.png",
+      "sha256": "84e32cd9bccddfa8e60d07a0a2a8780d12167e2d966580088fbf33bf03e5b1d0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-removal-review.png",
+      "sha256": "02b53360c449183cbeca4eb492634e154bd723150ebd4f6d29272a584cb57651",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-removal-success.png",
+      "sha256": "196e54de233fcce1fec13a1b267edc5eef9964eeb64c1f974b95a2fa37f88e22",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-reopened-details.png",
+      "sha256": "193cacb39ada2378f5fc7a2ce09efc5c24d1d218617e5ca5280524e074bdf4c9",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-reopened-installed.png",
+      "sha256": "effe3ff8c5cf7ab497119491cd077285e70099fff05b2c16270cbaebef19f2c1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-search-cleared.png",
+      "sha256": "e494373732a3b4d4ff5629041cca5c609f9a991d66e443bbcc2094d4d23a0cf3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-search-retained.png",
+      "sha256": "5ec726a477fb01b74f9cbc51576522682489fec96dffb27fa93b3c5574529e3b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-search.png",
+      "sha256": "8da02830c0243fef0003e675635d32499677e20edda99eb262285b731e35d1a7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-upgrade-review.png",
+      "sha256": "0852ca08d9442a89f5f8330ff8b774678ba9575aab342365699428d85c9da299",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plugin-upgrade-success.png",
+      "sha256": "f4e9dc1abf8e84a36d4cc945b27cc08d10b36587148c36df612ec4e36f8ddfc1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    }
+  ]
+}
