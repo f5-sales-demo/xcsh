@@ -1,5 +1,4 @@
-/** Live text-only comparison of the native TUI prompt and the iPhone WebRTC-v3 voice prompt. */
-import { completeSimple, Effort } from "@f5-sales-demo/pi-ai";
+/** Live tool-capable comparison of native TUI and iPhone WebRTC-v3 delegated behavior. */
 import { getAgentDir } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
@@ -20,65 +19,76 @@ const agentDir = getAgentDir();
 const settings = await Settings.init({ agentDir, cwd, inMemory: true });
 const auth = await discoverAuthStorage(agentDir);
 const registry = new ModelRegistry(auth);
-let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
 try {
 	await registry.refreshProvider("openai-codex", "online");
 	const model = registry.find("openai-codex", "gpt-5.6-sol");
 	if (!model) throw new Error("Sol is unavailable");
-	const apiKey = await registry.getApiKey(model);
-	if (!apiKey) throw new Error("Sol authentication is unavailable");
-	({ session } = await createAgentSession({
-		agentDir,
-		authStorage: auth,
-		cwd,
-		disableExtensionDiscovery: true,
-		enableMCP: false,
-		model,
-		modelRegistry: registry,
-		rules: [],
-		sessionManager: SessionManager.inMemory(),
-		settings,
-		skills: [],
-		toolNames: [],
-	}));
 	const userKnowledge = (await readMemorySummary(agentDir, settings)) ?? "";
-	const snapshot = {
-		systemPrompt: session.systemPrompt,
-		userKnowledge,
-		tools: session.getActiveToolNames().map(name => ({ name })),
-		history: "",
-	};
-	const voiceConfig = voiceCallConfig(
-		{
-			threadId: session.sessionId,
-			version: "v3",
-			outputModality: "audio",
-			includeStartupContext: false,
-			transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
-		},
-		snapshot,
-	);
-	const voicePrompt = String((voiceConfig.session as { instructions?: unknown }).instructions ?? "");
-	if (!voicePrompt.includes("MUST delegate the user's exact request"))
-		throw new Error("Voice configuration does not require attached-agent self-inspection");
-	const surfaces = [
-		["tui", session.systemPrompt, PROBE],
-		["iphone-webrtc-v3-delegated-agent", session.systemPrompt, voiceDelegation(PROBE, `user: ${PROBE}`)],
-	] as const;
-	const results: Record<string, ReturnType<typeof scorePersonaResponse>[]> = {};
-	for (const [surface, systemPrompt, userPrompt] of surfaces) {
+	type Observation = ReturnType<typeof scorePersonaResponse> & { memoryRead: boolean };
+	const results: Record<string, Observation[]> = {};
+	for (const surface of ["tui", "iphone-webrtc-v3-delegated-agent"] as const) {
 		results[surface] = [];
 		for (let repetition = 0; repetition < samples; repetition++) {
-			const response = await completeSimple(
+			const { session } = await createAgentSession({
+				agentDir,
+				authStorage: auth,
+				cwd,
+				disableExtensionDiscovery: true,
+				enableMCP: false,
 				model,
-				{ systemPrompt, messages: [{ role: "user", content: userPrompt, timestamp: Date.now() }] },
-				{ apiKey, maxTokens: 384, reasoning: Effort.Medium, signal: AbortSignal.timeout(120_000) },
-			);
-			const text = response.content
-				.filter((block): block is { type: "text"; text: string } => block.type === "text")
-				.map(block => block.text)
-				.join("\n");
-			results[surface].push(scorePersonaResponse(text, userKnowledge));
+				modelRegistry: registry,
+				rules: [],
+				sessionManager: SessionManager.inMemory(),
+				settings,
+				skills: [],
+				toolNames: ["read"],
+			});
+			try {
+				if (!session.getActiveToolNames().includes("read")) throw new Error("The read tool is unavailable");
+				if (surface === "iphone-webrtc-v3-delegated-agent") {
+					const voiceConfig = voiceCallConfig(
+						{
+							threadId: session.sessionId,
+							version: "v3",
+							outputModality: "audio",
+							includeStartupContext: false,
+							transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+						},
+						{
+							systemPrompt: session.systemPrompt,
+							userKnowledge,
+							tools: session.getActiveToolNames().map(name => ({ name })),
+							history: "",
+						},
+					);
+					const voicePrompt = String((voiceConfig.session as { instructions?: unknown }).instructions ?? "");
+					if (!voicePrompt.includes("MUST delegate the user's exact request"))
+						throw new Error("Voice configuration does not require attached-agent self-inspection");
+				}
+				await session.prompt(surface === "tui" ? PROBE : voiceDelegation(PROBE, `user: ${PROBE}`));
+				const messages = session.messages as Array<{
+					role: string;
+					content?: Array<{ type?: string; text?: string; name?: string; arguments?: { path?: string } }>;
+				}>;
+				const response = messages.findLast(message => message.role === "assistant");
+				const text = (response?.content ?? [])
+					.filter(block => block.type === "text")
+					.map(block => block.text ?? "")
+					.join("\n");
+				const memoryRead = messages.some(
+					message =>
+						message.role === "assistant" &&
+						(message.content ?? []).some(
+							block =>
+								block.type === "toolCall" &&
+								block.name === "read" &&
+								block.arguments?.path === "memory://root/memory_summary.md",
+						),
+				);
+				results[surface].push({ ...scorePersonaResponse(text, userKnowledge), memoryRead });
+			} finally {
+				await session.dispose();
+			}
 		}
 	}
 	console.log(
@@ -91,7 +101,12 @@ try {
 			surfaces: Object.fromEntries(
 				Object.entries(results).map(([surface, scores]) => [
 					surface,
-					{ passed: scores.filter(score => score.passed).length, samples, scores },
+					{
+						passed: scores.filter(score => score.passed && (surface === "tui" || score.memoryRead)).length,
+						memoryReads: scores.filter(score => score.memoryRead).length,
+						samples,
+						scores,
+					},
 				]),
 			),
 			rawTranscriptsRetained: false,
@@ -99,6 +114,5 @@ try {
 		}),
 	);
 } finally {
-	await session?.dispose();
 	auth.close();
 }

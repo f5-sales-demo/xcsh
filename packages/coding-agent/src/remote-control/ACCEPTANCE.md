@@ -473,3 +473,19 @@ prompt, `memory://root`, and every fresh voice snapshot; `/move` also rebuilds
 the effective prompt after the project changes. An A-to-B regression proves
 that only project B memory is retained. Automated parity and a new immutable
 runtime must pass before Robin repeats the physical Sol observation.
+
+The next physical Sol observation still claimed that only the current session
+was known. Sanitized persisted-turn evidence showed that the voice service did
+delegate the exact self-inspection request, but the attached Sol turn contained
+no tool call. The correction keeps the pinned delegation formatter intact and
+adds an xcsh execution contract requiring self-awareness reads and writes to use
+`memory://root/memory_summary.md`. Successful reads must contribute a concrete,
+non-sensitive stored fact; blanket no-memory answers are not acceptable when
+the shared project summary contains facts.
+
+The parity runner now executes tool-capable AgentSession turns instead of
+calling the model without tools. The 3x3 Sol run passed all TUI and delegated
+voice samples; every delegated voice sample performed the required shared-memory
+read. Output retained only byte counts, semantic flags, tool-call counts, and
+response digests. A newly packaged runtime and Robin-observed iPhone response
+remain required before spoken acceptance can pass.
