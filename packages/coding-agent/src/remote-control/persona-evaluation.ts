@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 const DENIAL =
-	/\b(?:i (?:have|hold) no (?:details|information) about you|i (?:do not|don't) know (?:anything|details|information) about you|i only know (?:about )?(?:this|the current) (?:chat|conversation))\b/i;
+	/\b(?:i (?:have|hold) no (?:stored )?(?:details|information|memor(?:y|ies))(?:\s+or\s+(?:details|information|memor(?:y|ies)))*\s+about you|i (?:do not|don't) know (?:anything|details|information) about you|i only know (?:about )?(?:this|the current) (?:chat|conversation)|i know nothing about you)\b/i;
 const GENERIC_IDENTITY = /\b(?:i am|i'm) (?:chatgpt|an? (?:openai|general-purpose) assistant)\b/i;
 const COMMON = new Set([
 	"about",
@@ -54,7 +54,7 @@ export function scorePersonaResponse(response: string, userKnowledge: string): P
 			Boolean(userKnowledge.trim()) &&
 			!genericIdentity &&
 			knowledgeTermMatches >= 1 &&
-			(!deniedKnownContext || knowledgeTermMatches >= 2),
+			!deniedKnownContext,
 		deniedKnownContext,
 		genericIdentity,
 		knowledgeTermMatches,
