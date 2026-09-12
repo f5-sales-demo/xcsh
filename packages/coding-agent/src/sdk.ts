@@ -1177,7 +1177,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		internalRouter.register(new ArtifactProtocolHandler({ getArtifactsDir }));
 		internalRouter.register(
 			new MemoryProtocolHandler({
-				getMemoryRoot: () => getMemoryRoot(agentDir, settings.getCwd()),
+				getMemoryRoot: () => getMemoryRoot(agentDir, sessionManager.getCwd()),
 			}),
 		);
 		internalRouter.register(
@@ -1586,7 +1586,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					description: renderSearchToolBm25Description(discoverableMCPTools, contextLoadingMode === "progressive"),
 				},
 			});
-			const memoryInstructions = await buildMemoryToolDeveloperInstructions(agentDir, settings);
+			const memoryInstructions = await buildMemoryToolDeveloperInstructions(
+				agentDir,
+				settings,
+				sessionManager.getCwd(),
+			);
 
 			// Resolve F5 XC context for the prompt. Read fresh each rebuild so tool-triggered
 			// rebuilds reflect the most recent /context activate. Mid-session context changes without a

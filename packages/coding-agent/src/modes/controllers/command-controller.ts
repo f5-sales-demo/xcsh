@@ -1570,6 +1570,7 @@ export class CommandController {
 							`Session files moved; project refresh failed: ${error instanceof Error ? error.message : String(error)}`,
 						);
 					}
+					await this.ctx.session.refreshBaseSystemPrompt();
 					if (target.getCwd() !== destination) throw new Error("Session directory changed during the move.");
 					this.#pendingMoves.delete(identity);
 				},

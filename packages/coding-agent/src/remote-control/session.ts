@@ -830,7 +830,11 @@ export class RemoteSession {
 					};
 					const settings = this.target.settings;
 					const userKnowledge = settings
-						? ((await readMemorySummary(settings.getAgentDir(), settings)) ?? "")
+						? ((await readMemorySummary(
+								settings.getAgentDir(),
+								settings,
+								this.target.sessionManager.getCwd(),
+							)) ?? "")
 						: "";
 					this.#assertCurrent(epoch);
 					return { ...snapshot, userKnowledge };

@@ -149,8 +149,9 @@ export function startMemoryStartupTask(options: {
 export async function buildMemoryToolDeveloperInstructions(
 	agentDir: string,
 	settings: Settings,
+	projectCwd = settings.getCwd(),
 ): Promise<string | undefined> {
-	const summary = await readMemorySummary(agentDir, settings);
+	const summary = await readMemorySummary(agentDir, settings, projectCwd);
 	if (!summary) return undefined;
 
 	return prompt.render(readPathTemplate, {
@@ -159,10 +160,14 @@ export async function buildMemoryToolDeveloperInstructions(
 }
 
 /** Read the same bounded project-memory summary used by the terminal prompt. */
-export async function readMemorySummary(agentDir: string, settings: Settings): Promise<string | undefined> {
+export async function readMemorySummary(
+	agentDir: string,
+	settings: Settings,
+	projectCwd = settings.getCwd(),
+): Promise<string | undefined> {
 	const cfg = loadMemoryConfig(settings);
 	if (!cfg.enabled) return undefined;
-	const memoryRoot = getMemoryRoot(agentDir, settings.getCwd());
+	const memoryRoot = getMemoryRoot(agentDir, projectCwd);
 	const summaryPath = path.join(memoryRoot, "memory_summary.md");
 
 	let text: string;
