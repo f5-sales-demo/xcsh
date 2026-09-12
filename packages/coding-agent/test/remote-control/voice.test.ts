@@ -759,6 +759,23 @@ test("requested transcript-tail flushing submits unpromoted speech once after vo
 	expect(f.records.some(r => r.kind === "transcriptTail")).toBe(true);
 	f.finish("Updated.");
 });
+
+test("transcript-tail flushing does not reopen work after realtime already answered", async () => {
+	const f = fixture();
+	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+	await f.voice.start({
+		version: "v3",
+		outputModality: "audio",
+		includeStartupContext: false,
+		flushTranscriptTailOnSessionEnd: true,
+		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+	});
+	f.receive({ type: "turn.done", turn: { role: "user", transcript: "Can you make tool calls?" } });
+	f.receive({ type: "turn.done", turn: { role: "assistant", transcript: "Yes, when helpful." } });
+	f.voice.stop();
+	await Bun.sleep(0);
+	expect(f.delegated).toEqual([]);
+});
 test.each([true, false])(
 	"delegated input with preceding transcript %s is not resubmitted by a late final",
 	async hasTranscript => {

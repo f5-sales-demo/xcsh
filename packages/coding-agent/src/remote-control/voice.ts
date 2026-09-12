@@ -601,6 +601,11 @@ export class NativeVoice {
 		const tail = this.#tail;
 		this.#tail = [];
 		if (!tail.some(entry => entry.text.trim())) return;
+		// A final assistant transcript means realtime already handled the user's
+		// request. Re-submitting that exchange can reopen older interrupted work
+		// from the backing session after the voice call closes.
+		const lastSpoken = tail.findLast(entry => entry.text.trim());
+		if (lastSpoken?.role === "assistant") return;
 		const transcript = JSON.stringify(tail.map(({ role, text }) => ({ role, text })));
 		const key = this.#key("transcript-tail", transcript);
 		if (this.#seen.has(key)) return;
