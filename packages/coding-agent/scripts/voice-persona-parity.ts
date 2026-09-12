@@ -6,6 +6,7 @@ import { Settings } from "../src/config/settings";
 import { readMemorySummary } from "../src/memories";
 import { scorePersonaResponse } from "../src/remote-control/persona-evaluation";
 import { voiceCallConfig } from "../src/remote-control/voice-call";
+import { voiceDelegation } from "../src/remote-control/voice-delegation";
 import { createAgentSession, discoverAuthStorage } from "../src/sdk";
 import { SessionManager } from "../src/session/session-manager";
 
@@ -58,17 +59,19 @@ try {
 		snapshot,
 	);
 	const voicePrompt = String((voiceConfig.session as { instructions?: unknown }).instructions ?? "");
+	if (!voicePrompt.includes("MUST delegate the user's exact request"))
+		throw new Error("Voice configuration does not require attached-agent self-inspection");
 	const surfaces = [
-		["tui", session.systemPrompt],
-		["iphone-webrtc-v3-prompt", voicePrompt],
+		["tui", session.systemPrompt, PROBE],
+		["iphone-webrtc-v3-delegated-agent", session.systemPrompt, voiceDelegation(PROBE, `user: ${PROBE}`)],
 	] as const;
 	const results: Record<string, ReturnType<typeof scorePersonaResponse>[]> = {};
-	for (const [surface, systemPrompt] of surfaces) {
+	for (const [surface, systemPrompt, userPrompt] of surfaces) {
 		results[surface] = [];
 		for (let repetition = 0; repetition < samples; repetition++) {
 			const response = await completeSimple(
 				model,
-				{ systemPrompt, messages: [{ role: "user", content: PROBE, timestamp: Date.now() }] },
+				{ systemPrompt, messages: [{ role: "user", content: userPrompt, timestamp: Date.now() }] },
 				{ apiKey, maxTokens: 384, reasoning: Effort.Medium, signal: AbortSignal.timeout(120_000) },
 			);
 			const text = response.content
@@ -82,7 +85,7 @@ try {
 		JSON.stringify({
 			probe: PROBE,
 			model: `${model.provider}/${model.id}`,
-			simulation: "iPhone WebRTC-v3 call configuration evaluated with the attached Sol work model",
+			simulation: "iPhone WebRTC-v3 self-inspection delegated to the attached Sol work model",
 			samples,
 			memory: { present: Boolean(userKnowledge), bytes: Buffer.byteLength(userKnowledge) },
 			surfaces: Object.fromEntries(
