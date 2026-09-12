@@ -782,7 +782,7 @@ dependencies = [
 
 [[package]]
 name = "containment-check"
-version = "21.25.0"
+version = "21.26.0"
 dependencies = [
  "brush-builtins",
  "brush-core",
@@ -2549,7 +2549,7 @@ dependencies = [
 
 [[package]]
 name = "pi-natives"
-version = "21.25.0"
+version = "21.26.0"
 dependencies = [
  "arboard",
  "ast-grep-core",
