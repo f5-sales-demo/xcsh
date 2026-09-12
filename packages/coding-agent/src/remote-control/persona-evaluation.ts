@@ -50,11 +50,7 @@ export function scorePersonaResponse(response: string, userKnowledge: string): P
 	const deniedKnownContext = Boolean(userKnowledge.trim()) && DENIAL.test(response);
 	const genericIdentity = GENERIC_IDENTITY.test(response);
 	return {
-		passed:
-			Boolean(userKnowledge.trim()) &&
-			!genericIdentity &&
-			knowledgeTermMatches >= 1 &&
-			!deniedKnownContext,
+		passed: Boolean(userKnowledge.trim()) && !genericIdentity && knowledgeTermMatches >= 1 && !deniedKnownContext,
 		deniedKnownContext,
 		genericIdentity,
 		knowledgeTermMatches,
