@@ -1,5 +1,31 @@
 import { describe, expect, it } from "bun:test";
-import { F5_LOGO_ROWS } from "../src/modes/components/welcome";
+import { visibleWidth } from "@f5-sales-demo/pi-tui";
+import { F5_LOGO_ROWS, WelcomeComponent } from "../src/modes/components/welcome";
+import { getThemeByName, setThemeInstance } from "../src/modes/theme/theme";
+
+it("welcome reserves space for the editor and adapts without clipping the logo on resize", async () => {
+	setThemeInstance((await getThemeByName("xcsh-dark"))!);
+	let rows = 20;
+	const welcome = new WelcomeComponent("fixture", () => rows);
+	for (const [width, height] of [
+		[60, 20],
+		[80, 24],
+		[100, 32],
+		[140, 40],
+	]) {
+		rows = height;
+		const lines = welcome.render(width);
+		expect(lines.length).toBeLessThanOrEqual(6);
+		expect(lines.every(line => visibleWidth(line) <= Math.min(width, 100))).toBe(true);
+		expect(Bun.stripANSI(lines.join("\n"))).toContain("xcsh vfixture");
+		expect(Bun.stripANSI(lines.join("\n"))).toContain("F5");
+	}
+	rows = 80;
+	expect(welcome.render(100).length).toBeGreaterThan(F5_LOGO_ROWS.length);
+	rows = 20;
+	expect(welcome.render(100).length).toBeLessThanOrEqual(6);
+	expect(welcome.render(30).every(line => visibleWidth(line) <= 30)).toBe(true);
+});
 
 /**
  * Regression guard for the F5 startup logo (issue #1863).

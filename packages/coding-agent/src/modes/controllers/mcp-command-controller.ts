@@ -3,7 +3,8 @@
  *
  * Handles /mcp subcommands for managing MCP servers.
  */
-import { Spacer, Text } from "@f5-sales-demo/pi-tui";
+import { createHash } from "node:crypto";
+import { Container, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getMCPConfigPath, getProjectDir, t } from "@f5-sales-demo/pi-utils";
 import type { SourceMeta } from "../../capability/types";
 import { analyzeAuthError, discoverOAuthEndpoints, MCPManager } from "../../mcp";
@@ -21,6 +22,7 @@ import {
 	clearSmitheryApiKey,
 	createSmitheryCliAuthSession,
 	getSmitheryApiKey,
+	getSmitheryLoginUrl,
 	pollSmitheryCliAuthSession,
 	saveSmitheryApiKey,
 } from "../../mcp/smithery-auth";
@@ -36,8 +38,12 @@ import type { OAuthCredential } from "../../session/auth-storage";
 import { shortenPath } from "../../tools/render-utils";
 import { openPath } from "../../utils/open";
 import { presentAuthLink } from "../components/auth-link-presenter";
-import { DynamicBorder } from "../components/dynamic-border";
+import { BorderedLoader } from "../components/bordered-loader";
 import { MCPAddWizard } from "../components/mcp-add-wizard";
+import type { ActionReview } from "../components/reviewed-action";
+import { ActionInterruptedError, runReviewedAction } from "../components/reviewed-action-dialog";
+import { ReportDetailsComponent } from "../components/selector-frame";
+import { TranscriptComponentFrame, TranscriptNoticeComponent } from "../components/transcript-notice";
 import { parseCommandArgs } from "../shared";
 import { theme } from "../theme/theme";
 import type { InteractiveModeContext } from "../types";
@@ -73,6 +79,113 @@ interface McpOAuthPresentationDependencies {
 	presentLink?: typeof presentAuthLink;
 }
 
+export interface MCPCommandDependencies {
+	clearSmitheryApiKey: typeof clearSmitheryApiKey;
+	createSmitheryCliAuthSession: typeof createSmitheryCliAuthSession;
+	getSmitheryApiKey: typeof getSmitheryApiKey;
+	getSmitheryLoginUrl: typeof getSmitheryLoginUrl;
+	pollSmitheryCliAuthSession: typeof pollSmitheryCliAuthSession;
+	saveSmitheryApiKey: typeof saveSmitheryApiKey;
+	searchSmitheryRegistry: typeof searchSmitheryRegistry;
+	sleep(milliseconds: number): Promise<void>;
+	now(): number;
+}
+
+const defaultCommandDependencies: MCPCommandDependencies = {
+	clearSmitheryApiKey,
+	createSmitheryCliAuthSession,
+	getSmitheryApiKey,
+	getSmitheryLoginUrl,
+	pollSmitheryCliAuthSession,
+	saveSmitheryApiKey,
+	searchSmitheryRegistry,
+	sleep: Bun.sleep,
+	now: Date.now,
+};
+
+const activeMcpRuntimeOperations = new WeakSet<InteractiveModeContext>();
+const activeSmitheryLogins = new WeakSet<InteractiveModeContext>();
+const activeMcpOAuthFlows = new WeakSet<InteractiveModeContext>();
+
+function mcpDigest(value: unknown): string {
+	return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function safeMcpEndpoint(value: string | undefined): string {
+	if (!value) return "(none)";
+	try {
+		const url = new URL(value);
+		return `${url.protocol}//${url.host}${url.pathname}`;
+	} catch {
+		return "(invalid URL)";
+	}
+}
+
+function mcpConfigSummary(config: MCPServerConfig): string {
+	if (config.type === "http" || config.type === "sse")
+		return `${config.type.toUpperCase()} · ${safeMcpEndpoint(config.url)}`;
+	return `STDIO · ${config.command ?? "(missing command)"} · ${config.args?.length ?? 0} argument(s)`;
+}
+
+function hasConfiguredMcpAuth(config: MCPServerConfig | undefined): boolean {
+	if (!config) return false;
+	const candidate = config as MCPServerConfig & {
+		headers?: Record<string, string>;
+		oauth?: unknown;
+		auth?: MCPAuthConfig;
+	};
+	return Boolean(candidate.headers || candidate.oauth || candidate.auth);
+}
+
+function mcpServerReview(
+	action: "add" | "remove" | "enable" | "disable" | "unauth" | "reauth",
+	target: {
+		name: string;
+		scope: MCPAddScope;
+		filePath: string;
+		current?: MCPServerConfig;
+		proposed?: MCPServerConfig;
+	},
+	fileState: unknown,
+): ActionReview {
+	const before = target.current ? mcpConfigSummary(target.current) : "Absent";
+	const after = target.proposed ? mcpConfigSummary(target.proposed) : "Removed";
+	const authBefore = (target.current as (MCPServerConfig & { auth?: MCPAuthConfig }) | undefined)?.auth
+		? "OAuth credential saved (masked)"
+		: hasConfiguredMcpAuth(target.current)
+			? "Configured (masked)"
+			: "None";
+	const authAfter = (target.proposed as (MCPServerConfig & { auth?: MCPAuthConfig }) | undefined)?.auth
+		? "OAuth credential saved (masked)"
+		: hasConfiguredMcpAuth(target.proposed)
+			? "Configured (masked)"
+			: "None";
+	return {
+		identity: `mcp-server:${target.scope}:${target.name}`,
+		scope: `${target.scope === "user" ? "User" : "Project"} MCP configuration · ${target.filePath}`,
+		revision: mcpDigest({ action, fileState, target }),
+		changes: [
+			{ field: "Saved server", before, after },
+			{
+				field: "Enabled state",
+				before: target.current?.enabled === false ? "Disabled" : target.current ? "Enabled" : "Absent",
+				after: target.proposed?.enabled === false ? "Disabled" : target.proposed ? "Enabled" : "Removed",
+			},
+			...(authBefore !== authAfter ? [{ field: "Authentication", before: authBefore, after: authAfter }] : []),
+		],
+		consequence:
+			action === "add"
+				? "Saves this server configuration and any masked credential. Connectivity testing and runtime connection are separate follow-up operations."
+				: action === "remove"
+					? "Removes this saved server and its managed OAuth credential, then disconnects it from this process."
+					: action === "unauth"
+						? "Removes the saved OAuth association and managed credential without deleting the server configuration."
+						: action === "reauth"
+							? "Replaces the saved OAuth association and managed credential. The authorization step completed before this review without persisting its result."
+							: "Persists the enabled state, then refreshes runtime connections and tools.",
+	};
+}
+
 /** Render the MCP controller's browser-authorization state without exposing the raw URL. */
 export function showMcpOAuthAuthorization(
 	ctx: Pick<InteractiveModeContext, "chatContainer" | "ui">,
@@ -82,30 +195,37 @@ export function showMcpOAuthAuthorization(
 	const showLink = dependencies.presentLink ?? presentAuthLink;
 	const openUrl = dependencies.openUrl ?? openPath;
 
-	ctx.chatContainer.addChild(new Spacer(1));
-	ctx.chatContainer.addChild(new Text(theme.fg("contentAccent", "━━━ OAuth Authorization Required ━━━"), 1, 0));
-	ctx.chatContainer.addChild(new Spacer(1));
-	showLink(ctx.chatContainer, info.url);
+	const content = new Container();
+	showLink(content, info.url);
 	if (info.instructions) {
-		ctx.chatContainer.addChild(new Spacer(1));
-		ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
+		content.addChild(new Spacer(1));
+		content.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
 	}
+	content.addChild(new Spacer(1));
+	content.addChild(new Text(theme.fg("muted", "Waiting for authorization · 5 minute timeout"), 1, 0));
 	ctx.chatContainer.addChild(new Spacer(1));
 	ctx.chatContainer.addChild(
-		new Text(theme.fg("muted", "Waiting for authorization... (Press Ctrl+C to cancel, 5 minute timeout)"), 1, 0),
+		new TranscriptComponentFrame(
+			"OAuth authorization",
+			"Complete authorization in the browser; no credential is persisted until its separate review succeeds.",
+			content,
+			["This operation cannot be interrupted; it times out after 5 minutes"],
+		),
 	);
-	ctx.chatContainer.addChild(new Spacer(1));
-	ctx.chatContainer.addChild(new Text(theme.fg("contentAccent", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"), 1, 0));
 	ctx.ui.requestRender();
 
 	openUrl(info.url);
-	ctx.chatContainer.addChild(new Spacer(1));
-	ctx.chatContainer.addChild(new Text(theme.fg("success", "→ Opening browser automatically..."), 1, 0));
-	ctx.ui.requestRender();
 }
 
 export class MCPCommandController {
-	constructor(private ctx: InteractiveModeContext) {}
+	#pendingOAuthCredentials = new Map<string, OAuthCredential>();
+	readonly #dependencies: MCPCommandDependencies;
+	constructor(
+		private ctx: InteractiveModeContext,
+		dependencies: Partial<MCPCommandDependencies> = {},
+	) {
+		this.#dependencies = { ...defaultCommandDependencies, ...dependencies };
+	}
 
 	/**
 	 * Handle /mcp command and route to subcommands
@@ -115,7 +235,7 @@ export class MCPCommandController {
 		const subcommand = parts[1]?.toLowerCase();
 
 		if (!subcommand || subcommand === "help") {
-			this.#showHelp();
+			await this.#showHelp();
 			return;
 		}
 
@@ -177,7 +297,7 @@ export class MCPCommandController {
 	/**
 	 * Show help text
 	 */
-	#showHelp(): void {
+	async #showHelp(): Promise<void> {
 		const helpText = [
 			"",
 			theme.bold("MCP Server Management"),
@@ -207,7 +327,7 @@ export class MCPCommandController {
 			"",
 		].join("\n");
 
-		this.#showMessage(helpText);
+		await this.#showReport("MCP server management", "Commands and connection-state boundaries", helpText);
 	}
 
 	#parseAddCommand(text: string): MCPAddParsed {
@@ -450,7 +570,9 @@ export class MCPCommandController {
 								finalConfig.oauth?.callbackPort,
 								finalConfig.oauth?.callbackPath,
 								finalConfig.oauth?.redirectUri,
+								`${parsed.initialName} (${parsed.scope} configuration)`,
 							);
+							if (!credentialId) return;
 							finalConfig = {
 								...finalConfig,
 								auth: {
@@ -493,7 +615,17 @@ export class MCPCommandController {
 				this.#handleWizardCancel();
 			},
 			async (authUrl: string, tokenUrl: string, clientId: string, clientSecret: string, scopes: string) => {
-				return await this.#handleOAuthFlow(authUrl, tokenUrl, clientId, clientSecret, scopes);
+				return await this.#handleOAuthFlow(
+					authUrl,
+					tokenUrl,
+					clientId,
+					clientSecret,
+					scopes,
+					undefined,
+					undefined,
+					undefined,
+					`${parsed.initialName ?? "new server"} (wizard draft)`,
+				);
 			},
 			async (config: MCPServerConfig) => {
 				return await this.#handleTestConnection(config);
@@ -523,8 +655,13 @@ export class MCPCommandController {
 		callbackPort?: number,
 		callbackPath?: string,
 		redirectUri?: string,
-	): Promise<string> {
-		const authStorage = this.ctx.session.modelRegistry.authStorage;
+		reviewTarget = "MCP server",
+		revalidate?: () => Promise<void>,
+	): Promise<string | null> {
+		if (activeMcpOAuthFlows.has(this.ctx)) {
+			this.ctx.showWarning("An MCP OAuth authorization is already running; duplicate request ignored.");
+			return null;
+		}
 		let parsedAuthUrl: URL;
 
 		// Validate OAuth URLs
@@ -539,7 +676,48 @@ export class MCPCommandController {
 
 		const resolvedClientId = clientId.trim() || parsedAuthUrl.searchParams.get("client_id") || undefined;
 		const resolvedClientSecret = clientSecret.trim() || undefined;
+		const review = {
+			identity: `mcp-oauth:${reviewTarget}:${parsedAuthUrl.origin}`,
+			scope: `Remote OAuth authorization · ${parsedAuthUrl.origin}`,
+			revision: mcpDigest({
+				reviewTarget,
+				authUrl,
+				tokenUrl,
+				resolvedClientId,
+				scopes,
+				redirectUri,
+				callbackPort,
+				callbackPath,
+			}),
+			changes: [
+				{ field: "Authorization grant", before: "Not requested", after: `Requested for ${reviewTarget}` },
+				{ field: "Authorization endpoint", before: "Not opened", after: safeMcpEndpoint(authUrl) },
+				{ field: "Requested scopes", before: "None", after: scopes.trim() || "Provider default" },
+				{
+					field: "Client credential",
+					before: "Not submitted",
+					after: resolvedClientSecret ? "Submitted (masked)" : "Not supplied",
+				},
+			],
+			consequence:
+				"Opens the provider authorization page and may create or replace a remote grant. The returned credential remains only in memory until a separate save review succeeds. Authorization cannot be interrupted and times out after 5 minutes.",
+		};
+		const authorizationReview = await runReviewedAction(this.ctx, "MCP OAuth authorization", {
+			review,
+			resolve: async () => {
+				await revalidate?.();
+				return { target: undefined, review };
+			},
+			execute: async () => {},
+		});
+		if (authorizationReview !== "succeeded") {
+			if (authorizationReview === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (authorizationReview === "unresolved")
+				this.ctx.showError("OAuth authorization review remains unresolved. Reopen the command to retry.");
+			return null;
+		}
 
+		activeMcpOAuthFlows.add(this.ctx);
 		try {
 			// Create OAuth flow
 			const flow = new MCPOAuthFlow(
@@ -573,14 +751,13 @@ export class MCPCommandController {
 			// Generate a unique credential ID
 			const credentialId = `mcp_oauth_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-			// Store credentials in auth storage
+			// Keep the credential in memory until the encompassing server or
+			// reauthorization review is confirmed.
 			const oauthCredential: OAuthCredential = {
 				type: "oauth",
 				...credentials,
 			};
-
-			// Store under a synthetic provider name
-			await authStorage.set(credentialId, oauthCredential);
+			this.#pendingOAuthCredentials.set(credentialId, oauthCredential);
 
 			return credentialId;
 		} catch (error) {
@@ -598,6 +775,8 @@ export class MCPCommandController {
 			} else {
 				throw new Error(`OAuth authentication failed: ${errorMsg}`);
 			}
+		} finally {
+			activeMcpOAuthFlows.delete(this.ctx);
 		}
 	}
 
@@ -747,72 +926,90 @@ export class MCPCommandController {
 	}
 
 	async #handleWizardComplete(name: string, config: MCPServerConfig, scope: "user" | "project"): Promise<void> {
+		const authStorage = this.ctx.session.modelRegistry.authStorage;
+		const credentialId = (config as MCPServerConfig & { auth?: MCPAuthConfig }).auth?.credentialId;
+		const pendingCredential = credentialId ? this.#pendingOAuthCredentials.get(credentialId) : undefined;
 		try {
-			// Determine file path
-			const cwd = getProjectDir();
-			const filePath = getMCPConfigPath(scope, cwd);
-
-			// Add server to config
-			await addMCPServer(filePath, name, config);
-
-			// Reload MCP manager
-			await this.#reloadMCP();
-			const state =
-				config.enabled === false
-					? "disconnected"
-					: await this.#waitForServerConnectionWithAnimation(name, { suppressDisconnectedWarning: true });
-			let isConnected = state === "connected";
-			const isConnecting = state === "connecting";
-
-			// Fallback: if manager state is still disconnected but direct test works,
-			// report as connected to avoid false-negative messaging.
-			if (!isConnected && !isConnecting && config.enabled !== false) {
-				try {
-					await this.#handleTestConnection(config);
-					isConnected = true;
-					await this.#syncManagerConnection(name, config);
-				} catch {
-					// Keep disconnected status
-				}
-			}
-
-			// refreshMCPTools preserves the prior MCP tool selection, so tools from
-			// brand-new servers are registered in the registry but never activated.
-			// Explicitly activate the newly added server's tools now.
-			if (isConnected && this.ctx.mcpManager) {
-				const serverTools = this.ctx.mcpManager.getTools().filter(t => t.mcpServerName === name);
-				if (serverTools.length > 0) {
-					const currentActive = this.ctx.session.getActiveToolNames();
-					const toActivate = serverTools.map(t => t.name).filter(n => this.ctx.session.getToolByName(n));
-					if (toActivate.length > 0) {
-						await this.ctx.session.setActiveToolsByName([...new Set([...currentActive, ...toActivate])]);
+			const prepare = async () => {
+				const filePath = getMCPConfigPath(scope, getProjectDir());
+				const fileState = await readMCPConfigFile(filePath);
+				const existing = fileState.mcpServers?.[name];
+				if (existing && mcpDigest(existing) !== mcpDigest(config))
+					throw new Error(`Server "${name}" now exists with different configuration in ${scope} scope.`);
+				const credentialSaved = credentialId ? authStorage.has(credentialId) : true;
+				if (credentialId && !credentialSaved && !pendingCredential)
+					throw new Error(
+						"The reviewed OAuth credential is no longer available. Run the authorization flow again.",
+					);
+				return {
+					target: { filePath, needsConfigWrite: !existing, needsCredentialWrite: !credentialSaved },
+					review: mcpServerReview(
+						"add",
+						{ name, scope, filePath, current: existing, proposed: config },
+						fileState,
+					),
+				};
+			};
+			const prepared = await prepare();
+			const outcome = await runReviewedAction(this.ctx, "MCP server addition", {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => {
+					let savedCredential = false;
+					if (target.needsCredentialWrite && credentialId && pendingCredential) {
+						await authStorage.set(credentialId, pendingCredential);
+						savedCredential = true;
 					}
+					try {
+						if (target.needsConfigWrite) await addMCPServer(target.filePath, name, config);
+					} catch (error) {
+						if (savedCredential && credentialId) await authStorage.remove(credentialId);
+						throw error;
+					}
+				},
+			});
+			if (outcome !== "succeeded") {
+				if (outcome !== "unresolved" && credentialId) this.#pendingOAuthCredentials.delete(credentialId);
+				if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+				else if (outcome === "unresolved")
+					this.ctx.showError(`MCP server addition for "${name}" remains unresolved. Reopen the command to retry.`);
+				return;
+			}
+			if (credentialId) this.#pendingOAuthCredentials.delete(credentialId);
+
+			let state: "connected" | "connecting" | "disconnected" = "disconnected";
+			let connectionWarning: string | undefined;
+			try {
+				await this.#reloadMCP();
+				state =
+					config.enabled === false
+						? "disconnected"
+						: await this.#waitForServerConnectionWithAnimation(name, { suppressDisconnectedWarning: true });
+				if (state === "connected" && this.ctx.mcpManager) {
+					const serverTools = this.ctx.mcpManager.getTools().filter(tool => tool.mcpServerName === name);
+					const currentActive = this.ctx.session.getActiveToolNames();
+					const toActivate = serverTools
+						.map(tool => tool.name)
+						.filter(toolName => this.ctx.session.getToolByName(toolName));
+					if (toActivate.length > 0)
+						await this.ctx.session.setActiveToolsByName([...new Set([...currentActive, ...toActivate])]);
 				}
+			} catch (error) {
+				connectionWarning = error instanceof Error ? error.message : String(error);
 			}
-
-			// Show success message
-			const scopeLabel = scope === "user" ? "user" : "project";
-			const lines = ["", theme.fg("success", `✓ Added server "${name}" to ${scopeLabel} config`), ""];
-
-			if (isConnected) {
-				lines.push(theme.fg("success", `✓ Successfully connected to server`));
-				lines.push("");
-			} else if (isConnecting) {
-				lines.push(theme.fg("muted", `◌ Server is connecting in background...`));
-				lines.push(theme.fg("muted", `  Run ${theme.fg("contentAccent", `/mcp test ${name}`)} in a few seconds.`));
-				lines.push("");
-			} else {
-				lines.push(theme.fg("warning", `⚠ Server added but not yet connected`));
-				lines.push(
-					theme.fg("muted", `  Run ${theme.fg("contentAccent", `/mcp test ${name}`)} to test the connection.`),
+			const connection =
+				config.enabled === false
+					? "disabled; connection not attempted"
+					: state === "connected"
+						? "connected"
+						: state === "connecting"
+							? "connecting"
+							: "not connected";
+			if (connectionWarning)
+				this.ctx.showWarning(
+					`Saved MCP server "${name}" in ${scope} configuration; runtime refresh failed: ${connectionWarning}`,
 				);
-				lines.push("");
-			}
-
-			lines.push(theme.fg("muted", `Run ${theme.fg("contentAccent", "/mcp list")} to see all configured servers.`));
-			lines.push("");
-
-			this.#showMessage(lines.join("\n"));
+			else this.ctx.showStatus(`Saved MCP server "${name}" in ${scope} configuration. Runtime: ${connection}.`);
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
 
@@ -835,8 +1032,7 @@ export class MCPCommandController {
 			[
 				"",
 				theme.fg("muted", "Server creation cancelled."),
-				"",
-				theme.fg("dim", "Tip: Press Ctrl+C or Esc anytime to cancel"),
+				theme.fg("dim", "No server configuration was saved."),
 				"",
 			].join("\n"),
 		);
@@ -884,7 +1080,9 @@ export class MCPCommandController {
 				discoveredServers.length === 0 &&
 				disabledServerNames.size === 0
 			) {
-				this.#showMessage(
+				await this.#showReport(
+					"Configured MCP servers",
+					"Saved configuration, discovery source, enabled state, and runtime connectivity",
 					[
 						"",
 						theme.fg("muted", "No MCP servers configured."),
@@ -987,7 +1185,11 @@ export class MCPCommandController {
 				}
 				lines.push("");
 			}
-			this.#showMessage(lines.join("\n"));
+			await this.#showReport(
+				"Configured MCP servers",
+				"Saved configuration, discovery source, enabled state, and runtime connectivity",
+				lines.join("\n"),
+			);
 		} catch (error) {
 			this.ctx.showError(`Failed to list servers: ${error instanceof Error ? error.message : String(error)}`);
 		}
@@ -1032,28 +1234,54 @@ export class MCPCommandController {
 		}
 
 		try {
-			const cwd = getProjectDir();
-			const userPath = getMCPConfigPath("user", cwd);
-			const projectPath = getMCPConfigPath("project", cwd);
-			const filePath = scope === "user" ? userPath : projectPath;
-			const config = await readMCPConfigFile(filePath);
-			if (!config.mcpServers?.[name]) {
-				this.ctx.showError(t("mcp.errors.serverNotFoundInScope", { name, scope }));
+			const prepare = async () => {
+				const filePath = getMCPConfigPath(scope, getProjectDir());
+				const fileState = await readMCPConfigFile(filePath);
+				const current = fileState.mcpServers?.[name];
+				if (!current) throw new Error(t("mcp.errors.serverNotFoundInScope", { name, scope }));
+				return {
+					target: { filePath, current },
+					review: mcpServerReview("remove", { name, scope, filePath, current }, fileState),
+				};
+			};
+			const prepared = await prepare();
+			let credentialWarning: string | undefined;
+			const outcome = await runReviewedAction(this.ctx, "MCP server removal", {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => {
+					await removeMCPServer(target.filePath, name);
+					const credentialId = (target.current as MCPServerConfig & { auth?: MCPAuthConfig }).auth?.credentialId;
+					try {
+						await this.#removeManagedOAuthCredential(credentialId);
+					} catch (error) {
+						credentialWarning = error instanceof Error ? error.message : String(error);
+					}
+				},
+			});
+			if (outcome === "busy") {
+				this.ctx.showStatus("Another reviewed action is already open.");
 				return;
 			}
-
-			// Disconnect if connected
-			if (this.ctx.mcpManager?.getConnection(name)) {
-				await this.ctx.mcpManager.disconnectServer(name);
+			if (outcome === "unresolved") {
+				this.ctx.showError(`MCP server removal for "${name}" remains unresolved. Reopen the command to retry.`);
+				return;
 			}
-
-			// Remove from config
-			await removeMCPServer(filePath, name);
-
-			// Reload MCP manager
-			await this.#reloadMCP();
-
-			this.#showMessage(["", theme.fg("success", `✓ Removed server "${name}" from ${scope} config`), ""].join("\n"));
+			if (outcome !== "succeeded") return;
+			let runtimeWarning: string | undefined;
+			try {
+				if (this.ctx.mcpManager?.getConnection(name)) await this.ctx.mcpManager.disconnectServer(name);
+				await this.#reloadMCP();
+			} catch (error) {
+				runtimeWarning = error instanceof Error ? error.message : String(error);
+			}
+			const warnings = [
+				credentialWarning && `managed credential cleanup failed: ${credentialWarning}`,
+				runtimeWarning && `runtime refresh failed: ${runtimeWarning}`,
+			].filter(Boolean);
+			if (warnings.length)
+				this.ctx.showWarning(`Removed MCP server "${name}" from ${scope} configuration; ${warnings.join("; ")}.`);
+			else this.ctx.showStatus(`Removed MCP server "${name}" from ${scope} configuration.`);
 		} catch (error) {
 			this.ctx.showError(
 				t("mcp.remove.failed", { message: error instanceof Error ? error.message : String(error) }),
@@ -1069,12 +1297,17 @@ export class MCPCommandController {
 			this.ctx.showError(t("mcp.test.usage"));
 			return;
 		}
+		if (activeMcpRuntimeOperations.has(this.ctx)) {
+			this.ctx.showStatus("An MCP runtime operation is already running; duplicate request ignored.");
+			return;
+		}
+		activeMcpRuntimeOperations.add(this.ctx);
 
-		const originalOnEscape = this.ctx.editor.onEscape;
-		const abortController = new AbortController();
-		this.ctx.editor.onEscape = () => {
-			abortController.abort();
-		};
+		const loader = new BorderedLoader(this.ctx.ui, theme, `Testing MCP connection "${name}"`, true);
+		this.ctx.editorContainer.clear();
+		this.ctx.editorContainer.addChild(loader);
+		this.ctx.ui.setFocus(loader);
+		this.ctx.ui.requestRender();
 
 		let connection: MCPServerConnection | undefined;
 		try {
@@ -1099,10 +1332,6 @@ export class MCPCommandController {
 				return;
 			}
 
-			this.#showMessage(
-				["", theme.fg("muted", `Testing connection to "${name}"... (esc to cancel)`), ""].join("\n"),
-			);
-
 			// Resolve auth config if needed
 			let resolvedConfig: MCPServerConfig;
 			if (this.ctx.mcpManager) {
@@ -1114,10 +1343,10 @@ export class MCPCommandController {
 			}
 
 			// Create temporary connection
-			connection = await connectToServer(name, resolvedConfig, { signal: abortController.signal });
+			connection = await connectToServer(name, resolvedConfig, { signal: loader.signal });
 
 			// List tools to verify connection
-			const tools = await listTools(connection, { signal: abortController.signal });
+			const tools = await listTools(connection, { signal: loader.signal });
 
 			const lines = [
 				"",
@@ -1138,9 +1367,13 @@ export class MCPCommandController {
 
 			lines.push("");
 			await this.#syncManagerConnection(name, config);
-			this.#showMessage(lines.join("\n"));
+			await this.#showReport(
+				`MCP connection: ${name}`,
+				"Connectivity test only · saved configuration and authentication are unchanged",
+				lines.join("\n"),
+			);
 		} catch (error) {
-			if (abortController.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
+			if (loader.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
 				this.ctx.showStatus(t("mcp.test.cancelled", { name }));
 				return;
 			}
@@ -1163,11 +1396,16 @@ export class MCPCommandController {
 
 			this.ctx.showError(t("mcp.test.failed", { name, message: errorMsg + helpText }));
 		} finally {
-			this.ctx.editor.onEscape = originalOnEscape;
+			loader.dispose();
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(this.ctx.editor);
+			this.ctx.ui.setFocus(this.ctx.editor);
+			this.ctx.ui.requestRender();
 			if (connection) {
 				// Best-effort: don't block UI on cleanup.
 				void disconnectServer(connection);
 			}
+			activeMcpRuntimeOperations.delete(this.ctx);
 		}
 	}
 
@@ -1197,7 +1435,40 @@ export class MCPCommandController {
 					);
 					return;
 				}
-				await setServerDisabled(userConfigPath, name, !enabled);
+				const prepare = async () => {
+					const currentDisabled = new Set(await readDisabledServers(userConfigPath));
+					const source = this.ctx.mcpManager?.getSource(name);
+					if (!source && !currentDisabled.has(name)) throw new Error(t("mcp.errors.serverNotFound", { name }));
+					const before = currentDisabled.has(name) ? "Disabled" : "Enabled";
+					return {
+						target: undefined,
+						review: {
+							identity: `mcp-server:discovered:${name}`,
+							scope: `User MCP disabled-server registry · ${userConfigPath}`,
+							revision: mcpDigest({ disabled: [...currentDisabled].sort(), source }),
+							changes: [{ field: "Enabled state", before, after: enabled ? "Enabled" : "Disabled" }],
+							consequence:
+								"Persists an override for a read-only discovered server, then refreshes runtime connections and tools. Its source configuration is not edited.",
+						},
+					};
+				};
+				const prepared = await prepare();
+				const outcome = await runReviewedAction(this.ctx, `MCP server ${enabled ? "enable" : "disable"}`, {
+					review: prepared.review,
+					resolve: prepare,
+					execute: async () => setServerDisabled(userConfigPath, name, !enabled),
+				});
+				if (outcome === "busy") {
+					this.ctx.showStatus("Another reviewed action is already open.");
+					return;
+				}
+				if (outcome === "unresolved") {
+					this.ctx.showError(
+						`The enabled-state change for "${name}" remains unresolved. Reopen the command to retry.`,
+					);
+					return;
+				}
+				if (outcome !== "succeeded") return;
 				if (enabled) {
 					await this.#reloadMCP();
 					const state = await this.#waitForServerConnectionWithAnimation(name);
@@ -1227,9 +1498,53 @@ export class MCPCommandController {
 				return;
 			}
 
-			const updated: MCPServerConfig = { ...found.config, enabled };
-			await updateMCPServer(found.filePath, name, updated);
-			await this.#reloadMCP();
+			const prepare = async () => {
+				const current = await this.#findConfiguredServer(name);
+				if (!current) throw new Error(t("mcp.errors.serverNotFound", { name }));
+				if (current.scope !== found.scope || current.filePath !== found.filePath)
+					throw new Error("The server scope changed. Open the command again.");
+				const fileState = await readMCPConfigFile(current.filePath);
+				const proposed: MCPServerConfig = { ...current.config, enabled };
+				return {
+					target: { ...current, proposed },
+					review: mcpServerReview(
+						enabled ? "enable" : "disable",
+						{
+							name,
+							scope: current.scope,
+							filePath: current.filePath,
+							current: current.config,
+							proposed,
+						},
+						fileState,
+					),
+				};
+			};
+			const prepared = await prepare();
+			const outcome = await runReviewedAction(this.ctx, `MCP server ${enabled ? "enable" : "disable"}`, {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => updateMCPServer(target.filePath, name, target.proposed),
+			});
+			if (outcome === "busy") {
+				this.ctx.showStatus("Another reviewed action is already open.");
+				return;
+			}
+			if (outcome === "unresolved") {
+				this.ctx.showError(
+					`The enabled-state change for "${name}" remains unresolved. Reopen the command to retry.`,
+				);
+				return;
+			}
+			if (outcome !== "succeeded") return;
+			try {
+				await this.#reloadMCP();
+			} catch (error) {
+				this.ctx.showWarning(
+					`Saved "${name}" as ${enabled ? "enabled" : "disabled"} in ${found.scope} configuration; runtime refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+				return;
+			}
 
 			let status = "";
 			if (enabled) {
@@ -1275,18 +1590,66 @@ export class MCPCommandController {
 				return;
 			}
 
-			const currentAuth = (found.config as MCPServerConfig & { auth?: MCPAuthConfig }).auth;
-			if (currentAuth?.type === "oauth") {
-				await this.#removeManagedOAuthCredential(currentAuth.credentialId);
+			const initialAuth = (found.config as MCPServerConfig & { auth?: MCPAuthConfig }).auth;
+			if (!initialAuth) {
+				this.ctx.showStatus(`Server "${name}" has no saved OAuth association.`);
+				return;
 			}
-
-			const updated = this.#stripOAuthAuth(found.config);
-			await updateMCPServer(found.filePath, name, updated);
-			await this.#reloadMCP();
-
-			this.#showMessage(
-				["", theme.fg("success", `✓ Cleared auth for "${name}" (${found.scope} config)`), ""].join("\n"),
-			);
+			const prepare = async () => {
+				const current = await this.#findConfiguredServer(name);
+				if (!current || current.filePath !== found.filePath)
+					throw new Error("The server target changed. Open the command again.");
+				const auth = (current.config as MCPServerConfig & { auth?: MCPAuthConfig }).auth;
+				if (!auth) throw new Error("The saved OAuth association was already removed.");
+				const proposed = this.#stripOAuthAuth(current.config);
+				const fileState = await readMCPConfigFile(current.filePath);
+				return {
+					target: { ...current, proposed, credentialId: auth.credentialId },
+					review: mcpServerReview(
+						"unauth",
+						{
+							name,
+							scope: current.scope,
+							filePath: current.filePath,
+							current: current.config,
+							proposed,
+						},
+						fileState,
+					),
+				};
+			};
+			const prepared = await prepare();
+			let credentialWarning: string | undefined;
+			const outcome = await runReviewedAction(this.ctx, "MCP authorization removal", {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => {
+					await updateMCPServer(target.filePath, name, target.proposed);
+					try {
+						await this.#removeManagedOAuthCredential(target.credentialId);
+					} catch (error) {
+						credentialWarning = error instanceof Error ? error.message : String(error);
+					}
+				},
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "unresolved")
+				this.ctx.showError(`Authorization removal for "${name}" remains unresolved. Reopen the command to retry.`);
+			else if (outcome === "succeeded") {
+				try {
+					await this.#reloadMCP();
+				} catch (error) {
+					this.ctx.showWarning(
+						`Removed saved auth for "${name}"; runtime refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+					);
+					return;
+				}
+				if (credentialWarning)
+					this.ctx.showWarning(
+						`Removed the server's OAuth association; managed credential cleanup failed: ${credentialWarning}`,
+					);
+				else this.ctx.showStatus(`Removed saved OAuth authorization for "${name}" (${found.scope} configuration).`);
+			}
 		} catch (error) {
 			this.ctx.showError(
 				t("mcp.unauth.failed", { message: error instanceof Error ? error.message : String(error) }),
@@ -1313,10 +1676,6 @@ export class MCPCommandController {
 			}
 
 			const currentAuth = (found.config as MCPServerConfig & { auth?: MCPAuthConfig }).auth;
-			if (currentAuth?.type === "oauth") {
-				await this.#removeManagedOAuthCredential(currentAuth.credentialId);
-			}
-
 			const baseConfig = this.#stripOAuthAuth(found.config);
 			const oauth = await this.#resolveOAuthEndpointsFromServer(baseConfig);
 			const oauthClientSecret = found.config.oauth?.clientSecret ?? currentAuth?.clientSecret ?? "";
@@ -1332,7 +1691,19 @@ export class MCPCommandController {
 				found.config.oauth?.callbackPort,
 				found.config.oauth?.callbackPath,
 				found.config.oauth?.redirectUri,
+				`${name} (${found.scope} configuration)`,
+				async () => {
+					const current = await this.#findConfiguredServer(name);
+					if (
+						!current ||
+						current.filePath !== found.filePath ||
+						mcpDigest(current.config) !== mcpDigest(found.config)
+					) {
+						throw new Error("The server configuration changed. Review /mcp reauth again.");
+					}
+				},
 			);
+			if (!credentialId) return;
 
 			const updated: MCPServerConfig = {
 				...baseConfig,
@@ -1344,9 +1715,71 @@ export class MCPCommandController {
 					clientSecret: oauthClientSecret || undefined,
 				},
 			};
-			await updateMCPServer(found.filePath, name, updated);
-			await this.#reloadMCP();
-			const state = await this.#waitForServerConnectionWithAnimation(name);
+			const pendingCredential = this.#pendingOAuthCredentials.get(credentialId);
+			if (!pendingCredential) throw new Error("The new OAuth credential is no longer available.");
+			const authStorage = this.ctx.session.modelRegistry.authStorage;
+			const prepare = async () => {
+				const current = await this.#findConfiguredServer(name);
+				if (
+					!current ||
+					current.filePath !== found.filePath ||
+					mcpDigest(current.config) !== mcpDigest(found.config)
+				)
+					throw new Error("The server configuration changed during authorization. Open /mcp reauth again.");
+				const fileState = await readMCPConfigFile(current.filePath);
+				return {
+					target: current,
+					review: mcpServerReview(
+						"reauth",
+						{
+							name,
+							scope: current.scope,
+							filePath: current.filePath,
+							current: current.config,
+							proposed: updated,
+						},
+						fileState,
+					),
+				};
+			};
+			const prepared = await prepare();
+			let oldCredentialWarning: string | undefined;
+			const outcome = await runReviewedAction(this.ctx, "MCP reauthorization", {
+				review: prepared.review,
+				resolve: prepare,
+				execute: async target => {
+					await authStorage.set(credentialId, pendingCredential);
+					try {
+						await updateMCPServer(target.filePath, name, updated);
+					} catch (error) {
+						await authStorage.remove(credentialId);
+						throw error;
+					}
+					try {
+						await this.#removeManagedOAuthCredential(currentAuth?.credentialId);
+					} catch (error) {
+						oldCredentialWarning = error instanceof Error ? error.message : String(error);
+					}
+				},
+			});
+			if (outcome !== "succeeded") {
+				if (outcome !== "unresolved") this.#pendingOAuthCredentials.delete(credentialId);
+				if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+				else if (outcome === "unresolved")
+					this.ctx.showError(`Reauthorization for "${name}" remains unresolved. Reopen the command to retry.`);
+				return;
+			}
+			this.#pendingOAuthCredentials.delete(credentialId);
+			let state: "connected" | "connecting" | "disconnected" = "disconnected";
+			try {
+				await this.#reloadMCP();
+				state = await this.#waitForServerConnectionWithAnimation(name);
+			} catch (error) {
+				this.ctx.showWarning(
+					`Saved new authorization for "${name}"; runtime refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+				return;
+			}
 
 			const lines = [
 				"",
@@ -1361,6 +1794,8 @@ export class MCPCommandController {
 				}`,
 				"",
 			];
+			if (oldCredentialWarning)
+				lines.push(theme.fg("warning", `Old managed credential cleanup failed: ${oldCredentialWarning}`));
 			this.#showMessage(lines.join("\n"));
 		} catch (error) {
 			this.ctx.showError(
@@ -1370,17 +1805,31 @@ export class MCPCommandController {
 	}
 
 	async #handleReload(): Promise<void> {
+		if (activeMcpRuntimeOperations.has(this.ctx)) {
+			this.ctx.showStatus("An MCP runtime operation is already running; duplicate request ignored.");
+			return;
+		}
+		activeMcpRuntimeOperations.add(this.ctx);
+		const loader = new BorderedLoader(this.ctx.ui, theme, "Reloading MCP servers and runtime tools", false);
+		this.ctx.editorContainer.clear();
+		this.ctx.editorContainer.addChild(loader);
+		this.ctx.ui.setFocus(loader);
+		this.ctx.ui.requestRender();
 		try {
-			this.#showMessage(["", theme.fg("muted", "Reloading MCP servers and runtime tools..."), ""].join("\n"));
 			await this.#reloadMCP();
 			const connectedCount = this.ctx.mcpManager?.getConnectedServers().length ?? 0;
-			this.#showMessage(
-				["", theme.fg("success", "✓ MCP reload complete"), `  Connected servers: ${connectedCount}`, ""].join("\n"),
-			);
+			this.ctx.showStatus(`MCP reload complete. Connected servers: ${connectedCount}.`);
 		} catch (error) {
 			this.ctx.showError(
 				t("mcp.reload.failed", { message: error instanceof Error ? error.message : String(error) }),
 			);
+		} finally {
+			loader.dispose();
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(this.ctx.editor);
+			this.ctx.ui.setFocus(this.ctx.editor);
+			this.ctx.ui.requestRender();
+			activeMcpRuntimeOperations.delete(this.ctx);
 		}
 	}
 
@@ -1396,8 +1845,16 @@ export class MCPCommandController {
 			this.ctx.showError(t("mcp.errors.noManager"));
 			return;
 		}
-
-		this.#showMessage(["", theme.fg("muted", `Reconnecting to "${name}"...`), ""].join("\n"));
+		if (activeMcpRuntimeOperations.has(this.ctx)) {
+			this.ctx.showStatus("An MCP runtime operation is already running; duplicate request ignored.");
+			return;
+		}
+		activeMcpRuntimeOperations.add(this.ctx);
+		const loader = new BorderedLoader(this.ctx.ui, theme, `Reconnecting MCP server "${name}"`, false);
+		this.ctx.editorContainer.clear();
+		this.ctx.editorContainer.addChild(loader);
+		this.ctx.ui.setFocus(loader);
+		this.ctx.ui.requestRender();
 
 		try {
 			const connection = await this.ctx.mcpManager.reconnectServer(name);
@@ -1407,14 +1864,7 @@ export class MCPCommandController {
 				// that would broaden the selection to all server tools.
 				await this.ctx.session.refreshMCPTools(this.ctx.mcpManager.getTools());
 				const serverTools = this.ctx.mcpManager.getTools().filter(t => t.mcpServerName === name);
-				this.#showMessage(
-					[
-						"\n",
-						theme.fg("success", `\u2713 Reconnected to "${name}"`),
-						`  Tools: ${serverTools.length}`,
-						"\n",
-					].join("\n"),
-				);
+				this.ctx.showStatus(`Reconnected to "${name}". Runtime tools: ${serverTools.length}.`);
 			} else {
 				this.ctx.showError(t("mcp.reconnect.failed", { name }));
 			}
@@ -1425,6 +1875,13 @@ export class MCPCommandController {
 					message: error instanceof Error ? error.message : String(error),
 				}),
 			);
+		} finally {
+			loader.dispose();
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(this.ctx.editor);
+			this.ctx.ui.setFocus(this.ctx.editor);
+			this.ctx.ui.requestRender();
+			activeMcpRuntimeOperations.delete(this.ctx);
 		}
 	}
 
@@ -1494,7 +1951,7 @@ export class MCPCommandController {
 			lines.push(theme.fg("muted", "No resources available on connected servers."));
 			lines.push("");
 		}
-		this.#showMessage(lines.join("\n"));
+		await this.#showReport("MCP resources", "Connected servers · read-only resource catalog", lines.join("\n"));
 	}
 
 	/**
@@ -1535,7 +1992,11 @@ export class MCPCommandController {
 			lines.push(theme.fg("muted", "No prompts available on connected servers."));
 			lines.push("");
 		}
-		this.#showMessage(lines.join("\n"));
+		await this.#showReport(
+			"MCP prompts",
+			"Connected servers · prompt expansion does not execute a prompt",
+			lines.join("\n"),
+		);
 	}
 
 	/**
@@ -1602,11 +2063,15 @@ export class MCPCommandController {
 			lines.push(theme.fg("muted", "No servers support notifications."));
 			lines.push("");
 		}
-		this.#showMessage(lines.join("\n"));
+		await this.#showReport(
+			"MCP notifications",
+			"Effective setting, server capabilities, and runtime subscriptions",
+			lines.join("\n"),
+		);
 	}
 
 	async #validateSmitheryApiKey(apiKey: string): Promise<void> {
-		await searchSmitheryRegistry("mcp", { limit: 1, apiKey });
+		await this.#dependencies.searchSmitheryRegistry("mcp", { limit: 1, apiKey });
 	}
 
 	async #promptSmitheryApiKey(promptLabel: string): Promise<string | null> {
@@ -1629,63 +2094,124 @@ export class MCPCommandController {
 		}
 	}
 
+	async #saveSmitheryApiKeyReviewed(apiKey: string): Promise<boolean> {
+		const proposalDigest = mcpDigest(apiKey);
+		const prepare = async () => {
+			const current = await this.#dependencies.getSmitheryApiKey();
+			return {
+				target: undefined,
+				review: {
+					identity: "credential:smithery",
+					scope: "User credential storage · Smithery registry",
+					revision: mcpDigest({ current: current ? mcpDigest(current) : null, proposalDigest }),
+					changes: [
+						{
+							field: "API credential",
+							before: current ? "Saved (masked)" : "Absent",
+							after: current && mcpDigest(current) === proposalDigest ? "Unchanged (masked)" : "Saved (masked)",
+						},
+					],
+					consequence:
+						"Persists the validated Smithery API key for future registry searches. The credential is masked and is not added to command history.",
+				},
+			};
+		};
+		const prepared = await prepare();
+		const outcome = await runReviewedAction(this.ctx, "Smithery credential save", {
+			review: prepared.review,
+			resolve: prepare,
+			execute: async () => this.#dependencies.saveSmitheryApiKey(apiKey),
+		});
+		if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+		else if (outcome === "unresolved")
+			this.ctx.showError("Smithery credential save remains unresolved. Reopen /mcp smithery-login to retry.");
+		return outcome === "succeeded";
+	}
+
 	async #handleSmitheryLoginWithApiKey(): Promise<boolean> {
 		const apiKey = await this.#promptSmitheryApiKey("Smithery API key (Esc to cancel)");
 		if (!apiKey) return false;
-		await saveSmitheryApiKey(apiKey);
-		this.ctx.showStatus(t("mcp.smithery.keySaved"));
-		return true;
+		const saved = await this.#saveSmitheryApiKeyReviewed(apiKey);
+		if (saved) this.ctx.showStatus(t("mcp.smithery.keySaved"));
+		return saved;
 	}
 
 	async #waitForSmitheryCliApiKey(sessionId: string, signal: AbortSignal): Promise<string> {
 		const pollIntervalMs = 2_000;
 		const timeoutMs = 300_000;
-		const startedAt = Date.now();
+		const startedAt = this.#dependencies.now();
 
 		while (!signal.aborted) {
-			if (Date.now() - startedAt >= timeoutMs) {
+			if (this.#dependencies.now() - startedAt >= timeoutMs) {
 				throw new Error("Smithery authorization timed out after 5 minutes.");
 			}
-			const response = await pollSmitheryCliAuthSession(sessionId, signal);
+			const response = await this.#dependencies.pollSmitheryCliAuthSession(sessionId, signal);
 			if (response.status === "success" && response.apiKey) {
 				return response.apiKey;
 			}
 			if (response.status === "error") {
 				throw new Error(response.message ?? "Smithery authorization failed.");
 			}
-			await Bun.sleep(pollIntervalMs);
+			await this.#dependencies.sleep(pollIntervalMs);
 		}
 
 		throw new Error("Smithery authorization cancelled.");
 	}
 
 	async #handleSmitheryBrowserLogin(): Promise<boolean> {
-		const session = await createSmitheryCliAuthSession();
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.chatContainer.addChild(
-			new Text(
-				[
-					theme.bold("Smithery Login"),
-					theme.fg("muted", "Browser authorization started. Complete auth in your browser."),
-				].join("\n"),
-				1,
-				1,
-			),
-		);
-		presentAuthLink(this.ctx.chatContainer, session.authUrl);
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.ui.requestRender();
-		openPath(session.authUrl);
-
-		const apiKey = await this.#waitForSmitheryCliApiKey(session.sessionId, new AbortController().signal);
-		await this.#validateSmitheryApiKey(apiKey);
-		await saveSmitheryApiKey(apiKey);
-		this.ctx.showStatus(t("mcp.smithery.keySaved"));
-		return true;
+		const origin = new URL(this.#dependencies.getSmitheryLoginUrl()).origin;
+		const prepare = async () => ({
+			target: origin,
+			review: {
+				identity: `remote-auth:smithery:${origin}`,
+				scope: `Smithery browser authentication · ${origin}`,
+				revision: mcpDigest(origin),
+				changes: [
+					{ field: "Remote authorization session", before: "Absent", after: "Create and poll until resolved" },
+					{ field: "Browser navigation", before: "No Smithery page open", after: "Open the returned sign-in URL" },
+				],
+				consequence:
+					"Creates a short-lived remote Smithery authorization session, opens its returned URL in the local browser, and polls for a one-time API credential. Interruption stops polling; any created remote session expires under Smithery policy. Credential persistence is reviewed separately.",
+			},
+		});
+		const proposal = await prepare();
+		let apiKey: string | undefined;
+		const outcome = await runReviewedAction(this.ctx, "Smithery browser login", {
+			review: proposal.review,
+			resolve: prepare,
+			cancellable: true,
+			execute: async (_target, signal) => {
+				try {
+					const session = await this.#dependencies.createSmitheryCliAuthSession(signal);
+					const opened = await this.ctx.openHttpUrl(session.authUrl);
+					if (!opened.ok)
+						throw new Error(`Could not open the Smithery sign-in page: ${opened.error}. URL: ${session.authUrl}`);
+					apiKey = await this.#waitForSmitheryCliApiKey(session.sessionId, signal);
+					await this.#validateSmitheryApiKey(apiKey);
+				} catch (error) {
+					if (signal.aborted || (error instanceof Error && error.name === "AbortError"))
+						throw new ActionInterruptedError("Smithery browser authorization interrupted.");
+					throw error;
+				}
+			},
+		});
+		if (outcome === "busy") {
+			this.ctx.showStatus("Another reviewed action is already open.");
+			return false;
+		}
+		if (outcome === "unresolved") throw new Error("Smithery browser authorization remains unresolved.");
+		if (outcome !== "succeeded" || !apiKey) return false;
+		const saved = await this.#saveSmitheryApiKeyReviewed(apiKey);
+		if (saved) this.ctx.showStatus(t("mcp.smithery.keySaved"));
+		return saved;
 	}
 
 	async #promptSmitheryLogin(reason: string): Promise<boolean> {
+		if (activeSmitheryLogins.has(this.ctx)) {
+			this.ctx.showStatus("Smithery authentication is already active; duplicate request ignored.");
+			return false;
+		}
+		activeSmitheryLogins.add(this.ctx);
 		this.#showMessage(
 			[
 				"",
@@ -1701,6 +2227,8 @@ export class MCPCommandController {
 				`Browser authorization failed: ${error instanceof Error ? error.message : String(error)}. Falling back to API key.`,
 			);
 			return await this.#handleSmitheryLoginWithApiKey();
+		} finally {
+			activeSmitheryLogins.delete(this.ctx);
 		}
 	}
 
@@ -1716,7 +2244,7 @@ export class MCPCommandController {
 	}
 
 	async #requireSmitheryApiKey(reason: string): Promise<string> {
-		let apiKey = await getSmitheryApiKey();
+		let apiKey = await this.#dependencies.getSmitheryApiKey();
 		if (apiKey) return apiKey;
 
 		const loggedIn = await this.#promptSmitheryLogin(reason);
@@ -1724,7 +2252,7 @@ export class MCPCommandController {
 			throw new Error("Smithery login cancelled. Run /mcp smithery-login, then retry /mcp smithery-search.");
 		}
 
-		apiKey = await getSmitheryApiKey();
+		apiKey = await this.#dependencies.getSmitheryApiKey();
 		if (!apiKey) {
 			throw new Error("Smithery API key not found after login.");
 		}
@@ -1757,8 +2285,37 @@ export class MCPCommandController {
 	}
 
 	async #handleSmitheryLogout(): Promise<void> {
-		const removed = await clearSmitheryApiKey();
-		this.ctx.showStatus(removed ? t("mcp.smithery.keyRemoved") : t("mcp.smithery.noKeyFound"));
+		const current = await this.#dependencies.getSmitheryApiKey();
+		if (!current) {
+			this.ctx.showStatus(t("mcp.smithery.noKeyFound"));
+			return;
+		}
+		const prepare = async () => {
+			const key = await this.#dependencies.getSmitheryApiKey();
+			if (!key) throw new Error("The Smithery credential was already removed.");
+			return {
+				target: undefined,
+				review: {
+					identity: "credential:smithery",
+					scope: "User credential storage · Smithery registry",
+					revision: mcpDigest(key),
+					changes: [{ field: "API credential", before: "Saved (masked)", after: "Removed" }],
+					consequence: "Removes only the saved Smithery API key. Existing MCP server configurations are retained.",
+				},
+			};
+		};
+		const prepared = await prepare();
+		const outcome = await runReviewedAction(this.ctx, "Smithery credential removal", {
+			review: prepared.review,
+			resolve: prepare,
+			execute: async () => {
+				await this.#dependencies.clearSmitheryApiKey();
+			},
+		});
+		if (outcome === "succeeded") this.ctx.showStatus(t("mcp.smithery.keyRemoved"));
+		else if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+		else if (outcome === "unresolved")
+			this.ctx.showError("Smithery credential removal remains unresolved. Reopen the command to retry.");
 	}
 
 	async #nextAvailableServerName(scope: MCPAddScope, baseName: string): Promise<string> {
@@ -1878,7 +2435,7 @@ export class MCPCommandController {
 			);
 			const results = await this.#runSmitheryOperationWithAuthRetry(
 				apiKey =>
-					searchSmitheryRegistry(parsed.keyword, {
+					this.#dependencies.searchSmitheryRegistry(parsed.keyword, {
 						limit: parsed.limit,
 						apiKey,
 						includeSemantic: parsed.semantic,
@@ -1914,9 +2471,20 @@ export class MCPCommandController {
 	 */
 	#showMessage(text: string): void {
 		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.chatContainer.addChild(new Text(text, 1, 1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
+		this.ctx.chatContainer.addChild(new TranscriptNoticeComponent("MCP", "Connection and registry status", text));
 		this.ctx.ui.requestRender();
+	}
+
+	async #showReport(title: string, purpose: string, text: string): Promise<void> {
+		await this.ctx.showHookCustom<void>(
+			(ui, _theme, _keys, done) =>
+				new ReportDetailsComponent(
+					title,
+					purpose,
+					text.trim(),
+					() => done(),
+					() => ui.terminal.rows,
+				),
+		);
 	}
 }

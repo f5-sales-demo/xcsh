@@ -97,11 +97,20 @@ export class MarketplaceManager {
 
 	// ── Marketplace lifecycle ─────────────────────────────────────────────────
 
-	async addMarketplace(source: string): Promise<MarketplaceRegistryEntry> {
+	async addMarketplace(
+		source: string,
+		validateCatalogBeforeCommit?: (catalog: MarketplaceCatalog) => void,
+	): Promise<MarketplaceRegistryEntry> {
 		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
 		const existingNames = new Set(reg.marketplaces.map(m => m.name));
 
 		const { catalog, clonePath } = await fetchMarketplace(source, this.#opts.marketplacesCacheDir);
+		try {
+			validateCatalogBeforeCommit?.(catalog);
+		} catch (error) {
+			if (clonePath) await fs.rm(clonePath, { recursive: true, force: true }).catch(() => {});
+			throw error;
+		}
 
 		if (existingNames.has(catalog.name)) {
 			if (clonePath) {

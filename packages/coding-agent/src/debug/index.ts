@@ -3,32 +3,46 @@
  *
  * Provides tools for debugging, bug report generation, and system diagnostics.
  */
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { getWorkProfile } from "@f5-sales-demo/pi-natives";
-import {
-	Container,
-	Loader,
-	type OverlayHandle,
-	type SelectItem,
-	SelectList,
-	Spacer,
-	Text,
-} from "@f5-sales-demo/pi-tui";
-import { getSessionsDir } from "@f5-sales-demo/pi-utils";
+import { Container, getKeybindings, Loader, type OverlayHandle } from "@f5-sales-demo/pi-tui";
+import { getReportsDir, getSessionsDir, Snowflake } from "@f5-sales-demo/pi-utils";
+import { formatKeyHints } from "../config/keybindings";
 import type { ContextProfile } from "../context/profile";
-import { DynamicBorder } from "../modes/components/dynamic-border";
-import { getSelectListTheme, getSymbolTheme, theme } from "../modes/theme/theme";
+import { HookSelectorComponent } from "../modes/components/hook-selector";
+import type { ActionReview } from "../modes/components/reviewed-action";
+import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
+import {
+	matchesSelectorKey,
+	ReportDetailsComponent,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorRow,
+} from "../modes/components/selector-frame";
+import { getSymbolTheme, theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
+import { reviewClipboardAction } from "../modes/utils/clipboard-action";
+import { matchesAppInterrupt } from "../modes/utils/keybinding-matchers";
+import { reviewLocalPathAction } from "../modes/utils/open-action";
 import { formatBytes } from "../tools/render-utils";
 import { fileHyperlink } from "../tui/hyperlink";
-import { openPath } from "../utils/open";
+import { type OpenPathResult, openPathWithResult } from "../utils/open";
 import { DebugLogViewerComponent } from "./log-viewer";
 import { generateHeapSnapshotData, type ProfilerSession, startCpuProfile } from "./profiler";
-import { clearArtifactCache, createDebugLogSource, createReportBundle, getArtifactCacheStats } from "./report-bundle";
+import {
+	clearArtifactCacheTargets,
+	createDebugLogSource,
+	createReportBundle,
+	getArtifactCacheTargets,
+	type ReportBundleOptions,
+	type ReportBundleResult,
+} from "./report-bundle";
 import { collectSystemInfo, formatSystemInfo } from "./system-info";
 
 /** Debug menu options */
-const DEBUG_MENU_ITEMS: SelectItem[] = [
+const DEBUG_MENU_ITEMS = [
 	{ value: "open-artifacts", label: "Open: artifact folder", description: "Open session artifacts in file manager" },
 	{ value: "performance", label: "Report: performance issue", description: "Profile CPU, reproduce, then bundle" },
 	{ value: "work", label: "Profile: work scheduling", description: "Open flamegraph of last 30s" },
@@ -43,47 +57,75 @@ const DEBUG_MENU_ITEMS: SelectItem[] = [
 		description: "Write visible TUI conversation to a temp txt",
 	},
 	{ value: "clear-cache", label: "Clear: artifact cache", description: "Remove old session artifacts" },
-];
+] as const;
 
 const formatFileHyperlink = (path: string): string => {
 	return fileHyperlink(path, path);
 };
 
+export class ProfilerControlComponent extends Container {
+	#closed = false;
+	constructor(
+		private readonly done: (outcome: "review" | "interrupted") => void,
+		private readonly rows: () => number,
+	) {
+		super();
+	}
+	override render(width: number): string[] {
+		const inner = selectorFrameContentWidth(width);
+		const bindings = getKeybindings();
+		const interrupt = bindings.getDefinition("app.interrupt")
+			? formatKeyHints(bindings.getKeys("app.interrupt"))
+			: "Ctrl+C";
+		return selectorFrame(
+			width,
+			this.rows(),
+			"CPU profiling active",
+			"Reproduce the performance issue while this foreground profiler collects samples",
+			[],
+			[selectorRow(["Stop profiling and review report"], [inner - 2], true)],
+			["Escape does not stop profiling or discard collected samples."],
+			[`${interrupt}: stop without saving`],
+			{ selectedBodyIndex: 0 },
+		);
+	}
+	handleInput(data: string): void {
+		if (this.#closed) return;
+		if (matchesAppInterrupt(data)) {
+			this.#closed = true;
+			this.done("interrupted");
+		} else if (matchesSelectorKey(data, "confirm")) {
+			this.#closed = true;
+			this.done("review");
+		}
+	}
+}
+
 /**
  * Debug selector component.
  */
-export class DebugSelectorComponent extends Container {
-	#selectList: SelectList;
+export class DebugSelectorComponent extends HookSelectorComponent {
+	private readonly ctx: InteractiveModeContext;
+	private readonly openLocalPath: (target: string) => Promise<OpenPathResult>;
 
 	constructor(
-		private ctx: InteractiveModeContext,
+		ctx: InteractiveModeContext,
 		onDone: () => void,
+		dependencies: { openLocalPath?: (target: string) => Promise<OpenPathResult> } = {},
 	) {
-		super();
-
-		// Title
-		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", "Debug Tools")), 1, 0));
-		this.addChild(new Spacer(1));
-
-		// Select list
-		this.#selectList = new SelectList(DEBUG_MENU_ITEMS, 7, getSelectListTheme());
-
-		this.#selectList.onSelect = item => {
+		const choices = DEBUG_MENU_ITEMS.map(item => `${item.label} — ${item.description}`);
+		let dispatch = (_choice: string) => {};
+		super("Debug tools and privacy-safe diagnostics", choices, choice => dispatch(choice), onDone, {
+			tui: ctx.ui,
+			maxVisible: 10,
+		});
+		this.ctx = ctx;
+		this.openLocalPath = dependencies.openLocalPath ?? openPathWithResult;
+		dispatch = choice => {
 			onDone();
-			void this.#handleSelection(item.value);
+			const index = choices.indexOf(choice);
+			if (index >= 0) void this.#handleSelection(DEBUG_MENU_ITEMS[index].value);
 		};
-
-		this.#selectList.onCancel = () => {
-			onDone();
-		};
-
-		this.addChild(this.#selectList);
-		this.addChild(new DynamicBorder());
-	}
-
-	handleInput(keyData: string): void {
-		this.#selectList.handleInput(keyData);
 	}
 
 	async #handleSelection(value: string): Promise<void> {
@@ -110,7 +152,7 @@ export class DebugSelectorComponent extends Container {
 				await this.#handleViewSystemInfo();
 				break;
 			case "context-profile":
-				this.#handleContextProfile();
+				await this.#handleContextProfile();
 				break;
 			case "transcript":
 				await this.#handleTranscriptExport();
@@ -131,69 +173,35 @@ export class DebugSelectorComponent extends Container {
 			return;
 		}
 
-		// Show message and wait for keypress
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(
-			new Text(theme.fg("contentAccent", `${theme.status.info} CPU profiling started`), 1, 0),
-		);
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(
-			new Text(theme.fg("muted", "Reproduce the performance issue, then press Enter to stop profiling."), 1, 0),
-		);
-		this.ctx.ui.requestRender();
-
-		// Wait for Enter keypress
-		const { promise, resolve } = Promise.withResolvers<void>();
-		const originalOnEscape = this.ctx.editor.onEscape;
-		const originalOnSubmit = this.ctx.editor.onSubmit;
-
-		this.ctx.editor.onSubmit = () => {
-			this.ctx.editor.onEscape = originalOnEscape;
-			this.ctx.editor.onSubmit = originalOnSubmit;
-			resolve();
-		};
-
-		this.ctx.editor.onEscape = () => {
-			this.ctx.editor.onEscape = originalOnEscape;
-			this.ctx.editor.onSubmit = originalOnSubmit;
-			resolve();
-		};
-
-		await promise;
-
-		// Stop profiling and create report
-		const loader = new Loader(
-			this.ctx.ui,
-			spinner => theme.fg("spinnerAccent", spinner),
-			text => theme.fg("muted", text),
-			"Generating report...",
-			getSymbolTheme().spinnerFrames,
-		);
-		this.ctx.statusContainer.addChild(loader);
-		this.ctx.ui.requestRender();
-
+		let stopped = false;
 		try {
-			const cpuProfile = await session.stop();
-			const workProfile = getWorkProfile(30);
-			const result = await createReportBundle({
-				sessionFile: this.ctx.sessionManager.getSessionFile(),
-				settings: this.#getResolvedSettings(),
-				cpuProfile,
-				workProfile,
-			});
-
-			loader.stop();
-			this.ctx.statusContainer.clear();
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `${theme.status.success} Performance report saved`), 1, 0),
+			const control = await this.ctx.showHookCustom<"review" | "interrupted">(
+				(ui, _theme, _keys, done) => new ProfilerControlComponent(done, () => ui.terminal.rows),
+				{ overlay: true, fullscreen: true },
 			);
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", formatFileHyperlink(result.path)), 1, 0));
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Files: ${result.files.length}`), 1, 0));
+			const cpuProfile = await session.stop();
+			stopped = true;
+			if (control === "interrupted") {
+				this.ctx.showStatus("CPU profiling stopped; collected samples were discarded and no report was written.");
+				return;
+			}
+			const workProfile = getWorkProfile(30);
+			const result = await this.#saveReportBundle(
+				"performance",
+				"the current session, recent logs, sanitized environment and settings, CPU profile, and work profile",
+				{
+					sessionFile: this.ctx.sessionManager.getSessionFile(),
+					settings: this.#getResolvedSettings(),
+					cpuProfile,
+					workProfile,
+				},
+			);
+			if (result)
+				this.ctx.showStatus(
+					`${theme.status.success} Performance report saved\n${formatFileHyperlink(result.path)}\nFiles: ${result.files.length}`,
+				);
 		} catch (err) {
-			loader.stop();
-			this.ctx.statusContainer.clear();
+			if (!stopped) await session.stop().catch(() => {});
 			this.ctx.showError(`Failed to create report: ${err instanceof Error ? err.message : String(err)}`);
 		}
 
@@ -209,16 +217,20 @@ export class DebugSelectorComponent extends Container {
 				return;
 			}
 
-			// Write SVG to temp file and open in browser
-			const tmpPath = `/tmp/work-profile-${Date.now()}.svg`;
-			await Bun.write(tmpPath, workProfile.svg);
-
-			openPath(tmpPath);
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("dim", `Opened flamegraph (${workProfile.sampleCount} samples)`), 1, 0),
+			const outputPath = await this.#writeDiagnosticFile(
+				"work-profile",
+				"svg",
+				workProfile.svg,
+				`Work-scheduling flamegraph with ${workProfile.sampleCount} samples`,
 			);
+			if (!outputPath) return;
+			const opened = await this.openLocalPath(outputPath);
+			if (opened.ok)
+				this.ctx.showStatus(`Saved and opened flamegraph (${workProfile.sampleCount} samples): ${outputPath}`);
+			else
+				this.ctx.showWarning(
+					`Flamegraph saved but automatic open failed: ${opened.error}\nOpen manually: ${outputPath}`,
+				);
 		} catch (err) {
 			this.ctx.showError(`Failed to open profile: ${err instanceof Error ? err.message : String(err)}`);
 		}
@@ -227,34 +239,20 @@ export class DebugSelectorComponent extends Container {
 	}
 
 	async #handleDumpReport(): Promise<void> {
-		const loader = new Loader(
-			this.ctx.ui,
-			spinner => theme.fg("spinnerAccent", spinner),
-			text => theme.fg("muted", text),
-			"Creating report bundle...",
-			getSymbolTheme().spinnerFrames,
-		);
-		this.ctx.statusContainer.addChild(loader);
-		this.ctx.ui.requestRender();
-
 		try {
-			const result = await createReportBundle({
-				sessionFile: this.ctx.sessionManager.getSessionFile(),
-				settings: this.#getResolvedSettings(),
-			});
-
-			loader.stop();
-			this.ctx.statusContainer.clear();
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `${theme.status.success} Report bundle saved`), 1, 0),
+			const result = await this.#saveReportBundle(
+				"bundle",
+				"the current session, recent logs, sanitized environment and resolved settings",
+				{
+					sessionFile: this.ctx.sessionManager.getSessionFile(),
+					settings: this.#getResolvedSettings(),
+				},
 			);
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", formatFileHyperlink(result.path)), 1, 0));
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Files: ${result.files.length}`), 1, 0));
+			if (result)
+				this.ctx.showStatus(
+					`${theme.status.success} Report bundle saved\n${formatFileHyperlink(result.path)}\nFiles: ${result.files.length}`,
+				);
 		} catch (err) {
-			loader.stop();
-			this.ctx.statusContainer.clear();
 			this.ctx.showError(`Failed to create report: ${err instanceof Error ? err.message : String(err)}`);
 		}
 
@@ -274,23 +272,21 @@ export class DebugSelectorComponent extends Container {
 
 		try {
 			const heapSnapshot = generateHeapSnapshotData();
-			loader.setText("Creating report bundle...");
-
-			const result = await createReportBundle({
-				sessionFile: this.ctx.sessionManager.getSessionFile(),
-				settings: this.#getResolvedSettings(),
-				heapSnapshot,
-			});
-
 			loader.stop();
 			this.ctx.statusContainer.clear();
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `${theme.status.success} Memory report saved`), 1, 0),
+			const result = await this.#saveReportBundle(
+				"memory",
+				"the current session, recent logs, sanitized environment and settings, and a heap snapshot",
+				{
+					sessionFile: this.ctx.sessionManager.getSessionFile(),
+					settings: this.#getResolvedSettings(),
+					heapSnapshot,
+				},
 			);
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", formatFileHyperlink(result.path)), 1, 0));
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Files: ${result.files.length}`), 1, 0));
+			if (result)
+				this.ctx.showStatus(
+					`${theme.status.success} Memory report saved\n${formatFileHyperlink(result.path)}\nFiles: ${result.files.length}`,
+				);
 		} catch (err) {
 			loader.stop();
 			this.ctx.statusContainer.clear();
@@ -302,6 +298,9 @@ export class DebugSelectorComponent extends Container {
 
 	async #handleViewLogs(): Promise<void> {
 		try {
+			const session = this.ctx.session;
+			const manager = this.ctx.sessionManager;
+			const sessionId = manager.getSessionId();
 			const logSource = await createDebugLogSource();
 			const logs = await logSource.getInitialText();
 			if (!logs && !logSource.hasOlderLogs()) {
@@ -320,6 +319,21 @@ export class DebugSelectorComponent extends Container {
 				onStatus: message => this.ctx.showStatus(message, { dim: true }),
 				onError: message => this.ctx.showError(message),
 				onUpdate: () => this.ctx.ui.requestRender(),
+				onCopy: async (payload, count) => {
+					await reviewClipboardAction(this.ctx, {
+						title: "debug log copy",
+						identity: `debug-logs:${sessionId}:${createHash("sha256").update(payload).digest("hex")}`,
+						label: `${count} selected debug log ${count === 1 ? "entry" : "entries"}`,
+						success: `Copied ${count} debug log ${count === 1 ? "entry" : "entries"}.`,
+						reopen: "Reopen Debug tools → View recent logs and reselect the entries.",
+						current: () =>
+							this.ctx.session === session &&
+							this.ctx.sessionManager === manager &&
+							manager.getSessionId() === sessionId,
+						resolveText: () => payload,
+					});
+					return false;
+				},
 				logSource,
 			});
 
@@ -342,31 +356,164 @@ export class DebugSelectorComponent extends Container {
 		try {
 			const info = await collectSystemInfo();
 			const formatted = formatSystemInfo(info);
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(new DynamicBorder());
-			this.ctx.chatContainer.addChild(new Text(formatted, 1, 0));
-			this.ctx.chatContainer.addChild(new DynamicBorder());
+			await this.#showReport("System information", "Privacy-safe local environment details", formatted);
 		} catch (err) {
 			this.ctx.showError(`Failed to collect system info: ${err instanceof Error ? err.message : String(err)}`);
 		}
-
-		this.ctx.ui.requestRender();
 	}
 
-	#handleContextProfile(): void {
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.chatContainer.addChild(new Text(formatContextProfile(this.ctx.session.getContextProfile()), 1, 0));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.ui.requestRender();
+	async #handleContextProfile(): Promise<void> {
+		await this.#showReport(
+			"Context profile",
+			"Privacy-safe prompt, tool, and provider-call measurements",
+			formatContextProfile(this.ctx.session.getContextProfile()),
+		);
+	}
+
+	async #showReport(title: string, purpose: string, content: string): Promise<void> {
+		await this.ctx.showHookCustom<void>(
+			(ui, _theme, _keys, done) =>
+				new ReportDetailsComponent(
+					title,
+					purpose,
+					content,
+					() => done(),
+					() => ui.terminal.rows,
+				),
+			{ overlay: true, fullscreen: true },
+		);
+	}
+
+	async #saveReportBundle(
+		label: string,
+		contents: string,
+		options: Omit<ReportBundleOptions, "outputPath">,
+	): Promise<ReportBundleResult | undefined> {
+		const manager = this.ctx.sessionManager;
+		const session = this.ctx.session;
+		const sessionId = manager.getSessionId();
+		const outputPath = path.join(getReportsDir(), `xcsh-${label}-${Snowflake.next()}.tar.gz`);
+		const current = () =>
+			this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
+		const payloadHash = createHash("sha256")
+			.update(JSON.stringify(options.settings ?? {}))
+			.update(options.cpuProfile?.data ?? "")
+			.update(options.heapSnapshot?.data ?? "")
+			.update(options.workProfile?.folded ?? "")
+			.digest("hex");
+		const inspect = async () => {
+			try {
+				const stat = await fs.lstat(outputPath);
+				if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Report destination is not a regular file.");
+				const bytes = await fs.readFile(outputPath);
+				return { size: stat.size, hash: createHash("sha256").update(bytes).digest("hex") };
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+				throw error;
+			}
+		};
+		const prepare = async () => {
+			if (!current()) throw new Error("The active session changed. Open the debug action again.");
+			const before = await inspect();
+			const review: ActionReview = {
+				identity: `debug-report:${label}:${sessionId}`,
+				scope: `Local diagnostic report · ${outputPath}`,
+				revision: JSON.stringify({ before, payloadHash, sessionId }),
+				changes: [
+					{
+						field: outputPath,
+						before: before ? `${before.size} bytes · SHA256 ${before.hash.slice(0, 12)}` : "Absent",
+						after: `Compressed diagnostic archive · payload SHA256 ${payloadHash.slice(0, 12)}`,
+					},
+				],
+				consequence: `Writes a local archive containing ${contents}. It may contain sensitive conversation, logs, configuration, environment metadata, or profiling data; anyone with file access can read it. No upload or remote publication occurs.`,
+			};
+			return { review, target: before };
+		};
+		const proposal = await prepare();
+		let result: ReportBundleResult | undefined;
+		const outcome = await runReviewedAction(this.ctx, `${label} debug report`, {
+			review: proposal.review,
+			resolve: prepare,
+			execute: async before => {
+				if (JSON.stringify(await inspect()) !== JSON.stringify(before))
+					throw new Error("Report destination changed after review.");
+				result = await createReportBundle({ ...options, outputPath });
+			},
+		});
+		if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+		return outcome === "succeeded" ? result : undefined;
+	}
+
+	async #writeDiagnosticFile(
+		label: string,
+		extension: string,
+		content: string | Uint8Array,
+		description: string,
+	): Promise<string | undefined> {
+		const manager = this.ctx.sessionManager;
+		const session = this.ctx.session;
+		const sessionId = manager.getSessionId();
+		const outputPath = path.join(getReportsDir(), `xcsh-${label}-${Snowflake.next()}.${extension}`);
+		const bytes = typeof content === "string" ? new TextEncoder().encode(content) : content;
+		const hash = createHash("sha256").update(bytes).digest("hex");
+		const current = () =>
+			this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
+		const inspect = async () => {
+			try {
+				const stat = await fs.lstat(outputPath);
+				if (!stat.isFile() || stat.isSymbolicLink())
+					throw new Error("Diagnostic destination is not a regular file.");
+				const existing = await fs.readFile(outputPath);
+				return { size: stat.size, hash: createHash("sha256").update(existing).digest("hex") };
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+				throw error;
+			}
+		};
+		const prepare = async () => {
+			if (!current()) throw new Error("The active session changed. Open the debug action again.");
+			const before = await inspect();
+			return {
+				review: {
+					identity: `debug-file:${label}:${sessionId}`,
+					scope: `Local diagnostic file · ${outputPath}`,
+					revision: JSON.stringify({ before, hash }),
+					changes: [
+						{
+							field: outputPath,
+							before: before ? `${before.size} bytes · SHA256 ${before.hash.slice(0, 12)}` : "Absent",
+							after: `${bytes.length} bytes · SHA256 ${hash.slice(0, 12)} · permissions 0600`,
+						},
+					],
+					consequence: `Writes ${description} to a local file and opens it after the write succeeds. No remote publication occurs.`,
+				} satisfies ActionReview,
+				target: before,
+			};
+		};
+		const proposal = await prepare();
+		const outcome = await runReviewedAction(this.ctx, `${label} export`, {
+			review: proposal.review,
+			resolve: prepare,
+			execute: async before => {
+				if (JSON.stringify(await inspect()) !== JSON.stringify(before))
+					throw new Error("Diagnostic destination changed after review.");
+				await fs.mkdir(path.dirname(outputPath), { recursive: true, mode: 0o700 });
+				await fs.writeFile(outputPath, bytes, { flag: "wx", mode: 0o600 });
+			},
+		});
+		if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+		return outcome === "succeeded" ? outputPath : undefined;
 	}
 
 	async #handleTranscriptExport(): Promise<void> {
 		await this.ctx.handleDebugTranscriptCommand();
 	}
 	async #handleOpenArtifacts(): Promise<void> {
-		const sessionFile = this.ctx.sessionManager.getSessionFile();
+		const manager = this.ctx.sessionManager;
+		const session = this.ctx.session;
+		const sessionId = manager.getSessionId();
+		const sessionFile = manager.getSessionFile();
 		if (!sessionFile) {
 			this.ctx.showWarning("No active session file.");
 			return;
@@ -374,78 +521,88 @@ export class DebugSelectorComponent extends Container {
 
 		const artifactsDir = sessionFile.slice(0, -6);
 
-		try {
-			const stat = await fs.stat(artifactsDir);
-			if (!stat.isDirectory()) {
-				this.ctx.showWarning("Artifact folder does not exist yet.");
-				return;
-			}
-		} catch {
-			this.ctx.showWarning("Artifact folder does not exist yet.");
-			return;
-		}
-
-		openPath(artifactsDir);
-		this.ctx.showStatus(`Opened: ${artifactsDir}`);
+		const current = () =>
+			this.ctx.session === session &&
+			this.ctx.sessionManager === manager &&
+			manager.getSessionId() === sessionId &&
+			manager.getSessionFile() === sessionFile;
+		const outcome = await reviewLocalPathAction(this.ctx, {
+			title: "artifact folder",
+			identity: `debug-artifacts:${sessionId}`,
+			scope: `Local session artifacts · session ${sessionId}`,
+			current,
+			resolvePath: async () => {
+				if (!current()) return undefined;
+				try {
+					const stat = await fs.lstat(artifactsDir);
+					if (!stat.isDirectory() || stat.isSymbolicLink()) return undefined;
+					const resolved = await fs.realpath(artifactsDir);
+					if (resolved !== artifactsDir) return undefined;
+					return {
+						path: resolved,
+						revision: `${stat.dev}:${stat.ino}:${stat.mtimeMs}`,
+						description: `Directory · device ${stat.dev} · inode ${stat.ino}`,
+					};
+				} catch {
+					return undefined;
+				}
+			},
+			open: target => this.openLocalPath(target),
+		});
+		if (outcome === "succeeded") this.ctx.showStatus(`Opened: ${artifactsDir}`);
+		else if (outcome === "missing") this.ctx.showWarning("Artifact folder does not exist yet.");
+		else if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
 	}
 
 	async #handleClearCache(): Promise<void> {
 		const sessionsDir = getSessionsDir();
-
-		// Get stats first
-		const stats = await getArtifactCacheStats(sessionsDir);
-
-		if (stats.count === 0) {
-			this.ctx.showStatus("Artifact cache is empty.");
-			return;
-		}
-
-		const sizeStr = formatBytes(stats.totalSize);
-		const oldestStr = stats.oldestDate ? stats.oldestDate.toLocaleDateString() : "unknown";
-
-		// Show confirmation
-		const confirmed = await this.ctx.showHookConfirm(
-			"Clear Artifact Cache",
-			`Found ${stats.count} artifact files (${sizeStr})\nOldest: ${oldestStr}\n\nRemove artifacts older than 30 days?`,
-		);
-
-		if (!confirmed) {
-			this.ctx.showStatus("Cache clear cancelled.");
-			return;
-		}
-
-		// Clear cache
-		const loader = new Loader(
-			this.ctx.ui,
-			spinner => theme.fg("spinnerAccent", spinner),
-			text => theme.fg("muted", text),
-			"Clearing artifact cache...",
-			getSymbolTheme().spinnerFrames,
-		);
-		this.ctx.statusContainer.addChild(loader);
-		this.ctx.ui.requestRender();
-
 		try {
-			const result = await clearArtifactCache(sessionsDir, 30);
-
-			loader.stop();
-			this.ctx.statusContainer.clear();
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(
-					theme.fg("success", `${theme.status.success} Cleared ${result.removed} artifact directories`),
-					1,
-					0,
-				),
-			);
+			const completed = new Set<string>();
+			const prepare = async () => {
+				const targets = (await getArtifactCacheTargets(sessionsDir, 30)).filter(
+					target => !completed.has(target.path),
+				);
+				if (targets.length === 0) throw new Error("Artifact cache has no directories older than 30 days.");
+				const review: ActionReview = {
+					identity: `artifact-cache:${path.resolve(sessionsDir)}`,
+					scope: `Local session artifact cache · ${path.resolve(sessionsDir)}`,
+					revision: JSON.stringify(targets),
+					changes: targets.map(target => ({
+						field: target.path,
+						before: `${target.fileCount} files · ${formatBytes(target.size)} · modified ${new Date(target.mtimeMs).toISOString()}`,
+						after: "Removed",
+					})),
+					consequence: `Permanently deletes ${targets.length} exact artifact director${targets.length === 1 ? "y" : "ies"} older than 30 days. Session transcript files are not selected. Targets are revalidated before deletion; only unresolved failures are offered on retry.`,
+				};
+				return { review, target: targets };
+			};
+			let proposal: Awaited<ReturnType<typeof prepare>>;
+			try {
+				proposal = await prepare();
+			} catch (error) {
+				this.ctx.showStatus(error instanceof Error ? error.message : String(error));
+				return;
+			}
+			let removed = 0;
+			const outcome = await runReviewedAction(this.ctx, "artifact cache removal", {
+				review: proposal.review,
+				resolve: prepare,
+				execute: async targets => {
+					const result = await clearArtifactCacheTargets(sessionsDir, targets);
+					for (const target of result.removed) completed.add(target);
+					removed += result.removed.length;
+					if (result.failed.length)
+						throw new Error(
+							`${result.failed.length} artifact director${result.failed.length === 1 ? "y" : "ies"} unresolved: ${result.failed.map(failure => `${failure.path}: ${failure.error}`).join("; ")}`,
+						);
+				},
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "succeeded")
+				this.ctx.showStatus(`${theme.status.success} Cleared ${removed} artifact directories`);
 		} catch (err) {
-			loader.stop();
-			this.ctx.statusContainer.clear();
 			this.ctx.showError(`Failed to clear cache: ${err instanceof Error ? err.message : String(err)}`);
 		}
-
-		this.ctx.ui.requestRender();
 	}
 
 	#getResolvedSettings(): Record<string, unknown> {

@@ -211,6 +211,17 @@ function extractCompleteSequences(buffer: string): { sequences: string[]; remain
 
 		// Try to extract a sequence starting at this position
 		if (remaining.startsWith(ESC)) {
+			// Two adjacent ESC introducers are two independent sequences. This occurs
+			// when a user's Escape key races a terminal capability response such as
+			// DA1 (`ESC ESC[?1;2c`). Treating the pair as one Meta-Escape event strips
+			// the response introducer and leaks `[?1;2c` into the focused editor.
+			// Emitting the first Escape independently lets the next pass retain the
+			// complete response for the terminal-level filter.
+			if (remaining.startsWith(`${ESC}${ESC}`)) {
+				sequences.push(ESC);
+				pos++;
+				continue;
+			}
 			// Find the end of this escape sequence
 			let seqEnd = 1;
 			while (seqEnd <= remaining.length) {

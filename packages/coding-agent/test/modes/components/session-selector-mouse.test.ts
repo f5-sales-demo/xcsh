@@ -49,10 +49,19 @@ describe("SessionSelectorComponent mouse", () => {
 		const lines = component.render(80).map(line => Bun.stripANSI(line));
 		const betaRow = lines.findIndex(line => line.includes("Beta session"));
 		component.routeMouse(mouseEvent(betaRow), betaRow, 3);
+		expect(
+			component
+				.render(80)
+				.map(line => Bun.stripANSI(line))
+				.join("\n"),
+		).toContain("Session details");
+		component.handleInput("\n");
 		expect(picked).toEqual(["/tmp/beta.jsonl"]);
 
 		const keyboardPicked: string[] = [];
-		selector(path => keyboardPicked.push(path)).handleInput("\n");
+		const keyboard = selector(path => keyboardPicked.push(path));
+		keyboard.handleInput("\n");
+		keyboard.handleInput("\n");
 		expect(keyboardPicked).toEqual(["/tmp/alpha.jsonl"]);
 	});
 
@@ -75,6 +84,7 @@ describe("SessionSelectorComponent mouse", () => {
 		component.render(80);
 		component.routeMouse(mouseEvent(0, { button: 65, wheel: 1, leftClick: false }), 0, 0);
 		component.handleInput("\n");
+		component.handleInput("\n");
 		expect(picked).toEqual(["/tmp/beta.jsonl"]);
 	});
 
@@ -92,7 +102,7 @@ describe("SessionSelectorComponent mouse", () => {
 			.render(80)
 			.map(line => Bun.stripANSI(line))
 			.join("\n");
-		expect(rendered).toContain("Delete session?");
+		expect(rendered).toContain("Review session deletion");
 		expect(rendered).toContain("Session 0");
 	});
 });

@@ -43,7 +43,7 @@ export function createDashboardController(): DashboardController {
 				if (state.results.length === 0 && runtime.runningExperiment)
 					return new Text(renderRunningOnly(runtime, state, theme), 0, 0);
 				if (runtime.dashboardExpanded) {
-					const width = process.stdout.columns ?? 120;
+					const width = _tui.terminal.columns || process.stdout.columns || 120;
 					const lines = [
 						renderExpandedHeader(runtime, width, theme),
 						...renderDashboardLines(runtime, width, theme, 8),
@@ -68,7 +68,7 @@ export function createDashboardController(): DashboardController {
 					let scrollOffset = 0;
 					return {
 						render(width: number): string[] {
-							const terminalRows = process.stdout.rows ?? 40;
+							const terminalRows = tui.terminal.rows || process.stdout.rows || 40;
 							const header = renderExpandedHeader(runtime, width, theme);
 							const body = renderDashboardLines(runtime, width, theme, 0);
 							if (runtime.runningExperiment)
@@ -87,9 +87,9 @@ export function createDashboardController(): DashboardController {
 						},
 						handleInput(data: string): void {
 							const totalRows =
-								renderDashboardLines(runtime, process.stdout.columns ?? 120, theme, 0).length +
-								(runtime.runningExperiment ? 1 : 0);
-							const viewportRows = Math.max(4, (process.stdout.rows ?? 40) - 4);
+								renderDashboardLines(runtime, tui.terminal.columns || process.stdout.columns || 120, theme, 0)
+									.length + (runtime.runningExperiment ? 1 : 0);
+							const viewportRows = Math.max(4, (tui.terminal.rows || process.stdout.rows || 40) - 4);
 							const maxScroll = Math.max(0, totalRows - viewportRows);
 							if (matchesKey(data, "escape") || matchesKey(data, "esc") || data === "q") {
 								done(undefined);

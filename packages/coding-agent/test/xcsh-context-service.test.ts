@@ -239,7 +239,7 @@ describe("ContextService", () => {
 
 			expect(result).toBeNull();
 			expect(service.getStatus().credentialSource).toBe("none");
-			// No XCSH vars should be in bash.environment
+			// No xcsh vars should be in bash.environment
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 			expect(bashEnv.XCSH_API_URL).toBeUndefined();
 		});
@@ -2398,6 +2398,23 @@ describe("ContextService", () => {
 			expect(result.overwritten).toEqual([]);
 			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT.name}.json`))).toBe(true);
 			expect(fs.existsSync(path.join(xcshContextsDir, `${TEST_CONTEXT_2.name}.json`))).toBe(true);
+		});
+
+		it("rolls back earlier context writes when a later filesystem write fails", async () => {
+			const service = ContextService.init(xcshConfigDir);
+			const first = { ...TEST_CONTEXT, name: "first" };
+			const second = { ...TEST_CONTEXT_2, name: "second" };
+			fs.mkdirSync(xcshContextsDir, { recursive: true });
+			// Make only the second atomic temp destination unwritable while leaving
+			// validation and the first write on their normal production paths.
+			fs.mkdirSync(path.join(xcshContextsDir, "second.json.tmp"));
+
+			await expect(service.importContexts(makeBundle([first, second]), { overwrite: false })).rejects.toThrow(
+				/No context changes were kept/,
+			);
+			expect(fs.existsSync(path.join(xcshContextsDir, "first.json"))).toBe(false);
+			expect(fs.existsSync(path.join(xcshContextsDir, "second.json"))).toBe(false);
+			expect(await service.listContexts()).toEqual([]);
 		});
 
 		it("throws with all conflict names when overwrite: false", async () => {

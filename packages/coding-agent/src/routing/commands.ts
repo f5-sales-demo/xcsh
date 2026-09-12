@@ -11,6 +11,7 @@ export interface CommandContext {
 
 export interface RouteCommandResult {
 	output: string;
+	error?: boolean;
 	newMode?: RoutingMode;
 	newProfile?: SubscriptionProfileId;
 }
@@ -19,12 +20,16 @@ export async function handleRouteCommand(args: string[], ctx: CommandContext): P
 	const subcommand = (args[0] ?? "status").toLowerCase();
 	const sm = ctx.coordinator.getStateMachine();
 	const state = sm.getState();
+	const usage = "Usage: /route [status|off|shadow|auto|profile <anthropic|google-antigravity|openai-codex>]";
+	if (subcommand === "profile" ? args.length !== 2 : args.length !== 1) {
+		return { output: usage, error: true };
+	}
 
 	switch (subcommand) {
 		case "status": {
 			const lines = [
-				`Routing Mode: ${ctx.mode}`,
-				`Routing Profile: ${ctx.profile ?? "none"}`,
+				`Effective Routing Mode: ${ctx.mode}`,
+				`Effective Routing Profile: ${ctx.profile ?? "none"}`,
 				`Active Model: ${ctx.currentModel}`,
 				`Active Tier: ${state.currentTier ?? "balanced"}`,
 				`Downshift Streak: ${state.downshiftStreak}`,
@@ -49,7 +54,6 @@ export async function handleRouteCommand(args: string[], ctx: CommandContext): P
 		}
 
 		case "auto": {
-			sm.clearManualPin();
 			return {
 				output: "Routing mode set to auto. Manual model pin cleared.",
 				newMode: "auto",
@@ -58,9 +62,10 @@ export async function handleRouteCommand(args: string[], ctx: CommandContext): P
 
 		case "profile": {
 			const profile = args[1] as SubscriptionProfileId | undefined;
-			if (!profile || !(profile in SUBSCRIPTION_ROUTING_PROFILES)) {
+			if (!profile || !Object.hasOwn(SUBSCRIPTION_ROUTING_PROFILES, profile)) {
 				return {
 					output: `Usage: /route profile [${Object.keys(SUBSCRIPTION_ROUTING_PROFILES).join("|")}]`,
+					error: true,
 				};
 			}
 			return { output: `Routing profile selected: ${profile}`, newProfile: profile };
@@ -68,7 +73,8 @@ export async function handleRouteCommand(args: string[], ctx: CommandContext): P
 
 		default: {
 			return {
-				output: `Unknown /route subcommand '${subcommand}'. Usage: /route [status|off|shadow|auto|profile]`,
+				output: `Unknown /route subcommand '${subcommand}'. ${usage}`,
+				error: true,
 			};
 		}
 	}

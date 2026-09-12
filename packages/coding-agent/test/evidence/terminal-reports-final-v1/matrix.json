@@ -1,0 +1,2102 @@
+{
+  "fixture": "reports",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 2,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 8,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1702,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 2,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 8,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1705,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 2,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 8,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1702,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 2,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 8,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1711,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 1,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 6,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1709,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 1,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 6,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1707,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 1,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 6,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1710,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 1,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 6,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1712,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 3,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1708,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 3,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1712,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 3,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1708,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 3,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1700,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 2,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1700,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 2,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1699,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 2,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1708,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "storedCredentialsUnchanged": 6,
+          "usageRequests": [
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ],
+          "jobsState": "empty current session",
+          "usageOverflowPages": 0,
+          "fullChangelogPagingExercised": true,
+          "hotkeyOverflowPages": 2,
+          "readOnlyReportsCreatedNoReview": true,
+          "mediaControlsChangedSessionBytes": false,
+          "btwRequestsChangedTranscript": false,
+          "btwRequests": 4,
+          "mainConversationRequests": 1,
+          "mainConversationReopened": true,
+          "debugReportCancelCreatedNoArchive": true,
+          "debugReportArchive": {
+            "count": 1,
+            "size": 1718,
+            "containsSession": true,
+            "containsSystemInfo": true
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            },
+            {
+              "method": "GET",
+              "path": "/wham/usage"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

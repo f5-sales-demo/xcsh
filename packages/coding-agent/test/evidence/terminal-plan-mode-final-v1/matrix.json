@@ -1,0 +1,918 @@
+{
+  "fixture": "plan-mode",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-HFZIpc/sessions/2026-09-12T07-20-02-823Z_157c6c8801dc29e2.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6c8801dc29e2",
+          "executionSessionId": "157c6c8dfd5c29e6",
+          "executionFile": "/tmp/xcsh-terminal-uat-HFZIpc/sessions/2026-09-12T07-20-08-949Z_157c6c8dfd5c29e6.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-6z45WW/sessions/2026-09-12T07-20-11-640Z_157c6c909e1a91d6.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6c909e1a91d6",
+          "executionSessionId": "157c6c96915a91da",
+          "executionFile": "/tmp/xcsh-terminal-uat-6z45WW/sessions/2026-09-12T07-20-17-733Z_157c6c96915a91da.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-O8tJcS/sessions/2026-09-12T07-20-20-460Z_157c6c993b33c70c.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6c993b33c70c",
+          "executionSessionId": "157c6c9f3af3c710",
+          "executionFile": "/tmp/xcsh-terminal-uat-O8tJcS/sessions/2026-09-12T07-20-26-603Z_157c6c9f3af3c710.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-UrF77k/sessions/2026-09-12T07-20-29-299Z_157c6ca1dce968d3.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6ca1dce968d3",
+          "executionSessionId": "157c6ca7cea968d7",
+          "executionFile": "/tmp/xcsh-terminal-uat-UrF77k/sessions/2026-09-12T07-20-35-386Z_157c6ca7cea968d7.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-nsNZfN/sessions/2026-09-12T07-20-38-087Z_157c6caa71f7c792.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6caa71f7c792",
+          "executionSessionId": "157c6caf5737c796",
+          "executionFile": "/tmp/xcsh-terminal-uat-nsNZfN/sessions/2026-09-12T07-20-43-100Z_157c6caf5737c796.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-fMrGov/sessions/2026-09-12T07-20-45-792Z_157c6cb1f81804eb.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cb1f81804eb",
+          "executionSessionId": "157c6cb6e2d804ef",
+          "executionFile": "/tmp/xcsh-terminal-uat-fMrGov/sessions/2026-09-12T07-20-50-827Z_157c6cb6e2d804ef.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-ldP5ws/sessions/2026-09-12T07-20-53-642Z_157c6cb9a29c126d.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cb9a29c126d",
+          "executionSessionId": "157c6cbe801c1271",
+          "executionFile": "/tmp/xcsh-terminal-uat-ldP5ws/sessions/2026-09-12T07-20-58-624Z_157c6cbe801c1271.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-yh0WRT/sessions/2026-09-12T07-21-01-323Z_157c6cc122ca87de.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cc122ca87de",
+          "executionSessionId": "157c6cc607ca87e2",
+          "executionFile": "/tmp/xcsh-terminal-uat-yh0WRT/sessions/2026-09-12T07-21-06-335Z_157c6cc607ca87e2.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-CZGuZB/sessions/2026-09-12T07-21-09-078Z_157c6cc8b5bfca14.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cc8b5bfca14",
+          "executionSessionId": "157c6ccd0abfca18",
+          "executionFile": "/tmp/xcsh-terminal-uat-CZGuZB/sessions/2026-09-12T07-21-13-514Z_157c6ccd0abfca18.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-OqMA06/sessions/2026-09-12T07-21-16-274Z_157c6ccfbc9fc7e1.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6ccfbc9fc7e1",
+          "executionSessionId": "157c6cd4195fc7e5",
+          "executionFile": "/tmp/xcsh-terminal-uat-OqMA06/sessions/2026-09-12T07-21-20-741Z_157c6cd4195fc7e5.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-8BOYvr/sessions/2026-09-12T07-21-23-582Z_157c6cd6df988813.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cd6df988813",
+          "executionSessionId": "157c6cdb52188817",
+          "executionFile": "/tmp/xcsh-terminal-uat-8BOYvr/sessions/2026-09-12T07-21-28-136Z_157c6cdb52188817.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-MVOjIg/sessions/2026-09-12T07-21-31-020Z_157c6cde233b30f5.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cde233b30f5",
+          "executionSessionId": "157c6ce2dc7b30f9",
+          "executionFile": "/tmp/xcsh-terminal-uat-MVOjIg/sessions/2026-09-12T07-21-35-857Z_157c6ce2dc7b30f9.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-n9ql1V/sessions/2026-09-12T07-21-38-747Z_157c6ce5aef15779.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6ce5aef15779",
+          "executionSessionId": "157c6ceb8a71577d",
+          "executionFile": "/tmp/xcsh-terminal-uat-n9ql1V/sessions/2026-09-12T07-21-44-745Z_157c6ceb8a71577d.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-m6mers/sessions/2026-09-12T07-21-47-893Z_157c6cee9d67071b.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cee9d67071b",
+          "executionSessionId": "157c6cf362a7071f",
+          "executionFile": "/tmp/xcsh-terminal-uat-m6mers/sessions/2026-09-12T07-21-52-778Z_157c6cf362a7071f.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-x3IkDv/sessions/2026-09-12T07-21-56-085Z_157c6cf69d519d07.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cf69d519d07",
+          "executionSessionId": "157c6cfbb5519d0b",
+          "executionFile": "/tmp/xcsh-terminal-uat-x3IkDv/sessions/2026-09-12T07-22-01-301Z_157c6cfbb5519d0b.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "file": "/tmp/xcsh-terminal-uat-WbuI6K/sessions/2026-09-12T07-22-04-210Z_157c6cfe8c791187.jsonl",
+          "modes": [
+            "plan",
+            "plan_paused"
+          ],
+          "cancelledEnableCreatedNoFile": true,
+          "cancelledPauseBytesUnchanged": true,
+          "cancelledActivePromptBytesUnchanged": true,
+          "cancelledActivePromptProviderRequestsUnchanged": true,
+          "activePromptKeptPlanMode": true,
+          "activePromptCompletionReopened": true,
+          "escapeDuringActivePromptDidNotInterrupt": true,
+          "cancelledApprovalBytesUnchanged": true,
+          "planningSessionId": "157c6cfe8c791187",
+          "executionSessionId": "157c6d032cb9118b",
+          "executionFile": "/tmp/xcsh-terminal-uat-WbuI6K/sessions/2026-09-12T07-22-08-946Z_157c6d032cb9118b.jsonl",
+          "approvedPlanInBothSessions": true,
+          "fakeExecutionCompletionReopened": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

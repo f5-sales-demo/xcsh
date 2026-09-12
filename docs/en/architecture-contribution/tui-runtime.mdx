@@ -17,3 +17,23 @@ Terminal decoding turns bytes and escape sequences into key events. Focused over
 Extensions can open a modal through `ctx.ui.custom` only when an interactive UI host exists. Custom tools may provide renderers for calls and results while preserving a plain-text representation for headless clients. A renderer must not become the only copy of durable tool output.
 
 Read `packages/tui/src` for the component and rendering contracts, and `packages/coding-agent/src/tui` for the session-aware components built on them.
+
+Use the [TUI interaction style guide](../tui-style-guide/) when adding a selector or manager. It
+defines the shared frame, responsive density, search and escape behavior, plain-text state semantics,
+and asynchronous feedback expected from interactive surfaces.
+
+## How are development native prerequisites kept current?
+
+`bun run dev`, `bun run test:ts`, and the coding-agent package's `bun run test` prepare the
+source-matched native addon automatically. The bootstrap checks a fingerprint of native sources,
+build inputs, and the host binary, then validates all runtime exports declared by the generated
+bindings in a fresh subprocess. Changed sources, missing artifacts, or incompatible bindings trigger
+a build; readiness is recorded only after the rebuilt addon passes another fresh-process check.
+An unchanged, verified checkout does not rebuild on every invocation.
+
+For direct `bun test <file>` or direct source CLI invocation, first run
+`bun scripts/ensure-dev-native.ts`. Bare `bun test` does not run package lifecycle scripts.
+Do not patch a JavaScript stub to add `PowerAssertion` or another missing export: the source and
+native addon must match. A failed bootstrap reports the build or compatibility error and exits
+nonzero; follow the Rust/Zig prerequisites in `DEVELOPING.md`. Development checks require a host
+build, so unset cross-compilation targets before running them.

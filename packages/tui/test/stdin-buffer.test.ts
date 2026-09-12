@@ -345,6 +345,13 @@ describe("StdinBuffer", () => {
 			expect(emittedSequences).toContain("\x1b[?0u");
 			expect(emittedSequences).toContain("\x1b[?64;1;2;4;6;17;18;21;22;52c");
 		});
+
+		it("keeps a user Escape separate from an adjacent terminal response", () => {
+			processInput("\x1b\x1b[?1;2c");
+
+			expect(emittedSequences).toEqual(["\x1b", "\x1b[?1;2c"]);
+			expect(emittedSequences).not.toContain("[?1;2c");
+		});
 	});
 
 	describe("Clear", () => {

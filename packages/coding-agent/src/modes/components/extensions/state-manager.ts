@@ -30,7 +30,7 @@ import type {
 	ProviderTab,
 	TreeNode,
 } from "./types";
-import { makeExtensionId, sourceFromMeta } from "./types";
+import { makeExtensionId, makeQualifiedExtensionId, sourceFromMeta } from "./types";
 
 /**
  * Settings manager interface for granular toggle persistence.
@@ -46,6 +46,9 @@ export interface ExtensionSettingsManager {
 export async function loadAllExtensions(cwd?: string, disabledIds?: string[]): Promise<Extension[]> {
 	const extensions: Extension[] = [];
 	const disabledExtensions = new Set<string>(disabledIds ?? []);
+	const disabled = (kind: ExtensionKind, name: string, source: SourceMeta, itemPath: string) =>
+		disabledExtensions.has(makeExtensionId(kind, name)) ||
+		disabledExtensions.has(makeQualifiedExtensionId(kind, name, sourceFromMeta(source), itemPath));
 
 	// Helper to convert capability items to extensions
 	function addItems<T extends { name: string; path: string; _source: SourceMeta }>(
@@ -59,7 +62,7 @@ export async function loadAllExtensions(cwd?: string, disabledIds?: string[]): P
 	): void {
 		for (const item of items) {
 			const id = makeExtensionId(kind, item.name);
-			const isDisabled = disabledExtensions.has(id);
+			const isDisabled = disabled(kind, item.name, item._source, item.path);
 			const isShadowed = (item as { _shadowed?: boolean })._shadowed;
 			const providerEnabled = isProviderEnabled(item._source.provider);
 
@@ -145,7 +148,7 @@ export async function loadAllExtensions(cwd?: string, disabledIds?: string[]): P
 		const mcps = await loadCapability<MCPServer>("mcps", loadOpts);
 		for (const server of mcps.all) {
 			const id = makeExtensionId("mcp", server.name);
-			const isDisabled = disabledExtensions.has(id);
+			const isDisabled = disabled("mcp", server.name, server._source, server._source.path);
 			const isShadowed = (server as { _shadowed?: boolean })._shadowed;
 			const providerEnabled = isProviderEnabled(server._source.provider);
 
@@ -210,7 +213,7 @@ export async function loadAllExtensions(cwd?: string, disabledIds?: string[]): P
 		const hooks = await loadCapability<Hook>("hooks", loadOpts);
 		for (const hook of hooks.all) {
 			const id = makeExtensionId("hook", `${hook.type}:${hook.tool}:${hook.name}`);
-			const isDisabled = disabledExtensions.has(id);
+			const isDisabled = disabled("hook", `${hook.type}:${hook.tool}:${hook.name}`, hook._source, hook.path);
 			const isShadowed = (hook as { _shadowed?: boolean })._shadowed;
 			const providerEnabled = isProviderEnabled(hook._source.provider);
 
@@ -255,7 +258,7 @@ export async function loadAllExtensions(cwd?: string, disabledIds?: string[]): P
 			// Extract filename from path for display
 			const name = path.basename(file.path);
 			const id = makeExtensionId("context-file", `${file.level}:${name}`);
-			const isDisabled = disabledExtensions.has(id);
+			const isDisabled = disabled("context-file", `${file.level}:${name}`, file._source, file.path);
 			const isShadowed = (file as { _shadowed?: boolean })._shadowed;
 			const providerEnabled = isProviderEnabled(file._source.provider);
 

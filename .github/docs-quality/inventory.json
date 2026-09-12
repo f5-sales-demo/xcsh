@@ -656,6 +656,88 @@
             "lc-7afdf244bb09f1fa",
             "lc-d17a0facdbe118b7"
           ]
+        },
+        {
+          "text": "How are development native prerequisites kept current?",
+          "readerQuestion": "How does a contributor keep the native addon matched to current source?",
+          "purpose": "Explain the source-derived native readiness, rebuild, and fresh-process validation contract.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/tui-style-guide.mdx",
+      "classification": "reference",
+      "audience": "xcsh contributors and reviewers",
+      "readerNeed": "Build and review predictable interactive selectors with shared visual, navigation, semantic, and feedback contracts.",
+      "purpose": "Define implementable TUI interaction patterns, annotated examples, a review checklist, and prioritized adoption inventory.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/modes/components/selector-frame.ts",
+        "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+        "packages/coding-agent/test/plugin-dashboard-interactions.test.ts"
+      ],
+      "evidence": [
+        "source-authority"
+      ],
+      "headings": [
+        {
+          "text": "What flow should an interactive manager use?",
+          "readerQuestion": "What sequence should an interactive manager follow?",
+          "purpose": "Define the stable browse, inspect, act, and outcome flow through the reference selectors.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How should a selector look?",
+          "readerQuestion": "Which frame, width, gutter, column, density, and highlight conventions apply?",
+          "purpose": "Define the adaptable visual language for wide and narrow terminals.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How should input and navigation behave?",
+          "readerQuestion": "How do search, navigation, confirmation, and Escape work?",
+          "purpose": "Define predictable keyboard and input editing behavior without shortcut collisions.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which states must the copy distinguish?",
+          "readerQuestion": "How should plugin and asynchronous states be communicated without relying on color?",
+          "purpose": "Separate availability, installation, enabled state, scope, updates, and operation feedback.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do confirmation and review screens work?",
+          "readerQuestion": "How should explicit actions, installation review, removal confirmation, and bulk review behave?",
+          "purpose": "Keep mutations deliberate and make their scope and prerequisite effects visible.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What should reviewers check?",
+          "readerQuestion": "Which concrete checks establish interaction and rendering quality?",
+          "purpose": "Provide a repeatable review checklist for responsive, accessible, and asynchronous behavior.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What did the slash-command library review identify?",
+          "readerQuestion": "Which command surfaces need usability improvements and what is their adoption status?",
+          "purpose": "Track every built-in command and the extensible discovery contract with prioritized, explicitly incomplete adoption work.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Where should the guide be adopted next?",
+          "readerQuestion": "Which interactive surfaces should adopt the contract first?",
+          "purpose": "Prioritize focused follow-up passes without authorizing a repository-wide redesign.",
+          "evidence": ["source-authority"],
+          "legacyConceptIds": []
         }
       ]
     },

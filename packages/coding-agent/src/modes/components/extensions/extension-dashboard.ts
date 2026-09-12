@@ -1,52 +1,129 @@
-/**
- * ExtensionDashboard - Tabbed layout for the Extension Control Center.
- *
- * Layout:
- * - Top: Horizontal tab bar for provider selection
- * - Body: 2-column grid (inventory list | preview panel)
- *
- * Navigation:
- * - TAB/Shift+TAB: Cycle through provider tabs
- * - Up/Down/j/k: Navigate list
- * - Space: Toggle selected item (or master switch)
- * - Esc: Close dashboard (clears search first if active)
- */
-import {
-	type Component,
-	Container,
-	type MouseRoutable,
-	matchesKey,
-	padding,
-	type SgrMouseEvent,
-	Spacer,
-	Text,
-	truncateToWidth,
-	visibleWidth,
-} from "@f5-sales-demo/pi-tui";
+import { createHash } from "node:crypto";
+import { Container, Input, type MouseRoutable, type SgrMouseEvent, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import { Settings } from "../../../config/settings";
-import { DynamicBorder } from "../../../modes/components/dynamic-border";
+import { getAllProvidersInfo, getDisabledProviders, setDisabledProvidersRuntime } from "../../../discovery";
 import { theme } from "../../../modes/theme/theme";
-import { matchesAppInterrupt } from "../../../modes/utils/keybinding-matchers";
-import { ExtensionList } from "./extension-list";
-import { InspectorPanel } from "./inspector-panel";
-import { applyFilter, createInitialState, filterByProvider, refreshState, toggleProvider } from "./state-manager";
-import type { DashboardState } from "./types";
+import type { ActionReview } from "../reviewed-action";
+import { ReviewedActionDialog, type ReviewedActionOutcome } from "../reviewed-action-dialog";
+import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "../selector-frame";
+import { applyFilter, loadAllExtensions } from "./state-manager";
+import { type Extension, makeQualifiedExtensionId, type ProviderTab } from "./types";
 
+interface ProviderInfo {
+	id: string;
+	displayName: string;
+	enabled: boolean;
+}
+
+export interface ExtensionDashboardDependencies {
+	loadExtensions(cwd: string, disabledIds: string[]): Promise<Extension[]>;
+	providers(): ProviderInfo[];
+	getDisabledProviders(): string[];
+	setDisabledProviders(ids: string[]): void;
+}
+
+const productionDependencies: ExtensionDashboardDependencies = {
+	loadExtensions: (cwd, disabledIds) => loadAllExtensions(cwd, disabledIds),
+	providers: () => getAllProvidersInfo(),
+	getDisabledProviders,
+	setDisabledProviders: setDisabledProvidersRuntime,
+};
+
+type DetailTarget = { kind: "extension"; identity: string } | { kind: "provider"; id: string };
+
+function extensionIdentity(extension: Extension): string {
+	return JSON.stringify([
+		extension.kind,
+		extension.name,
+		extension.source.provider,
+		extension.source.level,
+		extension.path,
+	]);
+}
+
+function persistedExtensionIdentity(extension: Extension): string {
+	return makeQualifiedExtensionId(extension.kind, extension.name, extension.source, extension.path);
+}
+
+function revision(value: unknown): string {
+	return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function stateLabel(extension: Extension): string {
+	if (extension.state === "active") return "Active";
+	if (extension.state === "shadowed") return "Shadowed";
+	return extension.disabledReason === "provider-disabled" ? "Provider disabled" : "Disabled";
+}
+
+function semantics(extension: Extension): string {
+	switch (extension.kind) {
+		case "prompt":
+		case "slash-command":
+			return "Prompt expansion: invoking this item expands stored text into the editor; it does not execute until submitted.";
+		case "skill":
+		case "rule":
+		case "context-file":
+		case "instruction":
+			return "Context contribution: this item supplies instructions or context; opening it here never executes code.";
+		case "tool":
+		case "hook":
+		case "mcp":
+		case "extension-module":
+			return "Execution capability: the loaded item can execute when its owning workflow invokes it; opening it here never invokes it.";
+	}
+}
+
+function tabsFor(extensions: Extension[], providers: ProviderInfo[], previous: ProviderTab[] = []): ProviderTab[] {
+	const counts = new Map<string, number>();
+	for (const extension of extensions)
+		counts.set(extension.source.provider, (counts.get(extension.source.provider) ?? 0) + 1);
+	const all: ProviderTab[] = [
+		{ id: "all", label: "All", enabled: true, count: extensions.length },
+		...providers
+			.filter(provider => provider.id !== "native")
+			.map(provider => ({
+				id: provider.id,
+				label: provider.displayName,
+				enabled: provider.enabled,
+				count: counts.get(provider.id) ?? 0,
+			})),
+	];
+	if (!previous.length) return all;
+	const order = new Map(previous.map((tab, index) => [tab.id, index]));
+	return all.sort(
+		(a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+	);
+}
+
+/** Single-column extension inventory with inspect-before-mutate reviewed actions. */
 export class ExtensionDashboard extends Container implements MouseRoutable {
-	#state!: DashboardState;
-	#mainList!: ExtensionList;
-	#inspector!: InspectorPanel;
-	#body!: TwoColumnBody;
-	#tabRanges: Array<{ start: number; end: number; index: number }> = [];
-	#hoveredTabIndex: number | null = null;
+	#extensions: Extension[] = [];
+	#tabs: ProviderTab[] = [];
+	#activeTab = "all";
+	#search = new Input();
+	#selection = new Map<string, string>();
+	#query = new Map<string, string>();
+	#details: DetailTarget | null = null;
+	#actionIndex = 0;
+	#detailOffset = 0;
+	#detailCapacity = 1;
+	#detailLength = 0;
+	#review: ReviewedActionDialog<unknown> | null = null;
+	#loading = false;
+	#notice = "";
+	#noticeTone: "success" | "warning" | "error" | "muted" = "muted";
+	#refreshGeneration = 0;
+	#clickRows = new Map<number, string>();
+	#lastLines: string[] = [];
 
 	onClose?: () => void;
 	onRequestRender?: () => void;
 
 	private constructor(
 		private readonly cwd: string,
-		private readonly settings: Settings | null,
+		private readonly settings: Settings,
 		private readonly getTerminalHeight: () => number,
+		private readonly dependencies: ExtensionDashboardDependencies,
 	) {
 		super();
 	}
@@ -55,347 +132,484 @@ export class ExtensionDashboard extends Container implements MouseRoutable {
 		cwd: string,
 		settings: Settings | null = null,
 		terminalHeight?: number | (() => number),
+		dependencies: ExtensionDashboardDependencies = productionDependencies,
 	): Promise<ExtensionDashboard> {
-		const getTerminalHeight =
-			typeof terminalHeight === "function" ? terminalHeight : () => terminalHeight ?? process.stdout.rows ?? 24;
-		const dashboard = new ExtensionDashboard(cwd, settings, getTerminalHeight);
-		await dashboard.#init();
+		const dashboard = new ExtensionDashboard(
+			cwd,
+			settings ?? (await Settings.init()),
+			typeof terminalHeight === "function" ? terminalHeight : () => terminalHeight ?? process.stdout.rows ?? 24,
+			dependencies,
+		);
+		await dashboard.#refresh("initial");
 		return dashboard;
 	}
 
-	async #init(): Promise<void> {
-		const sm = this.settings ?? (await Settings.init());
-		const disabledIds = sm ? ((sm.get("disabledExtensions") as string[]) ?? []) : [];
-		this.#state = await createInitialState(this.cwd, disabledIds);
+	#activeTabInfo(): ProviderTab | undefined {
+		return this.#tabs.find(tab => tab.id === this.#activeTab);
+	}
 
-		// Calculate max visible items based on terminal height
-		// Reserve ~10 lines for header, tabs, help text, borders
-		const maxVisible = Math.max(5, Math.floor((this.getTerminalHeight() - 10) / 2));
+	#filtered(): Extension[] {
+		const scoped =
+			this.#activeTab === "all"
+				? this.#extensions
+				: this.#extensions.filter(extension => extension.source.provider === this.#activeTab);
+		return applyFilter(scoped, this.#search.getValue());
+	}
 
-		// Create main list - always focused
-		this.#mainList = new ExtensionList(
-			this.#state.searchFiltered,
-			{
-				onSelectionChange: ext => {
-					this.#state.selected = ext;
-					this.#inspector.setExtension(ext);
-				},
-				onToggle: (extensionId, enabled) => {
-					this.#handleExtensionToggle(extensionId, enabled);
-				},
-				onMasterToggle: providerId => {
-					this.#handleProviderToggle(providerId);
-				},
-				masterSwitchProvider: this.#getActiveProviderId(),
-			},
-			maxVisible,
-		);
-		this.#mainList.setFocused(true);
+	#selectedExtension(): Extension | undefined {
+		const items = this.#filtered();
+		const identity = this.#selection.get(this.#activeTab);
+		return items.find(item => extensionIdentity(item) === identity) ?? items[0];
+	}
 
-		// Create inspector
-		this.#inspector = new InspectorPanel();
-		if (this.#state.selected) {
-			this.#inspector.setExtension(this.#state.selected);
+	#rememberSelection(extension: Extension | undefined): void {
+		if (extension) this.#selection.set(this.#activeTab, extensionIdentity(extension));
+	}
+
+	async #refresh(reason: "initial" | "manual" | "mutation"): Promise<void> {
+		const generation = ++this.#refreshGeneration;
+		this.#loading = true;
+		if (reason === "manual") {
+			this.#notice = "Refreshing extension inventory…";
+			this.#noticeTone = "muted";
 		}
-
-		this.#buildLayout();
-	}
-
-	#getActiveProviderId(): string | null {
-		const tab = this.#state.tabs[this.#state.activeTabIndex];
-		return tab && tab.id !== "all" ? tab.id : null;
-	}
-
-	#buildLayout(): void {
-		this.clear();
-
-		// Top border
-		this.addChild(new DynamicBorder());
-
-		// Title
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", " Extension Control Center")), 0, 0));
-
-		// Tab bar
-		this.addChild({ render: () => [this.#renderTabBar()], invalidate: () => {} });
-		this.addChild(new Spacer(1));
-
-		// 2-column body with height limit
-		// Reserve ~8 lines for header, tabs, help text, borders
-		this.#body = new TwoColumnBody(this.#mainList, this.#inspector, () => Math.max(5, this.getTerminalHeight() - 8));
-		this.addChild(this.#body);
-
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", " ↑/↓: navigate  Space: toggle  Tab: next provider  Esc: close"), 0, 0));
-
-		// Bottom border
-		this.addChild(new DynamicBorder());
-	}
-
-	#renderTabBar(): string {
-		const parts: string[] = [" "];
-		this.#tabRanges = [];
-		let column = 1;
-
-		for (let i = 0; i < this.#state.tabs.length; i++) {
-			const tab = this.#state.tabs[i];
-			const isActive = i === this.#state.activeTabIndex;
-			const isEmpty = tab.count === 0 && tab.id !== "all";
-			const isDisabled = !tab.enabled && tab.id !== "all";
-
-			// Build label with count
-			let label = tab.label;
-			if (tab.count > 0) {
-				label += ` (${tab.count})`;
+		this.onRequestRender?.();
+		try {
+			const extensions = await this.dependencies.loadExtensions(
+				this.cwd,
+				(this.settings.get("disabledExtensions") as string[]) ?? [],
+			);
+			if (generation !== this.#refreshGeneration) return;
+			this.#extensions = extensions;
+			this.#tabs = tabsFor(extensions, this.dependencies.providers(), this.#tabs);
+			if (!this.#tabs.some(tab => tab.id === this.#activeTab)) this.#activeTab = "all";
+			this.#rememberSelection(this.#selectedExtension());
+			if (reason === "manual") {
+				this.#notice = "Extension inventory refreshed.";
+				this.#noticeTone = "success";
 			}
-
-			const displayLabel = isDisabled ? `${theme.status.disabled} ${label}` : label;
-			const rawLabel = ` ${displayLabel} `;
-			this.#tabRanges.push({ start: column, end: column + visibleWidth(rawLabel), index: i });
-			column += visibleWidth(rawLabel);
-
-			if (isActive || i === this.#hoveredTabIndex) {
-				// Active tab: background highlight
-				parts.push(theme.bg("selectedBg", ` ${displayLabel} `));
-			} else if (isDisabled) {
-				// Disabled provider: dim
-				parts.push(theme.fg("dim", ` ${displayLabel} `));
-			} else if (isEmpty) {
-				// Empty enabled provider: very dim, unselectable
-				parts.push(theme.fg("dim", ` ${label} `));
-			} else {
-				// Normal enabled provider
-				parts.push(theme.fg("muted", ` ${label} `));
-			}
+		} catch (error) {
+			if (generation !== this.#refreshGeneration) return;
+			this.#notice = `Refresh failed: ${error instanceof Error ? error.message : String(error)}`;
+			this.#noticeTone = "error";
+		} finally {
+			if (generation === this.#refreshGeneration) this.#loading = false;
+			this.onRequestRender?.();
 		}
-
-		return parts.join("");
-	}
-
-	#handleProviderToggle(providerId: string): void {
-		toggleProvider(providerId);
-		void this.#refreshFromState();
-	}
-
-	#handleExtensionToggle(extensionId: string, enabled: boolean): void {
-		const sm = this.settings ?? Settings.instance;
-		if (!sm) return;
-
-		const disabled = ((sm.get("disabledExtensions") as string[]) ?? []).slice();
-		if (enabled) {
-			const index = disabled.indexOf(extensionId);
-			if (index !== -1) {
-				disabled.splice(index, 1);
-				sm.set("disabledExtensions", disabled);
-			}
-		} else {
-			if (!disabled.includes(extensionId)) {
-				disabled.push(extensionId);
-				sm.set("disabledExtensions", disabled);
-			}
-		}
-
-		void this.#refreshFromState();
-	}
-
-	async #refreshFromState(): Promise<void> {
-		// Remember current tab ID before refresh
-		const currentTabId = this.#state.tabs[this.#state.activeTabIndex]?.id;
-
-		const sm = this.settings ?? Settings.instance;
-		const disabledIds = sm ? ((sm.get("disabledExtensions") as string[]) ?? []) : [];
-		this.#state = await refreshState(this.#state, this.cwd, disabledIds);
-
-		// Find the same tab in the new (re-sorted) list
-		if (currentTabId) {
-			const newIndex = this.#state.tabs.findIndex(t => t.id === currentTabId);
-			if (newIndex >= 0) {
-				this.#state.activeTabIndex = newIndex;
-			}
-		}
-
-		this.#mainList.setExtensions(this.#state.searchFiltered);
-		this.#mainList.setMasterSwitchProvider(this.#getActiveProviderId());
-
-		if (this.#state.selected) {
-			this.#inspector.setExtension(this.#state.selected);
-		}
-
-		this.#buildLayout();
 	}
 
 	#switchTab(direction: 1 | -1): void {
-		const numTabs = this.#state.tabs.length;
-		if (numTabs === 0) return;
-
-		// Find next selectable tab (skip empty+enabled providers)
-		let nextIndex = this.#state.activeTabIndex;
-		for (let i = 0; i < numTabs; i++) {
-			nextIndex = (nextIndex + direction + numTabs) % numTabs;
-			const tab = this.#state.tabs[nextIndex];
-			const isEmptyEnabled = tab.count === 0 && tab.enabled && tab.id !== "all";
-			if (!isEmptyEnabled) break;
-		}
-		this.#state.activeTabIndex = nextIndex;
-		this.#activateTab(nextIndex);
+		if (!this.#tabs.length) return;
+		this.#query.set(this.#activeTab, this.#search.getValue());
+		const index = Math.max(
+			0,
+			this.#tabs.findIndex(tab => tab.id === this.#activeTab),
+		);
+		this.#activeTab = this.#tabs[(index + direction + this.#tabs.length) % this.#tabs.length]!.id;
+		this.#search.setValue(this.#query.get(this.#activeTab) ?? "");
+		this.#rememberSelection(this.#selectedExtension());
+		this.#detailOffset = 0;
 	}
 
-	#activateTab(index: number): void {
-		this.#state.activeTabIndex = index;
-
-		// Re-filter for new tab
-		const tab = this.#state.tabs[this.#state.activeTabIndex];
-		this.#state.tabFiltered = filterByProvider(this.#state.extensions, tab.id);
-		this.#state.searchFiltered = applyFilter(this.#state.tabFiltered, this.#state.searchQuery);
-		this.#state.listIndex = 0;
-		this.#state.scrollOffset = 0;
-		this.#state.selected = this.#state.searchFiltered[0] ?? null;
-
-		// Update list
-		this.#mainList.setExtensions(this.#state.searchFiltered);
-		this.#mainList.setMasterSwitchProvider(this.#getActiveProviderId());
-		this.#mainList.resetSelection();
-
-		if (this.#state.selected) {
-			this.#inspector.setExtension(this.#state.selected);
-		}
-
-		this.#buildLayout();
+	#extensionReview(extension: Extension): ActionReview {
+		const saved = (this.settings.get("disabledExtensions") as string[]) ?? [];
+		const qualified = persistedExtensionIdentity(extension);
+		const disabled = saved.includes(qualified) || saved.includes(extension.id);
+		return {
+			identity: `extension:${extensionIdentity(extension)}`,
+			scope: `${extension.source.level} extension settings · provider ${extension.source.provider}`,
+			revision: revision({
+				identity: extensionIdentity(extension),
+				state: extension.state,
+				description: extension.description,
+				trigger: extension.trigger,
+				shadowedBy: extension.shadowedBy,
+				raw: extension.raw,
+				disabled,
+				disabledExtensions: saved,
+			}),
+			changes: [
+				{
+					field: "Enabled override",
+					before: disabled ? "Disabled" : "Enabled",
+					after: disabled ? "Enabled" : "Disabled",
+				},
+			],
+			consequence: `${disabled ? "Enables" : "Disables"} only this ${extension.kind} identity. Provider state, shadowing, and project precedence remain separate; reload may be required before runtime use changes.`,
+		};
 	}
 
-	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
-		if (event.motion) {
-			const hoveredTab =
-				event.row === 2
-					? (this.#tabRanges.find(range => event.col >= range.start && event.col < range.end)?.index ?? null)
-					: null;
-			this.#hoveredTabIndex = hoveredTab;
+	#providerReview(provider: ProviderTab): ActionReview {
+		const disabled = new Set(this.dependencies.getDisabledProviders());
+		const enabled = !disabled.has(provider.id);
+		return {
+			identity: `provider:${provider.id}`,
+			scope: "user discovery provider settings",
+			revision: revision({ id: provider.id, enabled, disabled: [...disabled].sort() }),
+			changes: [
+				{
+					field: "Provider enabled",
+					before: enabled ? "Enabled" : "Disabled",
+					after: enabled ? "Disabled" : "Enabled",
+				},
+			],
+			consequence: `${enabled ? "Disables" : "Enables"} discovery for this provider across skills, tools, commands, hooks, prompts, context, and MCP definitions. Item overrides remain stored and a reload may be required.`,
+		};
+	}
+
+	async #persistSetting(
+		path: "disabledExtensions" | "disabledProviders",
+		before: string[],
+		after: string[],
+	): Promise<void> {
+		this.settings.set(path, after);
+		try {
+			await this.settings.flush({ throwOnError: true });
+		} catch (error) {
+			this.settings.set(path, before);
+			try {
+				await this.settings.flush({ throwOnError: true });
+			} catch {
+				// The original state remains the desired retry target; keep the primary error.
+			}
+			throw error;
 		}
-		if (event.leftClick && event.row === 2) {
-			const hit = this.#tabRanges.find(range => event.col >= range.start && event.col < range.end);
-			const tab = hit ? this.#state.tabs[hit.index] : undefined;
-			if (hit && tab && !(tab.count === 0 && tab.enabled && tab.id !== "all")) this.#activateTab(hit.index);
-			return;
-		}
-		const bodyLine = event.row - 4;
-		if (bodyLine < 0 || bodyLine >= this.#body.maxHeight) {
-			if (event.motion) this.#mainList.setHoverIndex(null);
-			this.onRequestRender?.();
-			return;
-		}
-		if (event.col < this.#body.leftWidth) {
-			if (event.wheel !== null) this.#mainList.handleWheel(event.wheel);
-			else if (event.motion) this.#mainList.setHoverIndex(this.#mainList.hitTest(bodyLine));
-			else if (event.leftClick) this.#mainList.handleClick(bodyLine);
-		} else if (event.col >= this.#body.leftWidth + 3 && event.wheel !== null) {
-			this.#body.scrollInspector(event.wheel);
-		} else if (event.motion) {
-			this.#mainList.setHoverIndex(null);
+	}
+
+	#openExtensionReview(extension: Extension): void {
+		const reviewedIdentity = extensionIdentity(extension);
+		const review = this.#extensionReview(extension);
+		this.#review = new ReviewedActionDialog(
+			extension.state === "disabled" ? "enable extension" : "disable extension",
+			{
+				review,
+				resolve: async () => {
+					const extensions = await this.dependencies.loadExtensions(
+						this.cwd,
+						(this.settings.get("disabledExtensions") as string[]) ?? [],
+					);
+					const current = extensions.find(item => extensionIdentity(item) === reviewedIdentity);
+					return current ? { review: this.#extensionReview(current), target: current } : undefined;
+				},
+				execute: async target => {
+					const current = target as Extension;
+					const before = [...((this.settings.get("disabledExtensions") as string[]) ?? [])];
+					const disabled = new Set(before);
+					const qualified = persistedExtensionIdentity(current);
+					if (disabled.has(qualified) || disabled.has(current.id)) {
+						disabled.delete(qualified);
+						disabled.delete(current.id);
+					} else disabled.add(qualified);
+					await this.#persistSetting("disabledExtensions", before, [...disabled].sort());
+				},
+			},
+			outcome => this.#finishReview(outcome, extension.displayName),
+			() => this.onRequestRender?.(),
+			this.getTerminalHeight,
+		);
+	}
+
+	#openProviderReview(provider: ProviderTab): void {
+		const review = this.#providerReview(provider);
+		this.#review = new ReviewedActionDialog(
+			provider.enabled ? "disable provider" : "enable provider",
+			{
+				review,
+				resolve: async () => {
+					const current = tabsFor(this.#extensions, this.dependencies.providers()).find(
+						tab => tab.id === provider.id,
+					);
+					return current ? { review: this.#providerReview(current), target: current } : undefined;
+				},
+				execute: async target => {
+					const current = target as ProviderTab;
+					const before = [...this.dependencies.getDisabledProviders()].sort();
+					const disabled = new Set(before);
+					if (disabled.has(current.id)) disabled.delete(current.id);
+					else disabled.add(current.id);
+					const after = [...disabled].sort();
+					await this.#persistSetting("disabledProviders", before, after);
+					this.dependencies.setDisabledProviders(after);
+				},
+			},
+			outcome => this.#finishReview(outcome, provider.label),
+			() => this.onRequestRender?.(),
+			this.getTerminalHeight,
+		);
+	}
+
+	#finishReview(outcome: ReviewedActionOutcome, label: string): void {
+		this.#review = null;
+		if (outcome === "succeeded") {
+			this.#notice = `Saved extension state for ${label}.`;
+			this.#noticeTone = "success";
+			void this.#refresh("mutation");
+		} else if (outcome === "interrupted") {
+			this.#notice = `Extension change for ${label} was interrupted.`;
+			this.#noticeTone = "warning";
 		}
 		this.onRequestRender?.();
 	}
 
-	handleInput(data: string): void {
-		// Ctrl+C - close immediately
-		if (matchesKey(data, "ctrl+c")) {
-			this.onClose?.();
-			return;
-		}
+	#detailsTarget(): Extension | ProviderTab | undefined {
+		const details = this.#details;
+		if (!details) return undefined;
+		if (details.kind === "provider") return this.#tabs.find(tab => tab.id === details.id);
+		return this.#extensions.find(extension => extensionIdentity(extension) === details.identity);
+	}
 
-		// Escape - clear search first, then close
-		if (matchesAppInterrupt(data)) {
-			if (this.#state.searchQuery.length > 0) {
-				this.#state.searchQuery = "";
-				this.#state.searchFiltered = this.#state.tabFiltered;
-				this.#mainList.setExtensions(this.#state.searchFiltered);
-				this.#mainList.clearSearch();
-				this.#buildLayout();
-				return;
+	override render(width: number): string[] {
+		if (this.#review) return this.#review.render(width);
+		const inner = selectorFrameContentWidth(width);
+		const height = this.getTerminalHeight();
+		if (this.#details) {
+			const target = this.#detailsTarget();
+			if (!target) {
+				this.#details = null;
+				return this.render(width);
 			}
-			this.onClose?.();
-			return;
+			const provider = "count" in target;
+			const actions = provider
+				? [`${target.enabled ? "Disable" : "Enable"} provider`]
+				: [
+						`${
+							[...((this.settings.get("disabledExtensions") as string[]) ?? [])].some(
+								id => id === target.id || id === persistedExtensionIdentity(target),
+							)
+								? "Enable"
+								: "Disable"
+						} extension`,
+						...(target.source.provider === "native" ? [] : [`Manage provider: ${target.source.providerName}`]),
+					];
+			const details = provider
+				? [
+						`Identifier: ${target.id}`,
+						`Saved state: ${target.enabled ? "Enabled" : "Disabled"}`,
+						`Discovered items: ${target.count}`,
+						"Provider state controls discovery across capability kinds; item overrides remain separate.",
+					]
+				: [
+						`Identifier: ${target.kind}:${target.name}`,
+						`Provider: ${target.source.providerName} (${target.source.provider})`,
+						`Scope: ${target.source.level}`,
+						`Status: ${stateLabel(target)}${target.disabledReason ? ` · ${target.disabledReason}` : ""}`,
+						`Path: ${target.path}`,
+						target.trigger ? `Trigger: ${target.trigger}` : "",
+						target.shadowedBy ? `Shadowed by: ${target.shadowedBy}` : "",
+						target.description ?? "",
+						semantics(target),
+					];
+			const wrapped = details.flatMap(line => (line ? wrapTextWithAnsi(line, inner) : []));
+			this.#detailCapacity = Math.max(1, height - 11 - actions.length);
+			this.#detailLength = wrapped.length;
+			this.#detailOffset = Math.min(this.#detailOffset, Math.max(0, wrapped.length - this.#detailCapacity));
+			this.#lastLines = selectorFrame(
+				width,
+				height,
+				provider ? "Provider details" : "Extension details",
+				provider ? target.label : target.displayName,
+				[],
+				actions.map((action, index) => selectorRow([action], [inner - 2], index === this.#actionIndex)),
+				wrapped.slice(this.#detailOffset, this.#detailOffset + this.#detailCapacity),
+				[
+					...(this.#notice ? [theme.fg(this.#noticeTone, this.#notice)] : []),
+					...(wrapped.length > this.#detailCapacity ? ["PgUp/PgDn: details"] : []),
+					"Esc: back",
+				],
+				{ selectedBodyIndex: this.#actionIndex },
+			);
+			this.#mapClickRows(actions);
+			return this.#lastLines;
 		}
 
-		// Tab/Shift+Tab: Cycle through tabs
-		if (matchesKey(data, "tab")) {
-			this.#switchTab(1);
-			return;
-		}
-		if (matchesKey(data, "shift+tab")) {
-			this.#switchTab(-1);
-			return;
-		}
-
-		// All other input goes to the list
-		this.#mainList.handleInput(data);
-
-		// Sync search query back to state
-		const query = this.#mainList.getSearchQuery();
-		if (query !== this.#state.searchQuery) {
-			this.#state.searchQuery = query;
-			this.#state.searchFiltered = applyFilter(this.#state.tabFiltered, query);
-		}
-	}
-}
-
-/**
- * Two-column body component for side-by-side rendering.
- */
-class TwoColumnBody implements Component {
-	#leftWidth = 0;
-	#rightScroll = 0;
-	#rightTotal = 0;
-	constructor(
-		private readonly leftPane: ExtensionList,
-		private readonly rightPane: InspectorPanel,
-		private readonly getMaxHeight: () => number,
-	) {}
-
-	get leftWidth(): number {
-		return this.#leftWidth;
-	}
-
-	get maxHeight(): number {
-		return this.getMaxHeight();
-	}
-
-	scrollInspector(delta: -1 | 1): void {
-		this.#rightScroll = Math.max(
-			0,
-			Math.min(Math.max(0, this.#rightTotal - this.maxHeight), this.#rightScroll + delta),
+		const tab = this.#activeTabInfo();
+		const extensions = this.#filtered();
+		const selected = this.#selectedExtension();
+		this.#rememberSelection(selected);
+		const providerRow = tab && tab.id !== "all" ? [`Manage provider: ${tab.label}`] : [];
+		const rows = [
+			...providerRow.map(label =>
+				selectorRow([label, tab!.enabled ? "Enabled" : "Disabled"], [Math.max(1, inner - 14), 10], false),
+			),
+			...extensions.map(extension =>
+				selectorRow(
+					[
+						extension.displayName,
+						`${extension.kind} · ${stateLabel(extension)}`,
+						`${extension.source.provider}/${extension.source.level}`,
+					],
+					[
+						Math.max(1, Math.floor(inner * 0.36)),
+						Math.max(1, Math.floor(inner * 0.34)),
+						Math.max(1, inner - Math.floor(inner * 0.7) - 6),
+					],
+					extension === selected,
+				),
+			),
+		];
+		const noResults = !extensions.length
+			? [
+					this.#extensions.length
+						? `No extensions match “${this.#search.getValue()}”.`
+						: "No extensions are available.",
+				]
+			: [];
+		const tabLine = this.#tabs
+			.map(
+				item =>
+					`${item.id === this.#activeTab ? "[" : ""}${item.label} (${item.count})${item.id === this.#activeTab ? "]" : ""}`,
+			)
+			.join("  ");
+		const selectedIndex = selected ? providerRow.length + extensions.indexOf(selected) : 0;
+		const selectedDetails = selected
+			? `${selected.kind}:${selected.name} · ${selected.source.provider}/${selected.source.level} · ${stateLabel(selected)}`
+			: "";
+		this.#lastLines = selectorFrame(
+			width,
+			height,
+			"Extension control center",
+			"Inspect discovered capabilities before changing saved enablement",
+			[
+				...wrapTextWithAnsi(tabLine, inner),
+				...this.#search.render(Math.max(1, inner - 8)).map(line => `Search: ${line}`),
+			],
+			rows.length ? rows : noResults,
+			[
+				selectedDetails,
+				this.#notice ? theme.fg(this.#noticeTone, this.#notice) : "",
+				this.#loading ? theme.fg("muted", "Refreshing while cached results remain available…") : "",
+			],
+			["Tab/Shift+Tab: provider", "Ctrl+R: refresh", "Esc: back"],
+			{ selectedBodyIndex: selectedIndex, overflowHint: "PgUp/PgDn: more extensions" },
 		);
+		this.#mapClickRows([...providerRow, ...extensions.map(extension => extensionIdentity(extension))]);
+		return this.#lastLines;
 	}
 
-	render(width: number): string[] {
-		const maxHeight = this.maxHeight;
-		this.leftPane.setMaxVisible(Math.max(5, Math.floor((maxHeight - 2) / 2)));
-		const leftWidth = Math.floor(width * 0.5);
-		this.#leftWidth = leftWidth;
-		const rightWidth = Math.max(0, width - leftWidth - 3);
-
-		const leftLines = this.leftPane.render(leftWidth);
-		const rightLines = this.rightPane.render(rightWidth);
-		this.#rightTotal = rightLines.length;
-		const maxScroll = Math.max(0, rightLines.length - maxHeight);
-		this.#rightScroll = Math.min(this.#rightScroll, maxScroll);
-		const visibleRight = rightLines.slice(this.#rightScroll, this.#rightScroll + maxHeight);
-
-		// Limit to maxHeight lines
-		const numLines = maxHeight;
-		const combined: string[] = [];
-		const separator = theme.fg("dim", ` ${theme.boxSharp.vertical} `);
-
-		for (let i = 0; i < numLines; i++) {
-			const left = truncateToWidth(leftLines[i] ?? "", leftWidth);
-			const leftPadded = left + padding(Math.max(0, leftWidth - visibleWidth(left)));
-			const right = truncateToWidth(visibleRight[i] ?? "", rightWidth);
-			combined.push(leftPadded + separator + right);
+	#mapClickRows(keys: string[]): void {
+		this.#clickRows.clear();
+		if (this.#details) {
+			for (let line = 0; line < this.#lastLines.length; line++) {
+				const plain = Bun.stripANSI(this.#lastLines[line] ?? "");
+				const index = keys.findIndex(key => plain.includes(key));
+				if (index >= 0) this.#clickRows.set(line, `action:${index}`);
+			}
+			return;
 		}
-
-		return combined;
+		const tab = this.#activeTabInfo();
+		for (let line = 0; line < this.#lastLines.length; line++) {
+			const plain = Bun.stripANSI(this.#lastLines[line] ?? "");
+			if (tab && tab.id !== "all" && plain.includes(`Manage provider: ${tab.label}`)) {
+				this.#clickRows.set(line, `provider:${tab.id}`);
+				continue;
+			}
+			for (const extension of this.#filtered()) {
+				if (plain.includes(extension.displayName) && plain.includes(extension.kind)) {
+					this.#clickRows.set(line, extensionIdentity(extension));
+					break;
+				}
+			}
+		}
 	}
 
-	invalidate(): void {
-		this.leftPane.invalidate?.();
-		this.rightPane.invalidate?.();
+	handleInput(data: string): void {
+		if (this.#review) {
+			this.#review.handleInput(data);
+			return;
+		}
+		if (data === "\x03") return;
+		if (this.#details) {
+			if (matchesSelectorKey(data, "cancel")) {
+				this.#details = null;
+				this.#detailOffset = 0;
+				this.#actionIndex = 0;
+			} else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
+				const target = this.#detailsTarget();
+				const count = target && !("count" in target) && target.source.provider !== "native" ? 2 : 1;
+				const delta = matchesSelectorKey(data, "up") ? -1 : 1;
+				this.#actionIndex = (this.#actionIndex + delta + count) % count;
+			} else if (matchesSelectorKey(data, "pageDown"))
+				this.#detailOffset = Math.min(
+					Math.max(0, this.#detailLength - this.#detailCapacity),
+					this.#detailOffset + this.#detailCapacity,
+				);
+			else if (matchesSelectorKey(data, "pageUp"))
+				this.#detailOffset = Math.max(0, this.#detailOffset - this.#detailCapacity);
+			else if (matchesSelectorKey(data, "confirm")) {
+				const target = this.#detailsTarget();
+				if (target && "count" in target) this.#openProviderReview(target);
+				else if (target && this.#actionIndex === 0) this.#openExtensionReview(target);
+				else if (target) {
+					const provider = this.#tabs.find(tab => tab.id === target.source.provider);
+					if (provider) {
+						this.#details = { kind: "provider", id: provider.id };
+						this.#actionIndex = 0;
+						this.#detailOffset = 0;
+					}
+				}
+			}
+			this.onRequestRender?.();
+			return;
+		}
+		if (data === "\x12") {
+			void this.#refresh("manual");
+			return;
+		}
+		if (data === "\t" || data === "\x1b[Z") {
+			this.#switchTab(data === "\t" ? 1 : -1);
+			this.onRequestRender?.();
+			return;
+		}
+		if (matchesSelectorKey(data, "cancel")) {
+			if (this.#search.getValue()) {
+				this.#search.setValue("");
+				this.#query.set(this.#activeTab, "");
+				this.#rememberSelection(this.#selectedExtension());
+			} else this.onClose?.();
+		} else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
+			const items = this.#filtered();
+			if (items.length) {
+				const selected = this.#selectedExtension();
+				const index = Math.max(0, selected ? items.indexOf(selected) : 0);
+				const delta = matchesSelectorKey(data, "up") ? -1 : 1;
+				this.#rememberSelection(items[(index + delta + items.length) % items.length]);
+			}
+		} else if (matchesSelectorKey(data, "confirm")) {
+			const selected = this.#selectedExtension();
+			if (selected) this.#details = { kind: "extension", identity: extensionIdentity(selected) };
+			else {
+				const tab = this.#activeTabInfo();
+				if (tab && tab.id !== "all") this.#details = { kind: "provider", id: tab.id };
+			}
+		} else {
+			const before = this.#search.getValue();
+			this.#search.handleInput(data);
+			if (before !== this.#search.getValue()) {
+				this.#query.set(this.#activeTab, this.#search.getValue());
+				this.#rememberSelection(this.#selectedExtension());
+			}
+		}
+		this.onRequestRender?.();
+	}
+
+	routeMouse(event: SgrMouseEvent, line: number): void {
+		if (this.#review || event.release) return;
+		if (event.wheel !== null) {
+			this.handleInput(event.wheel > 0 ? "\x1b[B" : "\x1b[A");
+			return;
+		}
+		if (!event.leftClick) return;
+		const key = this.#clickRows.get(line);
+		if (!key) return;
+		if (key.startsWith("action:")) this.handleInput("\r");
+		else if (key.startsWith("provider:")) {
+			this.#details = { kind: "provider", id: key.slice(9) };
+			this.onRequestRender?.();
+		} else {
+			const alreadySelected = this.#selection.get(this.#activeTab) === key;
+			this.#selection.set(this.#activeTab, key);
+			if (alreadySelected) this.#details = { kind: "extension", identity: key };
+			this.onRequestRender?.();
+		}
 	}
 }

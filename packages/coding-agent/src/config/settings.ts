@@ -233,6 +233,27 @@ export class Settings {
 		return getDefault(path);
 	}
 
+	/** Read-only scope provenance for internal interactive reviews; this does not write or change precedence. */
+	inspectScopes<P extends SettingPath>(
+		path: P,
+	): {
+		userValue: SettingValue<P>;
+		effectiveValue: SettingValue<P>;
+		userExplicit: boolean;
+		projectValue: SettingValue<P> | undefined;
+		runtimeValue: SettingValue<P> | undefined;
+	} {
+		const segments = path.split(".");
+		const user = getByPath(this.#global, segments);
+		return structuredClone({
+			userValue: (user === undefined ? getDefault(path) : user) as SettingValue<P>,
+			effectiveValue: this.get(path),
+			userExplicit: user !== undefined,
+			projectValue: getByPath(this.#project, segments) as SettingValue<P> | undefined,
+			runtimeValue: getByPath(this.#overrides, segments) as SettingValue<P> | undefined,
+		});
+	}
+
 	/**
 	 * Set a setting value (sync).
 	 * Updates global settings and queues a background save.
@@ -393,8 +414,18 @@ export class Settings {
 	 * Set a model role (helper for modelRoles record).
 	 */
 	setModelRole(role: ModelRole | string, modelId: string): void {
-		const current = this.get("modelRoles");
-		this.set("modelRoles", { ...current, [role]: modelId });
+		// Track the individual role path so the locked save can re-read and
+		// preserve other roles written by a concurrent settings instance or a
+		// preceding reviewed action. Treating the whole modelRoles map as one
+		// modified value allowed a stale in-memory map to overwrite those writes.
+		const explicitRoles = getByPath(this.#global, ["modelRoles"]);
+		setByPath(this.#global, ["modelRoles"], {
+			...(explicitRoles && typeof explicitRoles === "object" ? explicitRoles : {}),
+			[role]: modelId,
+		});
+		this.#modified.add(`modelRoles.${role}`);
+		this.#rebuildMerged();
+		this.#queueSave();
 	}
 
 	/**

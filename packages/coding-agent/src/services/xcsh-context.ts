@@ -274,7 +274,7 @@ export class ContextService {
 				this.#namespacesCache = namespaces.map(n => n.name).sort((a, b) => a.localeCompare(b));
 			})
 			.catch(err => {
-				logger.debug("XCSH namespace cache population failed", { error: String(err) });
+				logger.debug("xcsh namespace cache population failed", { error: String(err) });
 			});
 	}
 
@@ -411,7 +411,7 @@ export class ContextService {
 					this.#assertCompatibleVersion(localContext);
 				} catch (err) {
 					versionOk = false;
-					logger.warn("XCSH: local context uses incompatible schema version, skipping", {
+					logger.warn("xcsh: local context uses incompatible schema version, skipping", {
 						sourcePath: localResult.sourcePath,
 						error: String(err),
 					});
@@ -422,7 +422,7 @@ export class ContextService {
 					this.#applyToSettings(localContext);
 					this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 					this.#refreshApiClient(localContext);
-					logger.debug("XCSH: using project context", {
+					logger.debug("xcsh: using project context", {
 						name: localContext.name,
 						source: localResult.sourcePath,
 					});
@@ -472,7 +472,7 @@ export class ContextService {
 		try {
 			this.#assertCompatibleVersion(context);
 		} catch (err) {
-			logger.warn("XCSH: context uses incompatible schema version, skipping", {
+			logger.warn("xcsh: context uses incompatible schema version, skipping", {
 				name: contextName,
 				error: String(err),
 			});
@@ -545,7 +545,7 @@ export class ContextService {
 			// surfacing them in /context list or /context activate <tab> just
 			// offers users a selection that the handler will immediately refuse.
 			if (!this.#isValidContextName(name)) {
-				logger.warn("XCSH context file has invalid name, skipping", { name });
+				logger.warn("xcsh context file has invalid name, skipping", { name });
 				continue;
 			}
 			const context = this.#readContext(name);
@@ -672,12 +672,10 @@ export class ContextService {
 	 *      rejects the whole import; no writes occur.
 	 *   5. Conflict detection against a fresh listContexts() read — not the
 	 *      in-memory cache, which can miss concurrent-session edits.
-	 *   6. Atomic per-file write loop. Each write is atomic individually via
-	 *      #atomicWrite, but the overall import is NOT transactional: if the
-	 *      Nth of M writes throws, the first N-1 contexts are kept and the
-	 *      remainder are not written. Multi-file rollback would require a
-	 *      two-phase commit we do not implement; validation steps 1–5 catch
-	 *      all foreseeable failures before any write begins.
+	 *   6. Atomic per-file write loop with rollback snapshots. If the Nth of M
+	 *      writes fails, every earlier destination is restored (or removed when
+	 *      newly created) before the error is returned. A rollback failure is
+	 *      reported explicitly instead of implying the import was atomic.
 	 *   7. Cache refresh.
 	 */
 	async importContexts(bundle: unknown, opts: { overwrite: boolean }): Promise<ImportResult> {
@@ -778,21 +776,55 @@ export class ContextService {
 			);
 		}
 
-		// 6. Write loop — atomic per-file
+		// 6. Write loop — atomic per-file, transactional across the bundle by
+		// restoring exact pre-import destination bytes on any later failure.
 		fs.mkdirSync(this.contextsDir, { recursive: true, mode: 0o700 });
 		const imported: string[] = [];
 		const overwritten: string[] = [];
+		const snapshots = new Map<string, string | undefined>();
 		for (const context of normalized) {
 			const filePath = path.join(this.contextsDir, `${context.name}.json`);
-			const wasExisting = existingNames.has(context.name);
-			const payload: XCSHContext = {
-				...context,
-				version: context.version ?? CURRENT_SCHEMA_VERSION,
-				metadata: context.metadata ?? { createdAt: new Date().toISOString() },
-			};
-			this.#atomicWrite(filePath, JSON.stringify(payload, null, 2));
-			imported.push(context.name);
-			if (wasExisting) overwritten.push(context.name);
+			snapshots.set(
+				filePath,
+				fs.existsSync(filePath) && fs.statSync(filePath).isFile() ? fs.readFileSync(filePath, "utf8") : undefined,
+			);
+		}
+		try {
+			for (const context of normalized) {
+				const filePath = path.join(this.contextsDir, `${context.name}.json`);
+				const wasExisting = existingNames.has(context.name);
+				const payload: XCSHContext = {
+					...context,
+					version: context.version ?? CURRENT_SCHEMA_VERSION,
+					metadata: context.metadata ?? { createdAt: new Date().toISOString() },
+				};
+				this.#atomicWrite(filePath, JSON.stringify(payload, null, 2));
+				imported.push(context.name);
+				if (wasExisting) overwritten.push(context.name);
+			}
+		} catch (error) {
+			const rollbackFailures: string[] = [];
+			for (const name of [...imported].reverse()) {
+				const filePath = path.join(this.contextsDir, `${name}.json`);
+				try {
+					const snapshot = snapshots.get(filePath);
+					if (snapshot === undefined) {
+						if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+					} else {
+						this.#atomicWrite(filePath, snapshot);
+					}
+				} catch {
+					rollbackFailures.push(name);
+				}
+			}
+			await this.listContexts();
+			const reason = error instanceof Error ? error.message : String(error);
+			if (rollbackFailures.length > 0) {
+				throw new ContextError(
+					`Context import failed (${reason}). Rollback was incomplete for: ${rollbackFailures.join(", ")}. Inspect those context files before retrying.`,
+				);
+			}
+			throw new ContextError(`Context import failed (${reason}). No context changes were kept.`);
 		}
 
 		// 7. Cache refresh
@@ -868,7 +900,7 @@ export class ContextService {
 				try {
 					fs.renameSync(newPath, oldPath);
 				} catch (rollbackErr) {
-					logger.warn("XCSH context rename rollback failed — manual recovery required", {
+					logger.warn("xcsh context rename rollback failed — manual recovery required", {
 						oldName,
 						newName,
 						originalError: String(err),
@@ -1034,7 +1066,7 @@ export class ContextService {
 			this.#lastAuthCheckedAt = checkedAt;
 			this.#authStatus = shared.status;
 		}
-		logger.debug("XCSH token validation", {
+		logger.debug("xcsh token validation", {
 			status: result.status,
 			httpStatus: result.httpStatus,
 			latencyMs: result.latencyMs,
@@ -1158,8 +1190,16 @@ export class ContextService {
 		// explicitly writes at 0o600. active_context pointer is also
 		// tightened — it names the context but carries no credentials, so
 		// 0o600 is strictly no worse.
-		fs.writeFileSync(tmpPath, content, { mode: 0o600 });
-		fs.renameSync(tmpPath, filePath);
+		try {
+			fs.writeFileSync(tmpPath, content, { mode: 0o600 });
+			fs.renameSync(tmpPath, filePath);
+		} finally {
+			try {
+				if (fs.existsSync(tmpPath) && fs.statSync(tmpPath).isFile()) fs.unlinkSync(tmpPath);
+			} catch {
+				// The primary write/rename error is more useful than temp cleanup failure.
+			}
+		}
 	}
 
 	#isValidContextName(name: string): boolean {
@@ -1200,7 +1240,7 @@ export class ContextService {
 			if (!name) return null;
 			// Validate to prevent path traversal from crafted active_context files
 			if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
-				logger.warn("XCSH active_context contains invalid name", { name });
+				logger.warn("xcsh active_context contains invalid name", { name });
 				return null;
 			}
 			return name;
@@ -1223,7 +1263,7 @@ export class ContextService {
 	 */
 	#validateContextShape(obj: unknown, canonicalName: string): XCSHContext | null {
 		if (!obj || typeof obj !== "object") {
-			logger.warn("XCSH context is not an object", { name: canonicalName });
+			logger.warn("xcsh context is not an object", { name: canonicalName });
 			return null;
 		}
 		const parsed = obj as Record<string, unknown>;
@@ -1234,11 +1274,11 @@ export class ContextService {
 			!parsed.apiToken ||
 			typeof parsed.apiToken !== "string"
 		) {
-			logger.warn("XCSH context missing or invalid required fields", { name: canonicalName });
+			logger.warn("xcsh context missing or invalid required fields", { name: canonicalName });
 			return null;
 		}
 		if (parsed.defaultNamespace && typeof parsed.defaultNamespace !== "string") {
-			logger.warn("XCSH context has non-string defaultNamespace", { name: canonicalName });
+			logger.warn("xcsh context has non-string defaultNamespace", { name: canonicalName });
 			return null;
 		}
 
@@ -1266,7 +1306,7 @@ export class ContextService {
 					}
 					// Warn on mismatch OR when there is no top-level field to compare (XCSH_TENANT)
 					if (topLevelValue === undefined || v !== topLevelValue) {
-						logger.warn("XCSH context env contains reserved key — stripping", {
+						logger.warn("xcsh context env contains reserved key — stripping", {
 							name: canonicalName,
 							key: k,
 							envValue: SECRET_ENV_PATTERNS.test(k) ? "[redacted]" : v,
@@ -1333,7 +1373,7 @@ export class ContextService {
 		const filePath = path.join(this.contextsDir, `${name}.json`);
 		try {
 			if (!fs.existsSync(filePath)) {
-				logger.warn("XCSH context file not found", { name, path: filePath });
+				logger.warn("xcsh context file not found", { name, path: filePath });
 				return null;
 			}
 			const content = fs.readFileSync(filePath, "utf-8");
@@ -1345,7 +1385,7 @@ export class ContextService {
 			}
 			return context;
 		} catch (err) {
-			logger.warn("XCSH context read error", { name, error: String(err) });
+			logger.warn("xcsh context read error", { name, error: String(err) });
 			return null;
 		}
 	}
@@ -1364,7 +1404,7 @@ export class ContextService {
 		// it directly), inject context values for the rest. This avoids both
 		// overriding explicit env vars AND losing context values for unset keys.
 		const existing = (Settings.instance.get("bash.environment") ?? {}) as Record<string, string>;
-		// Preserve non-XCSH keys (user-defined HTTP_PROXY, PATH, etc.) but clear
+		// Preserve non-xcsh keys (user-defined HTTP_PROXY, PATH, etc.) but clear
 		// all XCSH_* keys to prevent stale credentials leaking across context switches
 		const merged: Record<string, string> = {};
 		for (const [key, value] of Object.entries(existing)) {

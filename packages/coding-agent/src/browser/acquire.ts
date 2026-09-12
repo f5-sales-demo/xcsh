@@ -176,10 +176,19 @@ async function launch(executablePath: string, args: string[]): Promise<Browser> 
 	return puppeteer.launch({ headless: false, executablePath, args, defaultViewport: null });
 }
 
+export interface BrowserAcquisitionStep {
+	action: "attach" | "launch" | "quit";
+	endpoint: string;
+	executable?: string;
+	profile?: string;
+}
+
 export async function acquirePage(opts: {
 	settings: { get(key: string): unknown };
 	debugPort?: number;
 	allowRelaunch?: boolean;
+	/** Internal interactive review boundary; omitted by existing CLI/tool callers. */
+	beforeAction?: (step: BrowserAcquisitionStep) => Promise<void>;
 }): Promise<{ browser: Browser; page: Page; mode: AcquireMode }> {
 	const debugPort = opts.debugPort ?? DEFAULT_DEBUG_PORT;
 	const configuredUrl = resolveBrowserConnectUrl(opts.settings);
@@ -187,14 +196,16 @@ export async function acquirePage(opts: {
 	assertLoopbackBrowserUrl(attachUrl);
 
 	// 1) Attach to a Chrome already exposing the debug port.
+	await opts.beforeAction?.({ action: "attach", endpoint: attachUrl });
 	const attached = await tryAttach(attachUrl);
 	if (attached) return { ...attached, mode: "attached" };
 
 	// If the user explicitly configured connectUrl but nothing is there, that is an error
 	// (do not silently launch a different browser than they asked to attach to).
 	if (configuredUrl) {
+		const configuredPort = new URL(configuredUrl).port || "80";
 		throw new Error(
-			`Could not attach to Chrome at ${configuredUrl}. Start Chrome with --remote-debugging-port=${debugPort} and retry, or unset browser.connectUrl to let xcsh launch Chrome.`,
+			`Could not attach to Chrome at ${configuredUrl}. Start Chrome with --remote-debugging-port=${configuredPort} and retry, or unset browser.connectUrl to let xcsh launch Chrome.`,
 		);
 	}
 
@@ -213,6 +224,12 @@ export async function acquirePage(opts: {
 	const defaultDir = defaultProfileDir();
 	if (defaultDir) {
 		try {
+			await opts.beforeAction?.({
+				action: "launch",
+				endpoint: attachUrl,
+				executable: located.path,
+				profile: defaultDir,
+			});
 			const browser = await withLaunchTimeout(
 				launch(located.path, buildLaunchArgs({ debugPort, profileDir: defaultDir })),
 				12_000,
@@ -232,9 +249,21 @@ export async function acquirePage(opts: {
 			if (allowRelaunch) {
 				const quit = quitChromeCommand();
 				if (quit) {
+					await opts.beforeAction?.({
+						action: "quit",
+						endpoint: attachUrl,
+						executable: located.path,
+						profile: defaultDir,
+					});
 					await runChromeControlCommand(quit);
 					const exited = await waitForChromeExit();
 					if (exited) {
+						await opts.beforeAction?.({
+							action: "launch",
+							endpoint: attachUrl,
+							executable: located.path,
+							profile: defaultDir,
+						});
 						const browser = await withLaunchTimeout(
 							launch(located.path, buildLaunchArgs({ debugPort, profileDir: defaultDir })),
 							12_000,
@@ -257,6 +286,12 @@ export async function acquirePage(opts: {
 	const profileDir = dedicatedProfileDir();
 	let browser: Browser;
 	try {
+		await opts.beforeAction?.({
+			action: "launch",
+			endpoint: attachUrl,
+			executable: located.path,
+			profile: profileDir,
+		});
 		browser = await withLaunchTimeout(launch(located.path, buildLaunchArgs({ debugPort, profileDir })), 12_000);
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);

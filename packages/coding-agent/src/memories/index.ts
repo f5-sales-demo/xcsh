@@ -1,5 +1,7 @@
-import type { Database } from "bun:sqlite";
+import { Database } from "bun:sqlite";
+import { createHash } from "node:crypto";
 import type * as fsNode from "node:fs";
+import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
@@ -173,6 +175,119 @@ export async function buildMemoryToolDeveloperInstructions(
 /**
  * Clear all persisted memory state and generated artifacts.
  */
+export async function inspectMemoryClear(
+	agentDir: string,
+	cwd: string,
+	lockedDatabase?: Database,
+): Promise<{
+	database: string;
+	artifacts: string;
+	revision: string;
+	threads: number;
+	outputs: number;
+	jobs: number;
+	files: number;
+	activeJobs: number;
+}> {
+	const database = getAgentDbPath(agentDir);
+	const artifacts = getMemoryRoot(agentDir, cwd);
+	const hash = createHash("sha256");
+	let threads = 0,
+		outputs = 0,
+		jobs = 0,
+		files = 0,
+		activeJobs = 0;
+	if (await Bun.file(database).exists()) {
+		const db = lockedDatabase ?? new Database(database, { readonly: true });
+		try {
+			for (const [table, order, where] of [
+				["threads", "id", ""],
+				["stage1_outputs", "thread_id", ""],
+				["jobs", "kind,job_key", "WHERE kind IN ('memory_stage1','memory_consolidate_global')"],
+			]) {
+				if (!db.query("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue;
+				const rows = db.query(`SELECT * FROM ${table} ${where} ORDER BY ${order}`).all();
+				hash.update(table).update(JSON.stringify(rows));
+				if (table === "threads") threads = rows.length;
+				if (table === "stage1_outputs") outputs = rows.length;
+				if (table === "jobs") {
+					jobs = rows.length;
+					activeJobs = rows.filter(row => (row as { status: string }).status === "running").length;
+				}
+			}
+		} finally {
+			if (!lockedDatabase) db.close();
+		}
+	}
+	const visit = async (file: string): Promise<void> => {
+		let stat: Awaited<ReturnType<typeof fs.lstat>>;
+		try {
+			stat = await fs.lstat(file);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				hash.update("missing");
+				return;
+			}
+			throw error;
+		}
+		hash.update(file).update(JSON.stringify([stat.dev, stat.ino, stat.mode, stat.mtimeMs]));
+		if (stat.isSymbolicLink()) {
+			hash.update(await fs.readlink(file));
+			files++;
+		} else if (stat.isDirectory())
+			for (const child of (await fs.readdir(file)).sort()) await visit(path.join(file, child));
+		else if (stat.isFile()) {
+			hash.update(await Bun.file(file).bytes());
+			files++;
+		} else throw new Error("Unsupported special file in memory artifacts; inspect it before clearing.");
+	};
+	await visit(artifacts);
+	return { database, artifacts, revision: hash.digest("hex"), threads, outputs, jobs, files, activeJobs };
+}
+
+/** Interactive clear: hold the database writer lock across revalidation and all deletion steps. */
+export async function clearReviewedMemoryData(
+	agentDir: string,
+	cwd: string,
+	reviewed: Awaited<ReturnType<typeof inspectMemoryClear>>,
+): Promise<void> {
+	const database = getAgentDbPath(agentDir);
+	const artifacts = getMemoryRoot(agentDir, cwd);
+	if (reviewed.database !== database || reviewed.artifacts !== artifacts)
+		throw new Error("Memory target changed. Review again.");
+	const db = (await Bun.file(database).exists()) ? new Database(database) : undefined;
+	let transaction = false;
+	try {
+		if (db) {
+			db.exec("PRAGMA busy_timeout=5000; BEGIN IMMEDIATE");
+			transaction = true;
+		}
+		const current = await inspectMemoryClear(agentDir, cwd, db);
+		if (current.activeJobs) throw new Error("Memory jobs are still marked running. Wait before clearing.");
+		if (current.revision !== reviewed.revision)
+			throw new Error("Memory contents changed. Review again before clearing.");
+		if (db) {
+			for (const [table, where] of [
+				["stage1_outputs", ""],
+				["threads", ""],
+				["jobs", "WHERE kind IN ('memory_stage1','memory_consolidate_global')"],
+			])
+				if (db.query("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table))
+					db.exec(`DELETE FROM ${table} ${where}`);
+		}
+		await fs.rm(artifacts, { recursive: true, force: true });
+		if (db) {
+			db.exec("COMMIT");
+			transaction = false;
+		}
+	} catch (error) {
+		if (transaction) db!.exec("ROLLBACK");
+		throw error;
+	} finally {
+		db?.close();
+	}
+}
+
 export async function clearMemoryData(agentDir: string, cwd: string): Promise<void> {
 	const db = openMemoryDb(getAgentDbPath(agentDir));
 	try {
@@ -186,6 +301,51 @@ export async function clearMemoryData(agentDir: string, cwd: string): Promise<vo
 /**
  * Force-enqueue global consolidation maintenance work.
  */
+export function inspectMemoryConsolidation(agentDir: string, cwd: string, lockedDatabase?: Database) {
+	const database = getAgentDbPath(agentDir);
+	const db = lockedDatabase ?? (existsSync(database) ? new Database(database, { readonly: true }) : undefined);
+	try {
+		const row = db?.query("SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'").get()
+			? (db
+					.query("SELECT * FROM jobs WHERE kind='memory_consolidate_global' AND job_key=?")
+					.get(`global:${cwd}`) as {
+					status: string;
+					input_watermark: number | null;
+					last_success_watermark: number | null;
+				} | null)
+			: null;
+		return {
+			database,
+			cwd,
+			revision: createHash("sha256").update(JSON.stringify(row)).digest("hex"),
+			state: row
+				? `${row.status}; input ${row.input_watermark ?? "none"}; completed ${row.last_success_watermark ?? "none"}`
+				: "No consolidation request",
+		};
+	} finally {
+		if (!lockedDatabase) db?.close();
+	}
+}
+
+export function enqueueReviewedMemoryConsolidation(
+	agentDir: string,
+	cwd: string,
+	reviewed: ReturnType<typeof inspectMemoryConsolidation>,
+): void {
+	if (reviewed.database !== getAgentDbPath(agentDir) || reviewed.cwd !== cwd)
+		throw new Error("Memory queue target changed. Review again.");
+	const db = openMemoryDb(reviewed.database);
+	try {
+		db.transaction(() => {
+			if (inspectMemoryConsolidation(agentDir, cwd, db).revision !== reviewed.revision)
+				throw new Error("Memory queue changed. Review again.");
+			enqueueGlobalWatermark(db, unixNow(), cwd, { forceDirtyWhenNotAdvanced: true });
+		}).immediate();
+	} finally {
+		closeMemoryDb(db);
+	}
+}
+
 export function enqueueMemoryConsolidation(agentDir: string, cwd: string, sourceUpdatedAt = unixNow()): void {
 	const db = openMemoryDb(getAgentDbPath(agentDir));
 	try {

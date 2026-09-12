@@ -398,7 +398,7 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		expect(fence.deny).not.toContain(home);
 		expect(fenceVerdict(fence, home, "enumerate")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "read")).toBe("allow");
-		// Xcsh-private state follows the same operator-rights rule: its listing is hidden, while a path
+		// xcsh-private state follows the same operator-rights rule: its listing is hidden, while a path
 		// the operator names directly remains available.
 		expect(fenceVerdict(fence, sessions, "enumerate")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(sessions, "x.jsonl"), "read")).toBe("allow");

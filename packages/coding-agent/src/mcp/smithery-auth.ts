@@ -35,9 +35,10 @@ export function getSmitheryLoginUrl(): string {
 	return SMITHERY_URL;
 }
 
-export async function createSmitheryCliAuthSession(): Promise<SmitheryCliAuthSession> {
+export async function createSmitheryCliAuthSession(signal?: AbortSignal): Promise<SmitheryCliAuthSession> {
 	const response = await fetch(`${SMITHERY_URL}/api/auth/cli/session`, {
 		method: "POST",
+		signal,
 	});
 	if (!response.ok) {
 		throw new Error(`Failed to create Smithery auth session: ${response.status} ${response.statusText}`);

@@ -16,7 +16,7 @@ followed symlinks — so how a path is spelled does not change what is reachable
 - Cross-tenant isolation removes the discovery step. The session container, local-account containers,
   data roots, and mounted-data containers cannot be enumerated, but a descendant path the operator
   names directly can still be read, written, or entered. An explicit read grant restores enumeration.
-- Xcsh-private cross-session stores follow the same discovery boundary: their container cannot be
+- xcsh-private cross-session stores follow the same discovery boundary: their container cannot be
   enumerated, while a descendant path the operator names directly keeps the operator's normal rights.
   This preserves `/tmp`, home, credentials, package managers, and ordinary tooling without workarounds.
 

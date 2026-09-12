@@ -2,6 +2,7 @@ import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import {
 	type Component,
 	extractPrintableText,
+	getKeybindings,
 	type MouseRoutable,
 	matchesKey,
 	padding,
@@ -10,8 +11,15 @@ import {
 	truncateToWidth,
 	visibleWidth,
 } from "@f5-sales-demo/pi-tui";
+import { formatKeyHints } from "../config/keybindings";
+import {
+	type SelectorFrameLine,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+} from "../modes/components/selector-frame";
 import { theme } from "../modes/theme/theme";
-import { copyToClipboard } from "../utils/clipboard";
 import {
 	formatDebugLogExpandedLines,
 	formatDebugLogLine,
@@ -480,6 +488,7 @@ interface DebugLogViewerComponentOptions {
 	processPid?: number;
 	logSource?: DebugLogSource;
 	onUpdate?: () => void;
+	onCopy?: (payload: string, count: number) => Promise<boolean | undefined> | boolean | undefined;
 }
 
 export class DebugLogViewerComponent implements Component, MouseRoutable {
@@ -489,6 +498,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 	#onStatus?: (message: string) => void;
 	#onError?: (message: string) => void;
 	#onUpdate?: () => void;
+	#onCopy?: (payload: string, count: number) => Promise<boolean | undefined> | boolean | undefined;
 	#logSource?: DebugLogSource;
 	#lastRenderWidth = 80;
 	#scrollRowOffset = 0;
@@ -512,6 +522,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		this.#onStatus = options.onStatus;
 		this.#onError = options.onError;
 		this.#onUpdate = options.onUpdate;
+		this.#onCopy = options.onCopy;
 	}
 
 	handleInput(keyData: string): void {
@@ -520,8 +531,8 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 			return;
 		}
 
-		if (matchesKey(keyData, "ctrl+c")) {
-			this.#copySelected();
+		if (getKeybindings().matches(keyData, "tui.input.copy")) {
+			void this.#copySelected();
 			return;
 		}
 
@@ -620,23 +631,45 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		this.#lastRenderWidth = Math.max(20, width);
 		this.#ensureCursorVisible();
 
-		const innerWidth = Math.max(1, this.#lastRenderWidth - 2);
+		const innerWidth = selectorFrameContentWidth(this.#lastRenderWidth);
 		const bodyHeight = this.#bodyHeight();
 
 		const rows = this.#renderRows(innerWidth);
 		this.#bodyRowCount = bodyHeight;
-		const visibleBodyLines = this.#renderVisibleBodyLines(rows, innerWidth, bodyHeight);
-
-		return [
-			this.#frameTop(innerWidth),
-			this.#frameLine(this.#summaryText(), innerWidth),
-			this.#frameSeparator(innerWidth),
-			this.#frameLine(this.#filterText(), innerWidth),
-			this.#frameSeparator(innerWidth),
-			...visibleBodyLines,
-			this.#frameLine(this.#statusText(), innerWidth),
-			this.#frameBottom(innerWidth),
-		];
+		const visibleBodyLines = this.#renderVisibleBodyLines(rows, bodyHeight);
+		const copyKeys = getKeybindings().getKeys("tui.input.copy");
+		const compact = this.#getTerminalRows() < 16;
+		const frame = selectorFrame(
+			this.#lastRenderWidth,
+			this.#getTerminalRows(),
+			`Debug logs · ${this.#model.visibleLogCount} of ${this.#model.logCount}`,
+			"",
+			[this.#filterText()],
+			visibleBodyLines,
+			compact ? [] : [this.#statusText()],
+			compact
+				? [`${formatKeyHints(copyKeys)}: review copy · ${selectorCancelHint("back")}`]
+				: [
+						`${formatKeyHints(copyKeys)}: review selected log copy · Shift+Up/Down: extend selection · Left/Right: collapse/expand`,
+						...(this.#model.canLoadOlder() ? [`${selectorKeys("pageUp")}: load older`] : []),
+						"Ctrl+A: select visible · Ctrl+P: current process",
+						selectorCancelHint("back"),
+					],
+			{
+				selectedBodyIndex: this.#bodyLineToRowIndex.indexOf(this.#model.cursorRowIndex),
+				maxBodyRows: bodyHeight,
+			},
+		);
+		const firstContent = visibleBodyLines.find(line =>
+			typeof line === "string" ? line.trim().length > 0 : Bun.stripANSI(line.content).trim().length > 0,
+		);
+		if (firstContent) {
+			const needle = Bun.stripANSI(typeof firstContent === "string" ? firstContent : firstContent.content).trim();
+			const index = frame.findIndex(line => Bun.stripANSI(line).includes(needle));
+			this.#bodyRowStart = index >= 0 ? index : 0;
+		}
+		this.#bodyRowCount = visibleBodyLines.length;
+		return frame;
 	}
 
 	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
@@ -661,25 +694,17 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		this.#onUpdate?.();
 	}
 
-	#summaryText(): string {
-		return ` # ${this.#model.visibleLogCount}/${this.#model.logCount} logs | ${this.#controlsText()}`;
-	}
-
-	#controlsText(): string {
-		return "Esc: back  Ctrl+C: copy  Up/Down: move  Shift+Up/Down: select range  Left/Right: collapse/expand  Ctrl+A: select all  Ctrl+O: load older  Ctrl+P: pid filter";
-	}
-
 	#filterText(): string {
 		const sanitized = replaceTabs(sanitizeText(this.#model.filterQuery));
 		const query = sanitized.length === 0 ? "" : theme.fg("contentAccent", sanitized);
 		const pidStatus = this.#model.isProcessFilterEnabled()
 			? theme.fg("success", "pid:on")
 			: theme.fg("muted", "pid:off");
-		return ` filter: ${query}  ${pidStatus}`;
+		return `Search: ${query || theme.fg("muted", "type to filter")} · ${pidStatus}`;
 	}
 
 	#statusText(): string {
-		const base = ` Selected: ${this.#model.getSelectedCount()}  Expanded: ${this.#model.expandedCount}`;
+		const base = `Selected: ${this.#model.getSelectedCount()} · Expanded: ${this.#model.expandedCount}`;
 		if (this.#statusMessage) {
 			return `${base}  ${this.#statusMessage}`;
 		}
@@ -687,7 +712,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 	}
 
 	#bodyHeight(): number {
-		return Math.max(3, this.#getTerminalRows() - 8);
+		return Math.max(1, this.#getTerminalRows() - (this.#getTerminalRows() < 16 ? 8 : 12));
 	}
 
 	async #handleLoadOlder(additionalCount: number = LOAD_OLDER_CHUNK): Promise<void> {
@@ -819,14 +844,13 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 
 	#renderVisibleBodyLines(
 		rows: Array<{ lines: string[]; rowIndex: number }>,
-		innerWidth: number,
 		bodyHeight: number,
-	): string[] {
+	): SelectorFrameLine[] {
 		this.#bodyLineToRowIndex = [];
-		const lines: string[] = [];
+		const lines: SelectorFrameLine[] = [];
 		if (rows.length === 0) {
 			this.#bodyLineToRowIndex.push(undefined);
-			lines.push(this.#frameLine(theme.fg("muted", "no matches"), innerWidth));
+			lines.push(theme.fg("muted", "No matching log entries."));
 		}
 		for (let i = this.#scrollRowOffset; i < rows.length; i++) {
 			const row = rows[i];
@@ -839,17 +863,12 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 					break;
 				}
 				this.#bodyLineToRowIndex.push(row.rowIndex);
-				lines.push(this.#frameLine(line, innerWidth));
+				lines.push({ content: line, selected: this.#model.cursorRowIndex === row.rowIndex });
 			}
 
 			if (lines.length >= bodyHeight) {
 				break;
 			}
-		}
-
-		while (lines.length < bodyHeight) {
-			this.#bodyLineToRowIndex.push(undefined);
-			lines.push(this.#frameLine("", innerWidth));
 		}
 
 		return lines;
@@ -881,7 +900,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 			return;
 		}
 		const bodyHeight = Math.max(1, this.#bodyHeight());
-		const innerWidth = Math.max(1, this.#lastRenderWidth - 2);
+		const innerWidth = selectorFrameContentWidth(this.#lastRenderWidth);
 
 		// Scroll up: cursor is above viewport
 		if (cursorRowIndex < this.#scrollRowOffset) {
@@ -906,25 +925,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		}
 	}
 
-	#frameTop(innerWidth: number): string {
-		return `${theme.boxSharp.topLeft}${theme.boxSharp.horizontal.repeat(innerWidth)}${theme.boxSharp.topRight}`;
-	}
-
-	#frameSeparator(innerWidth: number): string {
-		return `${theme.boxSharp.teeRight}${theme.boxSharp.horizontal.repeat(innerWidth)}${theme.boxSharp.teeLeft}`;
-	}
-
-	#frameBottom(innerWidth: number): string {
-		return `${theme.boxSharp.bottomLeft}${theme.boxSharp.horizontal.repeat(innerWidth)}${theme.boxSharp.bottomRight}`;
-	}
-
-	#frameLine(content: string, innerWidth: number): string {
-		const truncated = truncateToWidth(content, innerWidth);
-		const remaining = Math.max(0, innerWidth - visibleWidth(truncated));
-		return `${theme.boxSharp.vertical}${truncated}${padding(remaining)}${theme.boxSharp.vertical}`;
-	}
-
-	#copySelected() {
+	async #copySelected(): Promise<void> {
 		const selectedPayload = buildLogCopyPayload(this.#model.getSelectedRawLines());
 		const selected = selectedPayload.length === 0 ? [] : selectedPayload.split("\n");
 
@@ -936,7 +937,13 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		}
 
 		try {
-			copyToClipboard(selectedPayload);
+			if (!this.#onCopy) {
+				const message = "Copy review is unavailable; reopen Debug tools and try again";
+				this.#statusMessage = message;
+				this.#onError?.(message);
+				return;
+			}
+			if ((await this.#onCopy(selectedPayload, selected.length)) === false) return;
 			const message = `Copied ${selected.length} log ${selected.length === 1 ? "entry" : "entries"}`;
 			this.#statusMessage = message;
 			this.#onStatus?.(message);

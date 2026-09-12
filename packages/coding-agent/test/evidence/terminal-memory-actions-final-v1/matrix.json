@@ -1,0 +1,486 @@
+{
+  "fixture": "memory-actions",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-MG82Tq/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-MG82Tq/config/agent/memories/--tmp-xcsh-terminal-uat-MG82Tq-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198009; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-c9vwki/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-c9vwki/config/agent/memories/--tmp-xcsh-terminal-uat-c9vwki-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198016; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-vZdeA3/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-vZdeA3/config/agent/memories/--tmp-xcsh-terminal-uat-vZdeA3-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198023; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-vvQ6oV/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-vvQ6oV/config/agent/memories/--tmp-xcsh-terminal-uat-vvQ6oV-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198030; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-P9kpuM/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-P9kpuM/config/agent/memories/--tmp-xcsh-terminal-uat-P9kpuM-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198036; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-OTy6Vf/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-OTy6Vf/config/agent/memories/--tmp-xcsh-terminal-uat-OTy6Vf-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198043; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-09YICE/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-09YICE/config/agent/memories/--tmp-xcsh-terminal-uat-09YICE-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198049; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-MLLzyX/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-MLLzyX/config/agent/memories/--tmp-xcsh-terminal-uat-MLLzyX-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198056; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-QZOkvw/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-QZOkvw/config/agent/memories/--tmp-xcsh-terminal-uat-QZOkvw-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198063; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-tudRzI/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-tudRzI/config/agent/memories/--tmp-xcsh-terminal-uat-tudRzI-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198070; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-UMzPRR/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-UMzPRR/config/agent/memories/--tmp-xcsh-terminal-uat-UMzPRR-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198077; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-VEPMYT/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-VEPMYT/config/agent/memories/--tmp-xcsh-terminal-uat-VEPMYT-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198084; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-SbePvI/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-SbePvI/config/agent/memories/--tmp-xcsh-terminal-uat-SbePvI-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198091; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-PaKpXj/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-PaKpXj/config/agent/memories/--tmp-xcsh-terminal-uat-PaKpXj-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198098; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-Lh8ewD/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-Lh8ewD/config/agent/memories/--tmp-xcsh-terminal-uat-Lh8ewD-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198106; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "database": "/tmp/xcsh-terminal-uat-2ZGHjQ/config/agent/agent.db",
+          "artifacts": "/tmp/xcsh-terminal-uat-2ZGHjQ/config/agent/memories/--tmp-xcsh-terminal-uat-2ZGHjQ-project--",
+          "cancelledClearRevisionUnchanged": true,
+          "clearRemovedAllRecordsAndFiles": true,
+          "cancelledEnqueueRevisionUnchanged": true,
+          "confirmedQueueState": "pending; input 1789198113; completed 0",
+          "resetRemovedQueuedRequestAndConcurrentArtifact": true,
+          "final": {
+            "threads": 0,
+            "outputs": 0,
+            "jobs": 0,
+            "files": 0
+          }
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

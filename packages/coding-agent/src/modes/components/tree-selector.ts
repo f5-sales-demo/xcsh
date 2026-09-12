@@ -1,908 +1,495 @@
-import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
 	type Component,
 	Container,
-	extractPrintableText,
 	Input,
+	type MouseRoutable,
 	matchesKey,
-	Spacer,
-	Text,
-	TruncatedText,
-	truncateToWidth,
+	type SgrMouseEvent,
+	wrapTextWithAnsi,
 } from "@f5-sales-demo/pi-tui";
 import type { TreeFilterMode } from "../../config/settings-schema";
 import { theme } from "../../modes/theme/theme";
-import { matchesAppInterrupt } from "../../modes/utils/keybinding-matchers";
 import type { SessionTreeNode } from "../../session/session-manager";
-import { shortenPath } from "../../tools/render-utils";
-import { DynamicBorder } from "./dynamic-border";
+import {
+	matchesSelectorKey,
+	type SelectorFrameLine,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+	selectorRow,
+} from "./selector-frame";
 
-/** Gutter info: position (displayIndent where connector was) and whether to show │ */
-interface GutterInfo {
-	position: number; // displayIndent level where the connector was shown
-	show: boolean; // true = show │, false = show spaces
-}
-
-/** Flattened tree node for navigation */
-interface FlatNode {
-	node: SessionTreeNode;
-	/** Indentation level (each level = 3 chars) */
-	indent: number;
-	/** Whether to show connector (├─ or └─) - true if parent has multiple children */
-	showConnector: boolean;
-	/** If showConnector, true = last sibling (└─), false = not last (├─) */
-	isLast: boolean;
-	/** Gutter info for each ancestor branch point */
-	gutters: GutterInfo[];
-	/** True if this node is a root under a virtual branching root (multiple roots) */
-	isVirtualRootChild: boolean;
-}
-
-/** Filter mode for tree display */
 type FilterMode = TreeFilterMode;
 
-/**
- * Tree list component with selection and ASCII art visualization
- */
-/** Tool call info for lookup */
-interface ToolCallInfo {
-	name: string;
-	arguments: Record<string, unknown>;
+interface FlatNode {
+	node: SessionTreeNode;
+	depth: number;
+	ancestorContinues: boolean[];
+	isLast: boolean;
 }
 
-class TreeList implements Component {
-	#flatNodes: FlatNode[] = [];
-	#filteredNodes: FlatNode[] = [];
-	#selectedIndex = 0;
+function textContent(content: unknown, maxLength = 2_000): string {
+	if (typeof content === "string") return content.slice(0, maxLength);
+	if (!Array.isArray(content)) return "";
+	let result = "";
+	for (const block of content) {
+		if (typeof block === "object" && block !== null && "type" in block && block.type === "text") {
+			result += (block as { text: string }).text;
+			if (result.length >= maxLength) break;
+		}
+	}
+	return result.slice(0, maxLength);
+}
+
+function normalized(value: string): string {
+	return value
+		.replace(/[\n\t]+/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function entryRole(node: SessionTreeNode): string {
+	const entry = node.entry;
+	if (entry.type === "message") return entry.message.role;
+	if (entry.type === "custom_message") return entry.customType;
+	return entry.type.replaceAll("_", " ");
+}
+
+function entryText(node: SessionTreeNode, full = false): string {
+	const entry = node.entry;
+	const limit = full ? 2_000 : 220;
+	if (entry.type === "message") {
+		const message = entry.message as {
+			role: string;
+			content?: unknown;
+			command?: string;
+			toolName?: string;
+			errorMessage?: string;
+		};
+		const content = normalized(textContent(message.content, limit));
+		if (content) return content;
+		if (message.command) return normalized(message.command).slice(0, limit);
+		if (message.errorMessage) return normalized(message.errorMessage).slice(0, limit);
+		return message.toolName ? `[${message.toolName}]` : "(no text content)";
+	}
+	if (entry.type === "custom_message") return normalized(textContent(entry.content, limit));
+	if (entry.type === "branch_summary") return normalized(entry.summary).slice(0, limit);
+	if (entry.type === "compaction") return `${Math.round(entry.tokensBefore / 1_000)}k tokens before compaction`;
+	if (entry.type === "model_change") return entry.model;
+	if (entry.type === "thinking_level_change") return entry.thinkingLevel ?? "off";
+	if (entry.type === "label") return entry.label ?? "label cleared";
+	if (entry.type === "custom") return entry.customType;
+	return "";
+}
+
+function flattenTree(roots: SessionTreeNode[], activeLeafId: string | null): FlatNode[] {
+	const containsActive = new Map<SessionTreeNode, boolean>();
+	const ordered: SessionTreeNode[] = [];
+	const discover = [...roots];
+	while (discover.length) {
+		const node = discover.pop()!;
+		ordered.push(node);
+		discover.push(...node.children);
+	}
+	for (let index = ordered.length - 1; index >= 0; index--) {
+		const node = ordered[index];
+		containsActive.set(
+			node,
+			node.entry.id === activeLeafId || node.children.some(child => containsActive.get(child) === true),
+		);
+	}
+
+	const result: FlatNode[] = [];
+	type Pending = { node: SessionTreeNode; depth: number; ancestorContinues: boolean[]; isLast: boolean };
+	const sortedRoots = [...roots].sort(
+		(left, right) => Number(containsActive.get(right)) - Number(containsActive.get(left)),
+	);
+	const stack: Pending[] = [];
+	for (let index = sortedRoots.length - 1; index >= 0; index--)
+		stack.push({
+			node: sortedRoots[index],
+			depth: 0,
+			ancestorContinues: [],
+			isLast: index === sortedRoots.length - 1,
+		});
+	while (stack.length) {
+		const item = stack.pop()!;
+		result.push(item);
+		const children = [...item.node.children].sort(
+			(left, right) => Number(containsActive.get(right)) - Number(containsActive.get(left)),
+		);
+		for (let index = children.length - 1; index >= 0; index--) {
+			stack.push({
+				node: children[index],
+				depth: item.depth + 1,
+				ancestorContinues: [...item.ancestorContinues, !item.isLast],
+				isLast: index === children.length - 1,
+			});
+		}
+	}
+	return result;
+}
+
+class LabelEditor implements Component {
+	readonly input = new Input();
+	constructor(current: string | undefined) {
+		if (current) this.input.setValue(current);
+		this.input.onEscape = () => {};
+	}
+	render(width: number): string[] {
+		return this.input.render(width);
+	}
+	handleInput(data: string): void {
+		this.input.handleInput(data);
+	}
+	invalidate(): void {}
+}
+
+/** Responsive session-tree browser with exact node details and explicit actions. */
+export class TreeSelectorComponent extends Container implements MouseRoutable {
+	readonly #flat: FlatNode[];
+	#filtered: FlatNode[] = [];
+	#activePath = new Set<string>();
+	#selected = 0;
+	#search = new Input();
 	#filterMode: FilterMode;
-	#searchQuery = "";
-	#toolCallMap: Map<string, ToolCallInfo> = new Map();
-	#multipleRoots = false;
-	#activePathIds: Set<string> = new Set();
-	#lastSelectedId: string | null = null;
-
-	onSelect?: (entryId: string) => void;
-	onCancel?: () => void;
-	onLabelEdit?: (entryId: string, currentLabel: string | undefined) => void;
-
+	#detail: FlatNode | undefined;
+	#detailAction = 0;
+	#detailOffset = 0;
+	#labelEditor: LabelEditor | undefined;
+	#labelError = "";
+	#savingLabel = false;
+	#capacity = 1;
+	#browseStart = 0;
+	#hitRows = new Map<number, number>();
+	#actionRows = new Map<number, number>();
 	constructor(
 		tree: SessionTreeNode[],
 		private readonly currentLeafId: string | null,
-		private readonly maxVisibleLines: number,
+		terminalHeight: number,
+		private readonly onSelect: (entryId: string) => void | Promise<void>,
+		private readonly onCancel: () => void,
+		private readonly onLabelChangeCallback?: (
+			entryId: string,
+			label: string | undefined,
+		) => boolean | undefined | Promise<boolean | undefined>,
 		initialFilterMode: FilterMode = "default",
-		initialSelectedId?: string,
+		private readonly rows: () => number = () => terminalHeight,
 	) {
+		super();
+		this.#flat = flattenTree(tree, currentLeafId);
 		this.#filterMode = initialFilterMode;
-		this.#multipleRoots = tree.length > 1;
-		this.#flatNodes = this.#flattenTree(tree);
+		this.#search.onEscape = () => {};
 		this.#buildActivePath();
-		this.#applyFilter();
-
-		// Start with initialSelectedId if provided, otherwise current leaf
-		const targetId = initialSelectedId ?? currentLeafId;
-		this.#selectedIndex = this.#findNearestVisibleIndex(targetId);
-		this.#lastSelectedId = this.#filteredNodes[this.#selectedIndex]?.node.entry.id ?? null;
+		this.#applyFilter(currentLeafId);
+		if (tree.length === 0) setTimeout(onCancel, 100);
 	}
 
-	/** Build the set of entry IDs on the path from root to current leaf */
 	#buildActivePath(): void {
-		this.#activePathIds.clear();
-		if (!this.currentLeafId) return;
-
-		// Build a map of id -> entry for parent lookup
-		const entryMap = new Map<string, FlatNode>();
-		for (const flatNode of this.#flatNodes) {
-			entryMap.set(flatNode.node.entry.id, flatNode);
-		}
-
-		// Walk from leaf to root
-		let currentId: string | null = this.currentLeafId;
-		while (currentId) {
-			this.#activePathIds.add(currentId);
-			const node = entryMap.get(currentId);
-			if (!node) break;
-			currentId = node.node.entry.parentId ?? null;
+		const byId = new Map(this.#flat.map(item => [item.node.entry.id, item]));
+		let id = this.currentLeafId;
+		while (id) {
+			this.#activePath.add(id);
+			id = byId.get(id)?.node.entry.parentId ?? null;
 		}
 	}
 
-	/**
-	 * Find the index of the nearest visible entry, walking up the parent chain if needed.
-	 * Returns the index in filteredNodes, or the last index as fallback.
-	 */
-	#findNearestVisibleIndex(entryId: string | null): number {
-		if (this.#filteredNodes.length === 0) return 0;
-
-		// Build a map for parent lookup
-		const entryMap = new Map<string, FlatNode>();
-		for (const flatNode of this.#flatNodes) {
-			entryMap.set(flatNode.node.entry.id, flatNode);
-		}
-
-		// Build a map of visible entry IDs to their indices in filteredNodes
-		const visibleIdToIndex = new Map<string, number>(this.#filteredNodes.map((node, i) => [node.node.entry.id, i]));
-
-		// Walk from entryId up to root, looking for a visible entry
-		let currentId = entryId;
-		while (currentId !== null) {
-			const index = visibleIdToIndex.get(currentId);
-			if (index !== undefined) return index;
-			const node = entryMap.get(currentId);
-			if (!node) break;
-			currentId = node.node.entry.parentId ?? null;
-		}
-
-		// Fallback: last visible entry
-		return this.#filteredNodes.length - 1;
+	#matchesMode(item: FlatNode): boolean {
+		const entry = item.node.entry;
+		const settingsEntry = ["label", "custom", "model_change", "thinking_level_change"].includes(entry.type);
+		if (this.#filterMode === "user-only") return entry.type === "message" && entry.message.role === "user";
+		if (this.#filterMode === "labeled-only") return item.node.label !== undefined;
+		if (this.#filterMode === "all") return true;
+		if (this.#filterMode === "no-tools")
+			return !settingsEntry && !(entry.type === "message" && entry.message.role === "toolResult");
+		return !settingsEntry;
 	}
 
-	#flattenTree(roots: SessionTreeNode[]): FlatNode[] {
-		const result: FlatNode[] = [];
-		this.#toolCallMap.clear();
-
-		// Indentation rules:
-		// - At indent 0: stay at 0 unless parent has >1 children (then +1)
-		// - At indent 1: children always go to indent 2 (visual grouping of subtree)
-		// - At indent 2+: stay flat for single-child chains, +1 only if parent branches
-
-		// Stack items: [node, indent, justBranched, showConnector, isLast, gutters, isVirtualRootChild]
-		type StackItem = [SessionTreeNode, number, boolean, boolean, boolean, GutterInfo[], boolean];
-		const stack: StackItem[] = [];
-
-		// Determine which subtrees contain the active leaf (to sort current branch first)
-		// Use iterative post-order traversal to avoid stack overflow
-		const containsActive = new Map<SessionTreeNode, boolean>();
-		const leafId = this.currentLeafId;
-		{
-			// Build list in pre-order, then process in reverse for post-order effect
-			const allNodes: SessionTreeNode[] = [];
-			const preOrderStack: SessionTreeNode[] = [...roots];
-			while (preOrderStack.length > 0) {
-				const node = preOrderStack.pop()!;
-				allNodes.push(node);
-				// Push children in reverse so they're processed left-to-right
-				for (let i = node.children.length - 1; i >= 0; i--) {
-					preOrderStack.push(node.children[i]);
-				}
-			}
-			// Process in reverse (post-order): children before parents
-			for (let i = allNodes.length - 1; i >= 0; i--) {
-				const node = allNodes[i];
-				let has = leafId !== null && node.entry.id === leafId;
-				for (const child of node.children) {
-					if (containsActive.get(child)) {
-						has = true;
-					}
-				}
-				containsActive.set(node, has);
-			}
-		}
-
-		// Add roots in reverse order, prioritizing the one containing the active leaf
-		// If multiple roots, treat them as children of a virtual root that branches
-		const multipleRoots = roots.length > 1;
-		const orderedRoots = [...roots].sort((a, b) => Number(containsActive.get(b)) - Number(containsActive.get(a)));
-		for (let i = orderedRoots.length - 1; i >= 0; i--) {
-			const isLast = i === orderedRoots.length - 1;
-			stack.push([orderedRoots[i], multipleRoots ? 1 : 0, multipleRoots, multipleRoots, isLast, [], multipleRoots]);
-		}
-
-		while (stack.length > 0) {
-			const [node, indent, justBranched, showConnector, isLast, gutters, isVirtualRootChild] = stack.pop()!;
-
-			// Extract tool calls from assistant messages for later lookup
-			const entry = node.entry;
-			if (entry.type === "message" && entry.message.role === "assistant") {
-				const content = (entry.message as { content?: unknown }).content;
-				if (Array.isArray(content)) {
-					for (const block of content) {
-						if (typeof block === "object" && block !== null && "type" in block && block.type === "toolCall") {
-							const tc = block as { id: string; name: string; arguments: Record<string, unknown> };
-							this.#toolCallMap.set(tc.id, { name: tc.name, arguments: tc.arguments });
-						}
-					}
-				}
-			}
-
-			result.push({ node, indent, showConnector, isLast, gutters, isVirtualRootChild });
-
-			const children = node.children;
-			const multipleChildren = children.length > 1;
-
-			// Order children so the branch containing the active leaf comes first
-			const orderedChildren = (() => {
-				const prioritized: SessionTreeNode[] = [];
-				const rest: SessionTreeNode[] = [];
-				for (const child of children) {
-					if (containsActive.get(child)) {
-						prioritized.push(child);
-					} else {
-						rest.push(child);
-					}
-				}
-				return [...prioritized, ...rest];
-			})();
-
-			// Calculate child indent
-			let childIndent: number;
-			if (multipleChildren) {
-				// Parent branches: children get +1
-				childIndent = indent + 1;
-			} else if (justBranched && indent > 0) {
-				// First generation after a branch: +1 for visual grouping
-				childIndent = indent + 1;
-			} else {
-				// Single-child chain: stay flat
-				childIndent = indent;
-			}
-
-			// Build gutters for children
-			// If this node showed a connector, add a gutter entry for descendants
-			// Only add gutter if connector is actually displayed (not suppressed for virtual root children)
-			const connectorDisplayed = showConnector && !isVirtualRootChild;
-			// When connector is displayed, add a gutter entry at the connector's position
-			// Connector is at position (displayIndent - 1), so gutter should be there too
-			const currentDisplayIndent = this.#multipleRoots ? Math.max(0, indent - 1) : indent;
-			const connectorPosition = Math.max(0, currentDisplayIndent - 1);
-			const childGutters: GutterInfo[] = connectorDisplayed
-				? [...gutters, { position: connectorPosition, show: !isLast }]
-				: gutters;
-
-			// Add children in reverse order
-			for (let i = orderedChildren.length - 1; i >= 0; i--) {
-				const childIsLast = i === orderedChildren.length - 1;
-				stack.push([
-					orderedChildren[i],
-					childIndent,
-					multipleChildren,
-					multipleChildren,
-					childIsLast,
-					childGutters,
-					false,
-				]);
-			}
-		}
-
-		return result;
-	}
-
-	#applyFilter(): void {
-		// Update lastSelectedId only when we have a valid selection (non-empty list)
-		// This preserves the selection when switching through empty filter results
-		if (this.#filteredNodes.length > 0) {
-			this.#lastSelectedId = this.#filteredNodes[this.#selectedIndex]?.node.entry.id ?? this.#lastSelectedId;
-		}
-
-		const searchTokens = this.#searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
-
-		this.#filteredNodes = this.#flatNodes.filter(flatNode => {
-			const entry = flatNode.node.entry;
-			const isCurrentLeaf = entry.id === this.currentLeafId;
-
-			// Skip assistant messages with only tool calls (no text) unless error/aborted
-			// Always show current leaf so active position is visible
-			if (entry.type === "message" && entry.message.role === "assistant" && !isCurrentLeaf) {
-				const msg = entry.message as { stopReason?: string; content?: unknown };
-				const hasText = this.#hasTextContent(msg.content);
-				const isErrorOrAborted = msg.stopReason && msg.stopReason !== "stop" && msg.stopReason !== "toolUse";
-				// Only hide if no text AND not an error/aborted message
-				if (!hasText && !isErrorOrAborted) {
-					return false;
-				}
-			}
-
-			// Apply filter mode
-			let passesFilter = true;
-			// Entry types hidden in default view (settings/bookkeeping)
-			const isSettingsEntry =
-				entry.type === "label" ||
-				entry.type === "custom" ||
-				entry.type === "model_change" ||
-				entry.type === "thinking_level_change";
-
-			switch (this.#filterMode) {
-				case "user-only":
-					// Just user messages
-					passesFilter = entry.type === "message" && entry.message.role === "user";
-					break;
-				case "no-tools":
-					// Default minus tool results
-					passesFilter = !isSettingsEntry && !(entry.type === "message" && entry.message.role === "toolResult");
-					break;
-				case "labeled-only":
-					// Just labeled entries
-					passesFilter = flatNode.node.label !== undefined;
-					break;
-				case "all":
-					// Show everything
-					passesFilter = true;
-					break;
-				default:
-					// Default mode: hide settings/bookkeeping entries
-					passesFilter = !isSettingsEntry;
-					break;
-			}
-
-			if (!passesFilter) return false;
-
-			// Apply search filter
-			if (searchTokens.length > 0) {
-				const nodeText = this.#getSearchableText(flatNode.node).toLowerCase();
-				return searchTokens.every(token => nodeText.includes(token));
-			}
-
-			return true;
+	#applyFilter(preferredId?: string | null): void {
+		const selectedId = preferredId ?? this.#filtered[this.#selected]?.node.entry.id;
+		const tokens = this.#search.getValue().toLowerCase().split(/\s+/).filter(Boolean);
+		this.#filtered = this.#flat.filter(item => {
+			if (!this.#matchesMode(item)) return false;
+			const haystack =
+				`${item.node.entry.id} ${item.node.label ?? ""} ${entryRole(item.node)} ${entryText(item.node, true)}`.toLowerCase();
+			return tokens.every(token => haystack.includes(token));
 		});
-
-		// Try to preserve cursor on the same node, or find nearest visible ancestor
-		if (this.#lastSelectedId) {
-			this.#selectedIndex = this.#findNearestVisibleIndex(this.#lastSelectedId);
-		} else if (this.#selectedIndex >= this.#filteredNodes.length) {
-			// Clamp index if out of bounds
-			this.#selectedIndex = Math.max(0, this.#filteredNodes.length - 1);
-		}
-
-		// Update lastSelectedId to the actual selection (may have changed due to parent walk)
-		if (this.#filteredNodes.length > 0) {
-			this.#lastSelectedId = this.#filteredNodes[this.#selectedIndex]?.node.entry.id ?? this.#lastSelectedId;
-		}
+		const exact = selectedId ? this.#filtered.findIndex(item => item.node.entry.id === selectedId) : -1;
+		this.#selected = exact >= 0 ? exact : Math.min(this.#selected, Math.max(0, this.#filtered.length - 1));
 	}
 
-	/** Get searchable text content from a node */
-	#getSearchableText(node: SessionTreeNode): string {
-		const entry = node.entry;
-		const parts: string[] = [];
+	#cycleFilter(delta: -1 | 1): void {
+		const modes: FilterMode[] = ["default", "no-tools", "user-only", "labeled-only", "all"];
+		const index = modes.indexOf(this.#filterMode);
+		this.#filterMode = modes[(index + delta + modes.length) % modes.length];
+		this.#applyFilter();
+	}
 
-		if (node.label) {
-			parts.push(node.label);
+	#prefix(item: FlatNode): string {
+		if (item.depth === 0) return "";
+		const ancestors = item.ancestorContinues
+			.slice(1)
+			.map(continues => (continues ? `${theme.tree.vertical}  ` : "   "));
+		return `${ancestors.join("")}${item.isLast ? theme.tree.last : theme.tree.branch}`;
+	}
+
+	#browseBody(inner: number): SelectorFrameLine[] {
+		this.#capacity = Math.max(1, this.rows() - 13);
+		const body: SelectorFrameLine[] = [
+			`Search: ${theme.nav.cursor} ${this.#search.render(Math.max(1, inner - 10))[0] ?? ""}`,
+		];
+		if (!this.#filtered.length) {
+			body.push(theme.fg("muted", this.#search.getValue() ? "No matching tree nodes" : "No nodes in this view"));
+			return body;
 		}
+		this.#browseStart = Math.max(
+			0,
+			Math.min(this.#selected - Math.floor(this.#capacity / 2), this.#filtered.length - this.#capacity),
+		);
+		const end = Math.min(this.#filtered.length, this.#browseStart + this.#capacity);
+		for (let index = this.#browseStart; index < end; index++) {
+			const item = this.#filtered[index];
+			const active = this.#activePath.has(item.node.entry.id) ? `${theme.md.bullet} ` : "  ";
+			const label = item.node.label ? `[${item.node.label}] ` : "";
+			const lead = `${this.#prefix(item)}${active}${label}${entryRole(item.node)}:`;
+			body.push(
+				selectorRow(
+					[lead, entryText(item.node), item.node.entry.id.slice(-8)],
+					[Math.min(30, Math.max(12, Math.floor(inner * 0.34))), Math.max(8, inner - 44), 10],
+					index === this.#selected,
+				),
+			);
+		}
+		return body;
+	}
 
-		switch (entry.type) {
-			case "message": {
-				const msg = entry.message;
-				parts.push(msg.role);
-				if ("content" in msg && msg.content) {
-					parts.push(this.#extractContent(msg.content));
-				}
-				if (msg.role === "bashExecution") {
-					const bashMsg = msg as { command?: string };
-					if (bashMsg.command) parts.push(bashMsg.command);
-				}
-				break;
+	override render(width: number): string[] {
+		const inner = selectorFrameContentWidth(width);
+		if (this.#labelEditor && this.#detail) {
+			return selectorFrame(
+				width,
+				this.rows(),
+				"Edit tree label",
+				`Session node · ${this.#detail.node.entry.id}`,
+				[],
+				[
+					...(this.#labelError ? [theme.fg("error", this.#labelError)] : []),
+					"Label (leave empty to remove)",
+					...(this.#savingLabel ? [theme.fg("muted", "Saving reviewed label…")] : this.#labelEditor.render(inner)),
+				],
+				[],
+				[this.#savingLabel ? "Waiting for the reviewed save to finish." : selectorCancelHint("back")],
+			);
+		}
+		if (this.#detail) {
+			const actions = ["Navigate to this point", "Edit label"];
+			const allDetails = [
+				`Identity: ${this.#detail.node.entry.id}`,
+				`Parent: ${this.#detail.node.entry.parentId ?? "Root"}`,
+				`Type: ${entryRole(this.#detail.node)}`,
+				`Timestamp: ${this.#detail.node.entry.timestamp}`,
+				`Label: ${this.#detail.node.label ?? "None"}`,
+				`Position: ${this.#detail.node.entry.id === this.currentLeafId ? "Current leaf" : this.#activePath.has(this.#detail.node.entry.id) ? "Current path" : "Alternate branch"}`,
+				...wrapTextWithAnsi(`Content: ${entryText(this.#detail.node, true) || "No display content"}`, inner),
+			];
+			const detailCapacity = Math.max(2, this.rows() - 13);
+			this.#detailOffset = Math.min(this.#detailOffset, Math.max(0, allDetails.length - detailCapacity));
+			const lines = selectorFrame(
+				width,
+				this.rows(),
+				"Tree node details",
+				`Session tree · ${this.#detail.node.entry.id}`,
+				[],
+				actions.map((label, index) => selectorRow([label], [inner - 2], index === this.#detailAction)),
+				allDetails.slice(this.#detailOffset, this.#detailOffset + detailCapacity),
+				[
+					selectorCancelHint("back"),
+					...(allDetails.length > detailCapacity
+						? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: details`]
+						: []),
+				],
+				{ selectedBodyIndex: this.#detailAction },
+			);
+			this.#actionRows.clear();
+			for (let index = 0; index < actions.length; index++) {
+				const row = lines.findIndex(line => Bun.stripANSI(line).includes(actions[index]));
+				if (row >= 0) this.#actionRows.set(row, index);
 			}
-			case "custom_message": {
-				parts.push(entry.customType);
-				if (typeof entry.content === "string") {
-					parts.push(entry.content);
-				} else {
-					parts.push(this.#extractContent(entry.content));
-				}
-				break;
-			}
-			case "compaction":
-				parts.push("compaction");
-				break;
-			case "branch_summary":
-				parts.push("branch summary", entry.summary);
-				break;
-			case "model_change":
-				parts.push("model", entry.model);
-				break;
-			case "thinking_level_change":
-				parts.push("thinking", entry.thinkingLevel ?? ThinkingLevel.Off);
-				break;
-			case "custom":
-				parts.push("custom", entry.customType);
-				break;
-			case "label":
-				parts.push("label", entry.label ?? "");
-				break;
-		}
-
-		return parts.join(" ");
-	}
-
-	invalidate(): void {}
-
-	getSearchQuery(): string {
-		return this.#searchQuery;
-	}
-
-	getSelectedNode(): SessionTreeNode | undefined {
-		return this.#filteredNodes[this.#selectedIndex]?.node;
-	}
-
-	updateNodeLabel(entryId: string, label: string | undefined): void {
-		for (const flatNode of this.#flatNodes) {
-			if (flatNode.node.entry.id === entryId) {
-				flatNode.node.label = label;
-				break;
-			}
-		}
-	}
-
-	#getFilterLabel(): string {
-		switch (this.#filterMode) {
-			case "no-tools":
-				return " [no-tools]";
-			case "user-only":
-				return " [user]";
-			case "labeled-only":
-				return " [labeled]";
-			case "all":
-				return " [all]";
-			default:
-				return "";
-		}
-	}
-
-	render(width: number): string[] {
-		const lines: string[] = [];
-
-		if (this.#filteredNodes.length === 0) {
-			lines.push(truncateToWidth(theme.fg("muted", "  No entries found"), width));
-			lines.push(truncateToWidth(theme.fg("muted", `  (0/0)${this.#getFilterLabel()}`), width));
 			return lines;
 		}
 
-		const startIndex = Math.max(
-			0,
-			Math.min(
-				this.#selectedIndex - Math.floor(this.maxVisibleLines / 2),
-				this.#filteredNodes.length - this.maxVisibleLines,
-			),
-		);
-		const endIndex = Math.min(startIndex + this.maxVisibleLines, this.#filteredNodes.length);
-
-		for (let i = startIndex; i < endIndex; i++) {
-			const flatNode = this.#filteredNodes[i];
-			const entry = flatNode.node.entry;
-			const isSelected = i === this.#selectedIndex;
-
-			// Build line: cursor + prefix + path marker + label + content
-			const cursor = isSelected ? theme.fg("chromeAccent", "› ") : "  ";
-
-			// If multiple roots, shift display (roots at 0, not 1)
-			const displayIndent = this.#multipleRoots ? Math.max(0, flatNode.indent - 1) : flatNode.indent;
-
-			// Build prefix with gutters at their correct positions
-			// Each gutter has a position (displayIndent where its connector was shown)
-			const hasConnector = flatNode.showConnector && !flatNode.isVirtualRootChild;
-			const connectorSymbol = hasConnector ? (flatNode.isLast ? theme.tree.last : theme.tree.branch) : "";
-			const connectorChars = hasConnector ? Array.from(connectorSymbol) : [];
-			const connectorPosition = hasConnector ? displayIndent - 1 : -1;
-
-			// Build prefix char by char, placing gutters and connector at their positions
-			const totalChars = displayIndent * 3;
-			const prefixChars: string[] = [];
-			for (let i = 0; i < totalChars; i++) {
-				const level = Math.floor(i / 3);
-				const posInLevel = i % 3;
-
-				// Check if there's a gutter at this level
-				const gutter = flatNode.gutters.find(g => g.position === level);
-				if (gutter) {
-					if (posInLevel === 0) {
-						prefixChars.push(gutter.show ? theme.tree.vertical : " ");
-					} else {
-						prefixChars.push(" ");
-					}
-				} else if (hasConnector && level === connectorPosition) {
-					// Connector at this level
-					if (posInLevel === 0) {
-						prefixChars.push(connectorChars[0] ?? " ");
-					} else if (posInLevel === 1) {
-						prefixChars.push(connectorChars[1] ?? theme.tree.horizontal);
-					} else {
-						prefixChars.push(connectorChars[2] ?? " ");
-					}
-				} else {
-					prefixChars.push(" ");
-				}
-			}
-			const prefix = prefixChars.join("");
-
-			// Active path marker - shown right before the entry text
-			const isOnActivePath = this.#activePathIds.has(entry.id);
-			const pathMarker = isOnActivePath ? theme.fg("contentAccent", `${theme.md.bullet} `) : "";
-
-			const label = flatNode.node.label ? theme.fg("warning", `[${flatNode.node.label}] `) : "";
-			const content = this.#getEntryDisplayText(flatNode.node, isSelected);
-
-			let line = cursor + theme.fg("dim", prefix) + pathMarker + label + content;
-			if (isSelected) {
-				line = theme.bg("selectedBg", line);
-			}
-			lines.push(truncateToWidth(line, width));
-		}
-
-		lines.push(
-			truncateToWidth(
-				theme.fg("muted", `  (${this.#selectedIndex + 1}/${this.#filteredNodes.length})${this.#getFilterLabel()}`),
-				width,
-			),
-		);
-
-		return lines;
-	}
-
-	#getEntryDisplayText(node: SessionTreeNode, isSelected: boolean): string {
-		const entry = node.entry;
-		let result: string;
-
-		const normalize = (s: string) => s.replace(/[\n\t]/g, " ").trim();
-
-		switch (entry.type) {
-			case "message": {
-				const msg = entry.message;
-				const role = msg.role;
-				if (role === "user") {
-					const msgWithContent = msg as { content?: unknown };
-					const content = normalize(this.#extractContent(msgWithContent.content));
-					result = theme.fg("contentAccent", "user: ") + content;
-				} else if (role === "assistant") {
-					const msgWithContent = msg as { content?: unknown; stopReason?: string; errorMessage?: string };
-					const textContent = normalize(this.#extractContent(msgWithContent.content));
-					if (textContent) {
-						result = theme.fg("success", "assistant: ") + textContent;
-					} else if (msgWithContent.stopReason === "aborted") {
-						result = theme.fg("success", "assistant: ") + theme.fg("muted", "(aborted)");
-					} else if (msgWithContent.errorMessage) {
-						const errMsg = normalize(msgWithContent.errorMessage).slice(0, 80);
-						result = theme.fg("success", "assistant: ") + theme.fg("error", errMsg);
-					} else {
-						result = theme.fg("success", "assistant: ") + theme.fg("muted", "(no content)");
-					}
-				} else if (role === "toolResult") {
-					const toolMsg = msg as { toolCallId?: string; toolName?: string };
-					const toolCall = toolMsg.toolCallId ? this.#toolCallMap.get(toolMsg.toolCallId) : undefined;
-					if (toolCall) {
-						result = theme.fg("muted", this.#formatToolCall(toolCall.name, toolCall.arguments));
-					} else {
-						result = theme.fg("muted", `[${toolMsg.toolName ?? "tool"}]`);
-					}
-				} else if (role === "bashExecution") {
-					const bashMsg = msg as { command?: string };
-					result = theme.fg("dim", `[bash]: ${normalize(bashMsg.command ?? "")}`);
-				} else {
-					result = theme.fg("dim", `[${role}]`);
-				}
-				break;
-			}
-			case "custom_message": {
-				const content =
-					typeof entry.content === "string"
-						? entry.content
-						: entry.content
-								.filter((c): c is { type: "text"; text: string } => c.type === "text")
-								.map(c => c.text)
-								.join("");
-				result = theme.fg("customMessageLabel", `[${entry.customType}]: `) + normalize(content);
-				break;
-			}
-			case "compaction": {
-				const tokens = Math.round(entry.tokensBefore / 1000);
-				result = theme.fg("borderAccent", `[compaction: ${tokens}k tokens]`);
-				break;
-			}
-			case "branch_summary":
-				result = theme.fg("warning", `[branch summary]: `) + normalize(entry.summary);
-				break;
-			case "model_change":
-				result = theme.fg("dim", `[model: ${entry.model}]`);
-				break;
-			case "thinking_level_change":
-				result = theme.fg("dim", `[thinking: ${entry.thinkingLevel ?? ThinkingLevel.Off}]`);
-				break;
-			case "custom":
-				result = theme.fg("dim", `[custom: ${entry.customType}]`);
-				break;
-			case "label":
-				result = theme.fg("dim", `[label: ${entry.label ?? "(cleared)"}]`);
-				break;
-			default:
-				result = "";
-		}
-
-		return isSelected ? theme.bold(result) : result;
-	}
-
-	#extractContent(content: unknown): string {
-		const maxLen = 200;
-		if (typeof content === "string") return content.slice(0, maxLen);
-		if (Array.isArray(content)) {
-			let result = "";
-			for (const c of content) {
-				if (typeof c === "object" && c !== null && "type" in c && c.type === "text") {
-					result += (c as { text: string }).text;
-					if (result.length >= maxLen) return result.slice(0, maxLen);
-				}
-			}
-			return result;
-		}
-		return "";
-	}
-
-	#hasTextContent(content: unknown): boolean {
-		if (typeof content === "string") return content.trim().length > 0;
-		if (Array.isArray(content)) {
-			for (const c of content) {
-				if (typeof c === "object" && c !== null && "type" in c && c.type === "text") {
-					const text = (c as { text?: string }).text;
-					if (text && text.trim().length > 0) return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	#formatToolCall(name: string, args: Record<string, unknown>): string {
-		switch (name) {
-			case "read": {
-				const path = shortenPath(String(args.path || args.file_path || ""));
-				const offset = args.offset as number | undefined;
-				const limit = args.limit as number | undefined;
-				let display = path;
-				if (offset !== undefined || limit !== undefined) {
-					const start = offset ?? 1;
-					const end = limit !== undefined ? start + limit - 1 : "";
-					display += `:${start}${end ? `-${end}` : ""}`;
-				}
-				return `[read: ${display}]`;
-			}
-			case "write": {
-				const path = shortenPath(String(args.path || args.file_path || ""));
-				return `[write: ${path}]`;
-			}
-			case "edit": {
-				const path = shortenPath(String(args.path || args.file_path || ""));
-				return `[edit: ${path}]`;
-			}
-			case "bash": {
-				const rawCmd = String(args.command || "");
-				const cmd = rawCmd
-					.replace(/[\n\t]/g, " ")
-					.trim()
-					.slice(0, 50);
-				return `[bash: ${cmd}${rawCmd.length > 50 ? "..." : ""}]`;
-			}
-			case "grep": {
-				const pattern = String(args.pattern || "");
-				const path = shortenPath(String(args.path || "."));
-				return `[grep: /${pattern}/ in ${path}]`;
-			}
-			case "find": {
-				const pattern = String(args.pattern || "");
-				const path = shortenPath(String(args.path || "."));
-				return `[find: ${pattern} in ${path}]`;
-			}
-			case "ls": {
-				const path = shortenPath(String(args.path || "."));
-				return `[ls: ${path}]`;
-			}
-			default: {
-				// Custom tool - show name and truncated JSON args
-				const argsStr = JSON.stringify(args).slice(0, 40);
-				return `[${name}: ${argsStr}${JSON.stringify(args).length > 40 ? "..." : ""}]`;
-			}
-		}
-	}
-
-	handleInput(keyData: string): void {
-		if (matchesKey(keyData, "up")) {
-			this.#selectedIndex = this.#selectedIndex === 0 ? this.#filteredNodes.length - 1 : this.#selectedIndex - 1;
-		} else if (matchesKey(keyData, "down")) {
-			this.#selectedIndex = this.#selectedIndex === this.#filteredNodes.length - 1 ? 0 : this.#selectedIndex + 1;
-		} else if (matchesKey(keyData, "left")) {
-			// Page up
-			this.#selectedIndex = Math.max(0, this.#selectedIndex - this.maxVisibleLines);
-		} else if (matchesKey(keyData, "right")) {
-			// Page down
-			this.#selectedIndex = Math.min(this.#filteredNodes.length - 1, this.#selectedIndex + this.maxVisibleLines);
-		} else if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
-			const selected = this.#filteredNodes[this.#selectedIndex];
-			if (selected && this.onSelect) {
-				this.onSelect(selected.node.entry.id);
-			}
-		} else if (matchesAppInterrupt(keyData)) {
-			if (this.#searchQuery) {
-				this.#searchQuery = "";
-				this.#applyFilter();
-			} else {
-				this.onCancel?.();
-			}
-		} else if (matchesKey(keyData, "ctrl+c")) {
-			this.onCancel?.();
-		} else if (matchesKey(keyData, "shift+ctrl+o") || matchesKey(keyData, "ctrl+shift+o")) {
-			// Cycle filter backwards
-			const modes: FilterMode[] = ["default", "no-tools", "user-only", "labeled-only", "all"];
-			const currentIndex = modes.indexOf(this.#filterMode);
-			this.#filterMode = modes[(currentIndex - 1 + modes.length) % modes.length];
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "ctrl+o")) {
-			// Cycle filter forwards: default → no-tools → user-only → labeled-only → all → default
-			const modes: FilterMode[] = ["default", "no-tools", "user-only", "labeled-only", "all"];
-			const currentIndex = modes.indexOf(this.#filterMode);
-			this.#filterMode = modes[(currentIndex + 1) % modes.length];
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "alt+d")) {
-			this.#filterMode = "default";
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "alt+t")) {
-			this.#filterMode = "no-tools";
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "alt+u")) {
-			this.#filterMode = "user-only";
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "alt+l")) {
-			this.#filterMode = "labeled-only";
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "alt+a")) {
-			this.#filterMode = "all";
-			this.#applyFilter();
-		} else if (matchesKey(keyData, "backspace")) {
-			if (this.#searchQuery.length > 0) {
-				this.#searchQuery = this.#searchQuery.slice(0, -1);
-				this.#applyFilter();
-			}
-		} else if (matchesKey(keyData, "shift+l") && !this.#searchQuery) {
-			const selected = this.#filteredNodes[this.#selectedIndex];
-			if (selected && this.onLabelEdit) {
-				this.onLabelEdit(selected.node.entry.id, selected.node.label);
-			}
-		} else {
-			const printableText = extractPrintableText(keyData);
-			if (printableText) {
-				this.#searchQuery += printableText;
-				this.#applyFilter();
-			}
-		}
-	}
-}
-
-/** Component that displays the current search query */
-class SearchLine implements Component {
-	constructor(private treeList: TreeList) {}
-
-	invalidate(): void {}
-
-	render(width: number): string[] {
-		const query = this.treeList.getSearchQuery();
-		if (query) {
-			return [truncateToWidth(`  ${theme.fg("muted", "Search:")} ${theme.fg("contentAccent", query)}`, width)];
-		}
-		return [truncateToWidth(`  ${theme.fg("muted", "Search:")}`, width)];
-	}
-
-	handleInput(_keyData: string): void {}
-}
-
-/** Label input component shown when editing a label */
-class LabelInput implements Component {
-	#input: Input;
-	onSubmit?: (entryId: string, label: string | undefined) => void;
-	onCancel?: () => void;
-
-	constructor(
-		private readonly entryId: string,
-		currentLabel: string | undefined,
-	) {
-		this.#input = new Input();
-		if (currentLabel) {
-			this.#input.setValue(currentLabel);
-		}
-	}
-
-	invalidate(): void {}
-
-	render(width: number): string[] {
-		const lines: string[] = [];
-		const indent = "  ";
-		const availableWidth = width - indent.length;
-		lines.push(truncateToWidth(`${indent}${theme.fg("muted", "Label (empty to remove):")}`, width));
-		lines.push(...this.#input.render(availableWidth).map(line => truncateToWidth(`${indent}${line}`, width)));
-		lines.push(truncateToWidth(`${indent}${theme.fg("dim", "enter: save  esc: cancel")}`, width));
-		return lines;
-	}
-
-	handleInput(keyData: string): void {
-		if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
-			const value = this.#input.getValue().trim();
-			this.onSubmit?.(this.entryId, value || undefined);
-		} else if (matchesAppInterrupt(keyData)) {
-			this.onCancel?.();
-		} else {
-			this.#input.handleInput(keyData);
-		}
-	}
-}
-
-/**
- * Component that renders a session tree selector for navigation
- */
-export class TreeSelectorComponent extends Container {
-	#treeList: TreeList;
-	#labelInput: LabelInput | null = null;
-	#labelInputContainer: Container;
-	#treeContainer: Container;
-
-	constructor(
-		tree: SessionTreeNode[],
-		currentLeafId: string | null,
-		terminalHeight: number,
-		onSelect: (entryId: string) => void,
-		onCancel: () => void,
-		private readonly onLabelChangeCallback?: (entryId: string, label: string | undefined) => void,
-		initialFilterMode: FilterMode = "default",
-	) {
-		super();
-		const maxVisibleLines = Math.max(5, Math.floor(terminalHeight / 2));
-
-		this.#treeList = new TreeList(tree, currentLeafId, maxVisibleLines, initialFilterMode);
-		this.#treeList.onSelect = onSelect;
-		this.#treeList.onCancel = onCancel;
-		this.#treeList.onLabelEdit = (entryId, currentLabel) => this.#showLabelInput(entryId, currentLabel);
-
-		this.#treeContainer = new Container();
-		this.#treeContainer.addChild(this.#treeList);
-
-		this.#labelInputContainer = new Container();
-
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold("  Session Tree"), 1, 0));
-		this.addChild(
-			new TruncatedText(
+		const body = this.#browseBody(inner);
+		const selected = this.#filtered[this.#selected];
+		const lines = selectorFrame(
+			width,
+			this.rows(),
+			"Session tree",
+			"Inspect an exact node before navigating or labeling",
+			[
 				theme.fg(
 					"muted",
-					"Up/Down: move. Left/Right: page. Shift+L: label. Ctrl+O/Shift+Ctrl+O: filter. Alt+D/T/U/L/A: filter. Type to search",
+					["default", "no-tools", "user-only", "labeled-only", "all"]
+						.map(mode => (mode === this.#filterMode ? `[${mode}]` : mode))
+						.join("  "),
 				),
-				0,
-				0,
-			),
+			],
+			body,
+			selected ? wrapTextWithAnsi(`${entryRole(selected.node)} · ${entryText(selected.node)}`, inner) : [],
+			[
+				"Ctrl+O / Shift+Ctrl+O: switch view · Shift+L: edit selected label",
+				selectorCancelHint("back"),
+				...(this.#filtered.length > this.#capacity
+					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: page`]
+					: []),
+			],
+			{ selectedBodyIndex: this.#selected - this.#browseStart + 1, stickyBodyRows: 1 },
 		);
-		this.addChild(new SearchLine(this.#treeList));
-		this.addChild(new DynamicBorder());
-		this.addChild(new Spacer(1));
-		this.addChild(this.#treeContainer);
-		this.addChild(this.#labelInputContainer);
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
+		this.#hitRows.clear();
+		for (
+			let index = this.#browseStart;
+			index < Math.min(this.#filtered.length, this.#browseStart + this.#capacity);
+			index++
+		) {
+			const marker = this.#filtered[index].node.entry.id.slice(-8);
+			const row = lines.findIndex(line => Bun.stripANSI(line).includes(marker));
+			if (row >= 0) this.#hitRows.set(row, index);
+		}
+		return lines;
+	}
 
-		if (tree.length === 0) {
-			setTimeout(() => onCancel(), 100);
+	async #saveLabel(): Promise<void> {
+		if (!this.#detail || !this.#labelEditor || this.#savingLabel) return;
+		this.#savingLabel = true;
+		this.#labelError = "";
+		try {
+			const value = this.#labelEditor.input.getValue().trim() || undefined;
+			const saved = await this.onLabelChangeCallback?.(this.#detail.node.entry.id, value);
+			if (saved === false) return;
+			this.#detail.node.label = value;
+			this.#labelEditor = undefined;
+			this.#applyFilter(this.#detail.node.entry.id);
+		} catch (error) {
+			this.#labelError = error instanceof Error ? error.message : String(error);
+		} finally {
+			this.#savingLabel = false;
 		}
 	}
 
-	#showLabelInput(entryId: string, currentLabel: string | undefined): void {
-		this.#labelInput = new LabelInput(entryId, currentLabel);
-		this.#labelInput.onSubmit = (id, label) => {
-			this.#treeList.updateNodeLabel(id, label);
-			this.onLabelChangeCallback?.(id, label);
-			this.#hideLabelInput();
-		};
-		this.#labelInput.onCancel = () => this.#hideLabelInput();
+	handleInput(data: string): void {
+		if (this.#labelEditor) {
+			if (this.#savingLabel || matchesKey(data, "ctrl+c")) return;
+			if (matchesSelectorKey(data, "cancel")) {
+				this.#labelEditor = undefined;
+				this.#labelError = "";
+			} else if (matchesSelectorKey(data, "confirm")) void this.#saveLabel();
+			else this.#labelEditor.handleInput(data);
+			return;
+		}
+		if (this.#detail) {
+			if (matchesKey(data, "ctrl+c")) return;
+			if (matchesSelectorKey(data, "cancel")) {
+				this.#detail = undefined;
+				this.#detailOffset = 0;
+				return;
+			}
+			if (matchesSelectorKey(data, "pageUp") || matchesSelectorKey(data, "pageDown")) {
+				this.#detailOffset = Math.max(0, this.#detailOffset + (matchesSelectorKey(data, "pageUp") ? -3 : 3));
+				return;
+			}
+			if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
+				this.#detailAction = 1 - this.#detailAction;
+				return;
+			}
+			if (matchesSelectorKey(data, "confirm")) {
+				if (this.#detailAction === 0) void this.onSelect(this.#detail.node.entry.id);
+				else this.#labelEditor = new LabelEditor(this.#detail.node.label);
+			}
+			return;
+		}
 
-		this.#treeContainer.clear();
-		this.#labelInputContainer.clear();
-		this.#labelInputContainer.addChild(this.#labelInput);
-	}
-
-	#hideLabelInput(): void {
-		this.#labelInput = null;
-		this.#labelInputContainer.clear();
-		this.#treeContainer.clear();
-		this.#treeContainer.addChild(this.#treeList);
-	}
-
-	handleInput(keyData: string): void {
-		if (this.#labelInput) {
-			this.#labelInput.handleInput(keyData);
+		if (matchesSelectorKey(data, "cancel")) {
+			if (this.#search.getValue()) {
+				this.#search.setValue("");
+				this.#applyFilter();
+			} else this.onCancel();
+			return;
+		}
+		if (matchesKey(data, "ctrl+c")) return;
+		if (matchesKey(data, "shift+ctrl+o") || matchesKey(data, "ctrl+shift+o")) this.#cycleFilter(-1);
+		else if (matchesKey(data, "ctrl+o")) this.#cycleFilter(1);
+		else if (matchesKey(data, "alt+d")) {
+			this.#filterMode = "default";
+			this.#applyFilter();
+		} else if (matchesKey(data, "alt+t")) {
+			this.#filterMode = "no-tools";
+			this.#applyFilter();
+		} else if (matchesKey(data, "alt+u")) {
+			this.#filterMode = "user-only";
+			this.#applyFilter();
+		} else if (matchesKey(data, "alt+l")) {
+			this.#filterMode = "labeled-only";
+			this.#applyFilter();
+		} else if (matchesKey(data, "alt+a")) {
+			this.#filterMode = "all";
+			this.#applyFilter();
+		} else if (matchesKey(data, "shift+l") && !this.#search.getValue()) {
+			const item = this.#filtered[this.#selected];
+			if (item) {
+				this.#detail = item;
+				this.#detailAction = 1;
+				this.#labelEditor = new LabelEditor(item.node.label);
+			}
+		} else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
+			if (!this.#filtered.length) return;
+			const delta = matchesSelectorKey(data, "up") ? -1 : 1;
+			this.#selected = (this.#selected + delta + this.#filtered.length) % this.#filtered.length;
+		} else if (matchesSelectorKey(data, "pageUp") || matchesSelectorKey(data, "pageDown")) {
+			const delta = matchesSelectorKey(data, "pageUp") ? -this.#capacity : this.#capacity;
+			this.#selected = Math.max(0, Math.min(this.#filtered.length - 1, this.#selected + delta));
+		} else if (matchesSelectorKey(data, "confirm")) {
+			this.#detail = this.#filtered[this.#selected];
+			this.#detailAction = 0;
+			this.#detailOffset = 0;
 		} else {
-			this.#treeList.handleInput(keyData);
+			this.#search.handleInput(data);
+			this.#applyFilter();
 		}
 	}
 
-	getTreeList(): TreeList {
-		return this.#treeList;
+	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
+		if (this.#labelEditor) return;
+		if (event.wheel !== null) {
+			this.handleInput(event.wheel < 0 ? "\x1b[A" : "\x1b[B");
+			return;
+		}
+		if (!event.leftClick) return;
+		if (this.#detail) {
+			const action = this.#actionRows.get(event.row);
+			if (action === undefined) return;
+			this.#detailAction = action;
+			this.handleInput("\r");
+			return;
+		}
+		const index = this.#hitRows.get(event.row);
+		if (index === undefined) return;
+		this.#selected = index;
+		this.#detail = this.#filtered[index];
+		this.#detailAction = 0;
 	}
+
+	/** Kept for focused component tests and extension-internal diagnostics. */
+	getTreeList(): TreeSelectorComponent {
+		return this;
+	}
+
+	getSearchQuery(): string {
+		return this.#search.getValue();
+	}
+
+	getSelectedNode(): SessionTreeNode | undefined {
+		return this.#filtered[this.#selected]?.node;
+	}
+
+	invalidate(): void {}
 }

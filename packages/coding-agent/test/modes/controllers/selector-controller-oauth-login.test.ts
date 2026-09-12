@@ -15,6 +15,24 @@ function renderVisible(components: Array<{ render(width: number): string[] }>, w
 		.trim();
 }
 
+function confirmReviewedAction(
+	factory: (
+		ui: unknown,
+		theme: unknown,
+		keys: unknown,
+		done: (value: unknown) => void,
+	) => {
+		render(width: number): string[];
+		handleInput?(data: string): void;
+	},
+): Promise<unknown> {
+	return new Promise(resolve => {
+		const component = factory({ terminal: { rows: 32 }, requestRender() {} }, {}, {}, resolve);
+		component.handleInput?.("\x1b[B");
+		component.handleInput?.("\r");
+	});
+}
+
 beforeAll(() => {
 	initTheme();
 });
@@ -60,9 +78,113 @@ describe("SelectorController native login lifecycle", () => {
 		editorContainer.children[0]?.handleInput?.("\x1b");
 		expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_end", kind: "select" });
 	});
+
+	it("retains provider search and selection when credential review is cancelled", async () => {
+		const emit = vi.fn(async () => undefined);
+		const login = vi.fn(async () => undefined);
+		const editorContainer = {
+			children: [] as Array<{ handleInput?(key: string): void; render(width: number): string[] }>,
+			clear() {
+				this.children = [];
+			},
+			addChild(child: (typeof this.children)[number]) {
+				this.children.push(child);
+			},
+		};
+		let review = "";
+		const ctx = {
+			editorContainer,
+			editor: { render: () => [] },
+			session: {
+				extensionRunner: { emit },
+				modelRegistry: {
+					authStorage: { has: () => false, hasAuth: () => false, login },
+					getApiKeyForProvider: vi.fn(async () => undefined),
+					getProviderInventory: () => [],
+					getConfiguredProviderIds: () => new Set(),
+					getProviderAccessState: (provider: string) => ({
+						provider,
+						configured: false,
+						status: "unconfigured",
+						catalogFreshness: "none",
+						selectable: false,
+					}),
+					getProviderPickerMetadata: () => undefined,
+					refreshProvider: vi.fn(async () => undefined),
+				},
+			},
+			ui: { terminal: { rows: 24 }, requestRender: vi.fn(), setFocus: vi.fn() },
+			showStatus: vi.fn(),
+			showWarning: vi.fn(),
+			showHookCustom: (factory: Parameters<typeof confirmReviewedAction>[0]) =>
+				new Promise(resolve => {
+					const component = factory(ctx.ui, {}, {}, resolve);
+					review = Bun.stripANSI(component.render(80).join("\n"));
+					component.handleInput?.("\r");
+				}),
+		} as unknown as InteractiveModeContext;
+
+		await new SelectorController(ctx).showOAuthSelector("login");
+		const selector = editorContainer.children[0]!;
+		for (const character of "google-antigravity") selector.handleInput?.(character);
+		selector.handleInput?.("\r");
+		await Bun.sleep(0);
+
+		expect(review).toContain("Review provider sign-in");
+		expect(login).not.toHaveBeenCalled();
+		expect(editorContainer.children[0]).toBe(selector);
+		expect(Bun.stripANSI(selector.render(80).join("\n"))).toContain("google-antigravity");
+		expect(emit).not.toHaveBeenCalledWith({ type: "user_prompt_end", kind: "select" });
+	});
 });
 
 describe("SelectorController Google Antigravity login", () => {
+	it("reviews credential persistence with Cancel selected and masks an existing credential", async () => {
+		const login = vi.fn(async () => undefined);
+		const showStatus = vi.fn();
+		let review = "";
+		const ctx = {
+			session: {
+				modelRegistry: {
+					authStorage: {
+						hasAuth: () => true,
+						get: () => ({ type: "oauth", access: "must-not-render" }),
+						login,
+					},
+				},
+			},
+			oauthManualInput: new OAuthManualInputManager(),
+			ui: { requestRender: vi.fn() },
+			showStatus,
+			showWarning: vi.fn(),
+			showHookCustom: (
+				factory: (
+					ui: unknown,
+					theme: unknown,
+					keys: unknown,
+					done: (value: unknown) => void,
+				) => {
+					render(width: number): string[];
+					handleInput?(data: string): void;
+				},
+			) =>
+				new Promise(resolve => {
+					const component = factory({ terminal: { rows: 24 }, requestRender() {} }, {}, {}, resolve);
+					review = Bun.stripANSI(component.render(80).join("\n"));
+					component.handleInput?.("\r");
+				}),
+		} as unknown as InteractiveModeContext;
+
+		await new SelectorController(ctx).showOAuthSelector("login", "google-antigravity");
+
+		expect(review).toContain("Review provider sign-in");
+		expect(review).toContain("Credential: Stored (masked) → Replace after successful sign-in (masked)");
+		expect(review).toContain("Cancel");
+		expect(review).not.toContain("must-not-render");
+		expect(login).not.toHaveBeenCalled();
+		expect(showStatus).toHaveBeenCalledWith("Login cancelled. Existing credentials unchanged.");
+	});
+
 	it("saves authentication and offers a model handoff without applying a model", async () => {
 		const model = {
 			id: "gemini-3.6-flash-high",
@@ -102,6 +224,7 @@ describe("SelectorController Google Antigravity login", () => {
 			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
 			showStatus: vi.fn(),
 			showError,
+			showHookCustom: confirmReviewedAction,
 			openInBrowser: vi.fn(),
 		} as unknown as InteractiveModeContext;
 
@@ -154,6 +277,7 @@ describe("SelectorController Google Antigravity login", () => {
 			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
 			showStatus: vi.fn(),
 			showError: vi.fn(),
+			showHookCustom: confirmReviewedAction,
 			openInBrowser,
 		} as unknown as InteractiveModeContext;
 
@@ -200,6 +324,7 @@ describe("SelectorController Corporate Vertex login", () => {
 				ui: { requestRender: vi.fn() },
 				showStatus: vi.fn(),
 				showError,
+				showHookCustom: confirmReviewedAction,
 				openInBrowser: vi.fn(),
 			} as unknown as InteractiveModeContext;
 
@@ -301,6 +426,7 @@ describe("SelectorController Corporate Vertex login", () => {
 				ui: { requestRender: vi.fn() },
 				showStatus: vi.fn(),
 				showError: vi.fn(),
+				showHookCustom: confirmReviewedAction,
 				openInBrowser: vi.fn(),
 			} as unknown as InteractiveModeContext;
 
@@ -347,6 +473,7 @@ describe("SelectorController Corporate Vertex login", () => {
 				ui: { requestRender: vi.fn() },
 				showStatus: vi.fn(),
 				showError: vi.fn(),
+				showHookCustom: confirmReviewedAction,
 				openInBrowser,
 			} as unknown as InteractiveModeContext;
 
@@ -395,6 +522,7 @@ describe("SelectorController Corporate Vertex login", () => {
 				showStatus: vi.fn(),
 				showError: vi.fn(),
 				showWarning: vi.fn(),
+				showHookCustom: confirmReviewedAction,
 				openHttpUrl,
 			} as unknown as InteractiveModeContext;
 
@@ -450,6 +578,7 @@ describe("SelectorController ChatGPT device login", () => {
 				ui: { requestRender: vi.fn(), setFocus: vi.fn() },
 				showStatus: vi.fn(),
 				showError: vi.fn(),
+				showHookCustom: confirmReviewedAction,
 				openInBrowser,
 			} as unknown as InteractiveModeContext;
 
@@ -466,6 +595,65 @@ describe("SelectorController ChatGPT device login", () => {
 			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;
 			else process.env.SSH_CONNECTION = previousSshConnection;
 		}
+	});
+});
+
+describe("SelectorController provider logout review", () => {
+	it("cancels before deleting credentials", async () => {
+		const logout = vi.fn(async () => undefined);
+		const showStatus = vi.fn();
+		let screen = "";
+		const ctx = {
+			session: { modelRegistry: { authStorage: { hasAuth: () => true, logout } } },
+			ui: { requestRender: vi.fn() },
+			showStatus,
+			showWarning: vi.fn(),
+			showError: vi.fn(),
+			showHookCustom: (factory: Parameters<typeof confirmReviewedAction>[0]) =>
+				new Promise(resolve => {
+					const component = factory({ terminal: { rows: 24 }, requestRender() {} }, {}, {}, resolve);
+					screen = Bun.stripANSI(component.render(80).join("\n"));
+					component.handleInput?.("\r");
+				}),
+		} as unknown as InteractiveModeContext;
+
+		await new SelectorController(ctx).showOAuthSelector("logout", "anthropic");
+
+		expect(screen).toContain("Review provider credential removal");
+		expect(screen).toContain("Credential: Stored (masked) → Removed");
+		expect(logout).not.toHaveBeenCalled();
+		expect(showStatus).toHaveBeenCalledWith("Logout cancelled. Existing credentials unchanged.");
+	});
+
+	it("reports a completed removal separately from a failed catalog refresh", async () => {
+		let stored = true;
+		const logout = vi.fn(async () => {
+			stored = false;
+		});
+		const showWarning = vi.fn();
+		const ctx = {
+			session: {
+				modelRegistry: {
+					authStorage: { hasAuth: () => stored, logout },
+					refresh: vi.fn(async () => {
+						throw new Error("synthetic offline catalog");
+					}),
+				},
+			},
+			ui: { requestRender: vi.fn() },
+			showStatus: vi.fn(),
+			showWarning,
+			showError: vi.fn(),
+			showHookCustom: confirmReviewedAction,
+		} as unknown as InteractiveModeContext;
+
+		await new SelectorController(ctx).showOAuthSelector("logout", "anthropic");
+
+		expect(logout).toHaveBeenCalledTimes(1);
+		expect(stored).toBe(false);
+		expect(showWarning).toHaveBeenCalledWith(
+			"Credentials were removed, but provider refresh failed: synthetic offline catalog",
+		);
 	});
 });
 
@@ -494,6 +682,7 @@ it("cancels an in-flight browser wait through the provider abort signal", async 
 		oauthManualInput: new OAuthManualInputManager(),
 		showStatus,
 		showError: vi.fn(),
+		showHookCustom: confirmReviewedAction,
 		openInBrowser: vi.fn(),
 	} as unknown as InteractiveModeContext;
 	const promise = new SelectorController(ctx).showOAuthSelector("login", "google-antigravity");

@@ -40,22 +40,27 @@ describe("buildTabs", () => {
 		expect(rec!.count).toBe(2);
 	});
 
-	it("omits Recommended tab when all recommended plugins are installed", () => {
+	it("keeps Recommended visible with a zero count when all recommended plugins are installed", () => {
 		const plugins: DashboardPlugin[] = [
 			makePlugin({ id: "a@mkt", name: "a", installed: true, enabled: true, recommended: true }),
 			makePlugin({ id: "b@mkt", name: "b", installed: true, enabled: true, recommended: true }),
 		];
 		const tabs = buildTabs(plugins);
-		expect(tabs.find(t => t.id === "recommended")).toBeUndefined();
+		expect(tabs.find(t => t.id === "recommended")?.count).toBe(0);
 	});
 
-	it("omits Recommended tab when no plugins are recommended", () => {
+	it("keeps all four navigation tabs stable when catalogs are empty", () => {
 		const plugins: DashboardPlugin[] = [
 			makePlugin({ id: "a@mkt", name: "a" }),
 			makePlugin({ id: "b@mkt", name: "b" }),
 		];
 		const tabs = buildTabs(plugins);
-		expect(tabs.find(t => t.id === "recommended")).toBeUndefined();
+		expect(tabs.map(tab => [tab.id, tab.count])).toEqual([
+			["installed", 0],
+			["recommended", 0],
+			["discover", 2],
+			["updates", 0],
+		]);
 	});
 
 	it("positions Recommended after Installed", () => {

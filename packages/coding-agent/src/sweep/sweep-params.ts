@@ -18,7 +18,7 @@
  */
 
 /** A throwaway password that satisfies typical complexity rules. */
-const TEST_PW = "Xcsh-Sweep-Pw-2026!";
+const TEST_PW = "xcsh-Sweep-Pw-2026!";
 
 /**
  * Resources excluded from the sweep: they require real cloud credentials or

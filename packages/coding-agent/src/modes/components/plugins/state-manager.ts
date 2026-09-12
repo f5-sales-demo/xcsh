@@ -95,8 +95,7 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 		for (const entry of available) {
 			const pluginId = `${entry.name}@${mkt.name}`;
 			if (installedIds.has(pluginId)) {
-				const existing = plugins.find(p => p.id === pluginId);
-				if (existing) {
+				for (const existing of plugins.filter(p => p.source === "marketplace" && p.id === pluginId)) {
 					existing.displayName = existing.displayName || entry.displayName;
 					existing.recommended = existing.recommended || entry.recommended;
 					existing.prerequisites = existing.prerequisites || entry.prerequisites;
@@ -126,23 +125,21 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 }
 
 export function buildTabs(plugins: DashboardPlugin[]): PluginTab[] {
-	const tabs: PluginTab[] = [];
 	const installedCount = plugins.filter(p => p.installed).length;
 	const recommendedCount = plugins.filter(p => !p.installed && p.recommended).length;
 	const discoverCount = plugins.filter(p => !p.installed).length;
 	const updatesCount = plugins.filter(p => p.hasUpdate).length;
 
-	tabs.push({ id: "installed", label: t("plugins.tabs.installed"), count: installedCount });
-	if (recommendedCount > 0) {
-		tabs.push({ id: "recommended", label: t("plugins.tabs.recommended"), count: recommendedCount });
-	}
-	if (discoverCount > 0) {
-		tabs.push({ id: "discover", label: t("plugins.tabs.discover"), count: discoverCount });
-	}
-	if (updatesCount > 0) {
-		tabs.push({ id: "updates", label: t("plugins.tabs.updates"), count: updatesCount });
-	}
-	return tabs;
+	return [
+		{ id: "installed", label: t("plugins.tabs.installed"), count: installedCount },
+		{ id: "recommended", label: t("plugins.tabs.recommended"), count: recommendedCount },
+		{ id: "discover", label: t("plugins.tabs.discover"), count: discoverCount },
+		{ id: "updates", label: t("plugins.tabs.updates"), count: updatesCount },
+	];
+}
+
+export function pluginSelectionKey(plugin: DashboardPlugin): string {
+	return `${plugin.source}\u0000${plugin.id}\u0000${plugin.scope ?? ""}`;
 }
 
 export function filterByTab(plugins: DashboardPlugin[], tabId: PluginTabId): DashboardPlugin[] {
@@ -204,7 +201,9 @@ export async function refreshState(
 	mgr: MarketplaceManager,
 	npmMgr: PluginManager,
 ): Promise<PluginDashboardState> {
-	const selectedId = state.searchFiltered[state.selectedIndex]?.id;
+	const selectedKey = state.searchFiltered[state.selectedIndex]
+		? pluginSelectionKey(state.searchFiltered[state.selectedIndex]!)
+		: undefined;
 	const allPlugins = await loadAllPlugins(mgr, npmMgr);
 	const tabs = buildTabs(allPlugins);
 	const prevTabId = state.tabs[state.activeTabIndex]?.id ?? "installed";
@@ -227,8 +226,8 @@ export async function refreshState(
 		loading: false,
 		loadError: null,
 	};
-	if (selectedId) {
-		const selectedIndex = searchFiltered.findIndex(plugin => plugin.id === selectedId);
+	if (selectedKey) {
+		const selectedIndex = searchFiltered.findIndex(plugin => pluginSelectionKey(plugin) === selectedKey);
 		if (selectedIndex >= 0) nextState.selectedIndex = selectedIndex;
 	}
 	if (searchFiltered.length === 0) {

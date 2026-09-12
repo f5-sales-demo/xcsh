@@ -4,56 +4,86 @@ import {
 	Input,
 	type MouseRoutable,
 	matchesKey,
-	padding,
-	replaceTabs,
 	type SgrMouseEvent,
-	Spacer,
-	Text,
-	truncateToWidth,
-	visibleWidth,
+	wrapTextWithAnsi,
 } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
-import { matchesAppInterrupt } from "../../modes/utils/keybinding-matchers";
 import type { SessionInfo } from "../../session/session-manager";
 import { fuzzyFilter } from "../../utils/fuzzy";
-import { DynamicBorder } from "./dynamic-border";
-import { HookSelectorComponent } from "./hook-selector";
+import { ReviewedActionDialog } from "./reviewed-action-dialog";
+import {
+	matchesSelectorKey,
+	type SelectorFrameLine,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+	selectorRow,
+} from "./selector-frame";
 
-/**
- * Custom session list component with multi-line items and search
- */
+function formatDate(date: Date): string {
+	const diffMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60_000));
+	if (diffMinutes < 1) return "now";
+	if (diffMinutes < 60) return `${diffMinutes}m`;
+	const hours = Math.floor(diffMinutes / 60);
+	if (hours < 24) return `${hours}h`;
+	const days = Math.floor(hours / 24);
+	if (days < 7) return `${days}d`;
+	return date.toLocaleDateString();
+}
+
 class SessionList implements Component {
-	#filteredSessions: SessionInfo[] = [];
-	#selectedIndex: number = 0;
-	readonly #searchInput: Input;
+	#sessions: SessionInfo[];
+	#filteredSessions: SessionInfo[];
+	#selectedIndex = 0;
+	#searchInput = new Input();
+	#hitRows: (number | undefined)[] = [];
+	#capacity = 4;
+	#showCwd = false;
 	onSelect?: (sessionPath: string) => void;
 	onCancel?: () => void;
 	onExit: () => void = () => {};
-	#hitRows: (number | undefined)[] = [];
-
 	onDeleteRequest?: (session: SessionInfo) => void;
 
-	constructor(
-		private readonly allSessions: SessionInfo[],
-		private readonly showCwd = false,
-		private readonly getTerminalRows: () => number = () => 24,
-	) {
-		this.#filteredSessions = allSessions;
-		this.#searchInput = new Input();
-
-		// Handle Enter in search input - select current item
-		this.#searchInput.onSubmit = () => {
-			if (this.#filteredSessions[this.#selectedIndex]) {
-				const selected = this.#filteredSessions[this.#selectedIndex];
-				if (this.onSelect) {
-					this.onSelect(selected.path);
-				}
-			}
-		};
+	constructor(sessions: SessionInfo[], showCwd = false) {
+		this.#sessions = sessions;
+		this.#filteredSessions = sessions;
+		this.#showCwd = showCwd;
+		this.#searchInput.onEscape = () => {};
 	}
 
-	#maxVisible(): number {
-		return Math.max(2, Math.floor((this.getTerminalRows() - 13) / 4));
+	setSessions(sessions: SessionInfo[], showCwd: boolean, query: string): void {
+		const identity = this.selected()?.path;
+		this.#sessions = sessions;
+		this.#showCwd = showCwd;
+		this.#searchInput.setValue(query);
+		this.#filterSessions(query);
+		if (identity) {
+			const index = this.#filteredSessions.findIndex(session => session.path === identity);
+			if (index >= 0) this.#selectedIndex = index;
+		}
+	}
+
+	getQuery(): string {
+		return this.#searchInput.getValue();
+	}
+
+	selected(): SessionInfo | undefined {
+		return this.#filteredSessions[this.#selectedIndex];
+	}
+
+	#filterSessions(query: string): void {
+		this.#filteredSessions = fuzzyFilter(this.#sessions, query, session =>
+			[session.id, session.title ?? "", session.cwd, session.firstMessage, session.allMessagesText, session.path]
+				.filter(Boolean)
+				.join(" "),
+		);
+		this.#selectedIndex = Math.min(this.#selectedIndex, Math.max(0, this.#filteredSessions.length - 1));
+	}
+
+	removeSession(sessionPath: string): void {
+		this.#sessions = this.#sessions.filter(session => session.path !== sessionPath);
+		this.#filterSessions(this.getQuery());
 	}
 
 	hitTest(line: number): number | undefined {
@@ -71,330 +101,271 @@ class SessionList implements Component {
 		this.onSelect?.(session.path);
 	}
 
-	#filterSessions(query: string): void {
-		this.#filteredSessions = fuzzyFilter(this.allSessions, query, session => {
-			const parts = [
-				session.id,
-				session.title ?? "",
-				session.cwd ?? "",
-				session.firstMessage ?? "",
-				session.allMessagesText,
-				session.path,
-			];
-			return parts.filter(Boolean).join(" ");
-		});
-		this.#selectedIndex = Math.min(this.#selectedIndex, Math.max(0, this.#filteredSessions.length - 1));
-	}
+	invalidate(): void {}
 
-	removeSession(sessionPath: string): void {
-		const index = this.allSessions.findIndex(s => s.path === sessionPath);
-		if (index === -1) return;
-		this.allSessions.splice(index, 1);
-		// Re-filter to update filteredSessions
-		this.#filterSessions(this.#searchInput.getValue());
-		// Adjust selectedIndex if we deleted the last item or beyond
-		if (this.#selectedIndex >= this.#filteredSessions.length) {
-			this.#selectedIndex = Math.max(0, this.#filteredSessions.length - 1);
-		}
-	}
-
-	invalidate(): void {
-		// No cached state to invalidate currently
-	}
-
-	render(width: number): string[] {
-		const lines: string[] = [];
+	renderFrameLines(width: number): SelectorFrameLine[] {
+		const lines: SelectorFrameLine[] = [];
 		this.#hitRows = [];
-
-		// Render search input
-		lines.push(...this.#searchInput.render(width));
-		lines.push(""); // Blank line after search
-
+		lines.push(`Search: ${theme.nav.cursor} ${this.#searchInput.render(Math.max(1, width - 10))[0] ?? ""}`);
 		if (this.#filteredSessions.length === 0) {
-			if (this.showCwd) {
-				// "All" scope - no sessions anywhere that match filter
-				lines.push(truncateToWidth(theme.fg("muted", "  No sessions found"), width));
-			} else {
-				// "Current folder" scope - hint to try "all"
-				lines.push(
-					truncateToWidth(theme.fg("muted", "  No sessions in current folder. Press Tab to view all."), width),
-				);
-			}
+			lines.push(theme.fg("muted", this.getQuery() ? "No matching sessions" : "No sessions in this scope"));
 			return lines;
 		}
-
-		// Format dates
-		const formatDate = (date: Date): string => {
-			const now = new Date();
-			const diffMs = now.getTime() - date.getTime();
-			const diffMins = Math.floor(diffMs / 60000);
-			const diffHours = Math.floor(diffMs / 3600000);
-			const diffDays = Math.floor(diffMs / 86400000);
-
-			if (diffMins < 1) return "just now";
-			if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-			if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-			if (diffDays === 1) return "1 day ago";
-			if (diffDays < 7) return `${diffDays} days ago`;
-
-			return date.toLocaleDateString();
-		};
-
-		// Calculate visible range with scrolling
-		const maxVisible = this.#maxVisible();
-		const startIndex = Math.max(
+		const start = Math.max(
 			0,
-			Math.min(this.#selectedIndex - Math.floor(maxVisible / 2), this.#filteredSessions.length - maxVisible),
+			Math.min(this.#selectedIndex - Math.floor(this.#capacity / 2), this.#filteredSessions.length - this.#capacity),
 		);
-		const endIndex = Math.min(startIndex + maxVisible, this.#filteredSessions.length);
-
-		// Render visible sessions (2-3 lines per session + blank line)
-		for (let i = startIndex; i < endIndex; i++) {
-			const rowStart = lines.length;
-			const session = this.#filteredSessions[i];
-			const isSelected = i === this.#selectedIndex;
-
-			// Normalize first message to single line
-			const normalizedMessage = session.firstMessage.replace(/\n/g, " ").trim();
-
-			// First line: cursor + title (or first message if no title)
-			const cursorSymbol = `${theme.nav.cursor} `;
-			const cursorWidth = visibleWidth(cursorSymbol);
-			const cursor = isSelected ? theme.fg("chromeAccent", cursorSymbol) : padding(cursorWidth);
-			const maxWidth = width - cursorWidth; // Account for cursor width
-
-			if (session.title) {
-				// Has title: show title on first line, dimmed first message on second line
-				const truncatedTitle = truncateToWidth(session.title, maxWidth);
-				const titleLine = cursor + (isSelected ? theme.bold(truncatedTitle) : truncatedTitle);
-				lines.push(titleLine);
-
-				// Second line: dimmed first message preview
-				const truncatedPreview = truncateToWidth(normalizedMessage, maxWidth);
-				lines.push(`  ${theme.fg("dim", truncatedPreview)}`);
-			} else {
-				// No title: show first message as main line
-				const truncatedMsg = truncateToWidth(normalizedMessage, maxWidth);
-				const messageLine = cursor + (isSelected ? theme.bold(truncatedMsg) : truncatedMsg);
-				lines.push(messageLine);
+		const end = Math.min(this.#filteredSessions.length, start + this.#capacity);
+		const metaWidth = Math.min(16, Math.max(9, Math.floor(width * 0.22)));
+		const countWidth = Math.min(12, Math.max(7, Math.floor(width * 0.14)));
+		const titleWidth = Math.max(8, width - metaWidth - countWidth - 4);
+		for (let index = start; index < end; index++) {
+			const session = this.#filteredSessions[index];
+			const title = session.title || session.firstMessage.replace(/\s+/g, " ").trim() || "Untitled session";
+			this.#hitRows[lines.length] = index;
+			lines.push(
+				selectorRow(
+					[`${title} · ${session.id.slice(-8)}`, `${session.messageCount} msg`, formatDate(session.modified)],
+					[titleWidth, countWidth, metaWidth],
+					index === this.#selectedIndex,
+				),
+			);
+			if (index === this.#selectedIndex) {
+				const summary = `${this.#showCwd ? `${session.cwd} · ` : ""}${session.firstMessage.replace(/\s+/g, " ").trim()}`;
+				lines.push(...wrapTextWithAnsi(theme.fg("muted", summary), width));
 			}
-
-			// Metadata line: date + message count
-			const modified = formatDate(session.modified);
-			const msgCount = `${session.messageCount} message${session.messageCount !== 1 ? "s" : ""}`;
-			const metadata = `  ${modified} ${theme.sep.dot} ${msgCount}`;
-			const metadataLine = theme.fg("dim", truncateToWidth(metadata, width));
-
-			lines.push(metadataLine);
-			for (let row = rowStart; row < lines.length; row++) this.#hitRows[row] = i;
-			lines.push(""); // Blank separator is intentionally not clickable.
 		}
-
-		// Add scroll indicator if needed
-		if (startIndex > 0 || endIndex < this.#filteredSessions.length) {
-			const scrollText = `  (${this.#selectedIndex + 1}/${this.#filteredSessions.length})`;
-			const scrollInfo = theme.fg("muted", truncateToWidth(scrollText, width));
-			lines.push(scrollInfo);
-		}
-
+		if (start > 0 || end < this.#filteredSessions.length)
+			lines.push(theme.fg("muted", `${this.#selectedIndex + 1}/${this.#filteredSessions.length}`));
 		return lines;
 	}
 
-	handleInput(keyData: string): void {
-		// Delete key - request delete confirmation from parent
-		if (matchesKey(keyData, "delete")) {
-			const selected = this.#filteredSessions[this.#selectedIndex];
-			if (selected && this.onDeleteRequest) {
-				this.onDeleteRequest(selected);
-			}
-			return;
-		}
+	render(width: number): string[] {
+		return this.renderFrameLines(width).map(line => (typeof line === "string" ? line : line.content));
+	}
 
-		// Up arrow
-		if (matchesKey(keyData, "up")) {
-			this.#selectedIndex = Math.max(0, this.#selectedIndex - 1);
+	handleInput(data: string): void {
+		if (matchesKey(data, "delete")) {
+			const session = this.selected();
+			if (session) this.onDeleteRequest?.(session);
 			return;
 		}
-		// Down arrow
-		if (matchesKey(keyData, "down")) {
-			this.#selectedIndex = Math.min(this.#filteredSessions.length - 1, this.#selectedIndex + 1);
+		if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
+			const delta = matchesSelectorKey(data, "up") ? -1 : 1;
+			this.#selectedIndex = Math.max(0, Math.min(this.#filteredSessions.length - 1, this.#selectedIndex + delta));
 			return;
 		}
-		// Page up - jump up by maxVisible items
-		if (matchesKey(keyData, "pageUp")) {
-			this.#selectedIndex = Math.max(0, this.#selectedIndex - this.#maxVisible());
+		if (matchesSelectorKey(data, "pageUp") || matchesSelectorKey(data, "pageDown")) {
+			const delta = matchesSelectorKey(data, "pageUp") ? -this.#capacity : this.#capacity;
+			this.#selectedIndex = Math.max(0, Math.min(this.#filteredSessions.length - 1, this.#selectedIndex + delta));
 			return;
 		}
-		// Page down - jump down by maxVisible items
-		if (matchesKey(keyData, "pageDown")) {
-			this.#selectedIndex = Math.min(this.#filteredSessions.length - 1, this.#selectedIndex + this.#maxVisible());
+		if (matchesSelectorKey(data, "confirm")) {
+			const session = this.selected();
+			if (session) this.onSelect?.(session.path);
 			return;
 		}
-		// Enter
-		if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
-			const selected = this.#filteredSessions[this.#selectedIndex];
-			if (selected && this.onSelect) {
-				this.onSelect(selected.path);
-			}
+		if (matchesSelectorKey(data, "cancel")) {
+			if (this.getQuery()) {
+				this.#searchInput.setValue("");
+				this.#filterSessions("");
+			} else this.onCancel?.();
 			return;
 		}
-		// Escape - cancel
-		if (matchesAppInterrupt(keyData)) {
-			if (this.onCancel) {
-				this.onCancel();
-			}
-			return;
-		}
-		// Ctrl+C - exit
-		if (matchesKey(keyData, "ctrl+c")) {
-			this.onExit();
-			return;
-		}
-		// Pass everything else to search input
-		this.#searchInput.handleInput(keyData);
-		this.#filterSessions(this.#searchInput.getValue());
+		if (matchesKey(data, "ctrl+c")) return;
+		this.#searchInput.handleInput(data);
+		this.#filterSessions(this.getQuery());
 	}
 }
 
 export interface SessionSelectorOptions {
 	fillHeight?: boolean;
 	getTerminalRows?: () => number;
+	allSessions?: SessionInfo[];
+	currentCwd?: string;
 }
 
-/**
- * Component that renders a session selector with optional confirmation dialog
- */
 export class SessionSelectorComponent extends Container implements MouseRoutable {
 	#sessionList: SessionList;
-	#confirmationDialog: HookSelectorComponent | null = null;
-	#messageContainer: Container;
-	#onDelete?: (session: SessionInfo) => Promise<boolean>;
+	#confirmationDialog: ReviewedActionDialog<SessionInfo> | null = null;
+	#detail: SessionInfo | undefined;
+	#detailAction = 0;
 	#onRequestRender?: () => void;
 	#listLineOffset = 0;
-	#footerStart = 0;
-	readonly #fillHeight: boolean;
+	#detailActionRows: number[] = [];
+	#scope: "current" | "all" = "current";
+	#queries = { current: "", all: "" };
 	readonly #getTerminalRows: () => number;
-	readonly #bottomBorder = new DynamicBorder();
+	readonly #currentCwd: string;
+	readonly #currentSessions: SessionInfo[];
+	readonly #allSessions: SessionInfo[];
 
 	constructor(
 		sessions: SessionInfo[],
-		onSelect: (sessionPath: string) => void,
-		onCancel: () => void,
-		onExit: () => void,
-		onDelete?: (session: SessionInfo) => Promise<boolean>,
+		private readonly onResume: (sessionPath: string) => void,
+		private readonly onCancel: () => void,
+		private readonly onExit: () => void,
+		private readonly onDelete?: (session: SessionInfo) => Promise<boolean>,
 		options: SessionSelectorOptions = {},
 	) {
 		super();
-
-		this.#messageContainer = new Container();
-		this.#onDelete = onDelete;
-		this.#fillHeight = options.fillHeight ?? false;
 		this.#getTerminalRows = options.getTerminalRows ?? (() => 24);
-		// Add header
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.bold("Resume Session"), 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
-		this.addChild(new Spacer(1));
-		this.addChild(this.#messageContainer);
-		// Create session list
-		this.#sessionList = new SessionList(sessions, false, this.#getTerminalRows);
-		this.#sessionList.onSelect = onSelect;
-		this.#sessionList.onCancel = onCancel;
-		this.#sessionList.onExit = onExit;
-		this.#sessionList.onDeleteRequest = (session: SessionInfo) => {
-			this.#showDeleteConfirmation(session);
+		this.#currentCwd = options.currentCwd ?? sessions[0]?.cwd ?? "";
+		this.#currentSessions = sessions;
+		this.#allSessions = options.allSessions ?? sessions;
+		this.#sessionList = new SessionList(sessions);
+		this.#sessionList.onSelect = path => {
+			this.#detail = this.#allSessions.find(session => session.path === path);
+			this.#detailAction = 0;
+			this.#onRequestRender?.();
 		};
-		this.addChild(this.#sessionList);
-	}
-
-	override render(width: number): string[] {
-		const lines: string[] = [];
-		for (const child of this.children) {
-			if (this.#confirmationDialog && child === this.#sessionList) continue;
-			if (child === this.#sessionList) this.#listLineOffset = lines.length;
-			lines.push(...child.render(width));
-		}
-		const footer = [
-			"",
-			theme.fg("muted", "  [Del to delete, Enter to select, Esc to cancel]"),
-			"",
-			...this.#bottomBorder.render(width),
-		];
-		if (this.#fillHeight) {
-			const target = Math.max(0, this.#getTerminalRows() - footer.length);
-			if (lines.length > target) lines.length = target;
-			else while (lines.length < target) lines.push("");
-		}
-		this.#footerStart = lines.length;
-		lines.push(...footer);
-		return lines;
+		this.#sessionList.onCancel = this.onCancel;
+		this.#sessionList.onExit = this.onExit;
+		this.#sessionList.onDeleteRequest = session => this.#showDeleteConfirmation(session);
 	}
 
 	setOnRequestRender(callback: () => void): void {
 		this.#onRequestRender = callback;
 	}
 
-	#clearError(): void {
-		this.#messageContainer.clear();
+	#switchScope(next: "current" | "all"): void {
+		if (next === this.#scope) return;
+		this.#queries[this.#scope] = this.#sessionList.getQuery();
+		this.#scope = next;
+		this.#sessionList.setSessions(
+			next === "current" ? this.#currentSessions : this.#allSessions,
+			next === "all",
+			this.#queries[next],
+		);
 	}
 
-	#showError(message: string): void {
-		this.#messageContainer.clear();
-		this.#messageContainer.addChild(new Text(theme.fg("error", `Error: ${replaceTabs(message)}`), 1, 0));
-		this.#messageContainer.addChild(new Spacer(1));
+	override render(width: number): string[] {
+		if (this.#confirmationDialog) return this.#confirmationDialog.render(width);
+		const inner = selectorFrameContentWidth(width);
+		if (this.#detail) {
+			const session = this.#detail;
+			const actions = ["Resume this session", "Delete this session"];
+			const lines = selectorFrame(
+				width,
+				this.#getTerminalRows(),
+				"Session details",
+				`${session.title || "Untitled session"} · ${session.id}`,
+				[],
+				actions.map((label, index) => selectorRow([label], [inner - 2], index === this.#detailAction)),
+				[
+					`Identity: ${session.id}`,
+					`Working directory: ${session.cwd || "Unknown"}`,
+					`Session file: ${session.path}`,
+					`Parent: ${session.parentSessionPath ?? "None"}`,
+					`Modified: ${session.modified.toISOString()}`,
+					`Messages: ${session.messageCount}`,
+					...wrapTextWithAnsi(`First message: ${session.firstMessage}`, inner),
+				],
+				[selectorCancelHint("back")],
+				{ selectedBodyIndex: this.#detailAction },
+			);
+			this.#detailActionRows = actions.map(label => lines.findIndex(line => Bun.stripANSI(line).includes(label)));
+			return lines;
+		}
+		const list = this.#sessionList.renderFrameLines(inner);
+		const tabs = `[${this.#scope === "current" ? "Current" : "current"} (${this.#currentSessions.length})]  [${this.#scope === "all" ? "All" : "all"} (${this.#allSessions.length})]`;
+		const lines = selectorFrame(
+			width,
+			this.#getTerminalRows(),
+			"Sessions",
+			this.#scope === "current"
+				? `Current directory · ${this.#currentCwd || "unknown"}`
+				: "All saved session directories",
+			[theme.fg("muted", tabs)],
+			list,
+			[],
+			[
+				"Tab/Shift+Tab: scope",
+				"Del: review deletion",
+				selectorCancelHint("back"),
+				...(list.length >= Math.max(1, this.#getTerminalRows() - 10)
+					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: page`]
+					: []),
+			],
+		);
+		this.#listLineOffset = lines.findIndex(line => Bun.stripANSI(line).includes("Search:"));
+		return lines;
 	}
 
 	#showDeleteConfirmation(session: SessionInfo): void {
 		const displayName = session.title || session.firstMessage.slice(0, 40) || session.id;
-		this.#confirmationDialog = new HookSelectorComponent(
-			`Delete session?\n${displayName}`,
-			["Yes", "No"],
-			async (option: string) => {
-				if (option === "Yes" && this.#onDelete) {
-					this.#clearError();
-					try {
-						const deleted = await this.#onDelete(session);
-						if (deleted) {
-							this.#sessionList.removeSession(session.path);
-						}
-					} catch (err) {
-						this.#showError(err instanceof Error ? err.message : String(err));
-					}
+		const review = {
+			identity: `session:${session.id}`,
+			scope: `Saved session · ${session.cwd}`,
+			revision: JSON.stringify([session.id, session.path, session.modified.getTime(), session.messageCount]),
+			changes: [
+				{ field: "Session", before: displayName, after: "Permanently deleted" },
+				{ field: "File", before: session.path, after: "Removed" },
+				{ field: "Artifacts", before: session.path.slice(0, -6), after: "Removed if present" },
+			],
+			consequence:
+				"Permanently removes this saved conversation and its artifacts. If it is active, a new saved session is created before deletion. This cannot be undone.",
+		};
+		this.#confirmationDialog = new ReviewedActionDialog(
+			"session deletion",
+			{
+				review,
+				resolve: async () => ({ review, target: session }),
+				execute: async target => {
+					if (!this.onDelete || !(await this.onDelete(target)))
+						throw new Error("Session deletion was not completed.");
+				},
+			},
+			outcome => {
+				if (outcome === "succeeded") {
+					this.#sessionList.removeSession(session.path);
+					if (this.#detail?.path === session.path) this.#detail = undefined;
 				}
-				// Close confirmation dialog
-				this.removeChild(this.#confirmationDialog!);
 				this.#confirmationDialog = null;
-				// Request rerender
 				this.#onRequestRender?.();
 			},
-			() => {
-				// Cancel - close confirmation dialog
-				this.removeChild(this.#confirmationDialog!);
-				this.#confirmationDialog = null;
-				// Request rerender
-				this.#onRequestRender?.();
-			},
+			() => this.#onRequestRender?.(),
+			this.#getTerminalRows,
 		);
-		// Show confirmation dialog
-		this.addChild(this.#confirmationDialog);
 	}
 
-	handleInput(keyData: string): void {
+	handleInput(data: string): void {
 		if (this.#confirmationDialog) {
-			this.#confirmationDialog.handleInput(keyData);
-		} else {
-			this.#sessionList.handleInput(keyData);
+			this.#confirmationDialog.handleInput(data);
+			return;
 		}
+		if (this.#detail) {
+			if (matchesSelectorKey(data, "cancel")) this.#detail = undefined;
+			else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down"))
+				this.#detailAction = 1 - this.#detailAction;
+			else if (matchesSelectorKey(data, "confirm")) {
+				if (this.#detailAction === 0) this.onResume(this.#detail.path);
+				else this.#showDeleteConfirmation(this.#detail);
+			}
+			return;
+		}
+		if (matchesKey(data, "tab") || matchesKey(data, "shift+tab")) {
+			this.#switchScope(this.#scope === "current" ? "all" : "current");
+			return;
+		}
+		this.#sessionList.handleInput(data);
 	}
 
 	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
 		if (this.#confirmationDialog) return;
+		if (this.#detail) {
+			const index = this.#detailActionRows.indexOf(event.row);
+			if (event.leftClick && index >= 0) {
+				this.#detailAction = index;
+				this.handleInput("\n");
+			}
+			return;
+		}
 		if (event.wheel !== null) {
 			this.#sessionList.handleWheel(event.wheel);
 			return;
 		}
-		if (!event.leftClick || event.row >= this.#footerStart) return;
+		if (!event.leftClick || this.#listLineOffset < 0) return;
 		const index = this.#sessionList.hitTest(event.row - this.#listLineOffset);
 		if (index !== undefined) this.#sessionList.selectAndConfirm(index);
 	}

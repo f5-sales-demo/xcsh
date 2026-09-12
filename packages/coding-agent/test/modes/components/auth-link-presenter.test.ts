@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Container, setTerminalHyperlinks, TERMINAL } from "@f5-sales-demo/pi-tui";
 import { presentAuthLink, presentDeviceCode } from "../../../src/modes/components/auth-link-presenter";
 import { initTheme } from "../../../src/modes/theme/theme";
@@ -35,16 +35,15 @@ describe("presentAuthLink", () => {
 	for (const width of [18, 80]) {
 		it(`keeps the exact target hidden and each rendered link segment balanced at width ${width}`, () => {
 			const container = new Container();
-			const copy = vi.fn(async (_url: string) => undefined);
 
-			presentAuthLink(container, LONG_URL, { copy, platform: "linux" });
+			presentAuthLink(container, LONG_URL, { platform: "linux" });
 
 			const renderedLines = container.render(width);
 			const rendered = renderedLines.join("\n");
 			const visible = Bun.stripANSI(rendered).replace(/\s+/g, " ").trim();
 			expect(visible).toContain("Open sign-in page");
 			expect(visible).toContain("Ctrl+click to open");
-			expect(visible).toContain("Clipboard availability depends on terminal support.");
+			expect(visible).toContain("full URL remains visible");
 			expect(visible).not.toContain(LONG_URL);
 
 			const linkedLines = renderedLines.filter(line => line.includes("\x1b]8;;"));
@@ -55,16 +54,12 @@ describe("presentAuthLink", () => {
 				expect(targets.length).toBe(closes.length);
 				expect(targets.every(target => target === LONG_URL)).toBe(true);
 			}
-
-			expect(copy).toHaveBeenCalledTimes(1);
-			expect(copy).toHaveBeenCalledWith(LONG_URL);
-			expect(copy.mock.calls[0]?.[0]).not.toMatch(/[\r\n]/);
 		});
 	}
 
 	it("uses the macOS click hint", () => {
 		const container = new Container();
-		presentAuthLink(container, LONG_URL, { copy: vi.fn(), platform: "darwin" });
+		presentAuthLink(container, LONG_URL, { platform: "darwin" });
 
 		const visible = Bun.stripANSI(container.render(80).join("\n")).replace(/\s+/g, " ").trim();
 		expect(visible).toContain("Cmd+click to open");
@@ -75,7 +70,7 @@ describe("presentAuthLink", () => {
 		setTerminalHyperlinks(false);
 		try {
 			const container = new Container();
-			presentAuthLink(container, LONG_URL, { copy: vi.fn(), platform: "linux" });
+			presentAuthLink(container, LONG_URL, { platform: "linux" });
 
 			const rendered = container.render(240).join("\n");
 			expect(Bun.stripANSI(rendered)).toContain(LONG_URL);

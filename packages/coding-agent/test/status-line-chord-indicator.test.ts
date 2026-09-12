@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "bun:test";
 import * as os from "node:os";
 import { _resetSettingsForTest, Settings } from "../src/config/settings";
 import { StatusLineComponent } from "../src/modes/components/status-line";
-import { initTheme } from "../src/modes/theme/theme";
+import { getThemeByName, initTheme, setThemeInstance, theme } from "../src/modes/theme/theme";
 import type { AgentSession } from "../src/session/agent-session";
 
 beforeAll(async () => {
@@ -31,6 +31,20 @@ function makeSession(): AgentSession {
 const WIDTH = 200;
 
 describe("StatusLineComponent — chord-pending indicator", () => {
+	it("uses status-background-aware colors for phase and pending chord in both themes", async () => {
+		try {
+			for (const name of ["xcsh-light", "xcsh-dark"]) {
+				setThemeInstance((await getThemeByName(name))!);
+				const component = new StatusLineComponent(makeSession());
+				component.setChordPending("ctrl+x");
+				const { content } = component.getTopBorder(WIDTH);
+				expect(content).toContain(theme.fg("statusLineContext", "idle"));
+				expect(content).toContain(theme.fg("statusLineContext", "Ctrl+X-"));
+			}
+		} finally {
+			setThemeInstance((await getThemeByName("xcsh-dark"))!);
+		}
+	});
 	it("does not render the indicator when no chord is pending", () => {
 		const component = new StatusLineComponent(makeSession());
 		const { content } = component.getTopBorder(WIDTH);

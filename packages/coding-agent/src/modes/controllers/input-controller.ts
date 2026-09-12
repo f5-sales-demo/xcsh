@@ -1,7 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { type AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5-sales-demo/pi-tui";
 import { $env, t } from "@f5-sales-demo/pi-utils";
 import { settings } from "../../config/settings";
@@ -9,15 +8,18 @@ import { createStreamingAssistantGutter } from "../../modes/components/gutter-bl
 import { createPromptActionAutocompleteProvider } from "../../modes/prompt-action-autocomplete";
 import { theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
+import { reviewClipboardAction } from "../../modes/utils/clipboard-action";
+import { appInterruptHint } from "../../modes/utils/keybinding-matchers";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import { SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "../../session/messages";
 import { executeBuiltinSlashCommand } from "../../slash-commands/builtin-registry";
 import { resolveToCwd } from "../../tools/path-utils";
-import { copyToClipboard, readImageFromClipboard } from "../../utils/clipboard";
+import { readImageFromClipboard } from "../../utils/clipboard";
 import { getEditorCommand, openInEditor } from "../../utils/external-editor";
 import { ensureSupportedImageInput } from "../../utils/image-loading";
 import { resizeImage } from "../../utils/image-resize";
 import { generateSessionTitle, setSessionTerminalTitle } from "../../utils/title-generator";
+import { detachStandardStreamsForBackground } from "../background-terminal";
 
 interface Expandable {
 	setExpanded(expanded: boolean): void;
@@ -110,7 +112,7 @@ export class InputController {
 					this.ctx.retryEscapeHandler,
 			);
 		this.ctx.editor.onEscape = () => {
-			if (this.ctx.hasActiveBtw() && this.ctx.handleBtwEscape()) {
+			if (this.ctx.hasActiveBtw() && this.ctx.handleBtwInterrupt()) {
 				return;
 			}
 			if (this.ctx.loadingAnimation) {
@@ -132,8 +134,13 @@ export class InputController {
 				this.ctx.updateEditorBorderColor();
 			} else if (this.ctx.session.isStreaming) {
 				void this.ctx.session.abort();
-			} else if (!this.ctx.editor.getText().trim()) {
-				// Double-interrupt with empty editor triggers /tree, /branch, or nothing based on setting
+			} else this.handleCtrlC();
+		};
+		this.ctx.editor.onNavigateBack = () => {
+			if (this.ctx.hasActiveBtw() && this.ctx.handleBtwEscape()) return;
+			if (this.ctx.editor.shouldBypassAutocompleteOnEscape?.()) return;
+			if (!this.ctx.editor.getText().trim()) {
+				// Double-Escape navigation is independent of execution interruption.
 				const action = settings.get("doubleEscapeAction");
 				if (action !== "none") {
 					const now = Date.now();
@@ -344,7 +351,7 @@ export class InputController {
 				const command = isExcluded ? text.slice(2).trim() : text.slice(1).trim();
 				if (command) {
 					if (this.ctx.session.isBashRunning) {
-						this.ctx.showWarning("A bash command is already running. Press Esc to cancel it first.");
+						this.ctx.showWarning(`A bash command is already running. ${appInterruptHint()}.`);
 						this.ctx.editor.setText(text);
 						return;
 					}
@@ -362,7 +369,7 @@ export class InputController {
 				const code = isExcluded ? text.slice(2).trim() : text.slice(1).trim();
 				if (code) {
 					if (this.ctx.session.isPythonRunning) {
-						this.ctx.showWarning("A Python execution is already running. Press Esc to cancel it first.");
+						this.ctx.showWarning(`A Python execution is already running. ${appInterruptHint()}.`);
 						this.ctx.editor.setText(text);
 						return;
 					}
@@ -555,9 +562,17 @@ export class InputController {
 			this.ctx.showWarning("Agent is idle; nothing to background");
 			return;
 		}
-		if (this.ctx.hasActiveBtw()) {
-			this.ctx.handleBtwEscape();
-		}
+		if (!this.ctx.prepareBtwForBackground()) return;
+		const sessionId = this.ctx.sessionManager.getSessionId();
+		const sessionName = (this.ctx.sessionManager.getSessionName() ?? "").trim();
+		const sessionLabel = sessionName ? `${sessionName} (${sessionId})` : sessionId;
+		const queuedCount = this.ctx.session.queuedMessageCount;
+		const runningJobs = this.ctx.session.getAsyncJobSnapshot()?.running.length ?? 0;
+		const continuingWork = [
+			this.ctx.session.isStreaming ? "the active response" : undefined,
+			queuedCount > 0 ? `${queuedCount} queued prompt${queuedCount === 1 ? "" : "s"}` : undefined,
+			runningJobs > 0 ? `${runningJobs} async tool job${runningJobs === 1 ? "" : "s"}` : undefined,
+		].filter((value): value is string => value !== undefined);
 
 		this.ctx.isBackgrounded = true;
 		const backgroundUiContext = this.ctx.createBackgroundUiContext();
@@ -587,6 +602,10 @@ export class InputController {
 		this.ctx.unsubscribe = this.ctx.session.subscribe(async (event: AgentSessionEvent) => {
 			await this.ctx.handleBackgroundEvent(event);
 		});
+		// Close the race where agent_end occurred while the slash command was
+		// replacing the foreground subscriber but prompt persistence is still
+		// settling and isStreaming therefore remains true.
+		this.ctx.beginBackgroundCompletionTracking();
 
 		// Backgrounding keeps the current process to preserve in-flight agent state.
 		if (this.ctx.isInitialized) {
@@ -594,13 +613,32 @@ export class InputController {
 			this.ctx.isInitialized = false;
 		}
 
-		process.stdout.write("Background mode enabled. Run `bg` to continue in background.\n");
+		process.stdout.write(
+			`Background transfer started for session ${sessionLabel}. ${continuingWork.join(
+				", ",
+			)} will continue in this process; nothing was cancelled.\n`,
+		);
 
 		if (process.platform === "win32" || !process.stdout.isTTY) {
-			process.stdout.write("Backgrounding requires POSIX job control; continuing in foreground.\n");
+			process.stdout.write(
+				"POSIX job control is unavailable; xcsh is continuing headlessly in the foreground until the current work settles.\n",
+			);
 			return;
 		}
-
+		process.stdout.write(
+			"Shell controls: run `bg` to continue headlessly, or `fg` to wait for completion. Reopen this session to return; use `/jobs` to inspect async tool jobs.\n",
+		);
+		// The shell will make its own process group foreground again after this
+		// process stops. Detach before suspension so model settlement and runtime
+		// cleanup cannot read from or restore that controlling terminal after `bg`.
+		try {
+			detachStandardStreamsForBackground();
+		} catch (error) {
+			process.stdout.write(
+				`Could not detach from the controlling terminal; xcsh will continue headlessly in the foreground until work settles: ${error instanceof Error ? error.message : String(error)}\n`,
+			);
+			return;
+		}
 		process.kill(0, "SIGTSTP");
 	}
 
@@ -703,39 +741,45 @@ export class InputController {
 		});
 	}
 
-	/** Copy the current editor line to the system clipboard. */
-	handleCopyCurrentLine(): void {
+	/** Review and copy the current editor line to the system clipboard. */
+	async handleCopyCurrentLine(): Promise<void> {
 		const { line } = this.ctx.editor.getCursor();
 		const text = this.ctx.editor.getLines()[line] || "";
 		if (!text) {
 			this.ctx.showStatus("Nothing to copy");
 			return;
 		}
-		try {
-			copyToClipboard(text);
-			const sanitized = sanitizeText(text);
-			const preview = sanitized.length > 30 ? `${sanitized.slice(0, 30)}...` : sanitized;
-			this.ctx.showStatus(`Copied line: ${preview}`);
-		} catch {
-			this.ctx.showWarning("Failed to copy to clipboard");
-		}
+		const editor = this.ctx.editor;
+		const sessionId = this.ctx.sessionManager.getSessionId();
+		await reviewClipboardAction(this.ctx, {
+			title: "editor line copy",
+			identity: `editor:${sessionId}:line:${line}`,
+			label: `Editor line ${line + 1}`,
+			success: `Editor line ${line + 1} copied to the local clipboard.`,
+			reopen: "Use the copy-line shortcut again to review the current line.",
+			current: () => this.ctx.editor === editor && this.ctx.sessionManager.getSessionId() === sessionId,
+			resolveText: () => editor.getLines()[line] || undefined,
+		});
 	}
 
-	/** Copy current prompt text to system clipboard. */
-	handleCopyPrompt(): void {
+	/** Review and copy current prompt text to the system clipboard. */
+	async handleCopyPrompt(): Promise<void> {
 		const text = this.ctx.editor.getText();
 		if (!text) {
 			this.ctx.showStatus("Nothing to copy");
 			return;
 		}
-		try {
-			copyToClipboard(text);
-			const sanitized = sanitizeText(text);
-			const preview = sanitized.length > 30 ? `${sanitized.slice(0, 30)}...` : sanitized;
-			this.ctx.showStatus(`Copied: ${preview}`);
-		} catch {
-			this.ctx.showWarning("Failed to copy to clipboard");
-		}
+		const editor = this.ctx.editor;
+		const sessionId = this.ctx.sessionManager.getSessionId();
+		await reviewClipboardAction(this.ctx, {
+			title: "editor prompt copy",
+			identity: `editor:${sessionId}:prompt`,
+			label: "Editor prompt",
+			success: "Editor prompt copied to the local clipboard.",
+			reopen: "Use the copy-prompt shortcut again to review the current draft.",
+			current: () => this.ctx.editor === editor && this.ctx.sessionManager.getSessionId() === sessionId,
+			resolveText: () => editor.getText() || undefined,
+		});
 	}
 
 	cycleThinkingLevel(): void {

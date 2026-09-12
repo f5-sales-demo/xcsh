@@ -12,6 +12,20 @@ import { providerSelectorFixture } from "./helpers/provider-selector-fixture";
 beforeAll(async () => {
 	setThemeInstance((await getThemeByName("xcsh-dark"))!);
 });
+test("provider paging hints appear only while the catalog overflows", () => {
+	const create = (catalogProviders: ReturnType<typeof getLoginOptions>) =>
+		new OAuthSelectorComponent("login", { hasAuth: () => false } as unknown as AuthStorage, vi.fn(), vi.fn(), {
+			rows: () => 20,
+			initialCatalog: true,
+			catalogProviders,
+		});
+	const catalog = create(getLoginOptions());
+	expect(Bun.stripANSI(catalog.render(60).join("\n"))).toContain("Pageup/Pagedown: page");
+	catalog.handleInput("\x1b[6~");
+	expect(Bun.stripANSI(catalog.render(60).join("\n"))).toContain("(11/");
+	const small = create([{ id: "anthropic", name: "Anthropic", kind: "oauth", available: true }]);
+	expect(Bun.stripANSI(small.render(60).join("\n"))).not.toContain(": page");
+});
 for (const themeName of ["xcsh-dark", "xcsh-light"])
 	for (const symbols of ["unicode", "ascii"] as const)
 		for (const [columns, rows] of [
@@ -74,7 +88,7 @@ for (const themeName of ["xcsh-dark", "xcsh-light"])
 							.slice(1, -1)
 							.every(line => line.endsWith(expected.vertical) || line.endsWith(expected.teeRight)),
 					).toBe(true);
-					expect(Bun.stripANSI(lines.join("\n"))).toContain("Enter:");
+					expect(Bun.stripANSI(lines.join("\n"))).not.toContain("Enter:");
 					return Bun.stripANSI(lines.join("\n"));
 				};
 				expect(check(selector)).toContain("litellm/gpt-5.6-sol");

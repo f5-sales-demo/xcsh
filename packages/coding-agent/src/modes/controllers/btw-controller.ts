@@ -11,6 +11,7 @@ interface BtwRequest {
 	component: BtwPanelComponent;
 	abortController: AbortController;
 	question: string;
+	state: "running" | "settled";
 }
 
 export class BtwController {
@@ -30,7 +31,37 @@ export class BtwController {
 
 	handleEscape(): boolean {
 		if (!this.#activeRequest) return false;
-		this.#closeActiveRequest({ abort: this.#activeRequest.abortController.signal.aborted === false });
+		if (this.#activeRequest.state === "running") {
+			this.ctx.showStatus("/btw is still running; use the configured interrupt key to stop it.");
+			return true;
+		}
+		this.#closeActiveRequest({ abort: false });
+		return true;
+	}
+
+	handleInterrupt(): boolean {
+		const request = this.#activeRequest;
+		if (request?.state !== "running") return false;
+		request.state = "settled";
+		request.abortController.abort();
+		request.component.markAborted();
+		return true;
+	}
+
+	/**
+	 * A running side request owns a foreground-only panel. Refuse background
+	 * transfer until it settles (or is explicitly interrupted) so its completion
+	 * is never hidden or accidentally abandoned. A settled panel can be closed.
+	 */
+	prepareForBackground(): boolean {
+		if (!this.#activeRequest) return true;
+		if (this.#activeRequest.state === "running") {
+			this.ctx.showWarning(
+				"/btw is still running; wait for it or use the configured interrupt key before backgrounding.",
+			);
+			return false;
+		}
+		this.#closeActiveRequest({ abort: false });
 		return true;
 	}
 
@@ -51,12 +82,19 @@ export class BtwController {
 			return;
 		}
 
-		this.#closeActiveRequest({ abort: true });
+		if (this.#activeRequest?.state === "running") {
+			this.ctx.showWarning(
+				`/btw is already answering “${this.#activeRequest.question}”. Interrupt it before retrying.`,
+			);
+			return;
+		}
+		this.#closeActiveRequest({ abort: false });
 
 		const request: BtwRequest = {
 			component: new BtwPanelComponent({ question: trimmedQuestion, tui: this.ctx.ui }),
 			abortController: new AbortController(),
 			question: trimmedQuestion,
+			state: "running",
 		};
 		this.ctx.btwContainer.clear();
 		this.ctx.btwContainer.addChild(request.component);
@@ -107,6 +145,7 @@ export class BtwController {
 						request.component.setAnswer(finalText);
 					}
 					request.component.markComplete();
+					request.state = "settled";
 					return;
 				}
 				if (event.type === "error") {
@@ -117,6 +156,7 @@ export class BtwController {
 							this.#assistantText(event.error) || event.error.errorMessage || "BTW request failed.",
 						);
 					}
+					request.state = "settled";
 					return;
 				}
 			}
@@ -126,9 +166,11 @@ export class BtwController {
 			}
 			if (request.abortController.signal.aborted) {
 				request.component.markAborted();
+				request.state = "settled";
 				return;
 			}
 			request.component.markError(error instanceof Error ? error.message : String(error));
+			request.state = "settled";
 		}
 	}
 

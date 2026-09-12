@@ -1,0 +1,1432 @@
+{
+  "directory": "terminal-plan-mode-final-v1",
+  "historicalDirectory": "terminal-plan-mode-v3",
+  "fixture": "plan-mode",
+  "fingerprint": "ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b",
+  "variants": 16,
+  "images": 236,
+  "contactSheets": 20,
+  "exactPngMatches": 40,
+  "normalizedTextMatches": 52,
+  "changedText": 132,
+  "missingHistorical": 12,
+  "visualVerdict": "pass-actual-terminal",
+  "imageInventory": [
+    {
+      "path": "100x32-dark-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "724dd241d100f8a69e2018a27fc70f9c4196b85db4895f4eb17f205d77d0df0e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "8418bb45ced2f4d90c4f8497905401b6be47916fc769a2c1b8157940bf845781",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "0119e27e209ad8bad1530662eb3d9a13a2d6cc7f0c78b4965642a007d0080921",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-approval-choices.png",
+      "sha256": "c9176ad1f53c28df6ebcafd20c129589eb2731d860e1bec837d33f8120cb5a36",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-approval-review.png",
+      "sha256": "5ef15382b6e08f92ba32e40f759febf4d9b29ef9ecc282feafe5ea9d859c6653",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "1f2274caacc293895cc86c622ebfc124ddb1a12b582998a97bab40b0fe747bde",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-choices.png",
+      "sha256": "be95b8f7d97a4614ab091fdcb793f947342e57f354bf74eceb4f2d80054a22ad",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-editor.png",
+      "sha256": "d025593930ce73c77149f103ba0387ce7c208490fd1e9921d9fb78481567945e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-enable-review.png",
+      "sha256": "f9f42e47f7a11a0c7caadaec918af8679ec2053ec115deb6b61574601bf0aee9",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-enabled.png",
+      "sha256": "50fe004869b734e4285e82d42d1a2648ea7caaadb0250439274be458c41b5cc5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-pause-review.png",
+      "sha256": "098ded588f0f010246750dc3d914bb11723bd33295a57b3c4cf1ac6687484045",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-ascii/evidence/plan-paused.png",
+      "sha256": "a5b58f7e0e63d3e82581a9fe6fc28f84bf08878f723e8d73332065ce6bc60d14",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "ee074a5065c843f89298b5f1cdf293270f44df3b737b6586719f62b91648926b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "778c5e8d9291d67b91977936ac21f990d8a310cc5f7db60e477c4bbe9c4ee4d2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "af10efdd0b10383962a1ed289b2cfdee3ae7bc039d3c8186c495dd9a812d5487",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-approval-choices.png",
+      "sha256": "cd393cace4c37dfb67668e5f3a0c32d0acf4ff3662a69e4c0f2f2438c7904c9b",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-approval-review.png",
+      "sha256": "e45cefb3cc4b483752cd3397ac2ae4bb4bdcc68f1c67ad245093824dc82e8c39",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "1224bfae0fe57bb3aa20beb52c2c4c0111b3b1e7a69b81bcad88c07abfe1b1ce",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-choices.png",
+      "sha256": "8ae4468b267814b4e002315eed98b182e4594dfbd4a7c60f65232eee23deb5eb",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-editor.png",
+      "sha256": "99a93d67353468bfd6886fe63ff644a3d3858410fd2d44cd8a4a17107927a3ea",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-enable-review.png",
+      "sha256": "6bd29394802f891f654869c08a95e522e17269fa0591eca3f4ce86c85ad4308d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-enabled.png",
+      "sha256": "bea16162182af1f00edde0fdaf5f9e0cb29f8acf796bcdf0c1f9a080107fc516",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-pause-review.png",
+      "sha256": "4a22162071bea6804600717c564f91dca4d22ba0ece0747999a7e7722cacb8fd",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-dark-unicode/evidence/plan-paused.png",
+      "sha256": "76d366478bb2a0f4c04fb9210184b592c7d936435df079d08c1afa3f32e38a3b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "b9f6a8b112d63c258d37592bfa8357b4412a8d6e6cea6b632656ce5c3bce933f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "e26a5b4d9ef780aa9a94913ac5d6702f0916e10349b6305dc03c1549a1c4d26b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "8d164777b994962ba316583f747e094d025254ca2fa9cfd7b0964618b4dfa298",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-approval-choices.png",
+      "sha256": "84ad4e3953de9236bacb16bd4dec6214be07ea08c373bb470ff01c1a3aa5f0c0",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-approval-review.png",
+      "sha256": "f75edcfae7c0607012e76d546d2ca903a8fed085774f738f2425265c18357e48",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "b790adc11d79684f605e3de01a366bf7ba997fe5ecc11694a1dd2669457f25db",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-choices.png",
+      "sha256": "fa9ae6afbc6d0a5c2ba5e9454d26a16d41c63b3a78c3687d415f744d6a92ed95",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-editor.png",
+      "sha256": "d780fe41190cf41b8d07b79d337bd155ce4289261fdf05f1c3d044a309950a79",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-enable-review.png",
+      "sha256": "b1eb5110f4823a39f27ee1a2344acbed6003299f5810c73e1378cb2f394a1d4f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-enabled.png",
+      "sha256": "a9beb4c18d4eec2c1299f0cc7261fdd0c3ed43cc8f878ffe3aee6ba3828ef3ce",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-pause-review.png",
+      "sha256": "26f04f86810e754d4ba4385cd1d8b5b1c12ca2b733b0c2ac9fc60dde99e78614",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-ascii/evidence/plan-paused.png",
+      "sha256": "231ff14c922fb8ae351ee361a49ce259a35207571f335f2b16b745fa363471e3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "e5c89509f567cd9b17d9cc333c45612e1120f696d8562141a6ad1c73112b7e4a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "88138381c50c03c1eff52f686484ff0e3c228f980bf2ce1cace7c9a3a7d3e2e5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "13351013676c5adf6deeec0fe3accd5bfcf142d431b6984a0831974dfd16c095",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-approval-choices.png",
+      "sha256": "db1b359389cf7cc5ce227607e814036b2b670e74330a859c047d9f33e567d80e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-approval-review.png",
+      "sha256": "ad0579b7f52561c1122929d61a6a73f17f0c8ad7029aa985a151b80567b822bb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "2fc8c7b00b5350da824c962151ade3804c3f291f5e0dcfeb295b553058c0f574",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-choices.png",
+      "sha256": "fe19f4bb2efecf177b2d9d6a9a67432af7ac2f3e27355cf5ab83b4ed1551b23e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-editor.png",
+      "sha256": "ebdeb6907ce51b2fa0d7e2cc37ef1bdc079f481c1bd9b50c9e7386b40d7c9ec2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-enable-review.png",
+      "sha256": "48a83315a632da1351796a0a413574d56b90496e7362c7da30018e23f130d300",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-enabled.png",
+      "sha256": "37ad54d662647787ea9916de4648ac31eb33c19d34b618fc7b80829e392c209e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-pause-review.png",
+      "sha256": "e58771ae1842115b301fee1f7993f0d1b0ad04a67084d4f45a726e986f31bfa8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "100x32-light-unicode/evidence/plan-paused.png",
+      "sha256": "255c679ec745c58c5423384efbebb777b31ccfbc032499e15310eb26fee8cc9f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "14293e96c0eed01c10ffeefbb5afd157f045d2d6b81a789a50bdab9fd075c96d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "c836aa177911b8a7500f5832e6db39689e9f08259b380d0c22bfceaaecc16e37",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "cde2fe7aabbf4503b6ee21e83c977361deda66f391151a715d73e114c622f15f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-approval-choices.png",
+      "sha256": "49928a2cf5adaee5995840e7c9b5abb689a9175c18bbd0486128d8910bda114e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-approval-review.png",
+      "sha256": "dbd357802f9c5525d902d2ce3aa64bf7f3e6450a1530c06c59f1701ee6ab0fca",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "3c99f9bbc128e7ffbc02bf901c61c4e166394d6410239ce1f045ac8bedcaa8d0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-choices.png",
+      "sha256": "5b18f5a961c2caf1c0d063f75db9c9956c75ad928109c578e6f2490277e30d48",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-editor.png",
+      "sha256": "e7d088fa078014197b3fba27de6988f4910a1cdfd1dbc5888374100472dee8a7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-enable-review.png",
+      "sha256": "ad940260fb6ee8bf8c4558d5fddf6f066798bd7f8b4ac3be9ab77aa4638e6470",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-enabled.png",
+      "sha256": "c1581541bc8381a289ceddf87fbe71b2946d252872a21e640ff1923510fba02d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-pause-review.png",
+      "sha256": "af0e19166a85bcb772dd19e20091958d124659bc4746baba465dbf18fc99a442",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-ascii/evidence/plan-paused.png",
+      "sha256": "f6e8031837c7caaf2ef56206b117b3ed9e21c98a54791482cde1d3fff63f4dbb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "f4b75a890c327a7c0b80027565907fcf7a2384f2e2a95e133ebc401dd32ebc3e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "df9e19ba0cebd5c79359b1e6da5c4c83aeced3d873034e0ef533567005ea67a4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "73d9fa648f5abe35ac6275c8beabd0327d531a13d5e68560b0b04a2707aed360",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-approval-choices.png",
+      "sha256": "2c1ac3bdce52b0eda0153b5c48e5e9a79b22a4faf079ff009de83039f66b29c1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-approval-review.png",
+      "sha256": "c10f365eccacf230561afedb8977f1dac77541412166b824759bff62eb87f410",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "5141910267a4d782651fd3a6a6365beb741afeb9cd5d3b6a435b1ef7e92bec28",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-choices.png",
+      "sha256": "4d33c29248569f6f420e1da82b674f136b6ab7c2ab1e83590b902f657402643e",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-editor.png",
+      "sha256": "f559ad0d5ccf82cb71e7fc5c7aca50b695fd51930f6dd0c2efa0e3fc1ecdb286",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-enable-review.png",
+      "sha256": "65463227ffc1739abe04d76049b9828434390dd2ce2209d82b305c817772a6fa",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-enabled.png",
+      "sha256": "b54a5e27dd808ed87af57182cdb902899d2008656d3554984750d34d26336d91",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-pause-review.png",
+      "sha256": "57a2ada9a574e9ddadc4c921ab9f505a6251be653e0f6f504191bb9663efaf92",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-dark-unicode/evidence/plan-paused.png",
+      "sha256": "f14491a4984eca59056118d3c61ed51304360da2a2cb46f0e82dd0db82bfc91c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "25465591c18eb8a7bf2ba16425d976e69644cc8d6ce931da135fde9aff799fe0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "95183204de512aef2b5449818040b20a66c20f6b6ec4e2bc568e18eef4d567fb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "e29ba5ba17d9e3303e042b416d89b8c4d09a5b69cbbe1f60a1e6929ad4c7c297",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-approval-choices.png",
+      "sha256": "2fc5f576bff8da1aa10cf00041c4c3a4e5b478233f9cf2df234b8790afc3cd82",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-approval-review.png",
+      "sha256": "b46fb497c86b5e44bd80dd7120e6b28d6f862c115e0095887bb23c9e0e4c4c92",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "10accbbced763a61418bf8c71354f4d2a256dbb35a2cb3b9052b2f55e3938bf1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-choices.png",
+      "sha256": "0cc76e5b4ffa0f20f39fb44ae1ce464022fcd363cbbffb5bcdf0acf0c67d97dd",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-editor.png",
+      "sha256": "feff6ff257654776c4b325f5758ee5a25c75f0f592cea3143c5fc96d943010ea",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-enable-review.png",
+      "sha256": "8a099db626879fb661e115a2f54b63f91058bccd73f80935111f23dcf6b3493c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-enabled.png",
+      "sha256": "aeedbe5bac7fbae6485e4e3192feeca1c70ad2b0100b38be8c95b4602edb1b90",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-pause-review.png",
+      "sha256": "4aa64be5d223220d03c998e45e0ec99ad1b4f7f4db81541db7854b316253cf9e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-ascii/evidence/plan-paused.png",
+      "sha256": "06ed40236254b8ff1f0ed5a30eedbbde88d7198d5bf68cabb56788c64d70ba7c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "3d16f1926eb28de9a782818fb737c0b2c86c9a4abc4a84c3eccbb64d25b5bbeb",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "56f28e71227fe14f8468620d5fd21f79ff0fe5e2de1855f8d8535cf6d15483b5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "1b93bac7b46df05396a0d6191771ff5b722b23fbdf858226ac011bef131693b1",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-approval-choices.png",
+      "sha256": "74ef9f936840b4acdacf115e4080465a0c31b508e336657d466e19fc0f202074",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-approval-review.png",
+      "sha256": "d38a66786c781450107459c989c2de8fafa2df04e5dc5f07685e045e4463e561",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "959897ec369011aa983bd7913710caa45bf0a0f916505b31f5333108fa74c99b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-choices.png",
+      "sha256": "ac4cbb1f212e7776877486df49a66b6f973e56c5f9b18859a52ed9b6d4d4b5be",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-editor.png",
+      "sha256": "ea40e247453e847ab4b0a143af0958c103182cdebc8739fd49bdda2199c107d1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-enable-review.png",
+      "sha256": "2e3ac0ba24279e5f573a9b5417eb7adb1cd96dcd6d23f29e75360cbf0316e127",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-enabled.png",
+      "sha256": "8b5cdde95c49730169a14288b3db419f52fa59d438940bdfeffce08adee74c7a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-pause-review.png",
+      "sha256": "675c069f38a8df55d6868f56baca6ba02b44a42b5ac03226daac81395c8b618d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "140x40-light-unicode/evidence/plan-paused.png",
+      "sha256": "0d6acacd639f2517c7a60ffec04319cff5334b827cbe90e930852383a5b4c393",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "5b80d320ffc4192475ba5b9d9e415589134395654190c3d8ecfd8eca86a2a091",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "caf4e050a3673b39abe717d97a3e85e3ad67467925c5a658066522145bada556",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-active-prompt-review-paged-1.png",
+      "sha256": "bd17406ac6f877e360bfd6bd2c0c40a68b3371e06dfa89e57a4eff7d704a1e20",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "889651ca6da3d80d2ce4850cccf9cf2294e1a56432f19690d560435d208919fa",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-choices.png",
+      "sha256": "c936cd8b2885532cfb64fdc4af05be8abee0d3ea061e0e8df89f5847c4138fc5",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-review-paged-1.png",
+      "sha256": "947e22893ab341e3ba122a043028c9c493574fd8b85ad0af9bd58952001f5a4e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-review-paged-2.png",
+      "sha256": "37fafa95d41e5247999952d0bae04bbaa780ee264494cb5a6d14728fc04ce109",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-review-paged-3.png",
+      "sha256": "aba2235e1b6b98ff26029723308c1df54b42661ecdff919addb60e1177bff7ee",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-review-paged-4.png",
+      "sha256": "1f2f8a02ed1e5d9f4d1ae5e52365bbeff99cdc67763c4d27af2df0aec36ae55e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-review-paged-5.png",
+      "sha256": "8ffd6be9e20058d50ac3e45fad8571718e867475deda36707b0f943a77b8c689",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-review.png",
+      "sha256": "8d95a60ab1560c5bb915a741ae66a330941df4bf9aacb7c2fd43bac4562d9e61",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "2fab77fdffe0abd4a106346263db38195f13b6cdc03f2373d16baf430c5015d4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-choices.png",
+      "sha256": "feb42ad6be0b1e769e31e2e6828a166e7b6ba8d5236a9e4f7758f43966133134",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-editor.png",
+      "sha256": "5ddb9b0955c3c0556c4110c72ad268594484cc23cbe68aaf5fbe749064860589",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-enable-review-paged.png",
+      "sha256": "96b63b1b33615f21d8a279a693c73ae2806a425a1d2698cf1101753ee67b84d2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-enable-review.png",
+      "sha256": "9cbbe9835b2c3fdad1a85430bcc222fa5ebd595261a9a4c3f96c0e418cecce05",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-enabled.png",
+      "sha256": "96621a8c659a5bb2b9b8ead7d50879ef4d9d110756f12e85d742d02b51482cbc",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-pause-review-paged.png",
+      "sha256": "86ad77a73f568b2abb461b8cb00ffd570b7844a70992fc94cfdcbe6dcd7a388c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-pause-review.png",
+      "sha256": "e20c34ebaf9fd046dab5b3558bdbaa0366641757d0efa70473fa027ae6acdc2b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-ascii/evidence/plan-paused.png",
+      "sha256": "29660e2b99368a519d1edc529b4768724e913c8a9c4b032c9de508efa87742a0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "23820ab7fedce6fe78ea687f5f1d1d940b175752c3753cb482e83f2aa691a812",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "e79b5e545cc12223d002fc9735b64eaaae0c8e915a07cb98f949d5996b7cbd12",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-active-prompt-review-paged-1.png",
+      "sha256": "4f360773a07d9717955b4200d05c070f13e269c05b33f68a84cdcf5a0c3efb4b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "bd6d49e4a7644f297097b5079552caadab6f7155371707278176e5e41e6ad82b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-choices.png",
+      "sha256": "6164232da8d9e414dde047492ab957448b5e644d0a7cd7f043b854679d024c8c",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-review-paged-1.png",
+      "sha256": "d941c000912526a396db57cb85f61854e13e48c90a852ac467ed647eba6459e8",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-review-paged-2.png",
+      "sha256": "f4965ba1161483f8c5a4445a9860e593a1e08d14a5a5123b9bc1f5bd32d1329e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-review-paged-3.png",
+      "sha256": "e24078cf594d9ed1b936fdc0b8fae6f66cfebb4669da9a8744162ee177352e9d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-review-paged-4.png",
+      "sha256": "5ef3e232cd4abfed92567ae9e7095cb068389683cadc426f426ab15a4f777d30",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-review-paged-5.png",
+      "sha256": "86fbe9148a2b46e2ba02983c58ccea3c74c268381ab3e5569ec4e3c0e05b88a5",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-review.png",
+      "sha256": "dee0c884d0ef6674e9da048f4b300b8ffb08e2ff43e73fad4dc28e8291000f03",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "f960f88d0c115c914e92b7dd4b6e65c47819a75f74a7fbd778f3eb4f9d767e70",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-choices.png",
+      "sha256": "cf27fbe76488962e2842fab019a9288b3cda3efb8972762c003b9854cbdffe06",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-editor.png",
+      "sha256": "3d589f8eb7ced706f602c0b7b7132dfc7fcfb3ce9ebaef5087c19df50a7dcf96",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-enable-review-paged.png",
+      "sha256": "6a3c237c47917e4e2f338c96cdcb815fdf9712ed0ba5b5c8bd5ceceda8cb575d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-enable-review.png",
+      "sha256": "f65be0fd937565e66409dec26fa8cf8e914ef418817a87c0c3196989f3201705",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-enabled.png",
+      "sha256": "1e5158cf58e6140974ab72019a85e57a0b7a256ccba739a4440367b745d464b7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-pause-review-paged.png",
+      "sha256": "5dabf2f8db849d32bc0731cfe6792dbc1d37c1fd8bc4e451c5173d26919ff116",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-pause-review.png",
+      "sha256": "98418ccb3781b3a2e43971fecec7e10a3fae54851ad5d2898d225f034d3f260b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-dark-unicode/evidence/plan-paused.png",
+      "sha256": "28c4945111fb5d3874637b0d75249ca2b2739bd3eebdffb7d7834c50360c0abf",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "c0291cafd600296e349a125bd4c27fb08ab40145c4cbde06bb511e1810d31715",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "f7388991241d093c480d945bb8cbe9d8f7cc148023ede0c9f16f232d0111e6d0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-active-prompt-review-paged-1.png",
+      "sha256": "a57a62cfea4d822283e6c3646db6ced1047a809628f186ea05252b059b926845",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "b5e832ca6e0ef3dace03de4b2ae254ecf350d362723503b87bae94c99ccb71c2",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-choices.png",
+      "sha256": "04c68645c9045f20752a2bea31abb4e0dcfd77974744666d00f0e8093b92dc09",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-review-paged-1.png",
+      "sha256": "9973c107cf19bdf0faec95be9441fe13e0075b925d8c300093f0061f91a0a352",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-review-paged-2.png",
+      "sha256": "b935f4cdc7e91cfc6ada7ad2c1cc143057265af43fef84d813d131af7ffdf79c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-review-paged-3.png",
+      "sha256": "bed5159308b3c97c299bd6310edfbdec1519556b45d7ebf3e1ef4cfb0c0169dd",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-review-paged-4.png",
+      "sha256": "730a61a1168906140f1120b9a6373df2064c75a6e5371780729e4fb07d564a83",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-review-paged-5.png",
+      "sha256": "bc0dd97d0ee49666b33e2661a98c32beebeca17119405bf2cf258062bcde4d29",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-review.png",
+      "sha256": "eba839ea6ddb2f8a4e6a519eacd69e0125773c88cffa8ba52280d0aba4580546",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "40668dad346e61b6d68ebd32e5eab08e72c2517b9711fcbddeaa634397f3474e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-choices.png",
+      "sha256": "2a71455a63a3393e4b01e1a5bb3583832e81127a5d938e1cbea8d444fba1b2ae",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-editor.png",
+      "sha256": "c6ecf8d5ae0b9ca9f4f5d4dd0c4ec0678a7f7cb93d885594ebd882d25e7310e9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-enable-review-paged.png",
+      "sha256": "169f498e3d451ff30049f94306e1476de9ae185cade74e44a18887d68f9aa66a",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-enable-review.png",
+      "sha256": "2fb855fe4c0ef24067efcee003c8772f4722778ad9ae6b8bb7577356fdda4c8f",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-enabled.png",
+      "sha256": "49e0f46048f57caa6910524060a7d511968161fdad7a7c92b0ba0b615cad774d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-pause-review-paged.png",
+      "sha256": "9f58910fe7dac3c7a531ba079d529770614610dac5f05fb1a5d07c2e218fdf4d",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-pause-review.png",
+      "sha256": "5643fbb1fcb95de3673e3bd94ae692786d7f3f830d27cabda27bf8534bb52d3a",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-ascii/evidence/plan-paused.png",
+      "sha256": "4eb5b054bae508861cb0675ef8f04c76519576b328b0571e5e1b3f6a41a451c4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "cba1997afd6cfb7542996ae091450a01a7da995983c6b0ce3120e1e822e3fd5e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "0fd5932709f036e06d18e677ff056d3fe0446e52201324e63180ef1fd04edb45",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-active-prompt-review-paged-1.png",
+      "sha256": "ddc2978c20100cc83b7920c3a580af3ea781325a46e0871510e1aa1523879db3",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "46f58f9b988f0acb43e6cfccd7a990ca5131f53e7cc7047579b768ceb4b431b4",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-choices.png",
+      "sha256": "d178a3661f3a5fa57a2c8aa89d4d299a8b41b58d45502a60d0f67fe269eb2a59",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-review-paged-1.png",
+      "sha256": "bb9fd05701d4cc950dd37b89de04b8dd21de1dc2757eff3e5d5f00d8875fa509",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-review-paged-2.png",
+      "sha256": "edb035c60ee939bbdedd75e2c4cbeb667bb52e5b4c04bde3d5a54836e003e49b",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-review-paged-3.png",
+      "sha256": "2dbee5bc5f9e99518457b760593c853b2c0d64f87c74efac8edd50195c3ab4b4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-review-paged-4.png",
+      "sha256": "0be6132bdf1cf6ac9a852084aca1373fca595410065f96bb984345765d0e600d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-review-paged-5.png",
+      "sha256": "80f9092cdb07516089eaef487cb2da14593729179ce62d59220653ecc23528ba",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-review.png",
+      "sha256": "a892e61b7ea3218c6746b73661f4b96cf8ddea6545efa8d039173076318bdc2e",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "942668f55466fc784c73030b005e100d5bda58985ce2c6cd65090f454efb03a5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-choices.png",
+      "sha256": "7b12ce7ad6b73a8c33e6fd2349336a21b846e101110692bf454fa38329c5aef1",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-editor.png",
+      "sha256": "3348cb0b3c4de61061d4025b6d914b9ca00c4df9719d49dfe103f6b5649dbbe9",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-enable-review-paged.png",
+      "sha256": "6a2aee21ebd04c4feb2c1f449eccdc00b89fd14fb4e36ca96811993cd100f3aa",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-enable-review.png",
+      "sha256": "fe24d69e9f68216cbf6ab5ddd45a86a12690004be9d26727b7d481907b5b72c7",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-enabled.png",
+      "sha256": "144dc4b5019a7c52ba45e0b54a74bc6f5643fcb2215534b70b3efd2fee20ded5",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-pause-review-paged.png",
+      "sha256": "413d26d7b5098b51220b73399009444bf6db747f651c1d69344f895c559c9233",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-pause-review.png",
+      "sha256": "ee4201e2bea4fbacaa7c36a0bbb295133564d0c4537b74cdb6960240f4cca65b",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "60x20-light-unicode/evidence/plan-paused.png",
+      "sha256": "5b72c06a9eeccafdf17aa43b8e1859355cc62bd8540e5f3e428447aac341da36",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "9715fd200fd92365a32b2ae6eec95beb108e6b1a2f6b93d5faa90df9c61ee556",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "3f375258494094ab30a7431ec928a0264aa88fa9c3a18e2689f2d4e3e0cf4f46",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "d18703dcec8d6042160fde6044623a9451b97d02fc56593c220d52b77ab1f07d",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-approval-choices.png",
+      "sha256": "51d5586512a42629053fa8cb5aed5a55b3a77e54c9a258db464b108e35ffde18",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-approval-review-paged-1.png",
+      "sha256": "eb4427eebd554811d7b9132a4ad02f5ed543caf16d5ead467214ac12ac7c2970",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-approval-review-paged-2.png",
+      "sha256": "15f7950c866ffaee424987f99c16e1308552409011aaef968b7fa9dcbb531717",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-approval-review-paged-3.png",
+      "sha256": "def1f06938a678fd0aa9adf5f4c82be50f4638ac9dd5395b10f73d5c2d1e56e7",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-approval-review.png",
+      "sha256": "2a37dd2360f16bd6b8b519e37efc9b5f53fbbb5c1de442199037e8717eb19572",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "2e4101facf18616154426e136c0e09aefa62022bcf8f967447627b2375445549",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-choices.png",
+      "sha256": "37862fb8aa4cea8420d94332c22f62a35fa2e7a3c8b0aea53b06b104e2183320",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-editor.png",
+      "sha256": "87f0a8bce91bddd3cdfc2e7a41e8885b1b8d978af60f63210f02c40e4439fcd6",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-enable-review.png",
+      "sha256": "ea1db854139031c33b3db7464469c00be1513122e578ef208955aa86c76e7c06",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-enabled.png",
+      "sha256": "a3a28246f3436b037f910423300c24999f58fbad5e1a0c570b5583107e367fb4",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-pause-review.png",
+      "sha256": "aae64965a09e246c09907a04e1053f6117e0ca772eac6fd080c411b7e5224d96",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-ascii/evidence/plan-paused.png",
+      "sha256": "98831529e2c50388c99e2730bbca4d6257d2de7e58039f9c6e04fc89189cf288",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "51016274b5c831927ee8a1a30a3848aeff0c14ef874308e17e48754e6198d0d0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "86a362d4d68df6edff6c41953d5759a09b5898eae8877988a85806f39be9091c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "41f83b1c40ad00c6244b5f8016a05eb55d462856de17930003370b1ad899a644",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-approval-choices.png",
+      "sha256": "518cf472d6fb90f0ae00dfc22ea5d1d85a0f5c7ab17df73b514bfeecfe8071d3",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-approval-review-paged-1.png",
+      "sha256": "63ddaac6af65bb735a00643464c9351ac0362b98edc5fbd06f4cd61d5f60f7a3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-approval-review-paged-2.png",
+      "sha256": "8ab1037cfad25f35e893334aac6c333f1fe3ab52600acf3c36a90820ff004a68",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-approval-review-paged-3.png",
+      "sha256": "9dbc3bca3874fc8c340e3977fd931880ae052f9beb5284dba07ab4d4dda28390",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-approval-review.png",
+      "sha256": "8edf915070898a400a911fb6be2b64a3491252d4e47334b4ac136910b214e5f3",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "7d877b5207d328ce4f08c539f19ac594b142e344af2bbc77099f70bd358cb7f0",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-choices.png",
+      "sha256": "af56bf0cb398fc17c4d02ba475a460590dcfa289b24f05441f7724906a420e5f",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-editor.png",
+      "sha256": "3adca51f7bfda82fc421abe4cef31a7a957a2dd4990246f9856d9aeb904f0799",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-enable-review.png",
+      "sha256": "332e027c77c81817761f123d0a9bb6601e03917e2db50466e740e7019908037c",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-enabled.png",
+      "sha256": "8fbc4271ccd0ee280a77dce8620aaa25a564a732ff122d8ed320670786359f4f",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-pause-review.png",
+      "sha256": "2e157145dce2208c1b35e46e68b0657acc5360f34b7d174ae9037740322d846e",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-dark-unicode/evidence/plan-paused.png",
+      "sha256": "6dd9200f89f9284c736d5201849a0e73ecab246eee0a087396e891c38f2e0a27",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-active-prompt-completed.png",
+      "sha256": "c455c66185e627d669751a79bced8fa23e32ac1c01672760a6e93cb798afe6d2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-active-prompt-queued.png",
+      "sha256": "099f613bb651f6061e8ead6b1a73d689a2b7cb36ac17b3376c33363ab657e874",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-active-prompt-review.png",
+      "sha256": "71f3bb23f0ebf8bd137e8c0926e51ae212bcb84398072c9773056c4bc8488060",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-approval-choices.png",
+      "sha256": "3ab1f1f25817bcbf62a8200aefab1c9d2cddd511179003e266c3ad23625c99fd",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-approval-review-paged-1.png",
+      "sha256": "4d4e50f6144ac81315eba3782b0c49603f66c00d121eff5dc3e58f38fcea9a6d",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-approval-review-paged-2.png",
+      "sha256": "961b368f6b16097f3c00add5b0eeab48445e58bfacba7db0521cf6a56d132c29",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-approval-review-paged-3.png",
+      "sha256": "d5b9254ef3c9892a864e4e3fd850904fadb1fc7c00ac027285a2f290ba10bfc7",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-approval-review.png",
+      "sha256": "398547fe8a494dc850192ba1b9ca7bd26f764009369ff581ecf08e4b644791d2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-approval-submitted.png",
+      "sha256": "d0850cab114fed28dc17ff9dc2ee4b6bac06f26df7082b36610ceae680acea7a",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-choices.png",
+      "sha256": "d04f7fb9cd500854f531ee3040d1b641c00a1c9fbeeeba1f50bd156687c65361",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-editor.png",
+      "sha256": "8f1425c79dc3ca9ac6c9dd629cbd600373bc1803275070d4e1aa695edaa7831c",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-enable-review.png",
+      "sha256": "4adfa83192b74b0226830de095ee001d096a1dca9d50562dd167c4deed61d6d8",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-enabled.png",
+      "sha256": "0459831195deebd78541e20c772b67a66c556b8656349ecadc2930d9093e42a7",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-pause-review.png",
+      "sha256": "1ad5306fc2d186249d85800259743c6469c3f0a059e0316d8619042923016503",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-ascii/evidence/plan-paused.png",
+      "sha256": "4104904f809b8ee5668c8af78b6490d4f85645618ed5904345bbb349559ea3e1",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-active-prompt-completed.png",
+      "sha256": "4454c737f0d3c5477e7e46d1231696bf5ab7dad37e7f88e7be41280c99f05919",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-active-prompt-queued.png",
+      "sha256": "ae3b8b136a05cd70f181078c42d0bb1387a3cc6c22d1c8838891b3db8c9c92ca",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-active-prompt-review.png",
+      "sha256": "ae9d150d29a907d928b11b9de2016acdf79e107764381fc2720963036cd9d057",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-approval-choices.png",
+      "sha256": "40ea3a3cbaf4fa0cde3bbbd06a3843c189bd827307c73bfcc8dc091a824b82b2",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-approval-review-paged-1.png",
+      "sha256": "6d148df1922b64428618981697c628fbfc5010ada82e9b375d3058da9230e3b2",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-approval-review-paged-2.png",
+      "sha256": "1870ab2201a816fee20096e74b706d7bf67ef0569aa2c5c9c1502263116c21bc",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-approval-review-paged-3.png",
+      "sha256": "2cdec43f9084e7f2fe53b55bb38916bf73221a26819df4affe21ad98c57e58ab",
+      "historicalComparison": "missing-historical",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-approval-review.png",
+      "sha256": "4924966b4bdbcb4d0380486e1fc2e6b09baa547f463f1602b3cebfb0f58d5175",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-approval-submitted.png",
+      "sha256": "209b029b7677c340e84830b9a36db958fb3969cebe822194146367e6f4f031bc",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-choices.png",
+      "sha256": "56adb855afb988777d96662857bada41308eaab69f9ff79d043ac641b51914f4",
+      "historicalComparison": "exact-png",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-editor.png",
+      "sha256": "5e66bcafc60e46a12c170f18c9e16049ae0a7f5beedd7957b405ff93c1990b60",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-enable-review.png",
+      "sha256": "74130bdd799eb54c79522fd9006539f75e0eb0c276013d49456b211ac93b2b17",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-enabled.png",
+      "sha256": "0201c7658457eb42d1ab1731d5d6352ecbaa15ad6e22caa5bf018b5d05b28290",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-pause-review.png",
+      "sha256": "558bebced29c8a3e092035597598087ffb9fa503ab78b3479302d21c839adeb0",
+      "historicalComparison": "normalized-text",
+      "receiptBacked": true
+    },
+    {
+      "path": "80x24-light-unicode/evidence/plan-paused.png",
+      "sha256": "c3e1c8a125cf5a56b4d791e844f128a76748135df1f75c49759a4585d59b9d52",
+      "historicalComparison": "changed-text",
+      "receiptBacked": true
+    }
+  ]
+}

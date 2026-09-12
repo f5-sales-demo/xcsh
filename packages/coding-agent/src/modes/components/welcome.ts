@@ -1,6 +1,7 @@
-import { type Component, padding, truncateToWidth, visibleWidth } from "@f5-sales-demo/pi-tui";
+import type { Component } from "@f5-sales-demo/pi-tui";
 import { APP_NAME } from "@f5-sales-demo/pi-utils";
 import { theme } from "../../modes/theme/theme";
+import { selectorFrame, selectorFrameContentWidth } from "./selector-frame";
 
 /**
  * Startup splash: the F5 logo under a ` xcsh vX.Y.Z ` title bar. Intentionally
@@ -35,49 +36,27 @@ export const F5_LOGO_ROWS: readonly string[] = [
 ];
 
 export class WelcomeComponent implements Component {
-	constructor(private readonly version: string) {}
+	constructor(
+		private readonly version: string,
+		private readonly terminalRows: () => number = () => process.stdout.rows || 24,
+	) {}
 	invalidate(): void {}
 
 	render(termWidth: number): string[] {
-		const preferredLeftCol = 50;
-		const logoMaxWidth = 46;
-
-		const boxWidth = Math.min(preferredLeftCol + 2, Math.max(0, termWidth - 2));
-		if (boxWidth < 4) return [];
-		const leftCol = boxWidth - 2;
-
-		const f5Logo = F5_LOGO_ROWS;
-
-		const logoColored = f5Logo.map(line => this.#f5ColorLine(line));
-		const logoBlockPad = Math.max(0, Math.floor((leftCol - logoMaxWidth) / 2));
-		const logoPadStr = padding(logoBlockPad);
-		const contentLines = [...logoColored.map(l => logoPadStr + l), ""];
-
-		const border = (s: string) => theme.fg("borderMuted", s);
-		const hChar = theme.boxRound.horizontal;
-		const h = border(hChar);
-		const v = border(theme.boxRound.vertical);
-		const tl = border(theme.boxRound.topLeft);
-		const tr = border(theme.boxRound.topRight);
-		const bl = border(theme.boxRound.bottomLeft);
-		const br = border(theme.boxRound.bottomRight);
-
-		const lines: string[] = [];
-		const title = ` ${APP_NAME} v${this.version} `;
-		const titlePrefixRaw = hChar.repeat(3);
-		const titleStyled = border(titlePrefixRaw) + theme.bold(theme.fg("text", title));
-		const titleVisLen = visibleWidth(titlePrefixRaw) + visibleWidth(title);
-		const titleSpace = boxWidth - 2;
-		if (titleVisLen >= titleSpace) {
-			lines.push(tl + truncateToWidth(titleStyled, titleSpace) + tr);
-		} else {
-			lines.push(tl + titleStyled + border(hChar.repeat(titleSpace - titleVisLen)) + tr);
-		}
-		for (const line of contentLines) {
-			lines.push(v + this.#fitToWidth(line, leftCol) + v);
-		}
-		lines.push(bl + h.repeat(leftCol) + br);
-		return lines;
+		if (termWidth < 4) return [];
+		const width = Math.min(52, termWidth);
+		const budget = Math.max(4, Math.floor(this.terminalRows() / 2));
+		const fullLogo = F5_LOGO_ROWS.length + 6 <= budget && selectorFrameContentWidth(width) >= 46;
+		return selectorFrame(
+			width,
+			budget,
+			`${APP_NAME} v${this.version}`,
+			"",
+			[],
+			fullLogo ? F5_LOGO_ROWS.map(line => this.#f5ColorLine(line)) : [theme.bold(theme.fg("accent", "F5"))],
+			[],
+			[],
+		);
 	}
 
 	#f5ColorLine(line: string): string {
@@ -98,28 +77,5 @@ export class WelcomeComponent implements Component {
 			else result += char;
 		}
 		return result;
-	}
-
-	#fitToWidth(str: string, width: number): string {
-		const visLen = visibleWidth(str);
-		if (visLen > width) {
-			const ellipsis = "…";
-			const maxW = Math.max(0, width - visibleWidth(ellipsis));
-			let t = "";
-			let cw = 0;
-			let esc = false;
-			for (const ch of str) {
-				if (ch === "\x1b") esc = true;
-				if (esc) {
-					t += ch;
-					if (ch === "m") esc = false;
-				} else if (cw < maxW) {
-					t += ch;
-					cw++;
-				}
-			}
-			return `${t}${ellipsis}`;
-		}
-		return str + padding(width - visLen);
 	}
 }

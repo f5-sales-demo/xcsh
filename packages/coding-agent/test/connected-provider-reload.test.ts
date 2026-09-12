@@ -31,6 +31,7 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 		const registry = new ModelRegistry(auth, join(dir, "models.yml"));
 		expect(registry.getConfiguredProviderIds().has("litellm")).toBe(false);
 		let active: { handleInput?(key: string): void; render(width: number): string[] } | undefined;
+		const reviewScreens: string[] = [];
 		const setModel = vi.fn();
 		const showError = vi.fn();
 		const ctx = {
@@ -58,6 +59,13 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 			},
 			showStatus: vi.fn(),
 			showError,
+			showHookCustom: (factory: any) =>
+				new Promise(resolve => {
+					const component = factory(ctx.ui, {}, {}, resolve);
+					reviewScreens.push(Bun.stripANSI(component.render(100).join("\n")));
+					component.handleInput?.("\x1b[B");
+					component.handleInput?.("\r");
+				}),
 		} as unknown as InteractiveModeContext;
 		const login = new SelectorController(ctx).showOAuthSelector("login", "litellm");
 		const submit = async (value: string) => {
@@ -71,6 +79,10 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 		await submit("synthetic-uat-key");
 		await login;
 		expect(showError).not.toHaveBeenCalled();
+		expect(reviewScreens[0]).toContain("Review LiteLLM connection");
+		expect(reviewScreens[0]).toContain("Proxy endpoint: Not configured → http://gateway.example.test");
+		expect(reviewScreens[0]).toContain("API credential: Not stored → Stored (masked)");
+		expect(reviewScreens[0]).not.toContain("synthetic-uat-key");
 		expect(Bun.stripANSI(active!.render(100).join("\n"))).toContain("Provider connected");
 		expect(registry.getConfiguredProviderIds().has("litellm")).toBe(true);
 		for (const model of fixture.models) expect(registry.find(model.provider, model.id)).toBeDefined();

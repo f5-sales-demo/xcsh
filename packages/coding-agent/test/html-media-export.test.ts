@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { exportSessionToHtml } from "../src/export/html";
+import { exportSessionToHtml, prepareSessionHtmlExport } from "../src/export/html";
 import { createMediaId, type MediaMessage } from "../src/media/types";
 import { SessionManager } from "../src/session/session-manager";
 
@@ -36,6 +36,13 @@ test("HTML export copies content-addressed media and emits native playback rende
 	await sm.flush();
 
 	const output = path.join(root, "share.html");
+	const prepared = await prepareSessionHtmlExport(sm, undefined, { outputPath: output });
+	expect(await Bun.file(output).exists()).toBe(false);
+	expect(await fs.readdir(root)).not.toContain("share-media");
+	expect(prepared.outputPath).toBe(output);
+	expect(prepared.files.map(file => file.path)).toEqual([path.join(root, "share-media", `${blob.hash}.mp4`), output]);
+	expect(Buffer.from(prepared.files[0].bytes)).toEqual(bytes);
+	expect(prepared.missingAssets).toBe(0);
 	await exportSessionToHtml(sm, undefined, { outputPath: output });
 	const mediaPath = path.join(root, "share-media", `${blob.hash}.mp4`);
 	expect(Buffer.from(await fs.readFile(mediaPath))).toEqual(bytes);
@@ -69,6 +76,10 @@ test("HTML export records a missing media asset without failing", async () => {
 	});
 	await sm.ensureOnDisk();
 	const output = path.join(root, "missing.html");
+	const prepared = await prepareSessionHtmlExport(sm, undefined, { outputPath: output });
+	expect(prepared.missingAssets).toBe(1);
+	expect(prepared.files).toHaveLength(1);
+	expect(await Bun.file(output).exists()).toBe(false);
 	await expect(exportSessionToHtml(sm, undefined, { outputPath: output })).resolves.toBe(output);
 	const html = await fs.readFile(output, "utf8");
 	const encoded = html.match(/<script id="session-data" type="application\/json">([^<]+)<\/script>/)?.[1];

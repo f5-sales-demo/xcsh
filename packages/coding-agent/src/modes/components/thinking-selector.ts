@@ -1,8 +1,8 @@
 import type { Effort } from "@f5-sales-demo/pi-ai";
-import { Container, type SelectItem, SelectList } from "@f5-sales-demo/pi-tui";
+import { Container, type SelectItem, type SelectList } from "@f5-sales-demo/pi-tui";
 import { getSelectListTheme } from "../../modes/theme/theme";
 import { getThinkingLevelMetadata } from "../../thinking";
-import { DynamicBorder } from "./dynamic-border";
+import { SearchableSelectList } from "./searchable-select-list";
 
 /**
  * Component that renders a thinking level selector with borders
@@ -20,11 +20,13 @@ export class ThinkingSelectorComponent extends Container {
 
 		const thinkingLevels: SelectItem[] = availableLevels.map(getThinkingLevelMetadata);
 
-		// Add top border
-		this.addChild(new DynamicBorder());
-
-		// Create selector
-		this.#selectList = new SelectList(thinkingLevels, thinkingLevels.length, getSelectListTheme());
+		this.#selectList = new SearchableSelectList(
+			"Choose thinking level",
+			"Select the reasoning effort used by the current model.",
+			thinkingLevels,
+			thinkingLevels.length,
+			getSelectListTheme(),
+		);
 
 		// Preselect current level
 		const currentIndex = thinkingLevels.findIndex(item => item.value === currentLevel);
@@ -41,9 +43,6 @@ export class ThinkingSelectorComponent extends Container {
 		};
 
 		this.addChild(this.#selectList);
-
-		// Add bottom border
-		this.addChild(new DynamicBorder());
 	}
 
 	getSelectList(): SelectList {

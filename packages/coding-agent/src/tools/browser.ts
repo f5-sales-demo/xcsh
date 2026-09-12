@@ -461,8 +461,9 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 				this.#browser = await puppeteer.connect({ browserURL: connectUrl });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
+				const connectPort = new URL(connectUrl).port || "80";
 				throw new Error(
-					`Could not attach to Chrome at ${connectUrl}: ${msg}. Start Chrome with --remote-debugging-port=9222 and log into your tenant, then retry.`,
+					`Could not attach to Chrome at ${connectUrl}: ${msg}. Start Chrome with --remote-debugging-port=${connectPort} and log into your tenant, then retry.`,
 				);
 			}
 		} else {

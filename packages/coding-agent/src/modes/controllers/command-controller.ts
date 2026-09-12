@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -5,26 +6,35 @@ import {
 	getEnvApiKey,
 	getProviderDetails,
 	type ProviderDetails,
-	type ToolCall,
 	type UsageLimit,
 	type UsageReport,
 } from "@f5-sales-demo/pi-ai";
 import { Loader, Markdown, padding, Spacer, Text, visibleWidth } from "@f5-sales-demo/pi-tui";
-import { formatDuration, Snowflake, setProjectDir, setShellPwd, t } from "@f5-sales-demo/pi-utils";
+import { APP_NAME, formatDuration, isEnoent, Snowflake, setProjectDir, setShellPwd, t } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
 import { reset as resetCapabilities } from "../../capability";
 import { clearXcshPluginRootsCache } from "../../discovery/helpers";
-import { loadCustomShare } from "../../export/custom-share";
+import { getCustomSharePath, loadCustomShare } from "../../export/custom-share";
+import { prepareSessionHtmlExport } from "../../export/html";
 import type { CompactOptions } from "../../extensibility/extensions/types";
 import { getGatewayStatus } from "../../ipy/gateway-coordinator";
-import { buildMemoryToolDeveloperInstructions, clearMemoryData, enqueueMemoryConsolidation } from "../../memories";
+import {
+	clearReviewedMemoryData,
+	enqueueReviewedMemoryConsolidation,
+	getMemoryRoot,
+	inspectMemoryClear,
+	inspectMemoryConsolidation,
+} from "../../memories";
 import { BashExecutionComponent } from "../../modes/components/bash-execution";
 import { BorderedLoader } from "../../modes/components/bordered-loader";
-import { DynamicBorder } from "../../modes/components/dynamic-border";
 import { createToolGutter } from "../../modes/components/gutter-block";
 import { controlMediaPlayback, type MediaPlaybackAction } from "../../modes/components/media-message";
 import { PythonExecutionComponent } from "../../modes/components/python-execution";
-import { getMarkdownTheme, getSymbolTheme, theme } from "../../modes/theme/theme";
+import type { ActionReview } from "../../modes/components/reviewed-action";
+import { ActionInterruptedError, runReviewedAction } from "../../modes/components/reviewed-action-dialog";
+import { ReportDetailsComponent } from "../../modes/components/selector-frame";
+import { SettingsTextEditor } from "../../modes/components/settings-editors";
+import { getCurrentThemeName, getMarkdownTheme, getSymbolTheme, theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
 import { extractLastLink } from "../../modes/utils/copy-targets";
 import { buildHotkeysMarkdown } from "../../modes/utils/hotkeys-markdown";
@@ -35,21 +45,76 @@ import { outputMeta } from "../../tools/output-meta";
 import { resolveToCwd, stripOuterDoubleQuotes } from "../../tools/path-utils";
 import { replaceTabs } from "../../tools/render-utils";
 import { getChangelogPath, parseChangelog } from "../../utils/changelog";
-import { copyToClipboard } from "../../utils/clipboard";
-import { type OpenHttpUrlResult, openHttpUrl, openPath } from "../../utils/open";
+import {
+	type OpenHttpUrlResult,
+	type OpenPathResult,
+	openHttpUrl,
+	openPath,
+	openPathWithResult,
+} from "../../utils/open";
 import { setSessionTerminalTitle } from "../../utils/title-generator";
+import { reviewClipboardAction } from "../utils/clipboard-action";
+import { reviewExternalUrlAction } from "../utils/open-action";
 
-function showMarkdownPanel(ctx: InteractiveModeContext, title: string, markdown: string): void {
-	ctx.chatContainer.addChild(new Spacer(1));
-	ctx.chatContainer.addChild(new DynamicBorder());
-	ctx.chatContainer.addChild(new Text(theme.bold(theme.fg("contentAccent", title)), 1, 0));
-	ctx.chatContainer.addChild(new Spacer(1));
-	ctx.chatContainer.addChild(new Markdown(markdown.trim(), 1, 1, getMarkdownTheme()));
-	ctx.chatContainer.addChild(new DynamicBorder());
-	ctx.ui.requestRender();
+async function showMarkdownPanel(
+	ctx: InteractiveModeContext,
+	title: string,
+	purpose: string,
+	markdown: string,
+): Promise<void> {
+	await ctx.showHookCustom<void>(
+		(ui, _theme, _keys, done) =>
+			new ReportDetailsComponent(
+				title,
+				purpose,
+				markdown.trim(),
+				() => done(),
+				() => ui.terminal.rows,
+				(content, width) => new Markdown(content, 0, 0, getMarkdownTheme()).render(width),
+			),
+	);
 }
 
+type ManualCompactionTarget =
+	| {
+			kind: "persist";
+			manager: InteractiveModeContext["sessionManager"];
+			session: InteractiveModeContext["session"];
+	  }
+	| {
+			kind: "compact";
+			manager: InteractiveModeContext["sessionManager"];
+			session: InteractiveModeContext["session"];
+			leafId: string | null;
+			messageCount: number;
+			alreadyCompacted: boolean;
+			instructions: string | undefined;
+	  };
+
 export class CommandController {
+	#clearingMemory = false;
+	#exportingSession = false;
+	#fetchingUsage = false;
+	#writingDebugTranscript = false;
+	#lastUsageReports: UsageReport[] | null = null;
+	#forkingSession = false;
+	#openingLink = false;
+	#sharingSession = false;
+	#handingOff = false;
+	#pendingFork:
+		| {
+				manager: InteractiveModeContext["sessionManager"];
+				preview: NonNullable<ReturnType<InteractiveModeContext["sessionManager"]["previewFork"]>>;
+		  }
+		| undefined;
+	#pendingManualCompaction:
+		| {
+				manager: InteractiveModeContext["sessionManager"];
+				session: InteractiveModeContext["session"];
+				leafId: string | null;
+				instructions: string | undefined;
+		  }
+		| undefined;
 	constructor(private readonly ctx: InteractiveModeContext) {}
 
 	openInBrowser(urlOrPath: string): void {
@@ -60,188 +125,387 @@ export class CommandController {
 		return openHttpUrl(url);
 	}
 
+	openLocalPath(target: string): Promise<OpenPathResult> {
+		return openPathWithResult(target);
+	}
+
 	async handleExportCommand(text: string): Promise<void> {
-		const parts = text.split(/\s+/);
-		const arg = parts.length > 1 ? parts[1] : undefined;
+		if (this.#exportingSession) {
+			this.ctx.showWarning("A session export is already open or running.");
+			return;
+		}
+		const arg = text.replace(/^\S+\s*/, "").trim();
 
 		if (arg === "--copy" || arg === "clipboard" || arg === "copy") {
 			this.ctx.showWarning(t("controller.export.warnings.useDump"));
 			return;
 		}
 
+		this.#exportingSession = true;
 		try {
-			const filePath = await this.ctx.session.exportToHtml(arg);
-			this.ctx.showStatus(t("controller.export.status.exported", { path: filePath }));
-			this.openInBrowser(filePath);
+			const session = this.ctx.session;
+			const manager = this.ctx.sessionManager;
+			const sessionId = manager.getSessionId();
+			const sessionFile = manager.getSessionFile();
+			if (!sessionFile) throw new Error("Cannot export in-memory session to HTML");
+			const requested = arg || `${APP_NAME}-session-${path.basename(sessionFile, ".jsonl")}.html`;
+			const outputPath = resolveToCwd(stripOuterDoubleQuotes(requested), manager.getCwd());
+			const current = () =>
+				this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
+			const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+			const inspect = async (file: string) => {
+				try {
+					const stat = await fs.lstat(file);
+					if (!stat.isFile() || stat.isSymbolicLink())
+						throw new Error(`Export destination must be a regular file, not a link or directory: ${file}`);
+					const bytes = await fs.readFile(file);
+					return {
+						hash: digest(bytes),
+						size: bytes.length,
+						identity: `${stat.dev}:${stat.ino}`,
+						mode: (stat.mode & 0o777).toString(8).padStart(4, "0"),
+						owner: `${stat.uid}:${stat.gid}`,
+					};
+				} catch (error) {
+					if (isEnoent(error)) return undefined;
+					throw error;
+				}
+			};
+			const canonical = async (directory: string): Promise<string> => {
+				try {
+					return await fs.realpath(directory);
+				} catch (error) {
+					if (!isEnoent(error) || path.dirname(directory) === directory) throw error;
+					return path.join(await canonical(path.dirname(directory)), path.basename(directory));
+				}
+			};
+			const prepare = async () => {
+				const snapshot = await prepareSessionHtmlExport(manager, session.state, {
+					outputPath,
+					themeName: getCurrentThemeName(),
+				});
+				const files = [];
+				for (const file of snapshot.files) {
+					const destination = path.join(await canonical(path.dirname(file.path)), path.basename(file.path));
+					if (destination === path.join(await canonical(path.dirname(sessionFile)), path.basename(sessionFile)))
+						throw new Error("Export cannot overwrite the active session file.");
+					const before = await inspect(destination);
+					files.push({
+						...file,
+						path: destination,
+						before,
+						hash: digest(file.bytes),
+					});
+				}
+				const hasWrites = files.some(file => file.before?.hash !== file.hash);
+				const review: ActionReview = {
+					identity: `session-export:${sessionId}`,
+					scope: `Local HTML export · ${outputPath}`,
+					revision: JSON.stringify(files.map(file => [file.path, file.before, file.hash])),
+					changes: files.map(file => ({
+						field: file.path,
+						before: file.before
+							? `${file.before.size} bytes · SHA256 ${file.before.hash.slice(0, 12)} · permissions ${file.before.mode} · owner ${file.before.owner}`
+							: "Absent",
+						after: `${file.bytes.length} bytes · SHA256 ${file.hash.slice(0, 12)}${file.before?.hash === file.hash ? " (unchanged; no write)" : process.platform === "win32" ? " · platform file permissions" : " · permissions 0600 · owned by current user"}`,
+					})),
+					consequence: `${hasWrites ? "Write changed HTML and media files, creating parent directories as needed. Changed existing files are replaced; matching files are left unchanged." : "All export files already match; no files or directories will be written."} Contains conversation, system prompt and tool information; anyone with file access can read it. Opens the local HTML after completion; no remote publication.${snapshot.missingAssets ? ` Warning: ${snapshot.missingAssets} media assets are unavailable and will be omitted.` : ""}`,
+				};
+				return { review, target: { snapshot, files } };
+			};
+			const proposal = await prepare();
+			if (!current()) throw new Error("The export session changed. Open /export again.");
+			const outcome = await runReviewedAction(this.ctx, "session export", {
+				review: proposal.review,
+				resolve: async () => {
+					if (!current()) return undefined;
+					const prepared = await prepare();
+					return current() ? prepared : undefined;
+				},
+				execute: async ({ files }) => {
+					let saved = 0;
+					for (const file of files) {
+						try {
+							if (!current()) throw new Error("The export session changed");
+							if (JSON.stringify(await inspect(file.path)) !== JSON.stringify(file.before))
+								throw new Error(`Destination changed: ${file.path}. Review again before overwriting.`);
+							if (file.before?.hash === file.hash) continue;
+							await fs.mkdir(path.dirname(file.path), { recursive: true });
+							if ((await fs.realpath(path.dirname(file.path))) !== path.dirname(file.path))
+								throw new Error("Export parent directory changed");
+							const temporary = path.join(path.dirname(file.path), `.xcsh-export-${Snowflake.next()}.tmp`);
+							const handle = await fs.open(temporary, "wx", 0o600);
+							try {
+								await fs.writeFile(handle, file.bytes);
+								await handle.sync();
+								await handle.close();
+								if (JSON.stringify(await inspect(file.path)) !== JSON.stringify(file.before))
+									throw new Error("Export destination changed while preparing the write");
+								await fs.rename(temporary, file.path);
+							} finally {
+								try {
+									await handle.close();
+								} finally {
+									await fs.unlink(temporary).catch(error => {
+										if (!isEnoent(error)) throw error;
+									});
+								}
+							}
+							saved++;
+						} catch (error) {
+							throw new Error(
+								`${saved} export files saved in this attempt; remaining writes unresolved. ${error instanceof Error ? error.message : String(error)}`,
+							);
+						}
+					}
+				},
+			});
+			if (outcome === "succeeded") {
+				this.ctx.showStatus(t("controller.export.status.exported", { path: outputPath }));
+				const opened = await this.openLocalPath(outputPath);
+				if (!opened.ok)
+					this.ctx.showWarning(
+						`Export saved but automatic open failed: ${opened.error}\nOpen manually: ${outputPath}`,
+					);
+			}
 		} catch (error: unknown) {
-			this.ctx.showError(
-				t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
-			);
+			this.ctx.showError(`Failed to export session: ${error instanceof Error ? error.message : String(error)}`);
+		} finally {
+			this.#exportingSession = false;
 		}
 	}
 
-	handleDumpCommand() {
-		try {
-			const formatted = this.ctx.session.formatSessionAsText();
-			if (!formatted) {
-				this.ctx.showError(t("controller.dump.errors.noMessages"));
-				return;
-			}
-			copyToClipboard(formatted);
-			this.ctx.showStatus(t("controller.dump.status.copied"));
-		} catch (error: unknown) {
-			this.ctx.showError(
-				t("controller.dump.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
-			);
-		}
+	async handleDumpCommand(): Promise<void> {
+		const session = this.ctx.session;
+		const manager = this.ctx.sessionManager;
+		const sessionId = manager.getSessionId();
+		await reviewClipboardAction(this.ctx, {
+			title: "conversation copy",
+			identity: `conversation:${sessionId}`,
+			label: "Current conversation",
+			success: "Conversation copied to the local clipboard.",
+			reopen: "Open /dump to review and retry.",
+			current: () =>
+				this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId,
+			resolveText: () => session.formatSessionAsText(),
+		});
 	}
 
 	async handleDebugTranscriptCommand(): Promise<void> {
+		if (this.#writingDebugTranscript) {
+			this.ctx.showWarning("A transcript export review or write is already active.");
+			return;
+		}
+		this.#writingDebugTranscript = true;
+		const session = this.ctx.session;
+		const manager = this.ctx.sessionManager;
+		const sessionId = manager.getSessionId();
+		const outputPath = path.join(os.tmpdir(), `${Snowflake.next()}-tui-transcript.txt`);
 		try {
-			const width = Math.max(1, this.ctx.ui.terminal.columns);
-			const renderedLines = this.ctx.chatContainer.render(width).map(line => replaceTabs(Bun.stripANSI(line)));
-			const rendered = renderedLines.join("\n").trimEnd();
-			if (!rendered) {
-				this.ctx.showError(t("controller.debug.errors.noMessages"));
-				return;
-			}
-			const tmpPath = path.join(os.tmpdir(), `${Snowflake.next()}-tmp.txt`);
-			await Bun.write(tmpPath, `${rendered}\n`);
-			this.ctx.showStatus(t("controller.debug.status.written", { path: tmpPath }));
+			const current = () =>
+				this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
+			const inspect = async () => {
+				try {
+					const stat = await fs.lstat(outputPath);
+					if (!stat.isFile() || stat.isSymbolicLink())
+						throw new Error("Transcript destination is not a regular file.");
+					const bytes = await fs.readFile(outputPath);
+					return { size: bytes.length, hash: createHash("sha256").update(bytes).digest("hex") };
+				} catch (error) {
+					if (isEnoent(error)) return undefined;
+					throw error;
+				}
+			};
+			const prepare = async () => {
+				if (!current()) throw new Error("The session changed. Open the transcript export again.");
+				const width = Math.max(1, this.ctx.ui.terminal.columns);
+				const rendered = this.ctx.chatContainer
+					.render(width)
+					.map(line => replaceTabs(Bun.stripANSI(line)))
+					.join("\n")
+					.trimEnd();
+				if (!rendered) throw new Error(t("controller.debug.errors.noMessages"));
+				const content = `${rendered}\n`;
+				const hash = createHash("sha256").update(content).digest("hex");
+				const before = await inspect();
+				const review: ActionReview = {
+					identity: `tui-transcript:${sessionId}`,
+					scope: `Local diagnostic export · ${outputPath}`,
+					revision: JSON.stringify({ width, before, hash }),
+					changes: [
+						{
+							field: outputPath,
+							before: before ? `${before.size} bytes · SHA256 ${before.hash.slice(0, 12)}` : "Absent",
+							after: `${Buffer.byteLength(content)} bytes · SHA256 ${hash.slice(0, 12)} · permissions 0600`,
+						},
+					],
+					consequence:
+						"Writes the currently rendered conversation to a local temporary text file. It can contain sensitive transcript and tool output; anyone with file access can read it. A changed existing destination is atomically replaced.",
+				};
+				return { review, target: { before, content } };
+			};
+			const proposal = await prepare();
+			const outcome = await runReviewedAction(this.ctx, "TUI transcript export", {
+				review: proposal.review,
+				resolve: prepare,
+				execute: async ({ before, content }) => {
+					if (JSON.stringify(await inspect()) !== JSON.stringify(before))
+						throw new Error("Transcript destination changed after review.");
+					const temporary = `${outputPath}.${Snowflake.next()}.tmp`;
+					const handle = await fs.open(temporary, "wx", 0o600);
+					try {
+						await handle.writeFile(content, "utf8");
+						await handle.sync();
+						await handle.close();
+						if (JSON.stringify(await inspect()) !== JSON.stringify(before))
+							throw new Error("Transcript destination changed while preparing the write.");
+						await fs.rename(temporary, outputPath);
+					} finally {
+						await handle.close().catch(() => {});
+						await fs.unlink(temporary).catch(() => {});
+					}
+				},
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "succeeded")
+				this.ctx.showStatus(t("controller.debug.status.written", { path: outputPath }));
 		} catch (error: unknown) {
 			this.ctx.showError(
-				t("controller.debug.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
+				t("controller.debug.errors.failed", {
+					message: error instanceof Error ? error.message : "Unknown error",
+				}),
 			);
+		} finally {
+			this.#writingDebugTranscript = false;
 		}
 	}
 
 	async handleShareCommand(): Promise<void> {
-		const tmpFile = path.join(os.tmpdir(), `${Snowflake.next()}.html`);
-		const cleanupTempFile = async () => {
-			try {
-				await fs.rm(tmpFile, { force: true });
-			} catch {
-				// Ignore cleanup errors
-			}
-		};
-		try {
-			await this.ctx.session.exportToHtml(tmpFile);
-		} catch (error: unknown) {
-			this.ctx.showError(
-				t("controller.export.errors.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
-			);
+		if (this.#sharingSession) {
+			this.ctx.showWarning("A session share review or publication is already active.");
 			return;
 		}
-
+		this.#sharingSession = true;
+		const session = this.ctx.session;
+		const manager = this.ctx.sessionManager;
+		const sessionId = manager.getSessionId();
+		const stagingRoot = path.join(os.tmpdir(), `xcsh-share-${Snowflake.next()}`);
+		const htmlPath = path.join(stagingRoot, "session.html");
+		const current = () =>
+			this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
+		let resultUrl: string | undefined;
+		let resultMessage: string | undefined;
 		try {
-			const customShare = await loadCustomShare();
-			if (customShare) {
-				const loader = new BorderedLoader(this.ctx.ui, theme, t("controller.share.sharing"));
-				this.ctx.editorContainer.clear();
-				this.ctx.editorContainer.addChild(loader);
-				this.ctx.ui.setFocus(loader);
-				this.ctx.ui.requestRender();
-
-				const restoreEditor = async () => {
-					loader.dispose();
-					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(this.ctx.editor);
-					this.ctx.ui.setFocus(this.ctx.editor);
-					await cleanupTempFile();
-				};
-
-				try {
-					const result = await customShare.fn(tmpFile);
-					await restoreEditor();
-
-					if (typeof result === "string") {
-						this.ctx.showStatus(`Share URL: ${result}`);
-						this.openInBrowser(result);
-					} else if (result) {
-						const parts: string[] = [];
-						if (result.url) parts.push(`Share URL: ${result.url}`);
-						if (result.message) parts.push(result.message);
-						if (parts.length > 0) this.ctx.showStatus(parts.join("\n"));
-						if (result.url) this.openInBrowser(result.url);
-					} else {
-						this.ctx.showStatus(t("controller.share.sessionShared"));
+			const prepare = async () => {
+				if (!current()) throw new Error("The session changed. Open /share again.");
+				const customPath = getCustomSharePath();
+				let customRevision: string | undefined;
+				if (customPath)
+					customRevision = createHash("sha256")
+						.update(await fs.readFile(customPath))
+						.digest("hex");
+				else {
+					let authResult: Awaited<ReturnType<typeof $>>;
+					try {
+						authResult = await $`gh auth status`.quiet().nothrow();
+					} catch {
+						throw new Error(t("controller.share.ghNotInstalled"));
 					}
-					return;
-				} catch (err) {
-					await restoreEditor();
-					this.ctx.showError(
-						t("controller.share.customFailed", { message: err instanceof Error ? err.message : String(err) }),
-					);
-					return;
+					if (authResult.exitCode !== 0) throw new Error(t("controller.share.ghNotLoggedIn"));
 				}
+				const snapshot = await prepareSessionHtmlExport(manager, session.state, {
+					outputPath: htmlPath,
+					themeName: getCurrentThemeName(),
+				});
+				try {
+					await fs.lstat(stagingRoot);
+					throw new Error("Share staging destination unexpectedly exists. Reopen /share.");
+				} catch (error) {
+					if (!isEnoent(error)) throw error;
+				}
+				const hashes = snapshot.files.map(file => ({
+					path: path.relative(stagingRoot, file.path),
+					hash: createHash("sha256").update(file.bytes).digest("hex"),
+					size: file.bytes.length,
+				}));
+				const provider = customPath ? `custom handler ${customPath}` : "GitHub secret gist";
+				const review: ActionReview = {
+					identity: `session-share:${sessionId}`,
+					scope: `Remote publication · ${provider}`,
+					revision: JSON.stringify({ sessionId, customPath, customRevision, hashes }),
+					changes: [
+						{
+							field: "Published transcript",
+							before: "Not published by this action",
+							after: `${hashes.reduce((sum, file) => sum + file.size, 0)} bytes · SHA256 ${hashes.at(-1)?.hash.slice(0, 12)}`,
+						},
+						{
+							field: "Visibility",
+							before: "None",
+							after: customPath
+								? "Determined by the custom share handler"
+								: "Secret/unlisted gist; accessible to anyone with its URL",
+						},
+					],
+					consequence: `Stages the current conversation, system prompt, tool information and available media in a private temporary directory, then passes the HTML to ${provider}. This may publish sensitive conversation content remotely. Temporary files are removed after the handler finishes. A returned URL is shown but never opened automatically.${snapshot.missingAssets ? ` ${snapshot.missingAssets} media asset(s) are unavailable and will be omitted.` : ""}`,
+				};
+				return { review, target: { snapshot, customPath, customRevision } };
+			};
+			const proposal = await prepare();
+			const outcome = await runReviewedAction(this.ctx, "session publication", {
+				review: proposal.review,
+				resolve: prepare,
+				execute: async ({ snapshot, customPath, customRevision }) => {
+					await fs.mkdir(stagingRoot, { recursive: false, mode: 0o700 });
+					for (const file of snapshot.files) {
+						await fs.mkdir(path.dirname(file.path), { recursive: true, mode: 0o700 });
+						await fs.writeFile(file.path, file.bytes, { mode: 0o600, flag: "wx" });
+					}
+					try {
+						if (customPath) {
+							if (
+								createHash("sha256")
+									.update(await fs.readFile(customPath))
+									.digest("hex") !== customRevision
+							)
+								throw new Error("Custom share handler changed after review.");
+							const customShare = await loadCustomShare();
+							if (!customShare || customShare.path !== customPath)
+								throw new Error("Custom share handler changed after review.");
+							const result = await customShare.fn(htmlPath);
+							if (typeof result === "string") resultUrl = result;
+							else if (result) {
+								resultUrl = result.url;
+								resultMessage = result.message;
+							}
+						} else {
+							const result = await $`gh gist create --public=false ${htmlPath}`.quiet().nothrow();
+							if (result.exitCode !== 0)
+								throw new Error(result.stderr.toString("utf-8").trim() || "Unknown GitHub Gist error");
+							const gistUrl = result.stdout.toString("utf-8").trim();
+							const gistId = gistUrl.split("/").pop();
+							if (!gistId) throw new Error(t("controller.share.gistParseFailed"));
+							resultUrl = `https://gistpreview.github.io/?${gistId}`;
+							resultMessage = `Gist: ${gistUrl}`;
+						}
+					} finally {
+						await fs.rm(stagingRoot, { recursive: true, force: true });
+					}
+				},
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "succeeded") {
+				const parts = [
+					resultUrl ? `Share URL: ${resultUrl}` : t("controller.share.sessionShared"),
+					resultMessage,
+				].filter((value): value is string => Boolean(value));
+				this.ctx.showStatus(parts.join("\n"));
 			}
-		} catch (err) {
-			await cleanupTempFile();
-			this.ctx.showError(err instanceof Error ? err.message : String(err));
-			return;
-		}
-
-		try {
-			const authResult = await $`gh auth status`.quiet().nothrow();
-			if (authResult.exitCode !== 0) {
-				await cleanupTempFile();
-				this.ctx.showError(t("controller.share.ghNotLoggedIn"));
-				return;
-			}
-		} catch {
-			await cleanupTempFile();
-			this.ctx.showError(t("controller.share.ghNotInstalled"));
-			return;
-		}
-
-		const loader = new BorderedLoader(this.ctx.ui, theme, t("controller.share.creatingGist"));
-		this.ctx.editorContainer.clear();
-		this.ctx.editorContainer.addChild(loader);
-		this.ctx.ui.setFocus(loader);
-		this.ctx.ui.requestRender();
-
-		const restoreEditor = async () => {
-			loader.dispose();
-			this.ctx.editorContainer.clear();
-			this.ctx.editorContainer.addChild(this.ctx.editor);
-			this.ctx.ui.setFocus(this.ctx.editor);
-			await cleanupTempFile();
-		};
-
-		loader.onAbort = () => {
-			void restoreEditor();
-			this.ctx.showStatus(t("controller.share.cancelled"));
-		};
-
-		try {
-			const result = await $`gh gist create --public=false ${tmpFile}`.quiet().nothrow();
-			if (loader.signal.aborted) return;
-
-			await restoreEditor();
-
-			if (result.exitCode !== 0) {
-				const errorMsg = result.stderr.toString("utf-8").trim() || "Unknown error";
-				this.ctx.showError(t("controller.share.gistFailed", { message: errorMsg }));
-				return;
-			}
-
-			const gistUrl = result.stdout.toString("utf-8").trim();
-			const gistId = gistUrl.split("/").pop();
-			if (!gistId) {
-				this.ctx.showError(t("controller.share.gistParseFailed"));
-				return;
-			}
-
-			const previewUrl = `https://gistpreview.github.io/?${gistId}`;
-			this.ctx.showStatus(`Share URL: ${previewUrl}\nGist: ${gistUrl}`);
-			this.openInBrowser(previewUrl);
-		} catch (error: unknown) {
-			if (!loader.signal.aborted) {
-				await restoreEditor();
-				this.ctx.showError(
-					t("controller.share.gistFailed", { message: error instanceof Error ? error.message : "Unknown error" }),
-				);
-			}
+		} catch (error) {
+			await fs.rm(stagingRoot, { recursive: true, force: true }).catch(() => {});
+			this.ctx.showError(error instanceof Error ? error.message : String(error));
+		} finally {
+			this.#sharingSession = false;
 		}
 	}
 
@@ -261,32 +525,54 @@ export class CommandController {
 		this.ctx.showStatus(`Media ${result.id}: ${result.state}`);
 	}
 
-	handleCopyCommand(sub?: string) {
-		switch (sub) {
-			case "code":
-				return this.#copyCode();
-			case "all":
-				return this.#copyAllCode();
-			case "cmd":
-				return this.#copyLastCommand();
-			case "link":
-				return this.#copyLastLink();
-			case "last":
-				return this.#copyLastMessage();
-			case undefined:
-				return this.ctx.showCopySelector();
-			default:
-				this.ctx.showError(t("controller.copy.errors.unknownSub", { sub: sub! }));
-		}
-	}
-
-	#copyLastLink(): void {
-		const link = extractLastLink(this.ctx.session.messages);
-		if (!link) {
-			this.ctx.showWarning(t("controller.copy.warnings.noLink"));
+	async handleCopyCommand(sub?: string): Promise<void> {
+		if (sub === undefined) {
+			this.ctx.showCopySelector();
 			return;
 		}
-		this.#doCopy(link, t("controller.copy.status.link"));
+		const labels: Record<string, string> = {
+			last: "Last assistant message",
+			code: "Last code block",
+			all: "All code blocks",
+			cmd: "Last shell or Python command",
+			link: "Last link",
+		};
+		const label = labels[sub];
+		if (!label) {
+			this.ctx.showError(t("controller.copy.errors.unknownSub", { sub }));
+			return;
+		}
+		const session = this.ctx.session;
+		const manager = this.ctx.sessionManager;
+		const sessionId = manager.getSessionId();
+		const resolveText = () => {
+			if (sub === "link") return extractLastLink(session.messages) ?? undefined;
+			if (sub === "cmd") {
+				for (const message of [...session.messages].reverse()) {
+					if (message.role !== "assistant") continue;
+					for (const part of [...message.content].reverse()) {
+						if (part.type !== "toolCall") continue;
+						if (part.name === "bash" && typeof part.arguments.command === "string") return part.arguments.command;
+						if (part.name === "python" && typeof part.arguments.code === "string") return part.arguments.code;
+					}
+				}
+				return undefined;
+			}
+			const text = session.getLastAssistantText();
+			if (sub === "last" || !text) return text ?? undefined;
+			const blocks = [...text.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)].map(match => match[1].replace(/\n$/, ""));
+			return sub === "code" ? blocks.at(-1) : blocks.length ? blocks.join("\n\n") : undefined;
+		};
+		await reviewClipboardAction(this.ctx, {
+			title: "clipboard copy",
+			identity: `clipboard:${sessionId}:${sub}`,
+			label,
+			success: `${label} copied to the local clipboard.`,
+			reopen: `Open /copy ${sub} to review and retry.`,
+			current: () =>
+				this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId,
+			resolveText,
+		});
 	}
 
 	async handleOpenCommand(args?: string): Promise<void> {
@@ -294,83 +580,34 @@ export class CommandController {
 			this.ctx.showError(t("controller.open.usage"));
 			return;
 		}
-		const link = extractLastLink(this.ctx.session.messages);
-		if (!link) {
-			this.ctx.showWarning(t("controller.copy.warnings.noLink"));
+		if (this.#openingLink) {
+			this.ctx.showWarning("Another link review or launch is already active.");
 			return;
 		}
-		const result = await this.openHttpUrl(link);
-		if (!result.ok) this.ctx.showError(t("controller.open.failed", { message: result.error }));
-		else this.ctx.showStatus(t("controller.open.status"));
-	}
-
-	#copyLastMessage() {
-		const text = this.ctx.session.getLastAssistantText();
-		if (!text) {
-			this.ctx.showError(t("controller.copy.errors.noMessages"));
-			return;
-		}
-		this.#doCopy(text, t("controller.copy.status.lastMessage"));
-	}
-
-	#copyCode() {
-		const text = this.ctx.session.getLastAssistantText();
-		if (!text) {
-			this.ctx.showError(t("controller.copy.errors.noMessages"));
-			return;
-		}
-		const matches = [...text.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)];
-		const lastMatch = matches.at(-1);
-		if (!lastMatch) {
-			this.ctx.showWarning(t("controller.copy.warnings.noCodeBlock"));
-			return;
-		}
-		this.#doCopy(lastMatch[1].replace(/\n$/, ""), t("controller.copy.status.codeBlock"));
-	}
-
-	#copyAllCode() {
-		const text = this.ctx.session.getLastAssistantText();
-		if (!text) {
-			this.ctx.showError(t("controller.copy.errors.noMessages"));
-			return;
-		}
-		const matches = [...text.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)];
-		if (matches.length === 0) {
-			this.ctx.showWarning(t("controller.copy.warnings.noCodeBlocks"));
-			return;
-		}
-		const combined = matches.map(m => m[1].replace(/\n$/, "")).join("\n\n");
-		this.#doCopy(combined, t("controller.copy.status.codeBlocks", { count: matches.length }));
-	}
-
-	#copyLastCommand() {
-		const messages = this.ctx.session.messages;
-		// Walk backwards to find the last bash/python tool call
-		for (let i = messages.length - 1; i >= 0; i--) {
-			const msg = messages[i];
-			if (msg.role !== "assistant") continue;
-			const toolCalls = msg.content.filter((c): c is ToolCall => c.type === "toolCall");
-			for (let j = toolCalls.length - 1; j >= 0; j--) {
-				const tc = toolCalls[j];
-				if (tc.name === "bash" && typeof tc.arguments.command === "string") {
-					this.#doCopy(tc.arguments.command, t("controller.copy.status.bashCommand"));
-					return;
-				}
-				if (tc.name === "python" && typeof tc.arguments.code === "string") {
-					this.#doCopy(tc.arguments.code, t("controller.copy.status.pythonCode"));
-					return;
-				}
-			}
-		}
-		this.ctx.showWarning(t("controller.copy.warnings.noCommand"));
-	}
-
-	#doCopy(content: string, label: string) {
+		this.#openingLink = true;
 		try {
-			copyToClipboard(content);
-			this.ctx.showStatus(label);
-		} catch (error) {
-			this.ctx.showError(error instanceof Error ? error.message : String(error));
+			const session = this.ctx.session;
+			const manager = this.ctx.sessionManager;
+			const sessionId = manager.getSessionId();
+			const current = () =>
+				this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
+			if (!extractLastLink(session.messages)) {
+				this.ctx.showWarning(t("controller.copy.warnings.noLink"));
+				return;
+			}
+			const outcome = await reviewExternalUrlAction(this.ctx, {
+				title: "external link",
+				identity: `session-link:${sessionId}`,
+				scope: `External browser navigation · session ${sessionId}`,
+				current,
+				resolveUrl: () => extractLastLink(session.messages) ?? undefined,
+				open: link => this.openHttpUrl(link),
+			});
+			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");
+			else if (outcome === "missing") this.ctx.showWarning(t("controller.copy.warnings.noLink"));
+			else if (outcome === "succeeded") this.ctx.showStatus(t("controller.open.status"));
+		} finally {
+			this.#openingLink = false;
 		}
 	}
 
@@ -491,15 +728,11 @@ export class CommandController {
 		}
 
 		const now = Date.now();
-		const lineWidth = Math.max(24, (this.ctx.ui.terminal.columns ?? 100) - 24);
-		let info = `${theme.bold(t("controller.jobs.title"))}\n\n`;
-		info += `${theme.fg("dim", t("controller.jobs.running"))} ${snapshot.running.length}\n`;
+		const lineWidth = Math.max(24, Math.min(96, (this.ctx.ui.terminal.columns ?? 100) - 8));
+		let info = "";
 
 		if (snapshot.running.length === 0 && snapshot.recent.length === 0) {
-			info += `\n${theme.fg("dim", t("controller.jobs.noJobs"))}\n`;
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(new Text(info, 1, 0));
-			this.ctx.ui.requestRender();
+			await this.showReport(t("controller.jobs.title"), "Current session · empty", t("controller.jobs.noJobs"));
 			return;
 		}
 
@@ -519,26 +752,50 @@ export class CommandController {
 			}
 		}
 
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new Text(info.trimEnd(), 1, 0));
-		this.ctx.ui.requestRender();
+		await this.showReport(
+			t("controller.jobs.title"),
+			`Current session · ${snapshot.running.length} running · ${snapshot.recent.length} recent`,
+			info.trimEnd(),
+		);
 	}
 
 	async handleUsageCommand(reports?: UsageReport[] | null): Promise<void> {
 		let usageReports = reports ?? null;
 		if (!usageReports) {
-			const provider = this.ctx.session as { fetchUsageReports?: () => Promise<UsageReport[] | null> };
+			if (this.#fetchingUsage) {
+				this.ctx.showStatus("Usage refresh is already running; duplicate request ignored.");
+				return;
+			}
+			const provider = this.ctx.session as {
+				fetchUsageReports?: () => Promise<UsageReport[] | null>;
+			};
 			if (!provider.fetchUsageReports) {
 				this.ctx.showWarning(t("controller.usage.notConfigured"));
 				return;
 			}
+			this.#fetchingUsage = true;
+			const loader = new BorderedLoader(this.ctx.ui, theme, "Refreshing provider usage", false);
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(loader);
+			this.ctx.ui.setFocus(loader);
+			this.ctx.ui.requestRender();
 			try {
 				usageReports = await provider.fetchUsageReports();
 			} catch (error) {
-				this.ctx.showError(
-					t("controller.usage.fetchFailed", { message: error instanceof Error ? error.message : String(error) }),
-				);
+				const message = t("controller.usage.fetchFailed", {
+					message: error instanceof Error ? error.message : String(error),
+				});
+				if (this.#lastUsageReports?.length) {
+					await this.showUsageReport(this.#lastUsageReports, `Cached data · refresh failed: ${message}`);
+				} else this.ctx.showError(message);
 				return;
+			} finally {
+				loader.dispose();
+				this.ctx.editorContainer.clear();
+				this.ctx.editorContainer.addChild(this.ctx.editor);
+				this.ctx.ui.setFocus(this.ctx.editor);
+				this.ctx.ui.requestRender();
+				this.#fetchingUsage = false;
 			}
 		}
 
@@ -547,10 +804,8 @@ export class CommandController {
 			return;
 		}
 
-		const output = renderUsageReports(usageReports, theme, Date.now());
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new Text(output, 1, 0));
-		this.ctx.ui.requestRender();
+		this.#lastUsageReports = usageReports;
+		await this.showUsageReport(usageReports);
 	}
 
 	async handleChangelogCommand(showFull = false): Promise<void> {
@@ -571,71 +826,233 @@ export class CommandController {
 			? ""
 			: `\n\n${theme.fg("dim", "Use")} ${theme.bold("/changelog full")} ${theme.fg("dim", "to view the complete changelog.")}`;
 
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.chatContainer.addChild(new Text(theme.bold(theme.fg("contentAccent", title)), 1, 0));
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new Markdown(changelogMarkdown + hint, 1, 1, getMarkdownTheme()));
-		this.ctx.chatContainer.addChild(new DynamicBorder());
-		this.ctx.ui.requestRender();
+		await showMarkdownPanel(
+			this.ctx,
+			title,
+			showFull ? "Complete release history" : `Latest ${entriesToShow.length} releases`,
+			changelogMarkdown + hint,
+		);
 	}
 
-	handleHotkeysCommand(): void {
+	async handleHotkeysCommand(): Promise<void> {
 		const hotkeys = buildHotkeysMarkdown({ keybindings: this.ctx.keybindings });
-		showMarkdownPanel(this.ctx, t("controller.hotkeys.title"), hotkeys);
+		await showMarkdownPanel(this.ctx, t("controller.hotkeys.title"), "Effective terminal keybindings", hotkeys);
 	}
 
-	handleToolsCommand(): void {
-		const tools = buildToolsMarkdown({ tools: this.ctx.session.agent.state.tools });
-		showMarkdownPanel(this.ctx, t("controller.tools.title"), tools);
+	async handleToolsCommand(): Promise<void> {
+		const tools = buildToolsMarkdown({
+			tools: this.ctx.session.agent.state.tools,
+		});
+		await showMarkdownPanel(this.ctx, t("controller.tools.title"), "Tools available to the active model", tools);
+	}
+
+	private async showReport(title: string, purpose: string, content: string): Promise<void> {
+		await this.ctx.showHookCustom<void>(
+			(ui, _theme, _keys, done) =>
+				new ReportDetailsComponent(
+					title,
+					purpose,
+					content,
+					() => done(),
+					() => ui.terminal.rows,
+				),
+		);
+	}
+
+	private async showUsageReport(reports: UsageReport[], purpose?: string): Promise<void> {
+		const now = Date.now();
+		const latestFetchedAt = Math.max(...reports.map(report => report.fetchedAt ?? 0));
+		const age = latestFetchedAt ? `${formatDuration(Math.max(0, now - latestFetchedAt))} old` : "age unavailable";
+		await this.ctx.showHookCustom<void>(
+			(ui, _theme, _keys, done) =>
+				new ReportDetailsComponent(
+					"Usage",
+					purpose ?? `Provider limits · ${age}`,
+					"",
+					() => done(),
+					() => ui.terminal.rows,
+					(_content, width) => renderUsageReports(reports, theme, now, width).split("\n"),
+				),
+		);
 	}
 
 	async handleMemoryCommand(text: string): Promise<void> {
 		const argumentText = text.slice(7).trim();
+		if (argumentText.split(/\s+/).length > 1) {
+			this.ctx.showError(t("controller.memory.usage"));
+			return;
+		}
 		const action = argumentText.split(/\s+/, 1)[0]?.toLowerCase() || "view";
 		const agentDir = this.ctx.settings.getAgentDir();
 
 		if (action === "view") {
-			const payload = await buildMemoryToolDeveloperInstructions(agentDir, this.ctx.settings);
-			if (!payload) {
-				this.ctx.showWarning(t("controller.memory.empty"));
-				return;
+			const cwd = this.ctx.sessionManager.getCwd();
+			const file = path.join(getMemoryRoot(agentDir, cwd), "memory_summary.md");
+			let content: string;
+			try {
+				content = (await Bun.file(file).text()).trim();
+				if (!content) content = "The saved memory summary is empty.";
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code === "ENOENT")
+					content = "No saved memory summary exists for this project.";
+				else {
+					this.ctx.showError("Memory summary is unavailable. Check file access and retry; no data was changed.");
+					return;
+				}
 			}
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(new DynamicBorder());
-			this.ctx.chatContainer.addChild(
-				new Text(theme.bold(theme.fg("contentAccent", t("controller.memory.title"))), 1, 0),
+			const enabled = this.ctx.settings.get("memories.enabled");
+			await this.ctx.showHookCustom<void>(
+				(ui, _theme, _keys, done) =>
+					new ReportDetailsComponent(
+						"Project memory",
+						`Memory ${enabled ? "enabled" : "disabled"} · ${cwd}`,
+						`${enabled ? "Full saved summary; prompt injection may use a shorter excerpt." : "Memory use is disabled; any saved summary below remains on disk."}\nSource: ${file}\n\n${Bun.stripANSI(content)}`,
+						() => done(),
+						() => ui.terminal.rows,
+					),
 			);
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(new Markdown(payload, 1, 1, getMarkdownTheme()));
-			this.ctx.chatContainer.addChild(new DynamicBorder());
-			this.ctx.ui.requestRender();
 			return;
 		}
 
 		if (action === "reset" || action === "clear") {
+			if (this.#clearingMemory) {
+				this.ctx.showStatus("A memory-clear operation is already open.");
+				return;
+			}
+			this.#clearingMemory = true;
 			try {
-				await clearMemoryData(agentDir, this.ctx.sessionManager.getCwd());
-				await this.ctx.session.refreshBaseSystemPrompt();
-				this.ctx.showStatus(t("controller.memory.cleared"));
+				const manager = this.ctx.sessionManager;
+				const session = this.ctx.session;
+				const cwd = manager.getCwd();
+				const read = async () => {
+					const snapshot = await inspectMemoryClear(agentDir, cwd);
+					if (snapshot.activeJobs)
+						throw new Error(
+							"Memory jobs are still marked running. Wait for them to finish before clearing memory.",
+						);
+					const review: ActionReview = {
+						identity: `memory:${agentDir}:${cwd}`,
+						scope: "All-project database records · Current-project generated files",
+						revision: snapshot.revision,
+						changes: [
+							{
+								field: "Database",
+								before: snapshot.database,
+								after: "Keep database; remove memory records",
+							},
+							{
+								field: "All-project memory records",
+								before: `${snapshot.threads} threads, ${snapshot.outputs} outputs, ${snapshot.jobs} jobs`,
+								after: "0",
+							},
+							{
+								field: "Current-project artifacts",
+								before: `${snapshot.artifacts} (${snapshot.files} files/links)`,
+								after: "Removed",
+							},
+						],
+						consequence:
+							"Permanently removes learned memory records across all projects and generated memory files for this project. Other projects' generated files and conversation transcripts remain. Memory may be regenerated by later consolidation. Refreshes this session's memory prompt after deletion.",
+					};
+					return { target: snapshot, review };
+				};
+				const initial = await read();
+				const outcome = await runReviewedAction(this.ctx, "memory clear", {
+					review: initial.review,
+					resolve: async () =>
+						this.ctx.sessionManager === manager &&
+						this.ctx.session === session &&
+						manager.getCwd() === cwd &&
+						this.ctx.settings.getAgentDir() === agentDir
+							? read()
+							: undefined,
+					execute: async snapshot => {
+						if (snapshot.threads || snapshot.outputs || snapshot.jobs || snapshot.files)
+							await clearReviewedMemoryData(agentDir, cwd, snapshot);
+						try {
+							await session.refreshBaseSystemPrompt();
+						} catch {
+							throw new Error(
+								"Memory deletion finished, but refreshing the session prompt failed. Retry to refresh the prompt; deleted data cannot be restored.",
+							);
+						}
+						const remaining = await inspectMemoryClear(agentDir, cwd);
+						if (remaining.threads || remaining.outputs || remaining.jobs || remaining.files)
+							throw new Error(
+								"Memory data remains or was recreated during clearing. Review the remaining data before retrying.",
+							);
+					},
+				});
+				if (outcome === "succeeded") this.ctx.showStatus(t("controller.memory.cleared"));
+				else if (outcome === "unresolved")
+					this.ctx.showError(
+						"Memory clearing is unresolved; some data may already be deleted. Run /memory clear again to review remaining data or retry prompt refresh.",
+					);
 			} catch (error) {
 				this.ctx.showError(
-					t("controller.memory.clearFailed", { message: error instanceof Error ? error.message : String(error) }),
+					t("controller.memory.clearFailed", {
+						message: error instanceof Error ? error.message : String(error),
+					}),
 				);
+			} finally {
+				this.#clearingMemory = false;
 			}
 			return;
 		}
 
 		if (action === "enqueue" || action === "rebuild") {
+			if (this.#clearingMemory) {
+				this.ctx.showStatus("A memory operation is already open.");
+				return;
+			}
+			this.#clearingMemory = true;
 			try {
-				enqueueMemoryConsolidation(agentDir, this.ctx.sessionManager.getCwd());
-				this.ctx.showStatus(t("controller.memory.enqueued"));
+				const manager = this.ctx.sessionManager;
+				const cwd = manager.getCwd();
+				const read = () => {
+					const target = inspectMemoryConsolidation(agentDir, cwd);
+					const review: ActionReview = {
+						identity: `memory-queue:${agentDir}:${cwd}`,
+						scope: `Project ${cwd} · ${target.database}`,
+						revision: target.revision,
+						changes: [
+							{
+								field: "Consolidation request",
+								before: target.state,
+								after: "Request pending consolidation for this project",
+							},
+						],
+						consequence:
+							"Persists a consolidation request. It does not rebuild memory immediately or restart an active worker. Later consolidation can use model tokens and update generated memory files. Existing memory and conversation transcripts are not deleted.",
+					};
+					return { target, review };
+				};
+				const outcome = await runReviewedAction(this.ctx, "memory consolidation", {
+					review: read().review,
+					resolve: async () =>
+						this.ctx.sessionManager === manager &&
+						manager.getCwd() === cwd &&
+						this.ctx.settings.getAgentDir() === agentDir
+							? read()
+							: undefined,
+					execute: async target => {
+						enqueueReviewedMemoryConsolidation(agentDir, cwd, target);
+					},
+				});
+				if (outcome === "succeeded")
+					this.ctx.showStatus(
+						"Memory consolidation request saved for this project. Consolidation has not been verified as started or completed.",
+					);
+				else if (outcome === "unresolved")
+					this.ctx.showError("Memory queue update is unresolved. Review the current queue state before retrying.");
 			} catch (error) {
 				this.ctx.showError(
 					t("controller.memory.enqueueFailed", {
 						message: error instanceof Error ? error.message : String(error),
 					}),
 				);
+			} finally {
+				this.#clearingMemory = false;
 			}
 			return;
 		}
@@ -643,20 +1060,220 @@ export class CommandController {
 		this.ctx.showError(t("controller.memory.usage"));
 	}
 
+	/** Execute the session-switch portion of a larger, already reviewed action. */
+	async executeReviewedNewSession(
+		originalId: string,
+		beforeSwitch: () => Promise<void>,
+		preview: ReturnType<InteractiveModeContext["sessionManager"]["previewNewSession"]>,
+	): Promise<string> {
+		if (this.#startingSession) throw new Error("A new-session transition is already open.");
+		this.#startingSession = true;
+		try {
+			const manager = this.ctx.sessionManager;
+			const session = this.ctx.session;
+			const currentId = manager.getSessionId();
+			if (currentId !== originalId) {
+				if (!this.#unsavedNewSessions.has(currentId)) {
+					throw new Error("The reviewed session target changed before the execution session was ready.");
+				}
+				await manager.retryPersistence();
+				this.#unsavedNewSessions.delete(currentId);
+				return currentId;
+			}
+
+			await manager.retryPersistence();
+			if (session.isCompacting) {
+				session.abortCompaction();
+				while (session.isCompacting) await Bun.sleep(10);
+			}
+			if (
+				this.ctx.session !== session ||
+				this.ctx.sessionManager !== manager ||
+				manager.getSessionId() !== originalId
+			)
+				throw new Error("The reviewed session target changed before the execution session was created.");
+
+			let switched = false;
+			let createdId: string | undefined;
+			try {
+				switched = await session.newSessionWithReviewedPreparation(beforeSwitch, undefined, preview);
+			} finally {
+				if (manager.getSessionId() !== originalId) {
+					createdId = manager.getSessionId();
+					this.#unsavedNewSessions.add(createdId);
+				}
+			}
+			if (!switched)
+				throw new Error("New execution session was declined by an extension. The planning session is unchanged.");
+			if (createdId !== preview.targetSessionId)
+				throw new Error("New execution session did not produce the reviewed identity.");
+			await manager.retryPersistence();
+			this.#unsavedNewSessions.delete(createdId);
+			return createdId;
+		} finally {
+			this.#startingSession = false;
+		}
+	}
+
 	async handleClearCommand(): Promise<void> {
+		if (this.#startingSession) {
+			this.ctx.showStatus("A new-session review is already open.");
+			return;
+		}
+		this.#startingSession = true;
+		try {
+			const manager = this.ctx.sessionManager;
+			const session = this.ctx.session;
+			const originalId = manager.getSessionId();
+			if (this.#unsavedNewSessions.has(originalId)) {
+				const review = (): ActionReview => ({
+					identity: `session:${originalId}`,
+					scope: `Recover session persistence · ${manager.getSessionFile() ?? "in-memory session"}`,
+					revision: createHash("sha256").update(JSON.stringify(manager.getEntries())).digest("hex"),
+					changes: [
+						{
+							field: "Persistence",
+							before: "Unresolved previous session switch",
+							after: "Save current session",
+						},
+					],
+					consequence:
+						"Retries saving the session already created. Does not create another session or clear current messages.",
+				});
+				const outcome = await runReviewedAction(this.ctx, "session save recovery", {
+					review: review(),
+					resolve: async () =>
+						this.ctx.sessionManager === manager && manager.getSessionId() === originalId
+							? { review: review(), target: manager }
+							: undefined,
+					execute: async target => {
+						await target.retryPersistence();
+						this.#unsavedNewSessions.delete(originalId);
+					},
+				});
+				if (outcome === "succeeded")
+					this.ctx.showStatus(`Session ${originalId} saved. No additional session was created.`);
+				else if (outcome === "unresolved")
+					this.ctx.showError("Session persistence remains unresolved. Run /new to retry saving this session.");
+				return;
+			}
+			const preview = manager.previewNewSession();
+			const review = (): ActionReview => ({
+				identity: `session-new:${originalId}:${preview.targetSessionId}`,
+				scope: `New session in ${manager.getCwd()} · ${manager.getSessionDir()}`,
+				revision: createHash("sha256")
+					.update(
+						JSON.stringify([
+							preview,
+							manager.getEntries(),
+							session.isStreaming,
+							session.isCompacting,
+							session.queuedMessageCount,
+							this.ctx.compactionQueuedMessages,
+						]),
+					)
+					.digest("hex"),
+				changes: [
+					{
+						field: "Active conversation",
+						before: manager.getSessionName() ?? originalId,
+						after: `New empty session ${preview.targetSessionId}`,
+					},
+					{
+						field: "Session file",
+						before: preview.sourceSessionFile ?? "In-memory",
+						after: preview.targetSessionFile ?? "In-memory",
+					},
+					{
+						field: "Active work",
+						before: session.isStreaming || session.isCompacting ? "Running" : "Idle",
+						after: "Interrupted; queued prompts cleared",
+					},
+					{
+						field: "Queued prompts",
+						before: String((session.queuedMessageCount ?? 0) + this.ctx.compactionQueuedMessages.length),
+						after: "0",
+					},
+				],
+				consequence: manager.isPersisted()
+					? "Keeps the previous saved conversation for resume. Starts and saves a new session; requests interruption of active jobs and clears queued messages."
+					: "This session is not persisted. Its conversation cannot be resumed after switching; requests interruption of active work and clears queued messages.",
+			});
+			const proposed = review();
+			let createdId: string | undefined;
+			const outcome = await runReviewedAction(this.ctx, "new session", {
+				review: proposed,
+				resolve: async () => {
+					if (
+						this.ctx.session !== session ||
+						this.ctx.sessionManager !== manager ||
+						manager.getSessionId() !== (createdId ?? originalId)
+					)
+						return undefined;
+					return { review: proposed, target: session };
+				},
+				execute: async target => {
+					if (!createdId) {
+						// Fail before resetting the live agent if old-session persistence is unhealthy.
+						await manager.retryPersistence();
+						if (target.isCompacting) {
+							target.abortCompaction();
+							while (target.isCompacting) await Bun.sleep(10);
+						}
+						let switched = false;
+						try {
+							switched = await target.newSession(undefined, preview);
+						} finally {
+							if (manager.getSessionId() !== originalId) {
+								createdId = manager.getSessionId();
+								this.#unsavedNewSessions.add(createdId);
+							}
+						}
+						if (!switched)
+							throw new Error(
+								"New session was declined by an extension or could not be created. Existing view retained.",
+							);
+						if (createdId !== preview.targetSessionId)
+							throw new Error("New session did not produce the reviewed identity.");
+					}
+					await manager.retryPersistence();
+					if (
+						manager.getSessionId() !== preview.targetSessionId ||
+						manager.getSessionFile() !== preview.targetSessionFile
+					)
+						throw new Error("The active session does not match the reviewed destination.");
+					this.#unsavedNewSessions.delete(createdId!);
+				},
+			});
+			if (outcome === "succeeded") await this.resetNewSessionView();
+			else if (outcome === "unresolved") {
+				if (createdId) {
+					this.ctx.rebuildChatFromMessages();
+					this.ctx.statusLine.invalidate();
+					this.ctx.updateEditorTopBorder();
+				}
+				this.ctx.showError(
+					createdId
+						? `Session ${createdId} is active, but saving is unresolved. Run /new to retry saving it without creating another session.`
+						: "Session switch is unresolved. Existing view retained; no completion is claimed.",
+				);
+			}
+		} catch (error) {
+			this.ctx.showError(error instanceof Error ? error.message : String(error));
+		} finally {
+			this.#startingSession = false;
+		}
+	}
+	#startingSession = false;
+	#unsavedNewSessions = new Set<string>();
+
+	async resetNewSessionView(): Promise<void> {
 		if (this.ctx.loadingAnimation) {
 			this.ctx.loadingAnimation.stop();
 			this.ctx.loadingAnimation = undefined;
 		}
 		this.ctx.statusContainer.clear();
 
-		if (this.ctx.session.isCompacting) {
-			this.ctx.session.abortCompaction();
-			while (this.ctx.session.isCompacting) {
-				await Bun.sleep(10);
-			}
-		}
-		await this.ctx.session.newSession();
 		this.ctx.resetObserverRegistry();
 		setSessionTerminalTitle(
 			this.ctx.sessionManager.getSessionName(),
@@ -686,108 +1303,370 @@ export class CommandController {
 	}
 
 	async handleForkCommand(): Promise<void> {
+		if (this.#forkingSession) {
+			this.ctx.showStatus("A session fork review is already open.");
+			return;
+		}
 		if (this.ctx.session.isStreaming) {
 			this.ctx.showWarning(t("controller.fork.streaming"));
 			return;
 		}
-		if (this.ctx.loadingAnimation) {
-			this.ctx.loadingAnimation.stop();
-			this.ctx.loadingAnimation = undefined;
+		this.#forkingSession = true;
+		try {
+			const manager = this.ctx.sessionManager;
+			if (this.#pendingFork && this.#pendingFork.manager !== manager)
+				throw new Error("A previous fork remains unresolved in another session. Return to it before retrying.");
+			const preview = this.#pendingFork?.preview ?? manager.previewFork();
+			if (!preview) throw new Error("This in-memory session cannot be forked because it has no saved file.");
+			const statToken = async (targetPath: string) => {
+				try {
+					const stat = await fs.stat(targetPath);
+					return [stat.dev, stat.ino, stat.size, stat.mtimeMs, stat.isDirectory()] as const;
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+					throw error;
+				}
+			};
+			const read = async () => {
+				const recovery =
+					manager.getSessionId() === preview.targetSessionId &&
+					manager.getSessionFile() === preview.targetSessionFile;
+				const source = await statToken(preview.sourceSessionFile);
+				const sourceArtifacts = await statToken(preview.sourceArtifactDir);
+				const target = await statToken(preview.targetSessionFile);
+				const targetArtifacts = await statToken(preview.targetArtifactDir);
+				const validSource =
+					manager.getSessionId() === preview.sourceSessionId &&
+					manager.getSessionFile() === preview.sourceSessionFile;
+				if (!validSource && !recovery) return undefined;
+				return {
+					target: { preview, recovery },
+					review: {
+						identity: `session:${preview.sourceSessionId}->${preview.targetSessionId}`,
+						scope: `Session fork · ${manager.getCwd()}`,
+						revision: createHash("sha256")
+							.update(
+								JSON.stringify([
+									manager.getEntries(),
+									preview,
+									source,
+									sourceArtifacts,
+									target,
+									targetArtifacts,
+									recovery,
+								]),
+							)
+							.digest("hex"),
+						changes: [
+							{
+								field: "Session identity",
+								before: preview.sourceSessionId,
+								after: recovery ? `${preview.targetSessionId} (already created)` : preview.targetSessionId,
+							},
+							{
+								field: "Session file",
+								before: preview.sourceSessionFile,
+								after: preview.targetSessionFile,
+							},
+							{
+								field: "Artifacts",
+								before: sourceArtifacts ? preview.sourceArtifactDir : "None present",
+								after: sourceArtifacts ? preview.targetArtifactDir : "None to copy",
+							},
+						],
+						consequence: recovery
+							? "Retries only unresolved saving, artifact copying, and switch notification for the already-created fork. It does not create another session."
+							: "Creates an exact saved conversation copy with a new stable identity and parent link, switches to it, and copies artifacts. The source session remains unchanged; existing destinations are never overwritten.",
+					} satisfies ActionReview,
+				};
+			};
+			const proposed = await read();
+			if (!proposed) throw new Error("The session changed before its fork could be reviewed.");
+			const outcome = await runReviewedAction(
+				this.ctx,
+				proposed.target.recovery ? "session fork recovery" : "session fork",
+				{
+					review: proposed.review,
+					resolve: read,
+					execute: async target => {
+						if (!target.recovery) {
+							this.#pendingFork = { manager, preview: target.preview };
+							const success = await this.ctx.session.fork(target.preview);
+							if (!success) {
+								this.#pendingFork = undefined;
+								throw new Error("Fork was declined by an extension; the source session is unchanged.");
+							}
+						} else {
+							await this.ctx.session.completeReviewedFork(target.preview, true);
+						}
+						await manager.retryPersistence();
+						if (
+							manager.getSessionId() !== target.preview.targetSessionId ||
+							manager.getSessionFile() !== target.preview.targetSessionFile
+						)
+							throw new Error("Forked session identity changed before completion.");
+						this.#pendingFork = undefined;
+					},
+				},
+			);
+			if (outcome === "succeeded") {
+				if (this.ctx.loadingAnimation) {
+					this.ctx.loadingAnimation.stop();
+					this.ctx.loadingAnimation = undefined;
+				}
+				this.ctx.statusContainer.clear();
+				this.ctx.statusLine.invalidate();
+				this.ctx.updateEditorTopBorder();
+				const shortPath = preview.targetSessionFile.split("/").pop()!;
+				this.ctx.chatContainer.addChild(new Spacer(1));
+				this.ctx.chatContainer.addChild(
+					new Text(
+						`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.fork.success", { path: shortPath })}`)}`,
+						1,
+						1,
+					),
+				);
+				this.ctx.ui.requestRender();
+			} else if (outcome === "unresolved") {
+				this.ctx.showError(
+					`Fork ${preview.targetSessionId} is unresolved. Run /fork again to retry only its incomplete save, artifacts, or notification.`,
+				);
+			}
+		} catch (error) {
+			this.ctx.showError(error instanceof Error ? error.message : String(error));
+		} finally {
+			this.#forkingSession = false;
 		}
-		this.ctx.statusContainer.clear();
-
-		const success = await this.ctx.session.fork();
-		if (!success) {
-			this.ctx.showError(t("controller.fork.failed"));
-			return;
-		}
-
-		this.ctx.statusLine.invalidate();
-		this.ctx.updateEditorTopBorder();
-
-		const sessionFile = this.ctx.session.sessionFile;
-		const shortPath = sessionFile ? sessionFile.split("/").pop() : "new session";
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(
-			new Text(
-				`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.fork.success", { path: shortPath! })}`)}`,
-				1,
-				1,
-			),
-		);
-		this.ctx.ui.requestRender();
 	}
 
 	async handleMoveCommand(targetPath: string): Promise<void> {
+		if (this.#movingSession) {
+			this.ctx.showStatus("A session move is already open.");
+			return;
+		}
 		if (this.ctx.session.isStreaming) {
 			this.ctx.showWarning(t("controller.move.streaming"));
 			return;
 		}
-
-		const unquoted = stripOuterDoubleQuotes(targetPath);
-		if (!unquoted) {
-			this.ctx.showError(t("controller.move.usage"));
-			return;
-		}
-
-		const cwd = this.ctx.sessionManager.getCwd();
-		const resolvedPath = resolveToCwd(unquoted, cwd);
-
+		this.#movingSession = true;
 		try {
-			const stat = await fs.stat(resolvedPath);
-			if (!stat.isDirectory()) {
-				this.ctx.showError(t("controller.move.notDirectory", { path: resolvedPath }));
+			const manager = this.ctx.sessionManager;
+			const identity = manager.getSessionId();
+			const cwd = manager.getCwd();
+			const entered =
+				targetPath.trim() ||
+				(await this.ctx.showHookCustom<string | undefined>(
+					(_ui, _theme, _keys, done) =>
+						new SettingsTextEditor(
+							"Move session",
+							"Choose an existing working directory.",
+							cwd,
+							value => {
+								if (!value.trim()) throw new Error("Destination is required.");
+								done(value);
+							},
+							() => done(undefined),
+							{ purpose: "Edit destination · Review before moving" },
+						),
+				));
+			if (entered === undefined) return;
+			const destination = resolveToCwd(stripOuterDoubleQuotes(entered), cwd);
+			let moved = this.#pendingMoves.get(identity) === destination && manager.getCwd() === destination;
+			if (destination === cwd && !moved) {
+				this.ctx.showStatus("Session already uses this directory; nothing changed.");
 				return;
 			}
-		} catch {
-			this.ctx.showError(t("controller.move.notExists", { path: resolvedPath }));
-			return;
-		}
-
-		try {
-			await this.ctx.sessionManager.flush();
-			await this.ctx.sessionManager.moveTo(resolvedPath);
-			setProjectDir(resolvedPath);
-			clearXcshPluginRootsCache(); // re-warms preloadedPluginRoots with new project dir (async)
-			resetCapabilities();
-			await this.ctx.refreshSlashCommandState(resolvedPath);
-
-			setShellPwd(resolvedPath);
-			this.ctx.statusLine.setCwd(resolvedPath);
-			this.ctx.updateEditorTopBorder();
-
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(
-					`${theme.fg("contentAccent", `${theme.status.success} ${t("controller.move.success", { path: resolvedPath })}`)}`,
-					1,
-					1,
-				),
-			);
-			this.ctx.ui.requestRender();
-		} catch (err) {
-			this.ctx.showError(t("controller.move.failed", { message: err instanceof Error ? err.message : String(err) }));
+			const expected = manager.previewMoveTo(destination);
+			const readReview = async (): Promise<ActionReview> => {
+				const stat = await fs.stat(destination);
+				if (!stat.isDirectory()) throw new Error("Move destination is not a directory.");
+				if (!moved)
+					for (const target of [expected.sessionFile, expected.artifactDir]) {
+						if (!target) continue;
+						try {
+							await fs.lstat(target);
+						} catch (error) {
+							if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+							throw error;
+						}
+						throw new Error(`Move destination exists; no overwrite is allowed: ${target}`);
+					}
+				return {
+					identity: `session:${identity}`,
+					scope: "Current session · Working directory and saved files",
+					revision: createHash("sha256")
+						.update(JSON.stringify([manager.getEntries(), stat.dev, stat.ino, expected, moved]))
+						.digest("hex"),
+					changes: [
+						{ field: "Working directory", before: cwd, after: destination },
+						{
+							field: "Session file",
+							before: manager.getSessionFile() ?? "In-memory only",
+							after: expected.sessionFile ?? "In-memory only",
+						},
+						{
+							field: "Artifacts",
+							before: "Current session artifacts, if present",
+							after: expected.artifactDir ?? "None persisted",
+						},
+					],
+					consequence: moved
+						? "Completes saving and refreshing the already-moved session; does not move it again."
+						: "Moves the session and its artifacts, preserves session identity and conversation, and reloads project command discovery. Existing destination files will not be overwritten.",
+				};
+			};
+			let proposed = await readReview();
+			const outcome = await runReviewedAction(this.ctx, moved ? "session move recovery" : "session move", {
+				review: proposed,
+				resolve: async () => {
+					if (
+						this.ctx.sessionManager !== manager ||
+						manager.getSessionId() !== identity ||
+						this.ctx.session.isStreaming ||
+						manager.getCwd() !== (moved ? destination : cwd)
+					)
+						return undefined;
+					if (!moved) proposed = await readReview();
+					return { review: proposed, target: manager };
+				},
+				execute: async target => {
+					if (!moved) {
+						await target.retryPersistence();
+						if (JSON.stringify(await readReview()) !== JSON.stringify(proposed))
+							throw new Error("Move target changed while preparing. Retry for a renewed review.");
+						try {
+							await target.moveToReviewed(destination, expected);
+						} finally {
+							if (target.getCwd() === destination) {
+								moved = true;
+								this.#pendingMoves.set(identity, destination);
+							}
+						}
+					}
+					await target.retryPersistence();
+					setProjectDir(destination);
+					setShellPwd(destination);
+					this.ctx.statusLine.setCwd(destination);
+					this.ctx.updateEditorTopBorder();
+					clearXcshPluginRootsCache();
+					resetCapabilities();
+					try {
+						await this.ctx.refreshSlashCommandState(destination);
+					} catch (error) {
+						throw new Error(
+							`Session files moved; project refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+						);
+					}
+					if (target.getCwd() !== destination) throw new Error("Session directory changed during the move.");
+					this.#pendingMoves.delete(identity);
+				},
+			});
+			if (outcome === "succeeded") {
+				this.ctx.showStatus(`Session moved to ${destination}.`);
+				this.ctx.ui.requestRender();
+			} else if (outcome === "unresolved")
+				this.ctx.showError(
+					moved
+						? `Session is now at ${destination}, but saving or project refresh is unresolved. Run /move with the same destination to retry.`
+						: "Session move was not completed. Inspect the retained error before retrying.",
+				);
+		} catch (error) {
+			this.ctx.showError(error instanceof Error ? error.message : String(error));
+		} finally {
+			this.#movingSession = false;
 		}
 	}
+	#movingSession = false;
+	#pendingMoves = new Map<string, string>();
 
 	async handleRenameCommand(title: string): Promise<void> {
+		if (this.#renaming) {
+			this.ctx.showStatus("A session rename is already open.");
+			return;
+		}
+		this.#renaming = true;
 		try {
-			const stored = await this.ctx.sessionManager.setSessionName(title, "user");
-			if (!stored) {
-				this.ctx.showError(t("controller.rename.empty"));
+			const manager = this.ctx.sessionManager;
+			const sessionId = manager.getSessionId();
+			const normalize = (value: string) =>
+				value
+					.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
+					.replace(/ +/g, " ")
+					.trim();
+			const entered =
+				title.trim() ||
+				(await this.ctx.showHookCustom<string | undefined>(
+					(_ui, _theme, _keys, done) =>
+						new SettingsTextEditor(
+							"Rename session",
+							`Session ${sessionId} · Current name is prefilled.`,
+							manager.getSessionName() ?? "",
+							value => {
+								if (!normalize(value)) throw new Error("Session name cannot be empty.");
+								done(value);
+							},
+							() => done(undefined),
+							{ purpose: "Edit name · Review before saving" },
+						),
+				));
+			if (entered === undefined) return;
+			const name = normalize(entered);
+			if (!name) throw new Error("Session name cannot be empty.");
+			if (manager !== this.ctx.sessionManager || manager.getSessionId() !== sessionId)
+				throw new Error("Session changed. Run /rename again.");
+			if (manager.getSessionName() === name && this.#unresolvedRenames.get(sessionId) !== name) {
+				this.ctx.showStatus("Session name is unchanged; nothing saved.");
 				return;
 			}
-			const name = this.ctx.sessionManager.getSessionName()!;
-			setSessionTerminalTitle(name, this.ctx.sessionManager.getCwd(), this.ctx.sessionManager.titleSource);
+			const review = (): ActionReview => ({
+				identity: `session:${sessionId}`,
+				scope: `Current ${manager.isPersisted() ? "saved" : "in-memory"} session · ${manager.getCwd()}`,
+				revision: JSON.stringify([manager.getSessionName(), manager.titleSource]),
+				changes: [
+					{
+						field: "Name",
+						before: manager.getSessionName() ?? "Unnamed",
+						after: name,
+					},
+				],
+				consequence: `${manager.isPersisted() ? "Saves the display name in session history." : "This session is not persisted; the name lasts only for this session."} Future automatic titles will not replace this user-set name. Conversation content and session identity remain unchanged.`,
+			});
+			const outcome = await runReviewedAction(this.ctx, "session rename", {
+				review: review(),
+				resolve: async () =>
+					manager === this.ctx.sessionManager && manager.getSessionId() === sessionId
+						? { review: review(), target: manager }
+						: undefined,
+				execute: async target => {
+					this.#unresolvedRenames.set(sessionId, name);
+					if (target.getSessionName() !== name && !(await target.setSessionName(name, "user")))
+						throw new Error("Session name was not accepted.");
+					await target.retryPersistence();
+					if (target.getSessionName() !== name) throw new Error("Session name changed while saving.");
+					this.#unresolvedRenames.delete(sessionId);
+				},
+			});
+			if (outcome === "unresolved")
+				this.ctx.showError(
+					"Rename persistence is unresolved. The name may have changed; retry saving before leaving this session.",
+				);
+			if (outcome !== "succeeded") return;
+			setSessionTerminalTitle(name, manager.getCwd(), manager.titleSource);
 			this.ctx.statusLine.invalidate();
 			this.ctx.updateEditorBorderColor();
 			this.ctx.showStatus(t("controller.rename.success", { name }));
 		} catch (err) {
 			this.ctx.showError(
-				t("controller.rename.failed", { message: err instanceof Error ? err.message : String(err) }),
+				t("controller.rename.failed", {
+					message: err instanceof Error ? err.message : String(err),
+				}),
 			);
+		} finally {
+			this.#renaming = false;
 		}
 	}
+	#renaming = false;
+	#unresolvedRenames = new Map<string, string>();
 
 	async handleBashCommand(command: string, excludeFromContext = false): Promise<void> {
 		const isDeferred = this.ctx.session.isStreaming;
@@ -836,7 +1715,9 @@ export class CommandController {
 				this.ctx.bashComponent.setError(error instanceof Error ? error : String(error));
 			}
 			this.ctx.showError(
-				t("controller.bash.failed", { message: error instanceof Error ? error.message : "Unknown error" }),
+				t("controller.bash.failed", {
+					message: error instanceof Error ? error.message : "Unknown error",
+				}),
 			);
 		}
 
@@ -893,15 +1774,147 @@ export class CommandController {
 	}
 
 	async handleCompactCommand(customInstructions?: string): Promise<void> {
-		const entries = this.ctx.sessionManager.getEntries();
-		const messageCount = entries.filter(e => e.type === "message").length;
-
-		if (messageCount < 2) {
-			this.ctx.showWarning("Nothing to compact (no messages yet)");
+		const manager = this.ctx.sessionManager;
+		const session = this.ctx.session;
+		const sessionId = manager.getSessionId();
+		const instructions = customInstructions?.trim() || undefined;
+		const read = (): {
+			target: ManualCompactionTarget;
+			review: ActionReview;
+		} => {
+			if (
+				this.#pendingManualCompaction?.manager === manager &&
+				this.#pendingManualCompaction.session === session &&
+				this.#pendingManualCompaction.leafId === manager.getLeafId()
+			) {
+				return {
+					target: { kind: "persist" as const, manager, session },
+					review: {
+						identity: `session-compaction:${sessionId}`,
+						scope: `Current session ${sessionId}`,
+						revision: `persist:${manager.getLeafId() ?? "empty"}`,
+						changes: [
+							{
+								field: "Compaction summary",
+								before: "Applied in memory; backing save unresolved",
+								after: "Persist the existing summary without another model call",
+							},
+						],
+						consequence:
+							"Retries only the unresolved session-file save. It does not compact again or spend additional model tokens.",
+					} satisfies ActionReview,
+				};
+			}
+			const entries = manager.getEntries();
+			const messageCount = entries.filter(entry => entry.type === "message").length;
+			const leafId = manager.getLeafId();
+			const alreadyCompacted = entries.find(entry => entry.id === leafId)?.type === "compaction";
+			const model = session.model ? `${session.model.provider}/${session.model.id}` : "No model selected";
+			const activeWork = session.isStreaming ? "Active response will be interrupted after confirmation" : "Idle";
+			const revision = createHash("sha256")
+				.update(
+					JSON.stringify({
+						sessionId,
+						leafId,
+						entries: entries.map(entry => [entry.id, entry.parentId, entry.type]),
+						model,
+						activeWork,
+						instructions,
+					}),
+				)
+				.digest("hex");
+			return {
+				target: {
+					kind: "compact" as const,
+					manager,
+					session,
+					leafId,
+					messageCount,
+					alreadyCompacted,
+					instructions,
+				},
+				review: {
+					identity: `session-compaction:${sessionId}`,
+					scope: `Current session ${sessionId}`,
+					revision,
+					changes: [
+						{
+							field: "Conversation context",
+							before: `${messageCount} messages`,
+							after: "Compacted summary",
+						},
+						{
+							field: "Model",
+							before: model,
+							after: `Use ${model} for the summary`,
+						},
+						{
+							field: "Active work",
+							before: activeWork,
+							after: "Compaction begins after confirmation",
+						},
+						{
+							field: "Instructions",
+							before: "Current compaction defaults",
+							after: instructions ? Bun.stripANSI(instructions) : "Use current compaction defaults",
+						},
+					],
+					consequence:
+						"Uses the selected model and may spend tokens. Appends a summary to this session, replaces the effective context, and preserves the transcript history. Ctrl+C requests interruption; Escape remains navigation-only.",
+				} satisfies ActionReview,
+			};
+		};
+		const initial = read();
+		if (initial.target.kind === "compact" && initial.target.messageCount < 2) {
+			this.ctx.showWarning("Nothing to compact (fewer than two messages)");
 			return;
 		}
-
-		await this.executeCompaction(customInstructions, false);
+		if (initial.target.kind === "compact" && initial.target.alreadyCompacted) {
+			this.ctx.showWarning("Session is already compacted; nothing changed.");
+			return;
+		}
+		const outcome = await runReviewedAction<ManualCompactionTarget>(this.ctx, "session compaction", {
+			review: initial.review,
+			resolve: async () =>
+				this.ctx.sessionManager === manager && this.ctx.session === session && manager.getSessionId() === sessionId
+					? read()
+					: undefined,
+			execute: async (target, signal) => {
+				if (target.kind === "persist") {
+					await manager.retryPersistence();
+					this.#pendingManualCompaction = undefined;
+					return;
+				}
+				const interrupt = () => session.abortCompaction();
+				signal.addEventListener("abort", interrupt, { once: true });
+				if (signal.aborted) interrupt();
+				try {
+					await this.executeCompaction(target.instructions, false, true);
+				} catch (error) {
+					if (signal.aborted && !session.isCompacting)
+						throw new ActionInterruptedError("Compaction stopped before a summary was saved.");
+					throw error;
+				} finally {
+					signal.removeEventListener("abort", interrupt);
+				}
+				this.#pendingManualCompaction = {
+					manager,
+					session,
+					leafId: manager.getLeafId(),
+					instructions: target.instructions,
+				};
+				await manager.retryPersistence();
+				this.#pendingManualCompaction = undefined;
+			},
+			cancellable: true,
+		});
+		if (outcome === "succeeded") this.ctx.showStatus("Session context compacted and saved.");
+		else if (outcome === "interrupted") this.ctx.showWarning("Compaction interrupted; no summary was saved.");
+		else if (outcome === "unresolved")
+			this.ctx.showError(
+				"Compaction is unresolved. Retry to save an already-applied summary without repeating the model call, or review the current session state.",
+			);
+		else if (outcome === "busy") this.ctx.showWarning("Another reviewed action is already open.");
 	}
 
 	async handleSkillCommand(skillPath: string, args: string): Promise<void> {
@@ -919,7 +1932,11 @@ export class CommandController {
 		}
 	}
 
-	async executeCompaction(customInstructionsOrOptions?: string | CompactOptions, isAuto = false): Promise<void> {
+	async executeCompaction(
+		customInstructionsOrOptions?: string | CompactOptions,
+		isAuto = false,
+		throwOnFailure = false,
+	): Promise<void> {
 		if (this.ctx.loadingAnimation) {
 			this.ctx.loadingAnimation.stop();
 			this.ctx.loadingAnimation = undefined;
@@ -932,7 +1949,9 @@ export class CommandController {
 		};
 
 		this.ctx.chatContainer.addChild(new Spacer(1));
-		const label = isAuto ? "Auto-compacting context... (esc to cancel)" : "Compacting context... (esc to cancel)";
+		const label = isAuto
+			? `Auto-compacting context... (${appInterruptHint()})`
+			: `Compacting context... (${appInterruptHint()})`;
 		const compactingLoader = new Loader(
 			this.ctx.ui,
 			spinner => theme.fg("spinnerAccent", spinner),
@@ -943,6 +1962,7 @@ export class CommandController {
 		this.ctx.statusContainer.addChild(compactingLoader);
 		this.ctx.ui.requestRender();
 
+		let failure: unknown;
 		try {
 			const instructions = typeof customInstructionsOrOptions === "string" ? customInstructionsOrOptions : undefined;
 			const options =
@@ -956,11 +1976,14 @@ export class CommandController {
 			this.ctx.statusLine.invalidate();
 			this.ctx.updateEditorTopBorder();
 		} catch (error) {
+			failure = error;
 			const message = error instanceof Error ? error.message : String(error);
-			if (message === "Compaction cancelled" || (error instanceof Error && error.name === "AbortError")) {
-				this.ctx.showError("Compaction cancelled");
-			} else {
-				this.ctx.showError(`Compaction failed: ${message}`);
+			if (!throwOnFailure) {
+				if (message === "Compaction cancelled" || (error instanceof Error && error.name === "AbortError")) {
+					this.ctx.showError("Compaction cancelled");
+				} else {
+					this.ctx.showError(`Compaction failed: ${message}`);
+				}
 			}
 		} finally {
 			compactingLoader.stop();
@@ -968,25 +1991,118 @@ export class CommandController {
 			this.ctx.editor.onEscape = originalOnEscape;
 		}
 		await this.ctx.flushCompactionQueue({ willRetry: false });
+		if (throwOnFailure && failure !== undefined) throw failure;
 	}
 
 	async handleHandoffCommand(customInstructions?: string): Promise<void> {
+		if (this.#handingOff) {
+			this.ctx.showStatus("A handoff review or operation is already active.");
+			return;
+		}
+		const manager = this.ctx.sessionManager;
+		const session = this.ctx.session;
+		const pendingPreview = session.getPendingReviewedHandoffPreview();
 		const entries = this.ctx.sessionManager.getEntries();
 		const messageCount = entries.filter(e => e.type === "message").length;
 
-		if (messageCount < 2) {
+		if (!pendingPreview && messageCount < 2) {
 			this.ctx.showWarning("Nothing to hand off (no messages yet)");
 			return;
 		}
 
+		this.#handingOff = true;
 		try {
-			// The agent will visibly generate the handoff document in chat
-			const result = await this.ctx.session.handoff(customInstructions);
-
-			if (!result) {
-				this.ctx.showError("Handoff cancelled");
+			const preview = pendingPreview ?? manager.previewNewSession();
+			const sourceId = preview.sourceSessionId;
+			const sourceFile = preview.sourceSessionFile;
+			const sourceLeaf = manager.getLeafId();
+			const instructionText = customInstructions?.trim() || "Default comprehensive handoff";
+			const read = () => {
+				const recovery = session.hasPendingReviewedHandoff(preview);
+				const atSource = manager.getSessionId() === sourceId && manager.getSessionFile() === sourceFile;
+				const atTarget =
+					manager.getSessionId() === preview.targetSessionId &&
+					manager.getSessionFile() === preview.targetSessionFile;
+				if (this.ctx.session !== session || this.ctx.sessionManager !== manager || (!atSource && !atTarget))
+					return undefined;
+				if (!recovery && (!atSource || manager.getLeafId() !== sourceLeaf)) return undefined;
+				if (!recovery) manager.validateNewSessionPreview(preview);
+				const jobs = session.getAsyncJobSnapshot()?.running.length ?? 0;
+				const review: ActionReview = {
+					identity: `session-handoff:${sourceId}:${preview.targetSessionId}`,
+					scope: `Conversation handoff · ${sourceFile ?? "in-memory session"}`,
+					revision: createHash("sha256")
+						.update(
+							JSON.stringify([
+								preview,
+								manager.getEntries(),
+								session.model?.provider,
+								session.model?.id,
+								instructionText,
+								recovery,
+							]),
+						)
+						.digest("hex"),
+					changes: [
+						{ field: "Source session", before: sourceId, after: "Preserved for resume" },
+						{ field: "Active session", before: sourceId, after: preview.targetSessionId },
+						{
+							field: "Session file",
+							before: sourceFile ?? "In-memory",
+							after: preview.targetSessionFile ?? "In-memory",
+						},
+						{
+							field: "Handoff generation",
+							before: recovery ? "Document already generated" : "Not started",
+							after: `Context generated with ${session.model?.provider ?? "current provider"}/${session.model?.id ?? "current model"}`,
+						},
+						{ field: "Instructions", before: "None", after: instructionText },
+						{ field: "Running background jobs", before: String(jobs), after: "Cancellation requested" },
+					],
+					consequence: recovery
+						? "Retries only the unresolved local save, context injection, and state restoration for the already-generated handoff. It does not generate or bill another handoff."
+						: "Generates a handoff with the active model, which can consume tokens and incur cost, then starts the exact new session, injects that context, saves it, and requests cancellation of active background jobs. Ctrl+C requests interruption only while generation supports it.",
+				};
+				return { target: { recovery }, review };
+			};
+			const initial = read();
+			if (!initial) throw new Error("The handoff source changed before review.");
+			let result: Awaited<ReturnType<typeof session.handoff>>;
+			let attempted = false;
+			const outcome = await runReviewedAction(this.ctx, "session handoff", {
+				review: initial.review,
+				resolve: async () => read(),
+				cancellable: true,
+				execute: async (_target, signal) => {
+					attempted = true;
+					try {
+						result = await session.handoff(customInstructions, { signal, newSessionPreview: preview });
+						if (!result) throw new Error("Handoff generation completed without a document.");
+					} catch (error) {
+						if (
+							signal.aborted &&
+							error instanceof Error &&
+							(error.name === "AbortError" || error.message === "Handoff cancelled")
+						)
+							throw new ActionInterruptedError("Handoff generation stopped before the session transition.");
+						throw error;
+					}
+				},
+			});
+			if (outcome === "cancelled") return;
+			if (outcome === "interrupted") {
+				this.ctx.showWarning("Handoff generation was interrupted; the source session remains active.");
 				return;
 			}
+			if (outcome === "unresolved") {
+				this.ctx.showError(
+					attempted && session.hasPendingReviewedHandoff(preview)
+						? "Handoff document is generated, but the session transition remains unresolved. Run /handoff again to resume the same local transition."
+						: "Handoff remains unresolved. Review the current source before retrying.",
+				);
+				return;
+			}
+			if (!result) throw new Error("Handoff completed without a verified result.");
 
 			// Rebuild chat from the new session (which now contains the handoff document)
 			this.ctx.rebuildChatFromMessages();
@@ -1014,6 +2130,8 @@ export class CommandController {
 			} else {
 				this.ctx.showError(`Handoff failed: ${message}`);
 			}
+		} finally {
+			this.#handingOff = false;
 		}
 		this.ctx.ui.requestRender();
 	}
@@ -1056,7 +2174,9 @@ function formatProviderName(provider: string): string {
 }
 
 function formatNumber(value: number, maxFractionDigits = 1): string {
-	return new Intl.NumberFormat("en-US", { maximumFractionDigits: maxFractionDigits }).format(value);
+	return new Intl.NumberFormat("en-US", {
+		maximumFractionDigits: maxFractionDigits,
+	}).format(value);
 }
 
 function formatUsedAccounts(value: number): string {
@@ -1239,11 +2359,8 @@ function renderUsageBar(limit: UsageLimit, uiTheme: typeof theme): string {
 	return `${uiTheme.fg("dim", "[")}${uiTheme.fg(color, filledBar)}${uiTheme.fg("dim", emptyBar)}${uiTheme.fg("dim", "]")}`;
 }
 
-function renderUsageReports(reports: UsageReport[], uiTheme: typeof theme, nowMs: number): string {
+function renderUsageReports(reports: UsageReport[], uiTheme: typeof theme, nowMs: number, maxWidth = Infinity): string {
 	const lines: string[] = [];
-	const latestFetchedAt = Math.max(...reports.map(report => report.fetchedAt ?? 0));
-	const headerSuffix = latestFetchedAt ? ` (${formatDuration(nowMs - latestFetchedAt)} ago)` : "";
-	lines.push(uiTheme.bold(uiTheme.fg("contentAccent", `Usage${headerSuffix}`)));
 	const grouped = new Map<string, UsageReport[]>();
 	for (const report of reports) {
 		const list = grouped.get(report.provider) ?? [];
@@ -1267,7 +2384,12 @@ function renderUsageReports(reports: UsageReport[], uiTheme: typeof theme, nowMs
 
 		const limitGroups = new Map<
 			string,
-			{ label: string; windowLabel: string; limits: UsageLimit[]; reports: UsageReport[] }
+			{
+				label: string;
+				windowLabel: string;
+				limits: UsageLimit[];
+				reports: UsageReport[];
+			}
 		>();
 		for (const report of providerReports) {
 			for (const limit of report.limits) {
@@ -1308,13 +2430,28 @@ function renderUsageReports(reports: UsageReport[], uiTheme: typeof theme, nowMs
 			const statusIcon = resolveStatusIcon(status, uiTheme);
 
 			const windowSuffix = formatWindowSuffix(group.label, group.windowLabel, uiTheme);
-			lines.push(`${statusIcon} ${uiTheme.bold(group.label)} ${windowSuffix}`.trim());
-			const accountLabels = sortedLimits.map((limit, index) =>
-				padColumn(formatAccountHeader(limit, sortedReports[index], index, nowMs), COLUMN_WIDTH),
+			lines.push(
+				`${statusIcon} ${uiTheme.bold(group.label)} ${windowSuffix} · ${formatAggregateAmount(sortedLimits)}`.trim(),
 			);
-			lines.push(`  ${accountLabels.join(" ")}`.trimEnd());
-			const bars = sortedLimits.map(limit => padColumn(renderUsageBar(limit, uiTheme), COLUMN_WIDTH));
-			lines.push(`  ${bars.join(" ")} ${formatAggregateAmount(sortedLimits)}`.trimEnd());
+			const accountHeaders = sortedLimits.map((limit, index) =>
+				formatAccountHeader(limit, sortedReports[index], index, nowMs),
+			);
+			const longestHeader = Math.max(COLUMN_WIDTH, ...accountHeaders.map(header => visibleWidth(header)));
+			const columnWidth = Number.isFinite(maxWidth)
+				? Math.max(COLUMN_WIDTH, Math.min(longestHeader, maxWidth - 2))
+				: longestHeader;
+			const columnsPerRow = Number.isFinite(maxWidth)
+				? Math.max(1, Math.floor(Math.max(columnWidth, maxWidth - 2) / (columnWidth + 1)))
+				: sortedLimits.length;
+			for (let start = 0; start < sortedLimits.length; start += columnsPerRow) {
+				const rowLimits = sortedLimits.slice(start, start + columnsPerRow);
+				const accountLabels = accountHeaders
+					.slice(start, start + columnsPerRow)
+					.map(header => padColumn(header, columnWidth));
+				lines.push(`  ${accountLabels.join(" ")}`.trimEnd());
+				const bars = rowLimits.map(limit => padColumn(renderUsageBar(limit, uiTheme), columnWidth));
+				lines.push(`  ${bars.join(" ")}`.trimEnd());
+			}
 			const resetText = sortedLimits.length <= 1 ? resolveResetRange(sortedLimits, nowMs) : null;
 			if (resetText) {
 				lines.push(`  ${uiTheme.fg("dim", resetText)}`.trimEnd());
@@ -1340,3 +2477,5 @@ function renderUsageReports(reports: UsageReport[], uiTheme: typeof theme, nowMs
 
 	return lines.join("\n");
 }
+
+import { appInterruptHint } from "../utils/keybinding-matchers";

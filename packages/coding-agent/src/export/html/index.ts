@@ -132,10 +132,16 @@ const mediaExtension: Record<string, string> = {
 	"text/plain": ".txt",
 };
 
-async function exportMediaAssets(sm: SessionManager, entries: SessionEntry[], outputPath: string) {
+export interface PreparedHtmlExport {
+	outputPath: string;
+	files: Array<{ path: string; bytes: Uint8Array }>;
+	missingAssets: number;
+}
+
+async function collectMediaAssets(sm: SessionManager, entries: SessionEntry[], outputPath: string) {
 	const descriptors = listMediaDescriptors(entries);
 	const assets = new Map(descriptors.flatMap(listMediaAssets).map(asset => [asset.ref, asset]));
-	if (assets.size === 0) return {};
+	const files: PreparedHtmlExport["files"] = [];
 	const mediaDirName = `${path.basename(outputPath, path.extname(outputPath))}-media`;
 	const mediaDir = path.join(path.dirname(outputPath), mediaDirName);
 	const result: Record<string, string | null> = {};
@@ -146,12 +152,48 @@ async function exportMediaAssets(sm: SessionManager, entries: SessionEntry[], ou
 			result[asset.ref] = null;
 			continue;
 		}
-		await fs.mkdir(mediaDir, { recursive: true });
 		const fileName = `${hash}${mediaExtension[asset.mimeType] ?? ".bin"}`;
-		await Bun.write(path.join(mediaDir, fileName), blob);
+		files.push({ path: path.join(mediaDir, fileName), bytes: new Uint8Array(blob) });
 		result[asset.ref] = `${mediaDirName}/${fileName}`;
 	}
-	return result;
+	return { assets: result, files };
+}
+
+async function exportMediaAssets(sm: SessionManager, entries: SessionEntry[], outputPath: string) {
+	const media = await collectMediaAssets(sm, entries, outputPath);
+	for (const file of media.files) {
+		await fs.mkdir(path.dirname(file.path), { recursive: true });
+		await Bun.write(file.path, file.bytes);
+	}
+	return media.assets;
+}
+
+/** Read-only snapshot for interactive review. Existing CLI/RPC export entrypoints retain their behavior. */
+export async function prepareSessionHtmlExport(
+	sm: SessionManager,
+	state?: AgentState,
+	options: ExportOptions = {},
+): Promise<PreparedHtmlExport> {
+	const sessionFile = sm.getSessionFile();
+	if (!sessionFile) throw new Error("Cannot export in-memory session to HTML");
+	const outputPath = options.outputPath || `${APP_NAME}-session-${path.basename(sessionFile, ".jsonl")}.html`;
+	const entries = structuredClone(sm.getEntries());
+	const sessionData: SessionData = {
+		header: structuredClone(sm.getHeader()),
+		entries: projectMediaEntries(entries),
+		leafId: sm.getLeafId(),
+		systemPrompt: state?.systemPrompt,
+		tools: state?.tools?.map(tool => ({ name: tool.name, description: tool.description })),
+		mediaAssets: {},
+	};
+	const media = await collectMediaAssets(sm, entries, outputPath);
+	sessionData.mediaAssets = media.assets;
+	const html = await generateHtml(sessionData, options.themeName);
+	return {
+		outputPath,
+		files: [...media.files, { path: outputPath, bytes: new TextEncoder().encode(html) }],
+		missingAssets: Object.values(media.assets).filter(value => value === null).length,
+	};
 }
 
 /** Export session to HTML using SessionManager and AgentState. */

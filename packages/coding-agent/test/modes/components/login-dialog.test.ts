@@ -11,24 +11,26 @@ beforeAll(() => {
 });
 
 describe("LoginDialogComponent", () => {
-	it("presents and copies the exact auth target without visibly rendering it", () => {
+	it("presents and opens the exact auth target without overwriting the clipboard", () => {
 		const requestRender = vi.fn();
 		const openUrl = vi.fn();
-		const copy = vi.fn(async () => undefined);
 		const dialog = new LoginDialogComponent({ requestRender } as never, "synthetic-provider", vi.fn(), {
 			openUrl,
-			presentLink: (container, url) => presentAuthLink(container, url, { copy, platform: "linux" }),
+			presentLink: (container, url) => presentAuthLink(container, url, { platform: "linux" }),
 		});
 
 		dialog.showAuth(LONG_AUTH_URL, "Complete the synthetic provider instructions.");
 
-		const visible = Bun.stripANSI(dialog.render(28).join("\n")).replace(/\s+/g, " ").trim();
+		let visible = Bun.stripANSI(dialog.render(28).join("\n")).replace(/\s+/g, " ").trim();
 		expect(visible).toContain("Open sign-in page");
 		expect(visible).toContain("Ctrl+click to open");
-		expect(visible).toContain("Complete the synthetic provider instructions.");
+		for (let page = 0; page < 4 && !visible.includes("Complete the synthetic"); page++) {
+			dialog.handleInput("\x1b[6~");
+			visible = Bun.stripANSI(dialog.render(28).join("\n")).replace(/\s+/g, " ").trim();
+		}
+		expect(visible).toContain("Complete the synthetic");
+		expect(visible).toContain("provider instructions.");
 		expect(visible).not.toContain(LONG_AUTH_URL);
-		expect(copy).toHaveBeenCalledTimes(1);
-		expect(copy).toHaveBeenCalledWith(LONG_AUTH_URL);
 		expect(openUrl).toHaveBeenCalledTimes(1);
 		expect(openUrl).toHaveBeenCalledWith(LONG_AUTH_URL);
 		expect(requestRender).toHaveBeenCalledTimes(1);
@@ -37,17 +39,15 @@ describe("LoginDialogComponent", () => {
 	it("displays the hosted URL while opening the automatic loopback URL", () => {
 		const requestRender = vi.fn();
 		const openUrl = vi.fn();
-		const copy = vi.fn(async () => undefined);
 		const displayedUrl = `${LONG_AUTH_URL}&route=hosted`;
 		const automaticUrl = `${LONG_AUTH_URL}&route=loopback`;
 		const dialog = new LoginDialogComponent({ requestRender } as never, "anthropic", vi.fn(), {
 			openUrl,
-			presentLink: (container, url) => presentAuthLink(container, url, { copy, platform: "linux" }),
+			presentLink: (container, url) => presentAuthLink(container, url, { platform: "linux" }),
 		});
 
 		dialog.showAuth(displayedUrl, undefined, automaticUrl);
 
-		expect(copy).toHaveBeenCalledWith(displayedUrl);
 		expect(openUrl).toHaveBeenCalledWith(automaticUrl);
 	});
 
@@ -55,7 +55,7 @@ describe("LoginDialogComponent", () => {
 		const requestRender = vi.fn();
 		const dialog = new LoginDialogComponent({ requestRender } as never, "synthetic-provider", vi.fn(), {
 			openUrl: vi.fn(async () => ({ ok: false as const, error: "launcher unavailable" })),
-			presentLink: (container, url) => presentAuthLink(container, url, { copy: vi.fn(), platform: "linux" }),
+			presentLink: (container, url) => presentAuthLink(container, url, { platform: "linux" }),
 		});
 		dialog.showAuth(LONG_AUTH_URL, "Paste the authorization code manually.");
 		await Bun.sleep(0);

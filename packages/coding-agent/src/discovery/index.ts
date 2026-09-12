@@ -59,6 +59,7 @@ export {
 	// Cache management
 	reset,
 	setDisabledProviders,
+	setDisabledProvidersRuntime,
 } from "../capability";
 export type { ContextFile } from "../capability/context-file";
 export type { Extension, ExtensionManifest } from "../capability/extension";

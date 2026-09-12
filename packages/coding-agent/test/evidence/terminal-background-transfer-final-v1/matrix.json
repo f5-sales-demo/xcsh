@@ -1,0 +1,534 @@
+{
+  "fixture": "background-transfer",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-7dFrzH/sessions/2026-09-12T07-31-16-200Z_157c6f199a15e594.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-deNEHh/sessions/2026-09-12T07-31-23-771Z_157c6f20fecd39dc.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-eWH5oH/sessions/2026-09-12T07-31-31-262Z_157c6f284f867323.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-T6R3qp/sessions/2026-09-12T07-31-38-761Z_157c6f2fa24d2c23.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-7cUNBG/sessions/2026-09-12T07-31-46-217Z_157c6f36ea4aa796.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-rnAu9a/sessions/2026-09-12T07-31-54-018Z_157c6f3e88939a52.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-R5aVcO/sessions/2026-09-12T07-32-01-796Z_157c6f4620e2bc37.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-9u2lTx/sessions/2026-09-12T07-32-09-575Z_157c6f4db9ec035b.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-WMyj7b/sessions/2026-09-12T07-32-17-933Z_157c6f55e3682c8d.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-dr0wcU/sessions/2026-09-12T07-32-25-755Z_157c6f5d86ed0813.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-mZU8V4/sessions/2026-09-12T07-32-33-387Z_157c6f64faf68845.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-CMrkHb/sessions/2026-09-12T07-32-40-798Z_157c6f6c3797a185.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-9bNIld/sessions/2026-09-12T07-32-48-407Z_157c6f73a5e8a4e2.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-ERiBwr/sessions/2026-09-12T07-32-56-114Z_157c6f7b2c8f3c93.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-cRYIXL/sessions/2026-09-12T07-33-03-743Z_157c6f829f9ce181.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-ZZjKYY/sessions/2026-09-12T07-33-11-245Z_157c6f89f34f9593.jsonl",
+          "providerPosts": 1,
+          "stableSessionIdentified": true,
+          "nothingCancelledClaimVerified": true,
+          "posixStopAndBgResumeVerified": true,
+          "reopenedCompletedResponse": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

@@ -1,6 +1,6 @@
-import { Container, type SelectItem, SelectList } from "@f5-sales-demo/pi-tui";
+import { Container, type SelectItem, type SelectList } from "@f5-sales-demo/pi-tui";
 import { getSelectListTheme } from "../../modes/theme/theme";
-import { DynamicBorder } from "./dynamic-border";
+import { SearchableSelectList } from "./searchable-select-list";
 
 /**
  * Component that renders a show images selector with borders
@@ -16,11 +16,13 @@ export class ShowImagesSelectorComponent extends Container {
 			{ value: "no", label: "No", description: "Show text placeholder instead" },
 		];
 
-		// Add top border
-		this.addChild(new DynamicBorder());
-
-		// Create selector
-		this.#selectList = new SelectList(items, 5, getSelectListTheme());
+		this.#selectList = new SearchableSelectList(
+			"Choose image display",
+			"Choose whether supported images render inline in this terminal.",
+			items,
+			5,
+			getSelectListTheme(),
+		);
 
 		// Preselect current value
 		this.#selectList.setSelectedIndex(currentValue ? 0 : 1);
@@ -34,9 +36,6 @@ export class ShowImagesSelectorComponent extends Container {
 		};
 
 		this.addChild(this.#selectList);
-
-		// Add bottom border
-		this.addChild(new DynamicBorder());
 	}
 
 	getSelectList(): SelectList {

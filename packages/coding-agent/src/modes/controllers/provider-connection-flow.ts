@@ -2,6 +2,7 @@
 export async function runProviderConnectionFlow<Credentials, Probe>(options: {
 	collectCredentials(): Promise<Credentials | null>;
 	probe(credentials: Credentials): Promise<Probe>;
+	review?(input: { credentials: Credentials; probe?: Probe }): Promise<boolean>;
 	commit(input: { credentials: Credentials; probe?: Probe }): Promise<void>;
 	recover(request: { stage: "commit"; error: string; canEdit: boolean }): Promise<"retry" | "edit" | "cancel">;
 }): Promise<{ status: "completed"; discoveryError?: string } | { status: "cancelled" }> {
@@ -16,6 +17,7 @@ export async function runProviderConnectionFlow<Credentials, Probe>(options: {
 			discoveryError = error instanceof Error ? error.message : String(error);
 		}
 		while (true) {
+			if (options.review && !(await options.review({ credentials, probe }))) return { status: "cancelled" };
 			try {
 				await options.commit({ credentials, probe });
 				return { status: "completed", discoveryError };

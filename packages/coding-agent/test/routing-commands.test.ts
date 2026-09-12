@@ -39,7 +39,7 @@ describe("/route Commands (I09)", () => {
 		expect(result.output).toContain("Routing mode set to shadow");
 	});
 
-	it("should handle /route auto", async () => {
+	it("prepares /route auto without clearing the pin before execution", async () => {
 		const coordinator = new RoutingCoordinator();
 		coordinator.getStateMachine().setManualPin("openai/o3-mini");
 
@@ -50,8 +50,19 @@ describe("/route Commands (I09)", () => {
 		});
 
 		expect(result.newMode).toBe("auto");
-		expect(coordinator.getStateMachine().getState().manualPin).toBeUndefined(); // Pin cleared!
+		expect(coordinator.getStateMachine().getState().manualPin).toBe("openai/o3-mini");
 		expect(result.output).toContain("Routing mode set to auto");
+	});
+	it("rejects inherited profile properties rather than accepting them as profiles", async () => {
+		for (const profile of ["constructor", "toString", "__proto__"]) {
+			const result = await handleRouteCommand(["profile", profile], {
+				coordinator: new RoutingCoordinator(),
+				currentModel: "fixture/model",
+				mode: "off",
+			});
+			expect(result.newProfile).toBeUndefined();
+			expect(result.output).toContain("Usage");
+		}
 	});
 
 	it("selects only reviewed provider-sticky subscription profiles", async () => {
@@ -72,5 +83,27 @@ describe("/route Commands (I09)", () => {
 		});
 		expect(invalid.newProfile).toBeUndefined();
 		expect(invalid.output).toContain("Usage");
+	});
+
+	it("rejects surplus arguments for every route action", async () => {
+		const coordinator = new RoutingCoordinator();
+		for (const args of [
+			["status", "unexpected"],
+			["off", "unexpected"],
+			["shadow", "unexpected"],
+			["auto", "unexpected"],
+			["profile"],
+			["profile", "anthropic", "unexpected"],
+		]) {
+			const result = await handleRouteCommand(args, {
+				coordinator,
+				currentModel: "fixture/model",
+				mode: "off",
+			});
+			expect(result.error).toBe(true);
+			expect(result.newMode).toBeUndefined();
+			expect(result.newProfile).toBeUndefined();
+			expect(result.output).toContain("Usage: /route");
+		}
 	});
 });
