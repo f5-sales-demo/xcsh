@@ -948,6 +948,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	if (thinkingLevel === undefined) {
 		thinkingLevel = settings.get("defaultThinkingLevel");
 	}
+	const requestedThinkingLevel = thinkingLevel;
 	if (model) {
 		const resolvedModel = model;
 		thinkingLevel = logger.time("resolveThinkingLevelForModel", () =>
@@ -1054,6 +1055,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const asyncJobManager = backgroundJobsEnabled
 		? new AsyncJobManager({
 				maxRunningJobs: asyncMaxJobs,
+				getOwnerId: () => session?.sessionId,
+				onJobCancelled: job => session?.recordCancelledAsyncJob(job),
+				onJobProgress: (jobId, details) => session?.reportAsyncJobProgress(jobId, details),
 				onJobComplete: async (jobId, result, job) => {
 					if (!session || asyncJobManager!.isDeliverySuppressed(jobId)) return;
 					const formattedResult = await formatAsyncResultForFollowUp(result);
@@ -1072,6 +1076,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 								type: job?.type,
 								label: job?.label,
 								durationMs,
+								execution: job?.resultDetails?.execution,
 							},
 						},
 						{ deliverAs: "followUp", triggerTurn: true },
@@ -1391,6 +1396,21 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			extensionsResult.runtime.pendingProviderRegistrations = [];
 		}
 
+		// A saved model may also arrive through extensions or background discovery.
+		// Do not leave an early settings fallback selected when it becomes available.
+		if (!hasExplicitModel && hasExistingSession && defaultModelStr) {
+			const parsedModel = parseModelString(defaultModelStr);
+			if (parsedModel && (model?.provider !== parsedModel.provider || model?.id !== parsedModel.id)) {
+				await logger.time("awaitSavedModelDiscovery", () => modelRegistry.awaitBackgroundRefresh());
+				const restoredModel = modelRegistry.find(parsedModel.provider, parsedModel.id);
+				if (restoredModel && (await hasModelApiKey(restoredModel))) {
+					model = restoredModel;
+					modelFallbackMessage = undefined;
+					thinkingLevel = resolveThinkingLevelForModel(model, requestedThinkingLevel);
+				}
+			}
+		}
+
 		// Resolve deferred --model pattern now that extension models are registered.
 		if (!model && options.modelPattern) {
 			await logger.time("awaitExplicitModelDiscovery", () => modelRegistry.awaitBackgroundRefresh());
@@ -1448,6 +1468,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			}
 		}
 
+		// Tool loading follows the final model after deferred selection or restoration.
+		contextLoadingMode = resolveContextLoadingMode(model);
+
 		// Discover custom commands (TypeScript slash commands)
 		const customCommandsResult: CustomCommandsLoadResult = options.disableExtensionDiscovery
 			? { commands: [], errors: [] }
@@ -1466,6 +1489,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				cwd,
 				sessionManager,
 				modelRegistry,
+				settings,
 			);
 		}
 
@@ -1971,6 +1995,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// Restore messages if session has existing data
 		if (hasExistingSession) {
 			agent.replaceMessages(existingSession.messages);
+			// A launch override is the selected work model even if the user exits
+			// before it produces an assistant message that could infer the choice.
+			if (hasExplicitModel && model && `${model.provider}/${model.id}` !== defaultModelStr) {
+				sessionManager.appendModelChange(`${model.provider}/${model.id}`);
+			}
 		} else {
 			// Save initial model and thinking level for new sessions so they can be restored on resume
 			if (model) {

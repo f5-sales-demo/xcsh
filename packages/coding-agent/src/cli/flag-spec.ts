@@ -99,6 +99,11 @@ export const LAUNCH_FLAGS = defineFlags({
 		arity: "boolean",
 		description: "Disable extension discovery (explicit -e paths still work)",
 	},
+	"bundled-extension": {
+		arity: "repeatable-value",
+		description: "Load a named trusted bundled extension while discovery is disabled",
+		hidden: true,
+	},
 	"no-skills": { arity: "boolean", description: "Disable skills discovery and loading" },
 	skills: {
 		arity: "value",

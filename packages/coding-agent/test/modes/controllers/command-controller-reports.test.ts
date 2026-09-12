@@ -22,7 +22,7 @@ const reports: UsageReport[] = [
 				label: "Five hour",
 				scope: {
 					provider: "openai-codex",
-					accountId: "synthetic-account",
+					accountId: "example-account",
 					windowId: "5h",
 				},
 				window: { id: "5h", label: "5 Hour", resetsAt: Date.now() + 60_000 },
@@ -30,7 +30,7 @@ const reports: UsageReport[] = [
 				status: "ok",
 			},
 		],
-		metadata: { email: "synthetic@example.test" },
+		metadata: { email: "synthetic@example.com" },
 	},
 ];
 

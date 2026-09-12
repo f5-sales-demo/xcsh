@@ -50,6 +50,7 @@ if (Bun.stringWidth("\x1b[0m\x1b]8;;\x07") !== 0) {
 process.title = APP_NAME;
 
 const commands: CommandEntry[] = [
+	{ name: "remote-control", load: () => import("./commands/remote-control").then(m => m.default) },
 	{ name: "apply", load: () => import("./commands/apply").then(m => m.default) },
 	{ name: "launch", load: () => import("./commands/launch").then(m => m.default) },
 	{ name: "agents", load: () => import("./commands/agents").then(m => m.default) },

@@ -72,20 +72,21 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 
 test("SSH add is Cancel-first and separates saved configuration from connectivity", async () => {
 	const h = harness([["\r"]]);
-	await h.controller.handle('/ssh add edge --host edge.invalid --user demo --port 2222 --key "/keys/demo key"');
+	await h.controller.handle('/ssh add edge --host edge.example.com --user demo --port 2222 --key "/keys/demo key"');
 	expect(h.writes).toEqual([]);
 	expect(h.screens[0]).toContain("Review SSH host addition");
 	expect(h.screens[0]).toContain("ssh-host:project:edge");
-	expect(h.screens[0]).toContain("Absent → demo@edge.invalid · port 2222 · key /keys/demo key");
+	expect(h.screens[0]).toContain("Absent → demo@edge.example.com · port 2222 · key /keys/demo");
+	expect(h.screens[0]).toContain("key · standard mode");
 	expect(h.screens[0]).toContain("configuration only; it does not test connectivity");
 	expect(h.screens[0]).toContain("remote connection");
 });
 
 test("confirmed SSH add writes the exact reviewed scope and values", async () => {
 	const h = harness([["\x1b[B", "\r"]]);
-	await h.controller.handle("/ssh add edge --host edge.invalid --compat --scope user");
+	await h.controller.handle("/ssh add edge --host edge.example.com --compat --scope user");
 	expect(h.writes).toEqual(["add:/fixture/agent/ssh.json:edge"]);
-	expect(h.files.get("/fixture/agent/ssh.json")?.hosts?.edge).toEqual({ host: "edge.invalid", compat: true });
+	expect(h.files.get("/fixture/agent/ssh.json")?.hosts?.edge).toEqual({ host: "edge.example.com", compat: true });
 	expect(h.ctx.showStatus).toHaveBeenCalledWith(
 		'Saved SSH host "edge" in user configuration. Connectivity was not tested.',
 	);
@@ -93,9 +94,9 @@ test("confirmed SSH add writes the exact reviewed scope and values", async () =>
 
 test("SSH add renews a stale review before writing", async () => {
 	const h = harness([]);
-	const pending = h.controller.handle("/ssh add edge --host edge.invalid");
+	const pending = h.controller.handle("/ssh add edge --host edge.example.com");
 	await waitFor(() => h.screens.length === 1);
-	h.files.set("/fixture/project/.xcsh/ssh.json", { hosts: { other: { host: "other.invalid" } } });
+	h.files.set("/fixture/project/.xcsh/ssh.json", { hosts: { other: { host: "other.example.com" } } });
 	h.input("\x1b[B");
 	h.input("\r");
 	await waitFor(() => h.text().includes("proposal changed"));
@@ -109,7 +110,7 @@ test("SSH add renews a stale review before writing", async () => {
 test("SSH add keeps a failed write unresolved and retries the exact reviewed target", async () => {
 	const h = harness([]);
 	h.failures.add = 1;
-	const pending = h.controller.handle("/ssh add edge --host edge.invalid --scope project");
+	const pending = h.controller.handle("/ssh add edge --host edge.example.com --scope project");
 	await waitFor(() => h.screens.length === 1);
 	h.input("\x1b[B");
 	h.input("\r");
@@ -120,42 +121,42 @@ test("SSH add keeps a failed write unresolved and retries the exact reviewed tar
 	h.input("\r");
 	await pending;
 	expect(h.writes).toEqual(["add:/fixture/project/.xcsh/ssh.json:edge"]);
-	expect(h.files.get("/fixture/project/.xcsh/ssh.json")?.hosts?.edge).toEqual({ host: "edge.invalid" });
+	expect(h.files.get("/fixture/project/.xcsh/ssh.json")?.hosts?.edge).toEqual({ host: "edge.example.com" });
 });
 
 test("SSH remove reviews the exact existing target and cancellation preserves it", async () => {
 	const path = "/fixture/project/.xcsh/ssh.json";
-	const original: SSHHostConfig = { host: "edge.invalid", username: "demo", port: 2200 };
+	const original: SSHHostConfig = { host: "edge.example.com", username: "demo", port: 2200 };
 	const h = harness([["\r"]], { [path]: { hosts: { edge: original } } });
 	await h.controller.handle("/ssh remove edge --scope project");
 	expect(h.writes).toEqual([]);
 	expect(h.files.get(path)?.hosts?.edge).toEqual(original);
-	expect(h.screens[0]).toContain("demo@edge.invalid · port 2200");
+	expect(h.screens[0]).toContain("demo@edge.example.com · port 2200");
 	expect(h.screens[0]).toContain("Existing processes or connections are not terminated");
 });
 
 test("SSH remove renews a stale proposal and never deletes a replacement host", async () => {
 	const path = "/fixture/project/.xcsh/ssh.json";
-	const h = harness([], { [path]: { hosts: { edge: { host: "edge.invalid" } } } });
+	const h = harness([], { [path]: { hosts: { edge: { host: "edge.example.com" } } } });
 	const pending = h.controller.handle("/ssh remove edge --scope project");
 	await waitFor(() => h.screens.length === 1);
-	h.files.set(path, { hosts: { edge: { host: "replacement.invalid", username: "other" } } });
+	h.files.set(path, { hosts: { edge: { host: "replacement.example.com", username: "other" } } });
 	h.input("\x1b[B");
 	h.input("\r");
 	await waitFor(() => h.text().includes("proposal changed"));
 	expect(h.writes).toEqual([]);
-	expect(h.files.get(path)?.hosts?.edge).toEqual({ host: "replacement.invalid", username: "other" });
+	expect(h.files.get(path)?.hosts?.edge).toEqual({ host: "replacement.example.com", username: "other" });
 	h.input("\r");
 	await pending;
 });
 
 test("SSH list and help use bounded shared reports", async () => {
 	const path = "/fixture/project/.xcsh/ssh.json";
-	const h = harness([["\x1b"], ["\x1b"]], { [path]: { hosts: { edge: { host: "edge.invalid" } } } });
+	const h = harness([["\x1b"], ["\x1b"]], { [path]: { hosts: { edge: { host: "edge.example.com" } } } });
 	await h.controller.handle("/ssh list");
 	await h.controller.handle("/ssh help");
 	expect(h.screens[0]).toContain("Saved scope, source, and connection target");
-	expect(h.screens[0]).toContain("edge.invalid");
+	expect(h.screens[0]).toContain("edge.example.com");
 	expect(h.screens[1]).toContain("Commands and saved-configuration behavior");
 	expect(h.screens[1]).toContain("Esc: close");
 });

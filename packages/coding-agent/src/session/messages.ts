@@ -488,7 +488,8 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 				case "custom":
 				case "hookMessage": {
 					const content = typeof m.content === "string" ? [{ type: "text" as const, text: m.content }] : m.content;
-					const role = "user";
+					const role =
+						m.customType === "remote-voice-start" || m.customType === "remote-voice-end" ? "developer" : "user";
 					const attribution = m.attribution;
 					return {
 						role,

@@ -41,6 +41,7 @@ import { buildHotkeysMarkdown } from "../../modes/utils/hotkeys-markdown";
 import { buildToolsMarkdown } from "../../modes/utils/tools-markdown";
 import type { AsyncJobSnapshotItem } from "../../session/agent-session";
 import type { AuthStorage } from "../../session/auth-storage";
+import type { NewSessionOptions } from "../../session/session-manager";
 import { outputMeta } from "../../tools/output-meta";
 import { resolveToCwd, stripOuterDoubleQuotes } from "../../tools/path-utils";
 import { replaceTabs } from "../../tools/render-utils";
@@ -1065,6 +1066,7 @@ export class CommandController {
 		originalId: string,
 		beforeSwitch: () => Promise<void>,
 		preview: ReturnType<InteractiveModeContext["sessionManager"]["previewNewSession"]>,
+		options?: NewSessionOptions,
 	): Promise<string> {
 		if (this.#startingSession) throw new Error("A new-session transition is already open.");
 		this.#startingSession = true;
@@ -1096,7 +1098,7 @@ export class CommandController {
 			let switched = false;
 			let createdId: string | undefined;
 			try {
-				switched = await session.newSessionWithReviewedPreparation(beforeSwitch, undefined, preview);
+				switched = await session.newSessionWithReviewedPreparation(beforeSwitch, options, preview);
 			} finally {
 				if (manager.getSessionId() !== originalId) {
 					createdId = manager.getSessionId();
@@ -1115,7 +1117,19 @@ export class CommandController {
 		}
 	}
 
-	async handleClearCommand(): Promise<void> {
+	async handleClearCommand(
+		options?: NewSessionOptions,
+		createSession?: (options?: NewSessionOptions) => Promise<boolean>,
+	): Promise<void> {
+		if (options || createSession) {
+			if (this.ctx.session.isCompacting) {
+				this.ctx.session.abortCompaction();
+				while (this.ctx.session.isCompacting) await Bun.sleep(10);
+			}
+			if (!(await (createSession ? createSession(options) : this.ctx.session.newSession(options)))) return;
+			await this.resetNewSessionView();
+			return;
+		}
 		if (this.#startingSession) {
 			this.ctx.showStatus("A new-session review is already open.");
 			return;
@@ -1273,7 +1287,6 @@ export class CommandController {
 			this.ctx.loadingAnimation = undefined;
 		}
 		this.ctx.statusContainer.clear();
-
 		this.ctx.resetObserverRegistry();
 		setSessionTerminalTitle(
 			this.ctx.sessionManager.getSessionName(),

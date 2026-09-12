@@ -5,6 +5,7 @@ import { HookSelectorComponent } from "../src/modes/components/hook-selector";
 import { ExtensionUiController } from "../src/modes/controllers/extension-ui-controller";
 import { getThemeByName, setThemeInstance } from "../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../src/modes/types";
+import { UserInteractions } from "../src/session/user-interactions";
 
 beforeAll(async () => {
 	const theme = await getThemeByName("xcsh-dark");
@@ -83,7 +84,7 @@ describe("HookSelectorComponent", () => {
 			ui: { terminal: { rows: 24 }, requestRender: vi.fn(), setFocus: vi.fn(), showOverlay },
 			editor: {},
 			editorContainer: { clear: vi.fn(), addChild: vi.fn() },
-			session: { notifyUserPrompt: vi.fn() },
+			session: { notifyUserPrompt: vi.fn(), userInteractions: new UserInteractions() },
 		} as unknown as InteractiveModeContext;
 		const controller = new ExtensionUiController(ctx);
 		const abort = new AbortController();
@@ -91,7 +92,10 @@ describe("HookSelectorComponent", () => {
 		const first = ctx.hookSelector;
 		expect(showOverlay).toHaveBeenCalledWith(first, { fullscreen: true, mouseTracking: true });
 		expect(ctx.editorContainer.clear).not.toHaveBeenCalled();
-		expect(await controller.showHookSelector("Duplicate", ["Other"])).toBeUndefined();
+		const duplicate = controller.showHookSelector("Duplicate", ["Other"]);
+		const duplicateRequest = ctx.session.userInteractions.pending()[1];
+		expect(ctx.session.userInteractions.respond(duplicateRequest.id, undefined)).toBe(true);
+		expect(await duplicate).toBeUndefined();
 		expect(ctx.hookSelector).toBe(first);
 		controller.hideHookSelector();
 		expect(await pending).toBeUndefined();
@@ -122,7 +126,7 @@ describe("HookSelectorComponent", () => {
 			ui: { terminal: { rows: 24 }, requestRender() {}, setFocus() {}, showOverlay: () => ({ hide() {} }) },
 			editor: {},
 			editorContainer: { clear() {}, addChild() {} },
-			session: { notifyUserPrompt },
+			session: { notifyUserPrompt, userInteractions: new UserInteractions() },
 		} as unknown as InteractiveModeContext;
 		const controller = new ExtensionUiController(ctx);
 		const cancelled = controller.showHookConfirm("Change?", "Synthetic target only.");
@@ -145,7 +149,7 @@ describe("HookSelectorComponent", () => {
 			ui: { terminal: { rows: 24 }, requestRender() {}, setFocus() {}, showOverlay: () => ({ hide() {} }) },
 			editor: {},
 			editorContainer: { clear() {}, addChild() {} },
-			session: { notifyUserPrompt },
+			session: { notifyUserPrompt, userInteractions: new UserInteractions() },
 		} as unknown as InteractiveModeContext;
 		const controller = new ExtensionUiController(ctx);
 		const abort = new AbortController();

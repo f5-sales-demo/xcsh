@@ -192,6 +192,7 @@ export class ExtensionRunner {
 		private readonly cwd: string,
 		private readonly sessionManager: SessionManager,
 		private readonly modelRegistry: ModelRegistry,
+		private readonly settings?: ExtensionContext["settings"],
 	) {
 		this.#uiContext = noOpUIContext;
 	}
@@ -434,6 +435,7 @@ export class ExtensionRunner {
 			compact: instructionsOrOptions => this.#compactFn(instructionsOrOptions),
 			hasUI: this.hasUI(),
 			cwd: this.cwd,
+			settings: this.settings,
 			sessionManager: this.sessionManager,
 			modelRegistry: this.modelRegistry,
 			get model() {

@@ -1,0 +1,174 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "sourceFile": "codex-rs/core/src/realtime_history/presentation.rs",
+  "sourceSha256": "511a037bdefd287b8dfaf965943881158d8d03a26e0e75dcfb28a172b066dd61",
+  "evidence": "Original Rust observe_assistant_message and constants; no service or phone capture",
+  "cases": [
+    {
+      "text": "",
+      "presentations": []
+    },
+    {
+      "text": "::codex-realtime-inline{}",
+      "presentations": []
+    },
+    {
+      "text": "::codex-realtime-inline{}\n",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "::codex-realtime-inline{}\r\nFixture",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "::codex-realtime-inline{}\rFixture",
+      "presentations": []
+    },
+    {
+      "text": "::codex-realtime-inline{} \nFixture",
+      "presentations": []
+    },
+    {
+      "text": "[FINAL] ::codex-realtime-inline{}\nFixture",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "[anything]\n::codex-realtime-inline{}\nFixture",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "[FINAL]\n ::codex-realtime-inline{}\nFixture",
+      "presentations": []
+    },
+    {
+      "text": "::codex-realtime-inline{}\nFixture",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "﻿::codex-realtime-inline{}\nFixture",
+      "presentations": []
+    },
+    {
+      "text": " ::codex-realtime-inline{}\nFixture",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "[FINAL]::codex-realtime-inline{}\nFixture",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "::codex-inline-vis{}",
+      "presentations": [
+        {
+          "type": "inlineVisualization",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "text": "Text\n::codex-inline-vis{}\nvisualize{}",
+      "presentations": [
+        {
+          "type": "inlineVisualization",
+          "index": 0
+        },
+        {
+          "type": "inlineVisualization",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "text": "::codex-inline-vis{}",
+      "presentations": [
+        {
+          "type": "inlineVisualization",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "text": "﻿::codex-inline-vis{}",
+      "presentations": []
+    },
+    {
+      "text": "```\n::codex-inline-vis{}\n```\nvisualize{}",
+      "presentations": [
+        {
+          "type": "inlineVisualization",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "text": "~~~fixture\n::codex-inline-vis{}\n~~~",
+      "presentations": []
+    },
+    {
+      "text": "```\n::codex-inline-vis{}\n~~~\n::codex-inline-vis{}",
+      "presentations": [
+        {
+          "type": "inlineVisualization",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "text": "::codex-realtime-inline{}\n::codex-inline-vis{}",
+      "presentations": [
+        {
+          "type": "inlineMarkdown"
+        }
+      ]
+    },
+    {
+      "text": "Text ::codex-inline-vis{}",
+      "presentations": []
+    },
+    {
+      "text": "Text\r::codex-inline-vis{}",
+      "presentations": []
+    },
+    {
+      "text": "[FINAL] ::codex-inline-vis{}",
+      "presentations": []
+    },
+    {
+      "text": "::codex-inline-vis{partial",
+      "presentations": [
+        {
+          "type": "inlineVisualization",
+          "index": 0
+        }
+      ]
+    }
+  ]
+}

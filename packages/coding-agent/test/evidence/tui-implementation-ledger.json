@@ -7881,6 +7881,25 @@
     },
     {
       "surface": {
+        "id": "/remote",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "command"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "/rename",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"
@@ -9254,6 +9273,44 @@
       "notes": [
         "The native lifecycle hook keeps its public input callback and real cancellation boundary.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "dialog:packages/coding-agent/src/extensibility/extensions/bundled/sandbox-guard.ts:select:1",
+        "source": "packages/coding-agent/src/extensibility/extensions/bundled/sandbox-guard.ts",
+        "kind": "extension-dialog"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "dialog:packages/coding-agent/src/extensibility/extensions/bundled/sandbox-guard.ts:select:2",
+        "source": "packages/coding-agent/src/extensibility/extensions/bundled/sandbox-guard.ts",
+        "kind": "extension-dialog"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
       ]
     },
     {
@@ -13119,6 +13176,25 @@
         "Individually classified from current source SHA-256 e444f24f9b73f098a2de65cf50ec09adce16dfd108374a7d64382200d31327c1.",
         "Ownership: read-only-renderer; domain: core; direct tests: 1.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/question-flow.ts",
+        "source": "packages/coding-agent/src/modes/components/question-flow.ts",
+        "kind": "component"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
       ]
     },
     {

@@ -1,3 +1,4 @@
+import { recordFileMove, recordFileMutation, recordFileRename } from "../../tools/file-mutations";
 /**
  * Hashline edit mode — a line-addressable edit format using text hashes.
  *
@@ -1228,7 +1229,7 @@ export async function executeHashlineSingle(
 
 	if (deleteFile) {
 		if (sourceExists) {
-			await sourceFile.unlink();
+			await recordFileMutation(absolutePath, () => sourceFile.unlink());
 		}
 		invalidateFsScanAfterDelete(absolutePath);
 		return {
@@ -1249,7 +1250,7 @@ export async function executeHashlineSingle(
 		if (parentDir && parentDir !== ".") {
 			await fs.mkdir(parentDir, { recursive: true });
 		}
-		await fs.rename(absolutePath, resolvedMove);
+		await recordFileRename(absolutePath, resolvedMove, () => fs.rename(absolutePath, resolvedMove));
 		invalidateFsScanAfterRename(absolutePath, resolvedMove);
 		return {
 			content: [{ type: "text", text: `Moved ${path} to ${move}` }],
@@ -1330,7 +1331,8 @@ export async function executeHashlineSingle(
 		dst === writePath ? beginDeferredDiagnosticsForPath(writePath) : undefined,
 	);
 	if (resolvedMove && resolvedMove !== absolutePath) {
-		await sourceFile.unlink();
+		await recordFileMutation(absolutePath, () => sourceFile.unlink());
+		recordFileMove(absolutePath, resolvedMove);
 		invalidateFsScanAfterRename(absolutePath, resolvedMove);
 	} else {
 		invalidateFsScanAfterWrite(absolutePath);

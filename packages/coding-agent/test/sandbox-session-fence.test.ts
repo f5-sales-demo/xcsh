@@ -3,7 +3,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { getSessionsDir } from "@f5-sales-demo/pi-utils";
+import { Settings } from "../src/config/settings";
 import { fenceVerdict } from "../src/sandbox/containment";
+import { applyRemotePermissionProfile, grantRemoteSandboxPath } from "../src/sandbox/remote-permissions";
 import { resolveSessionFence, type SettingsReader } from "../src/sandbox/session-fence";
 
 /**
@@ -98,6 +100,43 @@ describe("resolveSessionFence", () => {
 		expect(fenceVerdict(readGranted, path.join(shared, "file.md"), "write")).toBe("allow");
 		expect(fenceVerdict(ordinary, path.join(shared, "file.md"), "write")).toBe("allow");
 		expect(readGranted).not.toBe(ordinary);
+	});
+
+	it("isolates Ask, Full, and path grants between sessions sharing one cwd", () => {
+		const container = fs.realpathSync(fs.mkdtempSync(path.join(os.homedir(), ".xcsh-remote-ask-")));
+		fixtures.push(container);
+		const workspace = path.join(container, "workspace");
+		fs.mkdirSync(workspace);
+		const target = path.join(container, "outside.txt");
+		const askProfile = {
+			approvalPolicy: "on-request" as const,
+			approvalsReviewer: "user" as const,
+			sandboxPolicy: {
+				type: "workspaceWrite" as const,
+				writableRoots: [],
+				networkAccess: false as const,
+				excludeTmpdirEnvVar: false as const,
+				excludeSlashTmp: false as const,
+			},
+			activePermissionProfile: { id: ":workspace" as const },
+		};
+		const askA = Settings.isolated({ "sandbox.enabled": false });
+		const askB = Settings.isolated({ "sandbox.enabled": false });
+		const full = Settings.isolated({ "sandbox.enabled": true });
+		applyRemotePermissionProfile(askA, askProfile);
+		applyRemotePermissionProfile(askB, askProfile);
+		applyRemotePermissionProfile(full, {
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandboxPolicy: { type: "dangerFullAccess" },
+			activePermissionProfile: null,
+		});
+
+		expect(fenceVerdict(resolveSessionFence(workspace, askA)!, target, "write")).toBe("deny");
+		expect(resolveSessionFence(workspace, full)).toBeUndefined();
+		grantRemoteSandboxPath(askA, target, "write");
+		expect(fenceVerdict(resolveSessionFence(workspace, askA)!, target, "write")).toBe("allow");
+		expect(fenceVerdict(resolveSessionFence(workspace, askB)!, target, "write")).toBe("deny");
 	});
 
 	it("reuses the fence for an identical configuration", () => {

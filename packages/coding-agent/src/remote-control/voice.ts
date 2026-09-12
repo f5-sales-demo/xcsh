@@ -1,0 +1,889 @@
+/** Native WebRTC and existing-call sideband; AgentSession remains the sole executor. */
+import { createHash, randomUUID } from "node:crypto";
+import { prompt } from "@f5-sales-demo/pi-utils";
+import tailTemplate from "../prompts/system/remote-voice-tail.md" with { type: "text" };
+import type { RealtimeModeInstructions } from "../session/realtime-context";
+import type { SubscriptionAuth } from "./enrollment";
+import { ProtocolError } from "./session";
+import { createVoiceCall, voiceCallConfig } from "./voice-call";
+import { voiceDelegation } from "./voice-delegation";
+import {
+	type HandoffPhase,
+	handoffChannel,
+	handoffOptions,
+	handoffPhase,
+	VoiceHandoff,
+	type VoiceOutputUpdate,
+} from "./voice-handoff";
+import { VoiceHistory } from "./voice-history";
+import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
+import type { VoicePersonaSnapshot } from "./voice-persona";
+import {
+	contextChunks,
+	decodeVoiceEvent,
+	existingCallConfig,
+	type VoiceEvent,
+	voiceInstructions,
+} from "./voice-protocol";
+import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
+import { standaloneVoiceConfig } from "./voice-standalone";
+
+export interface VoiceDependencies {
+	/** Shared by successive calls attached to one backing session. */
+	history?: VoiceHistory;
+	authenticate(): Promise<SubscriptionAuth>;
+	authenticateApiKey?(): Promise<string | undefined>;
+	createCall?: typeof createVoiceCall;
+	persona?(): VoicePersonaSnapshot;
+	modeChanged?(active: boolean, instructions: RealtimeModeInstructions): Promise<void>;
+	open?(url: string, headers: Record<string, string>, handlers: VoiceHandlers): Promise<VoiceSocket>;
+	emit(method: string, params: Record<string, unknown>): void;
+	records(): Record<string, unknown>[];
+	record(record: Record<string, unknown>): Promise<void>;
+	delegate(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string>;
+}
+function connectionFailure(error: unknown): "http" | "upgradeRejected" | "closed" | "timeout" | "transport" {
+	const message = error instanceof Error ? error.message : "";
+	if (/upgrade rejected/i.test(message)) return "upgradeRejected";
+	if (/\b(400|401|403|404|408|410|429|500|502|503|504)\b/.test(message)) return "http";
+	if (/timeout|timed out/i.test(message)) return "timeout";
+	if (/closed/i.test(message)) return "closed";
+	return "transport";
+}
+function safeConnectionError(error: unknown): string {
+	const status =
+		error instanceof Error
+			? error.message.match(/\b(400|401|403|404|408|410|429|500|502|503|504)\b/)?.[1]
+			: undefined;
+	return `Native realtime connection failed${status ? ` (HTTP ${status})` : ""}`;
+}
+export class NativeVoice {
+	#handoff?: VoiceHandoff | CompletedVoiceHandoff;
+	#activeHandoffId?: string;
+	#handoffOptions = handoffOptions({});
+	#history?: VoiceHistory;
+	#closing?: Promise<void>;
+	#ready = false;
+	#openingInputs: string[] = [];
+	#openingBytes = 0;
+	#tail: { role: "user" | "assistant"; text: string; done: boolean }[] = [];
+	#promotedFinal = new Map<string, string>();
+	#flushTail = false;
+	#abort = new AbortController();
+	#modeInstructions: RealtimeModeInstructions = {};
+	#modeStarted = false;
+	#modeUpdates: Promise<void> = Promise.resolve();
+	#started = false;
+	#socket?: VoiceSocket;
+	#config?: ReturnType<typeof existingCallConfig> | ReturnType<typeof standaloneVoiceConfig>;
+	#state: "idle" | "opening" | "open" | "reconnecting" | "closed" = "idle";
+	#epoch = 0;
+	#connectedAt = 0;
+	#rapidDisconnects = 0;
+	#reconnectAttempts = 0;
+	#reconnectTimer?: ReturnType<typeof setTimeout>;
+	#outbound: string[] = [];
+	#outboundBytes = 0;
+	#chain = Promise.resolve();
+	#pendingBytes = 0;
+	#seen = new Set<string>();
+	#pendingDelegations = 0;
+	#responseActive = false;
+	#responsePending = false;
+	#outputAudio?: { itemId: string; audioEndMs: number };
+	#awaitingV3Session = false;
+	#v3SessionReady?: { resolve: () => void; reject: (error: Error) => void };
+	#persona: VoicePersonaSnapshot | string = "";
+	constructor(private readonly deps: VoiceDependencies) {}
+	get active(): boolean {
+		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
+	}
+	async start(params: Record<string, unknown>): Promise<void> {
+		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
+		this.#handoffOptions = handoffOptions(params);
+		const transport = params.transport as { type?: unknown } | undefined;
+		const standalone = transport == null || transport.type === "websocket";
+		this.#persona = this.deps.persona?.() ?? this.#persona;
+		if (typeof this.#persona !== "string") {
+			Object.freeze(this.#persona);
+			Object.freeze(this.#persona.tools);
+		}
+		const callConfig = transport?.type === "webrtc" ? voiceCallConfig(params, this.#persona) : undefined;
+		let config = callConfig
+			? undefined
+			: standalone
+				? standaloneVoiceConfig(params, this.#persona)
+				: existingCallConfig(params);
+		const instructions = voiceInstructions(params);
+		this.#state = "opening";
+		this.#flushTail = params.flushTranscriptTailOnSessionEnd === true;
+		this.#seen = new Set(
+			this.deps
+				.records()
+				.filter(record => typeof record.key === "string")
+				.map(record => String(record.key)),
+		);
+		let stage = "authentication";
+		const startedAt = Date.now();
+		try {
+			const apiKey = standalone ? await this.deps.authenticateApiKey?.() : undefined;
+			if (standalone && !apiKey) throw new ProtocolError(-32602, "Realtime conversation requires API key auth");
+			const auth = standalone ? undefined : await this.deps.authenticate();
+			if (this.#state !== "opening") throw new Error("Voice stopped during authentication");
+			const version = callConfig?.version ?? config!.version;
+			// Pinned created calls default to their owning thread; existing calls retain the client's optional identity.
+			const sessionId =
+				config?.realtimeSessionId ??
+				(typeof params.realtimeSessionId === "string"
+					? params.realtimeSessionId
+					: callConfig && typeof params.threadId === "string"
+						? params.threadId
+						: null);
+			const headers: Record<string, string> = standalone
+				? { Authorization: `Bearer ${apiKey}`, originator: "xcsh" }
+				: {
+						Authorization: `Bearer ${auth!.accessToken}`,
+						"ChatGPT-Account-Id": auth!.accountId,
+						originator: "xcsh",
+						"openai-alpha": version === "v3" ? "quicksilver=v2" : "quicksilver=v1",
+					};
+			if (standalone && config?.kind === "websocket" && config.alpha) headers["openai-alpha"] = config.alpha;
+			if (sessionId !== null) headers["x-session-id"] = sessionId;
+			if (callConfig) {
+				stage = "call-create";
+				const call = await (this.deps.createCall ?? createVoiceCall)(
+					callConfig,
+					auth!,
+					headers,
+					undefined,
+					this.#abort.signal,
+				);
+				if (this.#state !== "opening") throw new Error("Voice stopped during call creation");
+				config = existingCallConfig({
+					version,
+					realtimeSessionId: sessionId,
+					outputModality: "audio",
+					includeStartupContext: false,
+					clientManagedHandoffs: params.clientManagedHandoffs,
+					transport: { type: "existingCall", callId: call.callId },
+				});
+				this.#config = config;
+				this.#started = true;
+				this.#history =
+					this.deps.history ??
+					new VoiceHistory(
+						sessionId,
+						record => this.deps.record(record),
+						(method, params) => this.deps.emit(method, params),
+					);
+				this.#chain = this.#history.start(sessionId);
+				await this.#chain;
+				if (!this.active) throw new Error("Voice stopped during history initialization");
+				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
+				this.deps.emit("thread/realtime/sdp", { sdp: call.sdp });
+			}
+			this.#config = config;
+			stage = "sideband-attach";
+			const socket = await this.#connect(headers);
+			if (this.#state !== "opening") {
+				socket.close();
+				throw new Error("Voice stopped while connecting");
+			}
+			this.#socket = socket;
+			this.#state = "open";
+			this.#connectedAt = Date.now();
+			if (standalone && this.#config?.kind === "websocket") {
+				if (version === "v3") {
+					this.#awaitingV3Session = true;
+					const ready = new Promise<void>((resolve, reject) => {
+						this.#v3SessionReady = { resolve, reject };
+					});
+					socket.send(JSON.stringify({ type: "session.update", session: this.#config.session }));
+					await ready;
+					this.#v3SessionReady = undefined;
+				} else socket.send(JSON.stringify({ type: "session.update", session: this.#config.session }));
+				if (!this.active) throw new Error("Voice stopped during standalone initialization");
+			}
+			if (callConfig?.version === "v1") {
+				// Created legacy calls configure their sideband; client-created calls do not.
+				const { model: _model, ...session } = callConfig.session;
+				socket.send(JSON.stringify({ type: "session.update", session }));
+				if (!this.active) throw new Error("Voice stopped during sideband initialization");
+			}
+			if (!this.#started) {
+				this.#started = true;
+				this.#history =
+					this.deps.history ??
+					new VoiceHistory(
+						sessionId,
+						record => this.deps.record(record),
+						(method, params) => this.deps.emit(method, params),
+					);
+				this.#chain = this.#history.start(sessionId);
+				await this.#chain;
+				if (!this.active) throw new Error("Voice stopped during history initialization");
+				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
+			}
+			stage = "mode-instructions";
+			this.#modeInstructions = instructions;
+			this.#modeUpdates = Promise.resolve().then(async () => {
+				if (!this.active) return;
+				this.#modeStarted = true;
+				await this.deps.modeChanged?.(true, { ...this.#modeInstructions });
+			});
+			await this.#modeUpdates;
+			if (!this.active) throw new Error("Voice stopped during mode initialization");
+			stage = "sideband-attach";
+			await this.deps.record({ kind: "voiceDiagnostic", stage, connected: true, elapsedMs: Date.now() - startedAt });
+			if (!this.active) throw new Error("Voice stopped during connection diagnostics");
+			this.#ready = true;
+			const openingInputs = this.#openingInputs;
+			this.#openingInputs = [];
+			this.#openingBytes = 0;
+			for (const data of openingInputs) this.#receive(data);
+		} catch (error) {
+			const message = safeConnectionError(error);
+			const status = message.match(/HTTP (\d{3})/)?.[1];
+			await this.deps
+				.record({
+					kind: "voiceDiagnostic",
+					stage,
+					connected: false,
+					failure: connectionFailure(error),
+					httpStatus: status ? Number(status) : null,
+					elapsedMs: Date.now() - startedAt,
+				})
+				.catch(() => {});
+			if (error instanceof ProtocolError && error.code === -32602) {
+				this.#fail(error.message);
+				throw error;
+			}
+			this.#fail(message);
+			throw new ProtocolError(-32000, message);
+		}
+	}
+	stop(reason = "requested"): Promise<void> {
+		if (this.#state === "closed" || this.#state === "idle") return this.#closing ?? Promise.resolve();
+		const socket = this.#socket;
+		this.#state = "closed";
+		this.#handoff?.close();
+		this.#epoch++;
+		clearTimeout(this.#reconnectTimer);
+		this.#outbound = [];
+		this.#outboundBytes = 0;
+		this.#openingInputs = [];
+		this.#openingBytes = 0;
+		this.#awaitingV3Session = false;
+		this.#v3SessionReady?.reject(new Error("Voice stopped during standalone initialization"));
+		this.#v3SessionReady = undefined;
+		this.#abort.abort();
+		const endInstructions = this.#modeUpdates
+			.catch(() => {})
+			.then(async () => {
+				if (this.#modeStarted) await this.deps.modeChanged?.(false, { ...this.#modeInstructions });
+			})
+			.catch(() => {
+				this.deps.emit("thread/realtime/error", { message: "Could not apply voice end instructions" });
+			});
+		this.#socket = undefined;
+		if (socket) {
+			try {
+				if (reason === "requested" && this.#config?.version === "v3")
+					socket.send(JSON.stringify({ type: "session.close" }));
+			} catch {}
+			socket.close();
+		}
+		this.#closing = Promise.all([this.#chain, endInstructions])
+			.then(async () => {
+				await this.#history?.close(reason === "failed");
+			})
+			.catch(() => {
+				this.deps.emit("thread/realtime/error", { message: "Could not persist voice history" });
+			})
+			.then(() => {
+				this.deps.emit("thread/realtime/closed", { reason });
+			});
+		if (this.#started && this.#flushTail) void this.#closing.then(() => this.#flushTranscriptTail()).catch(() => {});
+		return this.#closing;
+	}
+	#fail(message = "Native realtime transport failed"): void {
+		if (!this.active) return;
+		this.deps.emit("thread/realtime/error", { message });
+		this.stop("failed");
+	}
+	async #connect(headers: Record<string, string>): Promise<VoiceSocket> {
+		const epoch = ++this.#epoch;
+		return (this.deps.open ?? openVoiceSocket)(this.#config!.url, headers, {
+			message: data => {
+				if (this.#epoch === epoch) this.#receive(data);
+			},
+			closed: () => {
+				if (this.#epoch === epoch) this.#transportLost();
+			},
+		});
+	}
+	#transportLost(): void {
+		if (!this.active || this.#state === "reconnecting") return;
+		if (this.#awaitingV3Session) {
+			this.#awaitingV3Session = false;
+			this.#v3SessionReady?.reject(new Error("Realtime session ended before session.started"));
+		}
+		if (this.#state !== "open" || this.#config?.version !== "v3" || this.#config.kind === "websocket") {
+			this.stop("transportClosed");
+			return;
+		}
+		this.#state = "reconnecting";
+		this.#epoch++;
+		const socket = this.#socket;
+		this.#socket = undefined;
+		socket?.close();
+		// Match the pinned v3 sideband's 200 ms exponential backoff, capped at
+		// five seconds, and reset after a connection survives thirty seconds.
+		if (Date.now() - this.#connectedAt >= 30_000) this.#rapidDisconnects = 0;
+		this.#reconnectAttempts = 0;
+		this.#scheduleReconnect();
+	}
+	#scheduleReconnect(): void {
+		const delay = Math.min(200 * 2 ** Math.min(this.#rapidDisconnects++, 5), 5000);
+		this.#reconnectTimer = setTimeout(() => {
+			void this.#reconnect();
+		}, delay);
+	}
+	async #reconnect(): Promise<void> {
+		if (this.#state !== "reconnecting") return;
+		this.#reconnectAttempts++;
+		const startedAt = Date.now();
+		try {
+			// Selection and refresh stay with the owning session's credential broker.
+			const auth = await this.deps.authenticate();
+			if (this.#state !== "reconnecting") return;
+			const socket = await this.#connect({
+				Authorization: `Bearer ${auth.accessToken}`,
+				"ChatGPT-Account-Id": auth.accountId,
+				originator: "xcsh",
+				"openai-alpha": "quicksilver=v2",
+				...(this.#config?.realtimeSessionId != null ? { "x-session-id": this.#config.realtimeSessionId } : {}),
+			});
+			if (this.#state !== "reconnecting") {
+				socket.close();
+				return;
+			}
+			this.#socket = socket;
+			this.#state = "open";
+			this.#connectedAt = Date.now();
+			this.#drain();
+			await this.deps.record({
+				kind: "voiceDiagnostic",
+				stage: "sideband-reconnect",
+				connected: true,
+				elapsedMs: Date.now() - startedAt,
+			});
+		} catch (error) {
+			if (!this.active) return;
+			const message = safeConnectionError(error);
+			const status = message.match(/HTTP (\d{3})/)?.[1];
+			await this.deps
+				.record({
+					kind: "voiceDiagnostic",
+					stage: "sideband-reconnect",
+					attempt: this.#reconnectAttempts,
+					connected: false,
+					failure: connectionFailure(error),
+					httpStatus: status ? Number(status) : null,
+					elapsedMs: Date.now() - startedAt,
+				})
+				.catch(() => {});
+			if (!this.active) return;
+			if (status === "404" || status === "410") this.stop("transportClosed");
+			else if (
+				(!status || ["408", "429", "500", "502", "503", "504"].includes(status)) &&
+				this.#reconnectAttempts < 3
+			)
+				this.#scheduleReconnect();
+			else this.#fail(message);
+		}
+	}
+	#send(message: Record<string, unknown>): void {
+		if (this.#state !== "open" && this.#state !== "reconnecting") return;
+		const data = JSON.stringify(message);
+		const bytes = Buffer.byteLength(data);
+		if (this.#outboundBytes + bytes + (this.#socket?.bufferedAmount ?? 0) > 1_048_576) {
+			this.#fail("Realtime output buffer limit reached");
+			return;
+		}
+		this.#outbound.push(data);
+		this.#outboundBytes += bytes;
+		this.#drain();
+	}
+	#drain(): void {
+		while (this.#state === "open" && this.#socket && this.#outbound.length) {
+			const data = this.#outbound[0];
+			try {
+				this.#socket.send(data);
+			} catch {
+				// Retry only a failed write. Successful writes have no server ACK in
+				// this protocol and must not be replayed speculatively.
+				this.#transportLost();
+				return;
+			}
+			this.#outbound.shift();
+			this.#outboundBytes -= Buffer.byteLength(data);
+		}
+	}
+	appendText(text: unknown, role: unknown = "user", speakable = false): void {
+		if (this.#state !== "open" && this.#state !== "reconnecting")
+			throw new ProtocolError(-32000, "Voice is not active");
+		if (speakable && typeof text === "string" && !text.trim()) return;
+		if (
+			typeof text !== "string" ||
+			!text.trim() ||
+			Buffer.byteLength(text) > 65_536 ||
+			!["user", "assistant", "developer"].includes(String(role))
+		)
+			throw new ProtocolError(-32602, "Invalid realtime text input");
+		const outputText = speakable ? completedVoiceText(text) : text;
+		if (this.#config?.version === "v3") {
+			for (const chunk of contextChunks(outputText))
+				this.#send({
+					type: "session.context.append",
+					...(speakable ? { channel: "speakable" } : {}),
+					content: [{ type: "input_text", text: chunk }],
+				});
+		} else if (this.#config?.version === "v2") {
+			if (speakable) {
+				this.#sendV2Message(this.#prefixV2(outputText, "[BACKEND] "), "user");
+				this.#requestV2Response();
+			} else
+				this.#sendV2Message(
+					role === "user" ? this.#prefixV2(outputText, "[USER] ") : outputText,
+					role as "user" | "assistant" | "developer",
+				);
+		} else if (speakable) {
+			this.#send({ type: "conversation.handoff.append", handoff_id: "codex", output_text: outputText });
+		} else {
+			this.#send({
+				type: "conversation.item.create",
+				item: {
+					type: "message",
+					role,
+					content: [{ type: role === "assistant" ? "output_text" : "input_text", text: outputText }],
+				},
+			});
+		}
+	}
+	appendAudio(audio: unknown): void {
+		if (this.#state !== "open" || this.#config?.kind !== "websocket")
+			throw new ProtocolError(-32602, "Realtime audio input requires standalone WebSocket transport");
+		if (!audio || typeof audio !== "object" || Array.isArray(audio))
+			throw new ProtocolError(-32602, "Invalid realtime audio input");
+		const frame = audio as Record<string, unknown>;
+		const unsigned = (value: unknown, maximum: number) =>
+			typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= maximum;
+		if (
+			typeof frame.data !== "string" ||
+			!unsigned(frame.sampleRate, 0xffffffff) ||
+			!unsigned(frame.numChannels, 0xffff) ||
+			(frame.samplesPerChannel != null && !unsigned(frame.samplesPerChannel, 0xffffffff)) ||
+			(frame.itemId != null && typeof frame.itemId !== "string")
+		)
+			throw new ProtocolError(-32602, "Invalid realtime audio input");
+		this.#send({
+			type: this.#config.version === "v3" ? "input_audio.append" : "input_audio_buffer.append",
+			audio: frame.data,
+		});
+	}
+	#prefixV2(text: string, prefix: string): string {
+		return text && !text.startsWith(prefix) ? `${prefix}${text}` : text;
+	}
+	#sendV2Message(text: string, role: "user" | "assistant" | "developer"): void {
+		this.#send({
+			type: "conversation.item.create",
+			item: {
+				type: "message",
+				role,
+				content: [{ type: role === "assistant" ? "output_text" : "input_text", text }],
+			},
+		});
+	}
+	#sendV2FunctionOutput(id: string, output: string): void {
+		this.#send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: id, output } });
+	}
+	#requestV2Response(): void {
+		if (this.#responseActive) {
+			this.#responsePending = true;
+			return;
+		}
+		this.#send({ type: "response.create" });
+		this.#responseActive = true;
+	}
+	#finishV2Response(): void {
+		this.#responseActive = false;
+		this.#outputAudio = undefined;
+		if (!this.#responsePending) return;
+		this.#responsePending = false;
+		this.#requestV2Response();
+	}
+	#receive(data: string): void {
+		if (!this.active) return;
+		const bytes = Buffer.byteLength(data);
+		if (this.#seen.size >= 8192 || bytes > 1_048_576 || this.#pendingBytes + this.#openingBytes + bytes > 2_097_152) {
+			this.#fail("Realtime input buffer limit reached");
+			return;
+		}
+		if (!this.#ready) {
+			if (this.#awaitingV3Session && this.#config?.version === "v3") {
+				let input: unknown;
+				try {
+					input = JSON.parse(data);
+				} catch {
+					return;
+				}
+				const event = decodeVoiceEvent("v3", input);
+				if (!event) return;
+				this.#awaitingV3Session = false;
+				if (event.kind === "sessionUpdated") {
+					this.#openingInputs.push(data);
+					this.#openingBytes += bytes;
+					this.#v3SessionReady?.resolve();
+				} else
+					this.#v3SessionReady?.reject(
+						new Error(
+							event.kind === "error"
+								? "The realtime service reported an error"
+								: "Realtime session received an event before session.started",
+						),
+					);
+				return;
+			}
+			this.#openingInputs.push(data);
+			this.#openingBytes += bytes;
+			return;
+		}
+		this.#pendingBytes += bytes;
+		this.#chain = this.#chain
+			.then(async () => {
+				if (!this.#config) return;
+				let input: unknown;
+				try {
+					input = JSON.parse(data);
+				} catch {
+					this.#fail("Malformed realtime event");
+					return;
+				}
+				const event = decodeVoiceEvent(this.#config.version, input);
+				if (event) await this.#event(event);
+			})
+			.catch(() => this.#fail())
+			.finally(() => {
+				this.#pendingBytes -= bytes;
+			});
+	}
+	#key(kind: string, id: string): string {
+		const connectionId =
+			this.#config?.kind === "existingCall" ? this.#config.callId : this.#config?.realtimeSessionId;
+		return createHash("sha256")
+			.update(JSON.stringify([connectionId, kind, id]))
+			.digest("hex");
+	}
+	#trackTranscript(event: Extract<VoiceEvent, { kind: "transcript" }>): void {
+		if (event.done && this.#promotedFinal.get(event.role) === event.text) return;
+		if (!event.done) this.#promotedFinal.delete(event.role);
+		const last = this.#tail.at(-1);
+		if (!last || last.role !== event.role || last.done)
+			this.#tail.push({ role: event.role, text: event.text, done: event.done });
+		else {
+			last.text = event.done ? event.text : last.text + event.text;
+			last.done = event.done;
+		}
+		while (this.#tail.length > 128 || Buffer.byteLength(JSON.stringify(this.#tail)) > 65536) {
+			if (this.#tail.length === 1) {
+				this.#tail[0].text = this.#tail[0].text.slice(-8192);
+				break;
+			}
+			this.#tail.shift();
+		}
+	}
+	async #flushTranscriptTail(): Promise<void> {
+		const tail = this.#tail;
+		this.#tail = [];
+		if (!tail.some(entry => entry.text.trim())) return;
+		// A final assistant transcript means realtime already handled the user's
+		// request. Re-submitting that exchange can reopen older interrupted work
+		// from the backing session after the voice call closes.
+		const lastSpoken = tail.findLast(entry => entry.text.trim());
+		if (lastSpoken?.role === "assistant") return;
+		const transcript = JSON.stringify(tail.map(({ role, text }) => ({ role, text })));
+		const key = this.#key("transcript-tail", transcript);
+		if (this.#seen.has(key)) return;
+		this.#seen.add(key);
+		await this.deps.record({ key, kind: "transcriptTail", transcript });
+		const text = await this.deps.delegate(
+			key,
+			voiceDelegation(
+				prompt.render(tailTemplate).trimEnd(),
+				tail.map(entry => `${entry.role}: ${entry.text}`).join("\n"),
+				true,
+			),
+		);
+		await this.deps.record({ key, kind: "transcriptTailResult", text });
+	}
+
+	async #event(event: VoiceEvent): Promise<void> {
+		if (event.kind === "error") {
+			this.#fail("The realtime service reported an error");
+			return;
+		}
+		if (event.kind === "audio") {
+			if (this.#config?.version === "v2" && event.itemId) {
+				const samples = event.samplesPerChannel ?? this.#decodedSamples(event);
+				if (samples !== undefined) {
+					const duration = Math.floor((samples * 1000) / Math.max(1, event.sampleRate));
+					if (duration > 0)
+						this.#outputAudio =
+							this.#outputAudio?.itemId === event.itemId
+								? {
+										itemId: event.itemId,
+										audioEndMs: Math.min(0xffffffff, this.#outputAudio.audioEndMs + duration),
+									}
+								: { itemId: event.itemId, audioEndMs: duration };
+				}
+			}
+			if (!this.active) return;
+			this.deps.emit("thread/realtime/outputAudio/delta", {
+				audio: {
+					data: event.data,
+					sampleRate: event.sampleRate,
+					numChannels: event.numChannels,
+					samplesPerChannel: event.samplesPerChannel ?? null,
+					itemId: event.itemId ?? null,
+				},
+			});
+			return;
+		}
+		if (event.kind === "sessionUpdated") return;
+		if (event.kind === "responseCreated") {
+			this.#responseActive = true;
+			return;
+		}
+		if (event.kind === "responseDone") {
+			this.#finishV2Response();
+			return;
+		}
+		if (event.kind === "responseCancelled") {
+			this.#finishV2Response();
+			if (this.active)
+				this.deps.emit("thread/realtime/itemAdded", {
+					item: { type: "response.cancelled", response_id: event.id ?? null },
+				});
+			return;
+		}
+		if (event.kind === "itemAdded") {
+			if (this.active) this.deps.emit("thread/realtime/itemAdded", { item: event.item });
+			return;
+		}
+		if (event.kind === "speechStarted") {
+			const output = this.#outputAudio;
+			this.#outputAudio = undefined;
+			if (output && (event.itemId === undefined || event.itemId === output.itemId))
+				this.#send({
+					type: "conversation.item.truncate",
+					item_id: output.itemId,
+					content_index: 0,
+					audio_end_ms: output.audioEndMs,
+				});
+			if (this.active)
+				this.deps.emit("thread/realtime/itemAdded", {
+					item: { type: "input_audio_buffer.speech_started", item_id: event.itemId ?? null },
+				});
+			return;
+		}
+		if (event.kind === "noop") {
+			this.#outputAudio = undefined;
+			this.#sendV2FunctionOutput(event.id, "");
+			return;
+		}
+		if (event.kind === "transcript") {
+			if (event.done) {
+				const key = this.#key("transcript", event.id ?? randomUUID());
+				if (this.#seen.has(key)) return;
+				this.#seen.add(key);
+				await this.deps.record({
+					key,
+					kind: "transcript",
+					realtimeSessionId: this.#config?.realtimeSessionId,
+					role: event.role,
+					text: event.text,
+				});
+			}
+			this.#trackTranscript(event);
+			await this.#history?.transcript(event.role, event.text, event.done);
+			if (!this.active) return;
+			this.deps.emit(`thread/realtime/transcript/${event.done ? "done" : "delta"}`, {
+				role: event.role,
+				[event.done ? "text" : "delta"]: event.text,
+			});
+			return;
+		}
+		const key = this.#key("delegation", event.id);
+		if (this.#seen.has(key)) return;
+		if (this.#pendingDelegations >= 16 || this.#seen.size >= 8192) {
+			this.#fail("Realtime delegation limit reached");
+			return;
+		}
+		this.#seen.add(key);
+		await this.#history?.observe({ type: "handoff" });
+		// Pinned methods.rs appends a missing handoff input before consuming the active transcript.
+		const activeTranscript = this.#tail.map(({ role, text }) => ({ role, text }));
+		const input = event.text.trim();
+		if (input && !activeTranscript.some(entry => entry.role === "user" && entry.text.trim() === input))
+			activeTranscript.push({ role: "user", text: input });
+		for (const entry of activeTranscript) this.#promotedFinal.set(entry.role, entry.text);
+		this.#tail = [];
+		// Persist before submission: recovery suppresses repeats, including ambiguous
+		// interrupted submissions. This is at-most-once; crash-gap reconciliation remains a gate.
+		await this.deps.record({
+			key,
+			kind: "delegation",
+			state: "submitted",
+			realtimeSessionId: this.#config?.realtimeSessionId,
+			text: event.text,
+		});
+		if (this.active)
+			this.deps.emit("thread/realtime/itemAdded", {
+				item: {
+					type: "handoff_request",
+					handoff_id: event.id,
+					item_id: event.itemId ?? event.id,
+					input_transcript: event.text,
+					active_transcript: activeTranscript,
+				},
+			});
+		if (this.#config?.version === "v2" && this.#activeHandoffId !== undefined) {
+			this.#sendV2FunctionOutput(event.id, "This was sent to steer the previous background agent task.");
+			this.#requestV2Response();
+			this.#pendingDelegations++;
+			void this.deps
+				.delegate(
+					key,
+					voiceDelegation(event.text, activeTranscript.map(entry => `${entry.role}: ${entry.text}`).join("\n")),
+				)
+				.then(text => this.deps.record({ key, kind: "delegationResult", text }))
+				.catch(() => this.#fail("The backing agent could not accept voice steering"))
+				.finally(() => this.#pendingDelegations--);
+			return;
+		}
+		this.#pendingDelegations++;
+		this.#handoff?.close();
+		const handoff = this.#createHandoff(event.id);
+		this.#handoff = handoff;
+		this.#activeHandoffId = event.id;
+		void this.deps
+			.delegate(
+				key,
+				voiceDelegation(event.text, activeTranscript.map(entry => `${entry.role}: ${entry.text}`).join("\n")),
+				update => {
+					if (!this.active) return;
+					try {
+						handoff?.update(update);
+					} catch {
+						this.#fail("Could not stream the backing agent response");
+					}
+				},
+			)
+			.then(async text => {
+				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
+				await this.deps.record({ key, kind: "delegationResult", text });
+				if (this.#config?.clientManagedHandoffs || !this.active) return;
+				handoff?.finish(text);
+			})
+			.catch(() => this.#fail("The backing agent could not complete the voice request"))
+			.finally(() => {
+				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
+				this.#pendingDelegations--;
+			});
+	}
+	#createHandoff(id: string): VoiceHandoff | CompletedVoiceHandoff | undefined {
+		if (this.#config?.clientManagedHandoffs) return;
+		const v3 = this.#config?.version === "v3";
+		if (this.#config?.version === "v2")
+			return new CompletedVoiceHandoff(
+				(text, phase) => this.#sendCompletedOutput(text, phase, id),
+				() => {
+					this.#sendV2FunctionOutput(
+						id,
+						this.#handoffOptions.asItems
+							? ""
+							: "Background agent finished. Use the preceding [BACKEND] messages as the result.",
+					);
+					if (!this.#handoffOptions.asItems) this.#requestV2Response();
+				},
+			);
+		if (this.#handoffOptions.asItems)
+			return new CompletedVoiceHandoff((text, phase) => this.#sendCompletedOutput(text, phase, id));
+		if (v3)
+			return new VoiceHandoff(this.#handoffOptions, (channel, text) => {
+				for (const chunk of contextChunks(text))
+					this.#send({
+						type: "delegation.context.append",
+						delegation_item_id: id,
+						...(channel ? { channel } : {}),
+						content: [{ type: "input_text", text: chunk }],
+					});
+			});
+		return new CompletedVoiceHandoff((text, phase) => this.#sendCompletedOutput(text, phase, id));
+	}
+	/** Mirror completed backing events; streaming delegation updates retain their existing owner. */
+	mirrorText(text: string, phase?: HandoffPhase): void {
+		if ((this.#state !== "open" && this.#state !== "reconnecting") || this.#config?.clientManagedHandoffs) return;
+		if (!this.#activeHandoffId && !text.trim()) return;
+		if (Buffer.byteLength(text) > 1_048_576) {
+			this.#fail("Realtime handoff input limit");
+			return;
+		}
+		this.#sendCompletedOutput(text, phase, this.#activeHandoffId);
+	}
+	#sendCompletedOutput(text: string, phase?: HandoffPhase, handoffId?: string): void {
+		const v3 = this.#config?.version === "v3";
+		const options = this.#handoffOptions;
+		if (v3 && options.mode === "bemTags") phase = handoffPhase(text, options.prefixes) ?? "final_answer";
+		let output = completedVoiceText(text);
+		if (this.#config?.version !== "v2" && options.asItems && options.itemPrefix)
+			output = completedVoiceText(`${options.itemPrefix}\n\n${output}`);
+		if (v3) {
+			const channel = handoffChannel(options, phase);
+			for (const chunk of contextChunks(output))
+				this.#send({
+					type:
+						options.asItems || handoffId === undefined ? "session.context.append" : "delegation.context.append",
+					...(!options.asItems && handoffId !== undefined ? { delegation_item_id: handoffId } : {}),
+					...(channel ? { channel } : {}),
+					content: [{ type: "input_text", text: chunk }],
+				});
+		} else if (this.#config?.version === "v2") {
+			const backend = this.#prefixV2(output, "[BACKEND] ");
+			if (options.asItems)
+				this.#sendV2Message(
+					options.itemPrefix ? completedVoiceText(`${options.itemPrefix}\n\n${backend}`) : backend,
+					"developer",
+				);
+			else this.#sendV2Message(backend, "user");
+			if (handoffId === undefined && !options.asItems) this.#requestV2Response();
+		} else if (options.asItems) {
+			this.#send({
+				type: "conversation.item.create",
+				item: { type: "message", role: "developer", content: [{ type: "input_text", text: output }] },
+			});
+		} else {
+			this.#send({
+				type: "conversation.handoff.append",
+				handoff_id: handoffId ?? "codex",
+				output_text: `${phase === "commentary" ? "" : '"Agent Final Message":\n\n'}${output}`,
+			});
+		}
+	}
+	#decodedSamples(event: Extract<VoiceEvent, { kind: "audio" }>): number | undefined {
+		if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(event.data)) return;
+		const samples = Math.floor(Buffer.from(event.data, "base64").byteLength / 2 / Math.max(1, event.numChannels));
+		return samples <= 0xffffffff ? samples : undefined;
+	}
+}

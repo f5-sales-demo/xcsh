@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
@@ -78,6 +79,38 @@ describe("createAgentSession deferred model pattern resolution", () => {
 		expect(session.model?.provider).toBe("runtime-provider");
 		expect(session.model?.id).toBe("runtime-model");
 		expect(modelFallbackMessage).toBeUndefined();
+	});
+
+	test("restores a saved extension model and thinking level after provider registration", async () => {
+		const authStorage = await AuthStorage.create(":memory:");
+		authStorage.setRuntimeApiKey("runtime-provider", "fixture-key");
+		authStorage.setRuntimeApiKey("openai", "fixture-key");
+		const modelRegistry = new ModelRegistry(authStorage, path.join(tempDir, "models.yml"));
+		const manager = SessionManager.inMemory(tempDir);
+		manager.appendModelChange("runtime-provider/runtime-reasoning-model");
+		manager.appendThinkingLevelChange("high");
+		manager.appendMessage({ role: "user", content: "fixture context", timestamp: 1000 });
+		const settings = Settings.isolated();
+		settings.setModelRole("default", "openai/gpt-4o-mini");
+		try {
+			const { session, modelFallbackMessage } = await createAgentSession({
+				...buildSessionOptions(""),
+				modelPattern: undefined,
+				authStorage,
+				modelRegistry,
+				settings,
+				sessionManager: manager,
+			});
+			try {
+				expect(session.model).toMatchObject({ provider: "runtime-provider", id: "runtime-reasoning-model" });
+				expect(session.thinkingLevel).toBe(ThinkingLevel.High);
+				expect(modelFallbackMessage).toBeUndefined();
+			} finally {
+				await session.dispose();
+			}
+		} finally {
+			authStorage.close();
+		}
 	});
 
 	test("waits for runtime discovery before resolving an explicit modelPattern", async () => {

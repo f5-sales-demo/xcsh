@@ -2269,6 +2269,27 @@ export class AuthStorage {
 	}
 
 	/**
+	 * Resolve an API key without consulting or refreshing stored OAuth credentials.
+	 * Use this for protocols that explicitly require key authentication even when
+	 * the owning model uses OAuth. Environment resolution remains provider-specific.
+	 */
+	async getApiKeyFromNonOAuthSources(provider: string, sessionId?: string): Promise<string | undefined> {
+		provider = canonicalizeOAuthProviderId(provider);
+		const runtimeKey = this.#runtimeOverrides.get(provider);
+		if (runtimeKey) return runtimeKey;
+
+		const apiKeySelection = this.#selectCredentialByType(provider, "api_key", sessionId);
+		if (apiKeySelection) {
+			this.#recordSessionCredential(provider, sessionId, "api_key", apiKeySelection.index);
+			return this.#configValueResolver(apiKeySelection.credential.key);
+		}
+
+		const envKey = getEnvApiKey(provider);
+		if (envKey) return envKey;
+		return this.#fallbackResolver?.(provider) ?? undefined;
+	}
+
+	/**
 	 * Get API key for a provider.
 	 * Priority:
 	 * 1. Runtime override (CLI --api-key)

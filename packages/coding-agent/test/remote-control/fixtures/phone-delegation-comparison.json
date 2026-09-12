@@ -1,0 +1,69 @@
+{
+  "reference": {
+    "captureSha256": "0782238911d3b9e72e4bb55d493e78978f414562c3e235a2a7d93b3e220a504d",
+    "events": 92,
+    "methods": {
+      "in/thread/realtime/start": 1,
+      "out/thread/realtime/item/started": 4,
+      "out/thread/realtime/item/completed": 4,
+      "out/thread/realtime/started": 1,
+      "out/thread/realtime/sdp": 1,
+      "out/thread/realtime/item/transcript/delta": 38,
+      "out/thread/realtime/transcript/delta": 38,
+      "out/thread/realtime/itemAdded": 1,
+      "out/thread/realtime/transcript/done": 2,
+      "in/thread/realtime/stop": 1,
+      "out/thread/realtime/closed": 1
+    },
+    "startedMs": 1063.6,
+    "durationMs": 149474,
+    "delegation": 1,
+    "channels": {
+      "commentary": 5,
+      "speakable": 5
+    },
+    "acknowledgements": 10
+  },
+  "native": {
+    "sourceCommit": "1883d1b6796216c31a1eceb94e65cefb0f3125cc",
+    "hostCaptureSha256": "adc4f54286db3f9e85368b3ee974ff2ee577863775278d4e2bd01f37552028f5",
+    "voiceCaptureSha256": "8f6b10ebbc8a67608cd92fec42b3153c3dcd0d8996829bba59ec045955994407",
+    "events": 87,
+    "methods": {
+      "in/thread/realtime/start": 1,
+      "out/thread/realtime/item/started": 5,
+      "out/thread/realtime/item/completed": 5,
+      "out/thread/realtime/started": 1,
+      "out/thread/realtime/sdp": 1,
+      "out/thread/realtime/item/transcript/delta": 34,
+      "out/thread/realtime/transcript/delta": 34,
+      "out/thread/realtime/itemAdded": 1,
+      "out/thread/realtime/transcript/done": 3,
+      "in/thread/realtime/stop": 1,
+      "out/thread/realtime/closed": 1
+    },
+    "startedMs": 681.9,
+    "durationMs": 42361,
+    "delegation": 1,
+    "channels": {
+      "speakable": 1
+    },
+    "acknowledgements": 1
+  },
+  "strictComparison": {
+    "differences": 92,
+    "requiresSemanticReview": true,
+    "complete": false
+  },
+  "scope": "Selected phone voice RPC events and delegation sideband inventory; chunk count, timing, private text, recorder redaction versions and model differ. All three original capture files have verified completion boundaries. Derived event views are not standalone capture files.",
+  "semanticReview": {
+    "referenceWorkModel": "gpt-5.6-sol",
+    "nativeWorkModel": "gpt-6-astra",
+    "bothSpokenReadbacksConfirmed": true,
+    "bothMarkersCorrect": true,
+    "referenceTrailingNewline": true,
+    "nativeTrailingNewline": false,
+    "newlineRequested": false,
+    "remainingDifference": "Reference streams commentary and speakable output; native returns completed speakable output. Extra native assistant transcript segment, variable speech chunk counts, timestamps and older reference recorder redactions also contribute strict differences; complete feature parity is not established."
+  }
+}

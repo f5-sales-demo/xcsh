@@ -11,6 +11,7 @@ import type { BunFile } from "bun";
 import { type Theme, theme } from "../modes/theme/theme";
 import lspDescription from "../prompts/tools/lsp.md" with { type: "text" };
 import type { ToolSession } from "../tools";
+import { recordFileMutation } from "../tools/file-mutations";
 import { resolveToCwd } from "../tools/path-utils";
 import { ToolAbortError, throwIfAborted } from "../tools/tool-errors";
 import { clampTimeout } from "../tools/tool-timeouts";
@@ -745,11 +746,7 @@ export async function writethroughNoop(
 	_batch?: LspWritethroughBatchRequest,
 	_getDeferred?: (dst: string) => WritethroughDeferredHandle | undefined,
 ): Promise<FileDiagnosticsResult | undefined> {
-	if (file) {
-		await file.write(content);
-	} else {
-		await Bun.write(dst, content);
-	}
+	await recordFileMutation(dst, () => (file ? file.write(content) : Bun.write(dst, content)));
 	return undefined;
 }
 
@@ -921,102 +918,118 @@ async function runLspWritethrough(
 	const { lspServers, customLinterServers } = splitServers(servers);
 
 	let finalContent = content;
-	const writeContent = async (value: string) => (file ? file.write(value) : Bun.write(dst, value));
-	const getWritePromise = once(() => writeContent(finalContent));
-	const useCustomFormatter = enableFormat && customLinterServers.length > 0;
-
-	// Capture diagnostic versions BEFORE syncing to detect stale diagnostics
-	const minVersions = enableDiagnostics ? await captureDiagnosticVersions(cwd, servers) : undefined;
-	let expectedDocumentVersions: ServerVersionMap | undefined;
-
-	let formatter: FileFormatResult | undefined;
-	let diagnostics: FileDiagnosticsResult | undefined;
-	let timedOut = false;
-	try {
-		const timeoutSignal = AbortSignal.timeout(5_000);
-		timeoutSignal.addEventListener(
-			"abort",
-			() => {
-				timedOut = true;
-			},
-			{ once: true },
+	let writesClosed = false;
+	const pendingWrites = new Set<Promise<number>>();
+	const writeContent = (value: string): Promise<number> => {
+		if (writesClosed) return Promise.resolve(0);
+		const pending = recordFileMutation(dst, () => (file ? file.write(value) : Bun.write(dst, value)));
+		pendingWrites.add(pending);
+		void pending.then(
+			() => pendingWrites.delete(pending),
+			() => pendingWrites.delete(pending),
 		);
-		const operationSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-		await untilAborted(operationSignal, async () => {
-			if (useCustomFormatter) {
-				// Custom linters (e.g. Biome CLI) require on-disk input.
-				await writeContent(content);
-				finalContent = await formatContent(dst, content, cwd, customLinterServers, operationSignal);
-				formatter = finalContent !== content ? FileFormatResult.FORMATTED : FileFormatResult.UNCHANGED;
-				await writeContent(finalContent);
-				await syncFileContent(dst, finalContent, cwd, lspServers, operationSignal);
-			} else {
-				// 1. Sync original content to LSP servers
-				await syncFileContent(dst, content, cwd, lspServers, operationSignal);
+		return pending;
+	};
+	const getWritePromise = once(() => writeContent(finalContent));
+	try {
+		const useCustomFormatter = enableFormat && customLinterServers.length > 0;
 
-				// 2. Format in-memory via LSP
-				if (enableFormat) {
-					finalContent = await formatContent(dst, content, cwd, lspServers, operationSignal);
+		// Capture diagnostic versions BEFORE syncing to detect stale diagnostics
+		const minVersions = enableDiagnostics ? await captureDiagnosticVersions(cwd, servers) : undefined;
+		let expectedDocumentVersions: ServerVersionMap | undefined;
+
+		let formatter: FileFormatResult | undefined;
+		let diagnostics: FileDiagnosticsResult | undefined;
+		let timedOut = false;
+		try {
+			const timeoutSignal = AbortSignal.timeout(5_000);
+			timeoutSignal.addEventListener(
+				"abort",
+				() => {
+					timedOut = true;
+				},
+				{ once: true },
+			);
+			const operationSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+			await untilAborted(operationSignal, async () => {
+				if (useCustomFormatter) {
+					// Custom linters (e.g. Biome CLI) require on-disk input.
+					await writeContent(content);
+					finalContent = await formatContent(dst, content, cwd, customLinterServers, operationSignal);
 					formatter = finalContent !== content ? FileFormatResult.FORMATTED : FileFormatResult.UNCHANGED;
-				}
-
-				// 3. If formatted, sync formatted content to LSP servers
-				if (finalContent !== content) {
+					await writeContent(finalContent);
 					await syncFileContent(dst, finalContent, cwd, lspServers, operationSignal);
+				} else {
+					// 1. Sync original content to LSP servers
+					await syncFileContent(dst, content, cwd, lspServers, operationSignal);
+
+					// 2. Format in-memory via LSP
+					if (enableFormat) {
+						finalContent = await formatContent(dst, content, cwd, lspServers, operationSignal);
+						formatter = finalContent !== content ? FileFormatResult.FORMATTED : FileFormatResult.UNCHANGED;
+					}
+
+					// 3. If formatted, sync formatted content to LSP servers
+					if (finalContent !== content) {
+						await syncFileContent(dst, finalContent, cwd, lspServers, operationSignal);
+					}
+
+					// 4. Write to disk
+					await getWritePromise();
 				}
 
-				// 4. Write to disk
-				await getWritePromise();
-			}
+				if (enableDiagnostics) {
+					expectedDocumentVersions = await captureOpenFileVersions(dst, cwd, lspServers);
+				}
 
-			if (enableDiagnostics) {
-				expectedDocumentVersions = await captureOpenFileVersions(dst, cwd, lspServers);
-			}
+				// 5. Notify saved to LSP servers
+				await notifyFileSaved(dst, cwd, lspServers, operationSignal);
 
-			// 5. Notify saved to LSP servers
-			await notifyFileSaved(dst, cwd, lspServers, operationSignal);
-
-			// 6. Get diagnostics from all servers (wait for fresh results)
-			if (enableDiagnostics) {
-				diagnostics = await getDiagnosticsForFile(dst, cwd, servers, {
-					signal: operationSignal,
-					minVersions,
-					expectedDocumentVersions,
-					allowUnversionedLspDiagnostics: false,
-				});
+				// 6. Get diagnostics from all servers (wait for fresh results)
+				if (enableDiagnostics) {
+					diagnostics = await getDiagnosticsForFile(dst, cwd, servers, {
+						signal: operationSignal,
+						minVersions,
+						expectedDocumentVersions,
+						allowUnversionedLspDiagnostics: false,
+					});
+				}
+			});
+		} catch {
+			if (timedOut) {
+				formatter = undefined;
+				diagnostics = undefined;
+				// Schedule background diagnostic fetch if caller wants deferred results
+				if (deferred && !deferred.signal.aborted && enableDiagnostics) {
+					void scheduleDeferredDiagnosticsFetch({
+						dst,
+						cwd,
+						servers,
+						minVersions,
+						expectedDocumentVersions,
+						signal: deferred.signal,
+						callback: deferred.onDeferredDiagnostics,
+					});
+				}
 			}
-		});
-	} catch {
-		if (timedOut) {
-			formatter = undefined;
-			diagnostics = undefined;
-			// Schedule background diagnostic fetch if caller wants deferred results
-			if (deferred && !deferred.signal.aborted && enableDiagnostics) {
-				void scheduleDeferredDiagnosticsFetch({
-					dst,
-					cwd,
-					servers,
-					minVersions,
-					expectedDocumentVersions,
-					signal: deferred.signal,
-					callback: deferred.onDeferredDiagnostics,
-				});
-			}
+			await getWritePromise();
 		}
-		await getWritePromise();
-	}
 
-	if (formatter !== undefined) {
-		diagnostics ??= {
-			server: servers.map(([name]) => name).join(", "),
-			messages: [],
-			summary: "OK",
-			errored: false,
-		};
-		diagnostics.formatter = formatter;
-	}
+		if (formatter !== undefined) {
+			diagnostics ??= {
+				server: servers.map(([name]) => name).join(", "),
+				messages: [],
+				summary: "OK",
+				errored: false,
+			};
+			diagnostics.formatter = formatter;
+		}
 
-	return diagnostics;
+		return diagnostics;
+	} finally {
+		writesClosed = true;
+		await Promise.allSettled([...pendingWrites]);
+	}
 }
 
 async function flushWritethroughBatch(

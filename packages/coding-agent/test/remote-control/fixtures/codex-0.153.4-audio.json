@@ -1,0 +1,554 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "sources": {
+    "protocol_v1.rs": "9ee5ac9d9ddd2963bd5ab2359fa55e93d6c41d9405712ea9d8947885fba5faf1",
+    "protocol_frameless_bidi.rs": "faa6826b1884ccceb564e8bb6bd60048f7900ffcc5b50fcacbd840b03a173515"
+  },
+  "cases": [
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 0,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 0,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 1,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 1,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 120,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 120,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 65535,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 65535,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 65536,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 65536,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 4294967295,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 4294967295,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 4294967296,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": -1,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 0.5,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": null,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": "120",
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 0,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 0,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 120,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 120,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 65535,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 65535,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 65536,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 4294967295,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 4294967296,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": -1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": 0.5,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": null,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": "120",
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": 0
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 0,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": 1
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 1,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": 120
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 120,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": 65535
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 65535,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": 65536
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 65536,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": 4294967295
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 4294967295,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 4294967296,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": -1,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": 0.5,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": null,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "delta": "AAABAA==",
+        "sample_rate": 24000,
+        "samples_per_channel": "120",
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "channels": 1,
+        "data": "AAABAA==",
+        "delta": 12,
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": null,
+      "input": {
+        "channels": null,
+        "delta": "AAABAA==",
+        "num_channels": 2,
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 2,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "delta": "AAABAA==",
+        "num_channels": 2,
+        "sample_rate": 24000,
+        "type": "conversation.output_audio.delta"
+      },
+      "version": "v1"
+    },
+    {
+      "expected": {
+        "data": "AAABAA==",
+        "itemId": null,
+        "numChannels": 1,
+        "sampleRate": 24000,
+        "samplesPerChannel": null
+      },
+      "input": {
+        "audio": "AAABAA==",
+        "channels": 2,
+        "item_id": "ignored",
+        "sample_rate": 48000,
+        "samples_per_channel": 120,
+        "type": "output_audio.delta"
+      },
+      "version": "v3"
+    }
+  ]
+}

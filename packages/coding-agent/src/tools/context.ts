@@ -2,6 +2,8 @@ import type { AgentToolContext, ToolCallContext } from "@f5-sales-demo/pi-agent-
 import type { CustomToolContext } from "../extensibility/custom-tools/types";
 import type { ExtensionUIContext } from "../extensibility/extensions/types";
 
+import { withToolInteraction } from "../session/user-interactions";
+
 declare module "@f5-sales-demo/pi-agent-core" {
 	interface AgentToolContext extends CustomToolContext {
 		ui?: ExtensionUIContext;
@@ -19,9 +21,31 @@ export class ToolContextStore {
 	constructor(private readonly getBaseContext: () => CustomToolContext) {}
 
 	getContext(toolCall?: ToolCallContext): AgentToolContext {
+		const toolCallId = toolCall?.toolCalls[toolCall.index]?.id;
+		const original = this.#uiContext;
+		const ui =
+			original && toolCallId
+				? {
+						...original,
+						...(original.questions
+							? {
+									questions: (...args: Parameters<NonNullable<ExtensionUIContext["questions"]>>) =>
+										withToolInteraction(toolCallId, () => original.questions!(...args)),
+								}
+							: {}),
+						select: (...args: Parameters<ExtensionUIContext["select"]>) =>
+							withToolInteraction(toolCallId, () => original.select(...args)),
+						input: (...args: Parameters<ExtensionUIContext["input"]>) =>
+							withToolInteraction(toolCallId, () => original.input(...args)),
+						editor: (...args: Parameters<ExtensionUIContext["editor"]>) =>
+							withToolInteraction(toolCallId, () => original.editor(...args)),
+						confirm: (...args: Parameters<ExtensionUIContext["confirm"]>) =>
+							withToolInteraction(toolCallId, () => original.confirm(...args)),
+					}
+				: original;
 		return {
 			...this.getBaseContext(),
-			ui: this.#uiContext,
+			ui,
 			hasUI: this.#hasUI,
 			toolNames: this.#toolNames,
 			toolCall,

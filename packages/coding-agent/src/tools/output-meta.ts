@@ -4,12 +4,13 @@
  * Tools populate details.meta using the fluent OutputMetaBuilder.
  * The tool wrapper automatically formats and appends notices at message boundary.
  */
-import type {
-	AgentTool,
-	AgentToolContext,
-	AgentToolExecFn,
-	AgentToolResult,
-	AgentToolUpdateCallback,
+import {
+	type AgentTool,
+	type AgentToolContext,
+	AgentToolError,
+	type AgentToolExecFn,
+	type AgentToolResult,
+	type AgentToolUpdateCallback,
 } from "@f5-sales-demo/pi-agent-core";
 import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
 import { getDefault, type Settings } from "../config/settings";
@@ -555,8 +556,16 @@ async function wrappedExecute(
 		}
 		return result;
 	} catch (e) {
-		// Re-throw with formatted message so agent-loop sets isError flag
-		throw new Error(renderError(e));
+		// Preserve executor facts while retaining custom LLM-facing error rendering.
+		const message = renderError(e);
+		if (e instanceof AgentToolError) {
+			if (message === e.message) throw e;
+			throw new AgentToolError(message, {
+				...e.result,
+				content: [{ type: "text", text: message }, ...e.result.content.filter(part => part.type !== "text")],
+			});
+		}
+		throw new Error(message);
 	}
 }
 

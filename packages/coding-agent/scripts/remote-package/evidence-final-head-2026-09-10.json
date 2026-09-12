@@ -1,0 +1,57 @@
+{
+  "binarySha256": "d1cc71b2f8671dc3894bf7666387a7fb1d187fc76d8cec866cf6e2c976dc4da8",
+  "harnessSha256": "a53ef0bdcf286e6d06fb24d3062a1b7eb2c966891b9b9a824c112eeac28ee39d",
+  "providerSha256": "64b2560296ce4416d95f880834a151149acb9561bb6dcc310b43caa4c69b3f6b",
+  "version": "xcsh/21.24.0",
+  "image": "ubuntu:24.04",
+  "imageId": "sha256:0b1ebe5dd42682bb8eda97ecf10a09f70f18d2d4af35f82b9271badac5dbeb27",
+  "checks": [
+    {
+      "description": "Codex, standalone Bun and project dependencies absent",
+      "elapsedMs": 152
+    },
+    {
+      "description": "packaged status defaults off",
+      "elapsedMs": 2345
+    },
+    {
+      "description": "two named top-level TUIs discovered with distinct identities and working directories",
+      "elapsedMs": 6526
+    },
+    {
+      "description": "remote prompts execute real write/read tools in the correct TUI and persist completed history",
+      "elapsedMs": 6790
+    },
+    {
+      "description": "remote thread naming updates live discovery and emits the pinned notification",
+      "elapsedMs": 6794
+    },
+    {
+      "description": "host restart preserves owners/history and stable request replay does not execute twice",
+      "elapsedMs": 11503
+    },
+    {
+      "description": "abrupt packaged host loss preserves active terminal work and stable retry executes it once",
+      "elapsedMs": 16528
+    },
+    {
+      "description": "compiled --resume preserves session identity, history and extension work model",
+      "elapsedMs": 19382
+    },
+    {
+      "description": "terminal exit unregisters all owners",
+      "elapsedMs": 19594
+    },
+    {
+      "description": "disposable test container and its processes removed",
+      "elapsedMs": 20399
+    }
+  ],
+  "network": "none",
+  "enrollment": "synthetic",
+  "workModel": "package-fixture/model",
+  "phoneAcceptance": false,
+  "sourceCommit": "4a399d39e74e54853c0a0e8e7e2d5845300e9d02",
+  "buildInfoDirty": false,
+  "evidenceKind": "offline compiled integration"
+}

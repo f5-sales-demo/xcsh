@@ -12,6 +12,7 @@ import {
 } from "@f5-sales-demo/pi-ai";
 import { logger } from "@f5-sales-demo/pi-utils";
 import emptyToolSuccess from "./prompts/empty-tool-success.md" with { type: "text" };
+import { AgentToolError } from "./tool-error";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -21,6 +22,7 @@ import type {
 	AgentToolResult,
 	StreamFn,
 } from "./types";
+import { getToolExecutionKind } from "./types";
 
 /**
  * Start an agent loop with a new prompt message.
@@ -224,7 +226,7 @@ async function runLoop(
 			}
 
 			// Stream assistant response
-			const message = await streamAssistantResponse(currentContext, config, signal, stream, streamFn);
+			const message = await streamAssistantResponse(currentContext, newMessages, config, signal, stream, streamFn);
 			newMessages.push(message);
 			let steeringMessagesFromExecution: AgentMessage[] | undefined;
 
@@ -300,6 +302,7 @@ async function runLoop(
  */
 async function streamAssistantResponse(
 	context: AgentContext,
+	newMessages: AgentMessage[],
 	config: AgentLoopConfig,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
@@ -310,6 +313,14 @@ async function streamAssistantResponse(
 	if (config.transformContext) {
 		messages = await logger.ttftAttr("ttft.transform-context", () => config.transformContext!(messages, signal));
 	}
+	const injected = signal?.aborted ? [] : (config.getContextMessages?.(messages) ?? []);
+	for (const message of injected) {
+		context.messages.push(message);
+		newMessages.push(message);
+		stream.push({ type: "message_start", message });
+		stream.push({ type: "message_end", message });
+	}
+	if (injected.length > 0 && messages !== context.messages) messages = [...messages, ...injected];
 
 	// Convert to LLM-compatible messages (AgentMessage[] → Message[])
 	const llmMessages = await logger.ttftAttr("ttft.convert-to-llm", () => config.convertToLlm(messages));
@@ -504,12 +515,14 @@ async function executeToolCalls(
 		const normalizedResult = normalizeToolResult(result, isError);
 		const { toolCall } = record;
 		if (!record.started) {
+			const executionKind = getToolExecutionKind(record.tool, record.args);
 			stream.push({
 				type: "tool_execution_start",
 				toolCallId: toolCall.id,
 				toolName: toolCall.name,
 				args: record.args,
 				intent: toolCall.intent,
+				...(executionKind ? { executionKind } : {}),
 			});
 		}
 		const isWarning = Boolean(normalizedResult.isWarning);
@@ -559,12 +572,14 @@ async function executeToolCalls(
 		}
 		record.args = argsForExecution;
 		record.started = true;
+		const executionKind = getToolExecutionKind(tool, argsForExecution);
 		stream.push({
 			type: "tool_execution_start",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
 			args: argsForExecution,
 			intent: toolCall.intent,
+			...(executionKind ? { executionKind } : {}),
 		});
 
 		let result: AgentToolResult<any>;
@@ -607,10 +622,13 @@ async function executeToolCalls(
 				toolContext,
 			);
 		} catch (e) {
-			result = {
-				content: [{ type: "text", text: e instanceof Error ? e.message : String(e) }],
-				details: {},
-			};
+			result =
+				e instanceof AgentToolError
+					? e.result
+					: {
+							content: [{ type: "text", text: e instanceof Error ? e.message : String(e) }],
+							details: {},
+						};
 			isError = true;
 		}
 

@@ -55,6 +55,8 @@ export interface Args {
 	hooks?: string[];
 	extensions?: string[];
 	noExtensions?: boolean;
+	/** Trusted built-in extensions to retain while --no-extensions disables discovery. */
+	bundledExtensions?: string[];
 	pluginDirs?: string[];
 	print?: boolean;
 	export?: string;
@@ -195,6 +197,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	"no-extensions": r => {
 		r.noExtensions = true;
 	},
+	"bundled-extension": (r, v) => {
+		r.bundledExtensions = [...(r.bundledExtensions ?? []), v as string];
+	},
 	"no-skills": r => {
 		r.noSkills = true;
 	},
@@ -235,11 +240,12 @@ export interface LaunchBootstrapArgs {
 	hooks: string[];
 	extensions: string[];
 	noExtensions?: boolean;
+	bundledExtensions: string[];
 	pluginDirs: string[];
 	preExtensionExit: boolean;
 }
 
-const BOOTSTRAP_VALUE_FLAGS = new Set(["allow-path", "hook", "extension", "plugin-dir"]);
+const BOOTSTRAP_VALUE_FLAGS = new Set(["allow-path", "hook", "extension", "bundled-extension", "plugin-dir"]);
 const PRE_EXTENSION_EXITS = new Set(["version", "list-models", "export"]);
 
 /**
@@ -254,6 +260,7 @@ export function scanLaunchBootstrapArgs(args: readonly string[]): LaunchBootstra
 		allowPath: [],
 		hooks: [],
 		extensions: [],
+		bundledExtensions: [],
 		pluginDirs: [],
 		preExtensionExit: false,
 	};
@@ -286,6 +293,7 @@ export function scanLaunchBootstrapArgs(args: readonly string[]): LaunchBootstra
 			if (name === "allow-path") result.allowPath.push(value);
 			if (name === "hook") result.hooks.push(value);
 			if (name === "extension") result.extensions.push(value);
+			if (name === "bundled-extension") result.bundledExtensions.push(value);
 			if (name === "plugin-dir") result.pluginDirs.push(value);
 		}
 	}

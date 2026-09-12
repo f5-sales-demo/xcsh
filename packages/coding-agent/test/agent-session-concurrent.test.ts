@@ -7,7 +7,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Agent, AgentBusyError, type AgentTool } from "@f5-sales-demo/pi-agent-core";
-import { type AssistantMessage, getBundledModel, type Message, type ToolCall } from "@f5-sales-demo/pi-ai";
+import { type AssistantMessage, Effort, getBundledModel, type Message, type ToolCall } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
@@ -15,6 +15,7 @@ import type { Rule } from "../src/capability/rule";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
 import { TtsrManager } from "../src/export/ttsr";
+import { RoutingCoordinator } from "../src/routing/coordinator";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { convertToLlm } from "../src/session/messages";
@@ -122,6 +123,146 @@ describe("AgentSession concurrent prompt guard", () => {
 
 		throw new Error("Timed out waiting for condition");
 	}
+
+	it.each(["prompt", "custom", "send", "nextTurn"])(
+		"a %s waiting on routing cannot execute in the replacement session",
+		async origin => {
+			await createSession();
+			session.settings.set("routing.mode", "auto");
+			const entered = Promise.withResolvers<void>();
+			const release = Promise.withResolvers<void>();
+			const originalThinking = session.thinkingLevel;
+			vi.spyOn(RoutingCoordinator.prototype, "evaluateTurn").mockImplementation(async options => {
+				entered.resolve();
+				await release.promise;
+				return {
+					epochId: "stale-routing",
+					mode: "auto",
+					anchorModel: options.anchorModel,
+					selectedModel: options.anchorModel,
+					selectedEffort: "high",
+					applied: true,
+					reasons: [],
+				};
+			});
+			const prompt = vi.spyOn(session.agent, "prompt").mockResolvedValue();
+			const custom = { customType: "fixture", content: "Old instruction", display: true };
+			const pending =
+				origin === "prompt"
+					? session.prompt("Old instruction")
+					: origin === "custom"
+						? session.promptCustomMessage(custom)
+						: session.sendCustomMessage(custom, {
+								triggerTurn: true,
+								...(origin === "nextTurn" ? { deliverAs: "nextTurn" as const } : {}),
+							});
+			try {
+				await entered.promise;
+				await session.prepareSessionChange(create => create());
+			} finally {
+				release.resolve();
+				await pending;
+			}
+			expect(prompt).not.toHaveBeenCalled();
+			expect(session.messages).toEqual([]);
+			expect(session.thinkingLevel).toBe(originalThinking);
+		},
+	);
+
+	it("a routing switch waiting on credentials cannot change the replacement session model", async () => {
+		await createSession();
+		const previousModel = session.model;
+		const targetModel = session.modelRegistry.find("anthropic", "claude-sonnet-5")!;
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		vi.spyOn(session.modelRegistry, "getApiKey").mockImplementationOnce(async () => {
+			entered.resolve();
+			await release.promise;
+			return "test-key";
+		});
+		const routing = session.setModelRoutingSwitch(targetModel, Effort.High);
+		try {
+			await entered.promise;
+			await session.prepareSessionChange(create => create());
+		} finally {
+			release.resolve();
+			await routing;
+		}
+		expect(session.model).toEqual(previousModel);
+		expect(
+			session.sessionManager
+				.getBranch()
+				.filter(entry => entry.type === "model_change")
+				.map(entry => entry.model),
+		).toEqual([`${previousModel!.provider}/${previousModel!.id}`]);
+	});
+
+	it("a prompt waiting on credentials cannot start after session disposal", async () => {
+		await createSession();
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		vi.spyOn(session.modelRegistry, "getApiKey").mockImplementationOnce(async () => {
+			entered.resolve();
+			await release.promise;
+			return "test-key";
+		});
+		const prompt = vi.spyOn(session.agent, "prompt").mockResolvedValue();
+		const pending = session.prompt("Old instruction");
+		try {
+			await entered.promise;
+			await session.dispose();
+		} finally {
+			release.resolve();
+			await pending;
+		}
+		expect(prompt).not.toHaveBeenCalled();
+		expect(session.messages).toEqual([]);
+	});
+
+	it("session disposal settles active agent work before closing its storage", async () => {
+		await createSession();
+		const streamingAtClose: boolean[] = [];
+		const close = session.sessionManager.close.bind(session.sessionManager);
+		vi.spyOn(session.sessionManager, "close").mockImplementation(async () => {
+			streamingAtClose.push(session.agent.state.isStreaming);
+			await close();
+		});
+		const pending = session.prompt("Run until cancelled");
+		try {
+			await waitFor(() => session.agent.state.isStreaming);
+			await session.dispose();
+			expect(streamingAtClose).toEqual([false]);
+			expect(session.agent.state.isStreaming).toBe(false);
+		} finally {
+			await session.abort();
+			await pending;
+		}
+	});
+
+	it("a preparation failure restores session input and expires its creation callback", async () => {
+		await createSession();
+		let saved: (() => Promise<boolean>) | undefined;
+		const phases: string[] = [];
+		session.subscribeSessionTransitions(phase => {
+			phases.push(phase);
+		});
+		await expect(
+			session.prepareSessionChange(async create => {
+				saved = create;
+				await expect(session.prompt("Competing prompt")).rejects.toThrow("transition");
+				await expect(session.followUp("Competing follow-up")).rejects.toThrow("transition");
+				await expect(
+					session.promptCustomMessage({ customType: "fixture", content: "Competing custom", display: true }),
+				).rejects.toThrow("transition");
+				throw new Error("Preparation failed");
+			}),
+		).rejects.toThrow("Preparation failed");
+		expect(session.isSessionChanging).toBe(false);
+		expect(phases).toEqual(["before", "after"]);
+		await expect(saved!()).rejects.toThrow("transition");
+		await expect(session.followUp("Recovered input")).resolves.toBeUndefined();
+		expect(session.getQueuedMessages().followUp).toEqual(["Recovered input"]);
+	});
 
 	it("should throw when prompt() called while streaming", async () => {
 		await createSession();

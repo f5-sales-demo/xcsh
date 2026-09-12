@@ -64,10 +64,16 @@ export interface SessionHeader {
 	timestamp: string;
 	cwd: string;
 	parentSession?: string;
+	forkedFromId?: string;
+	remoteThreadId?: string;
 }
 
 export interface NewSessionOptions {
 	parentSession?: string;
+	forkedFromId?: string;
+	remoteThreadId?: string;
+	title?: string;
+	titleSource?: "auto" | "user";
 }
 
 /** Stable destination selected before a new-session transition is reviewed. */
@@ -87,9 +93,16 @@ export interface SessionEntryBase {
 	timestamp: string;
 }
 
+export interface SessionToolExecution {
+	kind: "command" | "fileChange";
+	cwd: string;
+}
+
 export interface SessionMessageEntry extends SessionEntryBase {
 	type: "message";
 	message: AgentMessage;
+	/** Runtime provenance; deliberately separate from provider-visible message content. */
+	toolExecution?: SessionToolExecution;
 }
 
 export interface ThinkingLevelChangeEntry extends SessionEntryBase {
@@ -1887,8 +1900,8 @@ export class SessionManager {
 		this.#persistError = undefined;
 		this.#persistErrorReported = false;
 		this.#sessionId = preview?.targetSessionId ?? Snowflake.next();
-		this.#sessionName = undefined;
-		this.#titleSource = undefined;
+		this.#sessionName = options?.title ? SessionManager.#sanitizeName(options.title) || undefined : undefined;
+		this.#titleSource = this.#sessionName ? options?.titleSource : undefined;
 		const timestamp = preview?.timestamp ?? new Date().toISOString();
 		const header: SessionHeader = {
 			type: "session",
@@ -1896,7 +1909,11 @@ export class SessionManager {
 			id: this.#sessionId,
 			timestamp,
 			cwd: this.cwd,
+			title: this.#sessionName,
+			titleSource: this.#titleSource,
 			parentSession: options?.parentSession,
+			forkedFromId: options?.forkedFromId,
+			remoteThreadId: options?.remoteThreadId,
 		};
 		this.#fileEntries = [header];
 		this.#byId.clear();
@@ -2117,12 +2134,14 @@ export class SessionManager {
 
 	/** Close the persistent writer after flushing all pending data. */
 	async close(): Promise<void> {
-		if (this.#persistWriter) {
-			await this.#queuePersistTask(async () => {
+		// Atomic rewrites use a temporary writer, so absence of an append writer
+		// does not mean persistence is idle. Always join the queue before closing.
+		await this.#queuePersistTask(async () => {
+			if (this.#persistWriter) {
 				await this.#closePersistWriterInternal();
 				this.#flushed = true;
-			});
-		}
+			}
+		});
 		await this.#dropDraftOnlySessionIfEmpty();
 		if (this.#persistError) throw this.#persistError;
 	}
@@ -2423,6 +2442,7 @@ export class SessionManager {
 			| PythonExecutionMessage
 			| FileMentionMessage
 			| MediaMessage,
+		toolExecution?: SessionToolExecution,
 	): string {
 		const entry: SessionMessageEntry = {
 			type: "message",
@@ -2430,6 +2450,9 @@ export class SessionManager {
 			parentId: this.#leafId,
 			timestamp: new Date().toISOString(),
 			message,
+			...(message.role === "toolResult" && toolExecution
+				? { toolExecution: { kind: toolExecution.kind, cwd: toolExecution.cwd } }
+				: {}),
 		};
 		this.#appendEntry(entry);
 		return entry.id;
@@ -2582,6 +2605,7 @@ export class SessionManager {
 	 * @param display Whether to show in TUI (true = styled display, false = hidden)
 	 * @param details Optional extension-specific metadata (not sent to LLM)
 	 * @param attribution Who initiated this message for billing/attribution semantics
+	 * @param timestamp Original message timestamp in milliseconds, when preserving a streamed identity
 	 * @returns Entry id
 	 */
 	appendCustomMessageEntry<T = unknown>(
@@ -2590,6 +2614,7 @@ export class SessionManager {
 		display: boolean,
 		details?: T,
 		attribution: MessageAttribution = "agent",
+		timestamp = Date.now(),
 	): string {
 		const entry: CustomMessageEntry<T> = {
 			type: "custom_message",
@@ -2600,7 +2625,7 @@ export class SessionManager {
 			attribution,
 			id: generateId(this.#byId),
 			parentId: this.#leafId,
-			timestamp: new Date().toISOString(),
+			timestamp: new Date(timestamp).toISOString(),
 		};
 		this.#appendEntry(entry);
 		return entry.id;

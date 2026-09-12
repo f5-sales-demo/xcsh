@@ -681,6 +681,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		},
 	},
 	{
+		name: "remote",
+		description: "Show native xcsh remote host status",
+		handle: async (_command, runtime) => {
+			const { remoteStatus } = await import("../remote-control/control");
+			const status = await remoteStatus();
+			runtime.ctx.showStatus(`Remote: ${status.relay}; live terminal sessions: ${status.liveSessions}`);
+			runtime.ctx.editor.setText("");
+		},
+	},
+	{
 		name: "session",
 		description: t("commands.session.description"),
 		subcommands: [

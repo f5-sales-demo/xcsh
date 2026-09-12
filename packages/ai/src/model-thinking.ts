@@ -233,9 +233,18 @@ export function refreshModelThinking<TApi extends Api>(model: ApiModel<TApi>): A
  * Each model is first normalized through `refreshModelThinking()` so generated
  * catalogs keep canonical thinking metadata and policy fixes in one pass.
  */
-export function applyGeneratedModelPolicies(models: ApiModel<Api>[]): void {
+export function applyGeneratedModelPolicies(
+	models: ApiModel<Api>[],
+	options: { preserveDiscoveredThinking?: boolean } = {},
+): void {
 	for (let index = 0; index < models.length; index++) {
-		const model = refreshModelThinking(models[index]!);
+		const source = models[index]!;
+		// Subscription discovery is authoritative for the effort enum. Re-inferring
+		// it from a model family can add values rejected by the backing model.
+		const model =
+			options.preserveDiscoveredThinking && source.api === "openai-codex-responses"
+				? enrichModelThinking(source)
+				: refreshModelThinking(source);
 		applyGeneratedModelPolicy(model);
 		models[index] = model;
 	}

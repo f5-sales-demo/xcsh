@@ -1,0 +1,131 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "sourceFile": "codex-rs/app-server-protocol/src/protocol/item_builders.rs",
+  "sourceSha256": "6fd5de82a66e47eef2b9bc878770c6061a27d64ae9dbd3e9efd176b962155f04",
+  "cases": [
+    {
+      "changes": [],
+      "expected": []
+    },
+    {
+      "changes": [
+        {
+          "path": "/fixture/new.txt",
+          "type": "add",
+          "content": "added\n"
+        }
+      ],
+      "expected": [
+        {
+          "path": "/fixture/new.txt",
+          "kind": {
+            "type": "add"
+          },
+          "diff": "added\n"
+        }
+      ]
+    },
+    {
+      "changes": [
+        {
+          "path": "/fixture/deleted.txt",
+          "type": "delete",
+          "content": "deleted without newline"
+        }
+      ],
+      "expected": [
+        {
+          "path": "/fixture/deleted.txt",
+          "kind": {
+            "type": "delete"
+          },
+          "diff": "deleted without newline"
+        }
+      ]
+    },
+    {
+      "changes": [
+        {
+          "path": "/fixture/edit.txt",
+          "type": "update",
+          "unifiedDiff": "@@ -1 +1 @@\n-old\n+new\n",
+          "movePath": null
+        }
+      ],
+      "expected": [
+        {
+          "path": "/fixture/edit.txt",
+          "kind": {
+            "type": "update",
+            "move_path": null
+          },
+          "diff": "@@ -1 +1 @@\n-old\n+new\n"
+        }
+      ]
+    },
+    {
+      "changes": [
+        {
+          "path": "/fixture/move.txt",
+          "type": "update",
+          "unifiedDiff": "",
+          "movePath": "/fixture/renamed.txt"
+        }
+      ],
+      "expected": [
+        {
+          "path": "/fixture/move.txt",
+          "kind": {
+            "type": "update",
+            "move_path": "/fixture/renamed.txt"
+          },
+          "diff": "\n\nMoved to: /fixture/renamed.txt"
+        }
+      ]
+    },
+    {
+      "changes": [
+        {
+          "path": "/fixture/𐀀",
+          "type": "add",
+          "content": ""
+        },
+        {
+          "path": "/fixture/",
+          "type": "delete",
+          "content": "Unicode Ω\r\n"
+        },
+        {
+          "path": "/fixture/a",
+          "type": "update",
+          "unifiedDiff": "@@ -1 +1 @@\n-a\n+b\n",
+          "movePath": "/fixture/b"
+        }
+      ],
+      "expected": [
+        {
+          "path": "/fixture/a",
+          "kind": {
+            "type": "update",
+            "move_path": "/fixture/b"
+          },
+          "diff": "@@ -1 +1 @@\n-a\n+b\n\n\nMoved to: /fixture/b"
+        },
+        {
+          "path": "/fixture/",
+          "kind": {
+            "type": "delete"
+          },
+          "diff": "Unicode Ω\r\n"
+        },
+        {
+          "path": "/fixture/𐀀",
+          "kind": {
+            "type": "add"
+          },
+          "diff": ""
+        }
+      ]
+    }
+  ]
+}

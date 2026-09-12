@@ -32,10 +32,12 @@ import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slas
 import { resolveLocalUrlToPath } from "../internal-urls";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
+import { startSessionBridge } from "../remote-control/bridge";
 import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
-import type { SessionContext, SessionManager } from "../session/session-manager";
+import type { NewSessionOptions, SessionContext, SessionManager } from "../session/session-manager";
+import { withPlanReviewInteraction } from "../session/user-interactions";
 import { profileMark } from "../startup-profile";
 import { STTController, type SttState } from "../stt";
 import type { ExitPlanModeDetails } from "../tools";
@@ -85,7 +87,7 @@ const EDITOR_MAX_HEIGHT_MIN = 6;
 const EDITOR_MAX_HEIGHT_MAX = 18;
 const EDITOR_RESERVED_ROWS = 12;
 
-import type { ActionReview } from "./components/reviewed-action";
+import { type ActionReview, executeReviewedAction } from "./components/reviewed-action";
 import { runReviewedAction } from "./components/reviewed-action-dialog";
 
 const EDITOR_FALLBACK_ROWS = 24;
@@ -184,6 +186,9 @@ export class InteractiveMode implements InteractiveModeContext {
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#planModeHasEntered = false;
+	#planReviewTask?: Promise<void>;
+	#planReviewAbort?: AbortController;
+	#planEditorEpoch = 0;
 	#planCommandActive = false;
 	#pendingPlanSave?: {
 		session: AgentSession;
@@ -202,6 +207,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	readonly #btwController: BtwController;
 	readonly #commandController: CommandController;
 	readonly #eventController: EventController;
+	#stopRemoteBridge?: () => void;
 	readonly #extensionUiController: ExtensionUiController;
 	readonly #inputController: InputController;
 	readonly #selectorController: SelectorController;
@@ -809,6 +815,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	async #enterPlanMode(options?: {
 		planFilePath?: string;
 		workflow?: "parallel" | "iterative";
+		preserveModel?: boolean;
 		silent?: boolean;
 	}): Promise<void> {
 		if (this.planModeEnabled) {
@@ -837,7 +844,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			await this.session.sendPlanModeContext({ deliverAs: "steer" });
 		}
 		this.#planModeHasEntered = true;
-		await this.#applyPlanModeModel();
+		if (!options?.preserveModel) await this.#applyPlanModeModel();
 		this.#updatePlanModeStatus();
 		this.sessionManager.appendModeChange("plan", { planFilePath });
 		if (!options?.silent) this.showStatus(`Plan mode enabled. Plan file: ${planFilePath}`);
@@ -936,11 +943,15 @@ export class InteractiveMode implements InteractiveModeContext {
 		return `${externalEditorKey}: open in editor`;
 	}
 
-	async #openPlanInExternalEditor(planFilePath: string): Promise<void> {
+	async #openPlanInExternalEditor(planFilePath: string, signal?: AbortSignal): Promise<void> {
 		const session = this.session;
 		const manager = this.sessionManager;
 		const sessionId = manager.getSessionId();
+		const editorEpoch = this.#planEditorEpoch;
 		const current = () =>
+			!signal?.aborted &&
+			!session.isDisposing &&
+			editorEpoch === this.#planEditorEpoch &&
 			this.session === session &&
 			this.sessionManager === manager &&
 			manager.getSessionId() === sessionId &&
@@ -964,7 +975,10 @@ export class InteractiveMode implements InteractiveModeContext {
 			return;
 		}
 
+		if (!current()) return;
 		let ttyHandle: fs.FileHandle | null = null;
+		let resumeInteractions: (() => void) | undefined;
+		let terminalStopped = false;
 		let resumed = false;
 		const resumeTerminal = async () => {
 			try {
@@ -973,14 +987,19 @@ export class InteractiveMode implements InteractiveModeContext {
 				ttyHandle = null;
 				if (!resumed) {
 					resumed = true;
-					this.ui.start(settings.get("startup.clearScreen"));
-					this.ui.requestRender(true);
+					if (terminalStopped) {
+						this.ui.start(settings.get("startup.clearScreen"));
+						this.ui.requestRender(true);
+					}
 				}
 			}
 		};
 		try {
 			ttyHandle = await this.#openEditorTerminalHandle();
+			if (!current()) return;
+			resumeInteractions = session.userInteractions.pauseLocalPresentation();
 			this.ui.stop();
+			terminalStopped = true;
 
 			const stdio: [number | "inherit", number | "inherit", number | "inherit"] = ttyHandle
 				? [ttyHandle.fd, ttyHandle.fd, ttyHandle.fd]
@@ -1022,11 +1041,16 @@ export class InteractiveMode implements InteractiveModeContext {
 		} catch (error) {
 			this.showWarning(`Failed to open external editor: ${error instanceof Error ? error.message : String(error)}`);
 		} finally {
+			resumeInteractions?.();
 			await resumeTerminal();
 		}
 	}
 
-	async #approvePlan(options: { planFilePath: string; finalPlanFilePath: string }): Promise<void> {
+	async #approvePlan(options: {
+		planFilePath: string;
+		finalPlanFilePath: string;
+		review?: { sessionId: string; entryId: string };
+	}): Promise<void> {
 		if (!options.planFilePath.startsWith("local://") || !options.finalPlanFilePath.startsWith("local://")) {
 			this.showError("Plan approval requires local:// source and destination paths.");
 			return;
@@ -1034,7 +1058,19 @@ export class InteractiveMode implements InteractiveModeContext {
 		const reviewedSession = this.session;
 		const reviewedManager = this.sessionManager;
 		const reviewedSessionId = reviewedManager.getSessionId();
-		const executionSessionPreview = reviewedManager.previewNewSession();
+		const sourceSessionFile = reviewedSession.sessionFile;
+		const sourceTitle = reviewedSession.sessionName;
+		const sourceTitleSource = reviewedManager.titleSource;
+		const remoteThreadId = reviewedManager.getHeader()?.remoteThreadId ?? reviewedSessionId;
+		let cancelledByDispose = reviewedSession.isDisposing;
+		const executionSessionOptions = {
+			parentSession: sourceSessionFile,
+			forkedFromId: reviewedSessionId,
+			remoteThreadId,
+			title: sourceTitle,
+			titleSource: sourceTitleSource,
+		};
+		const executionSessionPreview = reviewedManager.previewNewSession(executionSessionOptions);
 		const reviewedArtifactsDir = reviewedManager.getArtifactsDir();
 		const previousTools = this.#planModePreviousTools ?? reviewedSession.getActiveToolNames();
 		const resolveReviewedPath = (value: string) =>
@@ -1048,6 +1084,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		let renamed = sourcePath === approvedPath;
 		let executionSessionId: string | undefined;
 		let executionSessionReady = false;
+		let executionLinked = false;
 		let viewReset = false;
 		let planWritten = false;
 		let toolsRestored = false;
@@ -1165,7 +1202,8 @@ export class InteractiveMode implements InteractiveModeContext {
 			return;
 		}
 
-		const outcome = await runReviewedAction(this, "plan approval", {
+		type ReviewedPlanSnapshot = NonNullable<Awaited<ReturnType<typeof inspect>>>;
+		const action = {
 			review: initial.review,
 			resolve: async () => {
 				if (
@@ -1182,7 +1220,7 @@ export class InteractiveMode implements InteractiveModeContext {
 				const current = await inspect();
 				return current ? { review: current.review, target: current } : undefined;
 			},
-			execute: async target => {
+			execute: async (target: ReviewedPlanSnapshot) => {
 				if (target.destinationBlocked)
 					throw new Error(
 						`Plan destination is occupied at ${options.finalPlanFilePath}; choose a different title before retrying.`,
@@ -1206,6 +1244,7 @@ export class InteractiveMode implements InteractiveModeContext {
 								await this.#exitPlanMode({ silent: true, paused: false });
 							},
 							executionSessionPreview,
+							executionSessionOptions,
 						);
 						executionSessionReady = true;
 					} finally {
@@ -1213,10 +1252,20 @@ export class InteractiveMode implements InteractiveModeContext {
 							executionSessionId = reviewedManager.getSessionId();
 					}
 				}
+				if (cancelledByDispose || reviewedSession.isDisposing) return;
 				if (!viewReset) {
 					await this.#commandController.resetNewSessionView();
 					this.#planReviewContainer = undefined;
 					viewReset = true;
+				}
+				if (!executionLinked && options.review) {
+					reviewedManager.appendCustomEntry("plan-review", {
+						kind: "execution",
+						sourceSessionId: options.review.sessionId,
+						sourceEntryId: options.review.entryId,
+						planFilePath: options.finalPlanFilePath,
+					});
+					executionLinked = true;
 				}
 
 				const executionPlanPath = resolveLocalUrlToPath(options.finalPlanFilePath, {
@@ -1258,6 +1307,7 @@ export class InteractiveMode implements InteractiveModeContext {
 					promptStarted = false;
 				}
 				if (!promptCompleted) {
+					if (cancelledByDispose || reviewedSession.isDisposing) return;
 					promptStartEntryCount = reviewedManager.getEntries().length;
 					promptStarted = true;
 					await reviewedSession.prompt(planModePrompt, { synthetic: true });
@@ -1265,7 +1315,30 @@ export class InteractiveMode implements InteractiveModeContext {
 					await reviewedManager.flush();
 				}
 			},
+		};
+		const unsubscribeDispose = reviewedSession.addBeforeDisposeHook(() => {
+			cancelledByDispose = true;
 		});
+		let outcome: "succeeded" | "unresolved";
+		try {
+			try {
+				await executeReviewedAction(action.review, action.resolve, target => action.execute(target));
+			} catch (error) {
+				// Once the reviewed execution session exists, every remaining step is guarded by
+				// idempotent progress flags. Retry one transient persistence failure in that same
+				// identity; never repeat the phone approval or create a second session.
+				if (!executionSessionId || cancelledByDispose) throw error;
+				await executeReviewedAction(action.review, action.resolve, target => action.execute(target));
+			}
+			outcome = "succeeded";
+		} catch (error) {
+			if (cancelledByDispose) return;
+			this.showError(`Plan execution could not complete: ${error instanceof Error ? error.message : String(error)}`);
+			outcome = "unresolved";
+		} finally {
+			unsubscribeDispose();
+		}
+		if (cancelledByDispose) return;
 		if (outcome === "succeeded")
 			this.showStatus(
 				`Approved plan saved and submitted in execution session ${executionSessionId ?? reviewedManager.getSessionId()}.`,
@@ -1586,7 +1659,60 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
-	async handleExitPlanModeTool(details: ExitPlanModeDetails): Promise<void> {
+	getRemoteCollaborationMode(): "plan" | "default" {
+		return this.planModeEnabled ? "plan" : "default";
+	}
+
+	async setRemoteCollaborationMode(mode: "plan" | "default"): Promise<void> {
+		if (mode === "plan") {
+			await this.#enterPlanMode({ preserveModel: true });
+			return;
+		}
+		if (this.planModePaused && !this.planModeEnabled) {
+			this.planModePaused = false;
+			this.#updatePlanModeStatus();
+			this.sessionManager.appendModeChange("none");
+			this.showStatus("Plan mode disabled.");
+			return;
+		}
+		await this.#exitPlanMode();
+	}
+
+	async handleExitPlanModeTool(details: ExitPlanModeDetails, toolCallId?: string): Promise<void> {
+		if (this.#planReviewTask) return this.#planReviewTask;
+		const abort = new AbortController();
+		const unsubscribe = this.session.subscribe(event => {
+			if (event.type === "agent_start") abort.abort();
+		});
+		const unsubscribeTransition = this.session.subscribeSessionTransitions(phase => {
+			if (phase === "before") abort.abort();
+		});
+		const unsubscribeDispose = this.session.addBeforeDisposeHook(() => {
+			abort.abort();
+			this.#planEditorEpoch++;
+		});
+		const task = this.#reviewPlan(details, abort.signal, toolCallId);
+		this.#planReviewTask = task;
+		this.#planReviewAbort = abort;
+		const retire = () => {
+			if (this.#planReviewTask === task) this.#planReviewTask = undefined;
+		};
+		abort.signal.addEventListener("abort", retire, { once: true });
+		if (abort.signal.aborted) retire();
+		try {
+			await task;
+		} finally {
+			unsubscribe();
+			unsubscribeTransition();
+			unsubscribeDispose();
+			abort.signal.removeEventListener("abort", retire);
+			if (this.#planReviewAbort === abort) this.#planReviewAbort = undefined;
+			if (this.#planReviewTask === task) this.#planReviewTask = undefined;
+		}
+	}
+
+	async #reviewPlan(details: ExitPlanModeDetails, signal: AbortSignal, toolCallId?: string): Promise<void> {
+		const sessionId = this.session.sessionId;
 		if (!this.planModeEnabled) {
 			this.showWarning("Plan mode is not active.");
 			return;
@@ -1596,6 +1722,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		const reviewedSessionId = reviewedManager.getSessionId();
 		const currentReview = () => {
 			if (
+				!signal.aborted &&
 				this.session === reviewedSession &&
 				this.sessionManager === reviewedManager &&
 				reviewedManager.getSessionId() === reviewedSessionId &&
@@ -1624,16 +1751,20 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		this.#renderPlanPreview(planContent);
-		const choice = await this.showHookSelector(
-			"Plan mode - next step",
-			["Approve and execute", "Refine plan", "Stay in plan mode"],
-			{
+		const source = { sessionId, toolCallId: toolCallId ?? "", planFilePath, content: planContent };
+		const withReview = <T>(action: () => T): T => (toolCallId ? withPlanReviewInteraction(source, action) : action());
+		const choice = await withReview(() =>
+			this.showHookSelector("Plan mode - next step", ["Approve and execute", "Refine plan", "Stay in plan mode"], {
+				signal,
 				initialIndex: 2,
 				helpText: this.#getPlanReviewHelpText(),
 				onExternalEditor: () => {
-					if (currentReview()) void this.#openPlanInExternalEditor(planFilePath);
+					if (currentReview()) {
+						this.session.userInteractions.cancelAll();
+						void this.#openPlanInExternalEditor(planFilePath, signal);
+					}
 				},
-			},
+			}),
 		);
 
 		if (!currentReview()) return;
@@ -1650,10 +1781,21 @@ export class InteractiveMode implements InteractiveModeContext {
 					this.showWarning(
 						"The plan changed while awaiting approval. Review the updated content before executing.",
 					);
-					await this.handleExitPlanModeTool({ ...details, planFilePath });
+					await this.#reviewPlan({ ...details, planFilePath }, signal, toolCallId);
 					return;
 				}
-				await this.#approvePlan({ planFilePath, finalPlanFilePath });
+				const entryId = this.sessionManager.appendCustomEntry("plan-review", {
+					kind: "decision",
+					decision: choice,
+					content: planContent,
+					planFilePath,
+					toolCallId,
+				});
+				await this.#approvePlan({
+					planFilePath,
+					finalPlanFilePath,
+					review: { sessionId, entryId },
+				});
 			} catch (error) {
 				this.showError(
 					`Failed to finalize approved plan: ${error instanceof Error ? error.message : String(error)}`,
@@ -1661,8 +1803,17 @@ export class InteractiveMode implements InteractiveModeContext {
 			}
 			return;
 		}
+		this.sessionManager.appendCustomEntry("plan-review", {
+			kind: "decision",
+			decision: choice ?? "Cancel",
+			content: planContent,
+			planFilePath,
+			toolCallId,
+		});
 		if (choice === "Refine plan") {
-			const refinement = (await this.showHookInput("What should be refined?"))?.trim();
+			const refinement = (
+				await withReview(() => this.showHookInput("What should be refined?", undefined, { signal }))
+			)?.trim();
 			if (!currentReview()) return;
 			if (refinement) {
 				if (this.onInputCallback) {
@@ -1671,10 +1822,15 @@ export class InteractiveMode implements InteractiveModeContext {
 					this.editor.setText(refinement);
 				}
 			}
+			return;
 		}
 	}
 
 	stop(): void {
+		this.#planEditorEpoch++;
+		this.#planReviewAbort?.abort();
+		this.#stopRemoteBridge?.();
+		this.#stopRemoteBridge = undefined;
 		if (this.loadingAnimation) {
 			this.loadingAnimation.stop();
 			this.loadingAnimation = undefined;
@@ -1963,11 +2119,14 @@ export class InteractiveMode implements InteractiveModeContext {
 		return this.#commandController.handleToolsCommand();
 	}
 
-	handleClearCommand(): Promise<void> {
+	handleClearCommand(
+		options?: NewSessionOptions,
+		createSession?: (options?: NewSessionOptions) => Promise<boolean>,
+	): Promise<void> {
 		this.#btwController.dispose();
 		this.#extensionUiController.clearExtensionTerminalInputListeners();
 		this.#planReviewContainer = undefined;
-		return this.#commandController.handleClearCommand();
+		return this.#commandController.handleClearCommand(options, createSession);
 	}
 
 	handleForkCommand(): Promise<void> {
@@ -2319,8 +2478,12 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#extensionUiController.hideHookSelector();
 	}
 
-	showHookInput(title: string, placeholder?: string): Promise<string | undefined> {
-		return this.#extensionUiController.showHookInput(title, placeholder);
+	showHookInput(
+		title: string,
+		placeholder?: string,
+		dialogOptions?: ExtensionUIDialogOptions,
+	): Promise<string | undefined> {
+		return this.#extensionUiController.showHookInput(title, placeholder, dialogOptions);
 	}
 
 	hideHookInput(): void {
@@ -2366,5 +2529,9 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	#subscribeToAgent(): void {
 		this.#eventController.subscribeToAgent();
+		this.#stopRemoteBridge ??= startSessionBridge(this.session, undefined, undefined, {
+			getCollaborationMode: () => this.getRemoteCollaborationMode(),
+			setCollaborationMode: mode => this.setRemoteCollaborationMode(mode),
+		});
 	}
 }

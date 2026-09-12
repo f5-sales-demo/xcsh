@@ -104,7 +104,7 @@ describe("ChatHandler host-tool wiring (#2046 A3)", () => {
 		const tool = session.refreshedTools?.[0];
 		expect(tool).toBeDefined();
 		// Drive the tool exactly as the agent loop would.
-		void tool?.execute("tc-1", { message: "hi" });
+		const execution = tool?.execute("tc-1", { message: "hi" });
 
 		const calls = server.ofType("host_tool_call");
 		expect(calls).toHaveLength(1);
@@ -112,6 +112,9 @@ describe("ChatHandler host-tool wiring (#2046 A3)", () => {
 		expect(calls[0].toolCallId).toBe("tc-1");
 		expect(calls[0].arguments).toEqual({ message: "hi" });
 		expect(typeof calls[0].id).toBe("string");
+		// Settle the request so its idle timer cannot reject in a later test.
+		server.emit({ type: "host_tool_result", id: calls[0].id, result: okResult });
+		await expect(execution).resolves.toEqual(okResult);
 	});
 
 	it("(3) a matching host_tool_result resolves the tool's execute promise", async () => {

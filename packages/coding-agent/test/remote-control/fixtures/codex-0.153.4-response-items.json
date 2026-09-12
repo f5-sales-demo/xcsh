@@ -1,0 +1,80 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "sourceFile": "codex-rs/core/src/realtime_conversation.rs",
+  "sourceSha256": "3b113647331fb553349a79bf661f5899a4576364ef3b6181eabe0bbc84c9fc82",
+  "truncatorSourceFile": "codex-rs/utils/string/src/truncate.rs",
+  "truncatorSourceSha256": "51a22c8252db01b668f312e17c87c43c1abd96fc46ac3cfca0a85d45f6dc4d71",
+  "budgetSourceFile": "codex-rs/core/src/realtime_context.rs",
+  "budgetSourceSha256": "4e140443503e80030f19b5d07d72c36238f4f50a5bed17463c11376223c40140",
+  "budgetTokens": 1000,
+  "evidence": "Original pinned realtime_backend_item and Rust truncator/budget loop; no service or phone capture",
+  "cases": [
+    {
+      "input": {
+        "text": {
+          "unit": "Done",
+          "count": 1
+        },
+        "prefix": null
+      },
+      "bytes": 4,
+      "sha256": "11a6767d5674c7e45f7e00dc525762275b3a48491ad6045427d2609cc496c516"
+    },
+    {
+      "input": {
+        "text": {
+          "unit": "Done",
+          "count": 1
+        },
+        "prefix": {
+          "unit": "",
+          "count": 1
+        }
+      },
+      "bytes": 4,
+      "sha256": "11a6767d5674c7e45f7e00dc525762275b3a48491ad6045427d2609cc496c516"
+    },
+    {
+      "input": {
+        "text": {
+          "unit": "Done",
+          "count": 1
+        },
+        "prefix": {
+          "unit": "Fixture agent",
+          "count": 1
+        }
+      },
+      "bytes": 19,
+      "sha256": "a7ed8ae5a863d74eac7c30e0349a63e700a9d4fc69ea489e13899aaf27db69a5"
+    },
+    {
+      "input": {
+        "text": {
+          "unit": "🍁",
+          "count": 2000
+        },
+        "prefix": {
+          "unit": "Fixture agent",
+          "count": 1
+        }
+      },
+      "bytes": 3999,
+      "sha256": "123aee0408f67df895dffc0ca0edf86027b89b34c3e785d8f88b751173bf8fa7"
+    },
+    {
+      "input": {
+        "text": {
+          "unit": "🍁",
+          "count": 2000
+        },
+        "prefix": {
+          "unit": "🌳",
+          "count": 1500
+        }
+      },
+      "bytes": 3995,
+      "sha256": "9fb2c959458c9a3b7e2a24d853c54ae7cc150d93655e2b38a01eb0571e65274d"
+    }
+  ]
+}

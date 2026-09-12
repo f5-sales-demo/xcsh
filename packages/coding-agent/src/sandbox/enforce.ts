@@ -46,6 +46,8 @@ export interface ToolCallCheck {
 export interface ToolCallDecision {
 	block: boolean;
 	reason?: string;
+	path?: string;
+	access?: SandboxAccess;
 }
 
 const ALLOW: ToolCallDecision = { block: false };
@@ -118,6 +120,8 @@ function deny(cwd: string, resolved: string, access: SandboxAccess): ToolCallDec
 	if (access === "enumerate") {
 		return {
 			block: true,
+			path: resolved,
+			access,
 			reason:
 				`Directory discovery is outside this session's enumerate boundary (working directory: ${cwd}): ${resolved}. ` +
 				"This refusal is about listing names, not general filesystem access. Use the exact path the task names directly. " +
@@ -127,6 +131,8 @@ function deny(cwd: string, resolved: string, access: SandboxAccess): ToolCallDec
 	}
 	return {
 		block: true,
+		path: resolved,
+		access,
 		reason:
 			`Path is outside this session's ${access} boundary (working directory: ${cwd}): ${resolved}. ` +
 			"Use --allow-path or the sandbox.allow* settings to widen it, or --no-sandbox to disable isolation.",

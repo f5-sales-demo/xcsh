@@ -1108,8 +1108,8 @@ if (reportsFixture) {
 				access: `synthetic-access-${index + 1}`,
 				refresh: `synthetic-refresh-${index + 1}`,
 				expires: Date.now() + 3_600_000,
-				accountId: `synthetic-account-${index + 1}`,
-				email: `account-${index + 1}@example.test`,
+				accountId: String(index + 1),
+				email: `account-${index + 1}@example.com`,
 			})),
 		);
 	} finally {

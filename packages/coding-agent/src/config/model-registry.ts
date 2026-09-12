@@ -1068,7 +1068,7 @@ export class ModelRegistry {
 
 		this.#addImplicitDiscoverableProviders(configuredProviders);
 		const builtInModels = this.#applyHardcodedModelPolicies(this.#loadBuiltInModels(overrides));
-		const cachedDiscoveries = this.#applyHardcodedModelPolicies(this.#loadCachedDiscoverableModels());
+		const cachedDiscoveries = this.#applyHardcodedModelPolicies(this.#loadCachedDiscoverableModels(), true);
 		const resolvedDefaults = this.#mergeResolvedModels(builtInModels, cachedDiscoveries);
 		const withConfigModels = this.#mergeCustomModels(resolvedDefaults, this.#customModelOverlays);
 		// Merge runtime extension models so they survive refresh() cycles
@@ -1395,6 +1395,7 @@ export class ModelRegistry {
 						}
 					: model;
 			}),
+			true,
 		);
 		this.#models = this.#models.filter(
 			model => !refreshed.has(model.provider) || this.#providerDiscoveryStates.get(model.provider)?.status !== "ok",
@@ -2091,11 +2092,11 @@ export class ModelRegistry {
 			return applyModelOverride(model, override);
 		});
 	}
-	#applyHardcodedModelPolicies(models: Model<Api>[]): Model<Api>[] {
+	#applyHardcodedModelPolicies(models: Model<Api>[], preserveDiscoveredThinking = false): Model<Api>[] {
 		// Discovery caches contain provider-advertised metadata, which can lag the
 		// bundled corrections. Reapply generated-model policy before a cached entry
 		// replaces its bundled peer; explicit user overrides still run afterward.
-		applyGeneratedModelPolicies(models);
+		applyGeneratedModelPolicies(models, { preserveDiscoveredThinking });
 		return models.map(model => {
 			if (model.id !== "gpt-5.4" || model.provider === "github-copilot") {
 				return model;

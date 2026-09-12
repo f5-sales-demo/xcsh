@@ -11,21 +11,29 @@ export interface AsyncJob {
 	type: "bash" | "task";
 	status: "running" | "completed" | "failed" | "cancelled";
 	startTime: number;
+	ownerId?: string;
 	label: string;
 	abortController: AbortController;
 	promise: Promise<void>;
 	resultText?: string;
+	/** Latest structured executor facts, retained for the durable completion message. */
+	resultDetails?: Record<string, unknown>;
 	errorText?: string;
 }
 
 export interface AsyncJobManagerOptions {
 	onJobComplete: (jobId: string, text: string, job?: AsyncJob) => void | Promise<void>;
+	getOwnerId?: () => string | undefined;
+	onJobCancelled?: (job: AsyncJob) => void | Promise<void>;
+	onJobProgress?: (jobId: string, details?: Record<string, unknown>) => void | Promise<void>;
 	maxRunningJobs?: number;
 	retentionMs?: number;
 }
 
 interface AsyncJobDelivery {
 	jobId: string;
+	job: AsyncJob;
+	cancelled: boolean;
 	text: string;
 	attempt: number;
 	nextAttemptAt: number;
@@ -50,7 +58,10 @@ export class AsyncJobManager {
 	readonly #suppressedDeliveries = new Set<string>();
 	readonly #watchedJobs = new Set<string>();
 	readonly #evictionTimers = new Map<string, NodeJS.Timeout>();
+	readonly #onJobCancelled: AsyncJobManagerOptions["onJobCancelled"];
+	readonly #getOwnerId: AsyncJobManagerOptions["getOwnerId"];
 	readonly #onJobComplete: AsyncJobManagerOptions["onJobComplete"];
+	readonly #onJobProgress: AsyncJobManagerOptions["onJobProgress"];
 	readonly #maxRunningJobs: number;
 	readonly #retentionMs: number;
 	#deliveryLoop: Promise<void> | undefined;
@@ -58,6 +69,9 @@ export class AsyncJobManager {
 
 	constructor(options: AsyncJobManagerOptions) {
 		this.#onJobComplete = options.onJobComplete;
+		this.#onJobCancelled = options.onJobCancelled;
+		this.#getOwnerId = options.getOwnerId;
+		this.#onJobProgress = options.onJobProgress;
 		this.#maxRunningJobs = Math.max(1, Math.floor(options.maxRunningJobs ?? DEFAULT_MAX_RUNNING_JOBS));
 		this.#retentionMs = Math.max(0, Math.floor(options.retentionMs ?? DEFAULT_RETENTION_MS));
 	}
@@ -92,15 +106,18 @@ export class AsyncJobManager {
 			type,
 			status: "running",
 			startTime,
+			ownerId: this.#getOwnerId?.(),
 			label,
 			abortController,
 			promise: Promise.resolve(),
 		};
 
 		const reportProgress = async (text: string, details?: Record<string, unknown>): Promise<void> => {
-			if (!options?.onProgress) return;
+			if (details) job.resultDetails = details;
 			try {
-				await options.onProgress(text, details);
+				const notified = this.#onJobProgress?.(id, details);
+				if (notified) await notified;
+				await options?.onProgress?.(text, details);
 			} catch (error) {
 				logger.warn("Async job progress callback failed", {
 					jobId: id,
@@ -113,6 +130,7 @@ export class AsyncJobManager {
 				const text = await run({ jobId: id, signal: abortController.signal, reportProgress });
 				if (job.status === "cancelled") {
 					job.resultText = text;
+					this.#enqueueDelivery(id, text, true);
 					this.#scheduleEviction(id);
 					return;
 				}
@@ -123,6 +141,7 @@ export class AsyncJobManager {
 			} catch (error) {
 				if (job.status === "cancelled") {
 					job.errorText = error instanceof Error ? error.message : String(error);
+					this.#enqueueDelivery(id, job.errorText, true);
 					this.#scheduleEviction(id);
 					return;
 				}
@@ -144,7 +163,6 @@ export class AsyncJobManager {
 		if (job.status !== "running") return false;
 		job.status = "cancelled";
 		job.abortController.abort();
-		this.#scheduleEviction(id);
 		return true;
 	}
 
@@ -216,7 +234,7 @@ export class AsyncJobManager {
 		this.#deliveries.splice(
 			0,
 			this.#deliveries.length,
-			...this.#deliveries.filter(delivery => !this.isDeliverySuppressed(delivery.jobId)),
+			...this.#deliveries.filter(delivery => delivery.cancelled || !this.isDeliverySuppressed(delivery.jobId)),
 		);
 		return before - this.#deliveries.length;
 	}
@@ -225,7 +243,6 @@ export class AsyncJobManager {
 		for (const job of this.getRunningJobs()) {
 			job.status = "cancelled";
 			job.abortController.abort();
-			this.#scheduleEviction(job.id);
 		}
 	}
 
@@ -278,13 +295,17 @@ export class AsyncJobManager {
 		return drained;
 	}
 
+	#jobIdInUse(id: string): boolean {
+		return this.#jobs.has(id) || this.#deliveries.some(delivery => delivery.jobId === id);
+	}
+
 	#resolveJobId(preferredId?: string): string {
 		preferredId = preferredId?.trim();
 		if (!preferredId) {
 			let candidate = 1;
 			while (true) {
 				const id = `bg_${candidate}`;
-				if (!this.#jobs.has(id)) {
+				if (!this.#jobIdInUse(id)) {
 					return id;
 				}
 				candidate += 1;
@@ -292,11 +313,11 @@ export class AsyncJobManager {
 		}
 
 		const base = preferredId.trim();
-		if (!this.#jobs.has(base)) return base;
+		if (!this.#jobIdInUse(base)) return base;
 
 		let suffix = 2;
 		let candidate = `${base}-${suffix}`;
-		while (this.#jobs.has(candidate)) {
+		while (this.#jobIdInUse(candidate)) {
 			suffix += 1;
 			candidate = `${base}-${suffix}`;
 		}
@@ -335,13 +356,18 @@ export class AsyncJobManager {
 		return this.#suppressedDeliveries.has(jobId) || this.#watchedJobs.has(jobId);
 	}
 
-	#enqueueDelivery(jobId: string, text: string): void {
+	#enqueueDelivery(jobId: string, text: string, cancelled = false): void {
+		if (cancelled && !this.#onJobCancelled) return;
+		const job = this.#jobs.get(jobId);
+		if (!job) return;
 		// Skip delivery if already acknowledged
-		if (this.isDeliverySuppressed(jobId)) {
+		if (!cancelled && this.isDeliverySuppressed(jobId)) {
 			return;
 		}
 		this.#deliveries.push({
 			jobId,
+			job,
+			cancelled,
 			text,
 			attempt: 0,
 			nextAttemptAt: Date.now(),
@@ -366,10 +392,15 @@ export class AsyncJobManager {
 			});
 	}
 
+	#removeDelivery(delivery: AsyncJobDelivery): void {
+		const index = this.#deliveries.indexOf(delivery);
+		if (index >= 0) this.#deliveries.splice(index, 1);
+	}
+
 	async #runDeliveryLoop(): Promise<void> {
 		while (this.#deliveries.length > 0) {
 			const delivery = this.#deliveries[0];
-			if (this.isDeliverySuppressed(delivery.jobId)) {
+			if (!delivery.cancelled && this.isDeliverySuppressed(delivery.jobId)) {
 				this.#deliveries.shift();
 				continue;
 			}
@@ -381,20 +412,21 @@ export class AsyncJobManager {
 				continue;
 			}
 			// Check again after sleep
-			if (this.isDeliverySuppressed(delivery.jobId)) {
+			if (!delivery.cancelled && this.isDeliverySuppressed(delivery.jobId)) {
 				this.#deliveries.shift();
 				continue;
 			}
 
 			try {
-				await this.#onJobComplete(delivery.jobId, delivery.text, this.#jobs.get(delivery.jobId));
-				this.#deliveries.shift();
+				if (delivery.cancelled) await this.#onJobCancelled?.(delivery.job);
+				else await this.#onJobComplete(delivery.jobId, delivery.text, delivery.job);
+				this.#removeDelivery(delivery);
 			} catch (error) {
 				delivery.attempt += 1;
 				delivery.lastError = error instanceof Error ? error.message : String(error);
 				delivery.nextAttemptAt = Date.now() + this.#getRetryDelay(delivery.attempt);
-				this.#deliveries.shift();
-				if (!this.isDeliverySuppressed(delivery.jobId)) {
+				this.#removeDelivery(delivery);
+				if (delivery.cancelled || !this.isDeliverySuppressed(delivery.jobId)) {
 					this.#deliveries.push(delivery);
 				}
 				logger.warn("Async job completion delivery failed", {

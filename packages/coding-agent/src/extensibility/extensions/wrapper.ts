@@ -2,10 +2,16 @@
  * Tool wrappers for extensions.
  */
 
-import type { AgentTool, AgentToolContext, AgentToolUpdateCallback } from "@f5-sales-demo/pi-agent-core";
+import {
+	type AgentTool,
+	type AgentToolContext,
+	AgentToolError,
+	type AgentToolUpdateCallback,
+} from "@f5-sales-demo/pi-agent-core";
 import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type { Theme } from "../../modes/theme/theme";
+import { withToolInteraction } from "../../session/user-interactions";
 import { applyToolProxy } from "../tool-proxy";
 import type { ExtensionRunner } from "./runner";
 import type { RegisteredTool, ToolCallEventResult } from "./types";
@@ -19,6 +25,8 @@ export class RegisteredToolAdapter implements AgentTool<any, any, any> {
 	declare parameters: any;
 	declare label: string;
 	declare strict: boolean;
+	declare executionKind?: AgentTool["executionKind"];
+	declare getExecutionKind?: AgentTool["getExecutionKind"];
 
 	renderCall?: (args: any, options: any, theme: any) => any;
 	renderResult?: (result: any, options: any, theme: any, args?: any) => any;
@@ -85,6 +93,8 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 	declare parameters: TParameters;
 	declare label: string;
 	declare strict: boolean;
+	declare executionKind?: AgentTool["executionKind"];
+	declare getExecutionKind?: AgentTool["getExecutionKind"];
 
 	constructor(
 		private tool: AgentTool<TParameters, TDetails>,
@@ -112,12 +122,14 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 		// Emit tool_call event - extensions can block execution
 		if (this.runner.hasHandlers("tool_call")) {
 			try {
-				const callResult = (await this.runner.emitToolCall({
-					type: "tool_call",
-					toolName: this.tool.name,
-					toolCallId,
-					input: params as Record<string, unknown>,
-				})) as ToolCallEventResult | undefined;
+				const callResult = (await withToolInteraction(toolCallId, () =>
+					this.runner.emitToolCall({
+						type: "tool_call",
+						toolName: this.tool.name,
+						toolCallId,
+						input: params as Record<string, unknown>,
+					}),
+				)) as ToolCallEventResult | undefined;
 
 				if (callResult?.block) {
 					const reason = callResult.reason || "Tool execution was blocked by an extension";
@@ -139,10 +151,13 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 			result = await this.tool.execute(toolCallId, params, signal, onUpdate, context);
 		} catch (err) {
 			executionError = err instanceof Error ? err : new Error(String(err));
-			result = {
-				content: [{ type: "text", text: executionError.message }],
-				details: undefined as TDetails,
-			};
+			result =
+				err instanceof AgentToolError
+					? err.result
+					: {
+							content: [{ type: "text", text: executionError.message }],
+							details: undefined as TDetails,
+						};
 		}
 
 		// Emit tool_result event - extensions can modify the result and error status
@@ -166,7 +181,7 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 					// Extension marks a successful result as error
 					const textBlocks = (modifiedContent ?? []).filter((c): c is TextContent => c.type === "text");
 					const errorText = textBlocks.map(t => t.text).join("\n") || "Tool result marked as error by extension";
-					throw new Error(errorText);
+					throw new AgentToolError(errorText, { content: modifiedContent, details: modifiedDetails });
 				}
 				if (resultResult.isError === false && executionError) {
 					// Extension clears the error - return success
@@ -175,6 +190,11 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 
 				// Error status unchanged, but content/details may be modified
 				if (executionError) {
+					if (modifiedContent !== result.content || modifiedDetails !== result.details)
+						throw new AgentToolError(executionError.message, {
+							content: modifiedContent,
+							details: modifiedDetails,
+						});
 					throw executionError;
 				}
 				return { content: modifiedContent, details: modifiedDetails };

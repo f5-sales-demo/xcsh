@@ -1,0 +1,848 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "sourceFile": "codex-rs/apply-patch/src/file_update.rs",
+  "sourceSha256": "f954105ba036f1c3748fc2ed605ce9a677d619e56ce25f89bffdcad3377734f9",
+  "library": "similar 2.7.0",
+  "cases": [
+    {
+      "before": "",
+      "after": "",
+      "context": 1,
+      "expected": ""
+    },
+    {
+      "before": "",
+      "after": "new\n",
+      "context": 1,
+      "expected": "@@ -0,0 +1 @@\n+new\n"
+    },
+    {
+      "before": "old\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-old\n"
+    },
+    {
+      "before": "old",
+      "after": "new",
+      "context": 1,
+      "expected": "@@ -1 +1 @@\n-old\n\\ No newline at end of file\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "old\n",
+      "after": "new",
+      "context": 1,
+      "expected": "@@ -1 +1 @@\n-old\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "same\n",
+      "after": "same",
+      "context": 1,
+      "expected": "@@ -1 +1 @@\n-same\n+same\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\rb\r",
+      "after": "a\rc\r",
+      "context": 1,
+      "expected": "@@ -1,2 +1,2 @@\n a\r-b\r+c\r"
+    },
+    {
+      "before": "a\r\nb\r\n",
+      "after": "a\r\nc\r\n",
+      "context": 1,
+      "expected": "@@ -1,2 +1,2 @@\n a\r\n-b\r\n+c\r\n"
+    },
+    {
+      "before": "﻿Ω\n終\n",
+      "after": "﻿Ω\n始\n",
+      "context": 1,
+      "expected": "@@ -1,2 +1,2 @@\n ﻿Ω\n-終\n+始\n"
+    },
+    {
+      "before": "a\nb\nc\nd\ne\nf\ng\n",
+      "after": "a\nB\nc\nd\ne\nF\ng\n",
+      "context": 1,
+      "expected": "@@ -1,3 +1,3 @@\n a\n-b\n+B\n c\n@@ -5,3 +5,3 @@\n e\n-f\n+F\n g\n"
+    },
+    {
+      "before": "a\nb\na\nb\nc\n",
+      "after": "b\na\nb\nc\na\n",
+      "context": 0,
+      "expected": "@@ -1 +0,0 @@\n-a\n@@ -5,0 +5 @@\n+a\n"
+    },
+    {
+      "before": "a\nb\nc\n",
+      "after": "a\nnew\nb\nc\n",
+      "context": 4,
+      "expected": "@@ -1,3 +1,4 @@\n a\n+new\n b\n c\n"
+    },
+    {
+      "before": "b\nΩ\nb\nb\na\nend\n\nend\n",
+      "after": "b\nΩ\nb\nb\nnew\nnew\nend",
+      "context": 1,
+      "expected": "@@ -4,5 +4,4 @@\n b\n-a\n-end\n-\n-end\n+new\n+new\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nend\n\n\nb\n\nb\nend\nb\n\n\nΩ\nend\nend\nb\n",
+      "after": "end\nend\n\n\nb\n\nb\nend\nb\n\n\nΩ\nnew\nb",
+      "context": 1,
+      "expected": "@@ -12,4 +12,3 @@\n Ω\n-end\n-end\n-b\n+new\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-\n"
+    },
+    {
+      "before": "a\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-a\n"
+    },
+    {
+      "before": "a\n\na\nb\nend\nend\nend\nend\n\nb\nΩ\nb\na\na\n",
+      "after": "a\n\na\nnew\n\na\nb\nend\nend\nend\nend\n\nb\nΩ\nb\na\na",
+      "context": 1,
+      "expected": "@@ -3,2 +3,5 @@\n a\n+new\n+\n+a\n b\n@@ -13,2 +16,2 @@\n a\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\n\n\nΩ\nb\nb\n\nend\n",
+      "after": "b\n\n\nΩ\nb\nb\n\nend",
+      "context": 1,
+      "expected": "@@ -1,2 +1 @@\n-a\n b\n@@ -8,2 +7,2 @@\n \n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\nend\nend\nb\nend\n\n\na\nend\nb\nend\nb\n",
+      "after": "b\na\nend\nend\nb\nend\n\n\nend\nb\nend\nb",
+      "context": 1,
+      "expected": "@@ -8,3 +8,2 @@\n \n-a\n end\n@@ -12,2 +11,2 @@\n end\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nb\nend\na\n\nend\n",
+      "after": "end\nb\nend\nnew\nb\n\na\n\nend",
+      "context": 1,
+      "expected": "@@ -3,4 +3,7 @@\n end\n+new\n+b\n+\n a\n \n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\nend\nend\na\nΩ\nΩ\nb\nb\n",
+      "after": "Ω\nb\nend\nend\na\nΩ\nΩ\nb",
+      "context": 1,
+      "expected": "@@ -7,3 +7,2 @@\n Ω\n-b\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\nend\nend\n",
+      "after": "Ω\nb\nend\na",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n end\n-end\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\n\nΩ\n\n\n\n\n\n",
+      "after": "b\na\nΩ\n\n\n\n\n",
+      "context": 1,
+      "expected": "@@ -2,5 +2,3 @@\n a\n-\n Ω\n-\n \n"
+    },
+    {
+      "before": "end\nb\nend\nb\nend\nb\nb\na\na\na\n",
+      "after": "end\nb\nend\nb\nend\nnew\nnew\nΩ\nb\nb\na\na\na",
+      "context": 1,
+      "expected": "@@ -5,2 +5,5 @@\n end\n+new\n+new\n+Ω\n b\n@@ -9,2 +12,2 @@\n a\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\n\nΩ\nend\n\n\nb\na\nend\nend\na\n",
+      "after": "Ω\nb\n\nΩ\nend\n\n\nb\na\nend\nend\nnew",
+      "context": 1,
+      "expected": "@@ -11,2 +11,2 @@\n end\n-a\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nΩ\nend\na\na\n\nΩ\n",
+      "after": "a\nnew\nnew\na\n\nΩ",
+      "context": 1,
+      "expected": "@@ -1,7 +1,6 @@\n a\n-Ω\n-end\n-a\n+new\n+new\n a\n \n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n\nb\nend\na\nΩ\n\n\n",
+      "after": "a\n\nb\nb\nΩ\n\n",
+      "context": 1,
+      "expected": "@@ -3,6 +3,4 @@\n b\n-end\n-a\n+b\n Ω\n-\n \n"
+    },
+    {
+      "before": "Ω\na\n\nΩ\nΩ\n\nΩ\n\n\n",
+      "after": "Ω\na\n\nΩ\n\nΩ\n\n",
+      "context": 1,
+      "expected": "@@ -4,6 +4,4 @@\n Ω\n-Ω\n \n Ω\n-\n \n"
+    },
+    {
+      "before": "b\n\nb\n\n\nend\n",
+      "after": "b\nΩ\n\nb\n\nb\n\n\nend",
+      "context": 1,
+      "expected": "@@ -1,2 +1,3 @@\n b\n+Ω\n \n@@ -4,3 +5,5 @@\n \n+b\n \n-end\n+\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nΩ\n\nend\n\nend\nend\n\n\n",
+      "after": "a\nΩ\nend\n\nend\nend\n\n",
+      "context": 1,
+      "expected": "@@ -2,3 +2,2 @@\n Ω\n-\n end\n@@ -7,3 +6,2 @@\n end\n-\n \n"
+    },
+    {
+      "before": "\nΩ\na\nend\nb\nb\na\n",
+      "after": "\n\nΩ\nb\nb\na",
+      "context": 1,
+      "expected": "@@ -1,7 +1,6 @@\n \n+\n Ω\n-a\n-end\n b\n b\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\n\nend\nb\nb\na\n\na\nΩ\nend\n",
+      "after": "Ω\n\nend\nb\nb\na\n\nb\nnew\n\na\nΩ\nend",
+      "context": 1,
+      "expected": "@@ -7,4 +7,7 @@\n \n+b\n+new\n+\n a\n Ω\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\nb\n",
+      "after": "Ω\nb\nΩ\nΩ",
+      "context": 1,
+      "expected": "@@ -2,2 +2,3 @@\n b\n-b\n+Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\n\n",
+      "after": "\nnew\nnew\n\n",
+      "context": 1,
+      "expected": "@@ -1,2 +1,4 @@\n \n+new\n+new\n \n"
+    },
+    {
+      "before": "b\nΩ\n",
+      "after": "b\nΩ\na\nb\nΩ",
+      "context": 1,
+      "expected": "@@ -2 +2,4 @@\n Ω\n+a\n+b\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\na\na\nb\nb\nend\nb\n\n\na\nb\n",
+      "after": "a\nb\na\na\nb\nb\nend\nb\n\n\na\nΩ",
+      "context": 1,
+      "expected": "@@ -11,2 +11,2 @@\n a\n-b\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\na\nend\nΩ\na\nend\n\na\n",
+      "after": "Ω\nb\na\nend\nΩ\na\nend\na",
+      "context": 1,
+      "expected": "@@ -7,3 +7,2 @@\n end\n-\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-a\n"
+    },
+    {
+      "before": "a\na\nΩ\nΩ\nΩ\nΩ\nΩ\nend\nΩ\na\nend\na\n",
+      "after": "a\na\nΩ\nΩ\nΩ\nΩ\nΩ\nend\nΩ\na\nend\nΩ",
+      "context": 1,
+      "expected": "@@ -11,2 +11,2 @@\n end\n-a\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n\nb\nend\na\n",
+      "after": "end\n\nb\na",
+      "context": 1,
+      "expected": "@@ -3,3 +3,2 @@\n b\n-end\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nb\na\nb\na\nΩ\nΩ\n",
+      "after": "b\nb\na\nnew\nb\nΩ",
+      "context": 1,
+      "expected": "@@ -3,5 +3,4 @@\n a\n+new\n b\n-a\n-Ω\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-end\n"
+    },
+    {
+      "before": "Ω\nend\nΩ\nΩ\na\nΩ\n",
+      "after": "Ω\nnew\nnew\nb\nend\nΩ\nΩ\na\nΩ",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n Ω\n+new\n+new\n+b\n end\n@@ -5,2 +8,2 @@\n a\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n\nb\n",
+      "after": "a\nnew",
+      "context": 1,
+      "expected": "@@ -1,3 +1,2 @@\n a\n-\n-b\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\na\nb\nb\n",
+      "after": "\na\nb\na",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n b\n-b\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\na\na\na\na\n",
+      "after": "a\na\na\na",
+      "context": 1,
+      "expected": "@@ -1,3 +1 @@\n-end\n-a\n a\n@@ -5 +3,2 @@\n a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nΩ\nΩ\nend\nb\nΩ\na\n",
+      "after": "b\na\n\nb\nΩ\na",
+      "context": 1,
+      "expected": "@@ -1,7 +1,6 @@\n b\n-Ω\n-Ω\n-end\n+a\n+\n b\n Ω\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\n",
+      "after": "\na\na\nb\nΩ",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n \n-Ω\n+a\n+a\n+b\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\na\nΩ\n\nend\nb\nend\nend\nb\nΩ\nb\na\n",
+      "after": "b\na\na\nΩ\n\nend\nb\nend\nb\nΩ\nb\na",
+      "context": 1,
+      "expected": "@@ -8,3 +8,2 @@\n end\n-end\n b\n@@ -12,2 +11,2 @@\n b\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nΩ\nb\na\nb\nb\nΩ\na\n",
+      "after": "b\nΩ\nb\nnew\nb\nΩ\na",
+      "context": 1,
+      "expected": "@@ -3,6 +3,5 @@\n b\n-a\n-b\n+new\n b\n Ω\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\nb\nend\nb\na\nΩ\n",
+      "after": "\n\nnew\nb\na\nΩ",
+      "context": 1,
+      "expected": "@@ -1,7 +1,6 @@\n \n-Ω\n-b\n-end\n+\n+new\n b\n a\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\n\na\n\nΩ\nb\nend\n\nend\nb\nb\n",
+      "after": "b\na\n\nΩ\nΩ\nb\nend\n\nend\nb\nb",
+      "context": 1,
+      "expected": "@@ -3,5 +3,4 @@\n \n-a\n-\n Ω\n+Ω\n b\n@@ -11,2 +10,2 @@\n b\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nend\n",
+      "after": "a\na\na\nb\nend",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n a\n-end\n+a\n+a\n+b\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nend\nΩ\n",
+      "after": "a\nend\nb\nnew",
+      "context": 1,
+      "expected": "@@ -2,2 +2,3 @@\n end\n-Ω\n+b\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\nend\n",
+      "after": "new\n",
+      "context": 1,
+      "expected": "@@ -1,3 +1 @@\n-\n-Ω\n-end\n+new\n"
+    },
+    {
+      "before": "Ω\nb\n\nend\nb\na\n",
+      "after": "Ω\na\nb\n\nb\n\nend\nb\na",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n Ω\n+a\n+b\n+\n b\n@@ -5,2 +8,2 @@\n b\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nend\nb\nb\n\nb\na\nb\nΩ\nb\n",
+      "after": "end\nend\nb\nnew\nb\nΩ\nb\n\nb\na\nb\nΩ\nb",
+      "context": 1,
+      "expected": "@@ -3,2 +3,5 @@\n b\n+new\n+b\n+Ω\n b\n@@ -9,2 +12,2 @@\n Ω\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\na\nΩ\nb\nΩ\nend\n\na\na\na\n",
+      "after": "a\na\nb\nΩ\na\nΩ\nb\nΩ\nend\n\na\na\na",
+      "context": 1,
+      "expected": "@@ -2,2 +2,5 @@\n a\n+b\n+Ω\n+a\n Ω\n@@ -9,2 +12,2 @@\n a\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-a\n"
+    },
+    {
+      "before": "b\nb\nend\nΩ\nΩ\n\n\n",
+      "after": "b\nb\nend\nΩ\nnew\n",
+      "context": 1,
+      "expected": "@@ -4,4 +4,2 @@\n Ω\n-Ω\n-\n-\n+new\n"
+    },
+    {
+      "before": "\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-\n"
+    },
+    {
+      "before": "Ω\nend\nend\n",
+      "after": "Ω\nΩ\na",
+      "context": 1,
+      "expected": "@@ -1,3 +1,3 @@\n Ω\n-end\n-end\n+Ω\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nb\nΩ\na\nb\nΩ\nb\na\n\n",
+      "after": "\nb\nΩ\na\nb\nb\na\n",
+      "context": 1,
+      "expected": "@@ -5,5 +5,3 @@\n b\n-Ω\n b\n a\n-\n"
+    },
+    {
+      "before": "a\nend\nb\nb\n\nb\nΩ\nend\na\nend\nΩ\n",
+      "after": "a\nend\nb\nb\n\nb\nΩ\nend\na\nend\nb\nnew",
+      "context": 1,
+      "expected": "@@ -10,2 +10,3 @@\n end\n-Ω\n+b\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nend\nΩ\n\nend\n\nend\na\na\nend\na\nb\n",
+      "after": "end\nend\nΩ\n\nend\n\nend\nb\nend\na\nb",
+      "context": 1,
+      "expected": "@@ -7,6 +7,5 @@\n end\n-a\n-a\n+b\n end\n a\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\n\n\n\nb\n\n\n\nend\n",
+      "after": "\n\n\n\nb\n\n\nend",
+      "context": 1,
+      "expected": "@@ -7,3 +7,2 @@\n \n-\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nend\nend\nb\nΩ\n\nΩ\n\nb\n\na\n\n",
+      "after": "end\nend\nend\nb\nΩ\n\nΩ\n\n\na\n",
+      "context": 1,
+      "expected": "@@ -8,5 +8,3 @@\n \n-b\n \n a\n-\n"
+    },
+    {
+      "before": "b\nΩ\nΩ\n\nend\nend\na\nΩ\n\nend\nΩ\na\n\n\n",
+      "after": "b\nΩ\na\nΩ\nΩ\nΩ\n\nend\nend\na\nΩ\n\nend\nΩ\na\n\n",
+      "context": 1,
+      "expected": "@@ -2,2 +2,5 @@\n Ω\n+a\n+Ω\n+Ω\n Ω\n@@ -12,3 +15,2 @@\n a\n-\n \n"
+    },
+    {
+      "before": "a\nΩ\na\n\n",
+      "after": "a\nΩ\na\nb",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n a\n-\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nb\na\nend\na\na\nb\n\nΩ\nend\nend\nΩ\nend\n\nb\n",
+      "after": "end\nb\na\nend\na\na\nb\n\nΩ\nend\nend\nΩ\na\n",
+      "context": 1,
+      "expected": "@@ -12,4 +12,2 @@\n Ω\n-end\n-\n-b\n+a\n"
+    },
+    {
+      "before": "Ω\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-Ω\n"
+    },
+    {
+      "before": "\nΩ\nΩ\nend\nb\n",
+      "after": "Ω\nΩ\nend\nb",
+      "context": 1,
+      "expected": "@@ -1,2 +1 @@\n-\n Ω\n@@ -4,2 +3,2 @@\n end\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nend\nb\n",
+      "after": "b\nnew",
+      "context": 1,
+      "expected": "@@ -1,3 +1,2 @@\n-a\n-end\n b\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\n\nΩ\nb\nb\nend\na\na\nend\n",
+      "after": "\nΩ\nb\nb\nend\na\na\nend",
+      "context": 1,
+      "expected": "@@ -1,3 +1,2 @@\n \n-\n Ω\n@@ -8,2 +7,2 @@\n a\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\na\nend\n",
+      "after": "a\na\na\na",
+      "context": 1,
+      "expected": "@@ -2,2 +2,3 @@\n a\n-end\n+a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\nb\nΩ\n",
+      "after": "a\nb\nb\nb",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n b\n-Ω\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\n\nb\na\n\nend\n",
+      "after": "b\nb\n\na\n\nend",
+      "context": 1,
+      "expected": "@@ -1,7 +1,6 @@\n b\n-a\n-\n b\n+\n a\n \n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n\n\nb\nb\nΩ\na\n",
+      "after": "end\n\n\nb\nb\nb\nb",
+      "context": 1,
+      "expected": "@@ -5,3 +5,3 @@\n b\n-Ω\n-a\n+b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\n",
+      "after": "Ω\na\nb\n\nb",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n Ω\n+a\n b\n+\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nend\nend\nΩ\n\nend\n",
+      "after": "Ω\nnew\nnew\n\nend\nend\nΩ\n\nend",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n Ω\n+new\n+new\n+\n end\n@@ -5,2 +8,2 @@\n \n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n\nΩ\n\na\na\nb\nΩ\na\nend\na\na\nend\nb\na\n",
+      "after": "a\n\nΩ\n\na\na\nb\nΩ\na\nend\na\na\nend\na\nb",
+      "context": 1,
+      "expected": "@@ -13,3 +13,3 @@\n end\n-b\n a\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\n\na\nb\n\n",
+      "after": "Ω\n\nb\n",
+      "context": 1,
+      "expected": "@@ -2,4 +2,2 @@\n \n-a\n b\n-\n"
+    },
+    {
+      "before": "end\nΩ\nb\nb\nend\nb\nend\n",
+      "after": "end\nΩ\nb\nb\nend\na\na",
+      "context": 1,
+      "expected": "@@ -5,3 +5,3 @@\n end\n-b\n-end\n+a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\na\nb\nend\nb\nb\na\na\nb\nb\n\nb\nb\na\n",
+      "after": "a\nb\na\nb\nend\nb\nnew\nb\nb\nb\n\nb\nb\na",
+      "context": 1,
+      "expected": "@@ -6,5 +6,4 @@\n b\n+new\n b\n-a\n-a\n b\n@@ -14,2 +13,2 @@\n b\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n\nΩ\nΩ\nb\nb\nend\nb\nend\n\nend\n",
+      "after": "end\n\nb\nnew\nb\nend\nb\nend\n\nend",
+      "context": 1,
+      "expected": "@@ -2,5 +2,4 @@\n \n-Ω\n-Ω\n b\n+new\n b\n@@ -10,2 +9,2 @@\n \n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\n\n\n\n",
+      "after": "a\n\n\n",
+      "context": 1,
+      "expected": "@@ -1,4 +1,2 @@\n a\n-b\n-\n \n"
+    },
+    {
+      "before": "Ω\n\nΩ\n",
+      "after": "Ω\n\nΩ\na",
+      "context": 1,
+      "expected": "@@ -3 +3,2 @@\n Ω\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-\n"
+    },
+    {
+      "before": "\nΩ\nb\nb\nend\n\nend\n",
+      "after": "\nΩ\nb\nb\nend\nb\na",
+      "context": 1,
+      "expected": "@@ -5,3 +5,3 @@\n end\n-\n-end\n+b\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\n\na\n\nΩ\nΩ\nΩ\n",
+      "after": "\n\na\n\nΩ\nΩ\na\na",
+      "context": 1,
+      "expected": "@@ -6,2 +6,3 @@\n Ω\n-Ω\n+a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nend\na\nb\n",
+      "after": "a\nend\na\na",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n a\n-b\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\n",
+      "after": "\nb\nΩ\n\nΩ",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n \n+b\n Ω\n+\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n\na\nΩ\nend\nΩ\n",
+      "after": "a\n\nΩ\nb\n\na\nΩ\nend\nΩ",
+      "context": 1,
+      "expected": "@@ -2,2 +2,5 @@\n \n+Ω\n+b\n+\n a\n@@ -5,2 +8,2 @@\n end\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-b\n"
+    },
+    {
+      "before": "\nend\nb\nend\n\n\n\nΩ\na\na\nΩ\nΩ\n",
+      "after": "\nend\nb\nΩ\n\n\nΩ\na\na\nΩ\nΩ",
+      "context": 1,
+      "expected": "@@ -3,4 +3,3 @@\n b\n-end\n-\n+Ω\n \n@@ -11,2 +10,2 @@\n Ω\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nb\n\nend\nend\nend\n",
+      "after": "\nb\n\nend\nend\nb\nnew\nb\nend",
+      "context": 1,
+      "expected": "@@ -5,2 +5,5 @@\n end\n-end\n+b\n+new\n+b\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nΩ\n\nb\nΩ\na\na\nΩ\nend\nb\n\n\n",
+      "after": "Ω\nΩ\n\nb\nΩ\na\na\nb\nb\n\n",
+      "context": 1,
+      "expected": "@@ -7,6 +7,4 @@\n a\n-Ω\n-end\n b\n-\n+b\n \n"
+    },
+    {
+      "before": "Ω\nend\nend\n\nb\nend\nend\na\nend\n\nΩ\nΩ\nend\nend\n",
+      "after": "Ω\nend\nend\nnew\nb\nΩ\n\nb\nend\nend\na\nend\n\nΩ\nΩ\nend\nend",
+      "context": 1,
+      "expected": "@@ -3,2 +3,5 @@\n end\n+new\n+b\n+Ω\n \n@@ -13,2 +16,2 @@\n end\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\na\na\n",
+      "after": "b\na",
+      "context": 1,
+      "expected": "@@ -1,3 +1,2 @@\n-a\n-a\n-a\n+b\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nΩ\n\nb\na\nend\nend\na\nb\n",
+      "after": "b\nΩ\n\nb\nend\nend\na\nb",
+      "context": 1,
+      "expected": "@@ -4,3 +4,2 @@\n b\n-a\n end\n@@ -8,2 +7,2 @@\n a\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nend\nΩ\nΩ\n\nΩ\nb\nb\na\nb\n",
+      "after": "end\nend\nΩ\nΩ\n\n\n\n\nΩ\nb\nb\na\nb",
+      "context": 1,
+      "expected": "@@ -5,2 +5,5 @@\n \n+\n+\n+\n Ω\n@@ -9,2 +12,2 @@\n a\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-end\n"
+    },
+    {
+      "before": "a\n\nΩ\nΩ\n\n\nΩ\na\n\nb\nb\nb\n\nend\n\n",
+      "after": "a\na\n\n\n\nΩ\na\n\nb\nb\nb\n\nend\n",
+      "context": 1,
+      "expected": "@@ -1,5 +1,4 @@\n a\n+a\n \n-Ω\n-Ω\n \n@@ -14,2 +13 @@\n end\n-\n"
+    },
+    {
+      "before": "a\nb\n\nb\nend\nb\nb\nend\n",
+      "after": "a\nb\n\nΩ\nb\nb\nend",
+      "context": 1,
+      "expected": "@@ -3,6 +3,5 @@\n \n-b\n-end\n+Ω\n b\n b\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\nend\n\n\nΩ\na\n\nΩ\nb\n",
+      "after": "\nΩ\nend\n\n\n\nΩ\nb\nΩ\na\n\nΩ\nb",
+      "context": 1,
+      "expected": "@@ -5,2 +5,5 @@\n \n+\n+Ω\n+b\n Ω\n@@ -9,2 +12,2 @@\n Ω\n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nΩ\n\nend\nΩ\n\nb\nend\nb\nΩ\nb\nΩ\nend\nend\na\n",
+      "after": "Ω\nΩ\n\nend\nnew\nΩ\nend\nb\nΩ\nb\nΩ\nend\nend\na",
+      "context": 1,
+      "expected": "@@ -4,5 +4,4 @@\n end\n+new\n Ω\n-\n-b\n end\n@@ -14,2 +13,2 @@\n end\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\na\nΩ\n",
+      "after": "Ω\nb\na\n",
+      "context": 1,
+      "expected": "@@ -3,2 +3 @@\n a\n-Ω\n"
+    },
+    {
+      "before": "\n\nb\n\nb\nb\nΩ\nΩ\nb\nΩ\na\na\nΩ\n",
+      "after": "\n\nb\n\nb\nb\nΩ\nΩ\nb\na\na\nΩ",
+      "context": 1,
+      "expected": "@@ -9,5 +9,4 @@\n b\n-Ω\n a\n a\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\n\n\n\n\n",
+      "after": "b\n\n\n",
+      "context": 1,
+      "expected": "@@ -3,3 +3 @@\n \n-\n-\n"
+    },
+    {
+      "before": "end\n\nb\nΩ\nend\n\nb\nend\nb\n\n\n",
+      "after": "\nΩ\nΩ\nend\n\nb\nend\nb\n\n",
+      "context": 1,
+      "expected": "@@ -1,5 +1,4 @@\n-end\n \n-b\n Ω\n+Ω\n end\n@@ -9,3 +8,2 @@\n b\n-\n \n"
+    },
+    {
+      "before": "end\nΩ\nb\nΩ\nb\nend\n",
+      "after": "end\nΩ\nb\nb\n\na\nΩ\nb\nend",
+      "context": 1,
+      "expected": "@@ -3,4 +3,7 @@\n b\n+b\n+\n+a\n Ω\n b\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\na\nend\na\na\na\n",
+      "after": "\na\nend\na\na\nnew\nb\na\na",
+      "context": 1,
+      "expected": "@@ -5,2 +5,5 @@\n a\n+new\n+b\n a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\n\nb\nb\na\nend\nb\n",
+      "after": "\nΩ\n\nb\nb\na\nend\na",
+      "context": 1,
+      "expected": "@@ -7,2 +7,2 @@\n end\n-b\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nb\na\na\n",
+      "after": "Ω\nb\na\na",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n a\n-a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nΩ\n",
+      "after": "Ω\na\nb\nΩ\nΩ",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n Ω\n+a\n+b\n Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "Ω\nend\nend\nΩ\nb\n\nend\nb\nb\na\n",
+      "after": "Ω\nend\nend\nΩ\nb\n\nend\nb\na\nb\nb\nb\na",
+      "context": 1,
+      "expected": "@@ -8,3 +8,6 @@\n b\n+a\n+b\n b\n-a\n+b\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\n\nend\nb\n",
+      "after": "b\na\n\nend",
+      "context": 1,
+      "expected": "@@ -3,3 +3,2 @@\n \n-end\n-b\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nend\nend\na\nΩ\nb\nend\n",
+      "after": "b\nend\nend\n\n\nend",
+      "context": 1,
+      "expected": "@@ -3,5 +3,4 @@\n end\n-a\n-Ω\n-b\n-end\n+\n+\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-b\n"
+    },
+    {
+      "before": "b\na\n\na\n\na\nend\n\n\nb\nend\nΩ\nΩ\n",
+      "after": "a\n\na\n\na\nend\n\n\nb\nend\nΩ\nΩ",
+      "context": 1,
+      "expected": "@@ -1,2 +1 @@\n-b\n a\n@@ -11,3 +10,3 @@\n end\n-Ω\n Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\n\nend\nend\nend\n",
+      "after": "a\n\nend\nend",
+      "context": 1,
+      "expected": "@@ -3,3 +3,2 @@\n end\n-end\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nend\nΩ\nΩ\nΩ\n\nb\n\n",
+      "after": "end\nend\nΩ\nΩ\nΩ\n\nb\na",
+      "context": 1,
+      "expected": "@@ -7,2 +7,2 @@\n b\n-\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nend\nΩ\nb\nend\n\na\nb\nΩ\nb\nb\na\na\n",
+      "after": "\nend\nΩ\nb\nend\n\na\nΩ\nb\nb\na\na",
+      "context": 1,
+      "expected": "@@ -7,3 +7,2 @@\n a\n-b\n Ω\n@@ -11,3 +10,3 @@\n b\n-a\n a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\na\n\nb\n\nb\nb\nΩ\n\nΩ\nb\na\na\nend\n",
+      "after": "b\nb\na\na\na\n\nb\n\nb\nb\nΩ\n\nΩ\nb\na\na\nend",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n b\n+b\n+a\n+a\n a\n@@ -13,2 +16,2 @@\n a\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n\n\nΩ\n\n\n\nb\nend\n\nend\na\na\n",
+      "after": "end\n\nΩ\n\n\n\nb\nend\n\nend\na\na",
+      "context": 1,
+      "expected": "@@ -2,3 +2,2 @@\n \n-\n Ω\n@@ -11,3 +10,3 @@\n end\n-a\n a\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nb\n\nend\nend\nend\nΩ\nΩ\nend\nΩ\n",
+      "after": "b\nb\n\nb\n\na\nend\nend\nend\nΩ\nΩ\nend\nΩ",
+      "context": 1,
+      "expected": "@@ -3,2 +3,5 @@\n \n+b\n+\n+a\n end\n@@ -9,2 +12,2 @@\n end\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\n\na\nb\nend\nΩ\nb\n\n\nΩ\nb\nend\nΩ\na\nend\n",
+      "after": "end\n\na\nb\nend\nΩ\nb\n\n\nΩ\nb\nend\nΩ\na\na",
+      "context": 1,
+      "expected": "@@ -14,2 +14,2 @@\n a\n-end\n+a\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\nΩ\na\nb\na\nb\nend\n\n",
+      "after": "a\nb\nΩ\na\nb\na\nend\n",
+      "context": 1,
+      "expected": "@@ -6,4 +6,2 @@\n a\n-b\n end\n-\n"
+    },
+    {
+      "before": "a\nb\nΩ\nb\n",
+      "after": "a\nb\nΩ\nnew",
+      "context": 1,
+      "expected": "@@ -3,2 +3,2 @@\n Ω\n-b\n+new\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "\nΩ\nΩ\n\nΩ\n\nend\n\nΩ\n\nend\n",
+      "after": "\nΩ\nΩ\n\n\nend\n\nΩ\n\nend",
+      "context": 1,
+      "expected": "@@ -4,3 +4,2 @@\n \n-Ω\n \n@@ -10,2 +9,2 @@\n \n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nend\n",
+      "after": "b\na\nnew\nΩ\nend",
+      "context": 1,
+      "expected": "@@ -1,2 +1,5 @@\n b\n-end\n+a\n+new\n+Ω\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nend\nb\nend\na\nend\nΩ\n\nΩ\nb\nb\nend\n",
+      "after": "a\nend\nb\nend\na\nend\nΩ\n\nΩ\nb\nb\n",
+      "context": 1,
+      "expected": "@@ -11,2 +11 @@\n b\n-end\n"
+    },
+    {
+      "before": "end\nΩ\n\n\n\nb\nend\nb\nΩ\nΩ\n",
+      "after": "end\nΩ\n\n\n\nb\nend\nΩ\n\n\nb\nΩ\nΩ",
+      "context": 1,
+      "expected": "@@ -7,4 +7,7 @@\n end\n-b\n Ω\n+\n+\n+b\n Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nb\na\nb\n\na\na\n",
+      "after": "a\nb\na\nb\n\n",
+      "context": 1,
+      "expected": "@@ -5,3 +5 @@\n \n-a\n-a\n"
+    },
+    {
+      "before": "Ω\nend\n\na\nΩ\n\na\nb\nend\n\n",
+      "after": "Ω\nend\n\na\nΩ\n\na\nnew\nb\nb\nb\nend\n",
+      "context": 1,
+      "expected": "@@ -7,4 +7,6 @@\n a\n+new\n+b\n+b\n b\n end\n-\n"
+    },
+    {
+      "before": "Ω\n",
+      "after": "",
+      "context": 1,
+      "expected": "@@ -1 +0,0 @@\n-Ω\n"
+    },
+    {
+      "before": "end\nb\nend\nΩ\na\na\na\n\nb\n",
+      "after": "end\nend\nΩ\na\na\na\n\nb",
+      "context": 1,
+      "expected": "@@ -1,3 +1,2 @@\n end\n-b\n end\n@@ -8,2 +7,2 @@\n \n-b\n+b\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "end\nb\n\nb\na\nend\n",
+      "after": "end\nb\n\nb\nΩ\n\nb\na\nend",
+      "context": 1,
+      "expected": "@@ -4,3 +4,6 @@\n b\n+Ω\n+\n+b\n a\n-end\n+end\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "a\nΩ\na\nΩ\n\nb\nΩ\na\nend\nΩ\nend\na\nΩ\n",
+      "after": "a\nΩ\na\nΩ\n\nb\nΩ\na\nΩ\nend\na\nΩ",
+      "context": 1,
+      "expected": "@@ -8,3 +8,2 @@\n a\n-end\n Ω\n@@ -12,2 +11,2 @@\n a\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    },
+    {
+      "before": "b\nend\nb\nb\nb\nend\nΩ\nb\nb\nend\nΩ\nb\nΩ\n",
+      "after": "b\nend\nb\nb\nend\nΩ\nb\nb\nend\nΩ\nb\nΩ",
+      "context": 1,
+      "expected": "@@ -4,3 +4,2 @@\n b\n-b\n end\n@@ -12,2 +11,2 @@\n b\n-Ω\n+Ω\n\\ No newline at end of file\n"
+    }
+  ]
+}

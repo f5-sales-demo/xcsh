@@ -64,6 +64,9 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 */
 	convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 
+	/** Session-owned context updates after pruning; emitted and retained like other messages. */
+	getContextMessages?: (messages: readonly AgentMessage[]) => AgentMessage[];
+
 	/**
 	 * Optional transform applied to the context before `convertToLlm`.
 	 *
@@ -242,6 +245,10 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 	extends Tool<TParameters> {
 	// A human-readable label for the tool to be displayed in UI
 	label: string;
+	/** Host presentation of the actual executor; absent for ordinary dynamic tools. */
+	executionKind?: "command" | "fileChange";
+	/** Pure per-call classification; returning undefined preserves ordinary dynamic-tool presentation. */
+	getExecutionKind?: (params: unknown) => "command" | "fileChange" | undefined;
 	/** If true, tool is excluded unless explicitly listed in --tools or agent's tools field */
 	hidden?: boolean;
 	/** If true, tool can stage a pending action that requires explicit resolution via the resolve tool. */
@@ -293,7 +300,14 @@ export type AgentEvent =
 	| { type: "message_update"; message: AgentMessage; assistantMessageEvent: AssistantMessageEvent }
 	| { type: "message_end"; message: AgentMessage }
 	// Tool execution lifecycle
-	| { type: "tool_execution_start"; toolCallId: string; toolName: string; args: any; intent?: string }
+	| {
+			type: "tool_execution_start";
+			toolCallId: string;
+			toolName: string;
+			args: any;
+			intent?: string;
+			executionKind?: "command" | "fileChange";
+	  }
 	| { type: "tool_execution_update"; toolCallId: string; toolName: string; args: any; partialResult: any }
 	| {
 			type: "tool_execution_end";
@@ -303,3 +317,10 @@ export type AgentEvent =
 			isError?: boolean;
 			isWarning?: boolean;
 	  };
+
+export function getToolExecutionKind(
+	tool: AgentTool | undefined,
+	params: unknown,
+): "command" | "fileChange" | undefined {
+	return tool?.getExecutionKind ? tool.getExecutionKind(params) : tool?.executionKind;
+}

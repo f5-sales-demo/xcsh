@@ -18,6 +18,7 @@ import hashlineDescription from "../prompts/tools/hashline.md" with { type: "tex
 import patchDescription from "../prompts/tools/patch.md" with { type: "text" };
 import replaceDescription from "../prompts/tools/replace.md" with { type: "text" };
 import type { ToolSession } from "../tools";
+import { captureFileExecution } from "../tools/file-mutations";
 import { VimTool, vimSchema } from "../tools/vim";
 import { type EditMode, normalizeEditMode, resolveEditMode } from "../utils/edit-mode";
 import type { VimToolDetails } from "../vim/types";
@@ -231,6 +232,9 @@ async function executePerFile(
 
 export class EditTool implements AgentTool<TInput> {
 	readonly name = "edit";
+	get executionKind(): "fileChange" | undefined {
+		return this.mode === "vim" ? undefined : "fileChange";
+	}
 	readonly label = "Edit";
 	readonly nonAbortable = true;
 	readonly concurrency = "exclusive";
@@ -282,7 +286,14 @@ export class EditTool implements AgentTool<TInput> {
 			throw new Error(modeDefinition.invalidParamsMessage);
 		}
 
-		return modeDefinition.execute(this, params, signal, getLspBatchRequest(context?.toolCall), onUpdate);
+		if (this.mode === "vim")
+			return modeDefinition.execute(this, params, signal, getLspBatchRequest(context?.toolCall), onUpdate);
+		const captured = await captureFileExecution(snapshot =>
+			modeDefinition.execute(this, params, signal, getLspBatchRequest(context?.toolCall), partial =>
+				onUpdate?.({ ...partial, details: { diff: "", ...partial.details, execution: snapshot() } }),
+			),
+		);
+		return { ...captured, details: { diff: "", ...captured.details } };
 	}
 
 	#getModeDefinition(): EditModeDefinition {

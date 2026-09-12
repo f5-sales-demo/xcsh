@@ -355,3 +355,98 @@ describe("truncation notice formatting", () => {
 		).toBe("\n\n[Showing lines 100-100 of 500. Use sel=L101 to continue]");
 	});
 });
+
+describe("lossless throttled output", () => {
+	test("dump flushes throttled chunks in order exactly once", async () => {
+		const chunks: string[] = [];
+		const sink = new OutputSink({ chunkThrottleMs: 60_000, onChunk: chunk => chunks.push(chunk) });
+		sink.push("first");
+		sink.push("second");
+		sink.push("third");
+		const output = await sink.dump();
+		expect(chunks.join("")).toBe("firstsecondthird");
+		expect(output.output).toBe(chunks.join(""));
+		await sink.dump();
+		expect(chunks.join("")).toBe("firstsecondthird");
+	});
+	test("pending output is delivered when the producer pauses", async () => {
+		const chunks: string[] = [];
+		const delivered = Promise.withResolvers<void>();
+		const sink = new OutputSink({
+			chunkThrottleMs: 10,
+			onChunk: chunk => {
+				chunks.push(chunk);
+				if (chunks.join("") === "firstsecond") delivered.resolve();
+			},
+		});
+		sink.push("first");
+		sink.push("second");
+		await Promise.race([
+			delivered.promise,
+			Bun.sleep(200).then(() => {
+				throw new Error("Paused output was not flushed");
+			}),
+		]);
+		expect(chunks.join("")).toBe("firstsecond");
+		await sink.dump();
+	});
+	test("large unicode output preserves every character with bounded callback batches", async () => {
+		const chunks: string[] = [];
+		const sink = new OutputSink({ chunkThrottleMs: 60_000, onChunk: chunk => chunks.push(chunk) });
+		const text = "🦊é中".repeat(DEFAULT_MAX_BYTES);
+		sink.push(text);
+		await sink.dump();
+		expect(chunks.join("")).toBe(text);
+		expect(chunks.every(chunk => Buffer.byteLength(chunk) <= DEFAULT_MAX_BYTES && chunk.isWellFormed())).toBe(true);
+	});
+	test("secret masking applies before queued output is delivered", async () => {
+		const chunks: string[] = [];
+		const sink = new OutputSink({
+			chunkThrottleMs: 60_000,
+			maskSecrets: text => text.replaceAll("fixture-secret", "[masked]"),
+			onChunk: chunk => chunks.push(chunk),
+		});
+		sink.push("start ");
+		sink.push("fixture-secret");
+		await sink.dump();
+		expect(chunks.join("")).toBe("start [masked]");
+	});
+});
+
+test("a paused output callback failure is returned to the executor by dump", async () => {
+	let calls = 0;
+	const error = new Error("Fixture output consumer failed");
+	const sink = new OutputSink({
+		chunkThrottleMs: 10,
+		onChunk: () => {
+			if (++calls > 1) throw error;
+		},
+	});
+	sink.push("first");
+	sink.push("second");
+	await Bun.sleep(30);
+	await expect(sink.dump()).rejects.toBe(error);
+});
+
+test("dump closes artifact output even when the queued output consumer fails", async () => {
+	const dir = await createTempDir();
+	const artifactPath = path.join(dir, "output.txt");
+	let calls = 0;
+	const sink = new OutputSink({
+		artifactPath,
+		spillThreshold: 1,
+		chunkThrottleMs: 60_000,
+		onChunk: () => {
+			if (++calls > 1) throw new Error("Fixture consumer failure");
+		},
+	});
+	sink.push("first");
+	sink.push("second");
+	await expect(sink.dump()).rejects.toThrow("Fixture consumer failure");
+	if (process.platform === "linux") {
+		const descriptors = await fs.readdir("/proc/self/fd");
+		const targets = await Promise.all(descriptors.map(fd => fs.readlink(`/proc/self/fd/${fd}`).catch(() => "")));
+		expect(targets).not.toContain(artifactPath);
+	}
+	expect(await Bun.file(artifactPath).text()).toBe("firstsecond");
+});

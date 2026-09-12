@@ -1,3 +1,5 @@
+import { AgentToolError } from "@f5-sales-demo/pi-agent-core";
+
 /**
  * Standardized error types for tool execution.
  *
@@ -9,12 +11,13 @@
  * Base error for tool execution failures.
  * Override render() for custom LLM-facing formatting.
  */
-export class ToolError extends Error {
+export class ToolError extends AgentToolError<Record<string, unknown>> {
 	constructor(
 		message: string,
 		readonly context?: Record<string, unknown>,
+		details: Record<string, unknown> = {},
 	) {
-		super(message);
+		super(message, { content: [{ type: "text", text: message }], details });
 		this.name = "ToolError";
 	}
 
@@ -27,11 +30,11 @@ export class ToolError extends Error {
 /**
  * Error thrown when a tool operation is aborted (e.g., via AbortSignal).
  */
-export class ToolAbortError extends Error {
+export class ToolAbortError extends AgentToolError<Record<string, unknown>> {
 	static readonly MESSAGE = "Operation aborted";
 
-	constructor(message: string = ToolAbortError.MESSAGE) {
-		super(message);
+	constructor(message: string = ToolAbortError.MESSAGE, details: Record<string, unknown> = {}) {
+		super(message, { content: [{ type: "text", text: message }], details });
 		this.name = "ToolAbortError";
 	}
 }

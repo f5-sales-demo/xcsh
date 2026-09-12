@@ -37,6 +37,8 @@ function createSession(cwd: string, overrides: Partial<SessionLike> = {}): Sessi
 function createFixtureDatabase(dbPath: string): void {
 	const db = new Database(dbPath);
 	try {
+		// Seed one atomic fixture instead of syncing every inserted row separately.
+		db.run("BEGIN");
 		db.run(`
 			CREATE TABLE users (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,6 +111,7 @@ function createFixtureDatabase(dbPath: string): void {
 
 		db.prepare("INSERT INTO composite (team_id, user_id, value) VALUES (?, ?, ?)").run(1, 2, "pair");
 		db.prepare("INSERT INTO wide_rows (id, payload) VALUES (?, ?)").run(1, "x".repeat(320));
+		db.run("COMMIT");
 	} finally {
 		db.close();
 	}

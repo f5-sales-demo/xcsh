@@ -10,6 +10,7 @@ import type { ContainmentFence } from "../sandbox/containment";
 import { OutputSink } from "../session/streaming-output";
 import { getOrCreateSnapshot } from "../utils/shell-snapshot";
 import { NON_INTERACTIVE_ENV } from "./non-interactive-env";
+import { ShellOutputFilter } from "./shell-output-filter";
 
 /**
  * The fence as the napi boundary wants it: plain mutable arrays, or absent for unrestricted.
@@ -117,19 +118,23 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 
 	// CWD capture sentinels — used to detect directory changes from cd commands.
 	// Only appended for persistent shell sessions (one-shot shells don't persist CWD).
-	const CWD_SENTINEL_START = "__XCSH_CWD__:";
-	const CWD_SENTINEL_END = ":__XCSH_CWD_END__";
+	const frameId = Bun.randomUUIDv7();
+	const CWD_SENTINEL_START = `__xcsh_${frameId}_cwd__:`;
+	const CWD_SENTINEL_END = `:__xcsh_${frameId}_cwd_end__`;
 	// Exit-code capture sentinel — the persistent shell's own exit code reflects
 	// the trailing printf (always 0), so the user command's actual exit status
 	// must be captured in-band before another command replaces it. Without this
 	// sentinel, subprocess failures like `false`, `ls /nonexistent`, or `(exit 3)`
 	// silently report success.
-	const EXIT_SENTINEL_START = "__XCSH_EXIT__:";
-	const EXIT_SENTINEL_END = ":__XCSH_EXIT_END__";
+	const EXIT_SENTINEL_START = `__xcsh_${frameId}_exit__:`;
+	const EXIT_SENTINEL_END = `:__xcsh_${frameId}_exit_end__`;
 
+	const outputFilter = new ShellOutputFilter(CWD_SENTINEL_START, `${EXIT_SENTINEL_END}\n`, text =>
+		options?.onChunk?.(text),
+	);
 	// Create output sink for truncation and artifact handling
 	const sink = new OutputSink({
-		onChunk: options?.onChunk,
+		onChunk: options?.onChunk ? text => outputFilter.push(text) : undefined,
 		artifactPath: options?.artifactPath,
 		artifactId: options?.artifactId,
 		// Throttle the streaming preview callback to avoid saturating the
@@ -137,6 +142,12 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 		chunkThrottleMs: options?.onChunk ? 50 : 0,
 		maskSecrets: options?.maskSecrets,
 	});
+
+	const dump = async (notice?: string) => {
+		const result = await sink.dump(notice);
+		outputFilter.finish();
+		return result;
+	};
 
 	// sink.push() is synchronous — buffer management, counters, and onChunk
 	// all run inline. File writes (artifact path) are handled asynchronously
@@ -149,7 +160,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 		return {
 			exitCode: undefined,
 			cancelled: true,
-			...(await sink.dump("Command cancelled")),
+			...(await dump("Command cancelled")),
 		};
 	}
 
@@ -251,7 +262,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 			return {
 				exitCode: undefined,
 				cancelled: true,
-				...(await sink.dump(`Command exceeded hard timeout after ${Math.round(hardTimeoutMs / 1000)} seconds`)),
+				...(await dump(`Command exceeded hard timeout after ${Math.round(hardTimeoutMs / 1000)} seconds`)),
 			};
 		}
 
@@ -264,7 +275,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 			return {
 				exitCode: undefined,
 				cancelled: true,
-				...(await sink.dump(annotation)),
+				...(await dump(annotation)),
 			};
 		}
 
@@ -274,7 +285,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 			return {
 				exitCode: undefined,
 				cancelled: true,
-				...(await sink.dump("Command cancelled")),
+				...(await dump("Command cancelled")),
 			};
 		}
 
@@ -282,7 +293,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 		// result. Exit sentinel override is the authoritative exit code for
 		// persistent shell sessions — `winner.result.exitCode` would otherwise
 		// be the trailing printf's exit code (always 0).
-		const dumpResult = await sink.dump();
+		const dumpResult = await dump();
 		let newCwd: string | undefined;
 		let overrideExitCode: number | undefined;
 		if (shellSession) {
@@ -311,11 +322,11 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 					// Strip both sentinel lines from displayed output.
 					const afterLine = dumpResult.output.indexOf("\n", stripEndIdx);
 					const stripEnd = afterLine === -1 ? dumpResult.output.length : afterLine + 1;
-					const strippedBytes = stripEnd - cwdIdx;
+					const strippedBytes = Buffer.byteLength(dumpResult.output.slice(cwdIdx, stripEnd));
 					dumpResult.output = dumpResult.output.slice(0, cwdIdx) + dumpResult.output.slice(stripEnd);
 					dumpResult.totalBytes = Math.max(0, dumpResult.totalBytes - strippedBytes);
 					dumpResult.totalLines = Math.max(0, dumpResult.totalLines - linesRemoved);
-					dumpResult.outputBytes = dumpResult.output.length;
+					dumpResult.outputBytes = Buffer.byteLength(dumpResult.output);
 					dumpResult.outputLines = Math.max(0, dumpResult.outputLines - linesRemoved);
 				}
 			}
