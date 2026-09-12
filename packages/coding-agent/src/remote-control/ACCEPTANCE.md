@@ -397,3 +397,27 @@ elicitation remains unsupported, phone-created headless sessions remain out of
 scope, and manual voice restart after total network loss remains accepted.
 Expiry, revocation and re-pairing are intentionally last because they disrupt
 enrollment and remain pending until the presentation evidence is preserved.
+
+## Automated interaction sweep
+
+On 2026-09-12, a Herdr-managed terminal simulation ran the current interaction
+matrix under Bun 1.4.2. The remote-control, sandbox-guard, session-fence and
+sandbox-isolation matrix passed 948 tests with zero failures and 3,828
+expect() calls across 68 files in 62.44 seconds.
+
+The simulated cases cover native command/file prompt ownership,
+accept/decline/cancel (including phone cancellation), no mutation after
+decline/cancel, reattach and duplicate-response replay, one-winner
+terminal/remote resolution, Ask grant isolation and reset on Full, the empty
+permission-profile catalog, pagination, unsupported thread/fork, mid-stream
+attachment, steering/interruption, grouped questions, transcript history,
+relay replay and WebRTC recovery contracts.
+
+This closes those behaviors as automated protocol assertions. It does not
+substitute for what only an iPhone can establish visually: decline/cancel,
+duplicate/reconnect and simultaneous-resolution presentation; Ask-to-Full
+shield and empty-catalog presentation; or the final physical
+expiry/revocation/re-pairing flow. The existing package-wide exploratory run
+was intentionally stopped without a pass receipt after it exceeded its normal
+range and opened an unexpected outbound test connection. Do not count that
+interrupted broad run as verification.

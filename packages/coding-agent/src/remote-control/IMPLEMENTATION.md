@@ -2656,3 +2656,27 @@ the Pro OAuth run. There is no applicable MCP elicitation flow, phone-created
 headless sessions remain excluded, and manual voice restart after complete
 network loss remains accepted. Revocation and re-pairing remain last because
 they intentionally disturb enrollment.
+
+## Automated Herdr interaction verification
+
+The final current-source simulated interaction matrix ran in a Herdr-managed
+terminal on 2026-09-12 under Bun 1.4.2. It combined the complete remote-control
+directory with sandbox-guard, sandbox-session-fence and sandbox-isolation: 948
+tests passed, zero failed, with 3,828 expect() calls across 68 files in 62.44
+seconds.
+
+The sweep verifies native command/file ownership and tool-call identity;
+accept, decline, cancel and phone-cancel semantics; no mutation for declined or
+cancelled work; reconnect replay and duplicate resolution; single-winner
+terminal/remote decisions; Ask grant reset and same-directory isolation; the
+empty permission-profile list; pagination, unsupported fork, mid-stream
+attachment, steering, interruption, grouped questions, transcript history and
+relay/WebRTC recovery contracts. It is intentionally protocol automation, not
+a claim about iPhone visual or spoken UI.
+
+The only remaining human checks are physical presentation and enrollment
+actions: decline/cancel and replay/race display, Ask-to-Full shield and
+empty-catalog presentation, plus expiry/revocation/re-pairing. An unrestricted
+package-wide exploratory test was stopped without a pass receipt after exceeding
+its normal range with an unexpected outbound connection; it is not a
+verification result.

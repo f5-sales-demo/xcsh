@@ -1096,3 +1096,24 @@ OAuth run. Phone-created headless sessions are excluded, and fresh manual voice
 restart after total network loss is the accepted first-release recovery. The
 earlier Plan continuity, four-session history, four voice tasks, closure,
 cancellation and recovery observations remain accepted without repetition.
+
+## Herdr simulated-interaction receipt
+
+The current r4 source was exercised on 2026-09-12 through a Herdr terminal
+simulation, rather than by inferring phone behavior from relay traces. The
+68-file remote-control, sandbox-guard, session-fence and sandbox-isolation
+matrix passed 948 tests, 3,828 assertions and zero failures in 62.44 seconds
+under Bun 1.4.2. It directly covers the native broker identity and winner
+rules, accept/decline/cancel paths, non-mutation for refused requests, replay
+and duplicate suppression, Ask/Full grant fences, catalog/fork boundaries,
+history and attachment projections, steering, grouped questions and recovery
+contracts.
+
+This is parity evidence for protocol behavior only. The app visual and spoken
+presentation remains a distinct iPhone gate: decline/cancel and reconnect
+rendering, simultaneous terminal/phone resolution presentation, the Ask/Full
+shield and the empty catalog. Expiry, revocation and re-pairing also still need
+the physical paired device and are deliberately last. The subsequent
+unrestricted package-wide exploratory command was stopped without a pass
+receipt after an abnormally long outbound-network-bound run; it is not used as
+parity evidence.
