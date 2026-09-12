@@ -39,7 +39,7 @@
 		"lint": "biome lint .",
 		"check:bundle": "bun scripts/check-bundle.ts",
 		"pretest": "bun ../../scripts/check-installed-dependencies.ts && bun ../../scripts/ensure-dev-native.ts",
-		"test": "bun run generate-build-info && bun scripts/bun-test-guarded.ts --max-concurrency 1",
+		"test": "bun run generate-build-info && bun scripts/bun-test-guarded.ts --max-concurrency=2",
 		"bench:routing-matrix": "bun scripts/bench-routing-matrix.ts",
 		"bench:copy-selector": "bun scripts/bench-copy-selector.ts",
 		"fix": "biome check --write --unsafe . && bun run format-prompts && bun run generate-docs-index && bun run generate-api-spec-index && bun run generate-build-info",

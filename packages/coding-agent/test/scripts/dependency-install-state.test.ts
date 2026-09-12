@@ -199,9 +199,7 @@ describe("installed dependency state", () => {
 			scripts?: Record<string, string>;
 		};
 
-		expect(manifest.scripts?.["test:ts"]).toBe(
-			"bun run ensure:dependencies && bun scripts/ensure-dev-native.ts && bun run --workspaces --if-present test -- --only-failures",
-		);
+		expect(manifest.scripts?.["test:ts"]).toBe("bun scripts/run-ts-tests.ts");
 	});
 });
 

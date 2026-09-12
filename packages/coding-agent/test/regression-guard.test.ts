@@ -467,6 +467,10 @@ describe("CI invalidates stale release PRs before the full test matrix", () => {
 describe("CI installs Zig without a deprecated JavaScript action", () => {
 	it("executes and verifies the Zig installer inside every native matrix job", async () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const installer = await fs.readFile(
+			path.join(import.meta.dir, "../../../.github/actions/setup-zig/action.yml"),
+			"utf8",
+		);
 		const smokeJob = workflow.match(/\n {2}setup-zig:\n[\s\S]*?(?=\n {2}native:\n)/)?.[0] ?? "";
 		const nativeJob = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
 
@@ -476,7 +480,9 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(nativeJob).toContain("macos-14");
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: ./.github/actions/setup-zig");
-		expect(nativeJob).toContain('run: test "$(zig version)" = 0.16.0');
+		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
+		expect(installer).toContain("Verify baked Zig 0.16.0");
+		expect(installer).toContain('test "$(zig version)" = 0.16.0');
 		expect(nativeJob).not.toContain("needs: setup-zig");
 	});
 
@@ -486,7 +492,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		const installer = await fs.readFile(path.join(root, ".github/actions/setup-zig/action.yml"), "utf8");
 
 		expect(workflow).not.toContain("mlugg/setup-zig");
-		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(3);
+		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(2);
 		expect(installer).toContain("using: composite");
 		expect(installer).toContain('ZIG_VERSION: "0.16.0"');
 		const releases = [
@@ -575,11 +581,9 @@ describe("release artifacts run the sandbox matrix before and after publication"
 	it("checks the compiled Linux and signed macOS executables", async () => {
 		const linux = await loadJob("build-release");
 		const macos = await loadJob("build-sign-macos");
-		expect(linux).toContain("Install LLVM Mach-O inspection tools");
-		expect(linux).toContain("archive.ubuntu.com/ubuntu/pool/universe/l/llvm-toolchain-18");
-		expect(linux).toContain("sha256sum --check --strict");
-		expect(linux).toContain("GITHUB_PATH");
-		expect(linux).toContain("LD_LIBRARY_PATH");
+		expect(linux).toContain("Verify baked LLVM Mach-O inspection tools");
+		expect(linux).not.toContain("apt-get install --yes --no-install-recommends llvm");
+		expect(linux).not.toContain("archive.ubuntu.com/ubuntu/pool/universe/l/llvm-toolchain-18");
 		expect(linux).toContain("llvm-nm");
 		expect(linux).toContain("packages/coding-agent/binaries/xcsh-linux-x64");
 		expect(linux).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
