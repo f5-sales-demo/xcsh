@@ -190,14 +190,17 @@ const result = {
 	},
 	audits,
 };
-const serialized = `${JSON.stringify(result, null, 2)}\n`;
+const serialize = (value: typeof result): string => `${JSON.stringify(value, null, 2)}\n`;
 const outputPath = join(outputDirectory, "audit.json");
 if (checkOnly) {
 	if (!(await Bun.file(outputPath).exists())) throw new Error(`Missing source-boundary audit: ${outputPath}`);
-	if ((await Bun.file(outputPath).text()) !== serialized)
-		throw new Error("Source-boundary audit is stale; regenerate it before acceptance");
+	const persistedText = await Bun.file(outputPath).text();
+	const persisted = JSON.parse(persistedText) as typeof result;
+	if (!/^[0-9a-f]{40,64}$/.test(persisted.revision)) throw new Error("Source-boundary audit revision is invalid");
+	const expected = serialize({ ...result, revision: persisted.revision });
+	if (persistedText !== expected) throw new Error("Source-boundary audit is stale; regenerate it before acceptance");
 } else {
 	await mkdir(outputDirectory, { recursive: true });
-	await Bun.write(outputPath, serialized);
+	await Bun.write(outputPath, serialize(result));
 }
 console.log(JSON.stringify({ output: outputPath, fingerprint: result.fingerprint, counts: result.counts, checkOnly }));

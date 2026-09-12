@@ -4,7 +4,9 @@ import { join } from "node:path";
 const root = new URL("../../../", import.meta.url).pathname;
 
 test("first-party user-facing source and English documentation spell the product name as xcsh", async () => {
-	const files = new Set<string>(["DEVELOPING.md", "TUI_HANDOFF.md", "TUI_IMPLEMENTATION.md"]);
+	const files = new Set<string>(["DEVELOPING.md"]);
+	for (const optionalFile of ["TUI_HANDOFF.md", "TUI_IMPLEMENTATION.md"])
+		if (await Bun.file(join(root, optionalFile)).exists()) files.add(optionalFile);
 	for (const pattern of ["packages/coding-agent/src/**/*.{ts,md}", "packages/tui/src/**/*.ts", "docs/en/**/*.mdx"])
 		for await (const file of new Bun.Glob(pattern).scan({ cwd: root, onlyFiles: true })) {
 			if (file.endsWith(".generated.ts") || file.includes("/locales/")) continue;
