@@ -935,7 +935,7 @@ persists a separate phone-facing continuity ID. Direct local lineage remains in
 `forkedFromId` and `parentSession`; the wire view is not a fork and therefore
 retains its original `id`/`sessionId` with `forkedFromId: null` and
 `parentThreadId: null`. Registration, calls, interactions and notifications use
-that durable wire ID while local storage and execution use the replacement ID.
+that durable wire ID while local session storage and execution use the replacement ID.
 The red lifecycle run passed 24 cases and failed the continuity case with 133
 assertions; the repaired file passes 26 cases with 143 assertions, including a
 persisted terminal-resume check. The seven-file Plan matrix passes 83 tests with
@@ -976,3 +976,41 @@ added its already-established phone ID; its post-header records remained
 byte-identical and a private backup was retained. This was cutover compatibility,
 not an additional product behavior. New Plan executions persist the continuity
 ID natively, as confirmed by the new session header and resume regression.
+
+## Current final-runtime evidence
+
+Artifact `compiled-final-12d945ac4-r2` executes commit `12d945ac4` with binary
+SHA-256 `9accce86b0a4d05127f51ad35956cdf048a1cd2e041acb6ae34ddb0288d0ca7e`.
+Robin reported all four canonical model sessions discoverable after cutover and
+their prior transcripts viewable. Automated current-runtime evidence separately
+proves two-page discovery, complete per-session turn and item pagination,
+catalog/model/mode/empty-permission responses, the pinned unsupported-fork
+boundary, mid-stream attachment and stable retry identity.
+
+Current live control evidence covers a terminal-originated Terra turn steered by
+a remote client without changing the turn ID, concurrent-start rejection,
+suppression of the superseded file and an independently interrupted task whose
+delayed file remained absent. Astra completed one grouped two-question request
+with one resolution. These are protocol observations, not claims about their
+iPhone rendering.
+
+WebRTC v3 connected and closed without captured media while independent Astra
+work remained active; that work completed afterward with exact no-newline bytes.
+The native and pinned-Codex v1 paths remain rejected at the subscription service
+boundary, while standalone WebSocket v2 truthfully returns its API-key-only
+error. This run uses OpenAI Pro subscription OAuth, not an API key; all five live
+processes lack `OPENAI_API_KEY`.
+
+A graceful host-only restart through Herdr restored the same four session IDs,
+names and models with the relay connected. Credential/raw-audio scans of the
+mode-private live state and final evidence found no matches. Remaining parity
+claims require Robin's iPhone observations for the four exact voice tasks,
+presentation and lifecycle controls, plus expired/revoked enrollment recovery
+and re-pairing. The earlier Plan-continuity acceptance remains authoritative and
+is not repeated.
+
+The live OpenAI Pro enrollment subsequently refreshed in place: its expiry
+advanced from `2026-09-12T02:51:14Z` to `2026-09-12T03:00:44Z` while the same host
+PID remained alive, the relay stayed connected and all four original sessions
+remained registered. This is current compiled-runtime evidence for credential
+rotation, distinct from the still-pending revoked enrollment and re-pairing test.

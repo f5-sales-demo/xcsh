@@ -2447,7 +2447,7 @@ Plan execution still creates a fresh local AgentSession to separate the approved
 implementation context. `SessionHeader` and `NewSessionOptions` now also carry a
 `remoteThreadId`. The first approved transition stores its source ID; later Plan
 transitions propagate that durable value. `RemoteSession` validates and restores
-the phone-facing ID independently of its current local storage ID, projects that
+the phone-facing ID independently of its current local session storage ID, projects that
 ID as both wire `id` and `sessionId`, and translates calls, interactions and
 notifications back to the current local owner. Because the wire thread never
 forks, its `forkedFromId` and `parentThreadId` are null; the execution file still
@@ -2496,3 +2496,66 @@ preserving every later record byte-for-byte and retaining a private mode-`0600`
 backup. This migration is unnecessary for sessions created by the repaired
 code, which persist `remoteThreadId` at each approved transition and restore it
 on terminal resume.
+
+## Final immutable runtime and current acceptance evidence
+
+The post-upstream AVAS v1 correction is committed as `12d945ac4`. The immutable
+Ubuntu artifact is `compiled-final-12d945ac4-r2`, built cleanly with Bun 1.4.2;
+its binary SHA-256 is
+`9accce86b0a4d05127f51ad35956cdf048a1cd2e041acb6ae34ddb0288d0ca7e`.
+The ten-check network-disabled package harness passed in 18.700 seconds. The
+running host and four model processes all execute this artifact. Luna resumes
+local session `157bbf7b53f2c244` while retaining phone-facing thread
+`157ba8d39989966c`; Astra, Sol and Terra retain their established IDs, names,
+directories and work models.
+
+Current-runtime protocol evidence paged all four sessions through stable and
+experimental discovery with a limit of two. It paged every turn one at a time
+and every item two at a time, finding 23/54 Astra turns/items, 3/12 Luna,
+5/30 Sol and 2/13 Terra before the new acceptance turns. Each catalog was
+error-free, the model/mode catalogs matched the four owners and Plan/Default,
+permission profiles were empty, and `thread/fork` returned the expected
+unsupported-method error. A second client resumed Terra during an active turn,
+observed its completion marker and retried the same client message ID without a
+new turn.
+
+A Herdr terminal prompt and a simultaneous remote client exercised the
+cross-interface boundary. The concurrent start returned `-32000`; steering kept
+turn `157aadc8381ab60d-turn-b9c25686-2f94-46c8-a73d-f79a265621ba`,
+suppressed the original target and wrote a 23-byte no-newline fixture with
+SHA-256 `94d17cc0fa4fd6baf5d24b59bc130eacbd2806f046c637d43cf0542c33d0128f`.
+A separate delayed turn was interrupted before its file write and persisted as
+`interrupted`. Astra then completed one grouped two-question request, with two
+question IDs, one resolution event and one matching completed turn.
+
+WebRTC v3 produced one start, SDP and close event, reached connected/open peer
+and data-channel states, and captured no media. It was closed while Astra had an
+independent delayed terminal task in flight; that task subsequently wrote the
+exact 31-byte no-newline fixture with SHA-256
+`15b3831e4321859e713b50aaf51b6f4ca35dbe587587b6d1ce5ab7165c0ac2c5`.
+The native v1 and pinned Codex 0.153.4 comparison remain service-rejected for
+OpenAI Pro subscription OAuth, and standalone WebSocket v2 retains the explicit
+API-key-auth boundary. `OPENAI_API_KEY` is absent from the host and all four model
+processes; no key is sourced or invented.
+
+Finally, the host alone was stopped gracefully and restarted through Herdr.
+Within seconds the relay was connected and all four original IDs, names and
+models were registered. The live state directory is mode `0700`; its host state,
+log and socket are mode `0600`. Credential-like and raw-audio pattern scans of
+those surfaces and the final evidence directory returned no matches. Sanitized
+receipts live outside Git under
+`native-3818/evidence-final-12d945ac4-r2`.
+
+The same live host then crossed a natural subscription-credential refresh. The
+persisted expiry advanced from `2026-09-12T02:51:14Z` to
+`2026-09-12T03:00:44Z` without a host restart; afterward the relay was connected
+and the same four session IDs, names and models remained present. This proves the
+compiled host remains visible across a successful credential rotation without
+exposing or comparing token values.
+
+Robin's current post-cutover report confirms all four named sessions are
+discoverable and their prior transcripts are viewable. Remaining manual evidence
+is the explicit iPhone control/presentation/lifecycle matrix, four exact
+no-newline voice fixtures, and revoked/expired enrollment recovery with
+re-pairing. The already accepted Plan transcript-continuity scenario is not
+repeated.
