@@ -403,4 +403,23 @@ describe("buildMemoryToolDeveloperInstructions", () => {
 		expect(await readMemorySummary(agentDir, alpha)).toBe("ALPHA_PROFILE");
 		expect(await readMemorySummary(agentDir, beta)).toBe("BETA_PROFILE");
 	});
+
+	test("session project cwd overrides stale settings after an interactive move", async () => {
+		const agentDir = await makeTempDir("memories-runtime-moved-session");
+		const projectA = path.join(agentDir, "project-a");
+		const projectB = path.join(agentDir, "project-b");
+		const staleSettings = {
+			getCwd: () => projectA,
+			get: (name: string) => (name === "memories.enabled" ? true : undefined),
+		} as Settings;
+		await fs.mkdir(getMemoryRoot(agentDir, projectA), { recursive: true });
+		await fs.mkdir(getMemoryRoot(agentDir, projectB), { recursive: true });
+		await fs.writeFile(path.join(getMemoryRoot(agentDir, projectA), "memory_summary.md"), "ALPHA_PROFILE");
+		await fs.writeFile(path.join(getMemoryRoot(agentDir, projectB), "memory_summary.md"), "BETA_PROFILE");
+
+		expect(await readMemorySummary(agentDir, staleSettings, projectB)).toBe("BETA_PROFILE");
+		const instructions = await buildMemoryToolDeveloperInstructions(agentDir, staleSettings, projectB);
+		expect(instructions).toContain("BETA_PROFILE");
+		expect(instructions).not.toContain("ALPHA_PROFILE");
+	});
 });

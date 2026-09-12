@@ -196,6 +196,9 @@ describe("SessionManager.moveTo", () => {
 		const identity = manager.getSessionId();
 		const oldFile = manager.getSessionFile()!;
 		const setCwd = vi.fn();
+		const refreshBaseSystemPrompt = vi.fn(async () => {
+			expect(manager.getCwd()).toBe(cwdB);
+		});
 		const refresh = vi.fn(async (cwd: string) => {
 			expect(cwd).toBe(cwdB);
 			expect(getShellPwd()).toBe(cwdB);
@@ -208,7 +211,7 @@ describe("SessionManager.moveTo", () => {
 		});
 		const ctx = {
 			sessionManager: manager,
-			session: { isStreaming: false },
+			session: { isStreaming: false, refreshBaseSystemPrompt },
 			statusLine: { setCwd },
 			updateEditorTopBorder: vi.fn(),
 			refreshSlashCommandState: refresh,
@@ -230,6 +233,7 @@ describe("SessionManager.moveTo", () => {
 			await new CommandController(ctx).handleMoveCommand(cwdB);
 			expect(ctx.showError).not.toHaveBeenCalled();
 			expect(refresh).toHaveBeenCalledTimes(1);
+			expect(refreshBaseSystemPrompt).toHaveBeenCalledTimes(1);
 			expect(ctx.showStatus).toHaveBeenCalledWith(`Session moved to ${cwdB}.`);
 			expect(fs.existsSync(oldFile)).toBe(false);
 		} finally {
