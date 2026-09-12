@@ -31,6 +31,8 @@ test("client voice text cannot supersede the final authoritative xcsh identity",
 	expect(instructions.slice(identityOffset)).toContain("Never identify or introduce yourself as ChatGPT");
 	expect(instructions.slice(identityOffset)).toContain("persisted xcsh project-memory section");
 	expect(instructions.slice(identityOffset)).toContain("Never answer only that you lack stored information");
+	expect(instructions.slice(identityOffset)).toContain("MUST delegate the user's exact request");
+	expect(instructions.slice(identityOffset)).toContain("read or write self-awareness or memory");
 	expect(instructions.lastIndexOf(snapshot.userKnowledge)).toBeGreaterThan(identityOffset);
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(64 * 1024);
 });
