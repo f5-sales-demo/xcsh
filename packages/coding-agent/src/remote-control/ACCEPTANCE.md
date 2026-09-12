@@ -463,3 +463,13 @@ iPhone WebRTC-v3 call configuration. Its first memory-bearing baseline passed
 3/3 on both surfaces. The probe emits only byte counts, semantic flags, and
 response digests; it retains neither transcript text nor audio. A fresh spoken
 Sol observation remains required.
+
+That fresh observation still denied persisted knowledge. The same denial then
+reproduced in the attached Sol TUI after its session had been moved from the
+isolated acceptance directory into the xcsh project. The session manager and
+process cwd had changed, but memory lookup remained bound to the startup
+settings cwd. Memory lookup now uses the active session manager cwd for the TUI
+prompt, `memory://root`, and every fresh voice snapshot; `/move` also rebuilds
+the effective prompt after the project changes. An A-to-B regression proves
+that only project B memory is retained. Automated parity and a new immutable
+runtime must pass before Robin repeats the physical Sol observation.

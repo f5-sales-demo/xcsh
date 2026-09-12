@@ -1154,3 +1154,10 @@ you know about me` with the effective TUI prompt and the synthesized iPhone
 WebRTC-v3 call instructions using the same Sol work model. It does not retain
 raw responses or audio. This isolates prompt/persona parity for quick iteration;
 physical speech quality and device presentation remain manual gates.
+
+Session movement is also a parity boundary. Project memory is resolved from the
+active session manager cwd—not the immutable startup settings cwd—for the TUI
+prompt, `memory://root`, and a new WebRTC or standalone voice snapshot. After a
+reviewed `/move`, xcsh rebuilds the effective TUI prompt before accepting the
+next turn. A two-project regression rejects stale project-A memory and requires
+project-B memory on both surfaces.

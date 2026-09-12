@@ -2732,3 +2732,18 @@ surface with Sol. It prints only aggregate scores, byte counts, and SHA-256
 response digests, and retains no raw transcript or audio. On the first
 memory-bearing project baseline, both TUI and simulated iPhone prompts passed
 3/3. Device speech naturalness remains a human observation.
+
+The subsequent live failure exposed a lifecycle boundary rather than another
+persona-wording defect. Sol had started in an isolated acceptance directory and
+then moved its retained session into the xcsh project. `SessionManager` owned
+the new cwd, while the original `Settings` instance still owned the startup
+cwd. TUI prompt construction, `memory://root`, and voice-start memory lookup
+therefore selected different or stale project memory.
+
+Project-memory selection now takes the active `SessionManager.getCwd()` as its
+canonical scope. The interactive `/move` completion path rebuilds the base
+system prompt after command discovery is refreshed, and voice start reads the
+same current scope before freezing its snapshot. The regression creates
+distinct project-A and project-B summaries, moves the session, and asserts that
+the rebuilt prompt and memory reader contain B but not A. Memory remains
+project-scoped; no summaries are copied or aggregated across roots.
