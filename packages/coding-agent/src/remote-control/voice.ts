@@ -17,7 +17,7 @@ import {
 } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
-import type { VoicePersonaSnapshot } from "./voice-persona";
+import { type VoicePersonaSnapshot, voicePersonaInstructions } from "./voice-persona";
 import {
 	contextChunks,
 	decodeVoiceEvent,
@@ -126,6 +126,11 @@ export class NativeVoice {
 		let stage = "authentication";
 		const startedAt = Date.now();
 		try {
+			if (typeof this.#persona !== "string") {
+				const diagnostics = voicePersonaInstructions(params, this.#persona).diagnostics;
+				await this.deps.record({ kind: "voicePersonaDiagnostic", ...diagnostics });
+				if (this.#state !== "opening") throw new Error("Voice stopped during persona diagnostics");
+			}
 			const apiKey = standalone ? await this.deps.authenticateApiKey?.() : undefined;
 			if (standalone && !apiKey) throw new ProtocolError(-32602, "Realtime conversation requires API key auth");
 			const auth = standalone ? undefined : await this.deps.authenticate();

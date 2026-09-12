@@ -35,7 +35,10 @@ function bytes(value: string): number {
 /** Truncate only at Unicode code-point boundaries. Prefix/suffix form preserves terminal constraints. */
 export function boundedText(value: string, limit: number, suffixBytes = 0): { text: string; truncated: boolean } {
 	if (bytes(value) <= limit) return { text: value, truncated: false };
-	const prefixLimit = limit - suffixBytes;
+	const marker = "\n[...xcsh prompt truncated...]\n";
+	const contentLimit = Math.max(0, limit - bytes(marker));
+	const suffixLimit = Math.min(suffixBytes, contentLimit);
+	const prefixLimit = contentLimit - suffixLimit;
 	let prefix = "",
 		prefixSize = 0,
 		suffix = "",
@@ -48,11 +51,11 @@ export function boundedText(value: string, limit: number, suffixBytes = 0): { te
 	}
 	for (const character of Array.from(value).reverse()) {
 		const size = bytes(character);
-		if (suffixSize + size > suffixBytes) break;
+		if (suffixSize + size > suffixLimit) break;
 		suffix = character + suffix;
 		suffixSize += size;
 	}
-	return { text: `${prefix}\n[...xcsh prompt truncated...]\n${suffix}`, truncated: true };
+	return { text: `${prefix}${marker}${suffix}`, truncated: true };
 }
 function section(title: string, content: string): string {
 	return content ? `\n\n${title}\n${content}` : "";
