@@ -823,10 +823,34 @@ export class RemoteSession {
 		if (method === "thread/settings/update") {
 			for (const key of Object.keys(params))
 				if (
-					!["threadId", "effort", "model", "cwd", "summary", "collaborationMode"].includes(key) &&
+					![
+						"threadId",
+						"effort",
+						"model",
+						"cwd",
+						"summary",
+						"collaborationMode",
+						"approvalPolicy",
+						"approvalsReviewer",
+						"sandboxPolicy",
+					].includes(key) &&
 					params[key] != null
 				)
 					throw new ProtocolError(-32602, "Unsupported terminal settings override");
+			if (params.approvalPolicy != null && params.approvalPolicy !== "never")
+				throw new ProtocolError(-32602, "Unsupported approval policy override");
+			if (params.approvalsReviewer != null && params.approvalsReviewer !== "user")
+				throw new ProtocolError(-32602, "Unsupported approvals reviewer override");
+			if (params.sandboxPolicy != null) {
+				const sandbox = params.sandboxPolicy;
+				if (
+					typeof sandbox !== "object" ||
+					Array.isArray(sandbox) ||
+					(sandbox as Record<string, unknown>).type !== "dangerFullAccess" ||
+					Object.keys(sandbox).some(key => key !== "type")
+				)
+					throw new ProtocolError(-32602, "Unsupported sandbox policy override");
+			}
 			if (params.model != null && params.model !== this.target.model?.id)
 				throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
 			if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())

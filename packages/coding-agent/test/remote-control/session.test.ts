@@ -296,6 +296,22 @@ test("phone settings update applies supported effort without starting a turn or 
 	expect(levels).toEqual(["medium"]);
 	expect(a.prompts).toEqual([]);
 	expect(events).toContainEqual(expect.objectContaining({ method: "thread/settings/updated" }));
+	expect(
+		await a.remote.call("settings-policy", "thread/settings/update", {
+			threadId: "a",
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandboxPolicy: { type: "dangerFullAccess" },
+		}),
+	).toEqual({});
+	await expect(
+		a.remote.call("settings-policy-mismatch", "thread/settings/update", {
+			threadId: "a",
+			approvalPolicy: "on-request",
+			approvalsReviewer: "user",
+			sandboxPolicy: { type: "workspaceWrite" },
+		}),
+	).rejects.toMatchObject({ code: -32602 });
 	await expect(
 		a.remote.call("settings2", "thread/settings/update", { threadId: "a", model: "different", effort: "high" }),
 	).rejects.toMatchObject({ code: -32602 });
