@@ -1014,3 +1014,15 @@ advanced from `2026-09-12T02:51:14Z` to `2026-09-12T03:00:44Z` while the same ho
 PID remained alive, the relay stayed connected and all four original sessions
 remained registered. This is current compiled-runtime evidence for credential
 rotation, distinct from the still-pending revoked enrollment and re-pairing test.
+
+Robin then completed one phone voice tool task in each preserved model session.
+The four files contain exactly `LUNA-ORCHARD` (12 bytes), `ASTRA-COMET` (11),
+`SOL-HARBOR` (10), and `TERRA-MAPLE` (11), each without a trailing newline; the
+matching write, read, and spoken result remain visible in their terminal histories.
+
+A cancellation retry clarified that the voice Stop button intentionally closes
+voice while preserving delegated work. Using the separate transcript task Stop
+control on replacement artifact `5ffc51c2b-r2` produced `Operation aborted` and
+left no case-variant of the delayed Terra target after recheck. The repair also
+prevents an already-answered transcript tail from reopening older interrupted
+work; its focused test and the complete 65-file remote-control suite pass.

@@ -2559,3 +2559,20 @@ is the explicit iPhone control/presentation/lifecycle matrix, four exact
 no-newline voice fixtures, and revoked/expired enrollment recovery with
 re-pairing. The already accepted Plan transcript-continuity scenario is not
 repeated.
+
+The four phone voice fixtures subsequently passed with exact no-newline bytes:
+Luna `LUNA-ORCHARD`, Astra `ASTRA-COMET`, Sol `SOL-HARBOR`, and Terra
+`TERRA-MAPLE`. A later cancellation check exposed that an answered transcript
+tail could reopen older interrupted work after voice closure. Commit `5ffc51c2b`
+suppresses tail delegation when the realtime assistant has already answered,
+while retaining the existing unanswered-user-tail behavior. The focused voice
+matrix passes 77 tests with 756 assertions and the complete remote-control suite
+passes 906 tests with 3692 assertions under Bun 1.4.2.
+
+Immutable replacement `compiled-final-5ffc51c2b-r2` has SHA-256
+`3b7953a05a99af0650b4a42a39013192cd82e87a45bf87d77a4c954b3aa1ec5a`;
+its network-disabled ten-check package harness passed in 17.933 seconds. The
+Herdr cutover restored the same four session identities and models with the relay
+connected. Robin then used the transcript task Stop control after leaving voice:
+Terra reported `Operation aborted`, returned idle, and no case-variant of the
+delayed target existed after a second filesystem check.
