@@ -46,7 +46,7 @@ test("persisted user knowledge remains available to the voice surface with hones
 	);
 	expect(instructions).toContain("The user works on F5 Distributed Cloud");
 	expect(instructions).toContain("Persisted xcsh project memory about the user");
-	expect(instructions).toContain("durable knowledge learned across conversations");
+	expect(instructions).toContain("confirms whether durable knowledge is available");
 	expect(instructions).toContain("stored or inferred and potentially stale");
 	expect(instructions).toContain("Never invent user facts");
 	expect(instructions.trimEnd().endsWith(snapshot.userKnowledge)).toBe(true);
