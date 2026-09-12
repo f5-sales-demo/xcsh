@@ -7,21 +7,25 @@ not a declaration of complete feature parity.
 
 ## Legacy WebRTC source contract
 
-WebRTC now accepts v1 and v3; an omitted or null version defaults to v1. The
-pinned App Server requires explicit audio output. The v1 HTTP body follows the
-pinned quicksilver session shape, with `gpt-realtime-1.5`, PCM input at 24000 Hz,
-and the selected voice. Its request uses `quicksilver=v1`. Internal version
-metadata is excluded from the HTTP body. Nonempty initial items remain v3-only.
+WebRTC accepts v1 and v3; an omitted or null version defaults to v1. The pinned
+App Server requires explicit audio output. The v1 configuration retains the
+pinned quicksilver session shape and `gpt-realtime-1.5` internally, with PCM input
+at 24000 Hz and the selected voice. The subscription AVAS HTTP request uses
+`quicksilver=v2` and omits the explicit model because the service selects it.
+Internal version metadata is also excluded. Nonempty initial items remain
+v3-only.
 
-A newly created v1 call sends one sideband `session.update`, excluding the HTTP
-model field. Attaching a client-created call leaves its configuration intact.
+A newly created v1 call sends one sideband `session.update`, also omitting the
+wire model while leaving the internal configuration unchanged. Attaching a
+client-created call leaves its configuration intact.
 Completed v1 agent results include the pinned final-message marker. Tests cover
 duplicate delegation, initialization write failure, synchronous socket closure,
 early transcript ordering, and late work after closure. They use synthetic
 transport fixtures derived from the pinned Rust source, not phone recordings.
-Live v1 and standalone WebSocket acceptance and remaining startup/control options
-are still incomplete. Recorded v3 replay remains
-part of regression validation; no additional live parity is inferred here.
+The final-artifact transport audit established a passing v3 call. V1 remained
+service-rejected after the AVAS HTTP body omitted its model, and the same service
+also rejected pinned Codex 0.153.4. Recorded v3 replay remains part of regression
+validation; no live v1 parity is inferred here.
 The pinned `streams_handoff_append` gate enables incremental output only for v3.
 Legacy v1 forwards completed commentary without the final-message marker and
 completed final output with it. The completed-output checkpoint below verifies
@@ -489,6 +493,12 @@ pass with 1592 assertions. The 64-file remote-control suite passes 864 tests wit
 failures and 29599 assertions across 790 files. These are local source-contract checks. A live service
 connection, iPhone behavior, standalone reconnection, full v1/v3 standalone event
 matrices and release-artifact verification remain unproven.
+
+The selected OpenAI credential for final acceptance is a Pro subscription OAuth
+session, not an API key. A final-artifact v2 attempt therefore returned the
+expected `-32602 Realtime conversation requires API key auth`. This validates the
+authentication boundary; it is not a failed OAuth flow and no API key is required
+or available for this acceptance run.
 
 ## Command and file approval parity
 

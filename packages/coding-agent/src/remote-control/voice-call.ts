@@ -99,6 +99,9 @@ export async function createVoiceCall(
 	fetcher: typeof fetch = fetch,
 	signal?: AbortSignal,
 ): Promise<{ sdp: string; callId: string }> {
+	const session: Record<string, unknown> = { ...config.session };
+	// The AVAS subscription endpoint selects the legacy v1 model and rejects an explicit value.
+	if (config.version === "v1") delete session.model;
 	let response: Response;
 	try {
 		response = await fetcher(
@@ -115,7 +118,7 @@ export async function createVoiceCall(
 					"Content-Type": "application/json",
 					"openai-alpha": "quicksilver=v2",
 				},
-				body: JSON.stringify({ sdp: config.sdp, session: config.session }),
+				body: JSON.stringify({ sdp: config.sdp, session }),
 			},
 		);
 	} catch {

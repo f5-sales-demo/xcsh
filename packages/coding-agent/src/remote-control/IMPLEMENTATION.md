@@ -983,14 +983,15 @@ authentication discovery repairs. The merge had no conflicts; 26 focused
 authentication/model tests passed with 113 assertions across four files.
 
 Pinned `realtime_conversation.rs` defaults WebRTC to v1 when version is omitted
-or null. Native call creation now implements that default, accepts explicit v1,
-requires audio output, and retains explicit v3. The v1 request includes the
-quicksilver type, its own realtime model default, instructions, PCM input format
-and selected voice. The call creation header and sideband use quicksilver v1.
-HTTP serialization excludes internal version metadata. New v1 calls initialize
-their sideband once without the HTTP model field; existing calls do not overwrite
-the client's configuration. Completed legacy handoffs use the pinned final-agent
-message prefix. Work still executes in the existing AgentSession.
+or null. Native call creation implements that default, accepts explicit v1,
+requires audio output, and retains explicit v3. The v1 internal configuration
+includes the quicksilver type, its own realtime model default, instructions, PCM
+input format and selected voice. The subscription AVAS request now uses the
+service-required `quicksilver=v2` header and excludes the explicit HTTP model.
+Created-call sideband initialization also omits the wire model while the complete
+internal configuration remains available to the owner. Existing calls do not
+overwrite the client's configuration. Completed legacy handoffs use the pinned
+final-agent message prefix. Work still executes in the existing AgentSession.
 
 Observed initial tests failed four cases because WebRTC required explicit v3.
 After implementing negotiation, one test exposed the missing completed-message
@@ -1820,6 +1821,12 @@ The guarded package suite passed 8251 tests with 561 skips, zero failures and
 The source manifest pins the v2 methods, parser and common event parser used by
 these tests. No live standalone service connection or iPhone acceptance is
 claimed, and the dedicated phone runtime remains on the prior immutable build.
+
+Final acceptance uses an OpenAI Pro subscription OAuth session, with no
+`OPENAI_API_KEY`. The final artifact's standalone v2 probe returned the designed
+`-32602 Realtime conversation requires API key auth` error. That result confirms
+the credential boundary and must not be repaired by inventing or sourcing an API
+key. Subscription-backed WebRTC remains the applicable live path.
 
 ## Native command and file approval requests
 

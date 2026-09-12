@@ -12,6 +12,11 @@ const session = {
 	instructions: "fixture instructions",
 	audio: { input: { format: { type: "audio/pcm", rate: 24000 } }, output: { voice: "cove" } },
 };
+const avasSession = {
+	type: "quicksilver",
+	instructions: "fixture instructions",
+	audio: { input: { format: { type: "audio/pcm", rate: 24000 } }, output: { voice: "cove" } },
+};
 const params = {
 	transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
 	outputModality: "audio",
@@ -20,7 +25,7 @@ const params = {
 };
 
 test.each([{ version: undefined }, { version: null }, { version: "v1" }])(
-	"WebRTC defaults and explicit v1 use the AVAS call alpha and retain the pinned session shape: %j",
+	"WebRTC defaults and explicit v1 use the AVAS call alpha and omit its server-selected model: %j",
 	async override => {
 		const config = voiceCallConfig({ ...params, ...override }, "private context excluded");
 		let requests = 0;
@@ -31,7 +36,7 @@ test.each([{ version: undefined }, { version: null }, { version: "v1" }])(
 			requests++;
 			expect(url).toBe("https://chatgpt.com/backend-api/codex/realtime/calls?intent=quicksilver&architecture=avas");
 			expect(new Headers(init?.headers).get("openai-alpha")).toBe("quicksilver=v2");
-			expect(JSON.parse(String(init?.body))).toEqual({ sdp: params.transport.sdp, session });
+			expect(JSON.parse(String(init?.body))).toEqual({ sdp: params.transport.sdp, session: avasSession });
 			return new Response("v=0\r\nfixture-answer", { headers: { Location: "/v1/realtime/calls/rtc_fixture" } });
 		}) as typeof fetch);
 		expect(requests).toBe(1);
