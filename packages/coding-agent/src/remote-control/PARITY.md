@@ -1141,3 +1141,16 @@ resolved, but failed the identity gate by answering as ChatGPT. It was rolled
 back. The corrected envelope ends with a highest-priority xcsh/F5 identity
 anchor after client preferences and history, explicitly preserving the attached
 agent's tool-execution boundary and truthful user-knowledge limit.
+
+Voice start now refreshes the same bounded, project-scoped memory summary used
+to build the TUI prompt and records it as a distinct immutable snapshot section.
+This covers summaries created after the terminal's initial prompt was built and
+keeps `includeStartupContext:false` limited to recent conversation history. The
+memory section is capped at 16 KiB and is retained before optional descriptions
+and history; diagnostics expose only its byte count and truncation flag.
+
+`bun run bench:voice-persona -- <cwd> 3` compares the exact user probe `what do
+you know about me` with the effective TUI prompt and the synthesized iPhone
+WebRTC-v3 call instructions using the same Sol work model. It does not retain
+raw responses or audio. This isolates prompt/persona parity for quick iteration;
+physical speech quality and device presentation remain manual gates.

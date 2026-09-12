@@ -2709,3 +2709,26 @@ probe by responding as ChatGPT. All five processes were rolled back before the
 next edit. The follow-up adds a final authoritative identity anchor after every
 variable section and verifies that even client text explicitly demanding a
 generic ChatGPT introduction cannot occupy the final instruction position.
+
+## Shared TUI and voice user knowledge
+
+The next human probe showed that identity alone was insufficient: Sol answered
+`what do you know about me` as though no persisted knowledge existed. The native
+TUI baseline in Sol's isolated acceptance directory behaved the same way because
+that project had no memory summary. This established a shared-context problem,
+not merely a spoken wording problem.
+
+`readMemorySummary()` now supplies both the TUI's developer instructions and a
+fresh voice-start snapshot. The voice call waits for that read before freezing
+its persona, adds a distinct `Persisted xcsh project memory about the user`
+section, and preserves it when startup history is disabled. The section has a
+16 KiB UTF-8-safe limit inside the existing 64 KiB service envelope. Persona
+diagnostics contain only section sizes and truncation flags.
+
+The live `voice-persona-parity.ts` runner constructs a real ephemeral xcsh
+session, captures its effective TUI prompt, constructs the same WebRTC-v3 session
+configuration used by the iPhone, and evaluates the exact probe three times per
+surface with Sol. It prints only aggregate scores, byte counts, and SHA-256
+response digests, and retains no raw transcript or audio. On the first
+memory-bearing project baseline, both TUI and simulated iPhone prompts passed
+3/3. Device speech naturalness remains a human observation.

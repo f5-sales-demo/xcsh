@@ -150,6 +150,16 @@ export async function buildMemoryToolDeveloperInstructions(
 	agentDir: string,
 	settings: Settings,
 ): Promise<string | undefined> {
+	const summary = await readMemorySummary(agentDir, settings);
+	if (!summary) return undefined;
+
+	return prompt.render(readPathTemplate, {
+		memory_summary: summary,
+	});
+}
+
+/** Read the same bounded project-memory summary used by the terminal prompt. */
+export async function readMemorySummary(agentDir: string, settings: Settings): Promise<string | undefined> {
 	const cfg = loadMemoryConfig(settings);
 	if (!cfg.enabled) return undefined;
 	const memoryRoot = getMemoryRoot(agentDir, settings.getCwd());
@@ -166,10 +176,7 @@ export async function buildMemoryToolDeveloperInstructions(
 	if (!summary) return undefined;
 	const truncated = truncateByApproxTokens(summary, cfg.summaryInjectionTokenLimit);
 	if (!truncated.trim()) return undefined;
-
-	return prompt.render(readPathTemplate, {
-		memory_summary: truncated,
-	});
+	return truncated;
 }
 
 /**

@@ -6,7 +6,12 @@ import type { Model } from "@f5-sales-demo/pi-ai";
 import * as ai from "@f5-sales-demo/pi-ai";
 import { getAgentDbPath, Snowflake } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../src/config/settings";
-import { buildMemoryToolDeveloperInstructions, getMemoryRoot, startMemoryStartupTask } from "../src/memories";
+import {
+	buildMemoryToolDeveloperInstructions,
+	getMemoryRoot,
+	readMemorySummary,
+	startMemoryStartupTask,
+} from "../src/memories";
 import * as memoryStorage from "../src/memories/storage";
 
 interface SessionFixture {
@@ -372,9 +377,30 @@ describe("buildMemoryToolDeveloperInstructions", () => {
 		);
 
 		const payload = await buildMemoryToolDeveloperInstructions(agentDir, settings);
+		const summary = await readMemorySummary(agentDir, settings);
 		expect(payload).toBeDefined();
+		expect(summary).toBeDefined();
+		expect(payload).toContain(summary!);
 		expect(payload).toContain("memory://root/memory_summary.md");
 		expect(payload).not.toContain(memoryRoot);
 		expect(payload).toContain("...[truncated]...");
+	});
+
+	test("voice memory reads remain isolated to the attached session project", async () => {
+		const agentDir = await makeTempDir("memories-runtime-voice-isolation");
+		const settingsFor = (cwd: string) =>
+			({
+				getCwd: () => cwd,
+				get: (name: string) => (name === "memories.enabled" ? true : undefined),
+			}) as Settings;
+		const alpha = settingsFor("/fixture/alpha");
+		const beta = settingsFor("/fixture/beta");
+		await fs.mkdir(getMemoryRoot(agentDir, alpha.getCwd()), { recursive: true });
+		await fs.mkdir(getMemoryRoot(agentDir, beta.getCwd()), { recursive: true });
+		await fs.writeFile(path.join(getMemoryRoot(agentDir, alpha.getCwd()), "memory_summary.md"), "ALPHA_PROFILE");
+		await fs.writeFile(path.join(getMemoryRoot(agentDir, beta.getCwd()), "memory_summary.md"), "BETA_PROFILE");
+
+		expect(await readMemorySummary(agentDir, alpha)).toBe("ALPHA_PROFILE");
+		expect(await readMemorySummary(agentDir, beta)).toBe("BETA_PROFILE");
 	});
 });

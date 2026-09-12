@@ -451,3 +451,15 @@ replacement source appends an authoritative xcsh/F5 identity and delegation
 anchor after all client preferences and history; a hostile-client-prompt
 regression verifies that the final anchor wins. A fresh spoken observation is
 still required.
+
+Robin's next Sol observation passed identity but answered that it had no details
+about the user. The acceptance harness had launched Sol in a project directory
+without a memory summary, and the voice snapshot did not independently refresh
+the current project memory when a call began. The replacement uses the same
+bounded project-memory reader as the TUI prompt and adds that snapshot ahead of
+optional history. A text-only parity probe now runs the exact question `what do
+you know about me` three times against both the effective TUI prompt and the
+iPhone WebRTC-v3 call configuration. Its first memory-bearing baseline passed
+3/3 on both surfaces. The probe emits only byte counts, semantic flags, and
+response digests; it retains neither transcript text nor audio. A fresh spoken
+Sol observation remains required.
