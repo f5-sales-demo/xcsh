@@ -1161,17 +1161,3 @@ prompt, `memory://root`, and a new WebRTC or standalone voice snapshot. After a
 reviewed `/move`, xcsh rebuilds the effective TUI prompt before accepting the
 next turn. A two-project regression rejects stale project-A memory and requires
 project-B memory on both surfaces.
-
-Voice self-inspection now delegates through the ordinary attached-agent turn
-with an xcsh-specific contract after the byte-compatible pinned envelope. The
-contract requires the attached agent to read the same project-scoped
-`memory://root/memory_summary.md` resource used by the TUI and forbids replacing
-available stored facts with a current-chat-only disclaimer. The timeline
-recognizer accepts both the original pinned envelope and the enriched xcsh
-envelope, so voice-owned steering retains its existing speech-segment behavior.
-
-The automated comparison uses real tool-capable Sol AgentSession turns. TUI
-responses are scored against the shared prompt-time project summary; delegated
-voice responses additionally fail unless they invoke `read` on the shared memory
-path. The latest three-sample run passed 3/3 on each surface and recorded 3/3
-voice memory reads without retaining transcripts or audio.

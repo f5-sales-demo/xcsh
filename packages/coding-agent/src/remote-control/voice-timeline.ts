@@ -1,5 +1,4 @@
 /** Canonical realtime history reducer. Source provenance is recorded in NOTICE.md. */
-import { isVoiceDelegation } from "./voice-delegation";
 export type TimelineInput =
 	| { type: "start"; sessionId?: string | null }
 	| { type: "close" | "error" | "handoff" }
@@ -75,7 +74,8 @@ export class VoiceTimeline {
 						content.length === 1 && content[0]?.type === "text" && typeof content[0].text === "string"
 							? trim(content[0].text)
 							: undefined;
-					const delegation = single !== undefined && isVoiceDelegation(single);
+					const delegation =
+						single?.startsWith("<realtime_delegation>") && single.endsWith("</realtime_delegation>");
 					if (
 						this.#session !== undefined &&
 						!delegation &&

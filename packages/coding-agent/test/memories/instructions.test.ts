@@ -37,8 +37,6 @@ describe("buildMemoryToolDeveloperInstructions", () => {
 			expect(instructions).toBeDefined();
 			expect(instructions).toContain("memory://root/memory_summary.md");
 			expect(instructions).toContain("memory://root/skills/<name>/SKILL.md");
-			expect(instructions).toContain("perform a fresh read with the `read` tool");
-			expect(instructions).toContain("at least one concrete, non-sensitive stored fact");
 			expect(instructions).not.toContain(memoryRoot);
 		});
 	});

@@ -2747,21 +2747,3 @@ same current scope before freezing its snapshot. The regression creates
 distinct project-A and project-B summaries, moves the session, and asserts that
 the rebuilt prompt and memory reader contain B but not A. Memory remains
 project-scoped; no summaries are copied or aggregated across roots.
-
-The remaining device failure was an execution-policy gap. The stored voice turn
-had an exact delegation and completed result but no `read` tool call, so the
-attached agent answered from stale conversational context despite the fresh
-voice snapshot. `voiceDelegation()` now composes the byte-compatible pinned
-formatter with a bounded, static xcsh contract. For self-awareness and memory
-read/write requests that contract requires a fresh `read` of
-`memory://root/memory_summary.md`, then requires at least one concrete,
-non-sensitive stored fact when the read is non-empty. It never embeds memory
-content or creates a voice-only store.
-
-The common TUI memory guidance carries the same lookup and answer semantics.
-The timeline uses `isVoiceDelegation()` so the enriched handoff remains
-voice-owned and cannot prematurely seal a pending transcript segment. The
-tool-capable parity runner creates fresh in-memory AgentSession instances for
-each sample, verifies the real read-call path for delegated voice, and scores
-only sanitized semantics and digests. Its three-sample Sol result passed 3/3
-for TUI and 3/3 for delegated voice with three confirmed voice memory reads.
