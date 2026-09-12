@@ -1050,6 +1050,11 @@ only `sandbox-guard` through the new internal `--bundled-extension` option.
 All foreground host/model commands were verified to use that exact pair; no
 user or project extension is re-enabled.
 
+Manual iPhone evidence: in Ask, Luna voice rendered the Bash approval for an
+exact `pwd` request. Robin selected Allow once and received the correct command
+result. This establishes prompt delivery and the successful decision path, not
+the still-pending decline, cancellation, duplicate/reconnect or race paths.
+
 The native settings projection now supports two and only two permission tuples:
 
 - Ask: `on-request`, reviewer `user`, `workspaceWrite`, network disabled.

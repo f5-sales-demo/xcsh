@@ -2630,7 +2630,9 @@ launcher requests only `sandbox-guard`, preserving disabled user/project
 discovery while restoring command/path approval enforcement. Parser, loader,
 sandbox-guard, CLI extension-model and complete remote-control tests pass. The
 host and all four resumed model processes run the `r4` launcher; iPhone prompt
-rendering and decisions remain Robin-observed acceptance, not inferred here.
+rendering and Allow-once execution are Robin-observed acceptance, not inferred
+here. Decline, cancellation, replay/deduplication and concurrent resolution
+remain separate manual acceptance rows.
 
 The artifact now runs the dedicated host and all four Herdr-managed model
 sessions. The protocol audit preserves Luna local session

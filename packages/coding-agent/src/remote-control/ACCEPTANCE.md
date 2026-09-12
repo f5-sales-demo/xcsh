@@ -344,6 +344,12 @@ The replacement still disables all discovery but explicitly loads only
 `--bundled-extension sandbox-guard`. The foreground host and all four model
 sessions run `r4`; their command lines retain no other extension source.
 
+Robin then selected Ask, started a Luna voice call, and requested an exact Bash
+`pwd`. The phone rendered the approval prompt; selecting Allow once executed the
+command and returned the directory correctly. This is manual evidence for the
+Ask command-prompt and allow path only; decline, cancel, replay and concurrent
+resolution remain separate manual rows.
+
 Ask is exactly `approvalPolicy: on-request`, `approvalsReviewer: user`, and a
 `workspaceWrite` sandbox with network disabled. Full is exactly
 `approvalPolicy: never`, `approvalsReviewer: user`, and `dangerFullAccess`.
