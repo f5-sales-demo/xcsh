@@ -1034,15 +1034,21 @@ work; its focused test and the complete 65-file remote-control suite pass.
 
 ## Current Ask and Full parity checkpoint
 
-Artifact `compiled-final-d7aa4d48f-r2` executes full commit
-`d7aa4d48fe7976a0e4a3d8e861195b7c58349466`. Its binary SHA-256 is
-`bc2b9fbf4e0cc5c2a614ae15b4271d826d419d73c2fad70d55c6299a9841094c`
+Artifact `compiled-final-2134792f-r4` executes full commit
+`2134792f75a6e8b4c7408a78e71245f60feb1b8f`. Its binary SHA-256 is
+`4e892c8512d12ff9fccf79acabb54110a6d675a5bf87b24b0d79fbd38bb09dea`
 and its configuration SHA-256 is
-`462c3a1cdd0bd0ed706041243b864ed090817b999f171805f5cdddad05bb8796`.
-The executable binary and launcher are mode `0700`. The immutable artifact
-passed the ten-check, network-disabled Ubuntu harness in 26.398 seconds; its
-sanitized external receipt records ten checks, the full source commit and the
-same binary hash.
+`71b6e475b1c88cd005d642f8f434474a8d05db4e6d8ef21ba326e5d2437a8220`.
+The executable binary and launcher are mode `0700`; its configuration is mode
+`0600`. The immutable artifact passed the ten-check, network-disabled Ubuntu
+harness in 31.193 seconds; its sanitized external receipt records ten checks,
+the full source commit and the same binary hash.
+
+`d7aa4d48f-r2` incorrectly used `--no-extensions` without retaining the
+bundled guard that owns Ask prompts. `r4` keeps discovery disabled and loads
+only `sandbox-guard` through the new internal `--bundled-extension` option.
+All foreground host/model commands were verified to use that exact pair; no
+user or project extension is re-enabled.
 
 The native settings projection now supports two and only two permission tuples:
 

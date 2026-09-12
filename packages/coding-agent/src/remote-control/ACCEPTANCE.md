@@ -326,16 +326,23 @@ seconds and the four original session identities and models remain connected.
 
 ## Current Ask and Full runtime checkpoint
 
-The current immutable Ubuntu artifact is `compiled-final-d7aa4d48f-r2`, built
-from full source commit `d7aa4d48fe7976a0e4a3d8e861195b7c58349466` under
+The current immutable Ubuntu artifact is `compiled-final-2134792f-r4`, built
+from full source commit `2134792f75a6e8b4c7408a78e71245f60feb1b8f` under
 Bun 1.4.2. Its binary SHA-256 is
-`bc2b9fbf4e0cc5c2a614ae15b4271d826d419d73c2fad70d55c6299a9841094c`;
+`4e892c8512d12ff9fccf79acabb54110a6d675a5bf87b24b0d79fbd38bb09dea`;
 the configuration SHA-256 is
-`462c3a1cdd0bd0ed706041243b864ed090817b999f171805f5cdddad05bb8796`.
-Both the binary and launcher are mode `0700`. The ten-check network-disabled
-package harness passed in 26.398 seconds, including provenance, real tool use,
-host recovery, durable replay and container cleanup. Its sanitized receipt is
-outside Git at `native-3818/evidence-final-d7aa4d48f-r2`.
+`71b6e475b1c88cd005d642f8f434474a8d05db4e6d8ef21ba326e5d2437a8220`.
+Both the binary and launcher are mode `0700` and configuration is `0600`.
+The ten-check network-disabled package harness passed in 31.193 seconds,
+including provenance, real tool use, host recovery, durable replay and container
+cleanup. Its sanitized receipt is outside Git at
+`native-3818/evidence-final-2134792f-r4`.
+
+The superseded `d7aa4d48f-r2` launcher passed `--no-extensions`, which also
+removed the trusted `sandbox-guard` and therefore bypassed Ask's command prompt.
+The replacement still disables all discovery but explicitly loads only
+`--bundled-extension sandbox-guard`. The foreground host and all four model
+sessions run `r4`; their command lines retain no other extension source.
 
 Ask is exactly `approvalPolicy: on-request`, `approvalsReviewer: user`, and a
 `workspaceWrite` sandbox with network disabled. Full is exactly

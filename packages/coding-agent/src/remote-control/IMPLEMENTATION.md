@@ -2613,15 +2613,24 @@ policy amendments, Codex permission profiles or MCP elicitation.
 `permissionProfile/list` therefore remains an empty schema-valid catalog, while
 unowned permission and elicitation request methods remain rejected.
 
-The current immutable artifact is `compiled-final-d7aa4d48f-r2`. It records the
-full commit above, binary SHA-256
-`bc2b9fbf4e0cc5c2a614ae15b4271d826d419d73c2fad70d55c6299a9841094c`
+The current immutable artifact is `compiled-final-2134792f-r4`, built from full
+commit `2134792f75a6e8b4c7408a78e71245f60feb1b8f`, binary SHA-256
+`4e892c8512d12ff9fccf79acabb54110a6d675a5bf87b24b0d79fbd38bb09dea`
 and configuration SHA-256
-`462c3a1cdd0bd0ed706041243b864ed090817b999f171805f5cdddad05bb8796`.
-The binary and launcher are mode `0700`. Its network-disabled Ubuntu 24.04
-package harness passed all ten checks in 26.398 seconds and removed its
-disposable container. Sanitized evidence is retained outside Git under
-`native-3818/evidence-final-d7aa4d48f-r2`.
+`71b6e475b1c88cd005d642f8f434474a8d05db4e6d8ef21ba326e5d2437a8220`.
+The binary and launcher are mode `0700`; configuration is `0600`. Its
+network-disabled Ubuntu 24.04 package harness passed all ten checks in 31.193
+seconds and removed its disposable container. Sanitized evidence is retained
+outside Git under `native-3818/evidence-final-2134792f-r4`.
+
+The prior live launcher disabled every extension with `--no-extensions`, which
+also omitted the bundled `sandbox-guard` that presents the Ask approval dialog.
+The CLI now accepts a repeatable internal `--bundled-extension`; the isolated
+launcher requests only `sandbox-guard`, preserving disabled user/project
+discovery while restoring command/path approval enforcement. Parser, loader,
+sandbox-guard, CLI extension-model and complete remote-control tests pass. The
+host and all four resumed model processes run the `r4` launcher; iPhone prompt
+rendering and decisions remain Robin-observed acceptance, not inferred here.
 
 The artifact now runs the dedicated host and all four Herdr-managed model
 sessions. The protocol audit preserves Luna local session
