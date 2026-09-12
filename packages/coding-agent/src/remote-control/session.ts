@@ -38,6 +38,8 @@ export type SessionTarget = Pick<
 	| "sessionFile"
 	| "model"
 	| "messages"
+	| "systemPrompt"
+	| "getActiveToolNames"
 	| "isStreaming"
 	| "activeStreamMessage"
 	| "sessionManager"
@@ -804,14 +806,27 @@ export class RemoteSession {
 			this.#assertCurrent(epoch);
 			this.#voice = new NativeVoice({
 				history: this.#voiceHistoryOwner.history,
-				context: () => {
+				persona: () => {
 					this.#assertCurrent(epoch);
-					return JSON.stringify(
-						this.target.messages
-							.filter(message => message.role === "user" || message.role === "assistant")
-							.map(message => ({ role: message.role, text: textOf(message) }))
-							.slice(-30),
-					);
+					const tools = (this.target.getActiveToolNames?.() ?? [])
+						.sort((left, right) => left.localeCompare(right))
+						.map(name => {
+							const tool = this.target.getToolByName?.(name) as { description?: unknown } | undefined;
+							return {
+								name,
+								...(typeof tool?.description === "string" ? { description: tool.description } : {}),
+							};
+						});
+					return {
+						systemPrompt: this.target.systemPrompt ?? "",
+						tools,
+						history: JSON.stringify(
+							(this.target.messages ?? [])
+								.filter(message => message.role === "user" || message.role === "assistant")
+								.map(message => ({ role: message.role, text: textOf(message) }))
+								.slice(-30),
+						),
+					};
 				},
 				modeChanged: (active, instructions) =>
 					this.#effect(epoch, async () => {

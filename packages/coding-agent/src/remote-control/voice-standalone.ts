@@ -1,9 +1,9 @@
 /** Pinned Codex 0.153.4 standalone realtime WebSocket configuration. */
-import { prompt } from "@f5-sales-demo/pi-utils";
-import defaultInstructions from "../prompts/system/remote-voice.md" with { type: "text" };
-import contextTemplate from "../prompts/system/remote-voice-context.md" with { type: "text" };
+
 import { ProtocolError } from "./session";
 import { handoffOptions } from "./voice-handoff";
+import type { VoicePersonaSnapshot } from "./voice-persona";
+import { voicePersonaInstructions } from "./voice-persona";
 import { type VoiceVersion, voiceInstructions, voices } from "./voice-protocol";
 
 const agentDescription =
@@ -11,15 +11,10 @@ const agentDescription =
 const silenceDescription =
 	"Call this when the best response is to say nothing. Use it instead of speaking after hidden system/control messages, after background agent updates in silent modes, or whenever acknowledging aloud would be distracting. This tool has no user-visible effect.";
 
-function instructions(params: Record<string, unknown>, context: string): string {
+function instructions(params: Record<string, unknown>, persona: VoicePersonaSnapshot | string): string {
 	if (params.prompt != null && (typeof params.prompt !== "string" || Buffer.byteLength(params.prompt) > 262_144))
 		throw new ProtocolError(-32602, "Invalid realtime instructions");
-	return prompt
-		.render(contextTemplate, {
-			instructions: params.prompt === undefined ? prompt.render(defaultInstructions) : (params.prompt ?? ""),
-			context: params.includeStartupContext === false ? "" : context.slice(-32768),
-		})
-		.trim();
+	return voicePersonaInstructions(params, persona).instructions;
 }
 
 function initialItems(params: Record<string, unknown>, version: VoiceVersion) {
@@ -37,7 +32,7 @@ function initialItems(params: Record<string, unknown>, version: VoiceVersion) {
 	return items as { role: "user" | "assistant" | "developer"; text: string }[];
 }
 
-export function standaloneVoiceConfig(params: Record<string, unknown>, context: string) {
+export function standaloneVoiceConfig(params: Record<string, unknown>, persona: VoicePersonaSnapshot | string) {
 	voiceInstructions(params);
 	handoffOptions(params);
 	const transport = params.transport as { type?: unknown } | null | undefined;
@@ -58,7 +53,7 @@ export function standaloneVoiceConfig(params: Record<string, unknown>, context: 
 	if (typeof voice !== "string" || !allowedVoices.includes(voice))
 		throw new ProtocolError(-32602, "Invalid realtime voice");
 	const items = initialItems(params, version);
-	const sessionInstructions = instructions(params, context);
+	const sessionInstructions = instructions(params, persona);
 	const realtimeSessionId = params.realtimeSessionId ?? params.threadId ?? null;
 	if (
 		realtimeSessionId != null &&

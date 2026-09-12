@@ -1,12 +1,12 @@
 /** Pinned Codex realtime_call.rs backend request shape; selected ChatGPT subscription only. */
-import { prompt } from "@f5-sales-demo/pi-utils";
-import defaultInstructions from "../prompts/system/remote-voice.md" with { type: "text" };
-import contextTemplate from "../prompts/system/remote-voice-context.md" with { type: "text" };
+
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { handoffOptions } from "./voice-handoff";
+import type { VoicePersonaSnapshot } from "./voice-persona";
+import { voicePersonaInstructions } from "./voice-persona";
 import { voiceInstructions, voices } from "./voice-protocol";
-export function voiceCallConfig(params: Record<string, unknown>, context: string) {
+export function voiceCallConfig(params: Record<string, unknown>, persona: VoicePersonaSnapshot | string) {
 	voiceInstructions(params);
 	handoffOptions(params);
 	const transport = params.transport as { type?: unknown; sdp?: unknown } | undefined;
@@ -51,12 +51,7 @@ export function voiceCallConfig(params: Record<string, unknown>, context: string
 			/[\r\n]/.test(params.realtimeSessionId))
 	)
 		throw new ProtocolError(-32602, "Invalid realtime session identity");
-	const instructions = prompt
-		.render(contextTemplate, {
-			instructions: params.prompt === undefined ? prompt.render(defaultInstructions) : (params.prompt ?? ""),
-			context: params.includeStartupContext === false ? "" : context.slice(-32768),
-		})
-		.trim();
+	const instructions = voicePersonaInstructions(params, persona).instructions;
 	return {
 		version,
 		sdp: transport.sdp,

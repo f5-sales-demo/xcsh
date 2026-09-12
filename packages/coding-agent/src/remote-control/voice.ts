@@ -17,6 +17,7 @@ import {
 } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
+import type { VoicePersonaSnapshot } from "./voice-persona";
 import {
 	contextChunks,
 	decodeVoiceEvent,
@@ -33,7 +34,7 @@ export interface VoiceDependencies {
 	authenticate(): Promise<SubscriptionAuth>;
 	authenticateApiKey?(): Promise<string | undefined>;
 	createCall?: typeof createVoiceCall;
-	context?(): string;
+	persona?(): VoicePersonaSnapshot;
 	modeChanged?(active: boolean, instructions: RealtimeModeInstructions): Promise<void>;
 	open?(url: string, headers: Record<string, string>, handlers: VoiceHandlers): Promise<VoiceSocket>;
 	emit(method: string, params: Record<string, unknown>): void;
@@ -92,6 +93,7 @@ export class NativeVoice {
 	#outputAudio?: { itemId: string; audioEndMs: number };
 	#awaitingV3Session = false;
 	#v3SessionReady?: { resolve: () => void; reject: (error: Error) => void };
+	#persona: VoicePersonaSnapshot = { systemPrompt: "", tools: [], history: "" };
 	constructor(private readonly deps: VoiceDependencies) {}
 	get active(): boolean {
 		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
@@ -101,12 +103,14 @@ export class NativeVoice {
 		this.#handoffOptions = handoffOptions(params);
 		const transport = params.transport as { type?: unknown } | undefined;
 		const standalone = transport == null || transport.type === "websocket";
-		const callConfig =
-			transport?.type === "webrtc" ? voiceCallConfig(params, this.deps.context?.() ?? "") : undefined;
+		this.#persona = this.deps.persona?.() ?? this.#persona;
+		Object.freeze(this.#persona);
+		Object.freeze(this.#persona.tools);
+		const callConfig = transport?.type === "webrtc" ? voiceCallConfig(params, this.#persona) : undefined;
 		let config = callConfig
 			? undefined
 			: standalone
-				? standaloneVoiceConfig(params, this.deps.context?.() ?? "")
+				? standaloneVoiceConfig(params, this.#persona)
 				: existingCallConfig(params);
 		const instructions = voiceInstructions(params);
 		this.#state = "opening";
