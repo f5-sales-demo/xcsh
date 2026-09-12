@@ -2680,3 +2680,32 @@ empty-catalog presentation, plus expiry/revocation/re-pairing. An unrestricted
 package-wide exploratory test was stopped without a pass receipt after exceeding
 its normal range with an unexpected outbound connection; it is not a
 verification result.
+
+## Voice persona service-size repair
+
+The first personified runtime reached authenticated Sol call creation but the
+service rejected its 77,487-byte instruction envelope with HTTP 400. The relay,
+session, and enrollment paths stayed healthy, isolating the failure to request
+size. Only section byte counts and truncation booleans were recorded.
+
+`voice-persona.ts` now assembles against a 64 KiB final limit instead of
+truncating an already-rendered envelope. It reserves the directive and all
+sorted active tool names, bounds phone preferences to 32 KiB while retaining at
+least 16 KiB for a large effective prompt, then gives the prompt the remaining
+space with a UTF-8-safe 60/40 prefix/suffix split. Tool descriptions remain
+bounded to 16 KiB total and optional history to 32 KiB, but either is admitted
+only when the mandatory persona leaves space. Consequently late sections cannot
+be silently removed by whole-envelope truncation. The legacy fixture-only string
+path and existing-call ownership are unchanged.
+
+Focused WebRTC, standalone, lifecycle, persona, and owner tests pass 104 cases
+with 927 assertions; the full remote-control directory passes 915 cases with
+3,738 assertions. Package TypeScript and targeted Biome checks also pass under
+Bun 1.4.2. Immutable packaging, network-disabled qualification, cutover, and the
+fresh physical Sol observation are recorded separately after they occur.
+
+The first bounded candidate connected on Sol but failed the human identity
+probe by responding as ChatGPT. All five processes were rolled back before the
+next edit. The follow-up adds a final authoritative identity anchor after every
+variable section and verifies that even client text explicitly demanding a
+generic ChatGPT introduction cannot occupy the final instruction position.

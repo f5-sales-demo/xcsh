@@ -425,3 +425,29 @@ expiry/revocation/re-pairing flow. The existing package-wide exploratory run
 was intentionally stopped without a pass receipt after it exceeded its normal
 range and opened an unexpected outbound test connection. Do not count that
 interrupted broad run as verification.
+
+## Voice persona service-envelope follow-up
+
+Two Sol phone attempts against `compiled-final-6aabc873a-r1` ended immediately.
+Both reached authenticated call creation and received HTTP 400 while the relay
+and all terminal sessions remained healthy. Sanitized diagnostics recorded a
+77,487-byte persona envelope (53,647 system prompt, 15,028 capabilities, 7,880
+preferences, no history), with no section truncation. No prompt text, speech,
+credentials, or response body was retained.
+
+The replacement source budgets the final voice instruction envelope to at most
+64 KiB before rendering it. Tests require xcsh identity, the effective prompt's
+UTF-8-safe prefix and suffix, every sorted active tool name, and additive phone
+preferences to survive; tool descriptions and recent history use only remaining
+space. The focused voice matrix passes 104 tests with 927 assertions and the
+complete remote-control suite passes 915 tests with 3,738 assertions under Bun
+1.4.2. A newly qualified runtime and a fresh Robin-observed Sol call remain
+required; these automated results do not claim spoken acceptance.
+
+The first 64 KiB candidate connected successfully on Sol, closing the transport
+failure, but Robin reported that its answer presented itself as ChatGPT rather
+than xcsh. That candidate failed persona acceptance and was rolled back. The
+replacement source appends an authoritative xcsh/F5 identity and delegation
+anchor after all client preferences and history; a hostile-client-prompt
+regression verifies that the final anchor wins. A fresh spoken observation is
+still required.
