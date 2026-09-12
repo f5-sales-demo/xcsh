@@ -1842,8 +1842,10 @@ The terminal and phone still share the existing `UserInteractions` completion
 owner. Accept and decline select the local prompt's affirmative and negative
 choices. Cancel resolves that owner and aborts the active `AgentSession` turn.
 Session-wide and policy-amendment decisions are rejected because xcsh has no
-matching approval cache or policy mutation at this boundary. Pending native
-requests survive remote reattachment and retain their request identity.
+matching persistent approval cache or policy mutation at this boundary. Ask's
+separate session-local filesystem grants are not native command decisions.
+Pending native requests survive remote reattachment and retain their request
+identity.
 
 Tests first observed generic request envelopes and rejected native decision
 responses. The completed integration covers command/file accept, decline,
@@ -2497,7 +2499,7 @@ backup. This migration is unnecessary for sessions created by the repaired
 code, which persist `remoteThreadId` at each approved transition and restore it
 on terminal resume.
 
-## Final immutable runtime and current acceptance evidence
+## Prior immutable runtime and acceptance evidence
 
 The post-upstream AVAS v1 correction is committed as `12d945ac4`. The immutable
 Ubuntu artifact is `compiled-final-12d945ac4-r2`, built cleanly with Bun 1.4.2;
@@ -2576,3 +2578,70 @@ Herdr cutover restored the same four session identities and models with the rela
 connected. Robin then used the transcript task Stop control after leaving voice:
 Terra reported `Operation aborted`, returned idle, and no case-variant of the
 delayed target existed after a second filesystem check.
+
+## Native Ask policy and current immutable runtime
+
+The merge checkpoint `d7aa4d48fe7976a0e4a3d8e861195b7c58349466`
+integrates the current session-scoped settings architecture with the remote
+adapter. `RemoteSession` initializes permission state on the owning isolated
+`Settings` instance, accepts only the exact Ask or Full tuples, applies changes
+after all request validation succeeds, and projects the active state through
+settings notifications and resume responses.
+
+`sandbox/remote-permissions.ts` keeps Ask state in a `WeakMap` keyed by that
+settings instance. Ask enables the sandbox with empty read grants and the
+phone-supplied workspace roots as write grants. Full deletes the map entry and
+disables the sandbox. Reapplying Ask replaces rather than accumulates grants.
+Consequently two sessions in one directory cannot share policy or grants.
+`session-fence.ts` selects strict workspace-write containment only for the
+owning Ask session. The bundled sandbox guard routes command and path decisions
+through the existing extension UI / `UserInteractions` broker, grants an
+approved path only for that session, and rebuilds the fence from the updated
+settings.
+
+The supported wire tuples are deliberately closed:
+
+- Ask: `approvalPolicy: on-request`, `approvalsReviewer: user`, and
+  `sandboxPolicy.type: workspaceWrite` with `networkAccess: false`.
+- Full: `approvalPolicy: never`, `approvalsReviewer: user`, and
+  `sandboxPolicy.type: dangerFullAccess`.
+
+Ask offers one-turn command execution and session-local path grants. Native
+command/file approval responses remain accept, decline and cancel. The adapter
+does not add `acceptForSession`, persistent approval caches, network grants,
+policy amendments, Codex permission profiles or MCP elicitation.
+`permissionProfile/list` therefore remains an empty schema-valid catalog, while
+unowned permission and elicitation request methods remain rejected.
+
+The current immutable artifact is `compiled-final-d7aa4d48f-r2`. It records the
+full commit above, binary SHA-256
+`bc2b9fbf4e0cc5c2a614ae15b4271d826d419d73c2fad70d55c6299a9841094c`
+and configuration SHA-256
+`462c3a1cdd0bd0ed706041243b864ed090817b999f171805f5cdddad05bb8796`.
+The binary and launcher are mode `0700`. Its network-disabled Ubuntu 24.04
+package harness passed all ten checks in 26.398 seconds and removed its
+disposable container. Sanitized evidence is retained outside Git under
+`native-3818/evidence-final-d7aa4d48f-r2`.
+
+The artifact now runs the dedicated host and all four Herdr-managed model
+sessions. The protocol audit preserves Luna local session
+`157bbf7b53f2c244` and phone identity `157ba8d39989966c`, plus the established
+Astra, Sol and Terra identities, names, directories, models and histories. All
+four reported Full at audit time. Focused permission, interaction and session
+coverage passed 56 tests; all 908 remote-control tests passed with 3,703
+assertions. The final guarded coding-agent package run passed 8,693 tests with
+588 skips, zero failures and 33,992 assertions across 851 files under Bun 1.4.2.
+Workspace TypeScript, Biome, prompt, documentation, terminology and whitespace
+checks, all 24 pinned source hashes, and all six clean source-derived generators
+passed. These are automated results. Ask's iPhone selection, voice startup,
+approval rendering/decisions, single-winner behavior, Full switch and empty
+catalog presentation remain Robin-observed acceptance gates.
+
+Earlier accepted evidence remains in force without replaying the Plan scenario
+or four exact voice fixtures. WebRTC v3 remains the supported Pro OAuth voice
+transport. Native and pinned Codex WebRTC v1 remain service-rejected;
+standalone WebSocket v2 requires API-key authentication and is inapplicable to
+the Pro OAuth run. There is no applicable MCP elicitation flow, phone-created
+headless sessions remain excluded, and manual voice restart after complete
+network loss remains accepted. Revocation and re-pairing remain last because
+they intentionally disturb enrollment.

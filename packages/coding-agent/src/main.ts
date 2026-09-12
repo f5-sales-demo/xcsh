@@ -651,7 +651,14 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 		const configuredPaths = [...bootstrap.extensions, ...bootstrap.hooks];
 		extensionEventBus = new EventBus();
 		preloadedExtensions = bootstrap.noExtensions
-			? await logger.time("loadExtensions", loadExtensions, configuredPaths, cwd, extensionEventBus)
+			? await logger.time(
+					"loadExtensions",
+					loadExtensions,
+					configuredPaths,
+					cwd,
+					extensionEventBus,
+					bootstrap.bundledExtensions,
+				)
 			: await logger.time(
 					"discoverAndLoadExtensions",
 					discoverAndLoadExtensions,

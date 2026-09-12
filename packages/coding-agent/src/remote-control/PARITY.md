@@ -512,8 +512,11 @@ pinned schema documents.
 xcsh advertises only `accept`, `decline` and `cancel` for command approvals.
 `acceptForSession`, exec-policy amendments and network-policy amendments remain
 unsupported because the native runtime has no equivalent persistent approval
-state. Dedicated permission-profile requests and MCP elicitations also remain
-open. No phone approval acceptance is inferred from the automated coverage.
+state. The separate Ask policy may grant a blocked filesystem path for the
+owning session or allow one command execution; those grants are ephemeral,
+cleared by Ask/Full transitions and are not native command-decision aliases.
+Dedicated permission-profile requests and MCP elicitations remain unsupported.
+No phone approval acceptance is inferred from the automated coverage.
 
 ## Relay recovery source parity
 
@@ -679,8 +682,10 @@ types before touching a session. The request and response fixtures are unchanged
 copies of the 0.153.4 schemas.
 
 Dedicated permission grants are not interchangeable with xcsh's existing
-command/file approval choices: there is no native grant cache, scope, or
-additional-filesystem/network policy to mutate. Likewise, xcsh's MCP 2025-03-26
+command/file approval choices: there is no persistent native grant cache or
+network-policy amendment. Ask's session-local filesystem grants belong to the
+isolated terminal settings object and are cleared by a mode transition. Likewise,
+xcsh's MCP 2025-03-26
 client does not negotiate elicitation and rejects server requests other than
 `ping` and `roots/list`. Pending `item/permissions/requestApproval` and
 `mcpServer/elicitation/request` envelopes are therefore rejected explicitly
@@ -977,7 +982,7 @@ byte-identical and a private backup was retained. This was cutover compatibility
 not an additional product behavior. New Plan executions persist the continuity
 ID natively, as confirmed by the new session header and resume regression.
 
-## Current final-runtime evidence
+## Prior final-runtime evidence
 
 Artifact `compiled-final-12d945ac4-r2` executes commit `12d945ac4` with binary
 SHA-256 `9accce86b0a4d05127f51ad35956cdf048a1cd2e041acb6ae34ddb0288d0ca7e`.
@@ -1026,3 +1031,57 @@ control on replacement artifact `5ffc51c2b-r2` produced `Operation aborted` and
 left no case-variant of the delayed Terra target after recheck. The repair also
 prevents an already-answered transcript tail from reopening older interrupted
 work; its focused test and the complete 65-file remote-control suite pass.
+
+## Current Ask and Full parity checkpoint
+
+Artifact `compiled-final-d7aa4d48f-r2` executes full commit
+`d7aa4d48fe7976a0e4a3d8e861195b7c58349466`. Its binary SHA-256 is
+`bc2b9fbf4e0cc5c2a614ae15b4271d826d419d73c2fad70d55c6299a9841094c`
+and its configuration SHA-256 is
+`462c3a1cdd0bd0ed706041243b864ed090817b999f171805f5cdddad05bb8796`.
+The executable binary and launcher are mode `0700`. The immutable artifact
+passed the ten-check, network-disabled Ubuntu harness in 26.398 seconds; its
+sanitized external receipt records ten checks, the full source commit and the
+same binary hash.
+
+The native settings projection now supports two and only two permission tuples:
+
+- Ask: `on-request`, reviewer `user`, `workspaceWrite`, network disabled.
+- Full: `never`, reviewer `user`, `dangerFullAccess`.
+
+`thread/settings/update` validates the complete tuple and
+`thread/settings/updated` plus `thread/resume` return the active tuple. Ask
+enables strict workspace-write containment. Bash/Python execution may be allowed
+once; a denied path may be granted for that session only. Re-selecting Ask starts
+with fresh grants, and Full deletes the Ask state before disabling containment.
+The state is keyed by each session's isolated settings object, including when
+two sessions share a cwd. No Codex profile, durable session-wide approval cache,
+network access or policy amendment is synthesized.
+
+Command and file requests continue through the same `UserInteractions` owner and
+retain tool-call identity. Accept, decline and cancel are the complete native
+decision set. Automated tests cover exact-once completion, late/duplicate
+responses, reconnect replay, cancellation and a simultaneous terminal/remote
+winner. `permissionProfile/list` remains the truthful empty catalog;
+`item/permissions/requestApproval` and MCP elicitation remain explicitly
+unsupported.
+
+Focused Ask, interaction and session tests passed 56 cases. The complete
+remote-control suite passed 908 tests with 3,703 assertions. The final
+guarded coding-agent package run passed 8,693 tests with 588 skips, zero
+failures and 33,992 assertions across 851 files under Bun 1.4.2. Workspace
+TypeScript, Biome, prompt, documentation, terminology and whitespace checks,
+all 24 pinned source hashes, and all six clean source-derived generators passed.
+The current post-cutover protocol audit found the four established sessions,
+histories and models, with Luna's local `157bbf7b53f2c244` / phone
+`157ba8d39989966c` dual identity preserved. All four reported Full at audit time.
+Robin's iPhone rendering and decision observations remain separate and are not
+claimed by these automated results.
+
+The transport boundaries are unchanged: WebRTC v3 is the supported Pro OAuth
+path; native and pinned Codex WebRTC v1 remain rejected by the subscription
+service; standalone WebSocket v2 requires an API key and is not part of this
+OAuth run. Phone-created headless sessions are excluded, and fresh manual voice
+restart after total network loss is the accepted first-release recovery. The
+earlier Plan continuity, four-session history, four voice tasks, closure,
+cancellation and recovery observations remain accepted without repetition.

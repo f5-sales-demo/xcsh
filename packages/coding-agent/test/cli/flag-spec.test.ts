@@ -237,6 +237,8 @@ describe("launch bootstrap scan", () => {
 			"--plugin-dir",
 			"./plugins",
 			"--no-extensions",
+			"--bundled-extension",
+			"sandbox-guard",
 			"--allow-home",
 		]);
 
@@ -245,6 +247,7 @@ describe("launch bootstrap scan", () => {
 			hooks: ["./two.ts"],
 			pluginDirs: ["./plugins"],
 			noExtensions: true,
+			bundledExtensions: ["sandbox-guard"],
 			allowHome: true,
 			preExtensionExit: false,
 		});

@@ -17,7 +17,7 @@ completion of another. Codex baseline: 0.153.4,
 | Canonical complete history and pagination | Persisted branch/timeline, visible item projections, fork ancestry, Plan/Default modes and skill bootstrap match pinned schemas. On `12d945ac4-r2`, stable and experimental discovery each paged twice; every turn and item across all four sessions paged without gaps or duplicates; a second client attached while Terra was `inProgress` and observed completion | Phone catalog/fork and mid-stream presentation acceptance |
 | Typed prompts and streamed turns | Manual routing and real AgentSession tool execution passed. Current `12d945ac4-r2` history pagination matched live reads, a second client attached during active work, and the completed marker persisted with stable identity | Concurrent iPhone/terminal presentation acceptance |
 | Steering, interruption and explicit task cancellation | API and race coverage pass; spoken-output interruption passed manually. On `12d945ac4-r2`, remote steering retained a live Terra terminal turn ID, suppressed its original file and created one exact replacement. On `5ffc51c2b-r2`, Robin used the transcript task Stop control after leaving voice; Terra reported `Operation aborted`, returned idle, and no case-variant of the delayed target existed after recheck | Retain through release |
-| Questions and approvals in both interfaces | Native command/file/general-tool prompts share the broker and pinned schemas; accept, decline, cancellation and late-answer tests pass. Robin accepted one Plan on `acfa258` and observed its single implementation in the retained transcript. On `12d945ac4-r2`, Astra completed one grouped two-question request with one resolution; `permissionProfile/list` returned the schema-valid empty catalog | Complete iPhone command/file approval and empty permission-catalog presentation |
+| Questions and approvals in both interfaces | Native command/file/general-tool prompts share the broker and pinned schemas; accept, decline, cancellation and late-answer tests pass. The `d7aa4d48f-r2` runtime accepts the phone's exact Ask tuple, reports it on update/resume, uses session-local workspace grants, and restores Full without cross-session policy leakage. `permissionProfile/list` remains the schema-valid empty catalog | Complete Robin-observed iPhone Ask, command/file decision, concurrent-resolution, Full-switch and empty-catalog presentation |
 | Native realtime transports | WebRTC v1/v3 and existing-call paths; v1 default/session/handoff source-contract tests; actual iPhone v3 voice; 38 original Rust audio-parser cases and end-to-end forwarding tests match. Final-artifact v3 negotiation passed with one started, SDP and closed event, a connected peer and open data channel. V1 remained service-rejected after omitting the explicit HTTP model; pinned Codex 0.153.4 was also service-rejected | Preserve the sanitized v1 service boundary and complete remaining supported options; do not map v1 silently to v3 |
 | Initial context, speech boundaries and transcripts | Recorded timeline/replay state; turn-scoped mode, default/empty instructions and retained-context recovery match the pinned snapshot; real tool/pruning/resume/identity tests pass; shared voice owner and stored speech boundaries verified | Final live mode/context/history acceptance; live promotion and remaining recovery matrix |
 | Delegation and speakable output | Reference and native both created/read fixture; v3 streaming, completed v1 and response-item output pass 32 four-model adapter variants; shared timeline and bounded delegation match pinned Rust fixtures | Fresh live streaming/item-mode capture, remaining cancellation and live canonical timeline acceptance |
@@ -30,7 +30,7 @@ completion of another. Codex baseline: 0.153.4,
 | Relay acknowledgements, chunking, replay and bounds | Codec and transport tests cover acknowledgement, chunking, replay, cursor retention, bounded buffers, stale sockets and refresh-triggered connection rotation. On `12d945ac4-r2`, the live OAuth credential expiry advanced while the same host PID remained alive; the relay stayed connected with all four original sessions | Retain the refresh/replay gates through CI |
 | Credentials/raw audio absent from diagnostics | Private sanitized capture, PII and commit secret scans pass; audio forwarding tests confirm frames are absent from stored records. Final live-state/evidence scans found zero credential-like or raw-audio payload files, with private `0700`/`0600` modes | Retain repository and CI privacy gates through merge |
 | Sol, Luna, Terra and Astra fidelity | Parameterized adapter tests and isolated model-registry resume tests pass. Robin completed a voice tool task in each preserved session; host verification found exact no-newline files `LUNA-ORCHARD`, `ASTRA-COMET`, `SOL-HARBOR`, and `TERRA-MAPLE`, and each session history records its write, read, and spoken completion | Retain model identity through release |
-| No Codex installation or subprocess dependency | Final artifact `12d945ac4-r2` passed all ten isolated Ubuntu checks in 18.700 seconds without Codex, standalone Bun, network or source dependencies; real tools, naming, recovery, active work, compiled resume and durable replay passed | Live subscription/voice evidence remains separate |
+| No Codex installation or subprocess dependency | Current artifact `d7aa4d48f-r2` passed all ten isolated Ubuntu checks in 26.398 seconds without Codex, standalone Bun, network or source dependencies; real tools, naming, recovery, active work, compiled resume and durable replay passed | Live subscription/voice evidence remains separate |
 | Actual Codex reference recordings and comparison | Two recall calls and successful reference/native file calls; hashed sanitized fixtures | Repair remaining differences; further control/recovery/interaction scenarios and explicit unverified coverage |
 | TDD and repository checks | The v1 repair passes 11 focused tests/61 assertions, the 34-test transport matrix/150 assertions, all 905 remote tests/3688 assertions and 8311 guarded package tests/30019 assertions with 561 skips across 795 files under Bun 1.4.2. TypeScript, Biome, package, docs, textlint, whitespace, staged PII, staged/postcommit gitleaks, all 24 pinned hashes and the final ten-check harness pass | Retain these gates through PR CI; the unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
 | Manual acceptance only on Robin's report | Specific observations recorded in PARITY.md and issue comments | Obtain remaining manual checkpoints without treating simulated tests as phone acceptance |
@@ -266,7 +266,7 @@ Different speech chunk counts, model choices, timestamps and recorder redactions
 must remain visible in comparison reports. Do not mark the goal complete until
 every requirement above has current evidence at its required scope.
 
-## Current immutable runtime checkpoint
+## Prior immutable runtime checkpoint
 
 The final committed runtime now executes artifact `compiled-final-12d945ac4-r2`
 from commit `12d945ac428763383590da9ae7d642d6bef6a045`, with SHA-256
@@ -323,3 +323,64 @@ used the separate transcript task Stop control: Terra reported `Operation
 aborted`, returned idle, and no case-variant of the delayed target existed after
 recheck. The replacement's ten-check network-disabled harness passed in 17.933
 seconds and the four original session identities and models remain connected.
+
+## Current Ask and Full runtime checkpoint
+
+The current immutable Ubuntu artifact is `compiled-final-d7aa4d48f-r2`, built
+from full source commit `d7aa4d48fe7976a0e4a3d8e861195b7c58349466` under
+Bun 1.4.2. Its binary SHA-256 is
+`bc2b9fbf4e0cc5c2a614ae15b4271d826d419d73c2fad70d55c6299a9841094c`;
+the configuration SHA-256 is
+`462c3a1cdd0bd0ed706041243b864ed090817b999f171805f5cdddad05bb8796`.
+Both the binary and launcher are mode `0700`. The ten-check network-disabled
+package harness passed in 26.398 seconds, including provenance, real tool use,
+host recovery, durable replay and container cleanup. Its sanitized receipt is
+outside Git at `native-3818/evidence-final-d7aa4d48f-r2`.
+
+Ask is exactly `approvalPolicy: on-request`, `approvalsReviewer: user`, and a
+`workspaceWrite` sandbox with network disabled. Full is exactly
+`approvalPolicy: never`, `approvalsReviewer: user`, and `dangerFullAccess`.
+Settings updates and resumes report the active tuple truthfully. Ask command
+execution uses one-turn approval; out-of-workspace paths may be granted only for
+the owning session. Selecting Ask again or returning to Full clears those grants.
+The state is keyed by the session's isolated settings object, so another terminal
+in the same directory does not inherit Ask, Full or a grant. Native command and
+file requests still expose only the decisions the existing single-owner broker
+can honor: accept, decline and cancel. There is no persistent Codex approval
+cache, network grant or policy amendment.
+
+Automated evidence covers settings validation and publication, Ask/Full
+transitions, sandbox enforcement, session-local grant reset and same-directory
+isolation, native interaction identity, cancellation, reconnect replay and
+deduplication. The focused Ask/interaction/session matrix passed 56 tests, and
+the complete remote-control suite passed 908 tests with 3,703 assertions. The
+final guarded coding-agent package run passed 8,693 tests with 588 skips, zero
+failures and 33,992 assertions across 851 files under Bun 1.4.2. Workspace
+TypeScript, Biome, prompt, documentation, terminology and whitespace checks,
+all 24 pinned source hashes, and all six clean source-derived generators passed.
+The post-cutover audit found exactly Luna, Astra, Sol and Terra with their
+established IDs, names, directories, models and histories; Luna retains local session
+`157bbf7b53f2c244` and phone identity `157ba8d39989966c`. At the time of that
+audit all four sessions truthfully reported Full.
+
+These results are automation and protocol evidence, not iPhone acceptance.
+Robin still must confirm that Ask appears active, voice connects, command and
+file requests render, accept runs once, decline makes no mutation while the turn
+continues, cancel retires the request and work, duplicate/reconnected responses
+do not repeat work, simultaneous terminal/phone resolution has one winner, Full
+restores unrestricted execution without leakage, and the empty catalog renders
+coherently. The presentation rows for paginated history, unsupported fork,
+mid-stream attachment, concurrent prompting, steering, grouped questions and
+transcript promotion also remain Robin-observed gates.
+
+The accepted Plan continuity, four-session discovery and prior transcripts,
+four voice fixtures, deliberate pause/interruption, background/foreground
+recovery, voice closure, transcript-task cancellation, Full mode and Pro OAuth
+evidence remain valid and are not repeated. WebRTC v3 is the supported OAuth
+voice path. Native and pinned Codex WebRTC v1 remain service-rejected;
+standalone WebSocket v2 requires API-key authentication and is inapplicable to
+this Pro OAuth run. `permissionProfile/list` intentionally remains empty, MCP
+elicitation remains unsupported, phone-created headless sessions remain out of
+scope, and manual voice restart after total network loss remains accepted.
+Expiry, revocation and re-pairing are intentionally last because they disrupt
+enrollment and remain pending until the presentation evidence is preserved.
