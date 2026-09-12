@@ -28,7 +28,23 @@ test("client voice text cannot supersede the final authoritative xcsh identity",
 	expect(identityOffset).toBeGreaterThan(clientOffset);
 	expect(instructions.slice(identityOffset)).toContain("I'm xcsh, F5's sales-engineering assistant.");
 	expect(instructions.slice(identityOffset)).toContain("Never identify or introduce yourself as ChatGPT");
+	expect(instructions.slice(identityOffset)).toContain("xcsh's persisted memory summary");
+	expect(instructions.slice(identityOffset)).toContain("do not claim your knowledge is limited to the current chat");
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(64 * 1024);
+});
+
+test("persisted user knowledge remains available to the voice surface with honest boundaries", () => {
+	const { instructions } = voicePersonaInstructions(
+		{},
+		{
+			...snapshot,
+			systemPrompt: `${snapshot.systemPrompt}\nMemory summary:\nThe user works on F5 Distributed Cloud and prefers evidence-backed delivery.`,
+		},
+	);
+	expect(instructions).toContain("The user works on F5 Distributed Cloud");
+	expect(instructions).toContain("durable knowledge learned about the human across conversations");
+	expect(instructions).toContain("stored or inferred and potentially stale");
+	expect(instructions).toContain("Never invent user facts");
 });
 
 test("history is the only server-supplied section suppressed by includeStartupContext", () => {
