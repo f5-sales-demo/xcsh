@@ -113,7 +113,7 @@ export async function createVoiceCall(
 					"ChatGPT-Account-Id": auth.accountId,
 					originator: "xcsh",
 					"Content-Type": "application/json",
-					"openai-alpha": config.version === "v1" ? "quicksilver=v1" : "quicksilver=v2",
+					"openai-alpha": "quicksilver=v2",
 				},
 				body: JSON.stringify({ sdp: config.sdp, session: config.session }),
 			},
