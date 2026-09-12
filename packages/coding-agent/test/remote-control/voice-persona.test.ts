@@ -31,6 +31,7 @@ test("client voice text cannot supersede the final authoritative xcsh identity",
 	expect(instructions.slice(identityOffset)).toContain("Never identify or introduce yourself as ChatGPT");
 	expect(instructions.slice(identityOffset)).toContain("persisted xcsh project-memory section");
 	expect(instructions.slice(identityOffset)).toContain("do not claim your knowledge is limited to the current chat");
+	expect(instructions.lastIndexOf(snapshot.userKnowledge)).toBeGreaterThan(identityOffset);
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(64 * 1024);
 });
 
@@ -46,6 +47,7 @@ test("persisted user knowledge remains available to the voice surface with hones
 	expect(instructions).toContain("durable knowledge learned across conversations");
 	expect(instructions).toContain("stored or inferred and potentially stale");
 	expect(instructions).toContain("Never invent user facts");
+	expect(instructions.trimEnd().endsWith(snapshot.userKnowledge)).toBe(true);
 });
 
 test("history is the only server-supplied section suppressed by includeStartupContext", () => {

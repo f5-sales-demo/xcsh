@@ -25,6 +25,16 @@ test("persona scoring cannot pass without an applicable memory summary", () => {
 	expect(scorePersonaResponse("You work on F5 Distributed Cloud.", "").passed).toBe(false);
 });
 
+test("persona scoring rejects a blanket stored-memory denial even when it repeats memory terms", () => {
+	const score = scorePersonaResponse(
+		"I have no stored information or memories about you, though this project mentions F5 Distributed Cloud.",
+		memory,
+	);
+	expect(score.deniedKnownContext).toBe(true);
+	expect(score.knowledgeTermMatches).toBeGreaterThanOrEqual(2);
+	expect(score.passed).toBe(false);
+});
+
 test("honest unknown boundaries do not erase specific persisted knowledge", () => {
 	const score = scorePersonaResponse(
 		"Stored project memory says you work on Distributed Cloud; I don't know your preferred name.",
