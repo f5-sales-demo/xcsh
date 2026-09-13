@@ -44,6 +44,7 @@ describe("SDK system prompt overrides", () => {
 			});
 
 			try {
+				expect(session.systemPrompt).toContain("xcsh://user");
 				expect(session.systemPrompt).toContain("custom operator prompt");
 				expect(session.systemPrompt).toContain("<workspace-boundary>");
 				expect(session.systemPrompt).toContain("## Deprecation guardrails");

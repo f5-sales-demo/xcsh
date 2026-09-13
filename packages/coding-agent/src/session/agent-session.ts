@@ -3347,6 +3347,7 @@ export class AgentSession {
 		const message = options?.synthetic
 			? { role: "developer" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() }
 			: { role: "user" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() };
+		if (message.role === "user" && this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
 
 		await this.#maybeRestoreRetryFallbackPrimary();
 		if (!this.#isPromptCurrent(generation)) return;

@@ -4,14 +4,25 @@ import {
 	formatResourceCliOutput,
 	resolveResourceEnvironment,
 } from "../src/cli/resource-cli";
+import { contextlessCliFixture } from "./helpers/contextless-cli";
 
+const contextless = contextlessCliFixture();
 describe("resource CLI automation contract", () => {
 	test("runs credential-free validation through the public CLI without starting an agent", () => {
 		const result = Bun.spawnSync(
-			["bun", "src/cli.ts", "validate", "-f", "test/fixtures/resource-manifest.yaml", "-o", "json"],
+			[
+				process.execPath,
+				"--no-env-file",
+				new URL("../src/cli.ts", import.meta.url).pathname,
+				"validate",
+				"-f",
+				new URL("./fixtures/resource-manifest.yaml", import.meta.url).pathname,
+				"-o",
+				"json",
+			],
 			{
-				cwd: import.meta.dir.replace(/\/test$/, ""),
-				env: { ...process.env, XCSH_API_URL: "", XCSH_API_TOKEN: "", XCSH_NAMESPACE: "" },
+				cwd: contextless.cwd,
+				env: { ...process.env, ...contextless.env },
 				stdout: "pipe",
 				stderr: "pipe",
 			},
@@ -24,19 +35,20 @@ describe("resource CLI automation contract", () => {
 	test("routes manifest update through the public CLI without starting an agent", () => {
 		const result = Bun.spawnSync(
 			[
-				"bun",
-				"src/cli.ts",
+				process.execPath,
+				"--no-env-file",
+				new URL("../src/cli.ts", import.meta.url).pathname,
 				"update",
 				"-f",
-				"test/fixtures/resource-manifest.yaml",
+				new URL("./fixtures/resource-manifest.yaml", import.meta.url).pathname,
 				"--dry-run",
 				"client",
 				"-o",
 				"json",
 			],
 			{
-				cwd: import.meta.dir.replace(/\/test$/, ""),
-				env: { ...process.env, XCSH_API_URL: "", XCSH_API_TOKEN: "", XCSH_NAMESPACE: "" },
+				cwd: contextless.cwd,
+				env: { ...process.env, ...contextless.env },
 				stdout: "pipe",
 				stderr: "pipe",
 			},

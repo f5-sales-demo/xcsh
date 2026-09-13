@@ -16,7 +16,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
-import { CODING_AGENT_CLI, CODING_AGENT_ROOT } from "./helpers/cli-process";
+import { CODING_AGENT_CLI } from "./helpers/cli-process";
+import { contextlessCliFixture } from "./helpers/contextless-cli";
 import { requireSpans, SURVIVAL_BUDGET_MS, SURVIVAL_PROBE_INTERVAL_MS } from "./helpers/manager-waits";
 import {
 	type PortReaperDeps,
@@ -30,6 +31,8 @@ import {
 	TEARDOWN_HOOK_TIMEOUT_MS,
 } from "./helpers/port-reaper";
 import { describeManagerCensus, describePortScan, describeWaitFailure } from "./manager-wait-diagnostics";
+
+const contextless = contextlessCliFixture();
 
 let mgr: import("bun").Subprocess | undefined;
 // A SECOND manager on the same socket (single-manager-invariant test). It is
@@ -235,8 +238,8 @@ async function request(msg: unknown, timeoutMs = 2000): Promise<Record<string, u
  */
 async function spawnManager(poolSize: string, extraEnv: Record<string, string> = {}): Promise<() => string> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	const proc = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
-		cwd: CODING_AGENT_ROOT,
+	const proc = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "manager"], {
+		cwd: contextless.cwd,
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize, ...extraEnv },
 		stdout: "ignore",
 		stderr: "pipe",
@@ -280,7 +283,7 @@ async function startManager(extraEnv: Record<string, string> = {}): Promise<() =
  * started (#2495).
  */
 const PORT_BASE = 20_000 + (process.pid % 40) * 200;
-const BRIDGE_ENV = { XCSH_BRIDGE_PORT_START: String(PORT_BASE) };
+const BRIDGE_ENV = { ...contextless.env, XCSH_BRIDGE_PORT_START: String(PORT_BASE) };
 
 // Workers are assigned the LOWEST free range port; the T4 worker test pins base+17, so polling the
 // low end of the range avoids colliding with it.
@@ -562,8 +565,8 @@ test("`chrome recycle` steps down the running manager for an upgrade (#1874 Task
 	// Temp HOME so the wrapper refresh writes to a throwaway Chrome dir, not the
 	// developer's real native-host manifest.
 	const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-recycle-home-"));
-	const rc = Bun.spawn([process.execPath, CODING_AGENT_CLI, "chrome", "recycle"], {
-		cwd: CODING_AGENT_ROOT,
+	const rc = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "chrome", "recycle"], {
+		cwd: contextless.cwd,
 		env: { ...process.env, ...BRIDGE_ENV, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
@@ -599,8 +602,8 @@ test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=
 
 test("provision spawns a worker advertising the tenant; release reaps it", async () => {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	mgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
-		cwd: CODING_AGENT_ROOT,
+	mgr = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "manager"], {
+		cwd: contextless.cwd,
 		// Cold-spawn path under test — disable the pre-warm pool (own tests cover it).
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
@@ -697,8 +700,8 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 	// "leaktenant" (from the apiUrl), NOT the provisioned XCSH_SESSION_TENANT.
 	// spawnWorker clears XCSH_API_URL/XCSH_API_TOKEN so the tenant key is authoritative.
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	mgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
-		cwd: CODING_AGENT_ROOT,
+	mgr = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "manager"], {
+		cwd: contextless.cwd,
 		env: {
 			...process.env,
 			...BRIDGE_ENV,
@@ -796,8 +799,8 @@ test("a second manager on the same socket detects the live first and self-exits 
 	// discover A is live, and exit(0) WITHOUT unlinking A's socket. Under the old
 	// rm-then-listen startup B would instead clobber A's socket and block forever
 	// as a second live manager, orphaning A.
-	mgrB = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
-		cwd: CODING_AGENT_ROOT,
+	mgrB = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "manager"], {
+		cwd: contextless.cwd,
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
@@ -836,8 +839,8 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	expect(fs.existsSync(sock)).toBe(true); // a crashed manager leaves its socket file behind
 
 	// Successor manager cold-starts on the SAME (now stale) socket path.
-	mgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
-		cwd: CODING_AGENT_ROOT,
+	mgr = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "manager"], {
+		cwd: contextless.cwd,
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",

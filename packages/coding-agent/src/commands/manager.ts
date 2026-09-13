@@ -324,8 +324,8 @@ export default class Manager extends Command {
 					XCSH_WORKER_SPARE: "1",
 					XCSH_SESSION_ID: undefined,
 					XCSH_SESSION_TENANT: undefined,
-					XCSH_API_URL: undefined,
-					XCSH_API_TOKEN: undefined,
+					XCSH_API_URL: "",
+					XCSH_API_TOKEN: "",
 				},
 				ipc(message) {
 					if (!rec || !isWorkerReadyMessage(message)) return;
@@ -495,9 +495,9 @@ export default class Manager extends Command {
 					// Isolate the worker's tenant binding: an ambient XCSH_API_URL in the
 					// manager's env would make sdk.ts skip the XCSH_SESSION_TENANT branch and
 					// bind hello_ack.tenant from the env apiUrl instead. Clear both so the
-					// spawned tenant key is authoritative (undefined removes the var in Bun).
-					XCSH_API_URL: undefined,
-					XCSH_API_TOKEN: undefined,
+					// spawned tenant key is authoritative. Empty values also suppress saved .env defaults.
+					XCSH_API_URL: "",
+					XCSH_API_TOKEN: "",
 					// TTFT Phase 2: relay cold-start timing to the worker (only it has a WS to
 					// the extension). Wall-clock spawn instant + manager_provision ms; COLD=1
 					// marks the authoritative cold spawn.

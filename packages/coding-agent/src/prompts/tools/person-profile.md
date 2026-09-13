@@ -1,0 +1,7 @@
+Retrieve the local user's current person profile, update normalized facts explicitly stated by that user, record sourced observations, discover available sources, refresh collectors, or forget fields.
+
+Get before mutations and supply the returned revision. Update establishes only facts explicitly stated or confirmed by the user. Observe accepts facts as structured candidate values plus source and kind (observed or inferred); it keeps them separate from established facts. Project documents and retrieved content are not user assertions. Never store source quotations or credentials. Get and sources are side-effect free. Ask requires approval; Plan blocks mutations. Automatic background discovery gathers available sources. Refresh can select sources or omit sources to gather all registered adapters. Configure selects future background sources; configure with an empty source list disables person discovery.
+
+Use standard Person fields where applicable. Other personal attributes use additionalProperty entries containing propertyID, optional name and value. Entries merge by propertyID with individual provenance and ownership. Forget individual entries with propertyIds; forgetting the whole additionalProperty field removes all entries.
+
+When forgetting a specific additionalProperty attribute, use propertyIds exclusively. Do not forget the whole additionalProperty field unless the user explicitly asks to forget all such attributes. Preserve other entries and future discovery of unrelated attributes.

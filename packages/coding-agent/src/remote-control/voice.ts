@@ -17,7 +17,7 @@ import {
 } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
-import type { VoicePersonaSnapshot } from "./voice-persona";
+import { type VoicePersonaSnapshot, voicePersonaInstructions } from "./voice-persona";
 import {
 	contextChunks,
 	decodeVoiceEvent,
@@ -34,7 +34,7 @@ export interface VoiceDependencies {
 	authenticate(): Promise<SubscriptionAuth>;
 	authenticateApiKey?(): Promise<string | undefined>;
 	createCall?: typeof createVoiceCall;
-	persona?(): VoicePersonaSnapshot;
+	persona?(): VoicePersonaSnapshot | Promise<VoicePersonaSnapshot>;
 	modeChanged?(active: boolean, instructions: RealtimeModeInstructions): Promise<void>;
 	open?(url: string, headers: Record<string, string>, handlers: VoiceHandlers): Promise<VoiceSocket>;
 	emit(method: string, params: Record<string, unknown>): void;
@@ -100,22 +100,32 @@ export class NativeVoice {
 	}
 	async start(params: Record<string, unknown>): Promise<void> {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
-		this.#handoffOptions = handoffOptions(params);
-		const transport = params.transport as { type?: unknown } | undefined;
-		const standalone = transport == null || transport.type === "websocket";
-		this.#persona = this.deps.persona?.() ?? this.#persona;
-		if (typeof this.#persona !== "string") {
-			Object.freeze(this.#persona);
-			Object.freeze(this.#persona.tools);
-		}
-		const callConfig = transport?.type === "webrtc" ? voiceCallConfig(params, this.#persona) : undefined;
-		let config = callConfig
-			? undefined
-			: standalone
-				? standaloneVoiceConfig(params, this.#persona)
-				: existingCallConfig(params);
-		const instructions = voiceInstructions(params);
 		this.#state = "opening";
+		let callConfig: ReturnType<typeof voiceCallConfig> | undefined;
+		let config: ReturnType<typeof existingCallConfig> | ReturnType<typeof standaloneVoiceConfig> | undefined;
+		let instructions: RealtimeModeInstructions;
+		let standalone: boolean;
+		try {
+			this.#handoffOptions = handoffOptions(params);
+			const transport = params.transport as { type?: unknown } | undefined;
+			standalone = transport == null || transport.type === "websocket";
+			this.#persona = (await this.deps.persona?.()) ?? this.#persona;
+			if (this.#state !== "opening") throw new Error("Voice stopped during persona snapshot");
+			if (typeof this.#persona !== "string") {
+				Object.freeze(this.#persona);
+				Object.freeze(this.#persona.tools);
+			}
+			callConfig = transport?.type === "webrtc" ? voiceCallConfig(params, this.#persona) : undefined;
+			config = callConfig
+				? undefined
+				: standalone
+					? standaloneVoiceConfig(params, this.#persona)
+					: existingCallConfig(params);
+			instructions = voiceInstructions(params);
+		} catch (error) {
+			if (this.#state === "opening") this.#state = "idle";
+			throw error;
+		}
 		this.#flushTail = params.flushTranscriptTailOnSessionEnd === true;
 		this.#seen = new Set(
 			this.deps
@@ -126,6 +136,11 @@ export class NativeVoice {
 		let stage = "authentication";
 		const startedAt = Date.now();
 		try {
+			if (typeof this.#persona !== "string") {
+				const diagnostics = voicePersonaInstructions(params, this.#persona).diagnostics;
+				await this.deps.record({ kind: "voicePersonaDiagnostic", ...diagnostics });
+				if (this.#state !== "opening") throw new Error("Voice stopped during persona diagnostics");
+			}
 			const apiKey = standalone ? await this.deps.authenticateApiKey?.() : undefined;
 			if (standalone && !apiKey) throw new ProtocolError(-32602, "Realtime conversation requires API key auth");
 			const auth = standalone ? undefined : await this.deps.authenticate();

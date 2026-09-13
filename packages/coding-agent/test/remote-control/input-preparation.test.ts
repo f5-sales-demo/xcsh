@@ -7,6 +7,28 @@ import { AgentSession } from "../../src/session/agent-session";
 import { AuthStorage } from "../../src/session/auth-storage";
 import { SessionManager } from "../../src/session/session-manager";
 
+test("ordinary prompts run user-input preparation before provider admission", async () => {
+	const auth = await AuthStorage.create(":memory:");
+	const session = new AgentSession({
+		agent: new Agent({ initialState: { model: getBundledModel("openai", "gpt-4o-mini")! } }),
+		sessionManager: SessionManager.inMemory(),
+		settings: Settings.isolated({ "compaction.enabled": false }),
+		modelRegistry: new ModelRegistry(auth),
+	});
+	let prepared = false;
+	session.addBeforeUserInputHook(async () => {
+		prepared = true;
+		throw new Error("synthetic-preparation-stop");
+	});
+	try {
+		await expect(session.prompt("Synthetic input")).rejects.toThrow("synthetic-preparation-stop");
+		expect(prepared).toBe(true);
+	} finally {
+		await session.dispose();
+		auth.close();
+	}
+});
+
 test.each(["steer", "followUp"] as const)(
 	"%s admission joins preparation and rejects cancelled ownership",
 	async method => {

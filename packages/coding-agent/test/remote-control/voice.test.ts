@@ -718,6 +718,46 @@ test("WebRTC creates the native call, forwards answer SDP and attaches without o
 	expect(f.sent).toEqual([]);
 	f.voice.stop();
 });
+test("WebRTC uses on-demand person routing without startup person values", async () => {
+	const f = fixture();
+	let instructions = "";
+	f.deps.persona = async () => ({
+		systemPrompt: "You are xcsh.",
+		userKnowledge: "The user validates F5 sales-engineering workflows.",
+		tools: [],
+		history: "",
+	});
+	f.deps.createCall = async config => {
+		instructions = String((config.session as { instructions?: unknown }).instructions ?? "");
+		return { callId: "fixture-call", sdp: "v=0\r\nfixture-answer" };
+	};
+	await f.voice.start({
+		version: "v3",
+		outputModality: "audio",
+		includeStartupContext: false,
+		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+	});
+	expect(instructions).not.toContain("The user validates F5 sales-engineering workflows.");
+	expect(instructions).toContain("person_profile");
+	expect(instructions).toContain("xcsh://user");
+	await f.voice.stop();
+});
+test("a pending persona snapshot fences concurrent starts and respects stop", async () => {
+	const f = fixture();
+	const snapshot = Promise.withResolvers<{
+		systemPrompt: string;
+		userKnowledge: string;
+		tools: [];
+		history: string;
+	}>();
+	f.deps.persona = () => snapshot.promise;
+	const opening = f.voice.start(start);
+	await Bun.sleep(0);
+	await expect(f.voice.start(start)).rejects.toThrow("new attachment");
+	await f.voice.stop();
+	snapshot.resolve({ systemPrompt: "xcsh", userKnowledge: "fixture", tools: [], history: "" });
+	await expect(opening).rejects.toThrow("Voice stopped during persona snapshot");
+});
 test("WebRTC service rejection persists sanitized gate evidence and never opens a sideband", async () => {
 	const f = fixture();
 	f.deps.createCall = async () => {

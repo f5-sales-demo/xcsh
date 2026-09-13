@@ -25,6 +25,13 @@
  */
 import * as path from "node:path";
 import { logger } from "@f5-sales-demo/pi-utils";
+import {
+	MachineProfileSchema,
+	type MachineProfileService,
+	machineProfileService,
+} from "../person-profile/machine-profile";
+import { PersonProfileSchema } from "../person-profile/schema";
+import { type PersonProfileService, personProfileService } from "../person-profile/service";
 import type { ContainmentStatus } from "../sandbox/containment";
 import type { ContextStatus } from "../services/xcsh-context";
 import type { ActiveModelSnapshot } from "../session/active-model";
@@ -302,6 +309,8 @@ function loadConsoleFieldMetadata(): ConsoleFieldMetadataData {
 }
 
 export interface InternalDocsProtocolOptions {
+	personProfileService?: PersonProfileService;
+	machineProfileService?: MachineProfileService;
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	readonly getContextStatus?: () => ContextStatus | null;
 	/**
@@ -343,7 +352,11 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly #registryDeps: Partial<RegistryResolverDeps> | undefined;
 	readonly #getPluginRoots: GetPluginRoots | undefined;
 
+	readonly #personProfileService: PersonProfileService;
+	readonly #machineProfileService: MachineProfileService;
 	constructor(options: InternalDocsProtocolOptions = {}) {
+		this.#personProfileService = options.personProfileService ?? personProfileService;
+		this.#machineProfileService = options.machineProfileService ?? machineProfileService;
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
 		this.#getActiveModel = options.getActiveModel;
@@ -433,6 +446,36 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const host = url.rawHost || url.hostname;
+		if (host === "computer") {
+			const pathname = url.rawPathname ?? url.pathname;
+			if (new URL(url.href).search || !["", "/", "/schema"].includes(pathname))
+				throw new Error("Unsupported machine profile route; use machine_profile refresh");
+			const content = JSON.stringify(
+				pathname === "/schema" ? MachineProfileSchema : await this.#machineProfileService.get(),
+			);
+			return {
+				url: url.href,
+				content,
+				contentType: "application/json",
+				size: Buffer.byteLength(content),
+				sourcePath: "xcsh://computer",
+			};
+		}
+		if (host === "user") {
+			const pathname = url.rawPathname ?? url.pathname;
+			if (new URL(url.href).search || !["", "/", "/schema"].includes(pathname))
+				throw new Error("Unsupported person profile route; use person_profile refresh explicitly");
+			const content = JSON.stringify(
+				pathname === "/schema" ? PersonProfileSchema : await this.#personProfileService.get(),
+			);
+			return {
+				url: url.href,
+				content,
+				contentType: "application/json",
+				size: Buffer.byteLength(content),
+				sourcePath: "xcsh://user",
+			};
+		}
 
 		if (host === API_SPEC_HOST) {
 			return this.#getApiSpecResolver().resolve(url);
@@ -523,6 +566,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
 		const registryEntry = `- [${REGISTRY_HOST}/provider/<namespace>/<type>](${SCHEME_PREFIX}${REGISTRY_HOST}/provider/hashicorp/random) — live Terraform provider and module Registry metadata`;
 		const entries = [
+			"- [user](xcsh://user) — local person profile; [schema](xcsh://user/schema)",
+			"- [computer](xcsh://computer) — interaction machine profile; [schema](xcsh://computer/schema)",
 			syntheticEntry,
 			changesEntry,
 			sourceEntry,

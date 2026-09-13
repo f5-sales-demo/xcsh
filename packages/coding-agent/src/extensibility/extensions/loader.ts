@@ -15,6 +15,7 @@ import { loadCapability } from "../../discovery";
 import { getExtensionNameFromPath, getPreloadedPluginRoots } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
+import { type ProfileCollector, personProfileService } from "../../person-profile/service";
 import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
@@ -246,6 +247,35 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 
 	setSessionName(name: string): Promise<void> {
 		return this.runtime.setSessionName(name);
+	}
+
+	registerProfileCollector(collector: ProfileCollector): void {
+		if (!collector || typeof collector.collect !== "function") throw new Error("Invalid person profile collector");
+		personProfileService.registerProfileCollector(
+			{
+				...collector,
+				async collect(signal) {
+					const result = await collector.collect(signal);
+					if ("facts" in result) return result;
+					// Legacy flat output does not distinguish queried values from heuristic inference.
+					// Keep it as candidates; modern collectors can return explicit facts/observations.
+					return {
+						facts: {},
+						observations: Object.entries(result).map(([field, value]) => ({
+							field: field as keyof typeof result,
+							value,
+							source: collector.id,
+							kind: "inferred" as const,
+							observedAt: new Date().toISOString(),
+						})),
+					};
+				},
+			},
+			this.extension.resolvedPath,
+		);
+	}
+	unregisterProfileCollector(id: string): boolean {
+		return personProfileService.unregisterProfileCollector(id, this.extension.resolvedPath);
 	}
 
 	registerProvider(name: string, config: import("./types").ProviderConfig): void {

@@ -2292,7 +2292,7 @@ function convertTools(tools: Tool[]): Array<{
 			name: tool.name,
 			description: tool.description || "",
 			parameters,
-			...(effectiveStrict && { strict: true }),
+			...(effectiveStrict ? { strict: true } : tool.strict === false ? { strict: false } : {}),
 		};
 	});
 }

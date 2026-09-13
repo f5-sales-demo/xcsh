@@ -44,6 +44,9 @@ import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate
 import { Settings, type SkillsSettings } from "./config/settings";
 import { ContextProfileCollector } from "./context/profile";
 import { CursorExecHandlers } from "./cursor";
+import { ProfileBuilder } from "./person-profile/builder";
+import { type MachineProfileService, machineProfileService } from "./person-profile/machine-profile";
+import { type PersonProfileService, personProfileService } from "./person-profile/service";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
 import { initializeWithSettings } from "./discovery";
@@ -159,6 +162,11 @@ import { buildNamedToolChoice } from "./utils/tool-choice";
 
 // Types
 export interface CreateAgentSessionOptions {
+	/** Trusted embedding/test override; never selected by the model, cwd, provider or transport. */
+	personProfileService?: PersonProfileService;
+	machineProfileService?: MachineProfileService;
+	/** Enable application-owned automatic discovery. CLI sessions enable this; embedders own this lifecycle choice. */
+	profileDiscovery?: boolean;
 	/** Working directory for project-local discovery. Default: getProjectDir() */
 	cwd?: string;
 	/** Global config directory. Default: ~/.omp/agent */
@@ -1094,7 +1102,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			if (model) return formatModelString(model);
 			return undefined;
 		};
+		const profileService = options.personProfileService ?? personProfileService;
+		const deviceService = options.machineProfileService ?? machineProfileService;
 		const toolSession: ToolSession = {
+			personProfileService: profileService,
+			machineProfileService: deviceService,
 			cwd,
 			hasUI: options.hasUI ?? false,
 			enableLsp,
@@ -1177,7 +1189,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		internalRouter.register(new ArtifactProtocolHandler({ getArtifactsDir }));
 		internalRouter.register(
 			new MemoryProtocolHandler({
-				getMemoryRoot: () => getMemoryRoot(agentDir, settings.getCwd()),
+				getMemoryRoot: () => getMemoryRoot(agentDir, sessionManager.getCwd()),
 			}),
 		);
 		internalRouter.register(
@@ -1198,6 +1210,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		);
 		internalRouter.register(
 			new InternalDocsProtocolHandler({
+				personProfileService: profileService,
+				machineProfileService: deviceService,
 				getContextStatus: () => {
 					try {
 						return contextServiceRef?.instance?.getStatus() ?? null;
@@ -1586,7 +1600,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					description: renderSearchToolBm25Description(discoverableMCPTools, contextLoadingMode === "progressive"),
 				},
 			});
-			const memoryInstructions = await buildMemoryToolDeveloperInstructions(agentDir, settings);
+			const memoryInstructions = await buildMemoryToolDeveloperInstructions(
+				agentDir,
+				settings,
+				sessionManager.getCwd(),
+			);
 
 			// Resolve F5 XC context for the prompt. Read fresh each rebuild so tool-triggered
 			// rebuilds reflect the most recent /context activate. Mid-session context changes without a
@@ -2354,6 +2372,26 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		}
 
 		logger.time("createAgentSession:return");
+		if (options.profileDiscovery) {
+			let restoringPlan = sessionManager.buildSessionContext().mode === "plan";
+			const builder = new ProfileBuilder(
+				profileService,
+				deviceService,
+				() => {
+					const plan = session.getPlanModeState();
+					if (restoringPlan && (plan || sessionManager.buildSessionContext().mode !== "plan"))
+						restoringPlan = false;
+					return !restoringPlan && !session.isDisposing && !plan?.enabled;
+				},
+				() => logger.warn("Background profile discovery unavailable"),
+			);
+			builder.start();
+			const unsubscribe = session.addBeforeUserInputHook(() => builder.refresh());
+			session.addBeforeDisposeHook(async () => {
+				unsubscribe();
+				await builder.dispose();
+			});
+		}
 		return {
 			session,
 			extensionsResult,

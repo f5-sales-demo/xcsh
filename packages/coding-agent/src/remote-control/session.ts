@@ -806,7 +806,7 @@ export class RemoteSession {
 			this.#assertCurrent(epoch);
 			this.#voice = new NativeVoice({
 				history: this.#voiceHistoryOwner.history,
-				persona: () => {
+				persona: async () => {
 					this.#assertCurrent(epoch);
 					const tools = (this.target.getActiveToolNames?.() ?? [])
 						.sort((left, right) => left.localeCompare(right))
@@ -817,7 +817,7 @@ export class RemoteSession {
 								...(typeof tool?.description === "string" ? { description: tool.description } : {}),
 							};
 						});
-					return {
+					const snapshot = {
 						systemPrompt: this.target.systemPrompt ?? "",
 						tools,
 						history: JSON.stringify(
@@ -827,6 +827,8 @@ export class RemoteSession {
 								.slice(-30),
 						),
 					};
+					this.#assertCurrent(epoch);
+					return snapshot;
 				},
 				modeChanged: (active, instructions) =>
 					this.#effect(epoch, async () => {

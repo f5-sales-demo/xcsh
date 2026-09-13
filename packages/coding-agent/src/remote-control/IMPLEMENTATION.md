@@ -2680,3 +2680,70 @@ empty-catalog presentation, plus expiry/revocation/re-pairing. An unrestricted
 package-wide exploratory test was stopped without a pass receipt after exceeding
 its normal range with an unexpected outbound connection; it is not a
 verification result.
+
+## Voice persona service-size repair
+
+The first personified runtime reached authenticated Sol call creation but the
+service rejected its 77,487-byte instruction envelope with HTTP 400. The relay,
+session, and enrollment paths stayed healthy, isolating the failure to request
+size. Only section byte counts and truncation booleans were recorded.
+
+`voice-persona.ts` now assembles against a 64 KiB final limit instead of
+truncating an already-rendered envelope. It reserves the directive and all
+sorted active tool names, bounds phone preferences to 32 KiB while retaining at
+least 16 KiB for a large effective prompt, then gives the prompt the remaining
+space with a UTF-8-safe 60/40 prefix/suffix split. Tool descriptions remain
+bounded to 16 KiB total and optional history to 32 KiB, but either is admitted
+only when the mandatory persona leaves space. Consequently late sections cannot
+be silently removed by whole-envelope truncation. The legacy fixture-only string
+path and existing-call ownership are unchanged.
+
+Focused WebRTC, standalone, lifecycle, persona, and owner tests pass 104 cases
+with 927 assertions; the full remote-control directory passes 915 cases with
+3,738 assertions. Package TypeScript and targeted Biome checks also pass under
+Bun 1.4.2. Immutable packaging, network-disabled qualification, cutover, and the
+fresh physical Sol observation are recorded separately after they occur.
+
+The first bounded candidate connected on Sol but failed the human identity
+probe by responding as ChatGPT. All five processes were rolled back before the
+next edit. The follow-up adds a final authoritative identity anchor after every
+variable section and verifies that even client text explicitly demanding a
+generic ChatGPT introduction cannot occupy the final instruction position.
+
+## Shared TUI and voice user knowledge
+
+The next human probe showed that identity alone was insufficient: Sol answered
+`what do you know about me` as though no persisted knowledge existed. The native
+TUI baseline in Sol's isolated acceptance directory behaved the same way because
+that project had no memory summary. This established a shared-context problem,
+not merely a spoken wording problem.
+
+`readMemorySummary()` now supplies both the TUI's developer instructions and a
+fresh voice-start snapshot. The voice call waits for that read before freezing
+its persona, adds a distinct `Persisted xcsh project memory about the user`
+section, and preserves it when startup history is disabled. The section has a
+16 KiB UTF-8-safe limit inside the existing 64 KiB service envelope. Persona
+diagnostics contain only section sizes and truncation flags.
+
+The live `voice-persona-parity.ts` runner constructs a real ephemeral xcsh
+session, captures its effective TUI prompt, constructs the same WebRTC-v3 session
+configuration used by the iPhone, and evaluates the exact probe three times per
+surface with Sol. It prints only aggregate scores, byte counts, and SHA-256
+response digests, and retains no raw transcript or audio. On the first
+memory-bearing project baseline, both TUI and simulated iPhone prompts passed
+3/3. Device speech naturalness remains a human observation.
+
+The subsequent live failure exposed a lifecycle boundary rather than another
+persona-wording defect. Sol had started in an isolated acceptance directory and
+then moved its retained session into the xcsh project. `SessionManager` owned
+the new cwd, while the original `Settings` instance still owned the startup
+cwd. TUI prompt construction, `memory://root`, and voice-start memory lookup
+therefore selected different or stale project memory.
+
+Project-memory selection now takes the active `SessionManager.getCwd()` as its
+canonical scope. The interactive `/move` completion path rebuilds the base
+system prompt after command discovery is refreshed, and voice start reads the
+same current scope before freezing its snapshot. The regression creates
+distinct project-A and project-B summaries, moves the session, and asserts that
+the rebuilt prompt and memory reader contain B but not A. Memory remains
+project-scoped; no summaries are copied or aggregated across roots.

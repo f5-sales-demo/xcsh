@@ -46,3 +46,32 @@ describe("$envExact", () => {
 		expect($envExact(name)).toBeUndefined();
 	});
 });
+
+it("preserves explicitly empty environment values over saved defaults", async () => {
+	const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+	const { tmpdir } = await import("node:os");
+	const { join } = await import("node:path");
+	const cwd = await mkdtemp(join(tmpdir(), "xcsh-env-empty-"));
+	try {
+		await writeFile(join(cwd, ".env"), "XCSH_SYNTHETIC_EMPTY=saved-default\n");
+		const source = new URL("../src/env.ts", import.meta.url).pathname;
+		const result = Bun.spawnSync(
+			[
+				process.execPath,
+				"--no-env-file",
+				"-e",
+				`await import(${JSON.stringify(source)}); console.log(process.env.XCSH_SYNTHETIC_EMPTY === "")`,
+			],
+			{
+				cwd,
+				env: { ...process.env, XCSH_SYNTHETIC_EMPTY: "" },
+				stdout: "pipe",
+				stderr: "ignore",
+			},
+		);
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout.toString().trim()).toBe("true");
+	} finally {
+		await rm(cwd, { recursive: true, force: true });
+	}
+});

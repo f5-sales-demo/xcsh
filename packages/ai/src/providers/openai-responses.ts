@@ -514,7 +514,7 @@ function convertTools(tools: Tool[], strictMode: boolean): OpenAITool[] {
 			name: tool.name,
 			description: tool.description || "",
 			parameters,
-			...(effectiveStrict && { strict: true }),
+			...(effectiveStrict ? { strict: true } : tool.strict === false ? { strict: false } : {}),
 		} as OpenAITool;
 	});
 }

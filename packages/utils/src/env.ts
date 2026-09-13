@@ -53,7 +53,8 @@ const projectEnv = parseEnvFile(path.join(process.cwd(), ".env"));
 
 for (const file of [projectEnv, agentEnv, piEnv, homeEnv]) {
 	for (const [key, value] of Object.entries(file)) {
-		if (!Bun.env[key]) {
+		// An explicitly empty value disables a saved default, including credentials.
+		if (Bun.env[key] === undefined) {
 			Bun.env[key] = value;
 		}
 	}

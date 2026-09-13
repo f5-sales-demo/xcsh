@@ -34,8 +34,10 @@ import { FindTool } from "./find";
 import { GetPageContextTool } from "./get-page-context";
 import { GrepTool } from "./grep";
 import { InspectImageTool } from "./inspect-image";
+import { MachineProfileTool } from "./machine-profile";
 import { NotebookTool } from "./notebook";
 import { wrapToolWithMetaNotice } from "./output-meta";
+import { PersonProfileTool } from "./person-profile";
 import { PollTool } from "./poll-tool";
 import { PythonTool } from "./python";
 import { ReadTool } from "./read";
@@ -106,6 +108,8 @@ export type { DiscoverableMCPTool } from "../mcp/discoverable-tool-metadata";
 
 /** Session context for tool factories */
 export interface ToolSession {
+	personProfileService?: import("../person-profile/service").PersonProfileService;
+	machineProfileService?: import("../person-profile/machine-profile").MachineProfileService;
 	/** Current working directory */
 	cwd: string;
 	/** Whether UI is available */
@@ -221,6 +225,8 @@ export interface ToolSession {
 type ToolFactory = (session: ToolSession) => Tool | null | Promise<Tool | null>;
 
 export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
+	person_profile: s => new PersonProfileTool(s),
+	machine_profile: s => new MachineProfileTool(s),
 	ast_grep: s => new AstGrepTool(s),
 	ast_edit: s => new AstEditTool(s),
 	render_mermaid: s => new RenderMermaidTool(s),
