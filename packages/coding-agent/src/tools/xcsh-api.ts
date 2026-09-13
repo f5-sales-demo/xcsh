@@ -235,6 +235,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	readonly description: string;
 	readonly parameters = xcshApiSchema;
 	#contextEnv: ContextEnv;
+	#getContextService?: ToolSession["getContextService"];
 	#getActiveTools?: () => string[];
 	#lastApiBase = "";
 	#listablePathsCache: string[] | null = null;
@@ -247,6 +248,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	) {
 		this.description = prompt.render(xcshApiDescription);
 		this.#contextEnv = createContextEnv(session.settings);
+		this.#getContextService = session.getContextService;
 		this.#getActiveTools = session.getActiveTools;
 		this.#warmTls();
 	}
@@ -895,6 +897,24 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 						contextSelectionToolAvailable: this.#getActiveTools?.().includes("xcsh_context"),
 					}),
 			);
+		}
+		if (params.contextName !== undefined && this.#getContextService) {
+			try {
+				const status = (await this.#getContextService()).getStatus();
+				if (
+					status.credentialSource !== "environment" &&
+					(status.activeContextName !== params.contextName || status.authStatus !== "connected")
+				) {
+					return this.#errorResult(
+						"Selected context is not connected. Inspect the xcsh_context result before querying resources.\n" +
+							JSON.stringify({ expectedContext: params.contextName, authStatus: status.authStatus }),
+					);
+				}
+			} catch {
+				return this.#errorResult(
+					"Selected context readiness could not be verified. Inspect the xcsh_context result before querying resources.",
+				);
+			}
 		}
 		const [apiBase, apiToken] = this.#resolveCredentials();
 		if (apiBase && apiBase !== this.#lastApiBase) this.#warmTls();

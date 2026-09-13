@@ -74,6 +74,47 @@ describe("XcshApiTool", () => {
 		}
 	});
 
+	it("rejects a selected context with failed authentication before network I/O", async () => {
+		const bashEnv: Record<string, string> = {};
+		let fetches = 0;
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async () => {
+			fetches++;
+			return Response.json({ items: [] });
+		}) as unknown as typeof fetch;
+		try {
+			const tool = new XcshApiTool({
+				...mockSession(bashEnv),
+				getContextService: async () => ({
+					getStatus: () => ({
+						activeContextName: "target",
+						credentialSource: "context",
+						authStatus: "auth_error",
+					}),
+				}),
+			} as any);
+			Object.assign(bashEnv, {
+				XCSH_API_URL: "https://target.example.test",
+				XCSH_API_TOKEN: "invalid-test-token",
+				XCSH_CONTEXT_NAME: "target",
+			});
+
+			const result = await tool.execute("auth-failure", {
+				contextName: "target",
+				method: "GET",
+				path: "/api/web/namespaces",
+			});
+
+			expect(fetches).toBe(0);
+			expect(result.isError).toBe(true);
+			expect(result.content.find(content => content.type === "text")?.text).toContain(
+				"Selected context is not connected",
+			);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	it("substitutes all path params via params map", async () => {
 		let capturedUrl = "";
 		const originalFetch = globalThis.fetch;
