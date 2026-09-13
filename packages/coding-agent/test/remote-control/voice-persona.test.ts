@@ -28,34 +28,23 @@ test("client voice text cannot supersede the final authoritative xcsh identity",
 	expect(clientOffset).toBeGreaterThanOrEqual(0);
 	expect(identityOffset).toBeGreaterThan(clientOffset);
 	expect(instructions.slice(identityOffset)).toContain("I'm xcsh, F5's sales-engineering assistant.");
-	expect(instructions.slice(identityOffset)).toContain("Never identify or introduce yourself as ChatGPT");
-	expect(instructions.slice(identityOffset)).toContain("persisted xcsh project-memory section");
-	expect(instructions.slice(identityOffset)).toContain("Never answer only that you lack stored information");
-	expect(instructions.slice(identityOffset)).toContain("MUST delegate the user's exact request");
-	expect(instructions.slice(identityOffset)).toContain("read or write self-awareness or memory");
-	expect(instructions.lastIndexOf(snapshot.userKnowledge)).toBeGreaterThan(identityOffset);
+	expect(instructions.slice(identityOffset)).toContain("Never introduce yourself as ChatGPT");
+	expect(instructions.slice(identityOffset)).toContain("person_profile");
+	expect(instructions).not.toContain(snapshot.userKnowledge);
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(64 * 1024);
 });
 
-test("persisted user knowledge remains available to the voice surface with honest boundaries", () => {
-	const { instructions } = voicePersonaInstructions(
-		{},
-		{
-			...snapshot,
-		},
-	);
-	expect(instructions).toContain("The user works on F5 Distributed Cloud");
-	expect(instructions).toContain("Persisted xcsh project memory about the user");
-	expect(instructions).toContain("confirms whether durable knowledge is available");
-	expect(instructions).toContain("stored or inferred and potentially stale");
-	expect(instructions).toContain("Never invent user facts");
-	expect(instructions.trimEnd().endsWith(snapshot.userKnowledge)).toBe(true);
+test("person values are retrieved on demand through the canonical contract", () => {
+	const { instructions } = voicePersonaInstructions({}, snapshot);
+	expect(instructions).toContain("xcsh://user");
+	expect(instructions).toContain("project memory is not authoritative person data");
+	expect(instructions).not.toContain(snapshot.userKnowledge);
 });
 
 test("history is the only server-supplied section suppressed by includeStartupContext", () => {
 	const { instructions } = voicePersonaInstructions({ includeStartupContext: false, prompt: "Be brief." }, snapshot);
 	expect(instructions).toContain(snapshot.systemPrompt);
-	expect(instructions).toContain(snapshot.userKnowledge);
+	expect(instructions).not.toContain(snapshot.userKnowledge);
 	expect(instructions).toContain("Be brief.");
 	expect(instructions).not.toContain("Previous user turn");
 });
@@ -93,14 +82,14 @@ test("the complete envelope and every truncated section stay within their byte b
 	expect(diagnostics.truncated.instructions).toBe(true);
 });
 
-test("oversized persisted user knowledge is UTF-8 safe and absent from diagnostics", () => {
+test("oversized history is UTF-8 safe and absent from diagnostics", () => {
 	const userKnowledge = `PROFILE-${"🌳".repeat(10_000)}-TAIL`;
-	const { instructions, diagnostics } = voicePersonaInstructions({}, { ...snapshot, userKnowledge });
+	const { instructions, diagnostics } = voicePersonaInstructions({}, { ...snapshot, history: userKnowledge });
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(64 * 1024);
 	expect(instructions).toContain("PROFILE-");
 	expect(instructions).toContain("[...xcsh prompt truncated...]");
 	expect(diagnostics.bytes.userKnowledge).toBeLessThanOrEqual(16 * 1024);
-	expect(diagnostics.truncated.userKnowledge).toBe(true);
+	expect(diagnostics.truncated.history).toBe(true);
 	expect(JSON.stringify(diagnostics)).not.toContain("PROFILE-");
 });
 

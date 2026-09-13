@@ -217,15 +217,15 @@ describe("xcsh://api-spec", () => {
 });
 
 describe("retired profile routes", () => {
-	it.each(["xcsh://user", "xcsh://computer"])("does not expose %s", async url => {
+	it.each(["xcsh://computer"])("does not expose %s", async url => {
 		await expect(createRouter().resolve(url)).rejects.toThrow(
 			`Documentation file not found: ${url.slice("xcsh://".length)}`,
 		);
 	});
 
-	it("does not advertise profile routes", async () => {
+	it("advertises the person route while excluding workstation inventory", async () => {
 		const content = (await createRouter().resolve("xcsh://")).content;
-		expect(content).not.toContain("xcsh://user");
+		expect(content).toContain("xcsh://user");
 		expect(content).not.toContain("xcsh://computer");
 	});
 });

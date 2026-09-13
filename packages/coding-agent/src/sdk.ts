@@ -44,6 +44,7 @@ import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate
 import { Settings, type SkillsSettings } from "./config/settings";
 import { ContextProfileCollector } from "./context/profile";
 import { CursorExecHandlers } from "./cursor";
+import { type PersonProfileService, personProfileService } from "./person-profile/service";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
 import { initializeWithSettings } from "./discovery";
@@ -159,6 +160,8 @@ import { buildNamedToolChoice } from "./utils/tool-choice";
 
 // Types
 export interface CreateAgentSessionOptions {
+	/** Trusted embedding/test override; never selected by the model, cwd, provider or transport. */
+	personProfileService?: PersonProfileService;
 	/** Working directory for project-local discovery. Default: getProjectDir() */
 	cwd?: string;
 	/** Global config directory. Default: ~/.omp/agent */
@@ -1094,7 +1097,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			if (model) return formatModelString(model);
 			return undefined;
 		};
+		const profileService = options.personProfileService ?? personProfileService;
 		const toolSession: ToolSession = {
+			personProfileService: profileService,
 			cwd,
 			hasUI: options.hasUI ?? false,
 			enableLsp,
@@ -1198,6 +1203,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		);
 		internalRouter.register(
 			new InternalDocsProtocolHandler({
+				personProfileService: profileService,
 				getContextStatus: () => {
 					try {
 						return contextServiceRef?.instance?.getStatus() ?? null;
@@ -2358,6 +2364,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		}
 
 		logger.time("createAgentSession:return");
+		if (!session.getPlanModeState()?.enabled) {
+			void profileService
+				.reconcileFromCollectors()
+				.catch(() => logger.warn("Configured person profile reconciliation unavailable"));
+		}
 		return {
 			session,
 			extensionsResult,

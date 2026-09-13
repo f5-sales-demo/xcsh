@@ -1,3 +1,4 @@
+import personAwarenessTemplate from "./prompts/system/person-awareness.md" with { type: "text" };
 /**
  * System prompt construction and project context loading
  */
@@ -887,6 +888,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	const workspaceBoundary = workspaceBoundaryTemplate.trimEnd();
 	const startFolderBlock = prompt.render(startFolderTemplate, data).trimEnd();
 	const deprecationGuardrails = renderDeprecationGuardrails();
+	const personAwareness = personAwarenessTemplate.trimEnd();
 	const applyMandatoryBlocks = (candidate: string): string => {
 		let result = candidate;
 		result = result.includes(WORKSPACE_BOUNDARY_MARKER)
@@ -898,6 +900,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		result = result.includes(DEPRECATION_GUARDRAILS_MARKER)
 			? result.replace(DEPRECATION_GUARDRAILS_MARKER, deprecationGuardrails)
 			: `${result}\n\n## Deprecation guardrails\n\n${deprecationGuardrails}`;
+		if (!result.includes(personAwareness)) result += `\n\n${personAwareness}`;
 		return result;
 	};
 

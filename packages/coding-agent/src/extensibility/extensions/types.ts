@@ -1222,6 +1222,7 @@ export interface ExtensionAPI {
 	 * });
 	 */
 	registerProvider(name: string, config: ProviderConfig): void;
+	registerProfileCollector(collector: import("../../person-profile/service").ProfileCollector): void;
 
 	/** Shared event bus for extension communication. */
 	events: EventBus;

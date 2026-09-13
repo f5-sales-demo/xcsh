@@ -15,6 +15,7 @@ import { loadCapability } from "../../discovery";
 import { getExtensionNameFromPath, getPreloadedPluginRoots } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
+import { type ProfileCollector, personProfileService } from "../../person-profile/service";
 import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
@@ -246,6 +247,10 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 
 	setSessionName(name: string): Promise<void> {
 		return this.runtime.setSessionName(name);
+	}
+
+	registerProfileCollector(collector: ProfileCollector): void {
+		personProfileService.registerProfileCollector(collector, this.extension.resolvedPath);
 	}
 
 	registerProvider(name: string, config: import("./types").ProviderConfig): void {

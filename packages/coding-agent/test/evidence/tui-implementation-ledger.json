@@ -9383,6 +9383,34 @@
     },
     {
       "surface": {
+        "id": "dialog:packages/coding-agent/src/tools/person-profile.ts:select:1",
+        "source": "packages/coding-agent/src/tools/person-profile.ts",
+        "kind": "extension-dialog"
+      },
+      "status": "in-progress",
+      "adapter": "Existing ExtensionUIContext.select and attached-session interaction owner",
+      "reviewPolicy": "Ask approves one revision-checked profile mutation; Plan blocks writes; cancellation and late responses cannot commit",
+      "states": [
+        "approval",
+        "decline",
+        "cancel",
+        "late response"
+      ],
+      "tests": [
+        "packages/coding-agent/test/person-profile.test.ts"
+      ],
+      "persistence": [
+        "Atomic owner-only local profile after approval and revision validation"
+      ],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Automated approval and cancellation tests pass. Physical terminal and iPhone acceptance remain pending."
+      ]
+    },
+    {
+      "surface": {
         "id": "source:packages/coding-agent/src/autoresearch/dashboard.ts",
         "source": "packages/coding-agent/src/autoresearch/dashboard.ts",
         "kind": "integration"

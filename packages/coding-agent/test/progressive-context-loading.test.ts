@@ -265,6 +265,7 @@ describe("progressive context loading", () => {
 	it("renders a progressive neutral prompt within the static budget", async () => {
 		const { session } = await create("progressive");
 		try {
+			expect(session.systemPrompt).toContain("xcsh://user");
 			expect(session.systemPrompt.length).toBeLessThanOrEqual(24_000);
 			const toolJson = JSON.stringify(
 				session.agent.state.tools.map(tool => ({

@@ -13,7 +13,10 @@
  */
 import { afterEach, expect, test } from "bun:test";
 import { probe } from "./helpers/bridge-probe";
-import { CODING_AGENT_CLI, CODING_AGENT_ROOT } from "./helpers/cli-process";
+import { CODING_AGENT_CLI } from "./helpers/cli-process";
+import { contextlessCliFixture } from "./helpers/contextless-cli";
+
+const contextless = contextlessCliFixture();
 
 let proc: import("bun").Subprocess | undefined;
 afterEach(() => {
@@ -23,10 +26,11 @@ afterEach(() => {
 
 test("xcsh worker binds the forced port and advertises its tenant via hello_ack", async () => {
 	const port = 19239;
-	proc = Bun.spawn([process.execPath, CODING_AGENT_CLI, "worker"], {
-		cwd: CODING_AGENT_ROOT,
+	proc = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "worker"], {
+		cwd: contextless.cwd,
 		env: {
 			...process.env,
+			...contextless.env,
 			XCSH_BROWSER_PROVIDER: "extension",
 			XCSH_BRIDGE_PORT: String(port),
 			XCSH_SESSION_TENANT: "probe-tenant|staging",

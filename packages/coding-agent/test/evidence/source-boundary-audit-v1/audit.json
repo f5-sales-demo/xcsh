@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "4c32d6c73620ec0ce26c9df38b4a976e90e1f800",
-  "fingerprint": "e7738c0d31964a55b45d288e1881a4c9d20240a2936255633d250c95f75bef49",
+  "revision": "e69dde39e3c49f1104a692e87aff6cb3e9496149",
+  "fingerprint": "fdc173c2818b2b0292420b043f1fbd44bd506906a021bfa6cdd5896443b4075e",
   "counts": {
     "total": 241,
     "components": 95,
@@ -498,7 +498,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "4fc771a29930a16a2272ca3824dc935f349d39e0f373ff114a845a7333deea64",
+      "sha256": "88728bc44906b458c9f8c3d81e3da781baf5141f0700d9ecc826333d90d364bd",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -585,7 +585,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "7ccddd7f326e7bdc1ac38e7733695c387a03abf3597d63fcde982a5c4b3313ed",
+      "sha256": "6cd04db17a1b1aff81315569fd127dbab38583e2b9467385af653cc8dddabdb2",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -3124,7 +3124,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "463ab607cc4fd5ef3778a886270c34cf247a57f68fdb09ae2f6650ba58082bda",
+      "sha256": "c450e65b9e23088390c5eb5ee087307f9aca954bcf51dd69c2b1470afebfbaeb",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -4324,7 +4324,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "b3c280a6e764ccb9fa72bf8367970917aad7f01c36d89fd5500ed4cc97bd174a",
+      "sha256": "5e978ba0ec3c4e3f1fdef92213522fb5c390abd86671bfa8de2e6c85b29d3511",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",

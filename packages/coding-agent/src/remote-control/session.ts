@@ -3,7 +3,6 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { readMemorySummary } from "../memories";
 import {
 	applyRemotePermissionProfile,
 	initializeRemotePermissionProfile,
@@ -828,13 +827,8 @@ export class RemoteSession {
 								.slice(-30),
 						),
 					};
-					const settings = this.target.settings;
-					const userKnowledge = settings
-						? ((await readMemorySummary(settings.getAgentDir(), settings, this.target.sessionManager.getCwd())) ??
-							"")
-						: "";
 					this.#assertCurrent(epoch);
-					return { ...snapshot, userKnowledge };
+					return snapshot;
 				},
 				modeChanged: (active, instructions) =>
 					this.#effect(epoch, async () => {

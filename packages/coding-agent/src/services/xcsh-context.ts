@@ -193,7 +193,7 @@ export class ContextService {
 
 	#refreshApiClient(context: XCSHContext): void {
 		const apiUrl = context.apiUrl;
-		const apiToken = process.env[XCSH_API_TOKEN] ?? context.apiToken;
+		const apiToken = process.env[XCSH_API_TOKEN] || context.apiToken;
 		this.#apiClient = new XCSHApiClient({ apiUrl, apiToken });
 		// Best-effort background namespace-cache fill uses a non-retrying client.
 		// The cache is revalidated every 5 minutes (startRevalidation) and its
@@ -1026,8 +1026,9 @@ export class ContextService {
 	}): Promise<TokenValidationResult> {
 		// Use explicit credentials if provided (for non-active contexts or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active context)
-		const effectiveUrl = options?.apiUrl ?? process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl;
-		const effectiveToken = options?.apiToken ?? process.env[XCSH_API_TOKEN] ?? this.#activeContext?.apiToken;
+		const effectiveUrl = options?.apiUrl ?? (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl;
+		const effectiveToken =
+			options?.apiToken ?? (process.env[XCSH_API_TOKEN] || undefined) ?? this.#activeContext?.apiToken;
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 
 		// Ad-hoc mode: caller is validating credentials that DIFFER from the active/effective
@@ -1039,8 +1040,8 @@ export class ContextService {
 		// to the active name) also passes explicit creds via handleShow, but those creds match
 		// the active/effective ones, so we DO want to refresh the cache — a user running
 		// /context show on the active context is explicitly requesting a fresh validation.
-		const activeUrl = process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl;
-		const activeToken = process.env[XCSH_API_TOKEN] ?? this.#activeContext?.apiToken;
+		const activeUrl = (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl;
+		const activeToken = (process.env[XCSH_API_TOKEN] || undefined) ?? this.#activeContext?.apiToken;
 		const adHoc =
 			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
@@ -1109,13 +1110,14 @@ export class ContextService {
 	}
 
 	getStatus(): ContextStatus {
-		const url = process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl ?? null;
+		const url = (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl ?? null;
 		const tenant = url ? deriveTenantFromUrl(url) : null;
 		return {
 			activeContextName: this.#activeContext?.name ?? null,
 			activeContextUrl: url,
 			activeContextTenant: tenant,
-			activeContextNamespace: process.env[XCSH_NAMESPACE] ?? this.#activeContext?.defaultNamespace ?? null,
+			activeContextNamespace:
+				(process.env[XCSH_NAMESPACE] || undefined) ?? this.#activeContext?.defaultNamespace ?? null,
 			credentialSource: this.#credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: this.#credentialSource !== "none",

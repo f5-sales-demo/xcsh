@@ -1,104 +1,189 @@
-/** Live text-only comparison of the native TUI prompt and the iPhone WebRTC-v3 voice prompt. */
-import { completeSimple, Effort } from "@f5-sales-demo/pi-ai";
+/** Executing-agent contract qualification; physical iPhone acceptance remains separate. */
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { getAgentDir } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
-import { readMemorySummary } from "../src/memories";
-import { scorePersonaResponse } from "../src/remote-control/persona-evaluation";
-import { voiceCallConfig } from "../src/remote-control/voice-call";
+import { PersonProfileService } from "../src/person-profile/service";
+import { type PersonContractInvocation, scorePersonContract } from "../src/remote-control/persona-evaluation";
 import { voiceDelegation } from "../src/remote-control/voice-delegation";
 import { createAgentSession, discoverAuthStorage } from "../src/sdk";
 import { SessionManager } from "../src/session/session-manager";
 
-const PROBE = "what do you know about me";
-const cwd = process.argv[2] ?? process.cwd();
-const samples = Number(process.argv[3] ?? "3");
-if (!Number.isInteger(samples) || samples < 1 || samples > 10)
-	throw new Error("samples must be an integer from 1 to 10");
-
+const root = await mkdtemp(join(tmpdir(), "person-parity-"));
 const agentDir = getAgentDir();
-const settings = await Settings.init({ agentDir, cwd, inMemory: true });
 const auth = await discoverAuthStorage(agentDir);
 const registry = new ModelRegistry(auth);
-let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
+const service = new PersonProfileService(join(root, "private", "user-profile.json"));
+await service.update({ givenName: `Person-${crypto.randomUUID().slice(0, 8)}`, jobTitle: "Systems engineer" });
+const results: unknown[] = [];
 try {
 	await registry.refreshProvider("openai-codex", "online");
 	const model = registry.find("openai-codex", "gpt-5.6-sol");
-	if (!model) throw new Error("Sol is unavailable");
-	const apiKey = await registry.getApiKey(model);
-	if (!apiKey) throw new Error("Sol authentication is unavailable");
-	({ session } = await createAgentSession({
-		agentDir,
-		authStorage: auth,
-		cwd,
-		disableExtensionDiscovery: true,
-		enableMCP: false,
-		model,
-		modelRegistry: registry,
-		rules: [],
-		sessionManager: SessionManager.inMemory(),
-		settings,
-		skills: [],
-		toolNames: [],
-	}));
-	const userKnowledge = (await readMemorySummary(agentDir, settings)) ?? "";
-	const snapshot = {
-		systemPrompt: session.systemPrompt,
-		userKnowledge,
-		tools: session.getActiveToolNames().map(name => ({ name })),
-		history: "",
-	};
-	const voiceConfig = voiceCallConfig(
+	if (!model) throw new Error("Qualification model unavailable");
+	const scenarios: {
+		surface: string;
+		sample: number;
+		request: string;
+		action: "get" | "update" | "forget";
+		title?: string;
+	}[] = [
+		...["tui", "iphone-delegated-agent"].flatMap(surface =>
+			Array.from({ length: 3 }, (_, sample) => ({
+				surface,
+				sample,
+				request: "What do you know about me?",
+				action: "get" as const,
+			})),
+		),
 		{
-			threadId: session.sessionId,
-			version: "v3",
-			outputModality: "audio",
-			includeStartupContext: false,
-			transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+			surface: "tui",
+			sample: 3,
+			request: "My job title is Solutions architect. Please remember my job title.",
+			action: "update",
+			title: "Solutions architect",
 		},
-		snapshot,
-	);
-	const voicePrompt = String((voiceConfig.session as { instructions?: unknown }).instructions ?? "");
-	if (!voicePrompt.includes("MUST delegate the user's exact request"))
-		throw new Error("Voice configuration does not require attached-agent self-inspection");
-	const surfaces = [
-		["tui", session.systemPrompt, PROBE],
-		["iphone-webrtc-v3-delegated-agent", session.systemPrompt, voiceDelegation(PROBE, `user: ${PROBE}`)],
-	] as const;
-	const results: Record<string, ReturnType<typeof scorePersonaResponse>[]> = {};
-	for (const [surface, systemPrompt, userPrompt] of surfaces) {
-		results[surface] = [];
-		for (let repetition = 0; repetition < samples; repetition++) {
-			const response = await completeSimple(
-				model,
-				{ systemPrompt, messages: [{ role: "user", content: userPrompt, timestamp: Date.now() }] },
-				{ apiKey, maxTokens: 384, reasoning: Effort.Medium, signal: AbortSignal.timeout(120_000) },
+		{ surface: "iphone-delegated-agent", sample: 3, request: "What is my current job title?", action: "get" },
+		{
+			surface: "iphone-delegated-agent",
+			sample: 4,
+			request: "My job title has changed to Infrastructure analyst. Please correct it.",
+			action: "update",
+			title: "Infrastructure analyst",
+		},
+		{ surface: "tui", sample: 4, request: "What is my current job title?", action: "get" },
+		{
+			surface: "tui",
+			sample: 5,
+			request: "Correction: my job title is Research engineer. Please remember the correction.",
+			action: "update",
+			title: "Research engineer",
+		},
+		{ surface: "iphone-delegated-agent", sample: 5, request: "What is my current job title?", action: "get" },
+		{ surface: "iphone-delegated-agent", sample: 6, request: "Forget my job title.", action: "forget" },
+		{ surface: "tui", sample: 6, request: "What do you know about my job title?", action: "get" },
+	];
+	for (const { surface, sample, request, action, title } of scenarios) {
+		const cwd = join(root, surface);
+		await mkdir(cwd, { recursive: true });
+		const settings = await Settings.init({ agentDir, cwd, inMemory: true });
+		const { session } = await createAgentSession({
+			agentDir,
+			authStorage: auth,
+			cwd,
+			disableExtensionDiscovery: true,
+			enableMCP: false,
+			model,
+			modelRegistry: registry,
+			rules: [],
+			sessionManager: SessionManager.inMemory(),
+			settings,
+			skills: [],
+			toolNames: ["person_profile"],
+			personProfileService: service,
+		});
+		const calls = new Map<string, PersonContractInvocation>();
+		let stopReason: string | undefined;
+		let providerError = false;
+		const started = Date.now();
+		console.log(
+			JSON.stringify({
+				surface,
+				sample,
+				phase: "started",
+				tools: session.getActiveToolNames(),
+				hasPersonGuidance: session.systemPrompt.includes("xcsh://user"),
+			}),
+		);
+		const unsubscribe = session.subscribe(event => {
+			if (event.type === "message_end" && event.message.role === "assistant") {
+				stopReason = event.message.stopReason;
+				providerError = Boolean(event.message.errorMessage);
+			}
+			if (event.type === "tool_execution_start") {
+				const args = event.args as Record<string, unknown>;
+				calls.set(event.toolCallId, {
+					toolName: event.toolName,
+					action: typeof args.action === "string" ? args.action : undefined,
+					resource: typeof args.path === "string" ? args.path : undefined,
+					success: false,
+				});
+			}
+			if (event.type === "tool_execution_end") {
+				const call = calls.get(event.toolCallId);
+				if (!call) return;
+				call.success = !event.isError;
+				try {
+					const result = event.result as { content?: { type: string; text?: string }[] };
+					const text = result.content?.find(c => c.type === "text")?.text;
+					call.profile = text ? JSON.parse(text) : undefined;
+				} catch {
+					call.success = false;
+				}
+			}
+		});
+		const timeout = setTimeout(() => void session.abort(), 120000);
+		try {
+			await session.prompt(surface === "tui" ? request : voiceDelegation(request, `user: ${request}`));
+			const current = await service.get();
+			const relevant = [...calls.values()].filter(
+				c => c.toolName === "person_profile" && c.action === action && c.success,
 			);
-			const text = response.content
-				.filter((block): block is { type: "text"; text: string } => block.type === "text")
-				.map(block => block.text)
-				.join("\n");
-			results[surface].push(scorePersonaResponse(text, userKnowledge));
+			const matching = relevant.filter(c => isDeepStrictEqual(c.profile, current)).length;
+			const score =
+				action === "get"
+					? scorePersonContract([...calls.values()], current)
+					: {
+							passed:
+								matching > 0 &&
+								(action === "forget"
+									? current.facts.jobTitle === undefined && Boolean(current.suppressed.jobTitle)
+									: current.facts.jobTitle === title && current.provenance.jobTitle?.owner === "user"),
+							canonicalCalls: relevant.length,
+							matchingOutcomes: matching,
+							schemaVersion: current.schemaVersion,
+						};
+			if (action === "get" && [...calls.values()].some(c => c.action !== "get")) score.passed = false;
+			results.push({ surface, sample, ...score });
+			console.log(
+				JSON.stringify({
+					surface,
+					sample,
+					phase: "completed",
+					factFields: Object.keys(current.facts),
+					suppressedFields: Object.keys(current.suppressed),
+					titleMatches: action !== "update" || current.facts.jobTitle === title,
+					elapsedMs: Date.now() - started,
+					stopReason,
+					providerError,
+					tools: [...calls.values()].map(c => ({
+						name: c.toolName,
+						action: c.action,
+						success: c.success,
+						structured: c.profile !== undefined,
+					})),
+					...score,
+				}),
+			);
+			if (!score.passed) throw new Error("Canonical person qualification failed");
+		} finally {
+			clearTimeout(timeout);
+			unsubscribe();
+			await session.dispose();
 		}
 	}
 	console.log(
 		JSON.stringify({
-			probe: PROBE,
-			model: `${model.provider}/${model.id}`,
-			simulation: "iPhone WebRTC-v3 self-inspection delegated to the attached Sol work model",
-			samples,
-			memory: { present: Boolean(userKnowledge), bytes: Buffer.byteLength(userKnowledge) },
-			surfaces: Object.fromEntries(
-				Object.entries(results).map(([surface, scores]) => [
-					surface,
-					{ passed: scores.filter(score => score.passed).length, samples, scores },
-				]),
-			),
+			samples: scenarios.length,
+			results,
+			rawPromptsRetained: false,
 			rawTranscriptsRetained: false,
-			rawAudioRetained: false,
+			physicalPhoneAcceptance: false,
 		}),
 	);
 } finally {
-	await session?.dispose();
 	auth.close();
+	await rm(root, { recursive: true, force: true });
 }

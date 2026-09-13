@@ -205,6 +205,8 @@ describe("commitVllmLogin", () => {
 		fs.mkdirSync(path.dirname(state.modelsPath), { recursive: true });
 		fs.chmodSync(path.dirname(state.modelsPath), 0o750);
 		fs.writeFileSync(state.modelsPath, "# original\nproviders:\n  custom:\n    auth: none\n", { mode: 0o640 });
+		// Establish the rollback fixture independently of the invoking shell's umask.
+		fs.chmodSync(state.modelsPath, 0o640);
 
 		await expect(
 			commitVllmLogin({
