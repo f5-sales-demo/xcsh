@@ -2763,6 +2763,8 @@ validation, provider-session reset, manual routing pinning, session history,
 rollback, and synchronous persistence. Effort-only changes are flushed before
 acknowledgement. A settings notification immediately refreshes the host's thread
 snapshot and the app's selected controls.
+The app also sends its advertised `multiAgentMode` value with settings changes;
+xcsh accepts the canonical `explicitRequestOnly` value and rejects other modes.
 Settings updates and turn starts share an admission queue, so sending immediately
 after a tap waits for credential validation and persistence instead of racing the
 old model. Once any owner publishes a validated catalog, the compatibility

@@ -967,11 +967,14 @@ export class RemoteSession {
 						"approvalPolicy",
 						"approvalsReviewer",
 						"sandboxPolicy",
+						"multiAgentMode",
 					].includes(key) &&
 					params[key] != null
 				)
 					throw new ProtocolError(-32602, "Unsupported terminal settings override");
 			const permissionProfile = this.#parsePermissionProfile(params);
+			if (params.multiAgentMode != null && params.multiAgentMode !== "explicitRequestOnly")
+				throw new ProtocolError(-32602, "Unsupported multi-agent mode");
 			if (params.serviceTier != null) throw new ProtocolError(-32602, "Service tiers are not supported");
 			if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
 				throw new ProtocolError(-32602, "Unsupported working directory override");

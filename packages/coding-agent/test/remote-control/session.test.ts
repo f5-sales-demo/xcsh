@@ -453,6 +453,12 @@ test("phone model changes validate the target effort before changing session sta
 			model: "gpt-5.4",
 		}),
 	).rejects.toMatchObject({ code: -32602 });
+	await expect(
+		a.remote.call("unsupported-multi-agent", "thread/settings/update", {
+			threadId: "a",
+			multiAgentMode: "autonomous",
+		}),
+	).rejects.toMatchObject({ code: -32602 });
 	expect(changed).toBe(false);
 	expect(a.remote.thread().model).toBe("gpt-6-astra");
 	a.remote.dispose();

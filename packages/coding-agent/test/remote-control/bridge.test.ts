@@ -127,7 +127,13 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 			await host.router.handle("phone", {
 				id: 4,
 				method: "thread/settings/update",
-				params: { threadId: "fixture", model: "gpt-5.6-sol", effort: "high", serviceTier: null },
+				params: {
+					threadId: "fixture",
+					model: "gpt-5.6-sol",
+					effort: "high",
+					serviceTier: null,
+					multiAgentMode: "explicitRequestOnly",
+				},
 			}),
 		).toEqual({ id: 4, result: {} });
 		expect(target.model?.id).toBe("gpt-5.6-sol");
