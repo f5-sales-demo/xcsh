@@ -112,7 +112,7 @@ class CiCapacityContractTests(unittest.TestCase):
             self.assertIn(pinned_value, legacy_setup)
         self.assertNotIn("sudo apt-get", legacy_setup)
         self.assertIn("dpkg-deb --extract", legacy_setup)
-        self.assertIn('flags.push(`--parallel=${fileWorkers}`)', runner)
+        self.assertIn("flags.push(`--parallel=${fileWorkers}`)", runner)
         self.assertIn('"--max-concurrency=2"', runner)
         self.assertNotIn("--concurrent", benchmark + action + runner)
 
