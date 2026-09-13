@@ -3,6 +3,7 @@ import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { detectHostAvx2Support } from "./host-detect";
+import { type NativeManifest, verifyNativeManifest } from "./ci-native-manifest";
 
 /** Generated bindings are the runtime contract; interfaces/type aliases have no runtime value. */
 export function missingNativeExports(declarations: string, native: Record<string, unknown>): string[] {
@@ -34,6 +35,20 @@ export async function ensureNativeReady(operations: NativeReadiness): Promise<vo
 }
 
 const repoRoot = join(import.meta.dir, "..");
+
+export async function verifyConfiguredNativeManifest(
+	environment: Record<string, string | undefined> = Bun.env,
+	root = repoRoot,
+	verify = verifyNativeManifest,
+): Promise<boolean> {
+	const manifestPath = environment.XCSH_VERIFIED_NATIVE_MANIFEST;
+	if (!manifestPath) return false;
+	const sourceSha = environment.GITHUB_SHA;
+	if (!sourceSha) throw new Error("GITHUB_SHA is required when reusing verified native artifacts");
+	const manifest = (await Bun.file(manifestPath).json()) as NativeManifest;
+	await verify(root, manifest, sourceSha);
+	return true;
+}
 
 /** Serialize the entire check/build/probe/receipt transaction, not just Cargo. */
 export async function withNativePreparationLock<T>(
@@ -80,6 +95,7 @@ export async function probeNative(root = repoRoot): Promise<string[]> {
 }
 
 async function prepare(): Promise<void> {
+	if (await verifyConfiguredNativeManifest()) return;
 	const variant = process.arch === "x64"
 		? process.env.PI_NATIVE_VARIANT || (detectHostAvx2Support() ? "modern" : "baseline") : undefined;
 	if (variant && variant !== "modern" && variant !== "baseline") throw new Error("Invalid PI_NATIVE_VARIANT; use modern or baseline.");

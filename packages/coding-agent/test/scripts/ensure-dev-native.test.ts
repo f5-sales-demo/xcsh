@@ -6,8 +6,33 @@ import {
 	ensureNativeReady,
 	missingNativeExports,
 	probeNative,
+	verifyConfiguredNativeManifest,
 	withNativePreparationLock,
 } from "../../../../scripts/ensure-dev-native";
+
+test("verified CI native manifests bypass developer rebuild preparation", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-verified-native-"));
+	const manifestPath = join(root, "native-manifest.json");
+	const manifest = { schema_version: 1 as const, source_sha: "a".repeat(40), files: [] };
+	const verify = vi.fn(async () => {});
+	try {
+		await Bun.write(manifestPath, JSON.stringify(manifest));
+		expect(await verifyConfiguredNativeManifest({}, root, verify)).toBe(false);
+		await expect(
+			verifyConfiguredNativeManifest({ XCSH_VERIFIED_NATIVE_MANIFEST: manifestPath }, root, verify),
+		).rejects.toThrow("GITHUB_SHA");
+		expect(
+			await verifyConfiguredNativeManifest(
+				{ XCSH_VERIFIED_NATIVE_MANIFEST: manifestPath, GITHUB_SHA: manifest.source_sha },
+				root,
+				verify,
+			),
+		).toBe(true);
+		expect(verify).toHaveBeenCalledWith(root, manifest, manifest.source_sha);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
 
 test("concurrent preparation waits and rechecks readiness instead of building twice", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-native-lock-"));

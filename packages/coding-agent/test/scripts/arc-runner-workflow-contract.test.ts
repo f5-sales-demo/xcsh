@@ -99,7 +99,7 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 		["self-hosted", "Linux", "X64", "xcsh", "ubuntu-24.04"],
 		["self-hosted", "Linux", "X64", "xcsh", "container-build"],
 	];
-	const candidateRoutes = new Set(["xcsh-compute-bun-candidate", "xcsh-compute-f32-candidate"]);
+	const candidateRoutes = new Set(["xcsh-compute-d16-candidate", "xcsh-compute-f32-candidate"]);
 	const observedArcRoutes = new Set<string>();
 
 	expect(workflows.length).toBeGreaterThan(0);
@@ -124,15 +124,63 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 		}
 	}
 
-	expect(observedArcRoutes).toEqual(
-		new Set([
-			"xcsh-compute",
-			"xcsh-compute-bun-candidate",
-			"xcsh-compute-f32-candidate",
-			"xcsh-container-build",
-			"xcsh-socketless",
-		]),
-	);
+	expect(observedArcRoutes).toEqual(new Set(["xcsh-compute", "xcsh-container-build", "xcsh-socketless"]));
+});
+
+test("compute qualification is manual, frozen-source, and derives bounded workers from the experiment", async () => {
+	const source = await Bun.file(path.join(WORKFLOW_ROOT, "compute-benchmark.yml")).text();
+	const actionSource = await Bun.file(
+		path.join(REPOSITORY_ROOT, ".github/actions/runner-optimization-profile/action.yml"),
+	).text();
+	const runnerSource = await Bun.file(path.join(REPOSITORY_ROOT, "scripts/run-ts-tests.ts")).text();
+
+	expect(source).toContain("workflow_dispatch:");
+	for (const input of ["source_sha:", "experiment:", "cache_state:", "pair_id:"]) {
+		expect(source).toContain(input);
+	}
+	expect(source).toContain("0bca45d64934440703556091dc746de41dd5460b");
+	expect(source).toContain("xcsh-compute-d16-candidate");
+	expect(source).toContain("xcsh-compute-f32-candidate");
+	expect(source).not.toContain("xcsh-compute-bun-candidate");
+	expect(source).not.toContain("pull_request:");
+	expect(source).not.toContain("types: [labeled]");
+	expect(`${source}\n${runnerSource}`).not.toContain("--concurrent");
+	expect(runnerSource).toContain('flags.push("--parallel=2")');
+	expect(actionSource).toContain("EXPECTED_IMAGE_DIGEST");
+	expect(source).toContain("'{include:[{\"sample\":$pair}]}'");
+	expect(source).toContain("'{include:[range(1;5) | {sample:($pair + \"-slot-\" + tostring)}]}'");
+	expect(source).toContain("'{include:[range(1;3) | {sample:($pair + \"-slot-\" + tostring)}]}'");
+});
+
+test("DAG qualification holds image and hardware constant while measuring the real dependency graph", async () => {
+	const source = await Bun.file(path.join(WORKFLOW_ROOT, "compute-benchmark.yml")).text();
+	const workflow = parse(source) as WorkflowDocument;
+
+	expect(source).toContain("image-candidate|d16-serial|d16-parallel-2|d16-hardware|dag-control|dag-candidate");
+	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+	expect(workflow.jobs?.["dag-control"]?.["runs-on"]).toBe("${{ needs.prepare.outputs.runner_label }}");
+	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+	expect(workflow.jobs?.["dag-candidate-native"]?.["runs-on"]).toBe("${{ needs.prepare.outputs.runner_label }}");
+	expect(workflow.jobs?.["dag-candidate-rust"]?.needs).toBe("prepare");
+	expect(workflow.jobs?.["dag-candidate-typescript"]?.needs).toEqual(["prepare", "dag-candidate-native"]);
+	expect(workflow.jobs?.["dag-candidate-test"]?.needs).toEqual(["dag-candidate-typescript", "dag-candidate-rust"]);
+	expect(source).toContain("ci-native-manifest.ts verify");
+	expect(source).toContain("collect-dag-profile.ts");
+});
+
+test("CI reuses source-bound Linux natives and aggregates independent TypeScript and Rust tests", async () => {
+	const source = await Bun.file(path.join(WORKFLOW_ROOT, "ci.yml")).text();
+	const workflow = parse(source) as WorkflowDocument;
+
+	expect(workflow.jobs?.["test-typescript"]?.needs).toBe("native-linux-x64");
+	expect(workflow.jobs?.["test-rust"]?.needs).toBeUndefined();
+	expect(workflow.jobs?.test?.needs).toEqual(["test-typescript", "test-rust"]);
+	expect(source).toContain("native-manifest.json");
+	expect(source).toContain("ci-native-manifest.ts verify");
+	expect(source).not.toContain("sudo apt-get install --yes --no-install-recommends llvm");
+	expect(source).not.toContain("taiki-e/install-action@");
+	expect(source).toContain("uses: ./.github/actions/setup-bun");
+	expect(source).not.toContain("--concurrent");
 });
 
 test("Docker consumers use the container pool and every trust gate is socketless", async () => {

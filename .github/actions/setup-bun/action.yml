@@ -1,0 +1,29 @@
+name: Set up Bun
+description: Verify the baked self-hosted Bun or install it on a hosted runner
+inputs:
+  bun-version:
+    description: Required Bun version
+    required: false
+    default: "1.4.2"
+  no-cache:
+    description: Forwarded to oven-sh/setup-bun on hosted runners
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Verify baked self-hosted Bun
+      if: runner.environment == 'self-hosted' && runner.os == 'Linux'
+      shell: bash
+      env:
+        BUN_VERSION: ${{ inputs.bun-version }}
+      run: |
+        set -euo pipefail
+        test "$(command -v bun)" = /usr/local/bin/bun
+        test "$(bun --version)" = "$BUN_VERSION"
+    - name: Install Bun on hosted runner
+      if: runner.environment != 'self-hosted' || runner.os != 'Linux'
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version: ${{ inputs.bun-version }}
+        no-cache: ${{ inputs.no-cache }}

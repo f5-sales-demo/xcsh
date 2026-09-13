@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -62,7 +62,6 @@ jobs:
       - name: Verify image resizing, conversion and decode limits
         run: bun test --cwd packages/coding-agent test/utils/image-resize.test.ts test/utils/image-convert.test.ts
 
-  # Fast lint + type check (no Rust, no native build needed)
   check:
     name: check
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -72,54 +71,9 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        id: setup-bun
-        continue-on-error: true
-        with:
-          no-cache: true
-          bun-version: "1.4.2"
-      - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
-        shell: bash
-        run: |
-          BUN_VERSION=1.4.2
-          echo "Using pinned Bun version: $BUN_VERSION"
-          case "$RUNNER_OS" in
-            Linux)  PLATFORM="linux-x64" ;;
-            macOS)
-              case "$RUNNER_ARCH" in
-                ARM64) PLATFORM="darwin-aarch64" ;;
-                *)     PLATFORM="darwin-x64" ;;
-              esac ;;
-            Windows) PLATFORM="windows-x64" ;;
-          esac
-          URL="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-${PLATFORM}.zip"
-          OUTFILE="bun-download.zip"
-          echo "::warning::setup-bun action failed, retrying manual download from $URL"
-          MAX_RETRIES=3
-          DELAY=15
-          for attempt in $(seq 1 $MAX_RETRIES); do
-            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
-              break
-            fi
-            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
-              echo "::error::Failed to download Bun after $MAX_RETRIES attempts"
-              exit 1
-            fi
-            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
-            sleep $DELAY
-            DELAY=$((DELAY * 2))
-          done
-          unzip -q "$OUTFILE"
-          rm -f "$OUTFILE"
-          BUN_DIR="$PWD/bun-${PLATFORM}"
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            BUN_DIR=$(cygpath -w "$BUN_DIR")
-          fi
-          echo "$BUN_DIR" >> "$GITHUB_PATH"
-          bun --version
-      - name: Cache bun dependencies
+      - name: Verify baked Bun
+        run: bash scripts/verify-self-hosted-tools.sh bun
+      - name: Restore Bun dependency cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
@@ -130,6 +84,47 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
 
+  native-linux-x64:
+    name: Native build (linux, x64, baseline and modern)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: xcsh-compute
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - name: Verify baked build toolchain
+        run: bash scripts/verify-self-hosted-tools.sh full
+      - name: Restore exact Rust cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - run: bash scripts/ci-bun-install.sh
+      - name: Build baseline and modern native addons once
+        env:
+          TARGET_PLATFORM: linux
+          TARGET_ARCH: x64
+          TARGET_VARIANTS: baseline modern
+        run: bun run ci:build:native
+      - name: Create source-bound native manifest
+        run: bun scripts/ci-native-manifest.ts create --source-sha "$GITHUB_SHA"
+      - name: Sandbox self-test inside live bash profile
+        run: bun test packages/coding-agent/test/sandbox-check.test.ts --max-concurrency=2
+      - name: Upload verified Linux x64 natives
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pi-natives-linux-x64-baseline-modern
+          path: |
+            packages/natives/native/pi_natives.linux-x64-baseline.node
+            packages/natives/native/pi_natives.linux-x64-modern.node
+            packages/natives/native/native-manifest.json
+          if-no-files-found: error
+
   native:
     name: Native build (${{ matrix.os }}, ${{ matrix.arch }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -137,8 +132,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)) && fromJSON('[
-          {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"x64","variants":"modern"},
           {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern"},
@@ -146,8 +139,6 @@ jobs:
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline"},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern"}
           ]') || fromJSON('[
-          {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"x64","variants":"modern"},
           {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}
           ]') }}
     runs-on: ${{ matrix.runner || matrix.os }}
@@ -158,9 +149,23 @@ jobs:
         with:
           persist-credentials: false
           lfs: true
-      - uses: ./.github/actions/setup-rust
+      - name: Verify baked Linux build toolchain
+        if: runner.environment == 'self-hosted' && runner.os == 'Linux'
+        run: bash scripts/verify-self-hosted-tools.sh full
+      - name: Set up hosted Rust
+        if: runner.environment != 'self-hosted' || runner.os != 'Linux'
+        uses: ./.github/actions/setup-rust
         with:
           target: ${{ matrix.target }}
+      - name: Set up hosted Bun 1.4.2
+        if: runner.environment != 'self-hosted' || runner.os != 'Linux'
+        uses: ./.github/actions/setup-bun
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+      - name: Set up hosted Zig 0.16.0
+        if: runner.environment != 'self-hosted' || runner.os != 'Linux'
+        uses: ./.github/actions/setup-zig
       - name: Restore exact Rust cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -170,104 +175,20 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        id: setup-bun
-        continue-on-error: true
-        with:
-          no-cache: true
-          bun-version: "1.4.2"
-      - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
-        shell: bash
-        run: |
-          BUN_VERSION=1.4.2
-          echo "Using pinned Bun version: $BUN_VERSION"
-          case "$RUNNER_OS" in
-            Linux)  PLATFORM="linux-x64" ;;
-            macOS)
-              case "$RUNNER_ARCH" in
-                ARM64) PLATFORM="darwin-aarch64" ;;
-                *)     PLATFORM="darwin-x64" ;;
-              esac ;;
-            Windows) PLATFORM="windows-x64" ;;
-          esac
-          URL="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-${PLATFORM}.zip"
-          OUTFILE="bun-download.zip"
-          echo "::warning::setup-bun action failed, retrying manual download from $URL"
-          MAX_RETRIES=3
-          DELAY=15
-          for attempt in $(seq 1 $MAX_RETRIES); do
-            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
-              break
-            fi
-            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
-              echo "::error::Failed to download Bun after $MAX_RETRIES attempts"
-              exit 1
-            fi
-            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
-            sleep $DELAY
-            DELAY=$((DELAY * 2))
-          done
-          unzip -q "$OUTFILE"
-          rm -f "$OUTFILE"
-          BUN_DIR="$PWD/bun-${PLATFORM}"
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            BUN_DIR=$(cygpath -w "$BUN_DIR")
-          fi
-          echo "$BUN_DIR" >> "$GITHUB_PATH"
-          bun --version
-      - name: Setup Zig 0.16.0
-        uses: ./.github/actions/setup-zig
-      - name: Verify Zig 0.16.0
-        shell: bash
-        run: test "$(zig version)" = 0.16.0
       - run: bash scripts/ci-bun-install.sh
-      - name: Rust checks
-        if: matrix.rust_checks
-        run: bun run check:rs
-      # The containment fence's Landlock compiler. `crates/brush-core-vendored` is excluded from the
-      # workspace so `cargo test -p brush-core` refuses to run; this crate is a member and reaches that
-      # code by path, so it is the only place the compiler is covered. Pure logic — no kernel needed.
-      - name: Containment fence tests
-        if: matrix.rust_checks
-        run: cargo test -p containment-check
-      # Real enforcement, asserted — not a print and not a skip.
-      #
-      # This started as a diagnostic because I did not know whether this runner had Landlock in its LSM
-      # list (Ubuntu only added it to the default list in 24.04). It reported
-      # `lockdown,capability,landlock,yama,apparmor` on kernel 6.8-azure, so the answer is yes and the leg
-      # can assert. Worth having measured rather than guessed: I expected the opposite.
-      #
-      # `status` exits non-zero when there is no backend, which is deliberate. If this runner image ever
-      # loses Landlock, this step must fail loudly rather than quietly stop testing the boundary — a
-      # security check that skips reads exactly like one that passed.
-      - name: Landlock enforcement
-        if: matrix.rust_checks
-        run: |
-          echo "LSM list: $(cat /sys/kernel/security/lsm 2>/dev/null || echo unavailable)"
-          echo "kernel: $(uname -r)"
-          cargo build -p containment-check
-          cargo run -q -p containment-check -- status
-          bash crates/containment-check/landlock-e2e.sh target/debug/containment-check
       - name: Build native addon(s)
         env:
           CROSS_TARGET: ${{ matrix.target }}
           TARGET_PLATFORM: ${{ matrix.platform }}
           TARGET_ARCH: ${{ matrix.arch }}
           TARGET_VARIANTS: ${{ matrix.variants }}
-        shell: bash
-        run: |
-          bun run ci:build:native
-      # Run the diagnostic from inside the same fenced BashTool profile operators use. The standalone
-      # install smoke did not reproduce nested Seatbelt/Landlock composition, which is how #2800
-      # shipped 10/10 in CI and reported 7/10 in a healthy session.
+        run: bun run ci:build:native
       - name: Sandbox self-test inside live bash profile
         if: matrix.sandbox_check
-        run: bun test packages/coding-agent/test/sandbox-check.test.ts
+        run: bun test packages/coding-agent/test/sandbox-check.test.ts --max-concurrency=2
       - name: Seatbelt sibling-customer enforcement
         if: matrix.platform == 'darwin' && matrix.sandbox_check
-        run: bun test packages/coding-agent/test/sandbox-isolation.test.ts
+        run: bun test packages/coding-agent/test/sandbox-isolation.test.ts --max-concurrency=2
       - name: Upload native addon(s)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -275,8 +196,8 @@ jobs:
           path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
           if-no-files-found: error
 
-  test:
-    name: test
+  test-rust:
+    name: Rust tests
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: xcsh-compute
     timeout-minutes: 30
@@ -285,55 +206,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-          lfs: true
-      - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        id: setup-bun
-        continue-on-error: true
-        with:
-          no-cache: true
-          bun-version: "1.4.2"
-      - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
-        shell: bash
-        run: |
-          BUN_VERSION=1.4.2
-          echo "Using pinned Bun version: $BUN_VERSION"
-          case "$RUNNER_OS" in
-            Linux)  PLATFORM="linux-x64" ;;
-            macOS)
-              case "$RUNNER_ARCH" in
-                ARM64) PLATFORM="darwin-aarch64" ;;
-                *)     PLATFORM="darwin-x64" ;;
-              esac ;;
-            Windows) PLATFORM="windows-x64" ;;
-          esac
-          URL="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-${PLATFORM}.zip"
-          OUTFILE="bun-download.zip"
-          echo "::warning::setup-bun action failed, retrying manual download from $URL"
-          MAX_RETRIES=3
-          DELAY=15
-          for attempt in $(seq 1 $MAX_RETRIES); do
-            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
-              break
-            fi
-            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
-              echo "::error::Failed to download Bun after $MAX_RETRIES attempts"
-              exit 1
-            fi
-            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
-            sleep $DELAY
-            DELAY=$((DELAY * 2))
-          done
-          unzip -q "$OUTFILE"
-          rm -f "$OUTFILE"
-          BUN_DIR="$PWD/bun-${PLATFORM}"
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            BUN_DIR=$(cygpath -w "$BUN_DIR")
-          fi
-          echo "$BUN_DIR" >> "$GITHUB_PATH"
-          bun --version
-      - uses: ./.github/actions/setup-rust
+      - name: Verify baked Rust toolchain
+        run: bash scripts/verify-self-hosted-tools.sh full
       - name: Restore exact Rust cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -343,36 +217,59 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Setup Zig 0.16.0
-        uses: ./.github/actions/setup-zig
-      - name: Cache bun dependencies
+      - name: Rust checks
+        run: bun run check:rs
+      - name: Containment fence tests
+        run: cargo test -p containment-check
+      - name: Landlock enforcement
+        run: |
+          cargo build -p containment-check
+          cargo run -q -p containment-check -- status
+          bash crates/containment-check/landlock-e2e.sh target/debug/containment-check
+      - name: Test Rust workspaces
+        run: bun run test:rs
+
+  test-typescript:
+    name: TypeScript tests
+    needs: native-linux-x64
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: xcsh-compute
+    timeout-minutes: 30
+    env:
+      XCSH_VERIFIED_NATIVE_MANIFEST: ${{ github.workspace }}/packages/natives/native/native-manifest.json
+      XCSH_TEST_FILE_WORKERS: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+      - name: Verify baked TypeScript toolchain
+        run: bash scripts/verify-self-hosted-tools.sh full
+      - name: Download source-bound Linux x64 natives
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pi-natives-linux-x64-baseline-modern
+          path: packages/natives/native
+      - name: Verify source-bound native manifest
+        run: bun scripts/ci-native-manifest.ts verify --source-sha "$GITHUB_SHA"
+      - name: Restore Bun dependency cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
-      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
-        with:
-          tool: nextest
-      - name: Verify immutable runner dependencies
-        run: |
-          command -v fd
-          command -v rg
-          command -v magick
-          dpkg-query -W libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev >/dev/null
-      - name: Verify configured Bun version
-        run: test "$(bun --version)" = 1.4.2
       - run: bash scripts/ci-bun-install.sh
-      - run: bun run build:native
-      - name: Verify bun binary exists before tests
-        run: |
-          echo "which bun: $(which bun)"
-          echo "file type: $(file "$(command -v bun)")"
-          echo "ls -la: $(ls -la "$(command -v bun)")"
-          bun --version
-      - name: Test workspace
-        run: bun run ci:test:full
+      - name: Test TypeScript workspaces
+        run: bun run test:ts
       - name: CLI smoke test
         run: bun run ci:test:smoke
+
+  test:
+    name: test
+    needs: [test-typescript, test-rust]
+    runs-on: xcsh-socketless
+    steps:
+      - run: echo "TypeScript and Rust test shards passed"
 
   install_methods:
     name: Test installation methods
@@ -384,14 +281,13 @@ jobs:
           persist-credentials: false
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
-        continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -472,7 +368,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -495,14 +391,13 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
-        continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -574,14 +469,13 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
-        continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -632,33 +526,11 @@ jobs:
           pattern: pi-natives-*
           path: packages/natives/native
           merge-multiple: true
-      - name: Install LLVM Mach-O inspection tools
+      - name: Verify baked LLVM Mach-O inspection tools
         shell: bash
         run: |
           set -euo pipefail
-          # This release runner intentionally has no privilege escalation.  Stage
-          # just the LLVM executable and its shared library beneath RUNNER_TEMP
-          # instead of attempting a system package installation.
-          tool_root="${RUNNER_TEMP}/xcsh-llvm"
-          mkdir -p "$tool_root/packages" "$tool_root/root"
-          llvm_deb="$tool_root/packages/llvm-18.deb"
-          libllvm_deb="$tool_root/packages/libllvm18.deb"
-          curl --fail --location --retry 3 --retry-all-errors \
-            --output "$llvm_deb" \
-            https://archive.ubuntu.com/ubuntu/pool/universe/l/llvm-toolchain-18/llvm-18_18.1.3-1ubuntu1_amd64.deb
-          curl --fail --location --retry 3 --retry-all-errors \
-            --output "$libllvm_deb" \
-            https://archive.ubuntu.com/ubuntu/pool/main/l/llvm-toolchain-18/libllvm18_18.1.3-1ubuntu1_amd64.deb
-          echo "139cb82e16e75fcdd4a56562804ff9bfb482b65d0929580d621d28088075a27e  $llvm_deb" | sha256sum --check --strict
-          echo "af6197096ce3b89aab86de59f01c1b5feb008b2ae1514a03906c0664edb8b0b1  $libllvm_deb" | sha256sum --check --strict
-          dpkg-deb -x "$llvm_deb" "$tool_root/root"
-          dpkg-deb -x "$libllvm_deb" "$tool_root/root"
-          llvm_bin="$tool_root/root/usr/lib/llvm-18/bin"
-          llvm_lib="$tool_root/root/usr/lib/x86_64-linux-gnu"
-          test -x "$llvm_bin/llvm-nm"
-          echo "$llvm_bin" >> "$GITHUB_PATH"
-          echo "LD_LIBRARY_PATH=$llvm_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-          LD_LIBRARY_PATH="$llvm_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$llvm_bin/llvm-nm" --version
+          command -v llvm-nm
       - name: Verify native addons
         run: bun run ci:release:verify-natives
       - name: Build Linux and Windows binaries
@@ -705,14 +577,14 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -1095,7 +967,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -1157,14 +1029,13 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
-        continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -1236,7 +1107,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -1354,14 +1225,13 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
-        continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -1449,14 +1319,13 @@ jobs:
       - name: Verify runner Node.js
         run: node --version && npm --version
       - name: Setup Bun 1.4.2
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         id: setup-bun
-        continue-on-error: true
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: steps.setup-bun.outcome == 'failure'
+        if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2

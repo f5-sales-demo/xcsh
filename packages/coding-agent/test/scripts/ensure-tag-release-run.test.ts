@@ -124,9 +124,14 @@ describe("the tagging workflow is wired to the check (#2487)", () => {
 
 	it("provisions the pinned Bun release runtime in the bare checkout job", async () => {
 		const source = await workflow();
+		const setupAction = await fs.readFile(
+			path.join(import.meta.dir, "../../../../.github/actions/setup-bun/action.yml"),
+			"utf8",
+		);
 		expect(source).toContain("Setup Bun 1.4.2");
-		expect(source).toContain("oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6");
+		expect(source).toContain("uses: ./.github/actions/setup-bun");
 		expect(source).toContain('bun-version: "1.4.2"');
+		expect(setupAction).toContain("oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6");
 	});
 
 	it("no longer claims the chain will fire merely because the push exited 0", async () => {

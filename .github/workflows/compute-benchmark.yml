@@ -2,344 +2,420 @@
 name: Compute Runner Qualification
 
 on:
-  pull_request:
-    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Frozen xcsh source commit
+        required: true
+        default: 0bca45d64934440703556091dc746de41dd5460b
+      experiment:
+        description: One independently promoted experiment side
+        required: true
+        type: choice
+        options:
+          - image-control
+          - image-candidate
+          - d16-serial
+          - d16-parallel-2
+          - d16-hardware
+          - f32-hardware
+          - d16-burst
+          - f32-burst
+          - dag-control
+          - dag-candidate
+      cache_state:
+        description: Exact cache state for this matched sample
+        required: true
+        type: choice
+        options: [cold, warm]
+      pair_id:
+        description: Matched pair number, 1 through 5
+        required: true
 
 permissions:
-  contents: read
+  actions: read # Required to inspect DAG job timings and download benchmark artifacts.
+  contents: read # Required to check out the frozen source and qualification harness.
 
 concurrency:
-  group: compute-runner-qualification-${{ github.ref }}
+  group: compute-qualification-${{ inputs.experiment }}-${{ inputs.cache_state }}-${{ inputs.pair_id }}
   cancel-in-progress: false
 
+env:
+  FROZEN_SOURCE_SHA: 0bca45d64934440703556091dc746de41dd5460b
+
 jobs:
-  release-native-fixtures:
-    name: Release native fixture (${{ matrix.platform }}, ${{ matrix.arch }}, ${{ matrix.variant }})
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      (github.event.label.name == 'compute-benchmark-approved' || github.event.label.name == 'compute-hardware-approved') &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            platform: linux
-            arch: arm64
-            target: aarch64-unknown-linux-gnu
-            variant: default
-            variants: ""
-          - os: windows-latest
-            platform: win32
-            arch: x64
-            target: ""
-            variant: baseline
-            variants: baseline
-          - os: windows-latest
-            platform: win32
-            arch: x64
-            target: ""
-            variant: modern
-            variants: modern
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
-    env:
-      RUST_TARGET: ${{ matrix.target }}
+  prepare:
+    name: Validate bounded experiment
+    runs-on: xcsh-socketless
+    outputs:
+      expected_image_digest: ${{ steps.route.outputs.expected_image_digest }}
+      file_workers: ${{ steps.route.outputs.file_workers }}
+      matrix: ${{ steps.route.outputs.matrix }}
+      max_parallel: ${{ steps.route.outputs.max_parallel }}
+      runner_label: ${{ steps.route.outputs.runner_label }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-          lfs: true
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          no-cache: true
-          bun-version: "1.4.2"
-      - uses: ./.github/actions/setup-rust
-        with:
-          target: ${{ matrix.target }}
-      - name: Restore exact Rust cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Set up Zig 0.16.0
-        uses: ./.github/actions/setup-zig
-      - run: bash scripts/ci-bun-install.sh
-      - name: Build release native fixture
+      - name: Validate frozen source and derive route
+        id: route
         shell: bash
         env:
-          CROSS_TARGET: ${{ matrix.target }}
-          TARGET_PLATFORM: ${{ matrix.platform }}
-          TARGET_ARCH: ${{ matrix.arch }}
-          TARGET_VARIANTS: ${{ matrix.variants }}
-        run: bun run ci:build:native
-      - name: Upload immutable release native fixture
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: qualification-native-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.variant }}
-          path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
-          if-no-files-found: error
-          retention-days: 30
+          CACHE_STATE: ${{ inputs.cache_state }}
+          CANDIDATE_IMAGE_DIGEST: ${{ vars.XCSH_COMPUTE_CANDIDATE_IMAGE_DIGEST }}
+          EXPERIMENT: ${{ inputs.experiment }}
+          PAIR_ID: ${{ inputs.pair_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          STABLE_IMAGE_DIGEST: ${{ vars.XCSH_COMPUTE_IMAGE_DIGEST }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$FROZEN_SOURCE_SHA"
+          [[ "$PAIR_ID" =~ ^[1-5]$ ]]
+          [[ "$CACHE_STATE" =~ ^(cold|warm)$ ]]
 
-  d16-software-baseline:
-    name: D16 / Bun 1.3.14 / software / ${{ matrix.cache }} / pair-${{ matrix.pair }}
-    needs: release-native-fixtures
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-benchmark-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+          file_workers=0
+          max_parallel=1
+          matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[{"sample":$pair}]}')
+          case "$EXPERIMENT" in
+            image-control|d16-burst)
+              runner_label=xcsh-compute
+              expected_image_digest=$STABLE_IMAGE_DIGEST
+              ;;
+            image-candidate|d16-serial|d16-parallel-2|d16-hardware|dag-control|dag-candidate)
+              runner_label=xcsh-compute-d16-candidate
+              expected_image_digest=$CANDIDATE_IMAGE_DIGEST
+              ;;
+            f32-hardware|f32-burst)
+              runner_label=xcsh-compute-f32-candidate
+              expected_image_digest=$CANDIDATE_IMAGE_DIGEST
+              ;;
+            *) exit 2 ;;
+          esac
+          case "$EXPERIMENT" in
+            d16-parallel-2) file_workers=2 ;;
+            d16-burst)
+              max_parallel=4
+              matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[range(1;5) | {sample:($pair + "-slot-" + tostring)}]}')
+              ;;
+            f32-burst)
+              max_parallel=2
+              matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[range(1;3) | {sample:($pair + "-slot-" + tostring)}]}')
+              ;;
+          esac
+          [[ "$expected_image_digest" =~ ^(ghcr\.io/f5-sales-demo|f5salesdemoarcca\.azurecr\.io)/self-hosted-runner@sha256:[0-9a-f]{64}$ ]]
+          {
+            echo "expected_image_digest=$expected_image_digest"
+            echo "file_workers=$file_workers"
+            echo "matrix=$matrix"
+            echo "max_parallel=$max_parallel"
+            echo "runner_label=$runner_label"
+          } >> "$GITHUB_OUTPUT"
+
+  workload:
+    name: ${{ inputs.experiment }} / ${{ inputs.cache_state }} / pair-${{ matrix.sample }}
+    needs: prepare
+    if: inputs.experiment != 'dag-control' && inputs.experiment != 'dag-candidate'
     strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        cache: [cold, warm]
-        pair: [1, 2, 3, 4, 5]
-    runs-on: xcsh-compute
+      fail-fast: true
+      max-parallel: ${{ fromJSON(needs.prepare.outputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ${{ needs.prepare.outputs.runner_label }}
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # Frozen pre-refresh main. The refreshed tree intentionally requires Bun
-          # 1.4.2 and therefore cannot be a valid Bun 1.3.14 baseline.
-          ref: 4e12e53d3f6e7085c345d9426f7252b03ac6dbfd
-          persist-credentials: false
-          lfs: true
-      - name: Check out the candidate qualification harness
+      - name: Check out frozen source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+      - name: Check out qualification harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
           persist-credentials: false
           path: .qualification-harness
           sparse-checkout: |
             .github/actions/runner-optimization-profile
             scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
+            scripts/run-ts-tests.ts
+            scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
-          mode: full
-          variant: baseline
-          comparison: software
-          cache-state: ${{ matrix.cache }}
-          pair-id: ${{ matrix.pair }}
+          experiment: ${{ inputs.experiment }}
+          cache-state: ${{ inputs.cache_state }}
+          pair-id: ${{ matrix.sample }}
+          file-workers: ${{ needs.prepare.outputs.file_workers }}
+          expected-image-digest: ${{ needs.prepare.outputs.expected_image_digest }}
 
-  d16-software-candidate:
-    name: D16 / Bun 1.4.2 / software / ${{ matrix.cache }} / pair-${{ matrix.pair }}
-    needs: d16-software-baseline
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-benchmark-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        cache: [cold, warm]
-        pair: [1, 2, 3, 4, 5]
-    runs-on: xcsh-compute-bun-candidate
+  dag-control:
+    name: DAG control serial workload / ${{ inputs.cache_state }} / pair-${{ inputs.pair_id }}
+    needs: prepare
+    if: inputs.experiment == 'dag-control'
+    runs-on: ${{ needs.prepare.outputs.runner_label }}
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out frozen source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
+          fetch-depth: 0
           lfs: true
-      - uses: ./.github/actions/runner-optimization-profile
+      - name: Check out qualification harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          mode: full
-          variant: bun-1.4.2
-          comparison: software
-          cache-state: ${{ matrix.cache }}
-          pair-id: ${{ matrix.pair }}
-
-  software-acceptance:
-    name: Bun 1.4.2 performance acceptance
-    needs: d16-software-candidate
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-benchmark-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: xcsh-socketless
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+          path: .qualification-harness
+          sparse-checkout: |
+            .github/actions/runner-optimization-profile
+            scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
+            scripts/run-ts-tests.ts
+            scripts/verify-self-hosted-tools.sh
+          sparse-checkout-cone-mode: false
+      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
-          no-cache: true
-          bun-version: "1.4.2"
-      - name: Download matched workload evidence
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+          experiment: dag-control
+          cache-state: ${{ inputs.cache_state }}
+          pair-id: ${{ inputs.pair_id }}
+          file-workers: 0
+          expected-image-digest: ${{ needs.prepare.outputs.expected_image_digest }}
+
+  dag-candidate-native:
+    name: DAG candidate native / ${{ inputs.cache_state }} / pair-${{ inputs.pair_id }}
+    needs: prepare
+    if: inputs.experiment == 'dag-candidate'
+    runs-on: ${{ needs.prepare.outputs.runner_label }}
+    timeout-minutes: 45
+    steps:
+      - name: Check out frozen source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          pattern: workload-profile-software-*
-          path: qualification-evidence
-      - name: Enforce matched performance gates
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+      - name: Check out qualification harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          path: .qualification-harness
+          sparse-checkout: |
+            .github/actions/runner-optimization-profile
+            scripts/ci-native-manifest.ts
+            scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
+            scripts/run-ts-tests.ts
+            scripts/verify-self-hosted-tools.sh
+          sparse-checkout-cone-mode: false
+      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+        with:
+          experiment: dag-candidate
+          cache-state: ${{ inputs.cache_state }}
+          pair-id: ${{ inputs.pair_id }}
+          file-workers: 0
+          expected-image-digest: ${{ needs.prepare.outputs.expected_image_digest }}
+          phase-set: native
+          evidence-suffix: native
+      - name: Create source-bound native manifest
         env:
-          CANDIDATE_COMMIT: ${{ github.event.pull_request.head.sha }}
-        run: |
-          mkdir -p qualification-report
-          bun scripts/validate-performance-qualification.ts \
-            --input qualification-evidence \
-            --baseline-commit 4e12e53d3f6e7085c345d9426f7252b03ac6dbfd \
-            --candidate-commit "$CANDIDATE_COMMIT" \
-            --out qualification-report/performance-qualification.json
-      - name: Upload acceptance report
-        if: always()
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: >-
+          bun .qualification-harness/scripts/ci-native-manifest.ts create
+          --source-sha "$SOURCE_SHA" --root "$GITHUB_WORKSPACE"
+      - name: Upload source-bound native artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: bun-1.4.2-performance-qualification
-          path: qualification-report
+          name: dag-native-${{ inputs.cache_state }}-${{ inputs.pair_id }}
+          path: |
+            packages/natives/native/pi_natives.linux-x64-baseline.node
+            packages/natives/native/pi_natives.linux-x64-modern.node
+            packages/natives/native/native-manifest.json
           if-no-files-found: error
           retention-days: 30
 
-  d16-hardware-baseline:
-    name: D16 / Bun 1.3.14 / hardware / ${{ matrix.cache }} / pair-${{ matrix.pair }}
-    needs: release-native-fixtures
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-hardware-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      needs.release-native-fixtures.result == 'success'
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        cache: [cold, warm]
-        pair: [1, 2, 3, 4, 5]
-    runs-on: xcsh-compute-bun-candidate
-    timeout-minutes: 90
+  dag-candidate-rust:
+    name: DAG candidate Rust / ${{ inputs.cache_state }} / pair-${{ inputs.pair_id }}
+    needs: prepare
+    if: inputs.experiment == 'dag-candidate'
+    runs-on: ${{ needs.prepare.outputs.runner_label }}
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out frozen source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
-          lfs: true
-      - uses: ./.github/actions/runner-optimization-profile
+          fetch-depth: 0
+      - name: Check out qualification harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          mode: full
-          variant: baseline
-          comparison: hardware
-          cache-state: ${{ matrix.cache }}
-          pair-id: ${{ matrix.pair }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          path: .qualification-harness
+          sparse-checkout: |
+            .github/actions/runner-optimization-profile
+            scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
+            scripts/run-ts-tests.ts
+            scripts/verify-self-hosted-tools.sh
+          sparse-checkout-cone-mode: false
+      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+        with:
+          experiment: dag-candidate
+          cache-state: ${{ inputs.cache_state }}
+          pair-id: ${{ inputs.pair_id }}
+          file-workers: 0
+          expected-image-digest: ${{ needs.prepare.outputs.expected_image_digest }}
+          phase-set: rust
+          evidence-suffix: rust
 
-  f32-hardware-candidate:
-    name: F32 / Bun 1.3.14 / hardware / ${{ matrix.cache }} / pair-${{ matrix.pair }}
-    needs: d16-hardware-baseline
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-hardware-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        cache: [cold, warm]
-        pair: [1, 2, 3, 4, 5]
-    runs-on: xcsh-compute-f32-candidate
-    timeout-minutes: 90
+  dag-candidate-typescript:
+    name: DAG candidate TypeScript / ${{ inputs.cache_state }} / pair-${{ inputs.pair_id }}
+    needs: [prepare, dag-candidate-native]
+    if: inputs.experiment == 'dag-candidate'
+    runs-on: ${{ needs.prepare.outputs.runner_label }}
+    timeout-minutes: 45
+    env:
+      XCSH_NATIVE_MANIFEST_TOOL: ${{ github.workspace }}/.qualification-harness/scripts/ci-native-manifest.ts
+      XCSH_VERIFIED_NATIVE_MANIFEST: ${{ github.workspace }}/packages/natives/native/native-manifest.json
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out frozen source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
+          fetch-depth: 0
           lfs: true
-      - uses: ./.github/actions/runner-optimization-profile
+      - name: Check out qualification harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          mode: full
-          variant: f32
-          comparison: hardware
-          cache-state: ${{ matrix.cache }}
-          pair-id: ${{ matrix.pair }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          path: .qualification-harness
+          sparse-checkout: |
+            .github/actions/runner-optimization-profile
+            scripts/ci-native-manifest.ts
+            scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
+            scripts/run-ts-tests.ts
+            scripts/verify-self-hosted-tools.sh
+          sparse-checkout-cone-mode: false
+      - name: Download source-bound native artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dag-native-${{ inputs.cache_state }}-${{ inputs.pair_id }}
+          path: packages/natives/native
+      - name: Verify source-bound native manifest before profiling
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: >-
+          bun .qualification-harness/scripts/ci-native-manifest.ts verify
+          --source-sha "$SOURCE_SHA" --root "$GITHUB_WORKSPACE"
+      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+        with:
+          experiment: dag-candidate
+          cache-state: ${{ inputs.cache_state }}
+          pair-id: ${{ inputs.pair_id }}
+          file-workers: 0
+          expected-image-digest: ${{ needs.prepare.outputs.expected_image_digest }}
+          phase-set: typescript
+          evidence-suffix: typescript
 
-  d16-current-burst:
-    name: Current D16 two-slot burst / slot-${{ matrix.slot }}
-    needs: f32-hardware-candidate
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-hardware-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        slot: [1, 2, 3, 4]
-    runs-on: xcsh-compute
-    timeout-minutes: 60
+  dag-candidate-test:
+    name: DAG candidate test aggregation
+    needs: [dag-candidate-typescript, dag-candidate-rust]
+    if: inputs.experiment == 'dag-candidate'
+    runs-on: xcsh-socketless
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          lfs: true
-      - uses: ./.github/actions/runner-optimization-profile
-        with:
-          mode: pr
-          variant: baseline
-          comparison: burst
-          cache-state: cold
-          pair-id: slot-${{ matrix.slot }}
+      - run: echo "DAG TypeScript and Rust shards passed"
 
-  d16-burst:
-    name: Candidate D16 four-slot burst / slot-${{ matrix.slot }}
-    needs: d16-current-burst
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-hardware-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        slot: [1, 2, 3, 4]
-    runs-on: xcsh-compute-bun-candidate
-    timeout-minutes: 60
+  dag-control-summary:
+    name: DAG control critical-path evidence
+    needs: [prepare, dag-control]
+    if: inputs.experiment == 'dag-control'
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          lfs: true
-      - uses: ./.github/actions/runner-optimization-profile
+      - uses: ./.github/actions/setup-bun
         with:
-          mode: pr
-          variant: d16-four
-          comparison: burst
-          cache-state: cold
-          pair-id: slot-${{ matrix.slot }}
+          no-cache: true
+          bun-version: "1.4.2"
+      - name: Download control phase evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: workload-profile-dag-control-${{ inputs.cache_state }}-${{ inputs.pair_id }}-*
+          path: dag-evidence
+      - name: Collect workflow critical-path evidence
+        env:
+          CACHE_STATE: ${{ inputs.cache_state }}
+          GH_TOKEN: ${{ github.token }}
+          PAIR_ID: ${{ inputs.pair_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+            > dag-jobs.json
+          mkdir -p dag-summary/profiles
+          bun scripts/collect-dag-profile.ts \
+            --input dag-evidence --jobs dag-jobs.json --variant dag-control \
+            --source-sha "$SOURCE_SHA" --cache-state "$CACHE_STATE" \
+            --pair-id "$PAIR_ID" --out dag-summary/profiles/workflow-critical-path.json
+      - name: Upload control critical-path evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workload-profile-dag-control-${{ inputs.cache_state }}-${{ inputs.pair_id }}-critical-path
+          path: dag-summary
+          if-no-files-found: error
+          retention-days: 30
 
-  f32-burst:
-    name: F32 four-job burst / slot-${{ matrix.slot }}
-    needs: d16-burst
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-hardware-approved' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        slot: [1, 2, 3, 4]
-    runs-on: xcsh-compute-f32-candidate
-    timeout-minutes: 60
+  dag-candidate-summary:
+    name: DAG candidate critical-path evidence
+    needs: [prepare, dag-candidate-native, dag-candidate-rust, dag-candidate-typescript, dag-candidate-test]
+    if: inputs.experiment == 'dag-candidate'
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          lfs: true
-      - uses: ./.github/actions/runner-optimization-profile
+      - uses: ./.github/actions/setup-bun
         with:
-          mode: pr
-          variant: f32
-          comparison: burst
-          cache-state: cold
-          pair-id: slot-${{ matrix.slot }}
+          no-cache: true
+          bun-version: "1.4.2"
+      - name: Download candidate phase evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: workload-profile-dag-candidate-${{ inputs.cache_state }}-${{ inputs.pair_id }}-*
+          path: dag-evidence
+      - name: Collect workflow critical-path evidence
+        env:
+          CACHE_STATE: ${{ inputs.cache_state }}
+          GH_TOKEN: ${{ github.token }}
+          PAIR_ID: ${{ inputs.pair_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+            > dag-jobs.json
+          mkdir -p dag-summary/profiles
+          bun scripts/collect-dag-profile.ts \
+            --input dag-evidence --jobs dag-jobs.json --variant dag-candidate \
+            --source-sha "$SOURCE_SHA" --cache-state "$CACHE_STATE" \
+            --pair-id "$PAIR_ID" --out dag-summary/profiles/workflow-critical-path.json
+      - name: Upload candidate critical-path evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workload-profile-dag-candidate-${{ inputs.cache_state }}-${{ inputs.pair_id }}-critical-path
+          path: dag-summary
+          if-no-files-found: error
+          retention-days: 30
