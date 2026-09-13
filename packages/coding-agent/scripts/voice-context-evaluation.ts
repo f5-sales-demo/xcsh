@@ -8,6 +8,7 @@ import { type ContextFlowEvent, scoreContextFlow } from "../src/remote-control/c
 const source = resolve(process.env.XCSH_CONTEXT_EVAL_SOURCE ?? join(import.meta.dir, "../../.."));
 const baseline = process.argv.includes("--baseline");
 const forceContextDiagnostic = process.argv.includes("--force-context-diagnostic");
+const sseDiagnostic = process.argv.includes("--sse-diagnostic");
 const compactDiagnostic = process.argv.includes("--compact-diagnostic");
 const fixtureVersion = 2;
 const revision = Bun.spawnSync(["git", "-C", source, "rev-parse", "HEAD"]);
@@ -98,6 +99,7 @@ try {
 			const cwd = join(root, crypto.randomUUID());
 			await mkdir(cwd, { recursive: true });
 			const settings = await Settings.init({ cwd, agentDir: cwd, inMemory: true });
+			if (sseDiagnostic) settings.override("providers.openaiWebsockets", "off");
 			const service = ContextService.init(join(cwd, "contexts"));
 			// Isolate the existing cross-session API cache between fixtures and evaluation runs.
 			const fixtureKey = crypto.randomUUID();
@@ -406,7 +408,8 @@ try {
 				baseline,
 				compactDiagnostic,
 				forceContextDiagnostic,
-				eligibleForQualification: !baseline && !compactDiagnostic && !forceContextDiagnostic,
+				sseDiagnostic,
+				eligibleForQualification: !baseline && !compactDiagnostic && !forceContextDiagnostic && !sseDiagnostic,
 				fixtureVersion,
 				sourceCommit,
 				trackedChanges,

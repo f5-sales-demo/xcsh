@@ -116,7 +116,8 @@ booleans. Only generated synthetic fixtures and their algorithms belong in sourc
 
 `--compact-diagnostic` removes the normal backend instructions to investigate prompt
 interference. `--force-context-diagnostic` requests one named context-tool call to
-investigate provider tool-choice handling. Receipts mark both as ineligible for
+investigate provider tool-choice handling. `--sse-diagnostic` disables backend
+WebSockets to compare transport behavior. Receipts mark these variants as ineligible for
 qualification. They are diagnostic comparisons, not alternative acceptance runs.
 WebSocket observations retain only tool counts and capability/choice booleans.
 Synthetic assistant text is retained per turn, so an incorrect first answer cannot

@@ -61,6 +61,7 @@ follow-ups, corrections, pauses, cancellation, and access failures.
 
 The broader executing-agent run exposed false claims that a registered context
 tool was unavailable. Provider-request observations confirmed its schema was
-present. Prompt clarification alone did not eliminate this failure. It remains a
+present. Prompt clarification alone did not eliminate this failure. A bounded SSE
+comparison also reproduced it, so switching transport is not an established fix. It remains a
 qualification blocker; successful samples and passing deterministic tests do not
 justify deploying the candidate as accepted.
