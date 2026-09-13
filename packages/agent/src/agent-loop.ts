@@ -127,6 +127,110 @@ function normalizeMessagesForProvider(
 	return changed ? normalized : messages;
 }
 
+function exactToolName(choice: AgentLoopConfig["toolChoice"]): string | undefined {
+	if (!choice || typeof choice === "string") return undefined;
+	if (choice.type === "tool") return choice.name;
+	return "function" in choice ? choice.function.name : choice.name;
+}
+
+interface BufferedAssistantResponse {
+	message: AssistantMessage;
+	events: Array<Extract<AgentEvent, { type: "message_start" | "message_update" | "message_end" }>>;
+}
+
+function emptyUsage(): AssistantMessage["usage"] {
+	return {
+		input: 0,
+		output: 0,
+		cacheRead: 0,
+		cacheWrite: 0,
+		totalTokens: 0,
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	};
+}
+
+function sanitizedForcedToolMessage(
+	model: AgentLoopConfig["model"],
+	stopReason: "aborted" | "error",
+): AssistantMessage {
+	return {
+		role: "assistant",
+		content: [],
+		api: model.api,
+		provider: model.provider,
+		model: model.id,
+		usage: emptyUsage(),
+		stopReason,
+		...(stopReason === "error"
+			? { errorMessage: "Required tool invocation failed." }
+			: { errorMessage: "Request was aborted" }),
+		timestamp: Date.now(),
+	};
+}
+
+async function bufferAssistantResponse(
+	response: Awaited<ReturnType<StreamFn>>,
+	model: AgentLoopConfig["model"],
+	signal: AbortSignal | undefined,
+): Promise<BufferedAssistantResponse> {
+	const events: BufferedAssistantResponse["events"] = [];
+	let partialMessage: AssistantMessage | null = null;
+	let addedPartial = false;
+
+	for await (const event of response) {
+		if (signal?.aborted) {
+			const message = sanitizedForcedToolMessage(model, "aborted");
+			return {
+				message,
+				events: [
+					{ type: "message_start", message: { ...message } },
+					{ type: "message_end", message },
+				],
+			};
+		}
+
+		switch (event.type) {
+			case "start":
+				partialMessage = event.partial;
+				addedPartial = true;
+				events.push({ type: "message_start", message: { ...partialMessage } as AssistantMessage });
+				break;
+			case "text_start":
+			case "text_delta":
+			case "text_end":
+			case "thinking_start":
+			case "thinking_delta":
+			case "thinking_end":
+			case "toolcall_start":
+			case "toolcall_delta":
+			case "toolcall_end":
+			case "server_tool_start":
+			case "server_tool_end":
+				if (partialMessage) {
+					partialMessage = event.partial;
+					events.push({
+						type: "message_update",
+						assistantMessageEvent: event,
+						message: { ...partialMessage } as AssistantMessage,
+					});
+				}
+				break;
+			case "done":
+			case "error": {
+				const message = await response.result();
+				if (!addedPartial) events.push({ type: "message_start", message: { ...message } });
+				events.push({ type: "message_end", message });
+				return { message, events };
+			}
+		}
+	}
+
+	const message = await response.result();
+	if (!addedPartial) events.push({ type: "message_start", message: { ...message } });
+	if (!events.some(event => event.type === "message_end")) events.push({ type: "message_end", message });
+	return { message, events };
+}
+
 export const INTENT_FIELD = "_i";
 
 function injectIntentIntoSchema(schema: unknown): unknown {
@@ -340,11 +444,58 @@ async function streamAssistantResponse(
 		(config.getApiKey ? await config.getApiKey(config.model.provider) : undefined) || config.apiKey;
 
 	const dynamicToolChoice = config.getToolChoice?.();
+	const selectedToolChoice = dynamicToolChoice ?? config.toolChoice;
+	const requiredToolName = exactToolName(selectedToolChoice);
+	if (requiredToolName) {
+		// A named choice is a safety boundary, not a hint. Keep each attempt private until the
+		// requested call is complete so truncated prose and substituted tools cannot reach state,
+		// subscribers, or execution. A provider may exhaust its output budget before emitting the
+		// call; retry that pre-invocation failure once with the exact same choice.
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const response = await logger.ttftAttr("ttft.stream-fn", () =>
+				streamFunction(config.model, llmContext, {
+					...config,
+					apiKey: resolvedApiKey,
+					toolChoice: selectedToolChoice,
+					signal,
+				}),
+			);
+			const buffered = await bufferAssistantResponse(response, config.model, signal);
+			if (buffered.message.stopReason === "aborted") {
+				context.messages.push(buffered.message);
+				for (const event of buffered.events) stream.push(event);
+				return buffered.message;
+			}
+			if (buffered.message.stopReason === "error") break;
+
+			const toolCalls = buffered.message.content.filter(content => content.type === "toolCall");
+			const exactInvocation = toolCalls.length === 1 && toolCalls[0]?.name === requiredToolName;
+			if (exactInvocation) {
+				context.messages.push(buffered.message);
+				for (const event of buffered.events) {
+					if (event.type === "message_update") {
+						config.onAssistantMessageEvent?.(event.message as AssistantMessage, event.assistantMessageEvent);
+					}
+					stream.push(event);
+				}
+				return buffered.message;
+			}
+
+			if (attempt === 0 && buffered.message.stopReason === "length" && toolCalls.length === 0) continue;
+			break;
+		}
+
+		const failure = sanitizedForcedToolMessage(config.model, signal?.aborted ? "aborted" : "error");
+		context.messages.push(failure);
+		stream.push({ type: "message_start", message: { ...failure } });
+		stream.push({ type: "message_end", message: failure });
+		return failure;
+	}
 	const response = await logger.ttftAttr("ttft.stream-fn", () =>
 		streamFunction(config.model, llmContext, {
 			...config,
 			apiKey: resolvedApiKey,
-			toolChoice: dynamicToolChoice ?? config.toolChoice,
+			toolChoice: selectedToolChoice,
 			signal,
 		}),
 	);
