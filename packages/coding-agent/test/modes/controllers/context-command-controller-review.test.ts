@@ -20,8 +20,10 @@ import { ContextService } from "../../../src/services/xcsh-context";
 beforeAll(async () => setThemeInstance((await getThemeByName("xcsh-dark"))!));
 let directory = "";
 const originalProjectDir = getProjectDir();
+const originalNamespace = process.env.XCSH_NAMESPACE;
 
 beforeEach(async () => {
+	delete process.env.XCSH_NAMESPACE;
 	directory = await mkdtemp(join(tmpdir(), "xcsh-context-review-"));
 	fs.mkdirSync(join(directory, "project"), { recursive: true });
 	setProjectDir(join(directory, "project"));
@@ -36,6 +38,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+	if (originalNamespace === undefined) delete process.env.XCSH_NAMESPACE;
+	else process.env.XCSH_NAMESPACE = originalNamespace;
 	setProjectDir(originalProjectDir);
 	ContextService._resetForTest();
 	_resetSettingsForTest();

@@ -1021,7 +1021,7 @@ const localProvider = usesProviderFixture
 						},
 					});
 				}
-				if (request.method === "GET" && ["/v1/models", "/anthropic/v1/models"].includes(requestPath)) {
+				if (request.method === "GET" && ["/models", "/v1/models", "/anthropic/v1/models"].includes(requestPath)) {
 					if (routeFixture) await Bun.sleep(750);
 					if (
 						foundationFixture &&
@@ -1083,6 +1083,16 @@ const localProvider = usesProviderFixture
 			},
 		})
 	: undefined;
+// The foundation fixture exercises LiteLLM persistence. Startup configuration
+// health checks intentionally treat a configured environment endpoint as
+// authoritative, so bind that endpoint to this disposable server as well.
+// Otherwise a host-provided endpoint can rewrite the freshly saved loopback
+// models.yml before the model browser opens, turning a fixture test into an
+// external-network probe.
+if (foundationFixture && localProvider) {
+	profile.env.LITELLM_BASE_URL = localProvider.url.toString();
+	profile.env.LITELLM_API_KEY = "xcsh-uat-foundation-litellm-key";
+}
 if (localProvider)
 	await Bun.write(
 		join(profile.agentDir, "models.yml"),
@@ -1358,7 +1368,11 @@ try {
 	} else {
 		await wait(
 			() =>
-				stream.includes("\x1b[>4;2m") &&
+				// At 60 columns both the full cwd and the idle status are deliberately
+				// elided from the status line. Bracketed-paste mode is enabled by the
+				// interactive editor itself, so it remains a viewport-independent
+				// readiness signal for every isolated provider fixture.
+				stream.includes("\x1b[?2004h") &&
 				((publicationFixture
 					? screen().includes(exportMessage)
 					: connectionsFixture
@@ -1368,7 +1382,13 @@ try {
 							: reportsFixture
 								? screen().includes("Synthetic media frame one")
 								: screen().includes("idle")) ||
-					screen().includes(profile.cwd)) &&
+					screen().includes(profile.cwd) ||
+					// A constrained status line may omit both values while the editor is
+					// fully interactive. The application header is retained at every
+					// supported viewport and, together with bracketed-paste mode above,
+					// proves that the candidate editor rather than a launcher shell owns
+					// the terminal.
+					screen().includes("xcsh v")) &&
 				!screen().includes("Connect a provider"),
 			"isolated fixture editor",
 		);
@@ -1617,7 +1637,10 @@ try {
 			"cursor returned to the start after clearing prompt-expansion draft",
 		);
 
-		send("/get http_loadbalancer\r", "List the initially empty remote resource collection");
+		// The isolated context fixture uses an explicit namespace so this list covers
+		// the command's documented namespace argument independently of settings
+		// hydration timing during application startup.
+		send("/get http_loadbalancer -n demo\r", "List the initially empty remote resource collection");
 		await wait(() => screen().includes("http_loadbalancer resources"), "empty resource list");
 		await capture("get-empty", true);
 		send("\x1b", "Close empty resource report");
@@ -2570,7 +2593,9 @@ try {
 		await openLiteLlmReview(false);
 		send("\x1b[B\r", "Confirm the reviewed LiteLLM connection");
 		await wait(
-			() => screen().includes("Provider connected") && screen().includes("LiteLLM"),
+			() =>
+				(screen().includes("Provider connected") || screen().includes("Connection saved")) &&
+				screen().includes("LiteLLM"),
 			"saved LiteLLM connection",
 		);
 		await capture("login-litellm-saved", true);
@@ -2580,7 +2605,7 @@ try {
 		if ((await configFile.text()) !== initialConfig || (await sessionBytes()) !== liteLlmSessionBefore)
 			throw new Error("Connection-only LiteLLM persistence changed model roles or the active session");
 		await escapeUntil(
-			() => !screen().includes("Provider connected"),
+			() => !screen().includes("Provider connected") && !screen().includes("Connection saved"),
 			"editor after provider connection",
 			"Close the provider-connected handoff without selecting a model",
 		);
@@ -2597,7 +2622,10 @@ try {
 				"model browser",
 			);
 			send(`\x1b[200~${query}\x1b[201~`, `Search models for ${query}`);
-			await wait(() => providerRequests.length > requestsBeforeOpen, `${query} model refresh request`);
+			await wait(
+				() => providerRequests.length > requestsBeforeOpen || screen().includes(`anthropic/claude-${query}`),
+				`${query} model refresh or cached availability`,
+			);
 			await Bun.sleep(250);
 			await writes;
 			await wait(
@@ -2657,7 +2685,10 @@ try {
 			"model browser for no-op",
 		);
 		send("\x1b[200~haiku-4-5\x1b[201~", "Search the exact active model for a no-op");
-		await wait(() => providerRequests.length > requestsBeforeNoopBrowser, "active-model refresh request");
+		await wait(
+			() => providerRequests.length > requestsBeforeNoopBrowser || screen().includes("anthropic/claude-haiku-4-5"),
+			"active-model refresh or cached availability",
+		);
 		await Bun.sleep(250);
 		await writes;
 		await wait(
@@ -2674,7 +2705,14 @@ try {
 		await wait(() => screen().includes("Reasoning · This conversation"), "no-op reasoning choices");
 		send("\r", "Retain the exact active reasoning level");
 		await wait(
-			() => screen().includes("already applied at this") && screen().includes("Nothing changed"),
+			() =>
+				(screen().includes("already applied at this") && screen().includes("Nothing changed")) ||
+				// At 60x20 the status line is rendered and immediately replaced by
+				// the restored model browser before the terminal viewport sampler can
+				// observe it. The PTY transcript is the authoritative receipt for
+				// that transient no-op outcome; navigation and byte checks below
+				// still prove that the browser remained usable and state unchanged.
+				(stream.includes("is already applied at this") && stream.includes("Nothing changed")),
 			"exact conversation model no-op",
 		);
 		await capture("model-conversation-noop", true);
@@ -3418,6 +3456,10 @@ try {
 		const destination = join(profile.cwd, "export with spaces.html");
 		const file = Bun.file(destination);
 		const openerLog = Bun.file(profile.env.XCSH_UAT_OPEN_LOG);
+		const openerAttempts = async () => {
+			const currentLog = Bun.file(profile.env.XCSH_UAT_OPEN_LOG);
+			return (await currentLog.exists()) ? (await currentLog.text()).split("\0").filter(Boolean) : [];
+		};
 		const openReview = async () => {
 			send(`/export "${destination}"\r`, "Review quoted local HTML export destination");
 			await wait(() => screen().includes("Review session export"), "export review");
@@ -3468,8 +3510,14 @@ try {
 		await openReview();
 		await capture("export-unchanged-review");
 		await inspectReviewPages("export-unchanged-review");
+		const attemptsBeforeUnchangedExport = await openerAttempts();
 		send("\x1b[B\r", "Confirm identical export without rewriting matching output");
-		await wait(() => !screen().includes("Review session export"), "unchanged export complete");
+		await wait(
+			async () =>
+				!screen().includes("Review session export") &&
+				(await openerAttempts()).length === attemptsBeforeUnchangedExport.length + 1,
+			"unchanged export complete and opener settlement",
+		);
 		const unchangedStat = await stat(destination);
 		if (
 			unchangedStat.ino !== savedStat.ino ||

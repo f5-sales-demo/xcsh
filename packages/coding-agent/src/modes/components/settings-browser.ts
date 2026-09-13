@@ -1,4 +1,11 @@
-import { Container, Input, type SettingItem, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
+import {
+	Container,
+	Input,
+	type MouseRoutable,
+	type SettingItem,
+	type SgrMouseEvent,
+	wrapTextWithAnsi,
+} from "@f5-sales-demo/pi-tui";
 import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
 
 /** Internal settings navigation; paths, not row offsets, retain selection across searches. */
@@ -12,7 +19,7 @@ export class SettingsBrowser extends Container {
 
 	constructor(
 		private items: SettingItem[],
-		private readonly navigation: () => string[],
+		private readonly navigation: (width: number) => string[],
 		private readonly onChange: (id: string, value: string) => void,
 		private readonly onCancel: () => void,
 		private readonly presentation: {
@@ -28,6 +35,11 @@ export class SettingsBrowser extends Container {
 	}
 	updateItems(items: SettingItem[]): void {
 		this.items = items;
+	}
+
+	/** Section arrows are reserved for the parent only when search is empty. */
+	hasSearch(): boolean {
+		return Boolean(this.#search.getValue());
 	}
 
 	#matches(): SettingItem[] {
@@ -62,7 +74,7 @@ export class SettingsBrowser extends Container {
 			rows,
 			this.presentation.title ?? "Settings",
 			this.presentation.purpose ?? "Scope: user settings · Changes are drafts until saved",
-			[...this.navigation(), ...this.#search.render(Math.max(1, inner - 8)).map(line => `Search: ${line}`)],
+			[...this.navigation(inner), ...this.#search.render(Math.max(1, inner - 8)).map(line => `Search: ${line}`)],
 			items.length
 				? items.map((item, i) =>
 						selectorRow(
@@ -75,6 +87,7 @@ export class SettingsBrowser extends Container {
 			details.slice(this.#detailOffset, this.#detailOffset + this.#detailCapacity),
 			[
 				...(this.presentation.footer ?? ["Tab/Shift+Tab: section"]),
+				...(items.length ? [`Settings ${index + 1}/${items.length}`] : []),
 				...(details.length > this.#detailCapacity ? ["PgUp/PgDn: details"] : []),
 			],
 			{ selectedBodyIndex: index },
@@ -107,7 +120,7 @@ export class SettingsBrowser extends Container {
 			);
 		} else if (matchesSelectorKey(data, "pageUp")) {
 			this.#detailOffset = Math.max(0, this.#detailOffset - this.#detailCapacity);
-		} else if (matchesSelectorKey(data, "confirm")) {
+		} else if (matchesSelectorKey(data, "confirm") || (data === " " && !this.hasSearch())) {
 			const item = items[index];
 			if (item && this.presentation.open) {
 				this.#selected = item.id;
@@ -128,5 +141,10 @@ export class SettingsBrowser extends Container {
 			this.#search.handleInput(data);
 			if (before !== this.#search.getValue()) this.#detailOffset = 0;
 		}
+	}
+
+	routeMouse(event: SgrMouseEvent, line: number, col: number): void {
+		const editor = this.#editor as Partial<MouseRoutable> | undefined;
+		editor?.routeMouse?.(event, line, col);
 	}
 }

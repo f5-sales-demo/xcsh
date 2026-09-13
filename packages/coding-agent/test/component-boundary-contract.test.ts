@@ -17,6 +17,7 @@ import {
 } from "@f5-sales-demo/pi-tui";
 import { BracketedPasteHandler } from "../../tui/src/bracketed-paste";
 import { KillRing } from "../../tui/src/kill-ring";
+import { setTerminalImageProtocol, TERMINAL } from "../../tui/src/terminal-capabilities";
 import { getTerminalId, getTtyPath } from "../../tui/src/ttyid";
 import type { Rule } from "../src/capability/rule";
 import { selectSession } from "../src/cli/session-picker";
@@ -256,7 +257,13 @@ describe("remaining first-party component boundaries", () => {
 			[loader, "Synthetic progress"],
 			[cancellable, "Synthetic cancellable"],
 		];
-		for (const [component, text] of primitives) expectBounded(component, 60, text);
+		const originalImageProtocol = TERMINAL.imageProtocol;
+		setTerminalImageProtocol(null);
+		try {
+			for (const [component, text] of primitives) expectBounded(component, 60, text);
+		} finally {
+			setTerminalImageProtocol(originalImageProtocol);
+		}
 	});
 
 	it("keeps prompts masked and keybinding hints sourced from active bindings", () => {

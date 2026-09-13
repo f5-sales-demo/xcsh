@@ -24,6 +24,41 @@ test("choice search is editable, supports paste, and clears before closing", () 
 	expect(select).toHaveBeenCalledWith("second");
 });
 
+test("choice editor restores legacy Space, paging, and mouse controls when search is empty", async () => {
+	const values = Array.from({ length: 12 }, (_, index) => ({ value: `value-${index}`, label: `Value ${index}` }));
+	const select = vi.fn();
+	const preview = vi.fn();
+	const editor = new SettingsChoiceEditor("Example", "Description", values, "value-0", select, vi.fn(), preview);
+	let rendered = editor.render(80);
+	expect(Bun.stripANSI(rendered.join("\n"))).toContain("Choices 1/12");
+	editor.handleInput("\x1b[6~");
+	expect(Bun.stripANSI(editor.render(80).join("\n"))).toContain("Choices 9/12");
+	rendered = editor.render(80);
+	const thirdRow = rendered.findIndex(line => Bun.stripANSI(line).includes("Value 3"));
+	expect(thirdRow).toBeGreaterThanOrEqual(0);
+	editor.routeMouse(
+		{ button: 32, col: 0, row: thirdRow, release: false, wheel: null, motion: true, leftClick: false },
+		thirdRow,
+		0,
+	);
+	editor.routeMouse({ button: 65, col: 0, row: 0, release: false, wheel: 1, motion: false, leftClick: false }, 0, 0);
+	await Bun.sleep(0);
+	expect(preview).toHaveBeenCalled();
+	const clickRow = editor.render(80).findIndex(line => Bun.stripANSI(line).includes("Value 5"));
+	expect(clickRow).toBeGreaterThanOrEqual(0);
+	editor.routeMouse(
+		{ button: 0, col: 0, row: clickRow, release: false, wheel: null, motion: false, leftClick: true },
+		clickRow,
+		0,
+	);
+	await Bun.sleep(0);
+	expect(select).toHaveBeenCalledWith("value-5");
+	const activate = new SettingsChoiceEditor("Example", "", values.slice(0, 2), "value-0", select, vi.fn());
+	activate.handleInput(" ");
+	await Bun.sleep(0);
+	expect(select).toHaveBeenCalledWith("value-0");
+});
+
 test("cancellation waits for active preview and drops queued stale previews before rollback", async () => {
 	const pending = Promise.withResolvers<void>();
 	const events: string[] = [];

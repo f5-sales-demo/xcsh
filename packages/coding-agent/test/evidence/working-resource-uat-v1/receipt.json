@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "working-tree-resource-terminal-uat",
+  "baseCommit": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+  "candidate": "working tree with uncommitted corrections",
+  "variant": {
+    "columns": 80,
+    "rows": 24,
+    "theme": "dark",
+    "symbols": "unicode"
+  },
+  "actions": 37,
+  "persistence": {
+    "remoteObjectCount": 0,
+    "manifestOutputHash": "3583ed8ad70d638340640b7efa6b897b609ba4a5a8c2cdf4dc4f98f90d8ea7bc",
+    "contextBytesUnchanged": true,
+    "cancelledCreateMadeNoPost": true,
+    "dryRunMadeNoPut": true,
+    "failedDeletePreservedThenRetryRemoved": true
+  },
+  "sideEffects": {
+    "post": 1,
+    "put": 1,
+    "deleteFailure": 1,
+    "deleteSuccess": 1,
+    "manifestExport": "completed and hashed by the terminal workflow"
+  },
+  "limitation": "Candidate-only evidence: it validates the working correction tree, not baseline/pre-fix behavioral parity."
+}

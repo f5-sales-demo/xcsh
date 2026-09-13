@@ -33,6 +33,22 @@ function digest(value: string | Uint8Array): string {
 	return createHash("sha256").update(value).digest("hex");
 }
 
+/**
+ * macOS exposes /var and /tmp as documented logical aliases for /private/var
+ * and /private/tmp. Treat only those platform aliases as equivalent; a caller
+ * supplied symlink elsewhere remains a rejected export parent.
+ */
+function isExpectedResolvedDirectory(requested: string, resolved: string): boolean {
+	const absolute = path.resolve(requested);
+	const expected =
+		process.platform === "darwin" && (absolute === "/var" || absolute.startsWith("/var/"))
+			? `/private${absolute}`
+			: process.platform === "darwin" && (absolute === "/tmp" || absolute.startsWith("/tmp/"))
+				? `/private${absolute}`
+				: absolute;
+	return resolved === expected;
+}
+
 async function inspectDestination(filePath: string): Promise<DestinationState> {
 	try {
 		const stats = await fs.lstat(filePath);
@@ -266,7 +282,7 @@ export async function handleExportResourceCommand(
 						if (file.before.hash !== file.hash) {
 							const parent = path.dirname(file.path);
 							await fs.mkdir(parent, { recursive: true });
-							if ((await fs.realpath(parent)) !== path.resolve(parent))
+							if (!isExpectedResolvedDirectory(parent, await fs.realpath(parent)))
 								throw new Error("Destination parent resolves through a symbolic link");
 							const temporary = path.join(parent, `.xcsh-manifest-${Snowflake.next()}.tmp`);
 							const handle = await fs.open(temporary, "wx", 0o600);
