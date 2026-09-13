@@ -1257,7 +1257,7 @@ export class RemoteSession {
 					return;
 				}
 				if (result.status === "interrupted") {
-					resolve("The task was cancelled.");
+					resolve("The active turn was interrupted. This does not confirm that completed actions were undone.");
 					return;
 				}
 				resolve(

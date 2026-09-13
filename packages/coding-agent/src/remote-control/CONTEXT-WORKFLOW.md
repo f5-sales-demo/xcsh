@@ -111,3 +111,17 @@ and speaks a concise evidence-grounded response.
 Keep real prompts, transcripts, audio, profile values, tenant data, and credentials
 out of committed evidence. Record live tool names, outcome categories, counts, and
 booleans. Only generated synthetic fixtures and their algorithms belong in source.
+
+## Diagnostic comparisons
+
+`--compact-diagnostic` removes the normal backend instructions to investigate prompt
+interference. `--force-context-diagnostic` requests one named context-tool call to
+investigate provider tool-choice handling. Receipts mark both as ineligible for
+qualification. They are diagnostic comparisons, not alternative acceptance runs.
+WebSocket observations retain only tool counts and capability/choice booleans.
+Synthetic assistant text is retained per turn, so an incorrect first answer cannot
+be concealed by a later successful answer. Separate-turn selection must complete
+before the follow-up begins.
+
+See [GPT-Live guidance review](LIVE-GUIDANCE.md) for the voice/backend prompt
+boundary, interruption semantics, transport differences, and remaining gates.

@@ -7,6 +7,8 @@ import { type ContextFlowEvent, scoreContextFlow } from "../src/remote-control/c
 
 const source = resolve(process.env.XCSH_CONTEXT_EVAL_SOURCE ?? join(import.meta.dir, "../../.."));
 const baseline = process.argv.includes("--baseline");
+const forceContextDiagnostic = process.argv.includes("--force-context-diagnostic");
+const compactDiagnostic = process.argv.includes("--compact-diagnostic");
 const fixtureVersion = 2;
 const revision = Bun.spawnSync(["git", "-C", source, "rev-parse", "HEAD"]);
 if (revision.exitCode !== 0) throw new Error("Evaluation source revision unavailable");
@@ -28,6 +30,7 @@ const { voiceDelegation } = await import(modulePath("remote-control/voice-delega
 const { PersonProfileService } = await import(modulePath("person-profile/service.ts"));
 const root = await mkdtemp(join(tmpdir(), "xcsh-context-evaluation-"));
 const originalFetch = globalThis.fetch;
+const originalSocketSend = WebSocket.prototype.send;
 const savedEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith("XCSH_")));
 for (const key of Object.keys(savedEnv)) delete process.env[key];
 const auth = await discoverAuthStorage(getAgentDir());
@@ -101,6 +104,27 @@ try {
 			let turn = 0;
 			const trace: Array<Record<string, unknown>> = [];
 			const flow: ContextFlowEvent[] = [];
+			WebSocket.prototype.send = function (data: Parameters<WebSocket["send"]>[0]) {
+				if (typeof data === "string") {
+					let body: any;
+					try {
+						body = JSON.parse(data);
+					} catch {
+						/* Not a JSON request. */
+					}
+					if (body?.type === "response.create")
+						trace.push({
+							kind: "wire-request",
+							turn,
+							contextSchemaPresent: body.tools?.some((tool: any) => tool.name === "xcsh_context") ?? false,
+							toolCount: body.tools?.length ?? 0,
+							contextToolForced:
+								body.tool_choice?.name === "xcsh_context" ||
+								body.tool_choice?.function?.name === "xcsh_context",
+						});
+				}
+				return originalSocketSend.call(this, data);
+			};
 			globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
 				const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
 				if (url.hostname.endsWith(".console.ves.volterra.io")) {
@@ -187,6 +211,12 @@ try {
 				settings,
 				sessionManager: manager,
 				thinkingLevel: "medium",
+				...(compactDiagnostic
+					? {
+							systemPrompt:
+								"You are xcsh, F5’s sales-engineering assistant. Complete the user's request using the supplied tools. A realtime_delegation contains the user's request and recent transcript. Use actual tool results to report success, failure, or a useful clarification. Keep the response concise.",
+						}
+					: {}),
 				disableExtensionDiscovery: true,
 				enableMCP: false,
 				enableLsp: false,
@@ -228,7 +258,13 @@ try {
 			});
 			trace.length = 0;
 			const contextToolAvailable = session.getActiveToolNames().includes("xcsh_context");
+			if (forceContextDiagnostic)
+				session.toolChoiceQueue.pushOnce(
+					{ type: "function", name: "xcsh_context" },
+					{ label: "context-diagnostic" },
+				);
 			let answer = "";
+			let selectionCompletedBeforeFollowUp = scenario.id !== "follow-up";
 			let providerError = false;
 			const unsubscribe = session.subscribe((event: any) => {
 				if (event.type === "tool_execution_start")
@@ -274,15 +310,26 @@ try {
 						turn,
 						stopReason: event.message.stopReason,
 						answerWords: answer.split(/\s+/).filter(Boolean).length,
+						syntheticText: answer,
 					});
 				}
 			});
-			const timeout = setTimeout(() => void session.abort(), 120000);
+			let timedOut = false;
+			const startedAt = performance.now();
+			const timeout = setTimeout(() => {
+				timedOut = true;
+				void session.abort();
+			}, 120000);
 			console.log(JSON.stringify({ surface, scenario: scenario.id, phase: "started", baseline }));
 			try {
 				for (const request of scenario.turns) {
+					if (timedOut) break;
 					turn++;
 					await session.prompt(surface === "tui" ? request : voiceDelegation(request, `user: ${request}`));
+					const status = service.getStatus();
+					const selected = status.activeContextName === "beta" && status.authStatus === "connected";
+					trace.push({ kind: "turn-complete", turn, requestedContextConnected: selected });
+					if (scenario.id === "follow-up" && turn === 1) selectionCompletedBeforeFollowUp = selected;
 				}
 				const inventory = trace.filter(row => row.kind === "tenant-request" && row.inventory);
 				const activations = trace.filter(
@@ -303,8 +350,11 @@ try {
 					surface,
 					scenario: scenario.id,
 					baseline,
+					timedOut,
+					durationMs: Math.round(performance.now() - startedAt),
 					providerError,
 					contextToolAvailable,
+					selectionCompletedBeforeFollowUp,
 					activationSucceeded,
 					activeContextMatches: service.getStatus().activeContextName === "beta",
 					inventoryRequests: inventory.length,
@@ -316,6 +366,8 @@ try {
 					assistantTurns: trace.filter(row => row.kind === "assistant-turn").length,
 					flow: score,
 					passed:
+						selectionCompletedBeforeFollowUp &&
+						!timedOut &&
 						!providerError &&
 						score.passed &&
 						(blocked
@@ -349,7 +401,21 @@ try {
 	}
 	await writeFile(
 		join(output, "results.json"),
-		JSON.stringify({ baseline, fixtureVersion, sourceCommit, trackedChanges, model: model.id, results }, null, 2),
+		JSON.stringify(
+			{
+				baseline,
+				compactDiagnostic,
+				forceContextDiagnostic,
+				eligibleForQualification: !baseline && !compactDiagnostic && !forceContextDiagnostic,
+				fixtureVersion,
+				sourceCommit,
+				trackedChanges,
+				model: model.id,
+				results,
+			},
+			null,
+			2,
+		),
 		{
 			mode: 0o600,
 		},
@@ -358,6 +424,7 @@ try {
 } finally {
 	ContextService._resetForTest();
 	globalThis.fetch = originalFetch;
+	WebSocket.prototype.send = originalSocketSend;
 	for (const [key, value] of Object.entries(savedEnv)) if (value !== undefined) process.env[key] = value;
 	await rm(root, { recursive: true, force: true });
 }
