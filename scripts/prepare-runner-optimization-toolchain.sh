@@ -144,7 +144,7 @@ output_dir=$4
 verifier=$5
 phase_set=$6
 case "$experiment" in
-image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+image-control | image-candidate | d16-serial | d16-parallel-2 | d16-parallel-4 | d16-parallel-6 | d16-parallel-8 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
 *) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
