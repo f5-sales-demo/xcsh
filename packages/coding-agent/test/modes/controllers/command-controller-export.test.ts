@@ -193,7 +193,12 @@ test("partial media export retries only unresolved files after renewed review", 
 	expect(await Bun.file(sidecar).exists()).toBe(false);
 	h.input("\x1b[B");
 	h.input("\r");
-	await waitFor(async () => (await Bun.file(sidecar).exists()) && !(await Bun.file(destination).exists()));
+	await waitFor(
+		async () =>
+			(await Bun.file(sidecar).exists()) &&
+			!(await Bun.file(destination).exists()) &&
+			!(await fs.readdir(h.root)).some(name => name.startsWith(".xcsh-export-")),
+	);
 	expect(await readFile(sidecar, "utf8")).toBe("Synthetic video");
 	expect(await Bun.file(destination).exists()).toBe(false);
 	expect(h.ctx.showStatus).not.toHaveBeenCalled();
