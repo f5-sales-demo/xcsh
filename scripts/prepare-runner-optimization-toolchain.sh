@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly FROZEN_SOURCE_SHA=68721777f3a2fae473c9ee127539ad7139354040
+readonly FROZEN_SOURCE_SHA=c004f81977019b81d74b9ba0eeb33a579e65f89a
 readonly BUN_VERSION=1.4.2
 readonly BUN_SHA256=36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913
 readonly ZIG_VERSION=0.16.0
@@ -144,7 +144,7 @@ output_dir=$4
 verifier=$5
 phase_set=$6
 case "$experiment" in
-image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+image-control | image-candidate | d16-serial | d16-parallel-2 | d16-parallel-4 | d16-parallel-6 | d16-parallel-8 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
 *) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac

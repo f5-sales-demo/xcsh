@@ -11,7 +11,7 @@ inputs:
     description: Stable matched-pair identifier
     required: true
   file-workers:
-    description: Zero for serial files or exactly two Bun file workers
+    description: Zero for serial files or an explicitly qualified Bun file-worker count
     required: true
   expected-image-digest:
     description: Exact immutable runner image reference

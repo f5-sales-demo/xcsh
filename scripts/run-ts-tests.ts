@@ -2,7 +2,7 @@
 
 import { spawn } from "bun";
 
-export type FileWorkers = 0 | 2;
+export type FileWorkers = 0 | 2 | 4 | 6 | 8;
 
 export function parseFileWorkers(
 	args: readonly string[],
@@ -10,8 +10,8 @@ export function parseFileWorkers(
 ): FileWorkers {
 	const option = args.find(argument => argument.startsWith("--file-workers="));
 	const raw = option?.slice("--file-workers=".length) ?? environment.XCSH_TEST_FILE_WORKERS ?? "0";
-	if (raw !== "0" && raw !== "2") {
-		throw new Error(`XCSH test file workers must be 0 or 2, received ${JSON.stringify(raw)}`);
+	if (!(["0", "2", "4", "6", "8"] as const).includes(raw as "0" | "2" | "4" | "6" | "8")) {
+		throw new Error(`XCSH test file workers must be 0, 2, 4, 6, or 8, received ${JSON.stringify(raw)}`);
 	}
 	return Number(raw) as FileWorkers;
 }
@@ -48,7 +48,7 @@ export function verifiedNativeTestCommands(fileWorkers: FileWorkers): string[][]
 
 export function bunTestFlags(fileWorkers: FileWorkers): string[] {
 	const flags = ["--only-failures", "--max-concurrency=2"];
-	if (fileWorkers === 2) flags.push("--parallel=2");
+	if (fileWorkers > 0) flags.push(`--parallel=${fileWorkers}`);
 	return flags;
 }
 

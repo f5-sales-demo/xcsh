@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0|2-file-workers> <output-dir> <all|native|rust|typescript>" >&2
+  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0|2|4|6|8-file-workers> <output-dir> <all|native|rust|typescript>" >&2
   exit 2
 }
 
@@ -15,21 +15,27 @@ output_dir=$5
 phase_set=$6
 
 case "$experiment" in
-image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+image-control | image-candidate | d16-serial | d16-parallel-2 | d16-parallel-4 | d16-parallel-6 | d16-parallel-8 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
 *) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
-case "$file_workers" in 0 | 2) ;; *) usage ;; esac
+case "$file_workers" in 0 | 2 | 4 | 6 | 8) ;; *) usage ;; esac
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
-[[ "$experiment" == d16-parallel-2 && "$file_workers" == 2 ]] || [[ "$experiment" != d16-parallel-2 && "$file_workers" == 0 ]] || usage
+case "$experiment:$file_workers" in
+d16-parallel-2:2 | d16-parallel-4:4 | d16-parallel-6:6 | d16-parallel-8:8) ;;
+*:0)
+  [[ "$experiment" != d16-parallel-2 && "$experiment" != d16-parallel-4 && "$experiment" != d16-parallel-6 && "$experiment" != d16-parallel-8 ]]
+  ;;
+*) usage ;;
+esac
 [[ "$experiment" == dag-candidate || "$phase_set" == all ]] || usage
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 export XCSH_SOURCE_ROOT=$repo_root
 source_commit=$(git rev-parse HEAD)
-test "$source_commit" = 68721777f3a2fae473c9ee127539ad7139354040
+test "$source_commit" = c004f81977019b81d74b9ba0eeb33a579e65f89a
 SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$source_commit")
 [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]
 export SOURCE_DATE_EPOCH
