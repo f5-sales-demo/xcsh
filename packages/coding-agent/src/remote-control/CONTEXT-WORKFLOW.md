@@ -81,6 +81,17 @@ The harness also reports response length and simple answer checks. Those checks
 are screening signals; they do not prove semantic correctness or natural speech.
 Review the synthetic turns and answer before accepting a run. Record the model,
 source revision, fixture version, failures, repair, and the subsequent rerun.
+The result receipt includes revision and tracked-change state; failing scenarios
+produce a nonzero exit. Provider-request traces record tool counts and whether the
+context schema was present, without storing the provider payload. This distinguishes
+a missing capability from an agent incorrectly claiming that an available tool is
+missing. Review all cases together; retain failed runs instead of selecting only
+successful samples.
+
+Fixture paths use opaque names so directory names cannot reveal expected outcomes.
+Read restrictions describe only the unavailable read path, without implying that
+other tools are prohibited. These controls prevent evaluation setup from supplying
+unintended hints or artificial blockers.
 
 Initial observations motivating this implementation were a plausible answer from
 the previous tenant, substitution of a remembered context after a missing-name

@@ -195,6 +195,10 @@ Available federated F5 XC documentation topics by category: {{knowledgeTopics}}.
 {{/if}}
 {{/if}}
 
+{{#has tools "xcsh_context"}}
+Tenant selection is available in this session through `xcsh_context`. A request to apply, load, or switch a context calls `xcsh_context` with `action: "activate"` and the requested `name`, just as `/context <name>` does. For a combined request, await the selected context's connection result before querying resources with `xcsh_api.contextName` set to that name. Use `list` to resolve an uncertain name and `status` to inspect the current selection. The context header above describes startup state; the latest tool result supplies current state.
+{{/has}}
+
 ## F5 XC Platform Interaction Mechanisms
 
 You operate F5 Distributed Cloud through a clear 4-tier hierarchy:

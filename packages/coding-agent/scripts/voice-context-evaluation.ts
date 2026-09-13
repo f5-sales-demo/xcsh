@@ -7,6 +7,13 @@ import { type ContextFlowEvent, scoreContextFlow } from "../src/remote-control/c
 
 const source = resolve(process.env.XCSH_CONTEXT_EVAL_SOURCE ?? join(import.meta.dir, "../../.."));
 const baseline = process.argv.includes("--baseline");
+const fixtureVersion = 2;
+const revision = Bun.spawnSync(["git", "-C", source, "rev-parse", "HEAD"]);
+if (revision.exitCode !== 0) throw new Error("Evaluation source revision unavailable");
+const sourceCommit = revision.stdout.toString().trim();
+const sourceDirty = Bun.spawnSync(["git", "-C", source, "status", "--porcelain", "--untracked-files=no"]);
+if (sourceDirty.exitCode !== 0) throw new Error("Evaluation source state unavailable");
+const trackedChanges = sourceDirty.stdout.toString().trim().length > 0;
 const scenarioFilter = process.argv.find(value => value.startsWith("--scenario="))?.slice("--scenario=".length);
 const surfaceFilter = process.argv.find(value => value.startsWith("--surface="))?.slice("--surface=".length);
 const output = process.env.XCSH_CONTEXT_EVAL_OUTPUT;
@@ -26,6 +33,7 @@ for (const key of Object.keys(savedEnv)) delete process.env[key];
 const auth = await discoverAuthStorage(getAgentDir());
 const registry = new ModelRegistry(auth);
 const results: unknown[] = [];
+let failedScenarios = 0;
 try {
 	await registry.refreshProvider("openai-codex", "online");
 	const model = registry.find("openai-codex", savedEnv.XCSH_CONTEXT_EVAL_MODEL ?? "gpt-5.6-sol");
@@ -191,7 +199,17 @@ try {
 				personProfileService: person,
 				toolNames: ["read", "xcsh_api", ...(baseline ? [] : ["xcsh_context"])],
 				extensions: [
-					(api: any) =>
+					(api: any) => {
+						api.on("before_provider_request", (event: any) => {
+							const payload = event.payload;
+							const toolNames = (payload?.tools ?? []).map((tool: any) => tool.name ?? tool.function?.name);
+							trace.push({
+								kind: "provider-request",
+								turn,
+								contextSchemaPresent: toolNames.includes("xcsh_context"),
+								toolCount: toolNames.length,
+							});
+						});
 						api.on("tool_call", (event: any) => {
 							if (
 								event.toolName === "read" &&
@@ -204,7 +222,8 @@ try {
 										"This read path is unavailable. The read tool can access the API catalog and the isolated person profile.",
 								};
 							}
-						}),
+						});
+					},
 				],
 			});
 			trace.length = 0;
@@ -215,7 +234,12 @@ try {
 				if (event.type === "tool_execution_start")
 					trace.push({ kind: "tool-start", turn, tool: event.toolName, id: event.toolCallId, args: event.args });
 				if (event.type === "tool_execution_end") {
-					trace.push({ kind: "tool-end", turn, id: event.toolCallId, success: !event.isError });
+					trace.push({
+						kind: "tool-end",
+						turn,
+						id: event.toolCallId,
+						success: !event.isError && !event.result?.isError,
+					});
 					const start = trace.find(row => row.kind === "tool-start" && row.id === event.toolCallId);
 					const args = start?.args as { action?: string; name?: string } | undefined;
 					if (start?.tool === "xcsh_context" && args?.action === "activate") {
@@ -308,6 +332,7 @@ try {
 									: /\?|provide|share|need your/i.test(answer))),
 				};
 				results.push(outcome);
+				if (!outcome.passed) failedScenarios++;
 				// Synthetic turns only. Never persist system prompts, provider payloads, credentials, or real session history.
 				await writeFile(
 					join(output, `${surface}-${scenario.id}.json`),
@@ -322,9 +347,14 @@ try {
 			}
 		}
 	}
-	await writeFile(join(output, "results.json"), JSON.stringify({ baseline, model: model.id, results }, null, 2), {
-		mode: 0o600,
-	});
+	await writeFile(
+		join(output, "results.json"),
+		JSON.stringify({ baseline, fixtureVersion, sourceCommit, trackedChanges, model: model.id, results }, null, 2),
+		{
+			mode: 0o600,
+		},
+	);
+	if (failedScenarios > 0) process.exitCode = 1;
 } finally {
 	ContextService._resetForTest();
 	globalThis.fetch = originalFetch;
