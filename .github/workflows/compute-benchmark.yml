@@ -17,6 +17,9 @@ on:
           - image-candidate
           - d16-serial
           - d16-parallel-2
+          - d16-parallel-4
+          - d16-parallel-6
+          - d16-parallel-8
           - d16-hardware
           - f32-hardware
           - d16-burst
@@ -78,7 +81,7 @@ jobs:
               runner_label=xcsh-compute
               expected_image_digest=$STABLE_IMAGE_DIGEST
               ;;
-            image-candidate|d16-serial|d16-parallel-2|d16-hardware|dag-control|dag-candidate)
+            image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-hardware|dag-control|dag-candidate)
               runner_label=xcsh-compute-d16-candidate
               expected_image_digest=$CANDIDATE_IMAGE_DIGEST
               ;;
@@ -90,6 +93,9 @@ jobs:
           esac
           case "$EXPERIMENT" in
             d16-parallel-2) file_workers=2 ;;
+            d16-parallel-4) file_workers=4 ;;
+            d16-parallel-6) file_workers=6 ;;
+            d16-parallel-8) file_workers=8 ;;
             d16-burst)
               max_parallel=4
               matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[range(1;5) | {sample:($pair + "-slot-" + tostring)}]}')
