@@ -9430,6 +9430,34 @@
     },
     {
       "surface": {
+        "id": "dialog:packages/coding-agent/src/tools/xcsh-context.ts:select:1",
+        "source": "packages/coding-agent/src/tools/xcsh-context.ts",
+        "kind": "extension-dialog"
+      },
+      "status": "in-progress",
+      "adapter": "Existing ExtensionUIContext.select and attached-session interaction owner",
+      "reviewPolicy": "Ask approves a configuration-checked context selection; Plan blocks selection; cancellation and changed targets cannot commit",
+      "states": [
+        "approval",
+        "decline",
+        "cancel",
+        "late response"
+      ],
+      "tests": [
+        "packages/coding-agent/test/xcsh-context-tool.test.ts"
+      ],
+      "persistence": [
+        "Current process environment overlay only; saved context files remain unchanged"
+      ],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Automated approval and cancellation tests cover the selection contract. Physical terminal and phone interaction evaluation remains pending."
+      ]
+    },
+    {
+      "surface": {
         "id": "source:packages/coding-agent/src/autoresearch/dashboard.ts",
         "source": "packages/coding-agent/src/autoresearch/dashboard.ts",
         "kind": "integration"

@@ -149,14 +149,24 @@ describe("progressive context loading", () => {
 		try {
 			expect(session.settings.get("context.loadingMode")).toBe("eager");
 			const activeToolNames = session.getActiveToolNames();
+			expect(activeToolNames).toContain("xcsh_context");
 			expect(activeToolNames).toEqual(
 				expect.arrayContaining(["read", "grep", "find", "bash", "edit", "write", "search_tool_bm25"]),
 			);
 			expect(
 				activeToolNames.every(name =>
-					["read", "grep", "find", "bash", "python", "edit", "write", "xcsh_api", "search_tool_bm25"].includes(
-						name,
-					),
+					[
+						"read",
+						"grep",
+						"find",
+						"bash",
+						"python",
+						"edit",
+						"write",
+						"xcsh_api",
+						"xcsh_context",
+						"search_tool_bm25",
+					].includes(name),
 				),
 			).toBe(true);
 			expect(activeToolNames).not.toContain("task");

@@ -53,6 +53,7 @@ import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
 import { WriteTool } from "./write";
 import { XcshApiTool } from "./xcsh-api";
+import { XcshContextTool } from "./xcsh-context";
 
 // Exa MCP tools (22 tools)
 
@@ -108,6 +109,7 @@ export type { DiscoverableMCPTool } from "../mcp/discoverable-tool-metadata";
 
 /** Session context for tool factories */
 export interface ToolSession {
+	getContextService?: () => Promise<import("../services/xcsh-context").ContextService>;
 	personProfileService?: import("../person-profile/service").PersonProfileService;
 	machineProfileService?: import("../person-profile/machine-profile").MachineProfileService;
 	/** Current working directory */
@@ -226,6 +228,7 @@ type ToolFactory = (session: ToolSession) => Tool | null | Promise<Tool | null>;
 
 export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	person_profile: s => new PersonProfileTool(s),
+	xcsh_context: s => new XcshContextTool(s),
 	machine_profile: s => new MachineProfileTool(s),
 	ast_grep: s => new AstGrepTool(s),
 	ast_edit: s => new AstEditTool(s),

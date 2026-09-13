@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6f58ec9c2a3d2008b51841e0299d86cfa4559e65",
-  "fingerprint": "b7abcf0d7950e3292514cd1b11c47ef60c33df2de043afefefcaee9b946afa3b",
+  "revision": "063ff37866168e904a48ae5db0ad65259b9196bd",
+  "fingerprint": "0c784df790b5d4fdc5a13886ba2ea4815f370984de7865b648251712e68e3581",
   "counts": {
     "total": 241,
     "components": 95,
@@ -4340,7 +4340,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "f808800569602cbfa7aebb1a24b095a78afad6e213e5b0de17b1daaa9cf60ac4",
+      "sha256": "10572dfa64d1d62f47374b5f1a6541ee8822b60533aae5b59ef6ceec024733df",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",

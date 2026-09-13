@@ -1177,6 +1177,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 			},
 			settings: toolSettings,
+			getContextService: async () => {
+				// The CLI owns one context per process. Never select a different SDK session's settings.
+				if (Settings.instance !== settings) throw new Error("Context settings are not owned by this session");
+				const { ContextService } = await import("./services/xcsh-context");
+				return ContextService.getOrInit(undefined, cwd);
+			},
 			authStorage,
 			modelRegistry,
 			asyncJobManager,
@@ -1784,6 +1790,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			"edit",
 			"write",
 			"xcsh_api",
+			"xcsh_context",
 			"search_tool_bm25",
 		];
 		const eagerRequestedActiveToolNames = requestedActiveToolNames.filter(

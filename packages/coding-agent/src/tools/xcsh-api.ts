@@ -58,6 +58,12 @@ function loadAllowedNamespaceTypes(domain?: string): ReadonlySet<NamespaceType> 
 }
 
 const xcshApiSchema = Type.Object({
+	contextName: Type.Optional(
+		Type.String({
+			description:
+				"Expected active context name. Rejects the call before network I/O if this session is using a different context. Supply the user's requested context after selection.",
+		}),
+	),
 	method: Type.Union(
 		[Type.Literal("GET"), Type.Literal("POST"), Type.Literal("PUT"), Type.Literal("PATCH"), Type.Literal("DELETE")],
 		{ description: "HTTP method" },
@@ -81,6 +87,12 @@ const xcshApiSchema = Type.Object({
 		}),
 	),
 	payload: Type.Optional(Type.Unknown({ description: "JSON body for POST/PUT/PATCH/DELETE requests" })),
+	expandDiscovery: Type.Optional(
+		Type.Boolean({
+			description:
+				"Set false for a scoped GET of one resource type: preserve its full response and avoid automatic namespace-wide discovery. Defaults to true for compatibility. Applies to single path GETs.",
+		}),
+	),
 });
 
 type XcshApiParams = Static<typeof xcshApiSchema>;
@@ -823,6 +835,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	}
 
 	async execute(_toolCallId: string, params: XcshApiParams, signal?: AbortSignal): Promise<XcshApiResult> {
+		if (params.contextName !== undefined && params.contextName !== this.#contextEnv.getContextName()) {
+			return this.#errorResult(
+				"Context does not match the requested target. Complete xcsh_context activation and inspect its result before querying resources.",
+			);
+		}
 		const [apiBase, apiToken] = this.#resolveCredentials();
 		if (apiBase && apiBase !== this.#lastApiBase) this.#warmTls();
 		if (!apiBase) {
@@ -869,7 +886,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// Per-namespace auto-expand: when the model GETs a namespace list endpoint,
 		// batch ALL types for that namespace on first access. Each namespace expands once.
 		// File-based cache in #executeBatch prevents redundant API calls across sessions.
-		if (params.method === "GET" && !params.payload) {
+		if (params.method === "GET" && !params.payload && params.expandDiscovery !== false) {
 			const listablePaths = this.#loadListablePaths();
 			// Use the auto-expand trigger list (excludes healthcheck) to decide WHETHER to expand.
 			// The batch itself uses the full listablePaths (includes healthcheck) for content.
