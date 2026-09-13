@@ -14,6 +14,11 @@ execute through the same attached agent session.
 2. Select through `xcsh_context` using the same `ContextService.activate` operation
    as `/context <name>`. The terminal slash command remains available. Selection
    changes the process's context environment overlay, not the saved credential file.
+   Exact named-tool requests are buffered until the requested call is complete. If
+   the provider reaches its output limit before emitting that call, the backend
+   retries once with the same tool choice and a transient call-only reminder. A
+   second incomplete response or a substituted tool becomes a sanitized failure;
+   neither partial text nor an unrequested call reaches history or execution.
 3. Wait for selection and connectivity validation. Ask approvals belong to the
    attached session. Declines, cancellation, changed configuration during review,
    and Plan mode prevent a pending selection from committing. Late authentication
@@ -120,9 +125,11 @@ investigate provider tool-choice handling. `--sse-diagnostic` disables backend
 WebSockets to compare transport behavior. Receipts mark these variants as ineligible for
 qualification. They are diagnostic comparisons, not alternative acceptance runs.
 WebSocket observations retain only tool counts and capability/choice booleans.
-Synthetic assistant text is retained per turn, so an incorrect first answer cannot
-be concealed by a later successful answer. Separate-turn selection must complete
-before the follow-up begins.
+Accepted synthetic assistant text is retained per turn, so an incorrect answer
+cannot be concealed by a later successful answer. A rejected forced-tool attempt is
+instead represented by aggregate request and outcome metadata: its partial prose and
+arguments are deliberately not exposed or persisted. Separate-turn selection must
+complete before the follow-up begins.
 
 See [GPT-Live guidance review](LIVE-GUIDANCE.md) for the voice/backend prompt
 boundary, interruption semantics, transport differences, and remaining gates.

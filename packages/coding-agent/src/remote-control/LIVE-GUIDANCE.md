@@ -46,6 +46,12 @@ against a different selected context. Structured response phase metadata routes
 progress and final output; private reasoning is excluded. Native result chunks
 remain bounded by the pinned transport contract.
 
+When the backend explicitly requires `xcsh_context`, it treats that named choice as
+an execution boundary. The response stays private until the matching call is
+complete. A pre-invocation output-limit stop receives one retry with the same named
+choice; cancellation is not retried, and substituted tools are never dispatched.
+This preserves backend ownership without asking the voice model to select credentials.
+
 At-most-once submission is not exactly-once execution: crash-gap reconciliation
 remains an acceptance limitation. Do not retry an uncertain mutation merely
 because its spoken result was lost.
@@ -61,7 +67,8 @@ follow-ups, corrections, pauses, cancellation, and access failures.
 
 The broader executing-agent run exposed false claims that a registered context
 tool was unavailable. Provider-request observations confirmed its schema was
-present. Prompt clarification alone did not eliminate this failure. A bounded SSE
-comparison also reproduced it, so switching transport is not an established fix. It remains a
-qualification blocker; successful samples and passing deterministic tests do not
-justify deploying the candidate as accepted.
+present, and a bounded SSE comparison ruled out transport as the cause. The backend
+now guards the exact named-tool request as described above. Deterministic length,
+repeat-failure, cancellation, and substituted-tool cases plus bounded live TUI and
+delegated-voice checks cover the repair. A clean full evaluator run and physical
+phone interaction remain separate release gates.
