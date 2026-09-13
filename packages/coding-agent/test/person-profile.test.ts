@@ -193,7 +193,7 @@ test("four independent processes share one store without lost updates", async ()
 	expect(Object.keys((await service.get()).facts)).toHaveLength(4);
 });
 
-test("reconciliation requires explicit source configuration", async () => {
+test("fresh profiles discover available sources automatically and configuration can disable discovery", async () => {
 	const { service } = await setup();
 	let calls = 0;
 	service.registerProfileCollector({
@@ -206,14 +206,137 @@ test("reconciliation requires explicit source configuration", async () => {
 		},
 	});
 	await service.reconcileFromCollectors();
-	expect(calls).toBe(0);
-	await service.refresh(["configured"], 0, undefined, true);
+	expect(calls).toBe(1);
+	await service.refresh([], (await service.get()).revision, undefined, true);
 	await service.reconcileFromCollectors();
-	expect(calls).toBe(2);
+	expect(calls).toBe(1);
+	await service.refresh(["configured"], (await service.get()).revision, undefined, true);
 	const profile = await service.get();
 	await service.update({ jobTitle: "Corrected engineer" }, profile.revision);
 	await service.reconcileFromCollectors();
 	expect((await service.get()).facts.jobTitle).toBe("Corrected engineer");
+});
+
+test("conflicting collected evidence is retained as observation without replacing the person", async () => {
+	const { service } = await setup();
+	await service.update({ email: "human@example.com" });
+	service.registerProfileCollector({
+		id: "account",
+		name: "Account",
+		available: async () => true,
+		collect: async () => ({ email: "account@example.com" }),
+	});
+	await service.refresh(["account"]);
+	const profile = await service.get();
+	expect(profile.facts.email).toBe("human@example.com");
+	expect(profile.observations).toContainEqual(
+		expect.objectContaining({
+			field: "email",
+			value: "account@example.com",
+			source: "account",
+			kind: "observed",
+		}),
+	);
+	await service.forget(["email"]);
+	await service.refresh(["account"]);
+	expect(JSON.stringify(await service.get())).not.toContain("@example.com");
+});
+
+test("switching a collector account cannot silently replace the human", async () => {
+	const { service } = await setup();
+	let account = "example-account-a";
+	service.registerProfileCollector({
+		id: "identity",
+		name: "Identity",
+		available: async () => true,
+		collect: async () => ({ givenName: account, identifiers: { github: account } }),
+	});
+	await service.refresh(["identity"]);
+	account = "example-account-b";
+	await service.refresh(["identity"]);
+	const profile = await service.get();
+	expect(profile.facts.givenName).toBe("example-account-a");
+	expect(profile.observations).toContainEqual(
+		expect.objectContaining({ field: "givenName", value: "example-account-b", kind: "observed" }),
+	);
+});
+
+test("forgetting email also suppresses email-bearing account evidence", async () => {
+	const { service } = await setup();
+	service.registerProfileCollector({
+		id: "mail_account",
+		name: "Mail account",
+		available: async () => true,
+		collect: async () => ({
+			facts: {},
+			observations: [
+				{
+					field: "accounts",
+					value: [{ provider: "synthetic", identifier: "synthetic@example.com", principalType: "user" }],
+					source: "mail_account",
+					kind: "observed",
+					observedAt: new Date().toISOString(),
+				},
+			],
+		}),
+	});
+	await service.refresh(["mail_account"]);
+	await service.forget(["email"]);
+	await service.refresh(["mail_account"]);
+	expect(JSON.stringify(await service.get())).not.toContain("synthetic@example.com");
+});
+
+test("structured personal attributes accumulate and can be corrected or forgotten individually", async () => {
+	const { service } = await setup();
+	await service.update({ additionalProperty: [{ propertyID: "favorite_color", value: "green" }] });
+	await service.update({
+		additionalProperty: [{ propertyID: "preferred_editor", value: "synthetic-editor" }],
+	});
+	await service.update({ additionalProperty: [{ propertyID: "favorite_color", value: "blue" }] });
+	const before = await service.get();
+	expect(before.facts).toHaveProperty("additionalProperty", [
+		{ propertyID: "favorite_color", value: "blue" },
+		{ propertyID: "preferred_editor", value: "synthetic-editor" },
+	]);
+	await service.forget([], undefined, undefined, undefined, ["favorite_color"]);
+	const after = await service.get();
+	expect(JSON.stringify(after)).not.toContain('"blue"');
+	expect(JSON.stringify(after)).toContain("synthetic-editor");
+	expect(after).toHaveProperty("suppressedProperties.favorite_color");
+});
+
+test("personal attribute observations keep distinct keys and forgetting suppresses their return", async () => {
+	const { service } = await setup();
+	const observe = (propertyID: string, value: string) =>
+		service.observe([
+			{
+				field: "additionalProperty",
+				value: [{ propertyID, value }],
+				source: "synthetic",
+				kind: "observed",
+				observedAt: new Date().toISOString(),
+			},
+		]);
+	await observe("favorite_color", "green");
+	await observe("preferred_editor", "synthetic-editor");
+	expect((await service.get()).observations).toHaveLength(2);
+	await service.forget([], undefined, undefined, undefined, ["favorite_color"]);
+	await observe("favorite_color", "green");
+	const after = await service.get();
+	expect(after.observations).toHaveLength(1);
+	expect(JSON.stringify(after)).not.toContain('"green"');
+});
+
+test("unregister is scoped to its extension and source discovery is programmatic", async () => {
+	const { service } = await setup();
+	service.registerProfileCollector(
+		{ id: "custom", name: "Custom", available: async () => true, collect: async () => ({}) },
+		"owner",
+	);
+	expect(service.listCollectors()).toEqual([{ id: "custom", name: "Custom" }]);
+	expect(service.unregisterProfileCollector("custom", "other")).toBe(false);
+	expect(service.unregisterProfileCollector("custom", "owner")).toBe(true);
+	expect(service.listCollectors()).toEqual([]);
 });
 
 test("repeated normalized updates are idempotent and collectors cannot steal ownership", async () => {
@@ -312,4 +435,37 @@ test("Ask reviews proposed facts, declines safely and checks revision after appr
 		} as never),
 	).rejects.toThrow("revision conflict");
 	expect((await service.get()).facts.jobTitle).toBe("Corrected synthetic role");
+});
+
+test("personal attribute ownership protects corrections while other source attributes refresh", async () => {
+	const { service } = await setup();
+	let color = "green";
+	service.registerProfileCollector({
+		id: "attributes",
+		name: "Synthetic attributes",
+		available: async () => true,
+		collect: async () => ({
+			additionalProperty: [
+				{ propertyID: "favorite_color", value: color },
+				{ propertyID: "preferred_editor", value: "synthetic-editor" },
+			],
+		}),
+	});
+	await service.refresh(["attributes"]);
+	await service.update({ additionalProperty: [{ propertyID: "favorite_color", value: "blue" }] });
+	const corrected = await service.get();
+	const repeated = await service.update({ additionalProperty: [{ propertyID: "favorite_color", value: "blue" }] });
+	expect(repeated.revision).toBe(corrected.revision);
+	color = "red";
+	await service.refresh(["attributes"]);
+	const refreshed = await service.get();
+	expect(refreshed.facts.additionalProperty?.find(p => p.propertyID === "favorite_color")?.value).toBe("blue");
+	expect(refreshed.propertyProvenance?.favorite_color.owner).toBe("user");
+	expect(refreshed.propertyProvenance?.preferred_editor.owner).toBe("attributes");
+	expect(refreshed.observations.some(o => o.field === "additionalProperty")).toBe(true);
+	await service.forget([], undefined, undefined, undefined, ["favorite_color"]);
+	await service.refresh(["attributes"]);
+	expect((await service.get()).facts.additionalProperty).toEqual([
+		{ propertyID: "preferred_editor", value: "synthetic-editor" },
+	]);
 });

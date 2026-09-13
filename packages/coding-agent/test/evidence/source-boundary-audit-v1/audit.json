@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "e69dde39e3c49f1104a692e87aff6cb3e9496149",
-  "fingerprint": "fdc173c2818b2b0292420b043f1fbd44bd506906a021bfa6cdd5896443b4075e",
+  "revision": "cba1810714d2d7465f870cbfe9aba1c05add0770",
+  "fingerprint": "20efb02ddfb3165dd1871bcf8feddb2fe9eb91168fda4713201175f1816735f2",
   "counts": {
     "total": 241,
     "components": 95,
@@ -498,7 +498,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "88728bc44906b458c9f8c3d81e3da781baf5141f0700d9ecc826333d90d364bd",
+      "sha256": "1fa5dac3f91076d7f1ad95da852d30a0282c9d5356ffccb9dc6839645e4ac907",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -526,12 +526,12 @@
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
+        "packages/coding-agent/test/person-extension-contract.test.ts",
         "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/xcsh-context-service.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts",
-        "packages/tui/test/loader.test.ts"
+        "packages/tui/test/cancellable-loader.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -585,7 +585,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "6cd04db17a1b1aff81315569fd127dbab38583e2b9467385af653cc8dddabdb2",
+      "sha256": "cf386deb85597e12bba18eef200403fc158c81307a77aec0a3b04f2be932efdc",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -880,13 +880,14 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "39f7e8a6a2eb645f2b28c2f44e21d99916975bfe9d92f9a6153e55e4859fcf0b",
+      "sha256": "3ecda0b4a9466971e438f68796cc4e9a68f1b3bbe9ca0c492d2c0a65df23ef18",
       "exports": [
         "Container",
         "ExtensionEditorComponent",
         "ExtensionInputComponent",
         "ExtensionSelectorComponent",
         "Markdown",
+        "PersonProfileService",
         "Settings",
         "Spacer",
         "StringEnum",
@@ -894,6 +895,7 @@
         "VERSION",
         "discoverSlashCommands",
         "getAgentDir",
+        "loadProfile",
         "logger",
         "settings",
         "type FileSlashCommand"
@@ -4324,7 +4326,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "5e978ba0ec3c4e3f1fdef92213522fb5c390abd86671bfa8de2e6c85b29d3511",
+      "sha256": "f808800569602cbfa7aebb1a24b095a78afad6e213e5b0de17b1daaa9cf60ac4",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -6138,12 +6140,12 @@
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
+        "packages/coding-agent/test/person-extension-contract.test.ts",
         "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/xcsh-context-service.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts",
-        "packages/tui/test/loader.test.ts"
+        "packages/tui/test/cancellable-loader.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

@@ -250,7 +250,32 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 	}
 
 	registerProfileCollector(collector: ProfileCollector): void {
-		personProfileService.registerProfileCollector(collector, this.extension.resolvedPath);
+		if (!collector || typeof collector.collect !== "function") throw new Error("Invalid person profile collector");
+		personProfileService.registerProfileCollector(
+			{
+				...collector,
+				async collect(signal) {
+					const result = await collector.collect(signal);
+					if ("facts" in result) return result;
+					// Legacy flat output does not distinguish queried values from heuristic inference.
+					// Keep it as candidates; modern collectors can return explicit facts/observations.
+					return {
+						facts: {},
+						observations: Object.entries(result).map(([field, value]) => ({
+							field: field as keyof typeof result,
+							value,
+							source: collector.id,
+							kind: "inferred" as const,
+							observedAt: new Date().toISOString(),
+						})),
+					};
+				},
+			},
+			this.extension.resolvedPath,
+		);
+	}
+	unregisterProfileCollector(id: string): boolean {
+		return personProfileService.unregisterProfileCollector(id, this.extension.resolvedPath);
 	}
 
 	registerProvider(name: string, config: import("./types").ProviderConfig): void {

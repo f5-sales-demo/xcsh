@@ -9383,6 +9383,25 @@
     },
     {
       "surface": {
+        "id": "dialog:packages/coding-agent/src/tools/machine-profile.ts:select:1",
+        "source": "packages/coding-agent/src/tools/machine-profile.ts",
+        "kind": "extension-dialog"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "dialog:packages/coding-agent/src/tools/person-profile.ts:select:1",
         "source": "packages/coding-agent/src/tools/person-profile.ts",
         "kind": "extension-dialog"

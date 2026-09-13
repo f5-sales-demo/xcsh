@@ -7,7 +7,7 @@ import type {
 import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import { FieldSchema, PersonFactsSchema, type PersonProfile } from "../person-profile/schema";
+import { FieldSchema, PersonFactsSchema, type PersonProfile, PropertyIdSchema } from "../person-profile/schema";
 import { personProfileService } from "../person-profile/service";
 import personProfileToolTemplate from "../prompts/tools/person-profile.md" with { type: "text" };
 import { isRemoteAsk } from "../sandbox/remote-permissions";
@@ -21,12 +21,22 @@ const schema = Type.Object(
 			Type.Literal("update"),
 			Type.Literal("refresh"),
 			Type.Literal("forget"),
+			Type.Literal("observe"),
+			Type.Literal("sources"),
 		]),
 		facts: Type.Optional(PersonFactsSchema),
+		source: Type.Optional(Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" })),
+		kind: Type.Optional(Type.Union([Type.Literal("observed"), Type.Literal("inferred")])),
 		fields: Type.Optional(Type.Array(FieldSchema, { minItems: 1, maxItems: 100 })),
-		sources: Type.Optional(
-			Type.Array(Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" }), { minItems: 1, maxItems: 32 }),
+		propertyIds: Type.Optional(
+			Type.Array(PropertyIdSchema, {
+				minItems: 1,
+				maxItems: 100,
+				description:
+					"Forget individual xcsh-specific personal attributes by propertyID without deleting unrelated attributes",
+			}),
 		),
+		sources: Type.Optional(Type.Array(Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" }), { maxItems: 32 })),
 		configure: Type.Optional(
 			Type.Boolean({
 				description: "Enable subsequent background reconciliation for the explicitly selected refresh sources",
@@ -52,6 +62,13 @@ export class PersonProfileTool implements AgentTool<typeof schema> {
 	): Promise<AgentToolResult<unknown>> {
 		if (!Value.Check(schema, args)) throw new Error("Invalid person profile operation");
 		const service = this.session.personProfileService ?? personProfileService;
+		if (args.action === "sources") {
+			const sources = service.listCollectors();
+			return {
+				content: [{ type: "text", text: JSON.stringify({ sources }) }],
+				details: { sourceCount: sources.length },
+			};
+		}
 		if (args.action !== "get") {
 			enforcePlanModeWrite(this.session, service.path);
 			if (args.revision === undefined)
@@ -61,11 +78,13 @@ export class PersonProfileTool implements AgentTool<typeof schema> {
 			if (signal?.aborted) throw new Error("Person profile operation cancelled");
 			if (!context?.hasUI || !context.ui) throw new Error("Person profile approval unavailable");
 			const proposal =
-				args.action === "update"
-					? args.facts
-					: args.action === "forget"
-						? args.fields
-						: { sources: args.sources, configure: args.configure ?? false };
+				args.action === "observe"
+					? { facts: args.facts, source: args.source, kind: args.kind }
+					: args.action === "update"
+						? args.facts
+						: args.action === "forget"
+							? { fields: args.fields, propertyIds: args.propertyIds }
+							: { sources: args.sources, configure: args.configure ?? false };
 			const choice = await context.ui.select(
 				`Approve person profile ${args.action}: ${JSON.stringify(proposal)}`,
 				["Allow once", "Decline"],
@@ -77,19 +96,43 @@ export class PersonProfileTool implements AgentTool<typeof schema> {
 			if (choice !== "Allow once") throw new Error("Person profile operation declined");
 		}
 		let result: PersonProfile;
+		const canCommit = () => !this.session.getPlanModeState?.()?.enabled;
+		if (args.action !== "get") enforcePlanModeWrite(this.session, service.path);
 		switch (args.action) {
 			case "get":
 				result = await service.get();
 				break;
 			case "update":
 				if (!args.facts) throw new Error("Person profile facts required");
-				result = await service.update(args.facts, args.revision, signal);
+				result = await service.update(args.facts, args.revision, signal, canCommit);
+				break;
+			case "observe":
+				if (!args.facts || !args.source || !args.kind)
+					throw new Error("Person profile evidence, source and kind required");
+				result = await service.observe(
+					Object.entries(args.facts).map(([field, value]) => ({
+						field: field as keyof typeof args.facts,
+						value,
+						source: args.source!,
+						kind: args.kind!,
+						observedAt: new Date().toISOString(),
+					})),
+					args.revision,
+					signal,
+					canCommit,
+				);
 				break;
 			case "forget":
-				result = await service.forget(args.fields ?? [], args.revision, signal);
+				result = await service.forget(args.fields ?? [], args.revision, signal, canCommit, args.propertyIds);
 				break;
 			case "refresh":
-				result = await service.refresh(args.sources ?? [], args.revision, signal, args.configure);
+				result = await service.refresh(
+					args.sources ?? service.listCollectors().map(c => c.id),
+					args.revision,
+					signal,
+					args.configure,
+					canCommit,
+				);
 				break;
 		}
 		return {

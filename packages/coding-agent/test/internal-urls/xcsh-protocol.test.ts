@@ -216,17 +216,18 @@ describe("xcsh://api-spec", () => {
 	});
 });
 
-describe("retired profile routes", () => {
-	it.each(["xcsh://computer"])("does not expose %s", async url => {
-		await expect(createRouter().resolve(url)).rejects.toThrow(
-			`Documentation file not found: ${url.slice("xcsh://".length)}`,
+describe("canonical awareness routes", () => {
+	it("exposes the runtime-validated machine schema without a collection side effect", async () => {
+		const result = await createRouter().resolve("xcsh://computer/schema");
+		expect(JSON.parse(result.content).properties.schemaVersion.const).toBe(1);
+		await expect(createRouter().resolve("xcsh://computer?refresh=true")).rejects.toThrow(
+			"Unsupported machine profile route",
 		);
 	});
-
-	it("advertises the person route while excluding workstation inventory", async () => {
+	it("advertises separate person and machine resources", async () => {
 		const content = (await createRouter().resolve("xcsh://")).content;
 		expect(content).toContain("xcsh://user");
-		expect(content).not.toContain("xcsh://computer");
+		expect(content).toContain("xcsh://computer");
 	});
 });
 

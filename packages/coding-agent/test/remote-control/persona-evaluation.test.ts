@@ -30,3 +30,16 @@ test("only a successful canonical retrieval with matching structured data qualif
 	).toBe(false);
 	expect(scorePersonContract([], expected).passed).toBe(false);
 });
+
+test("canonical retrieval does not excuse a project-memory fallback in a person-only question", () => {
+	const expected = emptyProfile();
+	expect(
+		scorePersonContract(
+			[
+				{ toolName: "person_profile", action: "get", success: true, profile: expected },
+				{ toolName: "read", resource: "memory://root/memory_summary.md", success: true },
+			],
+			expected,
+		).passed,
+	).toBe(false);
+});

@@ -11,7 +11,13 @@ export interface PersonContractInvocation {
 export function scorePersonContract(
 	invocations: readonly PersonContractInvocation[],
 	expected: PersonProfile,
-): { passed: boolean; canonicalCalls: number; matchingOutcomes: number; schemaVersion: number } {
+): {
+	passed: boolean;
+	canonicalCalls: number;
+	matchingOutcomes: number;
+	schemaVersion: number;
+	projectMemoryReads: number;
+} {
 	const canonical = invocations.filter(
 		i =>
 			i.success &&
@@ -26,8 +32,12 @@ export function scorePersonContract(
 			return false;
 		}
 	}).length;
+	const projectMemoryReads = invocations.filter(
+		i => i.toolName === "read" && i.resource?.startsWith("memory://"),
+	).length;
 	return {
-		passed: matchingOutcomes > 0,
+		passed: matchingOutcomes > 0 && projectMemoryReads === 0,
+		projectMemoryReads,
 		canonicalCalls: canonical.length,
 		matchingOutcomes,
 		schemaVersion: expected.schemaVersion,

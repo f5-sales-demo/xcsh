@@ -51,7 +51,7 @@ export default function (pi) {
 				],
 				{
 					cwd: dir,
-					env: { ...process.env, PI_CODING_AGENT_DIR: join(dir, "agent") },
+					env: { ...process.env, PI_CODING_AGENT_DIR: join(dir, "agent"), XCSH_PROFILE_DISCOVERY: "0" },
 					stdout: "pipe",
 					stderr: "pipe",
 				},

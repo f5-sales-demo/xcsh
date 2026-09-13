@@ -1223,6 +1223,7 @@ export interface ExtensionAPI {
 	 */
 	registerProvider(name: string, config: ProviderConfig): void;
 	registerProfileCollector(collector: import("../../person-profile/service").ProfileCollector): void;
+	unregisterProfileCollector(id: string): boolean;
 
 	/** Shared event bus for extension communication. */
 	events: EventBus;

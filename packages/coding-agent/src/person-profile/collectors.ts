@@ -1,6 +1,6 @@
 import { $which } from "@f5-sales-demo/pi-utils";
 import type { UserProfile } from "./schema";
-import type { ProfileCollector } from "./service";
+import type { ProfileCollection, ProfileCollector } from "./service";
 
 // ---------------------------------------------------------------------------
 // Bounded CLI runner
@@ -326,17 +326,28 @@ const systemCollector: ProfileCollector = {
 		return process.platform === "darwin" || process.platform === "linux";
 	},
 
-	async collect(signal?: AbortSignal): Promise<Partial<UserProfile>> {
+	async collect(signal?: AbortSignal): Promise<ProfileCollection> {
 		const profile: Partial<UserProfile> = {};
+		const observations: ProfileCollection["observations"] = [];
+		profile.interactionDevices = [{ identifier: "xcsh://computer", relationship: "uses" }];
 		try {
 			const fullName = await detectSystemFullName(signal);
 			if (fullName) Object.assign(profile, splitFullName(fullName));
 		} catch {}
 		try {
 			const languages = process.platform === "darwin" ? await detectDarwinLanguages(signal) : detectLinuxLanguages();
-			if (languages.length > 0) profile.knowsLanguage = languages;
+			if (languages.length > 0) {
+				profile.preferredLanguage = languages[0];
+				observations.push({
+					field: "knowsLanguage",
+					value: languages,
+					source: "system",
+					kind: "inferred",
+					observedAt: new Date().toISOString(),
+				});
+			}
 		} catch {}
-		return profile;
+		return { facts: profile, observations };
 	},
 };
 
