@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { createDagProfile, type WorkflowJob } from "../../../../scripts/collect-dag-profile";
 import type { WorkloadProfile } from "../../../../scripts/validate-performance-qualification";
 
-const SOURCE_SHA = "0bca45d64934440703556091dc746de41dd5460b";
+const SOURCE_SHA = "68721777f3a2fae473c9ee127539ad7139354040";
 const IMAGE = `registry.example/runner@sha256:${"a".repeat(64)}`;
 
 function profile(phase: string, variant: "dag-control" | "dag-candidate"): WorkloadProfile {

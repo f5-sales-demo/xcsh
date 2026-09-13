@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { createNativeManifest, verifyNativeManifest } from "../../../../scripts/ci-native-manifest";
 
-const SOURCE_SHA = "0bca45d64934440703556091dc746de41dd5460b";
+const SOURCE_SHA = "68721777f3a2fae473c9ee127539ad7139354040";
 
 async function fixture() {
 	const root = await mkdtemp(path.join(tmpdir(), "xcsh-native-manifest-"));

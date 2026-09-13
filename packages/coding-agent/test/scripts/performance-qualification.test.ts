@@ -6,7 +6,7 @@ import {
 	type WorkloadProfile,
 } from "../../../../scripts/validate-performance-qualification";
 
-const SOURCE_SHA = "0bca45d64934440703556091dc746de41dd5460b";
+const SOURCE_SHA = "68721777f3a2fae473c9ee127539ad7139354040";
 
 function profile(
 	phase: string,

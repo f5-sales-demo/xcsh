@@ -7,7 +7,7 @@ on:
       source_sha:
         description: Frozen xcsh source commit
         required: true
-        default: 0bca45d64934440703556091dc746de41dd5460b
+        default: 68721777f3a2fae473c9ee127539ad7139354040
       experiment:
         description: One independently promoted experiment side
         required: true
@@ -41,7 +41,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  FROZEN_SOURCE_SHA: 0bca45d64934440703556091dc746de41dd5460b
+  FROZEN_SOURCE_SHA: 68721777f3a2fae473c9ee127539ad7139354040
 
 jobs:
   prepare:
