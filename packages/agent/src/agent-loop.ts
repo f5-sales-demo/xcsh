@@ -133,6 +133,21 @@ function exactToolName(choice: AgentLoopConfig["toolChoice"]): string | undefine
 	return "function" in choice ? choice.function.name : choice.name;
 }
 
+function forcedToolRetryContext(context: Context, toolName: string): Context {
+	return {
+		...context,
+		messages: [
+			...context.messages,
+			{
+				role: "developer",
+				content: `The previous response ended before the required tool call. Call ${toolName} now without explanatory text.`,
+				attribution: "agent",
+				timestamp: Date.now(),
+			},
+		],
+	};
+}
+
 interface BufferedAssistantResponse {
 	message: AssistantMessage;
 	events: Array<Extract<AgentEvent, { type: "message_start" | "message_update" | "message_end" }>>;
@@ -452,8 +467,9 @@ async function streamAssistantResponse(
 		// subscribers, or execution. A provider may exhaust its output budget before emitting the
 		// call; retry that pre-invocation failure once with the exact same choice.
 		for (let attempt = 0; attempt < 2; attempt++) {
+			const attemptContext = attempt === 0 ? llmContext : forcedToolRetryContext(llmContext, requiredToolName);
 			const response = await logger.ttftAttr("ttft.stream-fn", () =>
-				streamFunction(config.model, llmContext, {
+				streamFunction(config.model, attemptContext, {
 					...config,
 					apiKey: resolvedApiKey,
 					toolChoice: selectedToolChoice,

@@ -54,6 +54,7 @@ function response(message: AssistantMessage): AssistantMessageEventStream {
 
 function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
 	const calls: Array<SimpleStreamOptions["toolChoice"]> = [];
+	const requestMessages: string[][] = [];
 	const invocations: Array<{ name: string; contextName?: string }> = [];
 	const events: AgentEvent[] = [];
 	const interceptedUpdates: string[] = [];
@@ -89,8 +90,15 @@ function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
 		context,
 		config,
 		signal,
-		(_model: Model, _context, options) => {
+		(_model: Model, requestContext, options) => {
 			calls.push(options?.toolChoice);
+			requestMessages.push(
+				requestContext.messages.map(message =>
+					typeof message.content === "string"
+						? message.content
+						: message.content.map(content => (content.type === "text" ? content.text : "")).join(""),
+				),
+			);
 			return response(messages[responseIndex++]!);
 		},
 	);
@@ -98,7 +106,7 @@ function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
 		for await (const event of stream) events.push(event);
 		return await stream.result();
 	};
-	return { calls, context, events, interceptedUpdates, invocations, run };
+	return { calls, context, events, interceptedUpdates, invocations, requestMessages, run };
 }
 
 describe("exact named tool choice", () => {
@@ -115,10 +123,18 @@ describe("exact named tool choice", () => {
 		const result = await harness.run();
 
 		expect(harness.calls.slice(0, 2)).toEqual([forcedChoice, forcedChoice]);
+		expect(harness.calls[1]).toBe(harness.calls[0]);
+		expect(harness.requestMessages[0]).not.toContain(
+			"The previous response ended before the required tool call. Call xcsh_context now without explanatory text.",
+		);
+		expect(harness.requestMessages[1]).toContain(
+			"The previous response ended before the required tool call. Call xcsh_context now without explanatory text.",
+		);
 		expect(harness.invocations).toEqual([{ name: "xcsh_context", contextName: "intended" }]);
 		expect(JSON.stringify(harness.events)).not.toContain("PRIVATE_INCOMPLETE");
 		expect(JSON.stringify(harness.interceptedUpdates)).not.toContain("PRIVATE_INCOMPLETE");
 		expect(JSON.stringify(result)).not.toContain("PRIVATE_INCOMPLETE");
+		expect(JSON.stringify(result)).not.toContain("The previous response ended before the required tool call.");
 	});
 
 	it("returns a sanitized failure when the bounded retry also stops for length", async () => {
