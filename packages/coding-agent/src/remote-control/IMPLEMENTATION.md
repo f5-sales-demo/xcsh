@@ -2765,6 +2765,11 @@ acknowledgement. A settings notification immediately refreshes the host's thread
 snapshot and the app's selected controls.
 The app also sends its advertised `multiAgentMode` value with settings changes;
 xcsh accepts the canonical `explicitRequestOnly` value and rejects other modes.
+After a successful resume response, the host replays the active settings
+snapshot to that subscribed client. This compensates for the iPhone control
+rehydrating from the catalog default while preserving the model catalog's
+global default and the thread's actual effort, collaboration mode, and
+permission state.
 Settings updates and turn starts share an admission queue, so sending immediately
 after a tap waits for credential validation and persistence instead of racing the
 old model. Once any owner publishes a validated catalog, the compatibility

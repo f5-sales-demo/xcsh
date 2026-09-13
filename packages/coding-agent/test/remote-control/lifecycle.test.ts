@@ -301,6 +301,15 @@ test("the bridge keeps the subscribed remote thread across a Plan execution sess
 		},
 	});
 	await phone.call("protocol", { request: { id: 2, method: "thread/resume", params: { threadId: oldId } } });
+	const settingsDeadline = Date.now() + 1000;
+	while (events.length < 1 && Date.now() < settingsDeadline) await Bun.sleep(5);
+	expect(events).toMatchObject([
+		{
+			method: "thread/settings/updated",
+			params: { threadId: oldId, threadSettings: { model: session.model?.id, effort: null } },
+		},
+	]);
+	events.length = 0;
 	await session.newSession({ forkedFromId: oldId, remoteThreadId: oldId });
 	const executionSessionId = session.sessionId;
 	expect(executionSessionId).not.toBe(oldId);

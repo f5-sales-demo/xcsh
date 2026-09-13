@@ -1175,8 +1175,12 @@ available catalog, validates effort against that target model, and applies the
 pair through the same conversation-scoped model-selection transaction as the
 TUI. The transaction records manual routing pin and persists the session before
 acknowledging the tap. Effort-only changes are also flushed before the response.
-The validator accepts the app's canonical `multiAgentMode:
-"explicitRequestOnly"` setting and rejects unsupported values.
+The validator accepts the app's canonical
+`multiAgentMode: "explicitRequestOnly"` setting and rejects unsupported values.
+After every successful `thread/resume` response, the host sends that client the
+current settings notification. This restores the effort control from the live
+thread instead of the model catalog's default when the iPhone reopens the
+conversation.
 Unavailable models, hidden historical models, unsupported efforts, service
 tiers, and changes during an active turn fail without switching models. The
 resulting settings notification updates host discovery immediately instead of

@@ -86,6 +86,7 @@ function initializeCapabilities(value: unknown): InitializeCapabilities {
 }
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
+	collaborationMode?: "plan" | "default";
 	models?: RemoteModelDescriptor[];
 	requests?: InteractionRequest[];
 	skills?: Array<{
@@ -129,6 +130,52 @@ export class RemoteRouter {
 	}
 	#emit(client: string, event: Notification): void {
 		if (!this.#notificationOptOuts.get(client)?.has(event.method)) this.notify(client, event);
+	}
+	replayThreadSettings(client: string, threadId: string, response: unknown): void {
+		if (!this.subscribed(client, threadId) || !response || typeof response !== "object" || Array.isArray(response))
+			return;
+		const resumed = response as Record<string, unknown>;
+		const session = this.sessions.get(threadId);
+		const model = resumed.model;
+		const modelProvider = resumed.modelProvider;
+		const cwd = resumed.cwd;
+		const effort = resumed.reasoningEffort;
+		if (
+			!session ||
+			typeof model !== "string" ||
+			typeof modelProvider !== "string" ||
+			typeof cwd !== "string" ||
+			(effort !== null && typeof effort !== "string") ||
+			model !== session.thread.model ||
+			modelProvider !== session.thread.modelProvider ||
+			cwd !== session.thread.cwd ||
+			effort !== session.thread.reasoningEffort
+		)
+			return;
+		this.#emit(client, {
+			method: "thread/settings/updated",
+			params: {
+				threadId,
+				threadSettings: {
+					cwd,
+					approvalPolicy: resumed.approvalPolicy,
+					approvalsReviewer: resumed.approvalsReviewer,
+					sandboxPolicy: resumed.sandbox,
+					activePermissionProfile: resumed.activePermissionProfile ?? null,
+					model,
+					modelProvider,
+					serviceTier: resumed.serviceTier ?? null,
+					effort,
+					summary: null,
+					collaborationMode: {
+						mode: session.collaborationMode ?? "default",
+						settings: { model, reasoning_effort: effort, developer_instructions: null },
+					},
+					multiAgentMode: "explicitRequestOnly",
+					personality: null,
+				},
+			},
+		});
 	}
 	close(client: string): void {
 		this.#clients.delete(client);
@@ -212,9 +259,12 @@ export class RemoteRouter {
 				const model = (settings as Record<string, unknown>).model;
 				const provider = (settings as Record<string, unknown>).modelProvider;
 				const effort = (settings as Record<string, unknown>).effort;
+				const mode = ((settings as Record<string, unknown>).collaborationMode as { mode?: unknown } | undefined)
+					?.mode;
 				if (typeof model === "string") session.thread.model = model;
 				if (typeof provider === "string") session.thread.modelProvider = provider;
 				if (effort === null || typeof effort === "string") session.thread.reasoningEffort = effort;
+				if (mode === "plan" || mode === "default") session.collaborationMode = mode;
 				const descriptor = session.models?.find(item => item.id === model && item.provider === provider);
 				if (descriptor) {
 					session.thread.supportedReasoningEfforts = descriptor.supportedReasoningEfforts;

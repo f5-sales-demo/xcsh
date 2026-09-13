@@ -118,6 +118,31 @@ function registrationModels(value: unknown): NonNullable<SessionEndpoint["models
 	return value as NonNullable<SessionEndpoint["models"]>;
 }
 
+function registrationCollaborationMode(value: unknown): NonNullable<SessionEndpoint["collaborationMode"]> {
+	if (value == null) return "default";
+	if (value !== "plan" && value !== "default")
+		throw new ProtocolError(-32602, "Invalid collaboration mode registration");
+	return value;
+}
+
+function replayResumeSettings(
+	router: RemoteRouter,
+	client: string,
+	request: unknown,
+	response: unknown,
+	defer: boolean,
+): void {
+	if (!request || typeof request !== "object" || Array.isArray(request)) return;
+	const message = request as { method?: unknown; params?: { threadId?: unknown } };
+	if (message.method !== "thread/resume" || typeof message.params?.threadId !== "string") return;
+	if (!response || typeof response !== "object" || Array.isArray(response)) return;
+	const envelope = response as { error?: unknown; result?: unknown };
+	if (envelope.error != null || !Object.hasOwn(envelope, "result")) return;
+	const replay = () => router.replayThreadSettings(client, message.params!.threadId as string, envelope.result);
+	if (defer) setTimeout(replay, 0);
+	else replay();
+}
+
 export async function startLocalHost(
 	socketPath: string,
 	version: string,
@@ -153,7 +178,11 @@ export async function startLocalHost(
 			peers.delete(peer);
 		};
 		peer.handle = async (method, params) => {
-			if (method === "protocol") return router.handle(localClient, params.request);
+			if (method === "protocol") {
+				const result = await router.handle(localClient, params.request);
+				replayResumeSettings(router, localClient, params.request, result, true);
+				return result;
+			}
 			if (method === "status")
 				return {
 					enabled: true,
@@ -187,6 +216,7 @@ export async function startLocalHost(
 				const skills = registrationSkills(params.skills);
 				const skillErrors = registrationSkillErrors(params.skillErrors);
 				const models = registrationModels(params.models);
+				const collaborationMode = registrationCollaborationMode(params.collaborationMode);
 				router.registerSession(
 					thread.id,
 					{
@@ -195,6 +225,7 @@ export async function startLocalHost(
 						skills,
 						skillErrors,
 						models,
+						collaborationMode,
 						call: (identity, command, input) =>
 							peer.call("session/call", { identity, method: command, params: input }),
 					},
@@ -367,6 +398,7 @@ export async function startLocalHost(
 										`${JSON.stringify({ stage: "relay", method: safeMethod, errorCode: error.code, at: Date.now() })}\n`,
 									);
 								send(clientId, streamId, result);
+								replayResumeSettings(router, key, incoming.message, result, false);
 							}
 						})
 						.catch(() => {
