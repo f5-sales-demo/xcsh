@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "3c5f7a529642baf675a04eb9d0dfb0bc0f12bb0d",
+  "revision": "e247f76f956257aca08d696619445bf40f41f642",
   "fingerprint": "e70e8045ab04e0dca903fefe004bc2ff0222272954b9a45e6649c1d1959aa450",
   "counts": {
     "total": 241,
@@ -3911,6 +3911,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
+        "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
@@ -3928,8 +3929,7 @@
         "packages/coding-agent/test/herdr-terminal.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
-        "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
-        "packages/coding-agent/test/internal-urls/mcp-protocol.test.ts"
+        "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/shared.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5624,14 +5624,14 @@
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
+        "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
         "packages/coding-agent/test/auto-config-read.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/autocomplete-max-visible.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/background-terminal.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/block-images.test.ts"
+        "packages/coding-agent/test/bash-executor.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/write.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
