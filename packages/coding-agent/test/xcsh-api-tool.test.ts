@@ -761,7 +761,7 @@ describe("XcshApiTool", () => {
 			created = after.filter(name => !before.has(name));
 			expect(created.length).toBe(6);
 			for (const fileName of created) {
-				expect(fileName).toMatch(/^v2-[a-f0-9]{64}\.json$/);
+				expect(fileName).toMatch(/^v3-[a-f0-9]{64}\.json$/);
 				expect(fileName).not.toContain(marker);
 				expect(fileName).not.toContain("api_definitions");
 			}

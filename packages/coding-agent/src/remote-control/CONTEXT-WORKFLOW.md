@@ -29,7 +29,9 @@ execute through the same attached agent session.
    use `expandDiscovery: false` to retain the endpoint's full response without
    automatically retrieving other resource types. Broad inventory continues to use
    explicit namespace discovery. Read creator metadata, follow documented pagination,
-   and distinguish missing attribution from a nonmatching creator.
+   and distinguish missing attribution from a nonmatching creator. Batched detail
+   responses retain their metadata; failed and partial batches retain per-request
+   status and are not cached as successful empty inventories.
 7. Respond with the result and relevant scope, briefly confirming a requested
    context change. Explain material access or coverage gaps. Stop when the evidence
    answers the question instead of repeating detail reads or narrating every tool.
@@ -44,7 +46,9 @@ cancellation, session history, and approval ownership mechanisms remain in use.
 `scripts/voice-context-evaluation.ts` runs an executing model against synthetic
 tenant transport while using the real session, context service, tool registry,
 API tool, and voice delegation envelope. Scenarios cover combined and separate
-turns, missing contexts, authentication failure, and identity supplied in the conversation, held in the person profile, or unresolved. A separate
+turns, missing contexts, authentication failure, and identity supplied in the conversation, held in the person profile, or unresolved.
+Additional variations cover creator metadata available only in detail responses
+and denied inventory requests. A separate
 source checkout can provide the baseline:
 
 ```sh

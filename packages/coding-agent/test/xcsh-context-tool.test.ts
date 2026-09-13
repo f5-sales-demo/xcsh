@@ -209,7 +209,10 @@ test("a scoped resource question can retain creator metadata without expanding u
 
 test("a resource query bound to the requested context cannot run against the previous tenant", async () => {
 	await service.activate("alpha");
-	const api = new XcshApiTool({ settings } as never, join(root, "cache"));
+	const api = new XcshApiTool(
+		{ settings, getActiveTools: () => ["xcsh_api", "xcsh_context"] } as never,
+		join(root, "cache"),
+	);
 	requests.length = 0;
 	const result = await api.execute("wrong-target", {
 		method: "GET",
@@ -219,6 +222,7 @@ test("a resource query bound to the requested context cannot run against the pre
 	});
 	expect(result.isError).toBe(true);
 	expect(requests).toHaveLength(0);
+	expect(result.content.find(c => c.type === "text")?.text).toContain('"contextSelectionToolAvailable":true');
 });
 
 test("Ask without an approval owner cannot activate", async () => {
@@ -246,4 +250,59 @@ test("late authentication results cannot mark a different selected context conne
 	release(Response.json({ items: [] }));
 	await oldValidation;
 	expect(service.getStatus()).toMatchObject({ activeContextName: "beta", authStatus: "auth_error" });
+});
+
+test("batched detail reads preserve creator metadata and mixed failures instead of returning an empty inventory", async () => {
+	await service.activate("beta");
+	const api = new XcshApiTool({ settings } as never, join(root, "cache"));
+	globalThis.fetch = (async input =>
+		new URL(String(input)).pathname.endsWith("/example-denied")
+			? Response.json({ message: "denied" }, { status: 403 })
+			: Response.json({
+					metadata: { name: "example-lb", namespace: "demo-app" },
+					system_metadata: { creator_id: "synthetic-human" },
+				})) as typeof fetch;
+	const result = await api.execute("details", {
+		method: "GET",
+		contextName: "beta",
+		params: { namespace: "demo-app" },
+		paths: [
+			"/api/config/namespaces/{namespace}/http_loadbalancers/example-lb",
+			"/api/config/namespaces/{namespace}/http_loadbalancers/example-denied",
+		],
+	});
+	const text = result.content.find(c => c.type === "text")?.text ?? "";
+	expect(text).toContain('"creator_id":"synthetic-human"');
+	expect(text).toContain('"status":403');
+	expect(text).not.toContain("0 confirmed member");
+	expect(result.details).toMatchObject({ batchSize: 2, batchSuccessCount: 1 });
+});
+
+test("a denied batch is an error, not a successful empty inventory", async () => {
+	await service.activate("beta");
+	const api = new XcshApiTool({ settings } as never, join(root, "cache"));
+	globalThis.fetch = (async () => Response.json({ message: "denied" }, { status: 403 })) as unknown as typeof fetch;
+	const result = await api.execute("denied", {
+		method: "GET",
+		paths: ["/api/config/namespaces/{namespace}/http_loadbalancers"],
+		params: { namespace: "demo-app" },
+	});
+	expect(result.isError).toBe(true);
+	expect(result.content.find(c => c.type === "text")?.text).toContain("403");
+});
+
+test("tenant-wide discovery propagates denied namespace queries", async () => {
+	await service.activate("beta");
+	const api = new XcshApiTool({ settings } as never, join(root, "cache"));
+	globalThis.fetch = (async input =>
+		new URL(String(input)).pathname.endsWith("/namespaces")
+			? Response.json({ items: [{ name: "demo-app" }] })
+			: Response.json({}, { status: 403 })) as typeof fetch;
+	const result = await api.execute("denied-all", {
+		method: "GET",
+		paths: ["/api/config/namespaces/{namespace}/http_loadbalancers"],
+		params: { namespace: "*" },
+	});
+	expect(result.isError).toBe(true);
+	expect(result.content.find(c => c.type === "text")?.text).toContain("incomplete");
 });

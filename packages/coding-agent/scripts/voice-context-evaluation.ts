@@ -31,6 +31,13 @@ try {
 	const model = registry.find("openai-codex", savedEnv.XCSH_CONTEXT_EVAL_MODEL ?? "gpt-5.6-sol");
 	if (!model) throw new Error("Evaluation model unavailable");
 	const scenarios = [
+		...(["detail-attribution", "inventory-denied"] as const).map(id => ({
+			id,
+			turns: [
+				"Apply the beta context and tell me which HTTP load balancers in its default namespace have my creator ID.",
+			],
+			identity: true,
+		})),
 		{
 			id: "profile-identity",
 			turns: [
@@ -77,7 +84,7 @@ try {
 		for (const scenario of scenarios) {
 			if (scenarioFilter && scenario.id !== scenarioFilter) continue;
 			ContextService._resetForTest();
-			const cwd = join(root, `${surface}-${scenario.id}`);
+			const cwd = join(root, crypto.randomUUID());
 			await mkdir(cwd, { recursive: true });
 			const settings = await Settings.init({ cwd, agentDir: cwd, inMemory: true });
 			const service = ContextService.init(join(cwd, "contexts"));
@@ -108,13 +115,21 @@ try {
 						return Response.json({}, { status: 401 });
 					if (url.pathname.endsWith("/namespaces")) return Response.json({ items: [{ name: "default" }] });
 					if (inventory) {
+						if (scenario.id === "inventory-denied")
+							return Response.json({ message: "Access denied" }, { status: 403 });
 						const items = [
 							{ name: "synthetic-owned", namespace: "default", creator_id: "synthetic-human" },
 							{ name: "synthetic-other", namespace: "default", creator_id: "synthetic-other-human" },
 						];
 						const item = items.find(value => url.pathname.endsWith(`/${value.name}`));
+						const listed =
+							scenario.id === "detail-attribution"
+								? items.map(({ creator_id: _creator, ...value }) => value)
+								: items;
 						return Response.json(
-							item ? { metadata: item, system_metadata: { creator_id: item.creator_id }, spec: {} } : { items },
+							item
+								? { metadata: item, system_metadata: { creator_id: item.creator_id }, spec: {} }
+								: { items: listed },
 						);
 					}
 					return Response.json({ message: "Synthetic fixture has no identity mapping" }, { status: 403 });
@@ -150,7 +165,7 @@ try {
 					content: [
 						{
 							type: "text",
-							text: "For this synthetic evaluation, my creator ID in the beta tenant is synthetic-human.",
+							text: "My creator ID in tenant synthetic-beta, using context beta, is synthetic-human.",
 						},
 					],
 					timestamp: Date.now(),
@@ -186,13 +201,14 @@ try {
 								return {
 									block: true,
 									reason:
-										"This evaluation permits API catalog reads and its isolated synthetic person profile only.",
+										"This read path is unavailable. The read tool can access the API catalog and the isolated person profile.",
 								};
 							}
 						}),
 				],
 			});
 			trace.length = 0;
+			const contextToolAvailable = session.getActiveToolNames().includes("xcsh_context");
 			let answer = "";
 			let providerError = false;
 			const unsubscribe = session.subscribe((event: any) => {
@@ -264,6 +280,7 @@ try {
 					scenario: scenario.id,
 					baseline,
 					providerError,
+					contextToolAvailable,
 					activationSucceeded,
 					activeContextMatches: service.getStatus().activeContextName === "beta",
 					inventoryRequests: inventory.length,
@@ -283,7 +300,11 @@ try {
 								service.getStatus().activeContextName === "beta" &&
 								inventory.every(row => row.selected === "beta" && row.credentialMatches) &&
 								(knownIdentity
-									? inventory.length > 0 && answer.includes("synthetic-owned")
+									? inventory.length > 0 &&
+										(scenario.id === "inventory-denied"
+											? !answer.includes("synthetic-owned") &&
+												/denied|permission|forbidden|access/i.test(answer)
+											: answer.includes("synthetic-owned"))
 									: /\?|provide|share|need your/i.test(answer))),
 				};
 				results.push(outcome);
