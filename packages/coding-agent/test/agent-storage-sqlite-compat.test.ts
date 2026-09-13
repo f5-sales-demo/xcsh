@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, it } from "bun:test";
+import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -67,6 +68,35 @@ describe("AgentStorage SQLite compatibility", () => {
 		expect(readTableSql(dbPath, "settings")).toContain("strftime('%s','now')");
 		expect(readTableSql(dbPath, "model_usage")).not.toContain("unixepoch(");
 		expect(readTableSql(dbPath, "model_usage")).toContain("strftime('%s','now')");
+	});
+
+	it("waits for another xcsh process to finish initializing the shared database", async () => {
+		tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-agent-storage-lock-"));
+		const dbPath = path.join(tempDir, "agent.db");
+		const markerPath = path.join(tempDir, "locked");
+		const locker = Bun.spawn([
+			process.execPath,
+			"-e",
+			`import { Database } from "bun:sqlite";
+			const db = new Database(process.argv[1]);
+			db.run("BEGIN EXCLUSIVE");
+			await Bun.write(process.argv[2], "locked");
+			await Bun.sleep(600);
+			db.run("ROLLBACK");
+			db.close();`,
+			dbPath,
+			markerPath,
+		]);
+
+		for (let attempt = 0; attempt < 100 && !fsSync.existsSync(markerPath); attempt++) {
+			await Bun.sleep(10);
+		}
+		expect(fsSync.existsSync(markerPath)).toBe(true);
+
+		const storage = await AgentStorage.open(dbPath);
+		expect(await locker.exited).toBe(0);
+		storage.recordModelUsage("openai/gpt-5");
+		expect(storage.getModelUsageOrder()).toEqual(["openai/gpt-5"]);
 	});
 
 	it("migrates legacy settings and model usage schemas away from unixepoch defaults", async () => {
