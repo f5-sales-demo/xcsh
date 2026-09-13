@@ -537,9 +537,17 @@ export class DebugSelectorComponent extends HookSelectorComponent {
 					const stat = await fs.lstat(artifactsDir);
 					if (!stat.isDirectory() || stat.isSymbolicLink()) return undefined;
 					const resolved = await fs.realpath(artifactsDir);
-					if (resolved !== artifactsDir) return undefined;
+					// `/var` resolves to `/private/var` on macOS even when the requested
+					// artifact directory itself is not a symlink. Compare canonical parent
+					// identity so that alias does not reject a valid local target, while
+					// retaining the requested path in the review and launcher contract.
+					const canonicalExpected = path.join(
+						await fs.realpath(path.dirname(artifactsDir)),
+						path.basename(artifactsDir),
+					);
+					if (resolved !== canonicalExpected) return undefined;
 					return {
-						path: resolved,
+						path: artifactsDir,
 						revision: `${stat.dev}:${stat.ino}:${stat.mtimeMs}`,
 						description: `Directory · device ${stat.dev} · inode ${stat.ino}`,
 					};

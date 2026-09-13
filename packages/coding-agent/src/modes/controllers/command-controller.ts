@@ -57,6 +57,18 @@ import { setSessionTerminalTitle } from "../../utils/title-generator";
 import { reviewClipboardAction } from "../utils/clipboard-action";
 import { reviewExternalUrlAction } from "../utils/open-action";
 
+/** Accept macOS's documented logical temporary-directory aliases, but not arbitrary symlinks. */
+function isExpectedResolvedDirectory(requested: string, resolved: string): boolean {
+	const absolute = path.resolve(requested);
+	const expected =
+		process.platform === "darwin" && (absolute === "/var" || absolute.startsWith("/var/"))
+			? `/private${absolute}`
+			: process.platform === "darwin" && (absolute === "/tmp" || absolute.startsWith("/tmp/"))
+				? `/private${absolute}`
+				: absolute;
+	return resolved === expected;
+}
+
 async function showMarkdownPanel(
 	ctx: InteractiveModeContext,
 	title: string,
@@ -232,7 +244,12 @@ export class CommandController {
 								throw new Error(`Destination changed: ${file.path}. Review again before overwriting.`);
 							if (file.before?.hash === file.hash) continue;
 							await fs.mkdir(path.dirname(file.path), { recursive: true });
-							if ((await fs.realpath(path.dirname(file.path))) !== path.dirname(file.path))
+							if (
+								!isExpectedResolvedDirectory(
+									path.dirname(file.path),
+									await fs.realpath(path.dirname(file.path)),
+								)
+							)
 								throw new Error("Export parent directory changed");
 							const temporary = path.join(path.dirname(file.path), `.xcsh-export-${Snowflake.next()}.tmp`);
 							const handle = await fs.open(temporary, "wx", 0o600);

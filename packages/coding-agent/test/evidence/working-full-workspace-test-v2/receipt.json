@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "working-tree-full-workspace-test",
+  "command": "bun run ci:test:full",
+  "exitCode": 0,
+  "rawLog": "/private/tmp/xcsh-full-workspace-after-audit.log",
+  "codingAgent": {
+    "passed": 7678,
+    "skipped": 563,
+    "failed": 0,
+    "total": 8241,
+    "files": 775,
+    "expectCalls": 32335,
+    "durationSeconds": 234.94
+  },
+  "workspaceDurationSeconds": 282.67,
+  "acceptanceStatus": "passed; candidate-only workspace gate, not baseline-versus-pre-fix parity evidence"
+}

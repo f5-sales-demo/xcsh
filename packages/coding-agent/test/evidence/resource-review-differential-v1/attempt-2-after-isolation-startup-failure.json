@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "interactive-resource-review-differential",
+  "baseline": {
+    "commit": "0c6d27e4afacc42b598478d1fba532ef1eab9204",
+    "create": {
+      "openedViewport": "\n[Uncaught Exception] SyntaxError: Export named 'PowerAssertion' not found in mod\nule '/private/tmp/xcsh-parity-baseline.bYqn8m/packages/natives/native/index.js'.\n    at <parse> (:0)\n    at processTicksAndRejections (native:7:39)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "requestCountBeforeEscape": 0,
+      "objectPresentBeforeEscape": false,
+      "requestCountAfterEscape": 0,
+      "objectPresentAfterEscape": false,
+      "startupError": "candidate exited before interactive editor"
+    },
+    "apply": {
+      "openedViewport": "\n[Uncaught Exception] SyntaxError: Export named 'PowerAssertion' not found in mod\nule '/private/tmp/xcsh-parity-baseline.bYqn8m/packages/natives/native/index.js'.\n    at <parse> (:0)\n    at processTicksAndRejections (native:7:39)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "requestCountBeforeEscape": 0,
+      "objectPresentBeforeEscape": false,
+      "requestCountAfterEscape": 0,
+      "objectPresentAfterEscape": false,
+      "startupError": "candidate exited before interactive editor"
+    },
+    "delete": {
+      "openedViewport": "\n[Uncaught Exception] SyntaxError: Export named 'PowerAssertion' not found in mod\nule '/private/tmp/xcsh-parity-baseline.bYqn8m/packages/natives/native/index.js'.\n    at <parse> (:0)\n    at processTicksAndRejections (native:7:39)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "requestCountBeforeEscape": 0,
+      "objectPresentBeforeEscape": false,
+      "requestCountAfterEscape": 0,
+      "objectPresentAfterEscape": false,
+      "startupError": "candidate exited before interactive editor"
+    }
+  },
+  "preFix": {
+    "commit": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+    "create": {
+      "openedViewport": "\n[Uncaught Exception] SyntaxError: Export named 'PowerAssertion' not found in mod\nule '/private/tmp/xcsh-parity-prefix.7DmR5f/packages/natives/native/index.js'.\n    at <parse> (:0)\n    at processTicksAndRejections (native:7:39)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "requestCountBeforeEscape": 0,
+      "objectPresentBeforeEscape": false,
+      "requestCountAfterEscape": 0,
+      "objectPresentAfterEscape": false,
+      "startupError": "candidate exited before interactive editor"
+    },
+    "apply": {
+      "openedViewport": "\n[Uncaught Exception] SyntaxError: Export named 'PowerAssertion' not found in mod\nule '/private/tmp/xcsh-parity-prefix.7DmR5f/packages/natives/native/index.js'.\n    at <parse> (:0)\n    at processTicksAndRejections (native:7:39)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "requestCountBeforeEscape": 0,
+      "objectPresentBeforeEscape": false,
+      "requestCountAfterEscape": 0,
+      "objectPresentAfterEscape": false,
+      "startupError": "candidate exited before interactive editor"
+    },
+    "delete": {
+      "openedViewport": "\n[Uncaught Exception] SyntaxError: Export named 'PowerAssertion' not found in mod\nule '/private/tmp/xcsh-parity-prefix.7DmR5f/packages/natives/native/index.js'.\n    at <parse> (:0)\n    at processTicksAndRejections (native:7:39)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "requestCountBeforeEscape": 0,
+      "objectPresentBeforeEscape": false,
+      "requestCountAfterEscape": 0,
+      "objectPresentAfterEscape": false,
+      "startupError": "candidate exited before interactive editor"
+    }
+  },
+  "limitation": "This captures create/apply/delete cancellation and confirmation only. It must be extended with dry-run, manifest, get, describe, diff, failure, retry, and persistence before it can classify full resource parity."
+}

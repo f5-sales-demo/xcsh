@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "working-tree-full-workspace-test",
+  "capturedAt": "2026-09-13T00:12:41Z",
+  "command": "bun run ci:test:full",
+  "exitCode": 1,
+  "scope": "Current working tree; full workspace test suites run in parallel.",
+  "codingAgent": {
+    "passed": 7677,
+    "skipped": 563,
+    "failed": 1,
+    "total": 8241,
+    "files": 775,
+    "expectCalls": 32334
+  },
+  "failure": {
+    "test": "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
+    "cause": "The generated source-boundary audit was stale after in-scope settings and audit-test changes.",
+    "repair": "Regenerated packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json; the exact failing test then passed (2 pass, 0 fail)."
+  },
+  "rawLog": {
+    "path": "/private/tmp/xcsh-parity-fulltest.yDTImB/workspace-test-rerun.log",
+    "lines": 467,
+    "sha256": "589dfc4edb9ad4a972f38fa535cdeec305a7ef804d84d4856ebc468298052ce0"
+  },
+  "acceptanceStatus": "failed-capture-preserved; full workspace gate must be rerun after the repair"
+}
