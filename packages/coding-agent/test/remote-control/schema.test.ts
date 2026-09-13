@@ -29,7 +29,23 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 		});
 	for (const [schema, response] of [
 		[configSchema, configResponse({ model: "gpt-6-astra", modelProvider: "openai-codex" }, true)],
-		[modelSchema, modelResponse([{ model: "gpt-6-astra" }])],
+		[
+			modelSchema,
+			modelResponse(
+				[{ model: "gpt-6-astra" }],
+				[
+					{
+						id: "gpt-6-astra",
+						provider: "openai-codex",
+						displayName: "GPT-6 Astra",
+						description: "Maximum capability",
+						supportedReasoningEfforts: [{ reasoningEffort: "high", description: "High" }],
+						defaultReasoningEffort: "high",
+						inputModalities: ["text", "image"],
+					},
+				],
+			),
+		],
 		[permissionProfileListSchema, { data: [], nextCursor: null }],
 	] as const) {
 		const validate = ajv.compile(schema);
@@ -93,6 +109,24 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 		remote.dispose();
 		router.dispose();
 	}
+});
+
+test("a registered model catalog does not reintroduce a historical thread model", () => {
+	const response = modelResponse(
+		[{ model: "gpt-5.4", supportedReasoningEfforts: [] }],
+		[
+			{
+				id: "gpt-5.6-luna",
+				provider: "openai-codex",
+				displayName: "GPT-5.6 Luna",
+				description: "Fast responses",
+				supportedReasoningEfforts: [],
+				defaultReasoningEffort: "none",
+				inputModalities: ["text"],
+			},
+		],
+	);
+	expect(response.data.map(model => model.id)).toEqual(["gpt-5.6-luna"]);
 });
 
 test("a live replacement thread notification matches the pinned upstream schema", async () => {

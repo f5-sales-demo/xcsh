@@ -4,7 +4,7 @@ import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
-import { type Notification, ProtocolError } from "./session";
+import { type Notification, ProtocolError, type RemoteModelDescriptor } from "./session";
 import { voices } from "./voice-protocol";
 
 interface InitializeCapabilities {
@@ -86,6 +86,7 @@ function initializeCapabilities(value: unknown): InitializeCapabilities {
 }
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
+	models?: RemoteModelDescriptor[];
 	requests?: InteractionRequest[];
 	skills?: Array<{
 		name: string;
@@ -203,6 +204,24 @@ export class RemoteRouter {
 			if (name !== null && typeof name !== "string") return;
 			session.thread.name = name;
 			for (const client of this.#clients.keys()) this.#emit(client, event);
+			return;
+		}
+		if (event.method === "thread/settings/updated") {
+			const settings = event.params.threadSettings;
+			if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+				const model = (settings as Record<string, unknown>).model;
+				const provider = (settings as Record<string, unknown>).modelProvider;
+				const effort = (settings as Record<string, unknown>).effort;
+				if (typeof model === "string") session.thread.model = model;
+				if (typeof provider === "string") session.thread.modelProvider = provider;
+				if (effort === null || typeof effort === "string") session.thread.reasoningEffort = effort;
+				const descriptor = session.models?.find(item => item.id === model && item.provider === provider);
+				if (descriptor) {
+					session.thread.supportedReasoningEfforts = descriptor.supportedReasoningEfforts;
+					session.thread.defaultReasoningEffort = descriptor.defaultReasoningEffort;
+				}
+			}
+			for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
 			return;
 		}
 		if (event.id !== undefined) {
@@ -340,7 +359,10 @@ export class RemoteRouter {
 						break;
 					case "model/list":
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
-						result = modelResponse([...this.sessions.values()].map(session => session.thread));
+						result = modelResponse(
+							[...this.sessions.values()].map(session => session.thread),
+							[...this.sessions.values()].flatMap(session => session.models ?? []),
+						);
 						break;
 					case "permissionProfile/list": {
 						if (

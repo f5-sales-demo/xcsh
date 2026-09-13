@@ -1,3 +1,5 @@
+import type { RemoteModelDescriptor } from "./session";
+
 /** Read-only compatibility views. These never load or change Codex configuration. */
 export function configResponse(thread: Record<string, unknown> | undefined, includeLayers: boolean) {
 	// Null denotes an unset Codex-specific setting, rather than a promise about
@@ -38,9 +40,32 @@ export function configResponse(thread: Record<string, unknown> | undefined, incl
 	return { config, origins: {}, ...(includeLayers ? { layers: [] } : {}) };
 }
 
-export function modelResponse(threads: Record<string, unknown>[]) {
+export function modelResponse(threads: Record<string, unknown>[], catalog: RemoteModelDescriptor[] = []) {
 	const models = new Map<string, Record<string, unknown>>();
-	for (const thread of threads) {
+	for (const model of catalog) {
+		if (models.has(model.id)) continue;
+		models.set(model.id, {
+			id: model.id,
+			model: model.id,
+			displayName: model.displayName,
+			description: model.description,
+			upgrade: null,
+			upgradeInfo: null,
+			availabilityNux: null,
+			modelSpecialty: null,
+			hidden: false,
+			supportedReasoningEfforts: model.supportedReasoningEfforts,
+			defaultReasoningEffort: model.defaultReasoningEffort,
+			inputModalities: model.inputModalities,
+			supportsPersonality: false,
+			multiAgentVersion: null,
+			additionalSpeedTiers: [],
+			serviceTiers: [],
+			defaultServiceTier: null,
+			isDefault: false,
+		});
+	}
+	for (const thread of catalog.length === 0 ? threads : []) {
 		if (typeof thread.model !== "string" || models.has(thread.model)) continue;
 		models.set(thread.model, {
 			id: thread.model,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "464f9f848d9350ef425ac3332d9bfcb3becd10a0",
-  "fingerprint": "0c784df790b5d4fdc5a13886ba2ea4815f370984de7865b648251712e68e3581",
+  "revision": "3c5f7a529642baf675a04eb9d0dfb0bc0f12bb0d",
+  "fingerprint": "e70e8045ab04e0dca903fefe004bc2ff0222272954b9a45e6649c1d1959aa450",
   "counts": {
     "total": 241,
     "components": 95,
@@ -1910,7 +1910,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "02bcafae109fda239f16ab5a20bc04c6d43d34c59a9afb225fdfb32edbf39095",
+      "sha256": "a27fe290a94ac12a8d48d72ae6f43262298675a26eeaf9fcc753a4140aaf8fcf",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",
@@ -1943,7 +1943,8 @@
         "packages/coding-agent/test/model-selector-provider-tabs.test.ts",
         "packages/coding-agent/test/model-selector-registry-integration.test.ts",
         "packages/coding-agent/test/model-selector-role-badge-thinking.test.ts",
-        "packages/coding-agent/test/provider-selector-layout.test.ts"
+        "packages/coding-agent/test/provider-selector-layout.test.ts",
+        "packages/coding-agent/test/remote-control/model-lifecycle.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/model-selector.ts is individually classified as caller-owned-draft in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3466,6 +3467,7 @@
       "directTests": [
         "packages/coding-agent/test/commit-model-selection-role-thinking.test.ts",
         "packages/coding-agent/test/model-selection-session.test.ts",
+        "packages/coding-agent/test/remote-control/model-lifecycle.test.ts",
         "packages/coding-agent/test/sdk-model-selection.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/model-selection.ts is individually classified as runtime-lifecycle in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -3681,7 +3683,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "18846e00f9119e1175e5770aa3de0cc87f900d5835c3e6f5f36f907c7d792cd6",
+      "sha256": "7c82d753b7aa28a589f6cb10ae3c5ef4896b60ad64c7118a704365e9d4806e3f",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",

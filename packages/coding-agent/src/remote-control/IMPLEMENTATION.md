@@ -2747,3 +2747,23 @@ same current scope before freezing its snapshot. The regression creates
 distinct project-A and project-B summaries, moves the session, and asserts that
 the rebuilt prompt and memory reader contain B but not A. Memory remains
 project-scoped; no summaries are copied or aggregated across roots.
+
+## Shared mobile model selection
+
+The remote model catalog is now registered by each attached AgentSession and
+validated by the private host. It uses the same current-model filter as the TUI
+and publishes user-facing names, input modalities, supported effort values, and
+defaults through the pinned `model/list` schema.
+
+The iPhone's existing `thread/settings/update` control can change model and
+effort as one operation. The adapter resolves only a currently available model,
+validates effort against the destination model before mutation, and invokes the
+TUI's conversation-scoped model transaction. That transaction handles credential
+validation, provider-session reset, manual routing pinning, session history,
+rollback, and synchronous persistence. Effort-only changes are flushed before
+acknowledgement. A settings notification immediately refreshes the host's thread
+snapshot and the app's selected controls.
+Settings updates and turn starts share an admission queue, so sending immediately
+after a tap waits for credential validation and persistence instead of racing the
+old model. Once any owner publishes a validated catalog, the compatibility
+fallback cannot reintroduce a historical active model.

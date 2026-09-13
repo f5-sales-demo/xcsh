@@ -70,6 +70,54 @@ function registrationSkillErrors(value: unknown): NonNullable<SessionEndpoint["s
 	return value as NonNullable<SessionEndpoint["skillErrors"]>;
 }
 
+function registrationModels(value: unknown): NonNullable<SessionEndpoint["models"]> {
+	if (value == null) return [];
+	if (!Array.isArray(value) || value.length > 512) throw new ProtocolError(-32602, "Invalid model registration");
+	const effortValues = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+	const identities = new Set<string>();
+	for (const model of value) {
+		const identity =
+			model && typeof model === "object"
+				? `${String((model as { provider?: unknown }).provider)}\0${String((model as { id?: unknown }).id)}`
+				: "";
+		if (
+			!model ||
+			typeof model !== "object" ||
+			typeof model.id !== "string" ||
+			!model.id ||
+			model.id.length > 256 ||
+			typeof model.provider !== "string" ||
+			!model.provider ||
+			model.provider.length > 256 ||
+			typeof model.displayName !== "string" ||
+			model.displayName.length > 512 ||
+			typeof model.description !== "string" ||
+			model.description.length > 4096 ||
+			!Array.isArray(model.supportedReasoningEfforts) ||
+			model.supportedReasoningEfforts.length > 16 ||
+			model.supportedReasoningEfforts.some(
+				(level: unknown) =>
+					!level ||
+					typeof level !== "object" ||
+					typeof (level as { reasoningEffort?: unknown }).reasoningEffort !== "string" ||
+					!effortValues.has(String((level as { reasoningEffort?: unknown }).reasoningEffort)) ||
+					typeof (level as { description?: unknown }).description !== "string" ||
+					String((level as { description?: unknown }).description).length > 1024,
+			) ||
+			typeof model.defaultReasoningEffort !== "string" ||
+			!effortValues.has(model.defaultReasoningEffort) ||
+			!Array.isArray(model.inputModalities) ||
+			model.inputModalities.length === 0 ||
+			model.inputModalities.length > 2 ||
+			model.inputModalities.some((modality: unknown) => modality !== "text" && modality !== "image") ||
+			identities.has(identity)
+		)
+			throw new ProtocolError(-32602, "Invalid model registration");
+		identities.add(identity);
+	}
+	return value as NonNullable<SessionEndpoint["models"]>;
+}
+
 export async function startLocalHost(
 	socketPath: string,
 	version: string,
@@ -138,6 +186,7 @@ export async function startLocalHost(
 				const requests = router.validateSessionRequests(thread.id, params.requests ?? []);
 				const skills = registrationSkills(params.skills);
 				const skillErrors = registrationSkillErrors(params.skillErrors);
+				const models = registrationModels(params.models);
 				router.registerSession(
 					thread.id,
 					{
@@ -145,6 +194,7 @@ export async function startLocalHost(
 						requests,
 						skills,
 						skillErrors,
+						models,
 						call: (identity, command, input) =>
 							peer.call("session/call", { identity, method: command, params: input }),
 					},

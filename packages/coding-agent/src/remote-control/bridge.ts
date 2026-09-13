@@ -53,6 +53,7 @@ export function startSessionBridge(
 					requests: remote.pendingRequests(),
 					skills: catalog.skills,
 					skillErrors: catalog.errors,
+					models: remote.models(),
 				});
 			} catch {
 				peer?.close();

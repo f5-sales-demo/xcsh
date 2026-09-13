@@ -92,6 +92,22 @@ test("host registers two live owners, routes into owner socket, and removes exit
 	try {
 		await expect(
 			a.call("register", {
+				thread: { id: "invalid-model" },
+				models: [
+					{
+						id: "fixture",
+						provider: "fixture",
+						displayName: "Fixture",
+						description: "Fixture",
+						supportedReasoningEfforts: [{ reasoningEffort: "unbounded", description: "Invalid" }],
+						defaultReasoningEffort: "unbounded",
+						inputModalities: ["text"],
+					},
+				],
+			}),
+		).rejects.toMatchObject({ code: -32602 });
+		await expect(
+			a.call("register", {
 				thread: { id: "invalid" },
 				skills: [
 					{ name: "bad", description: "bad", path: "relative", scope: "user", enabled: true, pluginId: null },

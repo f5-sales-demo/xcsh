@@ -1161,3 +1161,30 @@ prompt, `memory://root`, and a new WebRTC or standalone voice snapshot. After a
 reviewed `/move`, xcsh rebuilds the effective TUI prompt before accepting the
 next turn. A two-project regression rejects stale project-A memory and requires
 project-B memory on both surfaces.
+
+## iPhone model and effort controls
+
+The ChatGPT model and effort buttons now operate on the attached xcsh session.
+Both interfaces use the same current-model catalog filter, so OpenAI subscription
+OAuth presents Luna, Terra, Sol, and Astra instead of historical and internal
+registry entries. Each catalog row carries the model's display name, input
+modalities, exact supported effort ladder, and default effort.
+
+`thread/settings/update` resolves the selected model against the live session's
+available catalog, validates effort against that target model, and applies the
+pair through the same conversation-scoped model-selection transaction as the
+TUI. The transaction records manual routing pin and persists the session before
+acknowledging the tap. Effort-only changes are also flushed before the response.
+Unavailable models, hidden historical models, unsupported efforts, service
+tiers, and changes during an active turn fail without switching models. The
+resulting settings notification updates host discovery immediately instead of
+waiting for the registration heartbeat.
+
+A prompt sent immediately after a model tap waits for that settings transaction
+to finish. Historical active models are excluded once the shared catalog is
+available, including from the legacy thread-metadata fallback.
+
+Synthetic phone-shaped bridge tests cover catalog rendering, a model-and-effort
+tap, immediate thread state, invalid choices, active-turn exclusion, persistence
+before shutdown, and full restart restoration. Physical iPhone rendering and
+tap acceptance remain a separate human checkpoint.
