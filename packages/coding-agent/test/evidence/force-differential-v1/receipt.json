@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "interactive-force-differential",
+  "baseline": {
+    "commit": "0c6d27e4afacc42b598478d1fba532ef1eab9204",
+    "emptyInvocation": {
+      "viewport": "│        (▒▒███████████████████████████████)       │\n│      (▒██████████▒▒▒▒▒███████████████████▒)      │\n│     (▒██████████▒█████▒▒▒███▒▒▒▒▒▒▒▒▒▒▒▒▒█▒)     │\n│    (▒██████████████████████▒███████████████▒)    │\n│   (▒████████████████████████████████████████▒)   │\n│  (▒███▒▒▒███████▒▒▒▒▒████████████████████████▒)  │\n│  |▒██████▒███████████████████████████████████▒|  │\n│  |▒████████████████████▒▒▒▒▒▒▒▒▒▒▒███████████▒|  │\n│  (▒███████████████████████████████▒▒████████▒▒)  │\n│   (▒████████████████████████████████▒▒▒████▒▒)   │\n│    (▒█████████████████████████████████████▒▒)    │\n│     (▒▒███████████████▒█████████████████▒▒▒)     │\n│      (▒▒▒▒▒████████████▒▒█████████████▒▒█▒)      │\n│        (▒██▒▒▒▒▒▒▒▒▒▒████▒▒▒▒▒▒▒▒▒▒▒▒▒█▒)        │\n│           (▒▒▒███████████████████▒▒▒)            │\n│                (▒▒▒▒████████▒▒▒▒)                │\n│                                                  │\n╰──────────────────────────────────────────────────╯\n\n\n Error: Usage: /force:<tool-name> [prompt]                                      \n\n╭─ 0% ▶ 📁 …00gp/T/xcsh-terminal-uat-XXXXXX/project ▶────────────────◀ idle ──╮\n╰─ ▏                                                                         ─╯",
+      "selectorOpened": false,
+      "sessionFilesBefore": 0,
+      "sessionFilesAfterCancel": 0
+    },
+    "explicitRead": {
+      "viewport": "│     (▒██████████▒█████▒▒▒███▒▒▒▒▒▒▒▒▒▒▒▒▒█▒)     │\n│    (▒██████████████████████▒███████████████▒)    │\n│   (▒████████████████████████████████████████▒)   │\n│  (▒███▒▒▒███████▒▒▒▒▒████████████████████████▒)  │\n│  |▒██████▒███████████████████████████████████▒|  │\n│  |▒████████████████████▒▒▒▒▒▒▒▒▒▒▒███████████▒|  │\n│  (▒███████████████████████████████▒▒████████▒▒)  │\n│   (▒████████████████████████████████▒▒▒████▒▒)   │\n│    (▒█████████████████████████████████████▒▒)    │\n│     (▒▒███████████████▒█████████████████▒▒▒)     │\n│      (▒▒▒▒▒████████████▒▒█████████████▒▒█▒)      │\n│        (▒██▒▒▒▒▒▒▒▒▒▒████▒▒▒▒▒▒▒▒▒▒▒▒▒█▒)        │\n│           (▒▒▒███████████████████▒▒▒)            │\n│                (▒▒▒▒████████▒▒▒▒)                │\n│                                                  │\n╰──────────────────────────────────────────────────╯\n\n\n Error: Usage: /force:<tool-name> [prompt]                                      \n\n Next turn forced to use read.                                                  \n\n╭─ 0% ▶ 📁 …00gp/T/xcsh-terminal-uat-XXXXXX/project ▶────────────────◀ idle ──╮\n╰─ ▏                                                                         ─╯",
+      "sessionFilesBefore": 0,
+      "sessionFilesAfter": 0
+    }
+  },
+  "preFix": {
+    "commit": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+    "emptyInvocation": {
+      "viewport": "╭──────────────────────────────────────────────────────────────────────────────╮\n│  Choose an option                                                            │\n│  Queue a forced tool call · Current session                                  │\n│                                                                              │\n│  2 of 2 options                                                              │\n│  >                                                                           │\n├──────────────────────────────────────────────────────────────────────────────┤\n│  ❯ Cancel                                                                    │\n│    Queue forced tool: read                                                   │\n│  Esc: back                                                                   │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "selectorOpened": true,
+      "sessionFilesBefore": 0,
+      "sessionFilesAfterCancel": 0
+    },
+    "explicitRead": {
+      "viewport": "\n╭──────────────────────────────────────────────────╮\n│ xcsh v21.25.0                                    │\n├──────────────────────────────────────────────────┤\n│ F5                                               │\n╰──────────────────────────────────────────────────╯\n\n\n Queued read once, then no tools. Earlier queued directives may run first; no   \n tool has run yet.                                                              \n\n╭─ 0% ▶ 📁 …00gp/T/xcsh-terminal-uat-XXXXXX/project ▶────────────────◀ idle ──╮\n╰─ ▏                                                                         ─╯\n\n\n\n\n\n\n\n\n\n\n",
+      "sessionFilesBefore": 0,
+      "sessionFilesAfter": 0
+    }
+  },
+  "classification": "intentional-safety-addition: pre-fix adds a cancel-first active-tool selector for an argument-less /force while retaining explicit /force read queueing without executing a tool."
+}

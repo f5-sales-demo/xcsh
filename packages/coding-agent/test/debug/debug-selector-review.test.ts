@@ -43,6 +43,7 @@ async function harness(
 		}),
 	};
 	const manager = { getSessionId: () => "fixture-session", getSessionFile: () => options.sessionFile };
+	const showStatus = vi.fn();
 	const ctx = {
 		ui: { terminal: { rows: 24 }, requestRender() {}, setFocus() {}, showOverlay: vi.fn() },
 		session,
@@ -52,7 +53,7 @@ async function harness(
 		hideThinkingBlock: false,
 		chatContainer: { addChild() {} },
 		statusContainer: { addChild() {}, clear() {} },
-		showStatus: vi.fn(),
+		showStatus,
 		showWarning: vi.fn(),
 		showError: vi.fn(),
 		showHookCustom: (factory: any) =>
@@ -67,6 +68,7 @@ async function harness(
 	return {
 		root,
 		ctx,
+		showStatus,
 		selector,
 		screens,
 		reviewInput: (input: string) => review?.handleInput?.(input),
@@ -80,6 +82,15 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 		await Bun.sleep(2);
 	}
 	throw new Error("Expected debug action state was not reached");
+}
+
+/** Long file identities may wrap inside a fixed-width review frame. */
+function terminalValue(value: string): string {
+	return value.replace(/[│╭╮╰╯├┤─]/gu, "").replace(/\s+/gu, "");
+}
+
+function expectTerminalValue(text: string, value: string): void {
+	expect(terminalValue(text)).toContain(terminalValue(value));
 }
 
 function searchAndSelect(component: Component, query: string): void {
@@ -121,13 +132,15 @@ test.each([false, true])("artifact cache deletion is exact and Cancel-first (con
 	await fs.utimes(artifact, old, old);
 	searchAndSelect(h.selector, "artifact cache");
 	await waitFor(() => h.reviewText().includes("Review artifact cache removal"));
-	expect(h.reviewText()).toContain(artifact);
+	expectTerminalValue(h.reviewText(), artifact);
 	expect(h.reviewText()).toContain("Session");
 	expect(h.reviewText()).toContain("transcript files are not selected");
 	expect(await Bun.file(path.join(artifact, "output.txt")).exists()).toBe(true);
 	if (confirm) h.reviewInput("\x1b[B");
 	h.reviewInput("\r");
-	await waitFor(() => (confirm ? !require("node:fs").existsSync(artifact) : true));
+	await waitFor(() =>
+		confirm ? !require("node:fs").existsSync(artifact) && h.showStatus.mock.calls.length === 1 : true,
+	);
 	expect(require("node:fs").existsSync(artifact)).toBe(!confirm);
 	if (confirm)
 		expect(h.ctx.showStatus).toHaveBeenCalledWith(expect.stringContaining("Cleared 1 artifact directories"));
@@ -158,7 +171,7 @@ test.each([false, true])(
 		const h = await harness([], { sessionFile, openLocalPath });
 		searchAndSelect(h.selector, "Open: artifact folder");
 		await waitFor(() => h.reviewText().includes("Review artifact folder"));
-		expect(h.reviewText()).toContain(artifactDir);
+		expectTerminalValue(h.reviewText(), artifactDir);
 		expect(h.reviewText()).toContain("Directory · device");
 		expect(h.reviewText()).toContain("recent-item history");
 		expect(openLocalPath).not.toHaveBeenCalled();

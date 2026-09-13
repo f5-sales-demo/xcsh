@@ -1,7 +1,16 @@
 import { isDeepStrictEqual } from "node:util";
 import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Effort } from "@f5-sales-demo/pi-ai";
-import { Container, matchesKey, type SettingItem, type Tab, TabBar, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
+import {
+	Container,
+	type MouseRoutable,
+	matchesKey,
+	type SettingItem,
+	type SgrMouseEvent,
+	type Tab,
+	TabBar,
+	wrapTextWithAnsi,
+} from "@f5-sales-demo/pi-tui";
 import { type SettingPath, type Settings, settings } from "../../config/settings";
 import type {
 	SettingTab,
@@ -104,7 +113,7 @@ export interface SettingsCallbacks {
  * Main tabbed settings selector component.
  * Uses declarative settings definitions from settings-defs.ts.
  */
-export class SettingsSelectorComponent extends Container {
+export class SettingsSelectorComponent extends Container implements MouseRoutable {
 	#tabBar: TabBar;
 	#currentList: SettingsBrowser | null = null;
 	#browsers = new Map<SettingTab, SettingsBrowser>();
@@ -538,8 +547,8 @@ export class SettingsSelectorComponent extends Container {
 
 		this.#currentList = new SettingsBrowser(
 			items,
-			() => [
-				getSettingsTabs().find(tab => tab.id === this.#currentTabId)!.label,
+			width => [
+				...this.#tabBar.render(width),
 				...(tabId === "appearance" ? [`Preview: ${this.#getStatusPreviewString()}`] : []),
 				...(this.#draftCount ? [`${this.#draftCount} unsaved changes · Ctrl+S: review changes`] : []),
 			],
@@ -648,7 +657,12 @@ export class SettingsSelectorComponent extends Container {
 		}
 		// Handle tab switching — but NOT when a text input is active, since
 		// arrow keys must reach the cursor and Tab must not switch tabs.
-		if (!editing && (matchesKey(data, "tab") || matchesKey(data, "shift+tab"))) {
+		if (
+			!editing &&
+			(matchesKey(data, "tab") ||
+				matchesKey(data, "shift+tab") ||
+				((matchesKey(data, "left") || matchesKey(data, "right")) && !this.#currentList?.hasSearch()))
+		) {
 			this.#tabBar.handleInput(data);
 			return;
 		}
@@ -659,5 +673,9 @@ export class SettingsSelectorComponent extends Container {
 		} else if (this.#pluginComponent) {
 			this.#pluginComponent.handleInput(data);
 		}
+	}
+
+	routeMouse(event: SgrMouseEvent, line: number, col: number): void {
+		this.#currentList?.routeMouse(event, line, col);
 	}
 }

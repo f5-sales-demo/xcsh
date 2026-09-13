@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "working-tree-cli-smoke",
+  "baseCommit": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+  "candidate": "working tree with uncommitted corrections",
+  "command": "bun run ci:test:smoke",
+  "exitCode": 0,
+  "checks": [
+    "xcsh --version",
+    "xcsh --help",
+    "xcsh stats --help",
+    "xcsh validate --help"
+  ],
+  "limitation": "Candidate-only smoke evidence; it does not establish published-baseline versus pre-fix behavioral parity."
+}

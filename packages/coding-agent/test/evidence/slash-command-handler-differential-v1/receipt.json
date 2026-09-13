@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "kind": "direct-slash-command-handler-differential",
+  "baseline": {
+    "version": "v21.24.4",
+    "commit": "0c6d27e4afacc42b598478d1fba532ef1eab9204",
+    "passed": 34,
+    "failed": 0
+  },
+  "preFix": {
+    "version": "v21.25.0",
+    "commit": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+    "passed": 37,
+    "failed": 0
+  },
+  "tests": [
+    "packages/coding-agent/test/slash-commands/force.test.ts",
+    "packages/coding-agent/test/slash-commands/login.test.ts",
+    "packages/coding-agent/test/slash-commands/btw.test.ts",
+    "packages/coding-agent/test/slash-commands/session.test.ts",
+    "packages/coding-agent/test/slash-commands/copy.test.ts",
+    "packages/coding-agent/test/chat-handler-slash-commands.test.ts"
+  ],
+  "observedDelta": {
+    "command": "/force",
+    "preFixAdditionalCases": [
+      "cancel-first active-tool selector preserves the queue when cancelled or empty",
+      "duplicate selector and changed-session guard",
+      "selected tool is queued without claiming execution"
+    ],
+    "classification": "intentional-safety-addition-pending-full-interactive-uat"
+  },
+  "limitation": "This covers direct handler contracts only. It does not prove terminal rendering, mouse input, responsive layout, persistence, or all selectable-row paths."
+}

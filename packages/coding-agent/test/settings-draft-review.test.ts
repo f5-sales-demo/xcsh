@@ -251,3 +251,36 @@ test("appearance settings keep the live status-line preview visible in the share
 	const rendered = Bun.stripANSI(selector.render(100).join("\n"));
 	expect(rendered).toContain("Preview: MODEL · 42% · /project");
 });
+
+test("settings shows every section and restores Left/Right plus Space activation outside search", async () => {
+	const selector = new SettingsSelectorComponent(
+		{
+			availableThinkingLevels: [],
+			thinkingLevel: undefined,
+			availableThemes: ["xcsh-dark"],
+			cwd: "/tmp",
+			settings: Settings.isolated(),
+		},
+		{ onChange() {}, onCancel() {} },
+	);
+	const initial = Bun.stripANSI(selector.render(100).join("\n"));
+	for (const label of [
+		"Appearance",
+		"Model",
+		"Interaction",
+		"Context",
+		"Editing",
+		"Tools",
+		"Tasks",
+		"Providers",
+		"Sandbox",
+		"Plugins",
+	])
+		expect(initial).toContain(label);
+	selector.handleInput("\x1b[C");
+	expect(Bun.stripANSI(selector.render(100).join("\n"))).toContain("Model");
+	selector.handleInput("\x1b[D");
+	selector.handleInput(" ");
+	await Bun.sleep(0);
+	expect(Bun.stripANSI(selector.render(100).join("\n"))).toContain("Choose a draft value");
+});

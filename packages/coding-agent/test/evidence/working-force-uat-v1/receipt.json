@@ -1,0 +1,40 @@
+{
+  "variant": {
+    "columns": 80,
+    "rows": 24,
+    "theme": "dark",
+    "symbols": "unicode"
+  },
+  "actions": [
+    "/force opens active-tool choices",
+    "Initially selected Cancel leaves queue unchanged",
+    "Reopen force chooser",
+    "Wheel selects read without activating it",
+    "Enter activates explicit read queue action",
+    "/quit Enter"
+  ],
+  "persistence": {
+    "sessionFiles": [],
+    "observed": "Cancel and queue action created no session file",
+    "queueProof": "Separate real AgentSession queue test; terminal alone does not prove queue contents",
+    "providerRequests": [
+      {
+        "method": "GET",
+        "path": "/v1/models"
+      }
+    ]
+  },
+  "outcome": {
+    "status": "passed"
+  },
+  "fingerprint": "038b70464321d45d10a27ecb79f8a69c6bc16eefc88600bbb8abbf31e12bb0fc",
+  "revision": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+  "output": "/var/folders/sc/dw_q61z13j36rlqvz8bylntr0000gp/T/xcsh-terminal-uat-Ixy033/evidence",
+  "ended": true,
+  "providerRequests": [
+    {
+      "method": "GET",
+      "path": "/v1/models"
+    }
+  ]
+}

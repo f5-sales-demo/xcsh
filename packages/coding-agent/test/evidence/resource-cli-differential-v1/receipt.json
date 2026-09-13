@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "resource-cli-contract-differential",
+  "baseline": {
+    "version": "v21.24.4",
+    "commit": "0c6d27e4afacc42b598478d1fba532ef1eab9204",
+    "command": "bun test packages/coding-agent/test/resource-cli.test.ts",
+    "passed": 6,
+    "failed": 0
+  },
+  "preFix": {
+    "version": "v21.25.0",
+    "commit": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+    "command": "bun test packages/coding-agent/test/resource-cli.test.ts",
+    "passed": 6,
+    "failed": 0
+  },
+  "coverage": [
+    "credential-free validation",
+    "manifest update",
+    "validation and API failure exit codes",
+    "direct automation credentials",
+    "reusable manifest export"
+  ],
+  "limitation": "This is public resource CLI contract evidence, not interactive slash-command review, cancellation, persistence, retry, or full TUI parity evidence."
+}

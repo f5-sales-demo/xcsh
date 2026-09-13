@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "cba1810714d2d7465f870cbfe9aba1c05add0770",
-  "fingerprint": "20efb02ddfb3165dd1871bcf8feddb2fe9eb91168fda4713201175f1816735f2",
+  "revision": "6f58ec9c2a3d2008b51841e0299d86cfa4559e65",
+  "fingerprint": "b7abcf0d7950e3292514cd1b11c47ef60c33df2de043afefefcaee9b946afa3b",
   "counts": {
     "total": 241,
     "components": 95,
@@ -248,7 +248,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "reports",
-      "sha256": "2da17aaa3261c708a4d3cc0cc46fb74539a7a2cecad9690b999af50e7aeeec0b",
+      "sha256": "d68ffe60b9ff5daacaab1a1374b7eecc76e9eeee25e4a67e1e267caf23df6599",
       "exports": [
         "DebugSelectorComponent",
         "ProfilerControlComponent",
@@ -861,6 +861,7 @@
         "packages/coding-agent/test/marketplace/slash-install-parser.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/slash-command-tui-inventory.test.ts",
         "packages/coding-agent/test/slash-commands.test.ts",
         "packages/coding-agent/test/slash-commands/branch.test.ts",
@@ -870,8 +871,7 @@
         "packages/coding-agent/test/slash-commands/exit.test.ts",
         "packages/coding-agent/test/slash-commands/fast.test.ts",
         "packages/coding-agent/test/slash-commands/force.test.ts",
-        "packages/coding-agent/test/slash-commands/login.test.ts",
-        "packages/coding-agent/test/slash-commands/plugin-reviewed-actions.test.ts"
+        "packages/coding-agent/test/slash-commands/login.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/slash-commands.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1332,7 +1332,8 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/modes/components/copy-selector.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-copy.test.ts"
+        "packages/coding-agent/test/modes/controllers/selector-controller-copy.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/copy-selector.ts is individually classified as caller-owned-draft in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1899,7 +1900,8 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/media-message-component.test.ts"
+        "packages/coding-agent/test/media-message-component.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/media-message.ts is individually classified as read-only-renderer in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2419,13 +2421,14 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "282a907f8741e47162e940f13b7c12b2f3d78a4b4f4fa4185b909baff66eb79b",
+      "sha256": "39cda0b4bdeb376e653f7c26a6a94a2d3cbc317241bc19db784901096264fb23",
       "exports": [
         "SettingsBrowser"
       ],
       "interactionSignals": [
         "render",
         "keyboard-input",
+        "mouse-input",
         "cancellation-callback"
       ],
       "persistenceSignals": [],
@@ -2462,7 +2465,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "2fee8e185245f6d1b44bb5bf8d84555a15a3d08e63168cdf51de4850c3a001e8",
+      "sha256": "a35b1008d9f57aae56aa3e6ac0967a4b739a7c73ac70bd282260e20279509709",
       "exports": [
         "SettingsChoiceEditor",
         "SettingsTextEditor"
@@ -2470,6 +2473,7 @@
       "interactionSignals": [
         "render",
         "keyboard-input",
+        "mouse-input",
         "selection-callback",
         "cancellation-callback"
       ],
@@ -2484,7 +2488,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "8933ae596006c87fe11d1deccce13aab7fca881cef114b9f3f9138ed76b79122",
+      "sha256": "86dbd6b9911b762d299be67a2a39c0981c2fdb48409b2706e739c9ac475c162f",
       "exports": [
         "SettingsCallbacks",
         "SettingsRuntimeContext",
@@ -2495,6 +2499,7 @@
       "interactionSignals": [
         "render",
         "keyboard-input",
+        "mouse-input",
         "cancellation-callback",
         "terminal-control"
       ],
@@ -2561,6 +2566,7 @@
         "packages/coding-agent/test/modes/components/status-line/hex-ansi.test.ts",
         "packages/coding-agent/test/regression-guard.test.ts",
         "packages/coding-agent/test/settings-draft-review.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/status-line-chord-indicator.test.ts",
         "packages/coding-agent/test/status-line-cwd-watch.test.ts",
         "packages/coding-agent/test/status-line-git-segment.test.ts",
@@ -3100,7 +3106,8 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/modes/controllers/btw-controller.test.ts"
+        "packages/coding-agent/test/modes/controllers/btw-controller.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/btw-controller.ts is individually classified as runtime-lifecycle in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3126,7 +3133,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "c450e65b9e23088390c5eb5ee087307f9aca954bcf51dd69c2b1470afebfbaeb",
+      "sha256": "49c346f9973c9b59584991d0e1959724cca7d6d6b742e73a20a4bc5c5fff166f",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -3181,7 +3188,8 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/modes/controllers/context-command-controller-review.test.ts"
+        "packages/coding-agent/test/modes/controllers/context-command-controller-review.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/context-command-controller.ts is individually classified as reviewed-mutation-adapter in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3302,7 +3310,8 @@
         "packages/coding-agent/test/input-controller-keybindings.test.ts",
         "packages/coding-agent/test/input-controller-llm-gate.test.ts",
         "packages/coding-agent/test/input-controller-suspend.test.ts",
-        "packages/coding-agent/test/issue-3461-repro.test.ts"
+        "packages/coding-agent/test/issue-3461-repro.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/input-controller.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3386,6 +3395,7 @@
         "packages/coding-agent/test/litellm-login-transaction.test.ts",
         "packages/coding-agent/test/login-model.test.ts",
         "packages/coding-agent/test/provider-onboarding-contract.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/vllm-login-transaction.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/login-model.ts is individually classified as runtime-lifecycle in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -3434,7 +3444,8 @@
       "directTests": [
         "packages/coding-agent/test/modes/controllers/mcp-command-controller-oauth.test.ts",
         "packages/coding-agent/test/modes/controllers/mcp-command-controller-review.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-smithery.test.ts"
+        "packages/coding-agent/test/modes/controllers/mcp-command-controller-smithery.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/mcp-command-controller.ts is individually classified as reviewed-mutation-adapter in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3522,7 +3533,8 @@
         "packages/coding-agent/test/modes/controllers/selector-controller-resume.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-session-delete.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-tree.test.ts",
-        "packages/coding-agent/test/regression-guard.test.ts"
+        "packages/coding-agent/test/regression-guard.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/selector-controller.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3539,7 +3551,8 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/modes/controllers/ssh-command-controller-review.test.ts"
+        "packages/coding-agent/test/modes/controllers/ssh-command-controller-review.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/ssh-command-controller.ts is individually classified as reviewed-mutation-adapter in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3934,7 +3947,8 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/slash-command-discovery.test.ts"
+        "packages/coding-agent/test/slash-command-discovery.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/slash-command-discovery.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4532,7 +4546,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "resources",
-      "sha256": "8b4aadf91455af8c66564a1ba747c4c546f72bde357ae7d0257277ed11b4e33a",
+      "sha256": "3ab80bd3d09abe2eb45da17a7f109383001e35674af6ddd9690dbc4e45e25f2c",
       "exports": [
         "getExportKindCompletions",
         "handleExportResourceCommand"
@@ -4561,6 +4575,7 @@
         "session-persistence"
       ],
       "directTests": [
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/slash-commands/fast.test.ts"
       ],
       "classification": "packages/coding-agent/src/slash-commands/fast-command.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -4635,6 +4650,7 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/slash-commands/resource-commands-review.test.ts"
       ],
       "classification": "packages/coding-agent/src/slash-commands/resource-commands.ts is individually classified as reviewed-mutation-adapter in the resources domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -4955,7 +4971,7 @@
         "packages/coding-agent/test/regression-guard.test.ts",
         "packages/coding-agent/test/sandbox-containment.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
-        "packages/coding-agent/test/slash-commands/browser.test.ts"
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/debug.ts is individually classified as tool-authority-boundary in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5503,6 +5519,7 @@
         "packages/coding-agent/test/sandbox-containment.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/ssh/connection-manager.test.ts",
         "packages/coding-agent/test/start-folder.test.ts",
         "packages/coding-agent/test/status-line-git-utils.test.ts",
@@ -6682,6 +6699,7 @@
         "packages/coding-agent/test/modes/components/user-message-selector-navigation.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-memory.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-session-delete.test.ts",
+        "packages/coding-agent/test/settings-editors.test.ts",
         "packages/tui/test/emergency-fullscreen-restore.test.ts",
         "packages/tui/test/fullscreen-overlay.test.ts",
         "packages/tui/test/mouse.test.ts",
@@ -6801,6 +6819,7 @@
         "packages/coding-agent/test/tools/bash-sixel-render.test.ts",
         "packages/coding-agent/test/tui/hyperlink.test.ts",
         "packages/tui/test/image-render.test.ts",
+        "packages/tui/test/markdown-media.test.ts",
         "packages/tui/test/markdown.test.ts",
         "packages/tui/test/media-playback.test.ts",
         "packages/tui/test/notifications.test.ts",

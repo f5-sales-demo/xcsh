@@ -1,0 +1,72 @@
+{
+  "variant": {
+    "columns": 80,
+    "rows": 24,
+    "theme": "dark",
+    "symbols": "unicode"
+  },
+  "actions": [
+    "Inspect isolated saved contexts and active runtime state",
+    "Close the context report",
+    "Validate credentials against the disposable loopback tenant",
+    "Close context validation without changing saved credentials",
+    "Review runtime context activation",
+    "Cancel activation from the initially selected action",
+    "Reopen context activation review",
+    "Confirm runtime-only context activation",
+    "Review removal of project-local context pointers",
+    "Cancel unlink first",
+    "Review project-local context unlink again",
+    "Confirm exact project-local context unlink",
+    "Inspect isolated MCP saved configuration and runtime state",
+    "Close MCP list",
+    "Test connectivity without changing saved MCP configuration",
+    "Close MCP connectivity report",
+    "Review a second disposable MCP server addition",
+    "Cancel MCP addition first",
+    "Reopen the same MCP server addition review",
+    "Confirm the exact MCP configuration write",
+    "Open an MCP removal review for stale-target testing",
+    "Reject the stale MCP proposal at execution time",
+    "Close the renewed MCP removal without deleting the changed target",
+    "Review removal of the saved MCP candidate",
+    "Confirm MCP candidate removal",
+    "Inspect isolated SSH configuration and loopback target",
+    "Close SSH list",
+    "Review an SSH host save separately from connectivity",
+    "Cancel SSH host save first",
+    "Reopen the exact SSH host review",
+    "Confirm SSH configuration save only",
+    "Open SSH removal review for stale-target testing",
+    "Reject the stale SSH removal proposal at execution time",
+    "Close renewed SSH removal without deleting the replacement",
+    "Review the replacement SSH host removal",
+    "Confirm removal of the currently reviewed SSH host",
+    "/quit Enter"
+  ],
+  "persistence": {
+    "contextValidationAuthorized": true,
+    "contextCredentialBytesUnchanged": true,
+    "startupSelectionUnchanged": true,
+    "cancelledUnlinkBytesUnchanged": true,
+    "confirmedUnlinkRemovedOnlyLocalPointers": true,
+    "mcpConnectivityTestUsedDisposableProcess": true,
+    "mcpStaleTargetPreservedAndCandidateRemoved": true,
+    "sshSaveDisclosedNoConnectivityTest": true,
+    "sshStaleTargetPreservedAndCandidateRemoved": true,
+    "independentReopenVerified": true
+  },
+  "outcome": {
+    "status": "passed"
+  },
+  "fingerprint": "038b70464321d45d10a27ecb79f8a69c6bc16eefc88600bbb8abbf31e12bb0fc",
+  "revision": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+  "output": "/var/folders/sc/dw_q61z13j36rlqvz8bylntr0000gp/T/xcsh-terminal-uat-lEsncm/evidence",
+  "ended": true,
+  "providerRequests": [
+    {
+      "method": "GET",
+      "path": "/v1/models"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "working-tree-full-workspace-test",
+  "command": "bun run ci:test:full",
+  "exitCode": 0,
+  "scope": "Current working tree with the completed differential parity ledger and responsive-matrix validation.",
+  "codingAgent": {
+    "passed": 7698,
+    "skipped": 563,
+    "failed": 0,
+    "total": 8261,
+    "files": 775,
+    "expectCalls": 33696,
+    "durationSeconds": 226.25
+  },
+  "workspaceDurationSeconds": 272.67,
+  "rawLog": {
+    "path": "/private/tmp/xcsh-parity-full-test-v4/output.log",
+    "lines": 438,
+    "sha256": "7311e824667557e500393775e146aa55dc22161b3870a2297b5a7fac88841a34"
+  },
+  "acceptanceStatus": "passed; candidate-only workspace gate, not baseline-versus-pre-fix parity evidence"
+}

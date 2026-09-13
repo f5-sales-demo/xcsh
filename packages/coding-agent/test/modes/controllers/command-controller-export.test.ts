@@ -64,12 +64,21 @@ async function harness() {
 		input: (key: string) => component?.handleInput?.(key),
 	};
 }
-async function waitFor(predicate: () => boolean) {
+async function waitFor(predicate: () => boolean | Promise<boolean>) {
 	for (let index = 0; index < 200; index++) {
-		if (predicate()) return;
+		if (await predicate()) return;
 		await Bun.sleep(5);
 	}
 	throw new Error("Export review state not reached");
+}
+
+/** Review frames wrap paths without changing the reviewed file identity. */
+function terminalValue(value: string): string {
+	return value.replace(/[│╭╮╰╯├┤─]/gu, "").replace(/\s+/gu, "");
+}
+
+function expectTerminalValue(text: string, value: string): void {
+	expect(terminalValue(text)).toContain(terminalValue(value));
 }
 
 test.each([false, true])(
@@ -79,7 +88,7 @@ test.each([false, true])(
 		const destination = join(h.root, "export with spaces.html");
 		const pending = h.controller.handleExportCommand(`/export "${destination}"`);
 		await waitFor(() => h.text().includes("Review session export"));
-		expect(h.text()).toContain(destination);
+		expectTerminalValue(h.text(), destination);
 		expect(h.text()).toContain("Absent");
 		expect(h.text()).toContain("0600");
 		expect(await Bun.file(destination).exists()).toBe(false);
@@ -141,7 +150,7 @@ test("duplicate export commands cannot start a second review or file write", asy
 	const pending = h.controller.handleExportCommand(`/export ${first}`);
 	await h.controller.handleExportCommand(`/export ${second}`);
 	await waitFor(() => h.text().includes("Review session export"));
-	expect(h.text()).toContain(first);
+	expectTerminalValue(h.text(), first);
 	expect(h.ctx.showWarning).toHaveBeenCalled();
 	h.input("\r");
 	await pending;
@@ -165,11 +174,13 @@ test("partial media export retries only unresolved files after renewed review", 
 		},
 	});
 	const destination = join(h.root, "media.html");
+	const canonicalDestination = join(await fs.realpath(h.root), "media.html");
 	const sidecar = join(h.root, "media-media", `${blob.hash}.mp4`);
+	const canonicalSidecar = join(await fs.realpath(h.root), "media-media", `${blob.hash}.mp4`);
 	const rename = fs.rename;
 	let failed = false;
 	const writes = vi.spyOn(fs, "rename").mockImplementation(async (source, target) => {
-		if (target === destination && !failed) {
+		if (target === canonicalDestination && !failed) {
 			failed = true;
 			throw new Error("Synthetic HTML rename failure");
 		}
@@ -177,12 +188,17 @@ test("partial media export retries only unresolved files after renewed review", 
 	});
 	const pending = h.controller.handleExportCommand(`/export ${destination}`);
 	await waitFor(() => h.text().includes("Review session export"));
-	expect(h.text()).toContain("media-media/");
+	expectTerminalValue(h.text(), "media-media/");
 	expect(h.text()).toContain(`${blob.hash.slice(-12)}.mp4`);
 	expect(await Bun.file(sidecar).exists()).toBe(false);
 	h.input("\x1b[B");
 	h.input("\r");
-	await waitFor(() => h.text().includes("1 export files saved"));
+	await waitFor(
+		async () =>
+			(await Bun.file(sidecar).exists()) &&
+			!(await Bun.file(destination).exists()) &&
+			!(await fs.readdir(h.root)).some(name => name.startsWith(".xcsh-export-")),
+	);
 	expect(await readFile(sidecar, "utf8")).toBe("Synthetic video");
 	expect(await Bun.file(destination).exists()).toBe(false);
 	expect(h.ctx.showStatus).not.toHaveBeenCalled();
@@ -190,13 +206,12 @@ test("partial media export retries only unresolved files after renewed review", 
 	h.input("\x1b[B");
 	h.input("\r");
 	await waitFor(() => h.text().includes("proposal changed"));
-	expect(h.text()).toContain("unchanged;");
-	expect(h.text()).toContain("no write");
+	expectTerminalValue(h.text(), "unchanged; no write");
 	h.input("\x1b[B");
 	h.input("\r");
 	await pending;
 	expect(await Bun.file(destination).exists()).toBe(true);
-	expect(writes.mock.calls.filter(call => call[1] === sidecar)).toHaveLength(1);
+	expect(writes.mock.calls.filter(call => call[1] === canonicalSidecar)).toHaveLength(1);
 	expect(h.ctx.showStatus).toHaveBeenCalledTimes(1);
 });
 
@@ -250,7 +265,7 @@ test.each([false, true])(
 		setAgentDir(agentDir);
 		const pending = h.controller.handleShareCommand();
 		await waitFor(() => h.text().includes("Review session publication"));
-		expect(h.text()).toContain(`custom handler ${join(agentDir, "share.mjs")}`);
+		expectTerminalValue(h.text(), `custom handler ${join(agentDir, "share.mjs")}`);
 		expect(h.text()).toContain("Visibility");
 		expect(h.text()).toContain("may publish sensitive conversation");
 		expect(h.text()).toContain("content remotely");
@@ -331,7 +346,7 @@ test.each([false, true])("TUI transcript file export is Cancel-first (confirm: %
 	expect(reviewText).toContain("Local diagnostic export");
 	expect(reviewText).toContain("Absent");
 	expect(reviewText).toContain("permissions 0600");
-	const destination = reviewText.match(/\/tmp\/[^\s│]+-tui-transcript\.txt/)?.[0];
+	const destination = terminalValue(reviewText).match(/\/(?:private\/)?(?:var|tmp)\/\S+?-tui-transcript\.txt/)?.[0];
 	expect(destination).toBeDefined();
 	if (confirm) h.input("\x1b[B");
 	h.input("\r");

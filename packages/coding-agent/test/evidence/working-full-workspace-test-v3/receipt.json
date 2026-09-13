@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "working-tree-full-workspace-test",
+  "capturedAt": "2026-09-13T02:30:34Z",
+  "command": "bun run ci:test:full",
+  "exitCode": 0,
+  "scope": "Current working tree after regenerating the source-boundary audit and repairing the resource-review differential receipt types.",
+  "codingAgent": {
+    "passed": 7698,
+    "skipped": 563,
+    "failed": 0,
+    "total": 8261,
+    "files": 775,
+    "expectCalls": 32994,
+    "durationSeconds": 228.97
+  },
+  "workspaceDurationSeconds": 275.96,
+  "rawLog": {
+    "path": "/private/tmp/xcsh-parity-full-test-v3/output.log",
+    "lines": 438,
+    "sha256": "0d653f797c1775940d278b706cb77b904de3cf72132ea7d32ac84cbc3ddc2853"
+  },
+  "acceptanceStatus": "passed; candidate-only workspace gate, not baseline-versus-pre-fix parity evidence"
+}

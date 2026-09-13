@@ -105,6 +105,15 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 	throw new Error("Timed out waiting for reviewed resource state");
 }
 
+/** Frame wrapping must not turn an exact reviewed path into a different value. */
+function terminalValue(value: string): string {
+	return value.replace(/[│╭╮╰╯├┤─]/gu, "").replace(/\s+/gu, "");
+}
+
+function expectTerminalValue(text: string, value: string): void {
+	expect(terminalValue(text)).toContain(terminalValue(value));
+}
+
 test("resource create is Cancel-first and performs no remote write before review", async () => {
 	const h = await fixture([["\r"]]);
 	await handleResourceCommand(
@@ -146,7 +155,7 @@ test("manifest file export reviews overwrite effects and cancellation leaves the
 	);
 	expect(await fs.stat(destination).catch(() => undefined)).toBeUndefined();
 	expect(h.screens[0]).toContain("Review manifest file export");
-	expect(h.screens[0]).toContain(`${destination}: Absent`);
+	expectTerminalValue(h.screens[0], `${destination}: Absent`);
 	expect(h.screens[0]).toContain("Existing changed files are atomically replaced");
 });
 
@@ -165,7 +174,7 @@ test("confirmed manifest file export revalidates and atomically persists the obs
 	expect(content).toContain("kind: http_loadbalancer");
 	expect(content).toContain("name: reviewed-lb");
 	expect(h.screens.at(-1)).toContain("Manifest export complete");
-	expect(h.screens.at(-1)).toContain(`${destination}: written`);
+	expectTerminalValue(h.screens.at(-1)!, `${destination}: written`);
 });
 
 test("resource apply client dry-run produces a report without any remote mutation", async () => {

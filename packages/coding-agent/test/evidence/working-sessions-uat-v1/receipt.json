@@ -1,0 +1,94 @@
+{
+  "variant": {
+    "columns": 80,
+    "rows": 24,
+    "theme": "dark",
+    "symbols": "unicode"
+  },
+  "actions": [
+    "Show the current session report without changing state",
+    "Open the shared hierarchical session-tree browser",
+    "Ctrl+C remains execution control and does not close tree navigation",
+    "Paste editable search for an identity-qualified tree node",
+    "Open exact tree-node details before navigation",
+    "Choose the explicit tree navigation action",
+    "Choose branch-summary generation for the abandoned path",
+    "Cancel tree navigation from its initially selected action",
+    "Reopen tree navigation options for the retained exact node",
+    "Choose branch summary again",
+    "Confirm reviewed tree navigation",
+    "Clear the intentionally prefilled branch-point editor draft before the next command",
+    "Review a typed session rename",
+    "Cancel rename first",
+    "Reopen the exact rename review",
+    "Confirm reviewed session rename",
+    "Review moving the session and artifacts to an exact directory",
+    "Cancel session move first",
+    "Reopen exact session move review",
+    "Confirm reviewed session move",
+    "Review an exact session fork including artifacts and parent linkage",
+    "Cancel session fork first",
+    "Reopen exact session fork review",
+    "Confirm reviewed session fork",
+    "Open branch-point browser in the forked session",
+    "Search for a stable user-message branch identity",
+    "Open exact branch-point details",
+    "Open the explicit branch creation review",
+    "Cancel branch creation first",
+    "Reopen conversation branch review",
+    "Confirm reviewed conversation branch",
+    "Clear the branch selector's intentional editor prefill before handoff",
+    "Review token-consuming handoff generation",
+    "Cancel handoff before model work",
+    "Reopen exact handoff review",
+    "Confirm reviewed handoff generation",
+    "Open the scoped/all session browser after handoff",
+    "Switch to the stable All sessions scope",
+    "Search by exact duplicate-safe session identity",
+    "Open exact resume target details",
+    "Open explicit resume review",
+    "Cancel resume first",
+    "Reopen exact resume review",
+    "Confirm reviewed session resume",
+    "Review an exact new empty session destination",
+    "Cancel new session first",
+    "Reopen exact new-session review",
+    "Confirm reviewed new session",
+    "/quit Enter"
+  ],
+  "persistence": {
+    "activeSession": "157d595aafac9b84",
+    "resumeTarget": "157d595ab0ec9b8b",
+    "treeSummaryPersistedExactlyOnce": true,
+    "renameReopened": true,
+    "moveReopenedAtNewCwd": true,
+    "forkCreatedExactlyOneParentLinkedSession": true,
+    "branchCreatedExactlyOneSession": true,
+    "handoffCancelAvoidedModelWork": true,
+    "handoffContextReopened": true,
+    "resumeVerifiedIdentity": true,
+    "newCancelNoFile": true,
+    "newCreatedExactlyOneSession": true
+  },
+  "outcome": {
+    "status": "passed"
+  },
+  "fingerprint": "038b70464321d45d10a27ecb79f8a69c6bc16eefc88600bbb8abbf31e12bb0fc",
+  "revision": "e68d757fa7ebf6f6e5b36d52138e99712c565065",
+  "output": "/var/folders/sc/dw_q61z13j36rlqvz8bylntr0000gp/T/xcsh-terminal-uat-m0Ws7N/evidence",
+  "ended": true,
+  "providerRequests": [
+    {
+      "method": "GET",
+      "path": "/v1/models"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/messages"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/messages"
+    }
+  ]
+}

@@ -1,4 +1,11 @@
-import { Container, Input, type SelectItem, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
+import {
+	Container,
+	Input,
+	type MouseRoutable,
+	type SelectItem,
+	type SgrMouseEvent,
+	wrapTextWithAnsi,
+} from "@f5-sales-demo/pi-tui";
 import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
 
 export class SettingsTextEditor extends Container {
@@ -63,12 +70,14 @@ export class SettingsTextEditor extends Container {
 }
 
 /** Search and preview are local; only the caller's draft callback changes a proposed value. */
-export class SettingsChoiceEditor extends Container {
+export class SettingsChoiceEditor extends Container implements MouseRoutable {
 	#search = new Input();
 	#selected: string;
 	#offset = 0;
 	#capacity = 1;
 	#detailLength = 0;
+	#choiceCapacity = 1;
+	#hitRows = new Map<number, SelectItem>();
 	#previewQueue: Promise<void> = Promise.resolve();
 	#generation = 0;
 	#finishing = false;
@@ -98,6 +107,12 @@ export class SettingsChoiceEditor extends Container {
 	#selection(): SelectItem | undefined {
 		const items = this.#items();
 		return items.find(item => item.value === this.#selected) ?? items[0];
+	}
+	#select(item: SelectItem): void {
+		if (item.value === this.#selected) return;
+		this.#selected = item.value;
+		this.#preview(item.value);
+		this.#offset = 0;
 	}
 	#preview(value: string): void {
 		if (!this.onPreview) return;
@@ -146,9 +161,10 @@ export class SettingsChoiceEditor extends Container {
 			inner,
 		);
 		this.#capacity = Math.max(1, Math.floor(rows / 4));
+		this.#choiceCapacity = Math.max(1, Math.floor(rows / 3));
 		this.#detailLength = details.length;
 		this.#offset = Math.min(this.#offset, Math.max(0, details.length - this.#capacity));
-		return selectorFrame(
+		const rendered = selectorFrame(
 			width,
 			rows,
 			this.title,
@@ -166,16 +182,30 @@ export class SettingsChoiceEditor extends Container {
 						)
 					: [this.options.length ? "No matching values" : "No values available"],
 			details.slice(this.#offset, this.#offset + this.#capacity),
-			details.length > this.#capacity ? ["PgUp/PgDn: details"] : [],
+			[
+				...(selected ? [`Choices ${items.indexOf(selected) + 1}/${items.length}`] : []),
+				...(items.length > this.#choiceCapacity ? ["PgUp/PgDn: choices"] : []),
+				...(details.length > this.#capacity ? ["PgUp/PgDn: details"] : []),
+			],
 			{ selectedBodyIndex: selected ? items.indexOf(selected) : 0 },
 		);
+		this.#hitRows.clear();
+		let from = 0;
+		for (const item of items) {
+			const row = rendered.findIndex((line, index) => index >= from && Bun.stripANSI(line).includes(item.label));
+			if (row >= 0) {
+				this.#hitRows.set(row, item);
+				from = row + 1;
+			}
+		}
+		return rendered;
 	}
 	handleInput(data: string): void {
 		if (this.#finishing) return;
 		if (matchesSelectorKey(data, "cancel")) {
 			if (this.#search.getValue()) this.#search.setValue("");
 			else this.#finish();
-		} else if (matchesSelectorKey(data, "confirm")) {
+		} else if (matchesSelectorKey(data, "confirm") || (data === " " && !this.#search.getValue())) {
 			const selected = this.#selection();
 			if (selected) this.#finish(selected.value);
 		} else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down")) {
@@ -184,17 +214,40 @@ export class SettingsChoiceEditor extends Container {
 			const index = current ? items.indexOf(current) : 0;
 			const delta = matchesSelectorKey(data, "up") ? -1 : 1;
 			const selected = items[(index + delta + items.length) % items.length];
-			if (selected) {
-				this.#selected = selected.value;
-				this.#preview(selected.value);
-				this.#offset = 0;
-			}
-		} else if (matchesSelectorKey(data, "pageDown"))
-			this.#offset = Math.min(Math.max(0, this.#detailLength - this.#capacity), this.#offset + this.#capacity);
-		else if (matchesSelectorKey(data, "pageUp")) this.#offset = Math.max(0, this.#offset - this.#capacity);
-		else {
+			if (selected) this.#select(selected);
+		} else if (matchesSelectorKey(data, "pageDown") || matchesSelectorKey(data, "pageUp")) {
+			const items = this.#items();
+			if (items.length > this.#choiceCapacity) {
+				const current = this.#selection();
+				const index = Math.max(0, current ? items.indexOf(current) : 0);
+				const delta = matchesSelectorKey(data, "pageDown") ? this.#choiceCapacity : -this.#choiceCapacity;
+				const selected = items[Math.max(0, Math.min(items.length - 1, index + delta))];
+				if (selected) this.#select(selected);
+			} else if (matchesSelectorKey(data, "pageDown"))
+				this.#offset = Math.min(Math.max(0, this.#detailLength - this.#capacity), this.#offset + this.#capacity);
+			else this.#offset = Math.max(0, this.#offset - this.#capacity);
+		} else {
 			this.#search.handleInput(data);
 			this.#offset = 0;
+		}
+	}
+
+	routeMouse(event: SgrMouseEvent, line: number, _col: number): void {
+		if (this.#finishing) return;
+		if (event.wheel !== null) {
+			const items = this.#items();
+			const current = this.#selection();
+			const index = Math.max(0, current ? items.indexOf(current) : 0);
+			const selected = items[Math.max(0, Math.min(items.length - 1, index + event.wheel))];
+			if (selected) this.#select(selected);
+			return;
+		}
+		const item = this.#hitRows.get(line);
+		if (!item) return;
+		if (event.motion) this.#select(item);
+		else if (event.leftClick) {
+			this.#select(item);
+			this.#finish(item.value);
 		}
 	}
 }
