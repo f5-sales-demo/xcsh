@@ -21,7 +21,7 @@ export default function packageFixture(pi: any) {
 		streamSimple(model: any, context: any) {
 			const lastUser = context.messages.findLastIndex((m: any) => m.role === "user");
 			const text = JSON.stringify(context.messages[lastUser]?.content ?? "");
-			const marker = text.match(/PACKAGE-(?:ALPHA|BETA|CRASH|RESUME)/)?.[0] ?? "PACKAGE-UNKNOWN";
+			const marker = text.match(/PACKAGE-(?:CURRENT|CRASH|RESUME)/)?.[0] ?? "PACKAGE-UNKNOWN";
 			const results = context.messages.slice(lastUser + 1).filter((m: any) => m.role === "toolResult");
 			const step = results.length;
 			if (results.some((result: any) => result.isError)) throw new Error("Package fixture tool failed");
