@@ -79,7 +79,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("  workflow_dispatch:\n", benchmark)
         for input_name in ("source_sha", "experiment", "cache_state", "pair_id"):
             self.assertIn(f"      {input_name}:\n", benchmark)
-        self.assertIn("afaecb5bfeaea4593ab4bce65ca7d620f605056d", benchmark)
+        self.assertIn("c7d9f37448115820385040a635ce8a8d15613222", benchmark)
         self.assertNotIn("  pull_request:\n", benchmark)
         self.assertIn("runner_label=xcsh-compute-d16-candidate", benchmark)
         self.assertIn("runner_label=xcsh-compute-f32-candidate", benchmark)
