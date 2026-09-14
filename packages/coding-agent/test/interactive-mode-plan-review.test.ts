@@ -766,9 +766,10 @@ describe("InteractiveMode plan review rendering", () => {
 				resumed.resolve();
 			});
 			let reviewFinished: Promise<unknown> | undefined;
+			let reviewedPlanText: string | undefined;
 			let rendered = "";
 			vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
-				expect(await Bun.file(planFilePath).text()).toBe("Original plan");
+				reviewedPlanText = await Bun.file(planFilePath).text();
 				const completed = Promise.withResolvers<any>();
 				reviewFinished = completed.promise;
 				const component = await factory(
@@ -777,7 +778,11 @@ describe("InteractiveMode plan review rendering", () => {
 					undefined,
 					completed.resolve,
 				);
-				rendered = Bun.stripANSI(component.render(100).join("\n"));
+				for (let i = 0; i < 100; i++) {
+					rendered = Bun.stripANSI(component.render(100).join("\n"));
+					if (rendered.includes("Original plan → Edited plan")) break;
+					await Bun.sleep(5);
+				}
 				if (action === "file-drift") await Bun.write(planFilePath, "Concurrent plan");
 				if (action !== "cancel") component.handleInput("\x1b[B");
 				component.handleInput("\r");
@@ -809,6 +814,7 @@ describe("InteractiveMode plan review rendering", () => {
 				planExists: true,
 				title: "PLAN",
 			});
+			expect(reviewedPlanText).toBe("Original plan");
 			expect(rendered).toContain("Original plan → Edited plan");
 			expect(await Bun.file(planFilePath).text()).toBe(
 				action === "confirm" ? "Edited plan" : action === "file-drift" ? "Concurrent plan" : "Original plan",

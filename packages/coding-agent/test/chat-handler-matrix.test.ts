@@ -72,6 +72,14 @@ const req = (id: string, text = "test") =>
 	({ type: "chat_request", id, text, context: null, mode: "educational" }) as Record<string, unknown>;
 const flush = (ms = 20) => new Promise(r => setTimeout(r, ms));
 
+async function waitFor(predicate: () => boolean, timeoutMs = 1_000): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	while (!predicate()) {
+		if (Date.now() >= deadline) throw new Error(`condition did not settle within ${timeoutMs}ms`);
+		await flush(10);
+	}
+}
+
 // Realistic multi-turn harness: each turn's prompt behavior is a function that can
 // emit session events (tool_execution_start/end) via the subscriber during execution,
 // simulating the catalog_workflow_runner driving browser automation for seconds while
@@ -157,7 +165,7 @@ describe("ChatHandler turn matrix", () => {
 		h.fire(req("c-A")); // starts (30ms)
 		await flush(5);
 		h.fire(req("c-B")); // queued
-		await flush(80); // both settle
+		await waitFor(() => h.dones().some(done => done.id === "c-B"));
 		expect(h.dones().map(d => d.id)).toContain("c-A");
 		expect(h.dones().map(d => d.id)).toContain("c-B"); // replayed + completed
 		expect(h.errors()).toEqual([]);
@@ -170,7 +178,7 @@ describe("ChatHandler turn matrix", () => {
 		await flush(5);
 		h.fire(req("c-2", "old intent")); // queued
 		h.fire(req("c-3", "newest intent")); // replaces c-2 in queue
-		await flush(120); // settle
+		await waitFor(() => h.dones().some(done => done.id === "c-3"));
 		const doneIds = h.dones().map(d => d.id);
 		expect(doneIds).toContain("c-1"); // first completed
 		expect(doneIds).toContain("c-3"); // newest replayed

@@ -35,7 +35,7 @@ repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 export XCSH_SOURCE_ROOT=$repo_root
 source_commit=$(git rev-parse HEAD)
-test "$source_commit" = c004f81977019b81d74b9ba0eeb33a579e65f89a
+test "$source_commit" = d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a
 SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$source_commit")
 [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]
 export SOURCE_DATE_EPOCH
