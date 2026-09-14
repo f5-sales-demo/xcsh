@@ -1194,3 +1194,29 @@ Synthetic phone-shaped bridge tests cover catalog rendering, a model-and-effort
 tap, immediate thread state, invalid choices, active-turn exclusion, persistence
 before shutdown, and full restart restoration. Physical iPhone rendering and
 tap acceptance remain a separate human checkpoint.
+
+## Durable relay and process lifecycle parity
+
+The 2026-09-14 lifecycle port keeps the existing v3 wire fields and adds no
+client-visible replacement protocol. Logical relay state now follows pinned Codex
+behavior by keying clients on `(clientId, streamId)`, replacing only the same
+stream, dropping unknown non-initialize traffic, expiring idle owners, bounding
+both queue directions at 128, returning retryable `-32001` overload errors, and
+retaining cursor plus unacknowledged output across reconnects. Cleanup retires
+subscriptions, delivered approval ownership, remote processes, codec state, and
+queues without cancelling the attached terminal's work.
+
+The additive `status` fields report supervisor and host state, startup manager,
+generation, restart count, and a sanitized degraded reason while retaining
+`enabled`, `relay`, `liveSessions`, and `sessions`. `restart` joins the existing
+management actions without changing pairing or client-management contracts.
+
+Linux startup parity is implemented as an owner-only systemd user unit with no
+credentials. Exact process identity includes PID, process start time, resolved
+executable path and SHA-256, plus lifecycle generation. The supervisor uses the
+specified health cadence, startup allowance, jittered retry, persistent breaker,
+and graceful drain. Automated four-session recovery proves stable identity,
+metadata, history, approval replay, and tenant-call deduplication. A source-matched
+packaged harness and one controlled Ubuntu crash/cutover remain required before
+this section can claim live lifecycle acceptance; iPhone behavior remains a
+separate human observation.

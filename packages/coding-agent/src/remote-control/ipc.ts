@@ -82,14 +82,14 @@ export class LocalPeer {
 			} else pending.resolve(frame.result);
 		}
 	}
-	call(method: string, params: Record<string, unknown>): Promise<unknown> {
+	call(method: string, params: Record<string, unknown>, timeoutMs = 30_000): Promise<unknown> {
 		if (this.#pending.size >= 256) return Promise.reject(new Error("Local remote request limit"));
 		const id = crypto.randomUUID();
 		return new Promise((resolve, reject) => {
 			const timer = setTimeout(() => {
 				this.#pending.delete(id);
 				reject(new Error("Local remote request timed out"));
-			}, 30_000);
+			}, timeoutMs);
 			this.#pending.set(id, { resolve, reject, timer });
 			try {
 				this.#send({ id, method, params });

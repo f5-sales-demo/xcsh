@@ -72,3 +72,29 @@ now guards the exact named-tool request as described above. Deterministic length
 repeat-failure, cancellation, and substituted-tool cases plus bounded live TUI and
 delegated-voice checks cover the repair. A clean full evaluator run and physical
 phone interaction remain separate release gates.
+
+## Durable transport lifecycle
+
+Voice transport recovery now sits behind a persistent remote-control supervisor.
+The supervisor, not the phone or the voice model, owns host replacement. It probes
+the host every two seconds, restarts after exit or three failed one-second probes,
+and opens a persistent degraded breaker after five failures in five minutes.
+`remote-control enable` or `restart` is the only breaker reset; `disable` remains
+stopped across service failure, logout, and reboot.
+
+Logical relay clients are scoped by both client and stream identity. Replacing one
+stream clears its subscriptions, approval-delivery ownership, remote process
+ownership, codec fragments, and queues without cancelling work in the attached
+terminal or affecting sibling streams. Unknown traffic is dropped. Idle clients
+expire after ten minutes, ingress and outbound queues are capped at 128, and an
+overloaded request receives the retryable `-32001` response. Cursor and unacknowledged
+output survive transport reconnect; WebSocket heartbeat and reconnect use 10-second
+pings, a 60-second pong timeout, and full-jitter exponential delay capped at 30
+seconds.
+
+Shutdown first stops admission, then drains routing and unacknowledged outbound work
+for up to 60 seconds. Forced termination is limited to an exact PID, start-time,
+executable-path, executable-hash, and generation match. These mechanics preserve
+backend task ownership during voice closure and host replacement; they do not prove
+microphone, speech, or iPhone presentation quality. Those remain physical-device
+acceptance gates after the immutable candidate passes offline qualification.

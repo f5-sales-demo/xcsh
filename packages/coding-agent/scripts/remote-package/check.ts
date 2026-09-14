@@ -127,6 +127,10 @@ async function connect(): Promise<void> {
 		capabilities: { experimentalApi: true },
 	});
 }
+function disconnect(): void {
+	peer?.close();
+	peer = undefined;
+}
 async function startHost(): Promise<void> {
 	hostIndex++;
 	host = Bun.spawn(
@@ -138,6 +142,14 @@ async function startHost(): Promise<void> {
 	);
 	await connect();
 }
+async function startSupervisor(): Promise<void> {
+	hostIndex++;
+	host = Bun.spawn(["docker", "exec", container, "xcsh", "remote-control", "supervisor"], {
+		stdout: Bun.file(`${output}/supervisor-${hostIndex}.log`),
+		stderr: Bun.file(`${output}/supervisor-${hostIndex}-error.log`),
+	});
+	await connect();
+}
 async function stopHost(): Promise<void> {
 	await peer!.call("stop", {});
 	peer!.close();
@@ -146,8 +158,7 @@ async function stopHost(): Promise<void> {
 }
 async function crashHost(): Promise<void> {
 	await docker("/bin/sh", "-c", "kill -9 $(cat /fixture/host.pid)");
-	peer?.close();
-	peer = undefined;
+	disconnect();
 	assert.notEqual(await host!.exited, 0);
 }
 async function threads(): Promise<any[]> {
@@ -210,6 +221,13 @@ try {
 		enabled: false,
 		relay: "stopped",
 		liveSessions: 0,
+		sessions: [],
+		generation: 0,
+		restartCount: 0,
+		supervisorState: "stopped",
+		hostState: "stopped",
+		startupManager: "none",
+		degradedReason: null,
 	});
 	passed("packaged status defaults off");
 	// Fake enrollment exercises local IPC only. Container networking is disabled.
@@ -362,6 +380,96 @@ try {
 	await waitFor(async () => (await threads()).length === 0, "all terminal exits removed");
 	passed("terminal exit unregisters all owners");
 	await stopHost();
+
+	await startSupervisor();
+	const firstManagedHost = JSON.parse(await Bun.file(`${output}/agent/remote-control/host-process.json`).text());
+	await docker("kill", "-9", String(firstManagedHost.pid));
+	disconnect();
+	const replacement = await waitFor(async () => {
+		if (!(await Bun.file(`${output}/agent/remote-control/host-process.json`).exists())) return undefined;
+		const value = JSON.parse(await Bun.file(`${output}/agent/remote-control/host-process.json`).text());
+		return value.pid !== firstManagedHost.pid ? value : undefined;
+	}, "supervisor host replacement");
+	await connect();
+	assert.notEqual(replacement.pid, firstManagedHost.pid);
+	assert.equal((await threads()).length, 0);
+	passed("packaged supervisor replaces one crashed host and restores its local relay socket");
+
+	peer?.close();
+	peer = undefined;
+	assert.deepEqual(JSON.parse(await docker("xcsh", "remote-control", "disable", "--json")), { enabled: false });
+	assert.equal(await host!.exited, 0);
+	await Bun.sleep(100);
+	const disabled = JSON.parse(await docker("xcsh", "remote-control", "status", "--json"));
+	assert.equal(disabled.enabled, false);
+	assert.equal(disabled.hostState, "stopped");
+	assert.equal(disabled.supervisorState, "stopped");
+	passed("intentional packaged disable remains stopped");
+
+	const hostStatePath = `${output}/agent/remote-control/host.json`;
+	const hostState = JSON.parse(await Bun.file(hostStatePath).text());
+	await writeFile(hostStatePath, JSON.stringify({ ...hostState, enabled: true }), { mode: 0o600 });
+	await writeFile(
+		`${output}/agent/remote-control/host-process.json`,
+		JSON.stringify({
+			pid: 2_000_000_000,
+			startTime: "stale",
+			executablePath: "/usr/local/bin/xcsh",
+			executableSha256: "0".repeat(64),
+			generation: disabled.generation + 1,
+		}),
+		{ mode: 0o600 },
+	);
+	await writeFile(
+		`${output}/agent/remote-control/lifecycle.json`,
+		JSON.stringify({
+			generation: disabled.generation + 1,
+			restartCount: disabled.restartCount,
+			supervisorState: "starting",
+			hostState: "stopped",
+			startupManager: "process",
+			degradedReason: null,
+		}),
+		{ mode: 0o600 },
+	);
+	await startSupervisor();
+	const recovered = JSON.parse(await Bun.file(`${output}/agent/remote-control/host-process.json`).text());
+	assert.notEqual(recovered.pid, 2_000_000_000);
+	passed("packaged supervisor recovers stale process state");
+
+	const contender = Bun.spawn(["docker", "exec", container, "xcsh", "remote-control", "supervisor"], {
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	assert.notEqual(await contender.exited, 0);
+	assert.equal((await threads()).length, 0);
+	passed("concurrent packaged supervisor start retains exactly one owner");
+
+	let current = recovered;
+	for (let failure = 0; failure < 5; failure++) {
+		disconnect();
+		await docker("kill", "-9", String(current.pid));
+		if (failure < 4) {
+			current = await waitFor(
+				async () => {
+					const value = JSON.parse(await Bun.file(`${output}/agent/remote-control/host-process.json`).text());
+					return value.pid !== current.pid ? value : undefined;
+				},
+				`crash-loop replacement ${failure + 1}`,
+			);
+			await connect();
+		}
+	}
+	const degraded = await waitFor(async () => {
+		const value = JSON.parse(await Bun.file(`${output}/agent/remote-control/lifecycle.json`).text());
+		return value.supervisorState === "degraded" ? value : undefined;
+	}, "crash-loop degraded state");
+	assert.equal(degraded.hostState, "unhealthy");
+	assert.equal(typeof degraded.degradedReason, "string");
+	passed("packaged crash loop opens the non-spawning degraded breaker");
+
+	assert.deepEqual(JSON.parse(await docker("xcsh", "remote-control", "disable", "--json")), { enabled: false });
+	assert.equal(await host!.exited, 0);
 	report = {
 		binarySha256: await digest(binary),
 		harnessSha256: await digest(import.meta.filename),

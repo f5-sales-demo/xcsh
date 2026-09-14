@@ -1,9 +1,13 @@
 import { Args, Command, Flags } from "@f5-sales-demo/pi-utils/cli";
 import { runRemoteControl } from "../remote-control/control";
 export default class RemoteControl extends Command {
-	static description = "Native remote interoperability preview: enable, disable, status, pair, clients, revoke";
+	static description =
+		"Native remote interoperability preview: enable, restart, disable, status, pair, clients, revoke";
 	static args = {
-		action: Args.string({ required: true, description: "enable | disable | status | pair | clients | revoke" }),
+		action: Args.string({
+			required: true,
+			description: "enable | restart | disable | status | pair | clients | revoke",
+		}),
 		clientId: Args.string({ description: "Client identity to revoke (from clients output)" }),
 	};
 	static flags = {

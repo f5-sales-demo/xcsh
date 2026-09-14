@@ -21,7 +21,10 @@ export class RelayCodec {
 	#outbound = new Map<string, number>();
 	#pending: { key: string; seq: number; segment: number; wire: string }[] = [];
 	#assemblies = new Map<string, Assembly>();
-	constructor(private readonly maxBufferedBytes = 16 * 1024 * 1024) {}
+	constructor(
+		private readonly maxBufferedBytes = 16 * 1024 * 1024,
+		private readonly maxPendingMessages = 128,
+	) {}
 	receive(wire: string): RelayMessage | null {
 		let frame: Frame;
 		try {
@@ -156,7 +159,12 @@ export class RelayCodec {
 		const seq = (this.#outbound.get(key) ?? 0) + 1;
 		const base = { client_id: clientId, stream_id: streamId, seq_id: seq };
 		const raw = Buffer.from(JSON.stringify(message));
-		if (raw.length > MAX_MESSAGE || (this.#outbound.size >= 256 && !this.#outbound.has(key)))
+		const pendingMessages = new Set(this.#pending.filter(item => item.key === key).map(item => item.seq)).size;
+		if (
+			raw.length > MAX_MESSAGE ||
+			(this.#outbound.size >= 256 && !this.#outbound.has(key)) ||
+			pendingMessages >= this.maxPendingMessages
+		)
 			throw new Error("Relay buffer limit");
 		const frames: string[] = [];
 		if (raw.length <= CHUNK_BYTES || event !== "server_message") {
@@ -193,5 +201,15 @@ export class RelayCodec {
 	}
 	replay(): string[] {
 		return this.#pending.map(item => item.wire);
+	}
+	get pendingMessages(): number {
+		return new Set(this.#pending.map(item => `${item.key}\0${item.seq}`)).size;
+	}
+	closeClient(clientId: string, streamId: string): void {
+		const key = JSON.stringify([clientId, streamId]);
+		this.#inbound.delete(key);
+		this.#outbound.delete(key);
+		this.#assemblies.delete(key);
+		this.#pending = this.#pending.filter(item => item.key !== key);
 	}
 }

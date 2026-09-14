@@ -474,3 +474,37 @@ prompt, `memory://root`, and every fresh voice snapshot; `/move` also rebuilds
 the effective prompt after the project changes. An A-to-B regression proves
 that only project B memory is retained. Automated parity and a new immutable
 runtime must pass before Robin repeats the physical Sol observation.
+
+## Durable lifecycle acceptance gate — 2026-09-14
+
+Issue #3873 now requires process and relay recovery before physical phone
+acceptance. Automated tests cover lock serialization, atomic owner-only state,
+PID reuse and executable mismatch, stale and corrupt records, socket collisions,
+systemd-user reconciliation, host crash replacement, persisted disable, graceful
+drain, and the five-failures-in-five-minutes degraded breaker. Relay tests cover
+same-stream replacement, sibling streams, unknown traffic, idle and explicit
+closure, bounded ingress/outbound queues, isolated overload replies, replay,
+heartbeat timeout, and capped jittered reconnects.
+
+One deterministic four-session recovery test re-registers Luna, Astra, Sol, and
+Terra-shaped sessions and compares their IDs, names, models, medium effort, and
+history after host replacement. It also requires one pending approval identity per
+session and stable request results with no second tenant execution. This automated
+test is necessary but does not substitute for the live Herdr cutover.
+
+Release acceptance still requires all of the following against one clean merged
+source revision: the full remote-control and guarded coding-agent suites; type,
+Biome, prompt, documentation, bundle, pinned-source, PII, secret, and whitespace
+checks; the network-disabled 15-check packaged harness; and the clean 16-case
+context evaluator with private review of every synthetic answer. A newly named
+immutable artifact must embed the full 40-character source SHA and pass permission
+and hash verification before replacing the current host.
+
+After offline qualification, the supervised Ubuntu host must be killed once. The
+result is accepted only if exactly one replacement appears, the relay reconnects,
+all four existing Herdr sessions return with unchanged identity, name, model,
+medium effort, and history summary, no turn/approval/tenant request duplicates,
+and the systemd user service remains enabled. Physical iPhone checks then cover
+workstation-state presentation, combined and follow-up speech, corrections,
+missing names, approval/denial/cancellation UI, interruption, target ordering, and
+concise spoken output. No merge is allowed before those observations pass.

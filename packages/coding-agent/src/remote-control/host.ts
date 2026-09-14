@@ -3,6 +3,7 @@ import { dirname, isAbsolute, normalize } from "node:path";
 import type { Enrollment } from "./enrollment";
 import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
 import { RelayCodec } from "./relay";
+import { RELAY_SWEEP_MS, ReconnectBackoff, RelayClientTracker, RelayHeartbeat } from "./relay-lifecycle";
 import { RemoteRouter, type SessionEndpoint } from "./router";
 import { type Notification, ProtocolError } from "./session";
 import { type TraceSink, traceFromEnvironment, traceJson } from "./trace-runtime";
@@ -14,7 +15,7 @@ async function prepareSocketPath(socketPath: string): Promise<void> {
 		peer.close();
 		active = true;
 	} catch (error) {
-		if (!["ECONNREFUSED", "ENOENT"].includes(String((error as NodeJS.ErrnoException).code))) throw error;
+		if (!["ECONNREFUSED", "ENOENT", "ENOTSOCK"].includes(String((error as NodeJS.ErrnoException).code))) throw error;
 	}
 	if (active) throw new Error("An xcsh remote host is already running");
 	try {
@@ -160,6 +161,9 @@ export async function startLocalHost(
 	};
 	const owners = new Map<LocalPeer, { id: string; lastSeen: number }>();
 	let closed = false;
+	let accepting = true;
+	let inFlight = 0;
+	let pendingOutbound = () => 0;
 	let relayStatus = "disconnected";
 	let stopRelay = () => {};
 	const server = await listenLocal(socketPath, peer => {
@@ -179,9 +183,15 @@ export async function startLocalHost(
 		};
 		peer.handle = async (method, params) => {
 			if (method === "protocol") {
-				const result = await router.handle(localClient, params.request);
-				replayResumeSettings(router, localClient, params.request, result, true);
-				return result;
+				if (!accepting) throw new ProtocolError(-32000, "Remote host is draining");
+				inFlight++;
+				try {
+					const result = await router.handle(localClient, params.request);
+					replayResumeSettings(router, localClient, params.request, result, true);
+					return result;
+				} finally {
+					inFlight--;
+				}
 			}
 			if (method === "status")
 				return {
@@ -194,11 +204,18 @@ export async function startLocalHost(
 						model: s.thread.model,
 					})),
 				};
-			if (method === "stop") {
+			if (method === "drain" || method === "stop") {
+				accepting = false;
+				const timeout =
+					typeof params.timeoutMs === "number" && params.timeoutMs >= 0
+						? Math.min(params.timeoutMs, 60_000)
+						: 60_000;
+				const deadline = Date.now() + timeout;
+				while (inFlight + pendingOutbound() > 0 && Date.now() < deadline) await Bun.sleep(25);
 				setTimeout(() => {
 					void close();
 				}, 20);
-				return {};
+				return { drained: inFlight + pendingOutbound() === 0 };
 			}
 			if (method === "unregister") {
 				remove();
@@ -266,19 +283,34 @@ export async function startLocalHost(
 		refresh?: () => Promise<Enrollment>,
 	): void {
 		const codec = new RelayCodec();
+		pendingOutbound = () => codec.pendingMessages;
 		const clients = new Map<string, { clientId: string; streamId: string }>();
+		const tracker = new RelayClientTracker({
+			onClose: key => {
+				const client = clients.get(key);
+				router.close(key);
+				clients.delete(key);
+				if (client) codec.closeClient(client.clientId, client.streamId);
+			},
+		});
 		let socket: WebSocket | undefined;
 		let timer: ReturnType<typeof setTimeout> | undefined;
-		let attempts = 0;
+		const backoff = new ReconnectBackoff();
+		const heartbeat = new RelayHeartbeat();
 		let refreshBeforeConnect = false;
 		const send = (clientId: string, streamId: string, message: unknown, event?: string) => {
 			if (!event || event === "server_message") trace?.record("rpc", "out", message);
-			const frames = codec.send(clientId, streamId, message, event);
-			if (socket?.readyState === WebSocket.OPEN)
-				for (const frame of frames) {
-					traceJson(trace, "relay", "out", frame);
-					socket.send(frame);
-				}
+			try {
+				const frames = codec.send(clientId, streamId, message, event);
+				if (socket?.readyState === WebSocket.OPEN)
+					for (const frame of frames) {
+						traceJson(trace, "relay", "out", frame);
+						socket.send(frame);
+					}
+			} catch (error) {
+				tracker.close(RelayClientTracker.key(clientId, streamId), "outbound_terminated");
+				throw error;
+			}
 		};
 		const connect = async () => {
 			if (closed) return;
@@ -316,7 +348,8 @@ export async function startLocalHost(
 			connection.onopen = () => {
 				if (socket !== connection) return;
 				relayStatus = "connected";
-				attempts = 0;
+				backoff.reset();
+				heartbeat.opened();
 				for (const frame of codec.replay()) {
 					traceJson(trace, "relay", "out", frame);
 					connection.send(frame);
@@ -325,6 +358,7 @@ export async function startLocalHost(
 			connection.onmessage = event => {
 				if (socket !== connection) return;
 				try {
+					heartbeat.pong();
 					if (typeof event.data !== "string") throw new Error();
 					traceJson(trace, "relay", "in", event.data);
 					const incoming = codec.receive(event.data);
@@ -336,11 +370,29 @@ export async function startLocalHost(
 						return;
 					}
 					if (incoming.event === "client_closed") {
-						router.close(key);
-						clients.delete(key);
+						tracker.close(key, "client_closed");
+						return;
+					}
+					const message = incoming.message as { id?: string | number; method?: string } | undefined;
+					if (!accepting) {
+						if (message?.id !== undefined)
+							send(clientId, streamId, {
+								id: message.id,
+								error: { code: -32000, message: "Remote host is draining" },
+							});
+						return;
+					}
+					const admitted = tracker.admit(clientId, streamId, message?.method, message?.id);
+					if (admitted.kind === "dropped") {
+						codec.closeClient(clientId, streamId);
 						return;
 					}
 					clients.set(key, { clientId, streamId });
+					if (!tracker.begin(key, admitted.generation)) {
+						if (message?.id !== undefined) send(clientId, streamId, tracker.overload(message.id));
+						return;
+					}
+					inFlight++;
 					trace?.record("rpc", "in", incoming.message);
 					// Diagnostics contain protocol method names only, never payloads or client identifiers.
 					const method = (incoming.message as { method?: string }).method;
@@ -391,7 +443,7 @@ export async function startLocalHost(
 					void router
 						.handle(key, incoming.message)
 						.then(result => {
-							if (result !== null) {
+							if (result !== null && tracker.isCurrent(key, admitted.generation)) {
 								const error = (result as { error?: { code: number } }).error;
 								if (error)
 									process.stdout.write(
@@ -402,8 +454,13 @@ export async function startLocalHost(
 							}
 						})
 						.catch(() => {
+							if (!tracker.isCurrent(key, admitted.generation)) return;
 							relayStatus = "protocol-error";
 							if (socket === connection) connection.close();
+						})
+						.finally(() => {
+							tracker.complete(key, admitted.generation);
+							inFlight--;
 						});
 				} catch {
 					relayStatus = "protocol-error";
@@ -422,14 +479,14 @@ export async function startLocalHost(
 				if (!closed) {
 					relayStatus = "reconnecting";
 					if (timer) clearTimeout(timer);
-					timer = setTimeout(
-						() => {
-							timer = undefined;
-							void connect();
-						},
-						Math.min(30_000, 500 * 2 ** Math.min(attempts++, 6)),
-					);
+					timer = setTimeout(() => {
+						timer = undefined;
+						void connect();
+					}, backoff.nextDelay());
 				}
+			};
+			(connection as WebSocket & { onpong?: () => void }).onpong = () => {
+				if (socket === connection) heartbeat.pong();
 			};
 		};
 		publishClient = (key, event) => {
@@ -439,12 +496,28 @@ export async function startLocalHost(
 				send(client.clientId, client.streamId, event);
 			} catch {
 				relayStatus = "buffer-limit";
-				socket?.close();
+				tracker.close(key, "outbound_terminated");
 			}
 		};
+		const heartbeatTimer = setInterval(() => {
+			if (socket?.readyState !== WebSocket.OPEN) return;
+			const action = heartbeat.poll();
+			if (action === "timeout") {
+				relayStatus = "heartbeat-timeout";
+				socket.close();
+				return;
+			}
+			if (action === "ping") {
+				const transport = socket as WebSocket & { ping?: () => void };
+				transport.ping?.();
+				heartbeat.sentPing();
+			}
+		}, 10_000);
+		heartbeatTimer.unref?.();
 
 		let refreshing = false;
 		const refreshTimer = setInterval(() => {
+			tracker.sweep();
 			if (!refresh || refreshing || closed || Date.parse(enrollment.expires_at) > Date.now() + 60_000) return;
 			refreshing = true;
 			void refresh()
@@ -463,10 +536,12 @@ export async function startLocalHost(
 				.finally(() => {
 					refreshing = false;
 				});
-		}, 30_000);
+		}, RELAY_SWEEP_MS);
 		stopRelay = () => {
 			clearInterval(refreshTimer);
+			clearInterval(heartbeatTimer);
 			if (timer) clearTimeout(timer);
+			tracker.closeAll("shutdown");
 			socket?.close();
 		};
 		void connect();

@@ -29,12 +29,15 @@ Enrollment is synthetic and cannot reach the service. This checks packaged
 independence and session integration, not subscription enrollment, live model
 capabilities, phone behavior, voice or complete protocol parity.
 
-The assertions cover default-off status, discovery of two named terminal owners,
+The 15 assertions cover default-off status, discovery of two named terminal owners,
 correct working-directory routing, native file-change facts and successful read
 results in history, clean and abrupt host restart, active terminal work surviving
 host process loss, stable-request replay without repeated turns, compiled
 `--resume` with preserved identity/history/extension model, durable replay after
-the terminal process itself restarts, and removal on terminal exit.
+the terminal process itself restarts, and removal on terminal exit. Five added
+lifecycle checks cover supervised crash replacement, persistent intentional
+disable, stale process-state recovery, one winner under concurrent supervisor
+startup, and non-spawning degradation after a bounded crash loop.
 
 The evidence directory retains terminal/host logs, saved sessions, history
 responses and `result.json`. The result records binary, harness and provider

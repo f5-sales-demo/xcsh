@@ -192,6 +192,7 @@ From the feature worktree:
 
 ```sh
 bun packages/coding-agent/src/cli.ts remote-control enable --json
+bun packages/coding-agent/src/cli.ts remote-control restart --json
 bun packages/coding-agent/src/cli.ts remote-control status --json
 bun packages/coding-agent/src/cli.ts remote-control pair
 bun packages/coding-agent/src/cli.ts remote-control disable
@@ -2774,3 +2775,55 @@ Settings updates and turn starts share an admission queue, so sending immediatel
 after a tap waits for credential validation and persistence instead of racing the
 old model. Once any owner publishes a validated catalog, the compatibility
 fallback cannot reintroduce a historical active model.
+
+## Durable remote-control lifecycle — issue 3873
+
+The 2026-09-14 lifecycle implementation replaces the one-shot host with an
+owner-only supervisor. `enable`, `restart`, and `disable` serialize through one
+lifecycle lock and are idempotent. On Linux, `enable` atomically reconciles and
+enables `xcsh-remote-control.service` in the user systemd manager. The unit has
+no credentials, starts only the supervisor, restarts it on failure, and uses
+`KillMode=mixed` so graceful shutdown reaches the supervisor before its host.
+Other platforms use the same supervisor as a detached process.
+
+The supervisor owns one host generation. Its PID records contain the PID,
+process start time, resolved executable path, executable SHA-256, and generation.
+Signals and stale-record removal require an exact identity match. A replacement
+supervisor may adopt a surviving host only when that record is still live and
+belongs to the current generation. Private state, sockets, and logs use owner-only
+permissions. A competing supervisor must win the socket bind before publishing
+its PID, so a failed contender cannot overwrite the live owner.
+
+The host is probed every two seconds with a one-second deadline and receives ten
+seconds to start. An exit or three failed probes triggers a full-jitter restart
+delay beginning at 500 ms and capped at 30 seconds. Five failures in five minutes
+persist a non-spawning degraded state across supervisor restarts. Only an explicit
+`enable` or `restart` creates a new generation and resets that breaker. Startup
+transitions restore the preceding lifecycle snapshot and enabled flag if service
+startup fails.
+
+Shutdown stops admission and waits up to 60 seconds for in-flight routing and
+unacknowledged outbound relay work. It then signals only an identity-verified
+process, escalating from TERM to KILL within a bounded service stop window. An
+intentional `disable` writes the disabled state before stopping the service, so
+systemd cannot restart either process at login or after a failure.
+
+Relay clients are keyed by `(clientId, streamId)`. Same-stream initialization
+replaces and completely clears the old logical owner, while sibling streams remain
+independent. Unknown non-initialize traffic is discarded without retaining codec
+state. Clients expire after ten idle minutes on a 30-second sweep; client closure,
+outbound termination, shutdown, and replacement all release subscriptions,
+interaction delivery ownership, process ownership, codec state, and bounded
+queues. Ingress and outbound queues are capped at 128. Saturated requests receive
+`-32001` with `Server overloaded; retry later.` without closing healthy streams.
+Cursor and unacknowledged output survive relay reconnects; heartbeat and reconnect
+timing use 10-second pings, a 60-second pong deadline, and capped full jitter.
+
+Deterministic coverage includes process-identity mismatch, stale/corrupt state and
+locks, socket collision, concurrent supervisor startup, persisted degradation,
+host crash replacement, intentional disable, bounded drain, relay replacement and
+expiry, overload isolation, reconnect replay, and four simultaneous session
+registrations. The four-session fixture preserves IDs, names, model selections,
+medium effort, histories, and one approval identity per session while proving that
+stable request replay does not repeat tenant execution. The live Ubuntu runtime is
+not changed until a new full-SHA immutable package passes every offline gate.

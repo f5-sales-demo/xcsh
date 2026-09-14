@@ -1,6 +1,6 @@
 # Context selection and resource conversations
 
-The objective is a reliable conversation, rather than a hard-coded answer to one
+The objective is a reliable conversation, rather than a hardcoded answer to one
 inventory question. A user can select a tenant and ask a resource question in one
 utterance or across several turns. Native conversational input and delegated voice
 execute through the same attached agent session.
@@ -133,3 +133,19 @@ complete before the follow-up begins.
 
 See [GPT-Live guidance review](LIVE-GUIDANCE.md) for the voice/backend prompt
 boundary, interruption semantics, transport differences, and remaining gates.
+
+## Lifecycle qualification boundary
+
+Context-selection acceptance must survive a supervised host replacement, not only
+an uninterrupted evaluator run. The four attached sessions retain their original
+tenant isolation and approval owners while the host process is replaced. Once they
+re-register, a stable `clientUserMessageId` must resolve to the already accepted
+turn; it must not repeat context activation, a tenant request, or an approval.
+
+Run the clean 16-case evaluator only from the exact candidate revision, under Bun
+1.4.2, after bounded missing-context checks. Reject a run with tracked-source drift,
+wrong-tenant requests, provider errors, timeouts, follow-up queries that precede
+selection completion, or an answer that fails private rubric review. Keep prompts,
+answers, tenant/profile values, credentials, transcripts, audio, and review notes
+outside Git. The immutable artifact and later live crash-recovery observation must
+refer to the same full source SHA.
