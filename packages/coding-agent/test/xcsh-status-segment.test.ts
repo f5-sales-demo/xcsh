@@ -112,4 +112,24 @@ describe("context.xcsh status line segment", () => {
 
 		expect(renderXCSHContextSegment().content).toBe("staging:default");
 	});
+
+	it("uses the selected context namespace when an inherited namespace is empty", async () => {
+		const context = {
+			...TEST_CONTEXT,
+			name: "f5-sales-demo",
+			apiUrl: "https://f5-sales-demo.console.ves.volterra.io",
+			defaultNamespace: "multi-cloud-networking",
+		};
+		writeContext(xcshContextsDir, context);
+		writeActiveContext(xcshConfigDir, context.name);
+
+		// An exported-but-empty value must not mask the active context. This was
+		// the behavior of the deployed 21.28.1 binary (using `??` here), which
+		// left the status segment stale/blank instead of reporting its namespace.
+		process.env.XCSH_NAMESPACE = "";
+		const service = ContextService.init(xcshConfigDir);
+		await service.loadActive();
+
+		expect(renderXCSHContextSegment().content).toBe("f5-sales-demo:multi-cloud-networking");
+	});
 });
