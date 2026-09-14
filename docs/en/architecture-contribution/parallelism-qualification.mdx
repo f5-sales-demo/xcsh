@@ -33,6 +33,21 @@ The performance-qualification evaluator is parameterized by the candidate
 variant. It does not need a new hardcoded worker count; invoke it with the new
 candidate variant when evaluating collected artifacts.
 
+### Source and harness must agree
+
+The qualification workflow checks out the workload source at its frozen source
+revision and checks out the qualification harness separately at the workflow
+revision. Some package test scripts import `scripts/run-ts-tests.ts` from the
+frozen source rather than from the harness. Therefore, a harness-only worker
+count change is insufficient: a package can reject the count even though the
+harness accepts it.
+
+Before screening a new count, create a deliberately refrozen source revision
+that includes the TypeScript launcher and direct-test changes above. Record the
+new source revision, keep it fixed for every sample in that screen, and collect
+a new serial baseline from that same source. Do not compare that screen to a
+baseline produced from the preceding frozen source revision.
+
 ## Bounded implementation pattern
 
 The following relationships must all be true for a candidate named
