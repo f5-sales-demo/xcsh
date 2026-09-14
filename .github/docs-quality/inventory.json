@@ -3439,6 +3439,31 @@
           ]
         }
       ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/parallelism-qualification.mdx",
+      "classification": "how-to",
+      "audience": "xcsh contributors qualifying CI performance changes",
+      "readerNeed": "Add a bounded Bun file-worker count without missing a workflow, harness, launcher, or contract update.",
+      "purpose": "Provide the complete implementation and validation checklist for expanding qualified file-test parallelism.",
+      "sourceAuthority": [
+        ".github/workflows/compute-benchmark.yml",
+        "scripts/prepare-runner-optimization-toolchain.sh",
+        "scripts/runner-optimization-profile.sh",
+        "scripts/run-ts-tests.ts",
+        "tests/test_ci_capacity_contract.py"
+      ],
+      "evidence": ["source-authority"],
+      "headings": [
+        {"text": "Purpose", "readerQuestion": "Why is a bounded worker count a cross-file contract?", "purpose": "Explain why every qualification boundary must be updated together.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Required changes", "readerQuestion": "Which files must change for a new worker count?", "purpose": "List the workflow, harness, launcher, and contract updates.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Source and harness must agree", "readerQuestion": "Why must the frozen source accept the new worker count?", "purpose": "Prevent a source-side package test from rejecting a harness-only parallelism update.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Bounded implementation pattern", "readerQuestion": "How is a worker count carried to Bun safely?", "purpose": "Define the explicit experiment-to-worker path and bounded scheduling rule.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Preflight before dispatch", "readerQuestion": "Which checks prove the new route before a workload runs?", "purpose": "Provide focused validation and dispatch readiness checks.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Settings that remain fixed during a screen", "readerQuestion": "Which controls must not change during a parallelism screen?", "purpose": "Preserve a comparable, bounded benchmark environment.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Failure signatures and the missing contract", "readerQuestion": "How do setup failures identify the missing update?", "purpose": "Map failures to the contract that requires repair.", "evidence": ["source-authority"], "legacyConceptIds": []},
+        {"text": "Promotion boundary", "readerQuestion": "When may a qualified count change normal CI?", "purpose": "Separate qualification enablement from production promotion and rollback.", "evidence": ["source-authority"], "legacyConceptIds": []}
+      ]
     }
   ]
 }
