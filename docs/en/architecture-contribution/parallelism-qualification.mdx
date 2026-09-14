@@ -1,0 +1,115 @@
+---
+title: "File-test parallelism qualification"
+description: "Expand bounded Bun file-test parallelism without leaving workflow and harness contracts out of sync."
+sidebar:
+  order: 11
+---
+
+## Purpose
+
+Use this guide when qualifying a new bounded Bun file-worker count on the D16
+candidate runner. A worker count is a contract that crosses the workflow, the
+profile harness, the TypeScript test launcher, and their tests. Update every
+contract in one change before dispatching a sample.
+
+Use `<WORKER_COUNT>` below for the proposed count, such as `10`. Keep the
+experiment name and count paired: `d16-parallel-<WORKER_COUNT>` must always
+map to `<WORKER_COUNT>`.
+
+## Required changes
+
+| Boundary | File | Required change |
+| --- | --- | --- |
+| Dispatch input | `.github/workflows/compute-benchmark.yml` | Add `d16-parallel-<WORKER_COUNT>` to `workflow_dispatch.inputs.experiment.options`. |
+| Candidate route | `.github/workflows/compute-benchmark.yml` | Add the experiment to the D16 candidate route allowlist. This keeps the D16 image and runner label selected. |
+| Worker mapping | `.github/workflows/compute-benchmark.yml` | Add `d16-parallel-<WORKER_COUNT>) file_workers=<WORKER_COUNT> ;;`. |
+| Setup profile | `scripts/prepare-runner-optimization-toolchain.sh` | Add the experiment to the accepted experiment allowlist. |
+| Workload profile | `scripts/runner-optimization-profile.sh` | Update the usage text, accepted experiment list, accepted worker-count list, exact experiment-to-worker pairing, and serial-only guard. |
+| TypeScript launcher | `scripts/run-ts-tests.ts` | Add the count to `FileWorkers`, the accepted raw values, and the error message. This is the code that converts the count to `--parallel=<WORKER_COUNT>`. |
+| Direct launcher test | `packages/coding-agent/test/scripts/run-ts-tests.test.ts` | Cover the new accepted count and retain rejection coverage for unsupported values. |
+| Workflow contracts | `tests/test_ci_capacity_contract.py` and `packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts` | Update exact route assertions so workflow and harness drift fail locally. |
+
+The performance-qualification evaluator is parameterized by the candidate
+variant. It does not need a new hardcoded worker count; invoke it with the new
+candidate variant when evaluating collected artifacts.
+
+## Bounded implementation pattern
+
+The following relationships must all be true for a candidate named
+`d16-parallel-<WORKER_COUNT>`:
+
+```text
+workflow choice
+  -> D16 candidate route
+  -> file_workers=<WORKER_COUNT>
+  -> profile allowlist and exact pair
+  -> FileWorkers accepts <WORKER_COUNT>
+  -> bun ... --max-concurrency=2 --parallel=<WORKER_COUNT>
+```
+
+Do not add a broad numeric range or an unbounded mode. Each count is explicitly
+qualified so a future change cannot silently alter CI scheduling.
+
+## Preflight before dispatch
+
+Run these checks after all files above are updated and before a candidate
+workload is dispatched:
+
+```bash
+actionlint .github/workflows/compute-benchmark.yml
+bash -n scripts/runner-optimization-profile.sh scripts/prepare-runner-optimization-toolchain.sh
+python3 -m unittest tests.test_ci_capacity_contract
+bun test packages/coding-agent/test/scripts/run-ts-tests.test.ts
+bun test packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts
+```
+
+If the worktree does not have Bun workspace dependencies, install them with
+`bun install --frozen-lockfile` before treating a TypeScript test startup error
+as a source failure. Do not substitute npm, Yarn, or pnpm.
+
+Before dispatching, confirm that the candidate ARC pool has zero current and
+pending runners. Dispatch one matched sample at a time and record the run ID at
+dispatch.
+
+## Settings that remain fixed during a screen
+
+Changing any of these changes the experiment rather than merely increasing
+file-test parallelism:
+
+- Keep the frozen source revision and immutable runner image unchanged.
+- Keep the D16 candidate runner class, ARC pool, `min=0`, and `max=1`.
+- Keep `--max-concurrency=2`.
+- Never add Bun `--concurrent`.
+- Keep one candidate workload active at a time.
+- Keep serial production CI at `XCSH_TEST_FILE_WORKERS: "0"` until the
+  qualification gates pass.
+
+## Failure signatures and the missing contract
+
+| Failure point | Likely missing update |
+| --- | --- |
+| `Validate bounded experiment` exits with code 2 | The workflow experiment is absent from the D16 candidate route allowlist. |
+| `Profile legacy setup or baked verification` prints its usage line | The setup-profile experiment allowlist is missing the candidate. |
+| `Profile workload phases` rejects the worker value | The workload-profile accepted count or exact experiment-to-worker pair is missing. |
+| `run-ts-tests.ts` says the worker count is unsupported | `FileWorkers` and its parsed string allowlist were not updated. |
+| Exact-string workflow contract test fails | Update its expected D16 candidate route only after the workflow route is intentionally changed. |
+
+Resolve the missing contract, run the focused preflight again, and then rerun
+only the failed sample. Do not infer a benchmark result from setup-only runs.
+
+## Promotion boundary
+
+Qualification changes only make a candidate runnable. They do not change normal
+CI. Promote a count only after matched artifact evidence demonstrates expected
+output, no failures, no OOMs or evictions, memory below the defined threshold,
+non-regressing p95, and the required median TypeScript improvement.
+
+The production change is intentionally separate:
+
+1. Change `.github/workflows/ci.yml` from `XCSH_TEST_FILE_WORKERS: "0"` to
+   the chosen qualified value.
+2. Update the serial-default assertion in `tests/test_ci_capacity_contract.py`.
+3. Run the focused contracts and an ordinary CI verification after merge.
+
+If ordinary CI becomes unstable or regresses unacceptably, restore
+`XCSH_TEST_FILE_WORKERS: "0"`.
