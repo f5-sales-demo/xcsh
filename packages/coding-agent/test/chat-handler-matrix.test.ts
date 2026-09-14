@@ -165,7 +165,7 @@ describe("ChatHandler turn matrix", () => {
 		h.fire(req("c-A")); // starts (30ms)
 		await flush(5);
 		h.fire(req("c-B")); // queued
-		await flush(80); // both settle
+		await waitFor(() => h.dones().some(done => done.id === "c-B"));
 		expect(h.dones().map(d => d.id)).toContain("c-A");
 		expect(h.dones().map(d => d.id)).toContain("c-B"); // replayed + completed
 		expect(h.errors()).toEqual([]);
