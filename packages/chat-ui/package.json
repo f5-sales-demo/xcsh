@@ -38,7 +38,7 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"dompurify": "3.4.14",
+		"dompurify": "3.4.15",
 		"marked": "18.0.11",
 		"temml": "0.13.5"
 	},
