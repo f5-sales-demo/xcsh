@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { remoteHostName } from "../../src/remote-control/control";
 import { enrollRemoteHost, RemoteControlError } from "../../src/remote-control/enrollment";
 
 const identity = {
-	name: "xcsh · workstation",
+	name: "xcsh - workstation",
 	version: "21.22.0",
 	installationId: "fixture-installation",
 	os: "linux",
@@ -17,6 +18,11 @@ const response = {
 };
 
 describe("native remote enrollment", () => {
+	test("uses lowercase xcsh in the workstation label", () => {
+		expect(remoteHostName("workstation")).toBe("xcsh - workstation");
+		expect(remoteHostName("XCSH - workstation")).toBe("xcsh - workstation");
+		expect(remoteHostName("xcsh · workstation")).toBe("xcsh - workstation");
+	});
 	test("sends the pinned enrollment contract with xcsh identity and selected subscription", async () => {
 		let observed: Request | undefined;
 		const result = await enrollRemoteHost(identity, auth, async request => {

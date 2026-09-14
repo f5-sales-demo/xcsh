@@ -4,9 +4,9 @@ import { Settings } from "../../src/config/settings";
 import { startLocalHost } from "../../src/remote-control/host";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 
-const models = ["gpt-5.6-luna", "gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra"];
+const models = ["gpt-6-astra"];
 
-test("four sessions re-register without duplicate turns, approvals, or tenant requests", async () => {
+test("the current session re-registers without duplicate turns, approvals, or tenant requests", async () => {
 	const dir = await mkdtemp("/tmp/xcsh-four-session-lifecycle-");
 	const path = `${dir}/host.sock`;
 	const tenantCalls = new Map<string, number>();
@@ -163,13 +163,13 @@ test("four sessions re-register without duplicate turns, approvals, or tenant re
 			accepted.set(threadId, response.result.turn.id);
 		}
 		await Bun.sleep(0);
-		expect([...tenantCalls.values()]).toEqual([1, 1, 1, 1]);
+		expect([...tenantCalls.values()]).toEqual([1]);
 		expect(
 			firstEvents
 				.filter(event => event.id?.startsWith("approval-"))
 				.map(event => event.id)
 				.sort(),
-		).toEqual(["approval-0", "approval-1", "approval-2", "approval-3"]);
+		).toEqual(["approval-0"]);
 
 		await host.close();
 		host = await startLocalHost(path, "fixture");
@@ -206,13 +206,13 @@ test("four sessions re-register without duplicate turns, approvals, or tenant re
 			});
 			expect(history.result.thread.turns).toHaveLength(2);
 		}
-		expect([...tenantCalls.values()]).toEqual([1, 1, 1, 1]);
+		expect([...tenantCalls.values()]).toEqual([1]);
 		expect(
 			secondEvents
 				.filter(event => event.id?.startsWith("approval-"))
 				.map(event => event.id)
 				.sort(),
-		).toEqual(["approval-0", "approval-1", "approval-2", "approval-3"]);
+		).toEqual(["approval-0"]);
 	} finally {
 		await Promise.all(remotes.map(remote => remote.close()));
 		await host.close();

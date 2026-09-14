@@ -61,4 +61,5 @@ prove the persisted client-message ledger prevents a second execution.
 `evidence-permission-boundary-2026-09-10.json` records the clean `b3953eecc`
 artifact after permission-profile discovery and explicit unowned permission/MCP
 request rejection. It passed all ten checks under Bun 1.4.2 before that exact
-binary started the four-session trace-bound live checkpoint.
+binary started the now-superseded four-session trace-bound live checkpoint. Current
+qualification uses one current terminal with its dynamic model catalog.

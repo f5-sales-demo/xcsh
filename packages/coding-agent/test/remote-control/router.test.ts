@@ -30,6 +30,93 @@ test("initialization is per phone stream; lists and attaches registered terminal
 	expect(calls).toHaveLength(1);
 	expect(await router.handle("phone", { id: 6, method: "thread/start" })).toMatchObject({ error: { code: -32601 } });
 });
+
+test("the vanilla remote catalog exposes one active terminal and only its dynamic models", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const calls: Array<{ id: string; method: string }> = [];
+	const endpoint = (id: string, model: string, models: any[]) => ({
+		thread: {
+			id,
+			name: id,
+			model,
+			modelProvider: "openai-codex",
+			cwd: `/tmp/${id}`,
+			updatedAt: 1,
+			createdAt: 1,
+			turns: [],
+		},
+		models,
+		call: async (_identity: string, method: string) => {
+			calls.push({ id, method });
+			return {};
+		},
+	});
+	const primaryModels = [
+		{
+			id: "gpt-5.6-luna",
+			provider: "openai-codex",
+			displayName: "Luna",
+			description: "Primary",
+			supportedReasoningEfforts: [],
+			defaultReasoningEffort: "medium",
+			inputModalities: ["text"],
+		},
+		{
+			id: "gpt-6-astra",
+			provider: "openai-codex",
+			displayName: "Astra",
+			description: "Selectable",
+			supportedReasoningEfforts: [],
+			defaultReasoningEffort: "medium",
+			inputModalities: ["text"],
+		},
+	];
+	router.registerSession("primary", endpoint("primary", "gpt-5.6-luna", primaryModels));
+	router.registerSession(
+		"fixture-secondary",
+		endpoint("fixture-secondary", "gpt-5.6-sol", [
+			{
+				id: "gpt-5.6-sol",
+				provider: "openai-codex",
+				displayName: "Sol",
+				description: "Fixture only",
+				supportedReasoningEfforts: [],
+				defaultReasoningEffort: "medium",
+				inputModalities: ["text"],
+			},
+		]),
+	);
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(await router.handle("phone", { id: 2, method: "thread/list", params: {} })).toMatchObject({
+		result: { data: [{ id: "primary" }] },
+	});
+	expect(await router.handle("phone", { id: 3, method: "model/list", params: {} })).toMatchObject({
+		result: { data: [{ id: "gpt-5.6-luna" }, { id: "gpt-6-astra" }] },
+	});
+	expect(
+		await router.handle("phone", {
+			id: 4,
+			method: "thread/settings/update",
+			params: { threadId: "fixture-secondary", model: "gpt-5.6-sol", effort: "medium" },
+		}),
+	).toMatchObject({ error: { code: -32602 } });
+	expect(
+		await router.handle("phone", {
+			id: 5,
+			method: "thread/settings/update",
+			params: { threadId: "primary", model: "gpt-6-astra", effort: "medium" },
+		}),
+	).toMatchObject({ result: {} });
+	expect(calls).toEqual([{ id: "primary", method: "thread/settings/update" }]);
+	router.removeSession("primary");
+	expect(await router.handle("phone", { id: 6, method: "thread/list", params: {} })).toMatchObject({
+		result: { data: [{ id: "fixture-secondary" }] },
+	});
+});
 test("malformed and experimental unsupported operations are explicit errors", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	let calls = 0;
@@ -474,9 +561,7 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 	expect(await call("config/read", { cwd: "/tmp/alpha", includeLayers: true })).toMatchObject({
 		result: { config: { model: "gpt-5.6-luna", model_provider: "openai-codex" }, origins: {}, layers: [] },
 	});
-	expect(await call("config/read", { cwd: "/tmp/beta" })).toMatchObject({
-		result: { config: { model: "gpt-6-astra" } },
-	});
+	expect(await call("config/read", { cwd: "/tmp/beta" })).toMatchObject({ result: { config: { model: null } } });
 	expect(await call("configRequirements/read")).toMatchObject({ result: { requirements: null } });
 	const collaborationModes = bootstrapReference.events.find(event => event.response === "collaborationMode/list")!;
 	expect(await call("collaborationMode/list")).toEqual({
@@ -486,9 +571,7 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 	expect(await call("plugin/installed", { cwds: ["/tmp/alpha"] })).toMatchObject({
 		result: { marketplaces: [], marketplaceLoadErrors: [] },
 	});
-	expect(await call("model/list")).toMatchObject({
-		result: { data: [{ id: "gpt-5.6-luna" }, { id: "gpt-6-astra" }], nextCursor: null },
-	});
+	expect(await call("model/list")).toMatchObject({ result: { data: [{ id: "gpt-5.6-luna" }], nextCursor: null } });
 	expect(await call("config/read", { cwd: "/unknown" })).toMatchObject({ result: { config: { model: null } } });
 	expect(await call("thread/goal/get", { threadId: "missing" })).toMatchObject({ error: { code: -32602 } });
 });

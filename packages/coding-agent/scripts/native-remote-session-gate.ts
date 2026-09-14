@@ -6,7 +6,7 @@ import { connectPeer } from "../src/remote-control/ipc";
 async function main(): Promise<void> {
 	if (process.argv.slice(2).join(" ") !== "--run") {
 		process.stdout.write(
-			"Usage: bun packages/coding-agent/scripts/native-remote-session-gate.ts --run\nRequires the xcsh Remote Luna and xcsh Remote Astra fixture TUIs.\n",
+			"Usage: bun packages/coding-agent/scripts/native-remote-session-gate.ts --run\nRequires one current xcsh interactive terminal.\n",
 		);
 		return;
 	}
@@ -31,54 +31,54 @@ async function main(): Promise<void> {
 	try {
 		await call("initialize", { clientInfo: { name: "xcsh-native-gate", version: "1" } });
 		const { data } = await call("thread/list");
-		for (const [name, marker] of [
-			["xcsh Remote Luna", "ALPHA-ORCHARD"],
-			["xcsh Remote Astra", "BETA-HARBOR"],
-		]) {
-			const thread = (
-				data as { id: string; name: string; model: string; cwd: string; reasoningEffort?: string | null }[]
-			).find(value => value.name === name);
-			assert(thread, "Fixture terminal missing");
-			const read = () =>
-				call("thread/read", { threadId: thread.id, includeTurns: true }) as Promise<{
-					thread: { turns: { items: { type: string; text?: string }[] }[] };
-				}>;
-			const before = (await read()).thread.turns.length;
-			const params = {
-				clientUserMessageId: `fixture-${crypto.randomUUID()}`,
-				model: thread.model,
-				cwd: thread.cwd,
-				effort: thread.reasoningEffort ?? null,
-				summary: "auto",
-				threadId: thread.id,
-				input: [{ type: "text", text: "Reply with only this session's marker, without tools or commentary." }],
-			};
-			const id = `gate-${crypto.randomUUID()}`;
-			const started = Date.now();
-			await call("skills/extraRoots/set", { extraRoots: [] });
-			const result = (await call("turn/start", params, id)) as { turn: { id: string } };
-			const replay = (await call("turn/start", params, id)) as { turn: { id: string } };
-			assert.equal(replay.turn.id, result.turn.id, "Replay selected another turn");
-			const retried = (await call("turn/start", params, `${id}-retry`)) as { turn: { id: string } };
-			assert.equal(retried.turn.id, result.turn.id, "Client message retry selected another turn");
-			let matched = false;
-			const deadline = Date.now() + 120_000;
-			while (Date.now() < deadline) {
-				const turns = (await read()).thread.turns;
-				if (
-					turns.length === before + 1 &&
-					turns.at(-1)?.items.some(item => item.type === "agentMessage" && item.text?.trim() === marker)
-				) {
-					matched = true;
-					break;
-				}
-				await Bun.sleep(250);
+		const threads = data as { id: string; model: string; cwd: string; reasoningEffort?: string | null }[];
+		assert.equal(threads.length, 1, "Remote UI must expose one current terminal");
+		const thread = threads[0]!;
+		const catalog = (await call("model/list")) as { data: { id: string }[] };
+		assert(
+			catalog.data.some(model => model.id === thread.model),
+			"Current terminal model is missing from its catalog",
+		);
+		const read = () =>
+			call("thread/read", { threadId: thread.id, includeTurns: true }) as Promise<{
+				thread: { turns: { items: { type: string; text?: string }[] }[] };
+			}>;
+		const before = (await read()).thread.turns.length;
+		const marker = `XCSH-VANILLA-${crypto.randomUUID()}`;
+		const params = {
+			clientUserMessageId: `vanilla-${crypto.randomUUID()}`,
+			model: thread.model,
+			cwd: thread.cwd,
+			effort: thread.reasoningEffort ?? null,
+			summary: "auto",
+			threadId: thread.id,
+			input: [{ type: "text", text: `Reply with only ${marker}, without tools or commentary.` }],
+		};
+		const id = `gate-${crypto.randomUUID()}`;
+		const started = Date.now();
+		await call("skills/extraRoots/set", { extraRoots: [] });
+		const result = (await call("turn/start", params, id)) as { turn: { id: string } };
+		const replay = (await call("turn/start", params, id)) as { turn: { id: string } };
+		assert.equal(replay.turn.id, result.turn.id, "Replay selected another turn");
+		const retried = (await call("turn/start", params, `${id}-retry`)) as { turn: { id: string } };
+		assert.equal(retried.turn.id, result.turn.id, "Client message retry selected another turn");
+		let matched = false;
+		const deadline = Date.now() + 120_000;
+		while (Date.now() < deadline) {
+			const turns = (await read()).thread.turns;
+			if (
+				turns.length === before + 1 &&
+				turns.at(-1)?.items.some(item => item.type === "agentMessage" && item.text?.trim() === marker)
+			) {
+				matched = true;
+				break;
 			}
-			assert(matched, "Fixture context round trip failed");
-			process.stdout.write(
-				`${JSON.stringify({ stage: "local-session", fixture: name, model: thread.model, contextMatched: true, duplicatePromptSuppressed: true, elapsedMs: Date.now() - started })}\n`,
-			);
+			await Bun.sleep(250);
 		}
+		assert(matched, "Vanilla session context round trip failed");
+		process.stdout.write(
+			`${JSON.stringify({ stage: "local-session", model: thread.model, catalogContainsCurrentModel: true, contextMatched: true, duplicatePromptSuppressed: true, elapsedMs: Date.now() - started })}\n`,
+		);
 	} finally {
 		peer.close();
 	}

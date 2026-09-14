@@ -28,6 +28,13 @@ interface HostState {
 	installationId: string;
 	enrollment: Enrollment;
 }
+export function remoteHostName(value: string = hostname()): string {
+	const device = value
+		.trim()
+		.replace(/^xcsh\s*(?:[-·])?\s*/i, "")
+		.trim();
+	return `xcsh - ${device || hostname()}`;
+}
 const root = () => join(getAgentDir(), "remote-control");
 const statePath = () => join(root(), "host.json");
 const supervisorSocketPath = () => join(root(), "supervisor.sock");
@@ -441,7 +448,8 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 		if (!state?.enabled) throw new Error("Enable xcsh remote control first");
 		if ((await remoteStatus()).relay !== "connected")
 			throw new Error("Wait for the xcsh remote relay to connect before pairing");
-		state.name = state.name.replace(/xcsh/gi, "xcsh");
+		state.name = remoteHostName(state.name);
+		await writeState(state);
 		if (Date.parse(state.enrollment.expires_at) < Date.now() + 60_000) await refreshState(state);
 		return startPairing(state.enrollment);
 	}
@@ -479,13 +487,13 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 					installationId: string;
 				};
 				const { installationId, ...enrollment } = gate;
-				state = { enabled: true, name: `xcsh · ${hostname()}`, installationId, enrollment };
+				state = { enabled: true, name: remoteHostName(), installationId, enrollment };
 			} else {
 				const storage = await AuthStorage.create(getAgentDbPath());
 				try {
 					await storage.reload();
 					const installationId = crypto.randomUUID();
-					const name = `xcsh · ${hostname()}`;
+					const name = remoteHostName();
 					const enrollment = await enrollRemoteHost(
 						{
 							name,
@@ -502,7 +510,7 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 				}
 			}
 		}
-		state.name = state.name.replace(/xcsh/gi, "xcsh");
+		state.name = remoteHostName(state.name);
 		if (Date.parse(state.enrollment.expires_at) < Date.now() + 60_000) await refreshState(state);
 		await writeState({ ...state, enabled: true });
 		const store = lifecycleStore();

@@ -486,11 +486,11 @@ same-stream replacement, sibling streams, unknown traffic, idle and explicit
 closure, bounded ingress/outbound queues, isolated overload replies, replay,
 heartbeat timeout, and capped jittered reconnects.
 
-One deterministic four-session recovery test re-registers Luna, Astra, Sol, and
-Terra-shaped sessions and compares their IDs, names, models, medium effort, and
-history after host replacement. It also requires one pending approval identity per
-session and stable request results with no second tenant execution. This automated
-test is necessary but does not substitute for the live Herdr cutover.
+The default remote catalog now presents one current terminal, with that terminal's
+own dynamic model and effort catalog. The recovery test re-registers that current
+session and requires its identity, selected model, history, pending approval, and
+stable request result to survive without a second tenant execution. Historical
+multi-session fixtures remain test evidence only; they are not a product default.
 
 Release acceptance still requires all of the following against one clean merged
 source revision: the full remote-control and guarded coding-agent suites; type,
@@ -502,9 +502,9 @@ and hash verification before replacing the current host.
 
 After offline qualification, the supervised Ubuntu host must be killed once. The
 result is accepted only if exactly one replacement appears, the relay reconnects,
-all four existing Herdr sessions return with unchanged identity, name, model,
-medium effort, and history summary, no turn/approval/tenant request duplicates,
-and the systemd user service remains enabled. Physical iPhone checks then cover
-workstation-state presentation, combined and follow-up speech, corrections,
-missing names, approval/denial/cancellation UI, interruption, target ordering, and
-concise spoken output. No merge is allowed before those observations pass.
+the current session returns with unchanged identity, selected model, and history
+summary, no turn/approval/tenant request duplicates occur, and the systemd user
+service remains enabled. Physical iPhone checks then cover workstation-state
+presentation, combined and follow-up speech, corrections, missing names,
+approval/denial/cancellation UI, interruption, target ordering, and concise spoken
+output. No merge is allowed before those observations pass.

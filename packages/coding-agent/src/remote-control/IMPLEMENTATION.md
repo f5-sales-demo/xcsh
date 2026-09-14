@@ -2822,8 +2822,7 @@ timing use 10-second pings, a 60-second pong deadline, and capped full jitter.
 Deterministic coverage includes process-identity mismatch, stale/corrupt state and
 locks, socket collision, concurrent supervisor startup, persisted degradation,
 host crash replacement, intentional disable, bounded drain, relay replacement and
-expiry, overload isolation, reconnect replay, and four simultaneous session
-registrations. The four-session fixture preserves IDs, names, model selections,
-medium effort, histories, and one approval identity per session while proving that
-stable request replay does not repeat tenant execution. The live Ubuntu runtime is
-not changed until a new full-SHA immutable package passes every offline gate.
+expiry, overload isolation, reconnect replay, one current-session registration,
+and model/effort selection persistence. The iPhone host label is exactly
+`xcsh - <workstation>`: `xcsh` is always lowercase. The live Ubuntu runtime is not
+changed until a new full-SHA immutable package passes every offline gate.

@@ -103,9 +103,23 @@ export interface SessionEndpoint {
 export class RemoteRouter {
 	sessions = new Map<string, SessionEndpoint>();
 	notify: (client: string, event: Notification) => void = () => {};
+	#currentSessionId: string | undefined;
+	#currentSession(): SessionEndpoint | undefined {
+		return (
+			(this.#currentSessionId ? this.sessions.get(this.#currentSessionId) : undefined) ??
+			this.sessions.values().next().value
+		);
+	}
+	#visibleSessions(): SessionEndpoint[] {
+		const current = this.#currentSession();
+		return current ? [current] : [];
+	}
+	#isCurrent(threadId: string): boolean {
+		return this.#currentSession()?.thread.id === threadId;
+	}
 	#processes = new RemoteProcesses(
 		(client, event) => this.#emit(client, event),
-		cwd => [...this.sessions.values()].some(session => session.thread.cwd === cwd),
+		cwd => this.#visibleSessions().some(session => session.thread.cwd === cwd),
 	);
 	dispose(): void {
 		this.#processes.close();
@@ -220,7 +234,8 @@ export class RemoteRouter {
 		// Heartbeats retain the same live owner, including calls already awaiting a response.
 		const current = previous ? Object.assign(previous, endpoint) : endpoint;
 		this.sessions.set(threadId, current);
-		if (!previous) {
+		if (!this.#currentSessionId && this.#currentSession()?.thread.id === threadId) this.#currentSessionId = threadId;
+		if (!previous && this.#isCurrent(threadId)) {
 			for (const [client, subscriptions] of this.#clients) {
 				if (replacedThreadId && subscriptions.has(replacedThreadId)) subscriptions.add(threadId);
 				this.#emit(client, {
@@ -229,23 +244,33 @@ export class RemoteRouter {
 				});
 			}
 		}
-		for (const request of current.requests ?? [])
-			for (const client of this.#clients.keys()) this.#deliver(client, request);
+		if (this.#isCurrent(threadId))
+			for (const request of current.requests ?? [])
+				for (const client of this.#clients.keys()) this.#deliver(client, request);
 	}
 	removeSession(threadId: string): void {
 		if (!this.sessions.has(threadId)) return;
+		const wasCurrent = this.#isCurrent(threadId);
 		for (const request of this.sessions.get(threadId)?.requests ?? [])
 			this.publish({ method: "serverRequest/resolved", params: { threadId, requestId: request.id } });
-		this.publish({ method: "thread/closed", params: { threadId } });
+		if (wasCurrent) this.publish({ method: "thread/closed", params: { threadId } });
 		this.sessions.delete(threadId);
+		if (wasCurrent) this.#currentSessionId = this.sessions.keys().next().value;
 		for (const subscriptions of this.#clients.values()) subscriptions.delete(threadId);
 		for (const delivered of this.#delivered.values())
 			for (const [id, thread] of delivered) if (thread === threadId) delivered.delete(id);
+		const next = this.#currentSession();
+		if (wasCurrent && next)
+			for (const client of this.#clients.keys())
+				this.#emit(client, {
+					method: "thread/started",
+					params: { thread: threadWireView(next.thread, this.#experimental.has(client), true) },
+				});
 	}
 	publish(event: Notification): void {
 		const threadId = String(event.params.threadId);
 		const session = this.sessions.get(threadId);
-		if (!session) return;
+		if (!session || !this.#isCurrent(threadId)) return;
 		if (event.method === "thread/name/updated") {
 			const name = event.params.threadName;
 			if (name !== null && typeof name !== "string") return;
@@ -382,7 +407,7 @@ export class RemoteRouter {
 									throw new ProtocolError(-32600, `thread/list.${field} requires experimentalApi capability`);
 						}
 						const page = threadList(
-							[...this.sessions.values()].map(session => session.thread),
+							this.#visibleSessions().map(session => session.thread),
 							params,
 						);
 						result = {
@@ -397,7 +422,7 @@ export class RemoteRouter {
 						result = await this.#processes.call(client, JSON.stringify(id), request.method, params);
 						break;
 					case "config/read": {
-						const matching = [...this.sessions.values()].filter(session => session.thread.cwd === params.cwd);
+						const matching = this.#visibleSessions().filter(session => session.thread.cwd === params.cwd);
 						result = configResponse(
 							matching.length === 1 ? matching[0].thread : undefined,
 							params.includeLayers === true,
@@ -410,8 +435,8 @@ export class RemoteRouter {
 					case "model/list":
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
 						result = modelResponse(
-							[...this.sessions.values()].map(session => session.thread),
-							[...this.sessions.values()].flatMap(session => session.models ?? []),
+							this.#visibleSessions().map(session => session.thread),
+							this.#visibleSessions().flatMap(session => session.models ?? []),
 						);
 						break;
 					case "permissionProfile/list": {
@@ -476,11 +501,15 @@ export class RemoteRouter {
 							requested.length > 0
 								? (requested as string[])
 								: ([
-										...new Set([...this.sessions.values()].map(session => session.thread.cwd).filter(String)),
+										...new Set(
+											this.#visibleSessions()
+												.map(session => session.thread.cwd)
+												.filter(String),
+										),
 									] as string[]);
 						result = {
 							data: cwds.map(cwd => {
-								const matches = [...this.sessions.values()].filter(session => session.thread.cwd === cwd);
+								const matches = this.#visibleSessions().filter(session => session.thread.cwd === cwd);
 								const skills = new Map<string, NonNullable<SessionEndpoint["skills"]>[number]>();
 								const errors: Array<{ path: string; message: string }> = [];
 								for (const session of matches) {
@@ -502,7 +531,7 @@ export class RemoteRouter {
 							normalize(params.path) !== params.path
 						)
 							throw new ProtocolError(-32602, "File path must be absolute and normalized");
-						const owner = [...this.sessions.values()].find(session =>
+						const owner = this.#visibleSessions().find(session =>
 							session.skills?.some(skill => skill.path === params.path),
 						);
 						if (!owner) throw new ProtocolError(-32602, "File is not an advertised live-session skill");
@@ -521,7 +550,10 @@ export class RemoteRouter {
 						result = { data: [], nextCursor: null };
 						break;
 					case "thread/loaded/list":
-						result = loadedThreadList([...this.sessions.keys()], params);
+						result = loadedThreadList(
+							this.#visibleSessions().map(session => String(session.thread.id)),
+							params,
+						);
 						break;
 					case "thread/unsubscribe": {
 						const threadId = String(params.threadId);
@@ -560,7 +592,7 @@ export class RemoteRouter {
 								`${request.method}.collaborationMode requires experimentalApi capability`,
 							);
 						const threadId = String(params.threadId);
-						const session = this.sessions.get(threadId);
+						const session = this.#isCurrent(threadId) ? this.sessions.get(threadId) : undefined;
 						if (!session)
 							throw new ProtocolError(
 								-32602,
