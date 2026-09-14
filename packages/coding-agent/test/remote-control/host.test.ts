@@ -81,7 +81,7 @@ test("heartbeat expiry removes a stale owner while retaining a refreshed owner",
 	}
 }, 7500);
 
-test("host registers two live owners, routes into owner socket, and removes exited sessions", async () => {
+test("host keeps additional live owners hidden from phone discovery and promotes one after exit", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-host-test-"));
 	const path = join(dir, "host.sock");
 	const host = await startLocalHost(path, "21.22.0");
@@ -89,6 +89,7 @@ test("host registers two live owners, routes into owner socket, and removes exit
 	const b = await connectPeer(path);
 	const control = await connectPeer(path);
 	a.handle = async (method, params) => ({ method, owner: "a", params });
+	control.handle = async () => ({});
 	try {
 		await expect(
 			a.call("register", {
@@ -126,11 +127,14 @@ test("host registers two live owners, routes into owner socket, and removes exit
 			}),
 		).toMatchObject({ result: { userAgent: "xcsh/21.22.0" } });
 		expect(await control.call("protocol", { request: { id: 2, method: "thread/list" } })).toMatchObject({
-			result: { data: [{ id: "a" }, { id: "b" }] },
+			result: { data: [{ id: "a" }] },
 		});
 		a.close();
 		await Bun.sleep(10);
 		expect(await control.call("status", {})).toMatchObject({ liveSessions: 1 });
+		expect(await control.call("protocol", { request: { id: 3, method: "thread/list" } })).toMatchObject({
+			result: { data: [{ id: "b" }] },
+		});
 	} finally {
 		a.close();
 		b.close();
@@ -269,7 +273,7 @@ test("host sends standalone process exit back only to the requesting local proto
 	}
 });
 
-test("local phone discovery reaches all 128 owners and routes a late page to its sole executor", async () => {
+test("local phone discovery exposes only the current owner and routes only it", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-discovery-host-"));
 	const path = join(dir, "host.sock");
 	const host = await startLocalHost(path, "fixture");
@@ -299,10 +303,10 @@ test("local phone discovery reaches all 128 owners and routes a late page to its
 			ids.push(...response.result.data.map(thread => thread.id));
 			cursor = response.result.nextCursor;
 		} while (cursor);
-		expect(ids).toHaveLength(128);
-		expect(new Set(ids).size).toBe(128);
+		expect(ids).toHaveLength(1);
+		expect(ids).toEqual(["0000000000000000"]);
 		expect(calls).toEqual([]);
-		const threadId = ids[127];
+		const threadId = ids[0];
 		expect(
 			await phone.call("protocol", {
 				request: { id: 3, method: "thread/resume", params: { threadId } },

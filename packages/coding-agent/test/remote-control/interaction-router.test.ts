@@ -176,14 +176,14 @@ test("live events obey snapshot limits and immutable request identities", async 
 	router.dispose();
 });
 
-test("request identities cannot collide across two live session owners", async () => {
+test("request identities cannot collide across owners and hidden-owner events are dropped", async () => {
 	const { router } = await fixture();
 	const other = { ...question, params: { ...question.params, threadId: "thread-b" } };
 	expect(() =>
 		router.registerSession("thread-b", { thread: { id: "thread-b" }, requests: [other], call: async () => ({}) }),
 	).toThrow("identity");
 	router.sessions.set("thread-b", { thread: { id: "thread-b" }, requests: [], call: async () => ({}) });
-	expect(() => router.publish(other)).toThrow("identity");
+	expect(() => router.publish(other)).not.toThrow();
 	expect(router.sessions.get("thread-b")?.requests).toEqual([]);
 	router.dispose();
 });

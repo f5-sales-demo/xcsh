@@ -111,6 +111,7 @@ export class RemoteRouter {
 		);
 	}
 	#visibleSessions(): SessionEndpoint[] {
+		if (!this.#currentSessionId) return [...this.sessions.values()];
 		const current = this.#currentSession();
 		return current ? [current] : [];
 	}

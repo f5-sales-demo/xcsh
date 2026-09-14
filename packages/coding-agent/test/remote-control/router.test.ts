@@ -543,11 +543,11 @@ test("thread wire views gate experimental fields and never expose internal model
 
 test("phone bootstrap metadata describes the attached live runtime", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
-	router.sessions.set("alpha", {
+	router.registerSession("alpha", {
 		thread: { id: "alpha", cwd: "/tmp/alpha", model: "gpt-5.6-luna", modelProvider: "openai-codex" },
 		call: async () => ({}),
 	});
-	router.sessions.set("beta", {
+	router.registerSession("beta", {
 		thread: { id: "beta", cwd: "/tmp/beta", model: "gpt-6-astra", modelProvider: "openai-codex" },
 		call: async () => ({}),
 	});
