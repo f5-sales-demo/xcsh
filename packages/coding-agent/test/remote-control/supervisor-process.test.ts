@@ -1,7 +1,44 @@
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { stopLegacyHost } from "../../src/remote-control/control";
 import { LifecycleStore } from "../../src/remote-control/lifecycle-state";
+
+test("legacy host takeover falls back to stop when drain is unsupported", async () => {
+	const calls: string[] = [];
+	let closed = false;
+	await stopLegacyHost(
+		async () =>
+			({
+				call: async (method: string) => {
+					calls.push(method);
+					if (method === "drain")
+						throw Object.assign(new Error("Unsupported local host method"), { code: -32601 });
+					return {};
+				},
+				close: () => {
+					closed = true;
+				},
+			}) as never,
+	);
+	expect(calls).toEqual(["drain", "stop"]);
+	expect(closed).toBe(true);
+});
+
+test("legacy host takeover does not bypass a failed supported drain", async () => {
+	const calls: string[] = [];
+	await stopLegacyHost(
+		async () =>
+			({
+				call: async (method: string) => {
+					calls.push(method);
+					throw new Error("Drain timed out");
+				},
+				close: () => {},
+			}) as never,
+	);
+	expect(calls).toEqual(["drain"]);
+});
 
 test("the real supervisor replaces a killed host once and an intentional disable keeps it stopped", async () => {
 	const agentDir = await mkdtemp("/tmp/xcsh-supervisor-process-");

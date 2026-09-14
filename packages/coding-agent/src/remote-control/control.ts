@@ -160,11 +160,16 @@ async function spawnManagedHost(generation: number): Promise<NonNullable<Awaited
 	throw new Error("Unable to identify the xcsh remote host process");
 }
 
-async function stopLegacyHost(): Promise<void> {
+export async function stopLegacyHost(connect: typeof connectPeer = connectPeer): Promise<void> {
 	let peer: Awaited<ReturnType<typeof connectPeer>> | undefined;
 	try {
-		peer = await connectPeer(remoteSocketPath());
-		await peer.call("drain", { timeoutMs: 60_000 }, 65_000);
+		peer = await connect(remoteSocketPath());
+		try {
+			await peer.call("drain", { timeoutMs: 60_000 }, 65_000);
+		} catch (error) {
+			if ((error as { code?: unknown }).code !== -32601) throw error;
+			await peer.call("stop", {}, 5_000);
+		}
 	} catch {
 		// A legacy host has no trusted PID record. It may be asked to stop over its
 		// owner-only socket, but it must never be force-signalled by guessed PID.
