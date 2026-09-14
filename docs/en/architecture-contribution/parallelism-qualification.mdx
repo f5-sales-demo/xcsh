@@ -30,7 +30,7 @@ map to `<WORKER_COUNT>`.
 | Workflow contracts | `tests/test_ci_capacity_contract.py` and `packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts` | Update exact route assertions so workflow and harness drift fail locally. |
 
 The performance-qualification evaluator is parameterized by the candidate
-variant. It does not need a new hard-coded worker count; invoke it with the new
+variant. It does not need a new hardcoded worker count; invoke it with the new
 candidate variant when evaluating collected artifacts.
 
 ## Bounded implementation pattern
@@ -65,7 +65,7 @@ bun test packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts
 
 If the worktree does not have Bun workspace dependencies, install them with
 `bun install --frozen-lockfile` before treating a TypeScript test startup error
-as a source failure. Do not substitute npm, yarn, or pnpm.
+as a source failure. Do not substitute npm, Yarn, or pnpm.
 
 Before dispatching, confirm that the candidate ARC pool has zero current and
 pending runners. Dispatch one matched sample at a time and record the run ID at
