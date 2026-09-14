@@ -452,7 +452,9 @@ try {
 		if (failure < 4) {
 			current = await waitFor(
 				async () => {
-					const value = JSON.parse(await Bun.file(`${output}/agent/remote-control/host-process.json`).text());
+					const record = Bun.file(`${output}/agent/remote-control/host-process.json`);
+					if (!(await record.exists())) return undefined;
+					const value = JSON.parse(await record.text());
 					return value.pid !== current.pid ? value : undefined;
 				},
 				`crash-loop replacement ${failure + 1}`,
