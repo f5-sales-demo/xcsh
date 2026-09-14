@@ -1,7 +1,7 @@
 # Packaged remote-session check
 
 This Linux integration check runs the production xcsh binary, its background host
-and two actual terminal sessions inside a disposable Ubuntu container. The
+and one current terminal session inside a disposable Ubuntu container. The
 container has no Codex, standalone Bun, repository checkout or package dependencies.
 Networking is disabled. The host-side Bun harness drives real pseudo-terminals
 and the native host's local socket; it never creates an AgentSession itself.
@@ -29,7 +29,7 @@ Enrollment is synthetic and cannot reach the service. This checks packaged
 independence and session integration, not subscription enrollment, live model
 capabilities, phone behavior, voice or complete protocol parity.
 
-The 15 assertions cover default-off status, discovery of two named terminal owners,
+The 15 assertions cover default-off status, discovery of one current terminal owner,
 correct working-directory routing, native file-change facts and successful read
 results in history, clean and abrupt host restart, active terminal work surviving
 host process loss, stable-request replay without repeated turns, compiled

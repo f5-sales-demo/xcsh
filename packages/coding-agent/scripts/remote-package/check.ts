@@ -174,7 +174,7 @@ async function digest(path: string): Promise<string> {
 }
 
 await mkdir(output, { mode: 0o700 });
-for (const name of ["alpha", "beta", "home", "agent/remote-control"])
+for (const name of ["current", "home", "agent/remote-control"])
 	await mkdir(`${output}/${name}`, { mode: 0o700, recursive: true });
 try {
 	await run([
@@ -247,21 +247,20 @@ try {
 		{ mode: 0o600 },
 	);
 	await startHost();
-	terminals.push(new Terminal("Alpha"), new Terminal("Beta"));
+	terminals.push(new Terminal("Current"));
 	const loaded = await waitFor(async () => {
 		const value = await threads();
-		return value.length === 2 ? value : undefined;
-	}, "two real packaged TUIs");
+		return value.length === 1 ? value : undefined;
+	}, "one real packaged TUI");
 	const owners = new Map(loaded.map(item => [item.name, item]));
-	assert.deepEqual([...owners.keys()].sort(), ["Package Alpha", "Package Beta"]);
-	assert.notEqual(owners.get("Package Alpha").id, owners.get("Package Beta").id);
+	assert.deepEqual([...owners.keys()], ["Package Current"]);
 	for (const [name, item] of owners) {
 		assert.equal(item.cwd, `/fixture/${name.split(" ").at(-1)!.toLowerCase()}`);
 		await rpc("thread/resume", { threadId: item.id });
 	}
-	passed("two named top-level TUIs discovered with distinct identities and working directories");
+	passed("one current top-level TUI is discovered with its working directory");
 	const accepted: { params: Record<string, unknown>; turnId: string }[] = [];
-	for (const label of ["Alpha", "Beta"]) {
+	for (const label of ["Current"]) {
 		const threadId = owners.get(`Package ${label}`).id;
 		const params = {
 			threadId,
@@ -303,28 +302,28 @@ try {
 		await writeFile(`${output}/${label.toLowerCase()}.history.json`, JSON.stringify(done, null, 2), { mode: 0o600 });
 	}
 	passed("remote prompts execute real write/read tools in the correct TUI and persist completed history");
-	const renamedThreadId = owners.get("Package Beta").id;
-	await rpc("thread/name/set", { threadId: renamedThreadId, name: "  Package Beta Renamed  " });
-	assert.equal((await threads()).find(item => item.id === renamedThreadId)?.name, "Package Beta Renamed");
+	const renamedThreadId = owners.get("Package Current").id;
+	await rpc("thread/name/set", { threadId: renamedThreadId, name: "  Package Current Renamed  " });
+	assert.equal((await threads()).find(item => item.id === renamedThreadId)?.name, "Package Current Renamed");
 	assert(
 		events.some(
 			(event: any) =>
 				event.method === "thread/name/updated" &&
 				event.params?.threadId === renamedThreadId &&
-				event.params?.threadName === "Package Beta Renamed",
+				event.params?.threadName === "Package Current Renamed",
 		),
 	);
 	passed("remote thread naming updates live discovery and emits the pinned notification");
 	await stopHost();
 	await startHost();
-	await waitFor(async () => (await threads()).length === 2, "surviving owners after host restart");
-	assert.equal((await threads()).find(item => item.id === renamedThreadId)?.name, "Package Beta Renamed");
+	await waitFor(async () => (await threads()).length === 1, "surviving owner after host restart");
+	assert.equal((await threads()).find(item => item.id === renamedThreadId)?.name, "Package Current Renamed");
 	for (const { params, turnId } of accepted) {
 		assert.equal((await rpc("turn/start", params)).turn.id, turnId);
 		assert.equal((await history(String(params.threadId))).length, 1);
 	}
 	passed("host restart preserves owners/history and stable request replay does not execute twice");
-	const crashThreadId = owners.get("Package Beta").id;
+	const crashThreadId = owners.get("Package Current").id;
 	const crashParams = {
 		threadId: crashThreadId,
 		clientUserMessageId: "fixture-crash",
@@ -337,7 +336,7 @@ try {
 	}, "active turn before abrupt host loss");
 	await crashHost();
 	await startHost();
-	await waitFor(async () => (await threads()).length === 2, "owners after abrupt host loss");
+	await waitFor(async () => (await threads()).length === 1, "owner after abrupt host loss");
 	const completedCrash = await waitFor(async () => {
 		const turns = await history(crashThreadId);
 		return turns
@@ -361,20 +360,20 @@ try {
 		).length,
 		1,
 	);
-	assert.equal(await Bun.file(`${output}/beta/package-check.txt`).text(), "PACKAGE-CRASH");
+	assert.equal(await Bun.file(`${output}/current/package-check.txt`).text(), "PACKAGE-CRASH");
 	passed("abrupt packaged host loss preserves active terminal work and stable retry executes it once");
 	await terminals[0].close();
 	await waitFor(async () => (await threads()).length === 1, "closed terminal removed");
-	const alphaId = owners.get("Package Alpha").id;
-	terminals.push(new Terminal("Alpha", alphaId));
-	await waitFor(async () => (await threads()).some(item => item.id === alphaId), "resumed owner identity");
-	assert.equal((await history(alphaId)).length, 1);
-	const resumed = await rpc("thread/resume", { threadId: alphaId });
+	const currentId = owners.get("Package Current").id;
+	terminals.push(new Terminal("Current", currentId));
+	await waitFor(async () => (await threads()).some(item => item.id === currentId), "resumed owner identity");
+	assert.equal((await history(currentId)).length, 1);
+	const resumed = await rpc("thread/resume", { threadId: currentId });
 	assert.equal(resumed.model, "model");
 	assert.equal(resumed.modelProvider, "package-fixture");
 	const retriedAfterTerminalRestart = await rpc("turn/start", accepted[0].params);
 	assert.equal(retriedAfterTerminalRestart.turn.id, accepted[0].turnId);
-	assert.equal((await history(alphaId)).length, 1);
+	assert.equal((await history(currentId)).length, 1);
 	passed("compiled --resume preserves identity, model and durable exactly-once request replay");
 	for (const terminal of terminals) await terminal.close();
 	await waitFor(async () => (await threads()).length === 0, "all terminal exits removed");
