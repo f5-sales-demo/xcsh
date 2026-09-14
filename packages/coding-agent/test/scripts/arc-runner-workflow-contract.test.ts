@@ -158,7 +158,7 @@ test("DAG qualification holds image and hardware constant while measuring the re
 	const workflow = parse(source) as WorkflowDocument;
 
 	expect(source).toContain(
-		"image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-hardware|dag-control|dag-candidate",
+		"image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-parallel-10|d16-hardware|dag-control|dag-candidate",
 	);
 	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 	expect(workflow.jobs?.["dag-control"]?.["runs-on"]).toBe("${{ needs.prepare.outputs.runner_label }}");

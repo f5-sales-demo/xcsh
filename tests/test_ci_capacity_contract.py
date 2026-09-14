@@ -145,7 +145,7 @@ class CiCapacityContractTests(unittest.TestCase):
     def test_dag_qualification_uses_one_image_and_real_job_dependencies(self) -> None:
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
         self.assertIn(
-            "image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-hardware|dag-control|dag-candidate)",
+            "image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-parallel-10|d16-hardware|dag-control|dag-candidate)",
             benchmark,
         )
         self.assertIn("  dag-candidate-native:\n", benchmark)
