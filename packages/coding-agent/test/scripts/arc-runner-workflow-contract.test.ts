@@ -138,7 +138,7 @@ test("compute qualification is manual, frozen-source, and derives bounded worker
 	for (const input of ["source_sha:", "experiment:", "cache_state:", "pair_id:"]) {
 		expect(source).toContain(input);
 	}
-	expect(source).toContain("c004f81977019b81d74b9ba0eeb33a579e65f89a");
+	expect(source).toContain("afaecb5bfeaea4593ab4bce65ca7d620f605056d");
 	expect(source).toContain("xcsh-compute-d16-candidate");
 	expect(source).toContain("xcsh-compute-f32-candidate");
 	expect(source).not.toContain("xcsh-compute-bun-candidate");
