@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly FROZEN_SOURCE_SHA=afaecb5bfeaea4593ab4bce65ca7d620f605056d
+readonly FROZEN_SOURCE_SHA=c7d9f37448115820385040a635ce8a8d15613222
 readonly BUN_VERSION=1.4.2
 readonly BUN_SHA256=36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913
 readonly ZIG_VERSION=0.16.0
