@@ -48,6 +48,8 @@ export function configResponse(thread: Record<string, unknown> | undefined, incl
 
 export function modelResponse(threads: Record<string, unknown>[], catalog: RemoteModelDescriptor[] = []) {
 	const models = new Map<string, Record<string, unknown>>();
+	const preferredModel = typeof threads[0]?.model === "string" ? threads[0].model : undefined;
+	const defaultModel = catalog.some(model => model.id === preferredModel) ? preferredModel : catalog[0]?.id;
 	for (const model of catalog) {
 		if (models.has(model.id)) continue;
 		models.set(model.id, {
@@ -71,7 +73,7 @@ export function modelResponse(threads: Record<string, unknown>[], catalog: Remot
 			additionalSpeedTiers: [],
 			serviceTiers: [],
 			defaultServiceTier: null,
-			isDefault: false,
+			isDefault: model.id === defaultModel,
 		});
 	}
 	for (const thread of catalog.length === 0 ? threads : []) {
@@ -94,7 +96,7 @@ export function modelResponse(threads: Record<string, unknown>[], catalog: Remot
 			additionalSpeedTiers: [],
 			serviceTiers: [],
 			defaultServiceTier: null,
-			isDefault: false,
+			isDefault: models.size === 0,
 		});
 	}
 	return { data: [...models.values()], nextCursor: null };

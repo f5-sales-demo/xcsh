@@ -894,7 +894,7 @@ test("a new phone conversation can enter voice before its first turn", async () 
 			}),
 		).toMatchObject({ result: { userAgent: "xcsh/21.29.0" } });
 		expect(await router.handle("phone", { id: 2, method: "model/list", params: {} })).toMatchObject({
-			result: { data: [{ id: "gpt-5.6-luna", inputModalities: ["text", "audio"] }] },
+			result: { data: [{ id: "gpt-5.6-luna", inputModalities: ["text", "audio"], isDefault: true }] },
 		});
 		expect(await router.handle("phone", { id: 3, method: "thread/start", params: { cwd: "/tmp" } })).toMatchObject({
 			result: { thread: { id: managedThread.id } },
