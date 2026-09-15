@@ -178,10 +178,17 @@ async function managedRecord(threadId: string): Promise<any> {
 }
 async function processExists(pid: number): Promise<boolean> {
 	assert(Number.isSafeInteger(pid) && pid > 0, "fixture process identity must contain a positive pid");
-	const process = Bun.spawn(["docker", "exec", container, "/bin/sh", "-c", `kill -0 ${pid} 2>/dev/null`], {
-		stdout: "ignore",
-		stderr: "ignore",
-	});
+	const process = Bun.spawn(
+		[
+			"docker",
+			"exec",
+			container,
+			"/bin/sh",
+			"-c",
+			`kill -0 ${pid} 2>/dev/null && IFS=' ' read -r _ _ state _ < /proc/${pid}/stat && [ "$state" != Z ]`,
+		],
+		{ stdout: "ignore", stderr: "ignore" },
+	);
 	return (await process.exited) === 0;
 }
 
