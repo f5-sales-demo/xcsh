@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { resolveRemoteThreadId } from "../../src/remote-control/thread-identity";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "../../src/slash-commands/builtin-registry";
 
 test("remote slash command exposes the full standalone lifecycle", () => {
@@ -19,4 +20,22 @@ test("remote slash command exposes the full standalone lifecycle", () => {
 	expect(command?.subcommands?.find(subcommand => subcommand.name === "revoke")).toMatchObject({
 		usage: "<client-id>",
 	});
+});
+
+test("remote enable saves the stable phone thread identity as primary", () => {
+	expect(
+		resolveRemoteThreadId({
+			sessionId: "local-execution-session",
+			sessionManager: { getHeader: () => ({ remoteThreadId: "phone-thread" }) },
+		}),
+	).toBe("phone-thread");
+	expect(
+		resolveRemoteThreadId({
+			sessionId: "local-execution-session",
+			sessionManager: { getHeader: () => ({ remoteThreadId: "/invalid/thread" }) },
+		}),
+	).toBe("local-execution-session");
+	expect(
+		resolveRemoteThreadId({ sessionId: "local-execution-session", sessionManager: { getHeader: () => null } }),
+	).toBe("local-execution-session");
 });

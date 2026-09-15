@@ -26,6 +26,7 @@ import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
 import { getLoginOptions } from "../modes/controllers/login-options";
 import { theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
+import { resolveRemoteThreadId } from "../remote-control/thread-identity";
 import { ContextService } from "../services/xcsh-context";
 import { handleFastCommand } from "./fast-command";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
@@ -714,7 +715,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						: action === "enable"
 							? {
 									cwd: runtime.ctx.sessionManager.getCwd(),
-									primarySessionId: runtime.ctx.session.sessionId,
+									primarySessionId: resolveRemoteThreadId(runtime.ctx.session),
 								}
 							: {},
 				)) as Record<string, unknown> | undefined;

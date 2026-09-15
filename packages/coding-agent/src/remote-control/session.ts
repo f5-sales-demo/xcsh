@@ -29,6 +29,7 @@ import {
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import { RemoteInteractions } from "./interactions";
 import { getSessionVoiceHistory, type SessionVoiceHistory } from "./session-voice-history";
+import { resolveRemoteThreadId, validRemoteThreadId } from "./thread-identity";
 import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
@@ -145,16 +146,6 @@ function canonicalJson(value: unknown): string {
 		return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
 	}
 	return JSON.stringify(value) ?? "null";
-}
-function validSessionId(value: unknown): string | undefined {
-	return typeof value === "string" &&
-		value.length > 0 &&
-		value.length <= 256 &&
-		!isAbsolute(value) &&
-		!value.includes("/") &&
-		!value.includes("\\")
-		? value
-		: undefined;
 }
 export class RemoteSession {
 	#epoch = 0;
@@ -324,8 +315,7 @@ export class RemoteSession {
 	}
 	#restoreIdentity(): void {
 		this.#boundId = this.target.sessionId;
-		const remoteThreadId = this.target.sessionManager.getHeader?.()?.remoteThreadId;
-		this.#threadId = validSessionId(remoteThreadId) ?? this.#boundId;
+		this.#threadId = resolveRemoteThreadId(this.target);
 		this.#unsubscribeVoiceHistory?.();
 		this.#voiceHistoryOwner = getSessionVoiceHistory(this.target);
 		this.#unsubscribeVoiceHistory = this.#voiceHistoryOwner.subscribe((method, params) =>
@@ -571,7 +561,7 @@ export class RemoteSession {
 		const header = this.target.sessionManager.getHeader?.();
 		const explicitFork = header?.forkedFromId;
 		const parentSession = header?.parentSession;
-		const forkedFromId = validSessionId(explicitFork) ?? validSessionId(parentSession) ?? null;
+		const forkedFromId = validRemoteThreadId(explicitFork) ?? validRemoteThreadId(parentSession) ?? null;
 		return {
 			id: this.#threadId,
 			sessionId: this.#threadId,
