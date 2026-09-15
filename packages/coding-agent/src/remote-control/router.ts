@@ -445,12 +445,11 @@ export class RemoteRouter {
 	#defer(client: string, event: Notification): void {
 		setTimeout(() => this.#emit(client, event), 0);
 	}
-	#deferThreadStarted(thread: Record<string, unknown>): void {
-		for (const client of this.#clients.keys())
-			this.#defer(client, {
-				method: "thread/started",
-				params: { thread: threadWireView(thread, this.#experimental.has(client), true) },
-			});
+	#deferThreadStarted(client: string, thread: Record<string, unknown>): void {
+		this.#defer(client, {
+			method: "thread/started",
+			params: { thread: threadWireView(thread, this.#experimental.has(client), true) },
+		});
 	}
 	async #lifecycleResponse(
 		client: string,
@@ -555,7 +554,7 @@ export class RemoteRouter {
 						const endpoint = await this.lifecycle.start({ ...params, cwd });
 						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, false);
 						result = lifecycle.result;
-						this.#deferThreadStarted(lifecycle.thread);
+						this.#deferThreadStarted(client, lifecycle.thread);
 						this.#deferLifecycleActivation(String(endpoint.thread.id));
 						break;
 					}
@@ -572,7 +571,7 @@ export class RemoteRouter {
 						const endpoint = await this.lifecycle.fork(params.threadId, { ...params, cwd }, source);
 						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, params.excludeTurns !== true);
 						result = lifecycle.result;
-						this.#deferThreadStarted(lifecycle.thread);
+						this.#deferThreadStarted(client, lifecycle.thread);
 						this.#deferLifecycleActivation(String(endpoint.thread.id));
 						break;
 					}
