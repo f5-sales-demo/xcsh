@@ -181,7 +181,7 @@ export class RemoteRouter {
 	}
 	#processes = new RemoteProcesses(
 		(client, event) => this.#emit(client, event),
-		cwd => this.#visibleSessions().some(session => session.thread.cwd === cwd),
+		cwd => this.#visibleThreads().some(thread => thread.cwd === cwd),
 	);
 	dispose(): void {
 		this.#processes.close();
@@ -433,6 +433,15 @@ export class RemoteRouter {
 			throw new ProtocolError(-32602, "Working directory does not exist");
 		}
 		return candidate;
+	}
+	async #loadManagedSession(threadId: string): Promise<boolean> {
+		if (this.sessions.has(threadId) || !this.lifecycle) return false;
+		if (!this.#visibleThreads().some(thread => String(thread.id) === threadId)) return false;
+		const endpoint = await this.lifecycle.resume(threadId);
+		if (!endpoint) return false;
+		const coldResume = !this.sessions.has(threadId);
+		this.registerManagedSession(threadId, endpoint);
+		return coldResume;
 	}
 	async #processParams(method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
 		if (method !== "process/spawn" || params.cwd !== "/") return params;
@@ -841,14 +850,7 @@ export class RemoteRouter {
 							);
 							break;
 						}
-						let coldResume = false;
-						if (request.method === "thread/resume" && !this.sessions.has(threadId) && this.lifecycle) {
-							const endpoint = await this.lifecycle.resume(threadId);
-							if (endpoint) {
-								this.registerManagedSession(threadId, endpoint);
-								coldResume = true;
-							}
-						}
+						const coldResume = await this.#loadManagedSession(threadId);
 						const session = this.#isVisible(threadId) ? this.sessions.get(threadId) : undefined;
 						if (!session)
 							throw new ProtocolError(

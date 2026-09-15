@@ -741,14 +741,18 @@ test("cold managed resume is single-flight and read does not load a worker", asy
 	const thread = {
 		id: "cold",
 		sessionId: "cold",
-		cwd: "/tmp/cold",
+		cwd: "/tmp",
 		model: "gpt-5.6-luna",
 		modelProvider: "openai-codex",
 		turns: [],
 	};
 	const endpoint = {
 		thread,
-		call: async () => ({ thread, model: thread.model, modelProvider: thread.modelProvider, cwd: thread.cwd }),
+		call: async (_identity: string, method: string) => {
+			if (method === "thread/goal/get") return { goal: null };
+			if (method === "thread/queue/list") return { data: [], nextCursor: null };
+			return { thread, model: thread.model, modelProvider: thread.modelProvider, cwd: thread.cwd };
+		},
 	};
 	let pending: Promise<typeof endpoint> | undefined;
 	const lifecycle = {
@@ -783,9 +787,37 @@ test("cold managed resume is single-flight and read does not load a worker", asy
 	});
 	expect(reads).toBe(1);
 	expect(resumes).toBe(0);
-	await Promise.all([
+	const results = await Promise.all([
+		router.handle("phone", { id: "goal", method: "thread/goal/get", params: { threadId: "cold" } }),
+		router.handle("phone", {
+			id: "queue",
+			method: "thread/queue/list",
+			params: { threadId: "cold", limit: 20 },
+		}),
+		router.handle("phone", {
+			id: "process",
+			method: "process/spawn",
+			params: {
+				processHandle: "cold-status",
+				cwd: "/tmp",
+				command: [process.execPath, "-e", ""],
+			},
+		}),
 		router.handle("phone", { id: 3, method: "thread/resume", params: { threadId: "cold" } }),
 		router.handle("phone", { id: 4, method: "thread/resume", params: { threadId: "cold" } }),
+	]);
+	expect(results).toEqual([
+		{ id: "goal", result: { goal: null } },
+		{ id: "queue", result: { data: [], nextCursor: null } },
+		{ id: "process", result: {} },
+		expect.objectContaining({
+			id: 3,
+			result: expect.objectContaining({ thread: expect.objectContaining({ id: "cold" }) }),
+		}),
+		expect.objectContaining({
+			id: 4,
+			result: expect.objectContaining({ thread: expect.objectContaining({ id: "cold" }) }),
+		}),
 	]);
 	expect(resumes).toBe(1);
 	router.dispose();
