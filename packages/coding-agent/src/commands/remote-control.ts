@@ -19,11 +19,14 @@ export default class RemoteControl extends Command {
 	async run(): Promise<void> {
 		const { args, flags } = await this.parse(RemoteControl);
 		if (!args.action) throw new Error("A remote action is required");
-		if (args.clientId && args.action !== "revoke") throw new Error("A client identity applies only to revoke");
+		if (args.clientId && args.action !== "revoke" && args.action !== "worker")
+			throw new Error("A client identity applies only to revoke");
 		if (args.action !== "clients" && (flags.cursor != null || flags.limit != null || flags.order != null))
 			throw new Error("Pagination flags apply only to clients");
 		const result = await runRemoteControl(args.action, {
-			clientId: args.clientId,
+			clientId: args.action === "revoke" ? args.clientId : undefined,
+			workerSocket: args.action === "worker" ? args.clientId : undefined,
+			cwd: args.action === "enable" ? process.cwd() : undefined,
 			cursor: flags.cursor,
 			limit: flags.limit,
 			order: flags.order as "asc" | "desc" | undefined,

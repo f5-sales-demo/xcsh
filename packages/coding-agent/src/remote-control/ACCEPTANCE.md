@@ -495,7 +495,7 @@ multi-session fixtures remain test evidence only; they are not a product default
 Release acceptance still requires all of the following against one clean merged
 source revision: the full remote-control and guarded coding-agent suites; type,
 Biome, prompt, documentation, bundle, pinned-source, PII, secret, and whitespace
-checks; the network-disabled 15-check packaged harness; and the clean 16-case
+checks; the network-disabled 17-check packaged receipt plus cleanup; and the clean 16-case
 context evaluator with private review of every synthetic answer. A newly named
 immutable artifact must embed the full 40-character source SHA and pass permission
 and hash verification before replacing the current host.
@@ -508,3 +508,20 @@ service remains enabled. Physical iPhone checks then cover workstation-state
 presentation, combined and follow-up speech, corrections, missing names,
 approval/denial/cancellation UI, interruption, target ordering, and concise spoken
 output. No merge is allowed before those observations pass.
+
+## Phone session lifecycle supersession — 2026-09-14
+
+Earlier dated rows and checkpoints that call `thread/fork` unsupported or exclude
+phone-created headless sessions describe prior immutable artifacts. They are
+superseded for the issue #3873 candidate by pinned-schema coverage for start, exact
+history fork, archive, unarchive, delete, compact, and revert. Automated bootstrap
+coverage now exercises initialize, model discovery, `thread/start`, WebRTC v3 SDP,
+and voice delegation in order.
+
+The candidate keeps one deterministic terminal visible at startup and adds only
+sessions created by the phone. Durable workers survive host replacement without
+duplicating turns, tools, approvals, or tenant requests; cold resume is
+single-flight; idle workers unload; and intentional disable also stops durable
+workers that the replacement host has not loaded. This is automated evidence only.
+The final physical iPhone checks and immutable-artifact/cutover gates below remain
+required.

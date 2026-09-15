@@ -707,9 +707,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			}
 			try {
 				const { runRemoteControl } = await import("../remote-control/control");
-				const result = (await runRemoteControl(action, action === "revoke" ? { clientId: rest[0] } : {})) as
-					| Record<string, unknown>
-					| undefined;
+				const result = (await runRemoteControl(
+					action,
+					action === "revoke"
+						? { clientId: rest[0] }
+						: action === "enable"
+							? {
+									cwd: runtime.ctx.sessionManager.getCwd(),
+									primarySessionId: runtime.ctx.session.sessionId,
+								}
+							: {},
+				)) as Record<string, unknown> | undefined;
 				if (action === "pair" && result && typeof result.manual_pairing_code === "string")
 					runtime.ctx.showStatus(`Remote pairing code: ${result.manual_pairing_code}`);
 				else if (action === "clients" && Array.isArray(result?.data))

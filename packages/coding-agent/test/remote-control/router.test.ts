@@ -28,7 +28,7 @@ test("initialization is per phone stream; lists and attaches registered terminal
 		await router.handle("phone", { id: 5, method: "thread/resume", params: { threadId: "fixture-thread" } }),
 	).toMatchObject({ result: { thread: { id: "fixture-thread" } } });
 	expect(calls).toHaveLength(1);
-	expect(await router.handle("phone", { id: 6, method: "thread/start" })).toMatchObject({ error: { code: -32601 } });
+	expect(await router.handle("phone", { id: 6, method: "thread/start" })).toMatchObject({ error: { code: -32000 } });
 });
 
 test("the vanilla remote catalog exposes one active terminal and only its dynamic models", async () => {
@@ -82,7 +82,7 @@ test("the vanilla remote catalog exposes one active terminal and only its dynami
 				description: "Fixture only",
 				supportedReasoningEfforts: [],
 				defaultReasoningEffort: "medium",
-				inputModalities: ["text"],
+				inputModalities: ["text" as const],
 			},
 		]),
 	);
@@ -538,7 +538,392 @@ test("thread wire views gate experimental fields and never expose internal model
 	});
 	expect(
 		await router.handle("experimental", { id: 10, method: "thread/fork", params: { threadId: thread.id } }),
-	).toMatchObject({ error: { code: -32601 } });
+	).toMatchObject({ error: { code: -32000 } });
+});
+
+test("phone-created thread lifecycle uses cwd precedence and remains visible beside one primary terminal", async () => {
+	const notifications: Array<{ client: string; method: string; params: Record<string, unknown> }> = [];
+	const calls: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const managed = new Map<string, any>();
+	const endpoint = (id: string, cwd: string, forkedFromId: string | null = null) => ({
+		thread: {
+			id,
+			sessionId: id,
+			forkedFromId,
+			cwd,
+			model: "gpt-5.6-luna",
+			modelProvider: "openai-codex",
+			reasoningEffort: "medium",
+			turns: [],
+			createdAt: 1,
+			updatedAt: 1,
+		},
+		call: async (_identity: string, method: string, params: Record<string, unknown>) => {
+			calls.push({ method, params });
+			return {
+				thread: endpoint(id, cwd, forkedFromId).thread,
+				model: "gpt-5.6-luna",
+				modelProvider: "openai-codex",
+				serviceTier: null,
+				cwd,
+				runtimeWorkspaceRoots: [cwd],
+				instructionSources: [],
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandbox: { type: "dangerFullAccess" },
+				activePermissionProfile: null,
+				reasoningEffort: "medium",
+				multiAgentMode: "explicitRequestOnly",
+			};
+		},
+	});
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [...managed.values()].map(value => value.thread),
+		start: async (params: Record<string, unknown>) => {
+			const value = endpoint("managed-start", String(params.cwd));
+			managed.set(value.thread.id, value);
+			return value;
+		},
+		resume: async (threadId: string) => managed.get(threadId),
+		read: async (threadId: string) => ({ thread: managed.get(threadId).thread }),
+		fork: async (threadId: string, params: Record<string, unknown>) => {
+			const value = endpoint("managed-fork", String(params.cwd), threadId);
+			managed.set(value.thread.id, value);
+			return value;
+		},
+		archive: async (threadId: string) => {
+			managed.delete(threadId);
+		},
+		unarchive: async (threadId: string) => {
+			const value = endpoint(threadId, "/tmp");
+			managed.set(threadId, value);
+			return value.thread;
+		},
+		delete: async (threadId: string) => {
+			managed.delete(threadId);
+		},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	router.notify = (client, event) => notifications.push({ client, ...event });
+	router.registerSession("primary", endpoint("primary", "/tmp/primary"));
+	router.registerSession("secondary", endpoint("secondary", "/tmp/secondary"));
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	await router.handle("observer", {
+		id: 10,
+		method: "initialize",
+		params: { clientInfo: { name: "observer", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+
+	const started = (await router.handle("phone", {
+		id: 2,
+		method: "thread/start",
+		params: { cwd: "/tmp", model: "gpt-5.6-luna", effort: "medium" },
+	})) as any;
+	expect(started.result).toMatchObject({ thread: { id: "managed-start", cwd: "/tmp" } });
+	expect(notifications).toEqual([]);
+	await Bun.sleep(1);
+	expect(notifications[0]).toMatchObject({ client: "phone", method: "thread/started" });
+	expect(notifications.filter(value => value.method === "thread/started").map(value => value.client)).toEqual([
+		"phone",
+		"observer",
+	]);
+
+	const forked = (await router.handle("phone", {
+		id: 3,
+		method: "thread/fork",
+		params: { threadId: "managed-start", excludeTurns: true },
+	})) as any;
+	expect(forked.result.thread).toMatchObject({ id: "managed-fork", forkedFromId: "managed-start" });
+	await Bun.sleep(1);
+	expect((await router.handle("phone", { id: 4, method: "thread/list", params: {} })) as any).toMatchObject({
+		result: { data: [{ id: "primary" }, { id: "managed-start" }, { id: "managed-fork" }] },
+	});
+	expect(calls.filter(value => value.method === "thread/resume")).toHaveLength(2);
+
+	expect(
+		await router.handle("phone", { id: 5, method: "thread/archive", params: { threadId: "managed-fork" } }),
+	).toEqual({ id: 5, result: {} });
+	await Bun.sleep(1);
+	expect(notifications.at(-1)).toMatchObject({ method: "thread/archived", params: { threadId: "managed-fork" } });
+	const restored = (await router.handle("phone", {
+		id: 6,
+		method: "thread/unarchive",
+		params: { threadId: "managed-fork" },
+	})) as any;
+	expect(restored.result.thread).toMatchObject({ id: "managed-fork" });
+	expect(
+		await router.handle("phone", { id: 7, method: "thread/delete", params: { threadId: "managed-fork" } }),
+	).toEqual({ id: 7, result: {} });
+	await Bun.sleep(1);
+	expect(notifications.at(-1)).toMatchObject({ method: "thread/deleted", params: { threadId: "managed-fork" } });
+	router.dispose();
+});
+
+test("thread fork hands the selected terminal history source to the managed lifecycle", async () => {
+	const source = {
+		id: "primary",
+		sessionId: "primary",
+		cwd: "/tmp",
+		path: "/tmp/primary.jsonl",
+		model: "gpt-5.6-luna",
+		modelProvider: "openai-codex",
+		turns: [],
+	};
+	let receivedSource: Record<string, unknown> | undefined;
+	const sourceCalls: string[] = [];
+	const fork = {
+		...source,
+		id: "fork",
+		sessionId: "fork",
+		forkedFromId: source.id,
+		path: "/tmp/fork.jsonl",
+	};
+	const response = (thread: Record<string, unknown>) => ({
+		thread,
+		model: thread.model,
+		modelProvider: thread.modelProvider,
+		cwd: thread.cwd,
+		approvalPolicy: "never",
+		approvalsReviewer: "user",
+		sandbox: { type: "dangerFullAccess" },
+	});
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [],
+		start: async () => ({ thread: fork, call: async () => response(fork) }),
+		resume: async () => undefined,
+		read: async () => ({ thread: source }),
+		fork: async (_threadId: string, _params: Record<string, unknown>, selected?: Record<string, unknown>) => {
+			receivedSource = selected;
+			return { thread: fork, call: async () => response(fork) };
+		},
+		archive: async () => {},
+		unarchive: async () => fork,
+		delete: async () => {},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	router.registerSession(source.id, {
+		thread: source,
+		call: async (_identity, method) => {
+			sourceCalls.push(method);
+			return { thread: source };
+		},
+	});
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(
+		await router.handle("phone", { id: 2, method: "thread/fork", params: { threadId: source.id } }),
+	).toMatchObject({ result: { thread: { id: fork.id, forkedFromId: source.id } } });
+	expect(receivedSource).toBe(source);
+	expect(sourceCalls).toEqual(["xcsh/thread/flush"]);
+	router.dispose();
+});
+
+test("cold managed resume is single-flight and read does not load a worker", async () => {
+	let resumes = 0;
+	let reads = 0;
+	const thread = {
+		id: "cold",
+		sessionId: "cold",
+		cwd: "/tmp/cold",
+		model: "gpt-5.6-luna",
+		modelProvider: "openai-codex",
+		turns: [],
+	};
+	const endpoint = {
+		thread,
+		call: async () => ({ thread, model: thread.model, modelProvider: thread.modelProvider, cwd: thread.cwd }),
+	};
+	let pending: Promise<typeof endpoint> | undefined;
+	const lifecycle = {
+		defaultCwd: "/tmp/default",
+		list: () => [thread],
+		start: async () => endpoint,
+		fork: async () => endpoint,
+		read: async () => {
+			reads++;
+			return { thread };
+		},
+		resume: async () => {
+			pending ??= (async () => {
+				resumes++;
+				await Bun.sleep(5);
+				return endpoint;
+			})();
+			return pending;
+		},
+		archive: async () => {},
+		unarchive: async () => thread,
+		delete: async () => {},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(await router.handle("phone", { id: 2, method: "thread/read", params: { threadId: "cold" } })).toMatchObject({
+		result: { thread: { id: "cold" } },
+	});
+	expect(reads).toBe(1);
+	expect(resumes).toBe(0);
+	await Promise.all([
+		router.handle("phone", { id: 3, method: "thread/resume", params: { threadId: "cold" } }),
+		router.handle("phone", { id: 4, method: "thread/resume", params: { threadId: "cold" } }),
+	]);
+	expect(resumes).toBe(1);
+	router.dispose();
+});
+
+test("phone bootstrap can create a managed thread, negotiate v3 SDP, and delegate voice work", async () => {
+	const methods: string[] = [];
+	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const managedThread = {
+		id: "managed-voice",
+		sessionId: "managed-voice",
+		forkedFromId: null,
+		parentThreadId: null,
+		preview: "",
+		ephemeral: false,
+		section: null,
+		sectionEnteredAt: null,
+		projectId: null,
+		historyMode: "paginated",
+		modelProvider: "openai-codex",
+		model: "gpt-5.6-luna",
+		reasoningEffort: "medium",
+		createdAt: 1,
+		updatedAt: 1,
+		recencyAt: 1,
+		status: { type: "idle" },
+		path: "/tmp/managed-voice.jsonl",
+		cwd: "/tmp",
+		cliVersion: "21.29.0",
+		source: "appServer",
+		threadSource: null,
+		agentNickname: null,
+		agentRole: null,
+		gitInfo: null,
+		name: null,
+		turns: [],
+	};
+	let router!: RemoteRouter;
+	const endpoint = {
+		thread: managedThread,
+		models: [
+			{
+				id: "gpt-5.6-luna",
+				provider: "openai-codex",
+				displayName: "Luna",
+				description: "Fast",
+				supportedReasoningEfforts: [{ reasoningEffort: "medium", description: "Medium" }],
+				defaultReasoningEffort: "medium",
+				inputModalities: ["text" as const],
+			},
+		],
+		call: async (_identity: string, method: string) => {
+			methods.push(method);
+			if (method === "thread/resume")
+				return {
+					thread: managedThread,
+					model: managedThread.model,
+					modelProvider: managedThread.modelProvider,
+					serviceTier: null,
+					cwd: managedThread.cwd,
+					instructionSources: [],
+					approvalPolicy: "never",
+					approvalsReviewer: "user",
+					sandbox: { type: "dangerFullAccess" },
+					reasoningEffort: "medium",
+				};
+			if (method === "thread/realtime/start") {
+				router.publish({
+					method: "thread/realtime/started",
+					params: { threadId: managedThread.id, realtimeSessionId: "fixture-realtime", version: "v3" },
+				});
+				router.publish({
+					method: "thread/realtime/sdp",
+					params: { threadId: managedThread.id, sdp: "v=0\\r\\nfixture" },
+				});
+			}
+			if (method === "thread/realtime/appendText") {
+				router.publish({
+					method: "turn/started",
+					params: { threadId: managedThread.id, turn: { id: "managed-voice-turn", status: "inProgress" } },
+				});
+				router.publish({
+					method: "turn/completed",
+					params: { threadId: managedThread.id, turn: { id: "managed-voice-turn", status: "completed" } },
+				});
+			}
+			return {};
+		},
+	};
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [managedThread],
+		start: async () => endpoint,
+		resume: async () => endpoint,
+		read: async () => ({ thread: managedThread }),
+		fork: async () => endpoint,
+		archive: async () => {},
+		unarchive: async () => managedThread,
+		delete: async () => {},
+	};
+	router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	router.notify = (_client, event) => notifications.push(event);
+	try {
+		expect(
+			await router.handle("phone", {
+				id: 1,
+				method: "initialize",
+				params: { clientInfo: { name: "fixture-phone", version: "1" }, capabilities: { experimentalApi: true } },
+			}),
+		).toMatchObject({ result: { userAgent: "xcsh/21.29.0" } });
+		expect(await router.handle("phone", { id: 2, method: "model/list", params: {} })).toMatchObject({
+			result: { data: [] },
+		});
+		expect(await router.handle("phone", { id: 3, method: "thread/start", params: { cwd: "/tmp" } })).toMatchObject({
+			result: { thread: { id: managedThread.id } },
+		});
+		expect(await router.handle("phone", { id: 4, method: "model/list", params: {} })).toMatchObject({
+			result: { data: [{ id: "gpt-5.6-luna", defaultReasoningEffort: "medium" }] },
+		});
+		expect(
+			await router.handle("phone", {
+				id: 5,
+				method: "thread/realtime/start",
+				params: {
+					threadId: managedThread.id,
+					version: "v3",
+					outputModality: "audio",
+					transport: { type: "webrtc", sdp: "v=0\\r\\noffer" },
+				},
+			}),
+		).toEqual({ id: 5, result: {} });
+		expect(notifications.map(event => event.method)).toContain("thread/realtime/sdp");
+		expect(
+			await router.handle("phone", {
+				id: 6,
+				method: "thread/realtime/appendText",
+				params: { threadId: managedThread.id, text: "delegate fixture work", role: "user" },
+			}),
+		).toEqual({ id: 6, result: {} });
+		expect(notifications.map(event => event.method)).toEqual(
+			expect.arrayContaining(["thread/realtime/started", "thread/realtime/sdp", "turn/started", "turn/completed"]),
+		);
+		expect(methods).toEqual(["thread/resume", "thread/realtime/start", "thread/realtime/appendText"]);
+	} finally {
+		router.dispose();
+	}
 });
 
 test("phone bootstrap metadata describes the attached live runtime", async () => {

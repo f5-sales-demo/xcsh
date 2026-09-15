@@ -172,9 +172,21 @@ async function digest(path: string): Promise<string> {
 	for await (const chunk of createReadStream(path)) hash.update(chunk);
 	return hash.digest("hex");
 }
+async function managedRecord(threadId: string): Promise<any> {
+	const catalog = JSON.parse(await Bun.file(`${output}/agent/remote-control/sessions.json`).text());
+	return catalog.threads.find((item: any) => item.id === threadId);
+}
+async function processExists(pid: number): Promise<boolean> {
+	assert(Number.isSafeInteger(pid) && pid > 0, "fixture process identity must contain a positive pid");
+	const process = Bun.spawn(["docker", "exec", container, "/bin/sh", "-c", `kill -0 ${pid} 2>/dev/null`], {
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	return (await process.exited) === 0;
+}
 
 await mkdir(output, { mode: 0o700 });
-for (const name of ["current", "home", "agent/remote-control"])
+for (const name of ["current", "phone", "home", "agent/extensions", "agent/remote-control"])
 	await mkdir(`${output}/${name}`, { mode: 0o700, recursive: true });
 try {
 	await run([
@@ -204,6 +216,8 @@ try {
 		"--mount",
 		`type=bind,src=${provider},dst=/provider.ts,readonly`,
 		"--mount",
+		`type=bind,src=${provider},dst=/fixture/agent/extensions/package-fixture.ts,readonly`,
+		"--mount",
 		`type=bind,src=${output},dst=/fixture`,
 		"--env",
 		"PI_CODING_AGENT_DIR=/fixture/agent",
@@ -221,6 +235,11 @@ try {
 		enabled: false,
 		relay: "stopped",
 		liveSessions: 0,
+		managedSessions: 0,
+		loadedManagedSessions: 0,
+		archivedManagedSessions: 0,
+		defaultCwd: null,
+		primarySession: null,
 		sessions: [],
 		generation: 0,
 		restartCount: 0,
@@ -378,6 +397,70 @@ try {
 	for (const terminal of terminals) await terminal.close();
 	await waitFor(async () => (await threads()).length === 0, "all terminal exits removed");
 	passed("terminal exit unregisters all owners");
+
+	const phoneStarted = await rpc("thread/start", {
+		cwd: "/fixture/phone",
+		model: "model",
+		modelProvider: "package-fixture",
+	});
+	const phoneThreadId = phoneStarted.thread.id;
+	assert.equal(phoneStarted.thread.cwd, "/fixture/phone");
+	assert.equal(phoneStarted.model, "model");
+	assert.equal(phoneStarted.modelProvider, "package-fixture");
+	assert(
+		(await rpc("model/list")).data.some((model: any) => model.id === "model" && model.provider === "package-fixture"),
+	);
+	const phoneParams = {
+		threadId: phoneThreadId,
+		clientUserMessageId: "fixture-phone",
+		input: [{ type: "text", text: "Write PACKAGE-PHONE and read it back." }],
+	};
+	const phoneTurn = (await rpc("turn/start", phoneParams)).turn;
+	const phoneHistory = await waitFor(async () => {
+		const turns = await history(phoneThreadId);
+		return turns.at(-1)?.status === "completed" ? turns : undefined;
+	}, "phone-created managed session tool completion");
+	assert.equal(await Bun.file(`${output}/phone/package-check.txt`).text(), "PACKAGE-PHONE");
+	assert.equal(phoneHistory.length, 1);
+	assert.equal(phoneHistory[0].id, phoneTurn.id);
+	const firstWorker = await waitFor(async () => {
+		const record = await managedRecord(phoneThreadId);
+		return record?.workerProcess ? record.workerProcess : undefined;
+	}, "managed worker identity");
+	assert.equal(await processExists(firstWorker.pid), true);
+	passed("packaged phone bootstrap discovers its model and delegates real tools in the selected cwd");
+
+	await stopHost();
+	await startHost();
+	const coldListing = (await threads()).find(item => item.id === phoneThreadId);
+	assert.equal(coldListing?.status?.type, "notLoaded");
+	assert.equal((await managedRecord(phoneThreadId)).workerProcess.pid, firstWorker.pid);
+	const resumedPhone = await rpc("thread/resume", { threadId: phoneThreadId });
+	assert.equal(resumedPhone.thread.id, phoneThreadId);
+	assert.equal((await managedRecord(phoneThreadId)).workerProcess.pid, firstWorker.pid);
+	assert.equal((await history(phoneThreadId)).length, 1);
+	assert.equal((await rpc("turn/start", phoneParams)).turn.id, phoneTurn.id);
+	assert.equal((await history(phoneThreadId)).length, 1);
+	passed("packaged host replacement reconnects the durable phone worker without duplicate work");
+
+	await docker("kill", "-9", String(firstWorker.pid));
+	await waitFor(async () => (!(await processExists(firstWorker.pid)) ? true : undefined), "managed worker crash");
+	await waitFor(
+		async () => (await threads()).find(item => item.id === phoneThreadId)?.status?.type === "notLoaded",
+		"managed worker detach",
+	);
+	const coldResumedPhone = await rpc("thread/resume", { threadId: phoneThreadId });
+	assert.equal(coldResumedPhone.thread.id, phoneThreadId);
+	const replacementWorker = await waitFor(async () => {
+		const record = await managedRecord(phoneThreadId);
+		return record?.workerProcess?.pid !== firstWorker.pid ? record.workerProcess : undefined;
+	}, "cold managed worker replacement");
+	assert.equal(await processExists(replacementWorker.pid), true);
+	assert.equal((await history(phoneThreadId)).length, 1);
+	assert.equal((await rpc("turn/start", phoneParams)).turn.id, phoneTurn.id);
+	assert.equal((await history(phoneThreadId)).length, 1);
+	passed("packaged cold resume replaces one crashed worker and preserves exactly-once history");
+
 	await stopHost();
 
 	await startSupervisor();
@@ -391,8 +474,13 @@ try {
 	}, "supervisor host replacement");
 	await connect();
 	assert.notEqual(replacement.pid, firstManagedHost.pid);
-	assert.equal((await threads()).length, 0);
-	passed("packaged supervisor replaces one crashed host and restores its local relay socket");
+	assert.deepEqual(
+		(await threads()).map(item => item.id),
+		[phoneThreadId],
+	);
+	assert.equal((await threads())[0].status.type, "notLoaded");
+	assert.equal(await processExists(replacementWorker.pid), true);
+	passed("packaged supervisor replaces one crashed host while the unloaded phone worker survives");
 
 	peer?.close();
 	peer = undefined;
@@ -403,7 +491,9 @@ try {
 	assert.equal(disabled.enabled, false);
 	assert.equal(disabled.hostState, "stopped");
 	assert.equal(disabled.supervisorState, "stopped");
-	passed("intentional packaged disable remains stopped");
+	assert.equal(await processExists(replacementWorker.pid), false);
+	assert.equal((await managedRecord(phoneThreadId)).workerProcess, null);
+	passed("intentional packaged disable remains stopped and terminates an unloaded phone worker");
 
 	const hostStatePath = `${output}/agent/remote-control/host.json`;
 	const hostState = JSON.parse(await Bun.file(hostStatePath).text());
@@ -435,6 +525,8 @@ try {
 	const recovered = JSON.parse(await Bun.file(`${output}/agent/remote-control/host-process.json`).text());
 	assert.notEqual(recovered.pid, 2_000_000_000);
 	passed("packaged supervisor recovers stale process state");
+	await rpc("thread/delete", { threadId: phoneThreadId });
+	await waitFor(async () => ((await threads()).length === 0 ? true : undefined), "managed fixture cleanup");
 
 	const contender = Bun.spawn(["docker", "exec", container, "xcsh", "remote-control", "supervisor"], {
 		stdout: "pipe",

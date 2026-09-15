@@ -56,6 +56,8 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 	| "setRealtimeMode"
+	| "compact"
+	| "navigateTree"
 	| "settings"
 	| "skills"
 	| "skillWarnings"
@@ -1021,6 +1023,14 @@ export class RemoteSession {
 			return {};
 		}
 		if (method === "thread/goal/get") return { goal: null };
+		if (method === "xcsh/thread/flush") {
+			if (this.#durable)
+				await this.#effect(epoch, async () => {
+					await this.target.sessionManager.ensureOnDisk();
+					await this.target.sessionManager.flush();
+				});
+			return {};
+		}
 		if (method === "thread/queue/list") {
 			const limit = params.limit ?? 100;
 			if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
@@ -1042,6 +1052,47 @@ export class RemoteSession {
 			};
 		}
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
+		if (method === "thread/compact/start") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Compaction requires persisted session history");
+			void this.#effect(epoch, () => this.target.compact()).catch(() => {
+				this.#emit("error", { message: "Thread compaction failed" });
+			});
+			return {};
+		}
+		if (method === "thread/revert") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Revert requires persisted session history");
+			if (typeof params.beforeTurnId !== "string") throw new ProtocolError(-32602, "Invalid revert turn");
+			const snapshot = projectHistorySnapshot(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active) || this.target.isStreaming,
+				this.target.sessionManager.getCwd(),
+			);
+			const firstItem = snapshot.timeline.find(
+				row => row.entry.type === "item" && row.entry.turnId === params.beforeTurnId,
+			);
+			if (!firstItem) throw new ProtocolError(-32602, "Revert turn not found");
+			await this.#effect(epoch, async () => {
+				if (this.#active || this.target.isStreaming) await this.target.abort();
+				const navigation = await this.target.navigateTree(firstItem.sourceId);
+				if (navigation.cancelled) throw new ProtocolError(-32000, "Thread revert was cancelled");
+				await this.target.sessionManager.flush();
+			});
+			const history = this.history();
+			const thread = this.thread(false);
+			setTimeout(() => this.#emit("thread/reverted", {}), 0);
+			return {
+				thread,
+				turnsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "turns" },
+					history.at(-1)?.id,
+				),
+				itemsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "items" },
+					history.flatMap(value => value.items).at(-1)?.id as string | undefined,
+				),
+			};
+		}
 		if (method === "thread/timeline/list") {
 			if (!this.#durable) throw new ProtocolError(-32601, "Timeline requires persisted session history");
 			const snapshot = projectHistorySnapshot(

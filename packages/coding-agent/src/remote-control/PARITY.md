@@ -1220,3 +1220,21 @@ metadata, history, approval replay, and tenant-call deduplication. A source-matc
 packaged harness and one controlled Ubuntu crash/cutover remain required before
 this section can claim live lifecycle acceptance; iPhone behavior remains a
 separate human observation.
+
+## Managed iPhone session parity supersession
+
+As of the 2026-09-14 issue #3873 candidate, the historical unsupported-fork and
+excluded-phone-session observations above are retained only as evidence for older
+artifacts. The current source supports the pinned Codex 0.153.4 start, fork,
+archive, unarchive, delete, compact, and revert contracts. It projects one chosen
+terminal plus phone-created sessions, keeps cold durable history discoverable, and
+uses response-before-notification ordering for lifecycle broadcasts.
+
+Phone-created sessions run full `AgentSession` workers with the same dynamic model
+catalog, tools, extensions, approvals, context bootstrap, WebRTC v3 voice, and
+history paths as a terminal. A worker survives host replacement, replays bounded
+unacknowledged events once, unloads when idle and unsubscribed, and is terminated
+on archive, delete, or intentional disable. Exact process identity and catalog-root
+validation prevent stale PID or corrupt-path cleanup from targeting another
+process or file. Automated protocol parity is not physical iPhone acceptance;
+the device flow remains an explicit release gate.

@@ -7900,6 +7900,166 @@
     },
     {
       "surface": {
+        "id": "/remote <arguments>",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "typed-arguments",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote clients",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote disable",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote enable",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote pair",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote restart",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote revoke",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote status",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "/rename",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"

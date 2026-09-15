@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { chmod, lstat, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, normalize, relative } from "node:path";
 import { AuthStorage } from "@f5-sales-demo/pi-ai";
 import { getAgentDbPath, getAgentDir, VERSION } from "@f5-sales-demo/pi-utils";
 import { loadRemoteSubscription, recoverRemoteSubscription } from "./auth";
@@ -18,6 +18,7 @@ import {
 	signalVerifiedProcess,
 	withLifecycleLock,
 } from "./lifecycle-state";
+import { startManagedSessionWorker } from "./managed-worker";
 import { startPairing } from "./pairing";
 import { SystemdUserManager } from "./startup-manager";
 import { RemoteSupervisor } from "./supervisor";
@@ -27,6 +28,8 @@ interface HostState {
 	name: string;
 	installationId: string;
 	enrollment: Enrollment;
+	defaultCwd?: string;
+	primarySessionId?: string;
 }
 export function remoteHostName(value: string = hostname()): string {
 	const device = value
@@ -129,8 +132,9 @@ async function stopManagedHost(
 ): Promise<void> {
 	let peer: Awaited<ReturnType<typeof connectPeer>> | undefined;
 	try {
+		const terminateManaged = (await readState())?.enabled === false;
 		peer = await connectPeer(remoteSocketPath());
-		await peer.call("drain", { timeoutMs: drainMs }, drainMs + 5_000);
+		await peer.call("drain", { timeoutMs: drainMs, terminateManaged }, drainMs + 5_000);
 	} catch {
 		// A crashed or wedged host falls through to exact-identity signalling.
 	} finally {
@@ -375,6 +379,11 @@ export async function remoteStatus(): Promise<Record<string, unknown>> {
 			enabled: state?.enabled ?? false,
 			relay: "stopped",
 			liveSessions: 0,
+			managedSessions: 0,
+			loadedManagedSessions: 0,
+			archivedManagedSessions: 0,
+			defaultCwd: state?.defaultCwd ?? null,
+			primarySession: state?.primarySessionId ?? null,
 			sessions: [],
 			...lifecycle,
 			supervisorState: supervisorAlive ? lifecycle.supervisorState : "stopped",
@@ -384,6 +393,9 @@ export async function remoteStatus(): Promise<Record<string, unknown>> {
 }
 export interface RemoteControlOptions extends ClientListOptions {
 	clientId?: string;
+	cwd?: string;
+	primarySessionId?: string;
+	workerSocket?: string;
 }
 export async function runRemoteControl(action: string, options: RemoteControlOptions = {}): Promise<unknown> {
 	if (action === "revoke" && !options.clientId?.trim())
@@ -409,6 +421,26 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 		}
 	}
 	if (action === "status") return remoteStatus();
+	if (action === "worker") {
+		const workers = join(root(), "workers");
+		const socket = options.workerSocket;
+		if (
+			!socket ||
+			!isAbsolute(socket) ||
+			normalize(socket) !== socket ||
+			relative(workers, socket).startsWith("..") ||
+			isAbsolute(relative(workers, socket))
+		)
+			throw new Error("A managed worker socket under the remote-control root is required");
+		const worker = await startManagedSessionWorker(socket);
+		const stop = () => void worker.close();
+		process.once("SIGTERM", stop);
+		process.once("SIGINT", stop);
+		await worker.finished;
+		process.removeListener("SIGTERM", stop);
+		process.removeListener("SIGINT", stop);
+		return undefined;
+	}
 	if (action === "disable") {
 		return withLifecycleLock(root(), async () => {
 			const state = await readState();
@@ -456,7 +488,10 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 	if (action === "host") {
 		const state = await readState();
 		if (!state?.enabled) throw new Error("xcsh remote control is disabled");
-		const host = await startLocalHost(remoteSocketPath(), VERSION);
+		const host = await startLocalHost(remoteSocketPath(), VERSION, undefined, {
+			defaultCwd: state.defaultCwd,
+			primarySessionId: state.primarySessionId,
+		});
 		process.once("SIGTERM", () => {
 			void host.close();
 		});
@@ -473,6 +508,12 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 	if (action !== "enable" && action !== "restart")
 		throw new Error("Unsupported remote action in the interoperability preview");
 	return withLifecycleLock(root(), async () => {
+		if (options.cwd != null) {
+			if (!isAbsolute(options.cwd) || normalize(options.cwd) !== options.cwd)
+				throw new Error("Remote default cwd must be normalized and absolute");
+			const cwd = await lstat(options.cwd).catch(() => undefined);
+			if (!cwd?.isDirectory()) throw new Error("Remote default cwd must be an existing directory");
+		}
 		let state = await readState();
 		const priorState = state ? structuredClone(state) : undefined;
 		const wasEnabled = state?.enabled === true;
@@ -512,7 +553,13 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 		}
 		state.name = remoteHostName(state.name);
 		if (Date.parse(state.enrollment.expires_at) < Date.now() + 60_000) await refreshState(state);
-		await writeState({ ...state, enabled: true });
+		state = {
+			...state,
+			enabled: true,
+			...(options.cwd == null ? {} : { defaultCwd: options.cwd }),
+			...(options.primarySessionId == null ? {} : { primarySessionId: options.primarySessionId }),
+		};
+		await writeState(state);
 		const store = lifecycleStore();
 		const previous = await store.readSnapshot();
 		const resetRequested = action === "restart" || !wasEnabled || previous?.supervisorState === "degraded";

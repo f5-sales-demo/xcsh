@@ -11,14 +11,42 @@ import modelSchema from "./fixtures/ModelListResponse.json";
 import permissionProfileListParamsSchema from "./fixtures/PermissionProfileListParams.json";
 import permissionProfileListSchema from "./fixtures/PermissionProfileListResponse.json";
 import skillsListSchema from "./fixtures/SkillsListResponse.json";
+import threadArchivedNotificationSchema from "./fixtures/ThreadArchivedNotification.json";
+import threadArchiveParamsSchema from "./fixtures/ThreadArchiveParams.json";
+import threadArchiveResponseSchema from "./fixtures/ThreadArchiveResponse.json";
+import threadCompactStartParamsSchema from "./fixtures/ThreadCompactStartParams.json";
+import threadCompactStartResponseSchema from "./fixtures/ThreadCompactStartResponse.json";
+import threadDeletedNotificationSchema from "./fixtures/ThreadDeletedNotification.json";
+import threadDeleteParamsSchema from "./fixtures/ThreadDeleteParams.json";
+import threadDeleteResponseSchema from "./fixtures/ThreadDeleteResponse.json";
+import threadForkParamsSchema from "./fixtures/ThreadForkParams.json";
+import threadForkResponseSchema from "./fixtures/ThreadForkResponse.json";
 import listSchema from "./fixtures/ThreadListResponse.json";
 import loadedListSchema from "./fixtures/ThreadLoadedListResponse.json";
 import threadNameUpdatedSchema from "./fixtures/ThreadNameUpdatedNotification.json";
 import readSchema from "./fixtures/ThreadReadResponse.json";
 import resumeSchema from "./fixtures/ThreadResumeResponse.json";
+import threadRevertedNotificationSchema from "./fixtures/ThreadRevertedNotification.json";
+import threadRevertParamsSchema from "./fixtures/ThreadRevertParams.json";
+import threadRevertResponseSchema from "./fixtures/ThreadRevertResponse.json";
 import threadSetNameParamsSchema from "./fixtures/ThreadSetNameParams.json";
 import threadSetNameResponseSchema from "./fixtures/ThreadSetNameResponse.json";
 import threadStartedSchema from "./fixtures/ThreadStartedNotification.json";
+import threadStartParamsSchema from "./fixtures/ThreadStartParams.json";
+import threadStartResponseSchema from "./fixtures/ThreadStartResponse.json";
+import threadUnarchivedNotificationSchema from "./fixtures/ThreadUnarchivedNotification.json";
+import threadUnarchiveParamsSchema from "./fixtures/ThreadUnarchiveParams.json";
+import threadUnarchiveResponseSchema from "./fixtures/ThreadUnarchiveResponse.json";
+
+function protocolAjv(): Ajv {
+	const ajv = new Ajv({ strict: false });
+	for (const name of ["int32", "int64", "uint", "uint16", "uint32", "uint64"])
+		ajv.addFormat(name, {
+			type: "number",
+			validate: (value: number) => Number.isSafeInteger(value) && (!name.startsWith("u") || value >= 0),
+		});
+	return ajv;
+}
 
 test("initialization and live thread payload match pinned upstream schemas", async () => {
 	const ajv = new Ajv({ strict: false });
@@ -264,6 +292,189 @@ test("actual rename request, response and notification match pinned schemas", as
 		expect(validResponse(result), JSON.stringify(validResponse.errors)).toBe(true);
 		const validNotification = ajv.compile(threadNameUpdatedSchema);
 		expect(validNotification(events[0].params), JSON.stringify(validNotification.errors)).toBe(true);
+	} finally {
+		remote.dispose();
+	}
+});
+
+test("managed lifecycle requests, responses and notifications match pinned 0.153.4 schemas", async () => {
+	const ajv = protocolAjv();
+	const validate = (schema: object, value: unknown) => {
+		const compiled = ajv.compile(schema);
+		expect(compiled(value), JSON.stringify(compiled.errors)).toBe(true);
+	};
+	const records = new Map<string, Record<string, unknown>>();
+	const thread = (id: string, forkedFromId: string | null = null): Record<string, unknown> => ({
+		id,
+		sessionId: id,
+		forkedFromId,
+		parentThreadId: null,
+		preview: "",
+		ephemeral: false,
+		section: null,
+		sectionEnteredAt: null,
+		projectId: null,
+		historyMode: "paginated",
+		modelProvider: "openai-codex",
+		model: "gpt-5.6-luna",
+		reasoningEffort: "medium",
+		createdAt: 1,
+		updatedAt: 1,
+		recencyAt: 1,
+		status: { type: "idle" },
+		path: `/tmp/${id}.jsonl`,
+		cwd: "/tmp",
+		cliVersion: "21.29.0",
+		source: "appServer",
+		threadSource: null,
+		agentNickname: null,
+		agentRole: null,
+		gitInfo: null,
+		name: null,
+		turns: [],
+	});
+	const endpoint = (value: Record<string, unknown>) => ({
+		thread: value,
+		call: async () => ({
+			thread: value,
+			model: value.model,
+			modelProvider: value.modelProvider,
+			serviceTier: null,
+			cwd: value.cwd,
+			instructionSources: [],
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandbox: { type: "dangerFullAccess" },
+			reasoningEffort: value.reasoningEffort,
+		}),
+	});
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [...records.values()],
+		start: async () => {
+			const value = thread("schema-start");
+			records.set(String(value.id), value);
+			return endpoint(value);
+		},
+		resume: async (threadId: string) => {
+			const value = records.get(threadId);
+			return value ? endpoint(value) : undefined;
+		},
+		read: async (threadId: string) => ({ thread: records.get(threadId) }),
+		fork: async (threadId: string) => {
+			const value = thread("schema-fork", threadId);
+			records.set(String(value.id), value);
+			return endpoint(value);
+		},
+		archive: async (threadId: string) => {
+			Object.assign(records.get(threadId)!, { archived: true });
+		},
+		unarchive: async (threadId: string) => {
+			Object.assign(records.get(threadId)!, { archived: false });
+			return records.get(threadId)!;
+		},
+		delete: async (threadId: string) => {
+			records.delete(threadId);
+		},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
+	router.notify = (_client, event) => notifications.push(event);
+	try {
+		await router.handle("phone", {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+		});
+		const startParams = { cwd: "/tmp", ephemeral: false, model: "gpt-5.6-luna" };
+		validate(threadStartParamsSchema, startParams);
+		const started = (await router.handle("phone", { id: 2, method: "thread/start", params: startParams })) as any;
+		validate(threadStartResponseSchema, started.result);
+
+		const forkParams = { threadId: "schema-start", excludeTurns: false };
+		validate(threadForkParamsSchema, forkParams);
+		const forked = (await router.handle("phone", { id: 3, method: "thread/fork", params: forkParams })) as any;
+		validate(threadForkResponseSchema, forked.result);
+
+		const archiveParams = { threadId: "schema-fork" };
+		validate(threadArchiveParamsSchema, archiveParams);
+		const archived = (await router.handle("phone", {
+			id: 4,
+			method: "thread/archive",
+			params: archiveParams,
+		})) as any;
+		validate(threadArchiveResponseSchema, archived.result);
+		await Bun.sleep(1);
+		validate(
+			threadArchivedNotificationSchema,
+			notifications.find(event => event.method === "thread/archived")?.params,
+		);
+
+		validate(threadUnarchiveParamsSchema, archiveParams);
+		const unarchived = (await router.handle("phone", {
+			id: 5,
+			method: "thread/unarchive",
+			params: archiveParams,
+		})) as any;
+		validate(threadUnarchiveResponseSchema, unarchived.result);
+		await Bun.sleep(1);
+		validate(
+			threadUnarchivedNotificationSchema,
+			notifications.find(event => event.method === "thread/unarchived")?.params,
+		);
+
+		validate(threadDeleteParamsSchema, archiveParams);
+		const deleted = (await router.handle("phone", { id: 6, method: "thread/delete", params: archiveParams })) as any;
+		validate(threadDeleteResponseSchema, deleted.result);
+		await Bun.sleep(1);
+		validate(threadDeletedNotificationSchema, notifications.find(event => event.method === "thread/deleted")?.params);
+	} finally {
+		router.dispose();
+	}
+});
+
+test("compaction and revert match pinned 0.153.4 schemas", async () => {
+	const ajv = protocolAjv();
+	const validate = (schema: object, value: unknown) => {
+		const compiled = ajv.compile(schema);
+		expect(compiled(value), JSON.stringify(compiled.errors)).toBe(true);
+	};
+	const entries = [
+		{
+			type: "message",
+			id: "schema-user",
+			parentId: null,
+			timestamp: "2026-09-14T00:00:00.000Z",
+			message: { role: "user", content: [{ type: "text", text: "fixture" }], timestamp: 1 },
+		},
+	] as any[];
+	const events: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const remote = new RemoteSession({
+		sessionId: "schema-managed",
+		sessionFile: "/tmp/schema-managed.jsonl",
+		messages: [],
+		isStreaming: false,
+		sessionManager: {
+			getCwd: () => "/tmp",
+			getBranch: () => entries,
+			flush: async () => {},
+		},
+		subscribe: () => () => {},
+		compact: async () => {},
+		navigateTree: async () => ({ cancelled: false }),
+		abort: async () => {},
+	} as unknown as SessionTarget);
+	remote.subscribe(event => events.push(event));
+	try {
+		const compactParams = { threadId: "schema-managed" };
+		validate(threadCompactStartParamsSchema, compactParams);
+		validate(threadCompactStartResponseSchema, await remote.call("compact", "thread/compact/start", compactParams));
+		const revertParams = { threadId: "schema-managed", beforeTurnId: "schema-managed-turn-schema-user" };
+		validate(threadRevertParamsSchema, revertParams);
+		validate(threadRevertResponseSchema, await remote.call("revert", "thread/revert", revertParams));
+		await Bun.sleep(1);
+		validate(threadRevertedNotificationSchema, events.find(event => event.method === "thread/reverted")?.params);
+		expect(Object.keys(events.find(event => event.method === "thread/reverted")!.params)).toEqual(["threadId"]);
 	} finally {
 		remote.dispose();
 	}

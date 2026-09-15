@@ -2826,3 +2826,37 @@ expiry, overload isolation, reconnect replay, one current-session registration,
 and model/effort selection persistence. The iPhone host label is exactly
 `xcsh - <workstation>`: `xcsh` is always lowercase. The live Ubuntu runtime is not
 changed until a new full-SHA immutable package passes every offline gate.
+
+## Phone-created session lifecycle — issue 3873 supersession
+
+The 2026-09-14 session-lifecycle work supersedes earlier dated statements that
+`thread/start`, `thread/fork`, or phone-created sessions are unsupported. The host
+still exposes exactly one selected terminal initially. A phone may additionally
+create durable or ephemeral sessions, and those managed sessions then remain
+visible alongside the selected terminal.
+
+Managed sessions use ordinary `AgentSession` construction, extension and tool
+discovery, approval handling, history, model selection, and context bootstrap.
+Their cwd is selected in this order: an explicit normalized phone cwd, the exposed
+terminal cwd, then the cwd saved by `/remote enable`. Durable metadata is written
+to an owner-only catalog. Cold read does not load a worker; concurrent resume is
+single-flight; idle unsubscribed workers unload after 30 minutes; and archived
+history remains cold-readable and restorable.
+
+Each loaded phone session is owned by a separate worker process and owner-only
+Unix socket. Host replacement detaches rather than cancels durable workers, so an
+active turn continues and its bounded event queue replays once to the replacement.
+Worker PID records use the same PID, start-time, executable-path, executable-hash,
+and generation checks as host lifecycle records. Delete, archive, idle unload, and
+intentional disable wait for session disposal and terminate only the exact worker;
+ordinary host replacement does not. Catalog paths are constrained to the session,
+archive, and worker roots before they can be opened, moved, or deleted.
+
+The implemented Codex 0.153.4 lifecycle surface is `thread/start`, `thread/fork`,
+`thread/archive`, `thread/unarchive`, `thread/delete`, `thread/compact/start`, and
+`thread/revert`. Stable and experimental thread projections, pagination, ephemeral
+fork history, response-before-notification ordering, and explicit protocol errors
+are covered by pinned schemas. Voice on a managed session uses the same WebRTC v3,
+persona, delegation, approval, cancellation, and replay implementation as the
+terminal session. Context changes remain tool-owned through `xcsh_context`; the
+voice model does not parse the TUI-only `/context` command.

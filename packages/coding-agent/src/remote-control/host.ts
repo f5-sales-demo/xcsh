@@ -2,6 +2,7 @@ import { lstat, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, normalize } from "node:path";
 import type { Enrollment } from "./enrollment";
 import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
+import { ManagedRemoteSessions } from "./managed-sessions";
 import { RelayCodec } from "./relay";
 import { RELAY_SWEEP_MS, ReconnectBackoff, RelayClientTracker, RelayHeartbeat } from "./relay-lifecycle";
 import { RemoteRouter, type SessionEndpoint } from "./router";
@@ -148,9 +149,17 @@ export async function startLocalHost(
 	socketPath: string,
 	version: string,
 	trace: TraceSink | undefined = traceFromEnvironment("host", version),
+	options: { defaultCwd?: string; primarySessionId?: string } = {},
 ) {
 	await prepareSocketPath(socketPath);
-	const router = new RemoteRouter(dirname(socketPath), version);
+	const managed = await new ManagedRemoteSessions(
+		dirname(socketPath),
+		options.defaultCwd ?? process.cwd(),
+	).initialize();
+	const router = new RemoteRouter(dirname(socketPath), version, managed, options.primarySessionId);
+	managed.publish = event => router.publish(event);
+	managed.detached = threadId => router.removeSession(threadId);
+	managed.hasSubscribers = threadId => router.hasSubscribers(threadId);
 	const peers = new Set<LocalPeer>();
 	const localClients = new Map<string, LocalPeer>();
 	let publishClient = (_client: string, _event: Notification) => {};
@@ -166,6 +175,7 @@ export async function startLocalHost(
 	let pendingOutbound = () => 0;
 	let relayStatus = "disconnected";
 	let stopRelay = () => {};
+	let terminateManagedOnClose = false;
 	const server = await listenLocal(socketPath, peer => {
 		peers.add(peer);
 		const localClient = `local-${crypto.randomUUID()}`;
@@ -198,6 +208,11 @@ export async function startLocalHost(
 					enabled: true,
 					relay: relayStatus,
 					liveSessions: router.sessions.size,
+					managedSessions: managed.counts().total,
+					loadedManagedSessions: managed.counts().loaded,
+					archivedManagedSessions: managed.counts().archived,
+					defaultCwd: managed.defaultCwd,
+					primarySession: options.primarySessionId ?? null,
 					sessions: [...router.sessions.values()].map(s => ({
 						id: s.thread.id,
 						name: s.thread.name,
@@ -206,6 +221,7 @@ export async function startLocalHost(
 				};
 			if (method === "drain" || method === "stop") {
 				accepting = false;
+				terminateManagedOnClose ||= params.terminateManaged === true;
 				const timeout =
 					typeof params.timeoutMs === "number" && params.timeoutMs >= 0
 						? Math.min(params.timeoutMs, 60_000)
@@ -270,6 +286,7 @@ export async function startLocalHost(
 		if (closed) return;
 		closed = true;
 		router.dispose();
+		await managed.close(terminateManagedOnClose);
 		clearInterval(sweep);
 		stopRelay();
 		for (const peer of peers) peer.close();

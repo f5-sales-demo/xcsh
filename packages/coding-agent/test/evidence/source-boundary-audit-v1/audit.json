@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "e247f76f956257aca08d696619445bf40f41f642",
-  "fingerprint": "e70e8045ab04e0dca903fefe004bc2ff0222272954b9a45e6649c1d1959aa450",
+  "revision": "7a4a160b9821e285e7f11b0b134c3d4b4d23d75d",
+  "fingerprint": "41569a9981b37d33e5692f9085cf330b3cdac1c2e5e2bba2e73cae22fce9fb9c",
   "counts": {
     "total": 241,
     "components": 95,
@@ -4410,7 +4410,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "18ef10e14ed5657cb0bc99682fb1ebcda752fc68bb2b7a87820b4d3dfdc90621",
+      "sha256": "9c89b23f401933508d30fca35f7a40f995ff9cfdf955f103028a1912ced44bd5",
       "exports": [
         "BranchSummaryEntry",
         "CURRENT_SESSION_VERSION",
@@ -4509,7 +4509,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "8bbee159c3799dead85c44c6d473ff5447ab7ece9865fd51e743ff6aaacdba28",
+      "sha256": "c2a9d4d182b231d22a3c747c32cf5e1a9719fe73072ac607d9909f0341f84017",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",

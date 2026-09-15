@@ -98,3 +98,19 @@ executable-path, executable-hash, and generation match. These mechanics preserve
 backend task ownership during voice closure and host replacement; they do not prove
 microphone, speech, or iPhone presentation quality. Those remain physical-device
 acceptance gates after the immutable candidate passes offline qualification.
+
+## Managed voice sessions
+
+Phone-created sessions are no longer an unsupported boundary in the issue #3873
+candidate. They use the same server-owned persona snapshot, WebRTC v3 transport,
+delegation, approval broker, cancellation, context tool, and durable history as an
+attached terminal. The phone may request a cwd only when it is normalized,
+absolute, and already exists; otherwise the host selects the exposed terminal cwd
+and then the saved `/remote enable` cwd.
+
+The voice model must invoke `xcsh_context` for context changes. `/context` remains
+a TUI command and is not reimplemented in voice prose. A host disconnect leaves
+the worker and active turn running; a replacement host reconnects to that exact
+worker and replays only its bounded unacknowledged events. Intentional disable is
+different: it disposes managed sessions and exact-identity terminates every durable
+worker, including workers not yet cold-loaded by the replacement host.

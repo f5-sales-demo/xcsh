@@ -94,6 +94,74 @@ test("unsupported methods return explicit protocol errors", async () => {
 	a.remote.dispose();
 });
 
+test("manual compaction starts asynchronously and revert selects the exact pre-turn branch", async () => {
+	const a = fixture("a");
+	let release = () => {};
+	let compactCalls = 0;
+	let navigated = "";
+	const ordering: string[] = [];
+	a.remote.subscribe(event => {
+		if (event.method === "thread/reverted") ordering.push("notification");
+	});
+	const entries = [
+		{
+			type: "message",
+			id: "user-one",
+			parentId: null,
+			timestamp: "2026-09-14T00:00:00.000Z",
+			message: { role: "user", content: [{ type: "text", text: "one" }], timestamp: 1 },
+		},
+		{
+			type: "message",
+			id: "assistant-one",
+			parentId: "user-one",
+			timestamp: "2026-09-14T00:00:01.000Z",
+			message: {
+				role: "assistant",
+				content: [{ type: "text", text: "done" }],
+				stopReason: "stop",
+				timestamp: 2,
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { total: 0 } },
+			},
+		},
+		{
+			type: "message",
+			id: "user-two",
+			parentId: "assistant-one",
+			timestamp: "2026-09-14T00:00:02.000Z",
+			message: { role: "user", content: [{ type: "text", text: "two" }], timestamp: 3 },
+		},
+	] as any[];
+	Object.assign(a.remote.target.sessionManager, { getBranch: () => entries, flush: async () => {} });
+	Object.assign(a.remote.target, {
+		compact: async () => {
+			compactCalls++;
+			await new Promise<void>(resolve => {
+				release = resolve;
+			});
+		},
+		navigateTree: async (entryId: string) => {
+			navigated = entryId;
+			return { cancelled: false };
+		},
+	});
+	expect(await a.remote.call("compact", "thread/compact/start", { threadId: "a" })).toEqual({});
+	expect(compactCalls).toBe(1);
+	const reverted = (await a.remote.call("revert", "thread/revert", {
+		threadId: "a",
+		beforeTurnId: "a-turn-user-two",
+	})) as any;
+	ordering.push("response");
+	expect(navigated).toBe("user-two");
+	expect(reverted.thread).toMatchObject({ id: "a", turns: [] });
+	expect(reverted).toHaveProperty("turnsBackwardsCursor");
+	expect(ordering).toEqual(["response"]);
+	await Bun.sleep(1);
+	expect(ordering).toEqual(["response", "notification"]);
+	release();
+	a.remote.dispose();
+});
+
 test("live skill metadata and reads stay bound to the terminal's loaded skill files", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-remote-skill-"));
 	const skillPath = join(dir, "SKILL.md");
