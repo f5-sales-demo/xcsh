@@ -434,6 +434,14 @@ export class RemoteRouter {
 		}
 		return candidate;
 	}
+	#processParams(method: string, params: Record<string, unknown>): Record<string, unknown> {
+		if (method !== "process/spawn" || params.cwd !== "/") return params;
+		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return params;
+		// Blank-chat clients use root as a placeholder before choosing a workspace.
+		// Map only that placeholder to the exposed primary; unrelated paths still fail.
+		const cwd = this.#currentSession()?.thread.cwd;
+		return typeof cwd === "string" && isAbsolute(cwd) && normalize(cwd) === cwd ? { ...params, cwd } : params;
+	}
 	#defer(client: string, event: Notification): void {
 		setTimeout(() => this.#emit(client, event), 0);
 	}
@@ -591,10 +599,21 @@ export class RemoteRouter {
 					case "process/spawn":
 					case "process/kill":
 					case "process/writeStdin":
-						result = await this.#processes.call(client, JSON.stringify(id), request.method, params);
+						result = await this.#processes.call(
+							client,
+							JSON.stringify(id),
+							request.method,
+							this.#processParams(request.method, params),
+						);
 						break;
 					case "config/read": {
-						const matching = this.#visibleSessions().filter(session => session.thread.cwd === params.cwd);
+						const matching =
+							params.cwd == null
+								? // Global bootstrap config inherits model defaults from the exposed primary.
+									[this.#currentSession()].filter(
+										(session): session is SessionEndpoint => session !== undefined,
+									)
+								: this.#visibleSessions().filter(session => session.thread.cwd === params.cwd);
 						result = configResponse(
 							matching.length === 1 ? matching[0].thread : undefined,
 							params.includeLayers === true,

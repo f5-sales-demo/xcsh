@@ -893,9 +893,49 @@ test("a new phone conversation can enter voice before its first turn", async () 
 				params: { clientInfo: { name: "fixture-phone", version: "1" }, capabilities: { experimentalApi: true } },
 			}),
 		).toMatchObject({ result: { userAgent: "xcsh/21.29.0" } });
+		expect(
+			await router.handle("phone", { id: 2, method: "config/read", params: { includeLayers: true } }),
+		).toMatchObject({
+			result: {
+				config: {
+					model: "gpt-5.6-luna",
+					model_provider: "openai-codex",
+					model_reasoning_effort: "medium",
+				},
+			},
+		});
 		expect(await router.handle("phone", { id: 2, method: "model/list", params: {} })).toMatchObject({
 			result: { data: [{ id: "gpt-5.6-luna", inputModalities: ["text", "audio"], isDefault: true }] },
 		});
+		expect(
+			await router.handle("phone", {
+				id: "blank-chat-preflight",
+				method: "process/spawn",
+				params: {
+					processHandle: "blank-chat-preflight",
+					cwd: "/",
+					command: [process.execPath, "-e", "process.stdout.write(process.cwd())"],
+					tty: false,
+					streamStdin: false,
+					streamStdoutStderr: false,
+					timeoutMs: 1000,
+					outputBytesCap: 4096,
+				},
+			}),
+		).toEqual({ id: "blank-chat-preflight", result: {} });
+		const preflightDeadline = Date.now() + 3000;
+		while (!notifications.some(event => event.method === "process/exited") && Date.now() < preflightDeadline)
+			await Bun.sleep(5);
+		expect(notifications.find(event => event.method === "process/exited")).toMatchObject({
+			params: { processHandle: "blank-chat-preflight", exitCode: 0, stdout: "/tmp" },
+		});
+		expect(
+			await router.handle("phone", {
+				id: "unrelated-cwd",
+				method: "process/spawn",
+				params: { processHandle: "unrelated-cwd", cwd: "/var", command: [process.execPath, "-e", ""] },
+			}),
+		).toMatchObject({ error: { code: -32602 } });
 		expect(await router.handle("phone", { id: 3, method: "thread/start", params: { cwd: "/tmp" } })).toMatchObject({
 			result: { thread: { id: managedThread.id } },
 		});
