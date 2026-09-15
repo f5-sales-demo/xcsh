@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { connectPeer } from "../../src/remote-control/ipc";
 import type { ManagedSessionRuntimeRequest } from "../../src/remote-control/managed-sessions";
 import { startManagedSessionWorker } from "../../src/remote-control/managed-worker";
+import { RemoteRouter } from "../../src/remote-control/router";
+import { replayVoiceFirstSequence } from "../../src/remote-control/voice-first-replay";
 
 test("a managed worker keeps one active turn across host replacement and replays its completion once", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-managed-worker-"));
@@ -111,6 +113,136 @@ test("worker stop acknowledges only after the session runtime is durably closed"
 		peer.close();
 		await worker.finished;
 	} finally {
+		await worker.close();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("voice-first replay crosses a real managed worker with a deterministic realtime transport", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-managed-worker-voice-"));
+	const socket = join(root, "worker.sock");
+	const notifications: Record<string, unknown>[] = [];
+	let publish: ((event: { method: string; params: Record<string, unknown> }) => void) | undefined;
+	const thread = {
+		id: "managed-voice",
+		sessionId: "managed-voice",
+		cwd: root,
+		model: "gpt-5.6-luna",
+		modelProvider: "openai-codex",
+		reasoningEffort: "high",
+		source: "vscode",
+		status: { type: "idle" },
+		turns: [],
+	};
+	const worker = await startManagedSessionWorker(socket, {
+		createRuntime: async () => ({
+			endpoint: {
+				thread,
+				call: async (_identity, method) => {
+					if (method === "thread/resume") return { thread, model: thread.model, cwd: thread.cwd };
+					if (method === "thread/realtime/start") {
+						publish?.({
+							method: "thread/realtime/started",
+							params: { threadId: thread.id, realtimeSessionId: "fixture-call", version: "v3" },
+						});
+						publish?.({ method: "thread/realtime/sdp", params: { threadId: thread.id, sdp: "fixture-sdp" } });
+					}
+					return {};
+				},
+			},
+			setPublisher: listener => {
+				publish = listener;
+			},
+			close: async () => {},
+		}),
+	});
+	let peer: Awaited<ReturnType<typeof connectPeer>> | undefined;
+	let router: RemoteRouter | undefined;
+	try {
+		peer = await connectPeer(socket);
+		peer.handle = async (method, params) => {
+			if (method === "worker/event") {
+				router?.publish(params.event as { method: string; params: Record<string, unknown> });
+				return { ack: params.seq };
+			}
+			return {};
+		};
+		const lifecycle = {
+			defaultCwd: root,
+			list: () => [],
+			start: async (params: Record<string, unknown>) => {
+				const description = (await peer!.call("worker/initialize", {
+					request: { kind: "start", params },
+				})) as any;
+				return {
+					...description.endpoint,
+					call: async (identity: string, method: string, callParams: Record<string, unknown>) =>
+						(
+							(await peer!.call("worker/sessionCall", { identity, method, params: callParams })) as {
+								result: unknown;
+							}
+						).result,
+				};
+			},
+			resume: async () => undefined,
+			read: async () => ({ thread }),
+			fork: async () => {
+				throw new Error("not used");
+			},
+			archive: async () => {},
+			unarchive: async () => thread,
+			delete: async () => {},
+		};
+		router = new RemoteRouter(root, "fixture", lifecycle);
+		router.notify = (_client, event) => notifications.push({ method: event.method, params: event.params });
+		await router.handle("phone", {
+			id: 0,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+		});
+		const event = (direction: "in" | "out", message: Record<string, unknown>) => ({
+			layer: "rpc",
+			direction,
+			message,
+		});
+		const result = await replayVoiceFirstSequence(
+			[
+				event("in", { id: 1, method: "thread/start", params: { cwd: root } }),
+				event("out", { id: 1, result: { thread: { id: { $ref: "thread" }, source: "vscode" } } }),
+				event("out", {
+					method: "thread/started",
+					params: { thread: { id: { $ref: "thread" }, source: "vscode" } },
+				}),
+				event("in", {
+					id: 2,
+					method: "thread/realtime/start",
+					params: { threadId: "managed-voice", version: "v3" },
+				}),
+				event("out", { id: 2, result: {} }),
+				event("out", {
+					method: "thread/realtime/started",
+					params: { threadId: { $ref: "thread" }, realtimeSessionId: { $ref: "call" }, version: "v3" },
+				}),
+				event("out", {
+					method: "thread/realtime/sdp",
+					params: { threadId: { $ref: "thread" }, sdp: { $redacted: "sdp", valueType: "string" } },
+				}),
+			],
+			{
+				send: request => router!.handle("phone", request) as Promise<Record<string, unknown>>,
+				nextNotification: async timeoutMs => {
+					const deadline = Date.now() + timeoutMs;
+					while (notifications.length === 0 && Date.now() < deadline) await Bun.sleep(1);
+					if (notifications.length === 0) throw new Error("Timed out waiting for replay notification");
+					return notifications.shift()!;
+				},
+			},
+		);
+		expect(result.success).toBe(true);
+		expect(result.requests).toEqual(["thread/start", "thread/realtime/start"]);
+	} finally {
+		router?.dispose();
+		peer?.close();
 		await worker.close();
 		await rm(root, { recursive: true, force: true });
 	}

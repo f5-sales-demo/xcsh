@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { assembleProtocolTraces } from "../../src/remote-control/trace-assembler";
+import { createHash } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { assembleProtocolTraces, verifyTraceArtifactProvenance } from "../../src/remote-control/trace-assembler";
 
 const commit = "a".repeat(40);
 const artifactSha256 = "b".repeat(64);
@@ -58,4 +62,31 @@ test("assembler rejects incomplete, discontinuous, and provenance-mismatched cap
 	const mismatch = capture("voice", 1_000, [1]);
 	(mismatch.rows[0] as any).sourceCommit = "c".repeat(40);
 	expect(() => assembleProtocolTraces([capture("host", 1_000, [1]), mismatch])).toThrow("provenance differs");
+});
+
+test("assembler accepts a missing trace hash only with matching verified artifact provenance", () => {
+	const legacy = capture("host", 1_000, [1]);
+	delete (legacy.rows[0] as any).artifactSha256;
+	expect(() => assembleProtocolTraces([legacy])).toThrow("invalid provenance");
+	const verifiedArtifact = { sourceCommit: commit, artifactSha256 };
+	expect(assembleProtocolTraces([{ ...legacy, verifiedArtifact }]).manifest.artifactSha256).toBe(artifactSha256);
+	expect(() =>
+		assembleProtocolTraces([{ ...legacy, verifiedArtifact: { ...verifiedArtifact, sourceCommit: "c".repeat(40) } }]),
+	).toThrow("external provenance differs");
+});
+
+test("artifact verifier derives the hash and requires the embedded full commit", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-trace-artifact-"));
+	try {
+		const artifact = join(root, "xcsh");
+		const bytes = Buffer.from(`prefix-${commit}-suffix`);
+		await writeFile(artifact, bytes);
+		expect(await verifyTraceArtifactProvenance(artifact, commit)).toEqual({
+			sourceCommit: commit,
+			artifactSha256: createHash("sha256").update(bytes).digest("hex"),
+		});
+		await expect(verifyTraceArtifactProvenance(artifact, "c".repeat(40))).rejects.toThrow("does not contain");
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });

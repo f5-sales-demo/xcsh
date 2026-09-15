@@ -130,10 +130,21 @@ Capture is off when the directory variable is absent. Never restart a user's
 active voice call merely to enable recording; coordinate the test boundary.
 
 After every producer has closed cleanly, assemble the post-TLS corpus with
-`bun assemble.ts host=host.jsonl voice=voice.jsonl`. The command rejects missing
-footers, sequence gaps, and mixed artifact provenance, then emits one deterministic
-fixture with synchronized ordering and a transport summary. Packet captures remain
-private and are never inputs to the replay corpus.
+`bun assemble.ts host=host.jsonl voice=voice.jsonl`. For an immutable older capture
+whose manifest predates `artifactSha256`, add `--artifact host=/exact/path/to/xcsh`.
+The assembler streams the artifact hash and requires the manifest's full source
+commit to occur in those exact bytes; it never trusts a caller-supplied commit or
+rewrites the capture. The command rejects missing footers, sequence gaps, and mixed
+artifact provenance, then emits one deterministic fixture with synchronized ordering
+and a transport summary. Packet captures remain private and are never inputs to the
+replay corpus.
+
+For a voice-first pair, run
+`bun voice-first-report.ts reference-assembled.json candidate-assembled.json`. The
+report correlates the `thread/start` response and `thread/started` notification on
+the requesting relay stream, checks their thread and source shapes, and records
+whether that client progresses to `thread/realtime/start` before cleanup. It uses
+only sanitized identities, field shapes, ordering, and timing.
 
 `bun compare.ts <reference.jsonl> <xcsh.jsonl>` produces an inventory of signals,
 correlated requests and replies, errors, unanswered requests, timings, and a

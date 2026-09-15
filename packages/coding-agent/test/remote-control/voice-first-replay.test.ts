@@ -9,22 +9,20 @@ const event = (direction: "in" | "out", message: Record<string, unknown>) => ({
 
 test("stateful voice-first replay waits for each response and never invents realtime start", async () => {
 	const sent: string[] = [];
-	const notifications = [
-		{ method: "thread/started", params: { thread: { id: "actual-thread", source: "appServer" } } },
-	];
+	const notifications = [{ method: "thread/started", params: { thread: { id: "actual-thread", source: "vscode" } } }];
 	const result = await replayVoiceFirstSequence(
 		[
 			event("in", { id: 1, method: "thread/start", params: {} }),
-			event("out", { id: 1, result: { thread: { id: { $ref: "thread" }, source: "appServer" } } }),
+			event("out", { id: 1, result: { thread: { id: { $ref: "thread" }, source: "vscode" } } }),
 			event("out", {
 				method: "thread/started",
-				params: { thread: { id: { $ref: "thread" }, source: "appServer" } },
+				params: { thread: { id: { $ref: "thread" }, source: "vscode" } },
 			}),
 		],
 		{
 			send: async request => {
 				sent.push(String(request.method));
-				return { id: 1, result: { thread: { id: "actual-thread", source: "appServer" } } };
+				return { id: 1, result: { thread: { id: "actual-thread", source: "vscode" } } };
 			},
 			nextNotification: async () => notifications.shift()!,
 		},

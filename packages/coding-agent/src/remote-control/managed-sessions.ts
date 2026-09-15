@@ -300,7 +300,7 @@ function threadFromRecord(record: ManagedThreadRecord, turns: unknown[] = []): R
 		path: record.path,
 		cwd: record.cwd,
 		cliVersion: VERSION,
-		source: "appServer",
+		source: "vscode",
 		threadSource: null,
 		agentNickname: null,
 		agentRole: null,
@@ -366,7 +366,7 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 	const thread = () => ({
 		...remote.thread(),
 		forkedFromId: request.kind === "fork" ? (request.source?.id ?? null) : (request.record?.forkedFromId ?? null),
-		source: "appServer",
+		source: "vscode",
 	});
 	let publish: (event: Notification) => void = () => {};
 	const unsubscribe = remote.subscribe(event => publish(event));

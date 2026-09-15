@@ -238,7 +238,7 @@ test("the CLI worker keeps a durable session alive while the host-side catalog i
 		const first = await new ManagedRemoteSessions(root, cwd, processOptions).initialize();
 		const started = await first.start({ cwd });
 		const id = String(started.thread.id);
-		expect(started.thread).toMatchObject({ id, cwd, ephemeral: false, source: "appServer" });
+		expect(started.thread).toMatchObject({ id, cwd, ephemeral: false, source: "vscode" });
 		const catalog = (await Bun.file(join(root, "sessions.json")).json()) as any;
 		const workerPid = catalog.threads[0]?.workerProcess?.pid as number | undefined;
 		expect(workerPid).toBeInteger();
@@ -248,7 +248,7 @@ test("the CLI worker keeps a durable session alive while the host-side catalog i
 		const replacement = await new ManagedRemoteSessions(root, cwd, processOptions).initialize();
 		expect(replacement.list()).toMatchObject([{ id, status: { type: "notLoaded" } }]);
 		const resumed = await replacement.resume(id);
-		expect(resumed?.thread).toMatchObject({ id, cwd, source: "appServer" });
+		expect(resumed?.thread).toMatchObject({ id, cwd, source: "vscode" });
 		expect(replacement.counts()).toEqual({ total: 1, loaded: 1, archived: 0 });
 		await replacement.delete(id);
 		for (let attempt = 0; attempt < 100; attempt++) {

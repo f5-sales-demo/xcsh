@@ -1,8 +1,16 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import type { TraceManifest } from "./trace";
+
+export interface VerifiedArtifactProvenance {
+	sourceCommit: string;
+	artifactSha256: string;
+}
 
 export interface CapturedTraceInput {
 	role: string;
 	rows: readonly Record<string, any>[];
+	verifiedArtifact?: VerifiedArtifactProvenance;
 }
 
 export interface AssembledTraceEvent {
@@ -30,22 +38,54 @@ export interface AssembledProtocolTrace {
 	footer: { complete: true; events: number };
 }
 
+export async function verifyTraceArtifactProvenance(
+	artifact: string,
+	sourceCommit: string,
+): Promise<VerifiedArtifactProvenance> {
+	if (!/^[a-f0-9]{40}$/.test(sourceCommit)) throw new Error("Artifact provenance requires a full source commit");
+	const expected = Buffer.from(sourceCommit);
+	const hash = createHash("sha256");
+	let carry = Buffer.alloc(0);
+	let containsCommit = false;
+	for await (const chunk of createReadStream(artifact)) {
+		const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+		hash.update(bytes);
+		if (!containsCommit) {
+			const searchable = Buffer.concat([carry, bytes]);
+			containsCommit = searchable.indexOf(expected) !== -1;
+			carry = searchable.subarray(Math.max(0, searchable.length - expected.length + 1));
+		}
+	}
+	if (!containsCommit) throw new Error("Artifact does not contain the trace source commit");
+	return { sourceCommit, artifactSha256: hash.digest("hex") };
+}
+
 function manifestOf(input: CapturedTraceInput): Record<string, any> {
 	if (!/^[a-z][a-z0-9-]{0,31}$/.test(input.role)) throw new Error(`Invalid capture role: ${input.role}`);
 	if (input.rows.length < 2 || input.rows[0]?.kind !== "manifest")
 		throw new Error(`Capture ${input.role} has no manifest`);
 	const manifest = input.rows[0];
+	const verified = input.verifiedArtifact;
+	if (
+		verified &&
+		(!/^[a-f0-9]{40}$/.test(verified.sourceCommit) ||
+			!/^[a-f0-9]{64}$/.test(verified.artifactSha256) ||
+			verified.sourceCommit !== manifest.sourceCommit ||
+			(manifest.artifactSha256 !== undefined && manifest.artifactSha256 !== verified.artifactSha256))
+	)
+		throw new Error(`Capture ${input.role} external provenance differs`);
+	const artifactSha256 = manifest.artifactSha256 ?? verified?.artifactSha256;
 	if (
 		manifest.schemaVersion !== 1 ||
 		!(["codex", "xcsh"] as unknown[]).includes(manifest.source) ||
 		typeof manifest.version !== "string" ||
 		!/^[a-f0-9]{40}$/.test(manifest.sourceCommit) ||
-		!/^[a-f0-9]{64}$/.test(manifest.artifactSha256) ||
+		!/^[a-f0-9]{64}$/.test(artifactSha256) ||
 		typeof manifest.scenario !== "string" ||
 		!Number.isFinite(manifest.startedAtUnixMs)
 	)
 		throw new Error(`Capture ${input.role} has invalid provenance`);
-	return manifest;
+	return { ...manifest, artifactSha256 };
 }
 
 function eventsOf(input: CapturedTraceInput): Record<string, any>[] {
