@@ -37,6 +37,7 @@ export interface ManagedThreadRecord {
 	model: string | null;
 	modelProvider: string;
 	reasoningEffort: string | null;
+	threadSource: string | null;
 	name: string | null;
 	forkedFromId: string | null;
 	workerSocket: string | null;
@@ -301,7 +302,7 @@ function threadFromRecord(record: ManagedThreadRecord, turns: unknown[] = []): R
 		cwd: record.cwd,
 		cliVersion: VERSION,
 		source: "vscode",
-		threadSource: null,
+		threadSource: record.threadSource,
 		agentNickname: null,
 		agentRole: null,
 		gitInfo: null,
@@ -367,6 +368,10 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 		...remote.thread(),
 		forkedFromId: request.kind === "fork" ? (request.source?.id ?? null) : (request.record?.forkedFromId ?? null),
 		source: "vscode",
+		threadSource:
+			typeof request.params.threadSource === "string"
+				? request.params.threadSource
+				: (request.record?.threadSource ?? null),
 	});
 	let publish: (event: Notification) => void = () => {};
 	const unsubscribe = remote.subscribe(event => publish(event));
@@ -470,6 +475,9 @@ export class ManagedRemoteSessions implements RemoteThreadLifecycle {
 			validProcessIdentity(record.workerProcess) && (record.workerSocket !== null || record.workerProcess == null);
 		if (!validId || !validCwd || !validOriginal || !validPath || !validWorker || !validWorkerProcess)
 			throw new Error("Invalid remote session catalog");
+		if (record.threadSource !== undefined && record.threadSource !== null && typeof record.threadSource !== "string")
+			throw new Error("Invalid remote session catalog");
+		record.threadSource ??= null;
 		record.workerProcess ??= null;
 	}
 
@@ -521,6 +529,7 @@ export class ManagedRemoteSessions implements RemoteThreadLifecycle {
 			model: typeof thread.model === "string" ? thread.model : null,
 			modelProvider: typeof thread.modelProvider === "string" ? thread.modelProvider : "unknown",
 			reasoningEffort: typeof thread.reasoningEffort === "string" ? thread.reasoningEffort : null,
+			threadSource: typeof thread.threadSource === "string" ? thread.threadSource : null,
 			name: typeof thread.name === "string" ? thread.name : null,
 			forkedFromId,
 			workerSocket: null,

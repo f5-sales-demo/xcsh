@@ -236,19 +236,26 @@ test("the CLI worker keeps a durable session alive while the host-side catalog i
 	};
 	try {
 		const first = await new ManagedRemoteSessions(root, cwd, processOptions).initialize();
-		const started = await first.start({ cwd });
+		const started = await first.start({ cwd, threadSource: "fixture-source" });
 		const id = String(started.thread.id);
-		expect(started.thread).toMatchObject({ id, cwd, ephemeral: false, source: "vscode" });
+		expect(started.thread).toMatchObject({
+			id,
+			cwd,
+			ephemeral: false,
+			source: "vscode",
+			threadSource: "fixture-source",
+		});
 		const catalog = (await Bun.file(join(root, "sessions.json")).json()) as any;
+		expect(catalog.threads[0]?.threadSource).toBe("fixture-source");
 		const workerPid = catalog.threads[0]?.workerProcess?.pid as number | undefined;
 		expect(workerPid).toBeInteger();
 		await first.close();
 		expect(() => process.kill(workerPid!, 0)).not.toThrow();
 
 		const replacement = await new ManagedRemoteSessions(root, cwd, processOptions).initialize();
-		expect(replacement.list()).toMatchObject([{ id, status: { type: "notLoaded" } }]);
+		expect(replacement.list()).toMatchObject([{ id, threadSource: "fixture-source", status: { type: "notLoaded" } }]);
 		const resumed = await replacement.resume(id);
-		expect(resumed?.thread).toMatchObject({ id, cwd, source: "vscode" });
+		expect(resumed?.thread).toMatchObject({ id, cwd, source: "vscode", threadSource: "fixture-source" });
 		expect(replacement.counts()).toEqual({ total: 1, loaded: 1, archived: 0 });
 		await replacement.delete(id);
 		for (let attempt = 0; attempt < 100; attempt++) {
