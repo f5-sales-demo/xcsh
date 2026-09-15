@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { RemoteRouter } from "../../src/remote-control/router";
 import bootstrapReference from "./fixtures/codex-0.153.4-phone-bootstrap.json";
+import voiceFirstTrace from "./fixtures/iphone-voice-first-sanitized.json";
 
 test("initialization is per phone stream; lists and attaches registered terminal only", async () => {
 	const calls: unknown[] = [];
@@ -784,6 +785,22 @@ test("cold managed resume is single-flight and read does not load a worker", asy
 });
 
 test("a new phone conversation can enter voice before its first turn", async () => {
+	expect(voiceFirstTrace.events.map(event => `${event.direction}/${event.method}`)).toEqual([
+		"in/initialize",
+		"in/model/list",
+		"in/fs/readFile",
+		"in/fs/readFile",
+		"in/process/spawn",
+		"out/process/exited",
+		"in/thread/start",
+	]);
+	expect(voiceFirstTrace.events.at(-1)).toMatchObject({
+		method: "thread/start",
+		responseClass: "error",
+		errorCode: -32602,
+		errorMessageBytes: 35,
+		parameterShape: { sandbox: { type: "string", bytes: 18 } },
+	});
 	const methods: string[] = [];
 	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
 	const managedThread = {
@@ -936,7 +953,28 @@ test("a new phone conversation can enter voice before its first turn", async () 
 				params: { processHandle: "unrelated-cwd", cwd: "/var", command: [process.execPath, "-e", ""] },
 			}),
 		).toMatchObject({ error: { code: -32602 } });
-		expect(await router.handle("phone", { id: 3, method: "thread/start", params: { cwd: "/tmp" } })).toMatchObject({
+		const startParams = {
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			config: {
+				experimental_realtime_ws_model: "fixture-realtime",
+				"features.concurrent_reasoning_summaries": true,
+				"features.realtime_conversation": true,
+				model_reasoning_effort: "medium",
+				"realtime.version": "v3",
+			},
+			cwd: "/tmp",
+			developerInstructions: "x".repeat(420),
+			dynamicTools: [],
+			ephemeral: false,
+			historyMode: "paginated",
+			model: "gpt-5.6-luna",
+			sandbox: "danger-full-access",
+			threadSource: "fixture-source",
+		};
+		const observedStart = voiceFirstTrace.events.find(event => event.method === "thread/start")!;
+		expect(Object.keys(startParams).sort()).toEqual([...observedStart.parameterKeys].sort());
+		expect(await router.handle("phone", { id: 3, method: "thread/start", params: startParams })).toMatchObject({
 			result: { thread: { id: managedThread.id } },
 		});
 		expect(await router.handle("phone", { id: 4, method: "model/list", params: {} })).toMatchObject({

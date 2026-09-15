@@ -2,7 +2,11 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { ManagedRemoteSessions, type ManagedSessionRuntimeRequest } from "../../src/remote-control/managed-sessions";
+import {
+	ManagedRemoteSessions,
+	type ManagedSessionRuntimeRequest,
+	managedSandboxPolicy,
+} from "../../src/remote-control/managed-sessions";
 import { SessionManager } from "../../src/session/session-manager";
 
 function runtimeFactory(counters: { creates: number; closes: number }) {
@@ -39,6 +43,22 @@ function runtimeFactory(counters: { creates: number; closes: number }) {
 }
 
 const cliPath = resolve(import.meta.dir, "../../src/cli.ts");
+
+test("phone sandbox modes translate to the bounded internal permission contract", () => {
+	expect(managedSandboxPolicy("danger-full-access", "/fixture/project")).toEqual({ type: "dangerFullAccess" });
+	expect(managedSandboxPolicy("workspace-write", "/fixture/project")).toEqual({
+		type: "workspaceWrite",
+		writableRoots: ["/fixture/project"],
+		networkAccess: false,
+		excludeTmpdirEnvVar: false,
+		excludeSlashTmp: false,
+	});
+	for (const unsupported of ["read-only", "dangerFullAccess", {}, 1]) {
+		expect(() => managedSandboxPolicy(unsupported, "/fixture/project")).toThrow(
+			"Unsupported sandbox policy override",
+		);
+	}
+});
 
 test("managed catalog persists durable metadata and cold resume is single-flight", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-managed-"));
@@ -242,6 +262,71 @@ test("the CLI worker keeps a durable session alive while the host-side catalog i
 		expect(() => process.kill(workerPid!, 0)).toThrow();
 		await replacement.close();
 	} finally {
+		await rm(agentDir, { recursive: true, force: true });
+		await rm(cwd, { recursive: true, force: true });
+	}
+}, 30_000);
+
+test("the real managed worker accepts the phone thread/start sandbox contract", async () => {
+	const agentDir = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-start-"));
+	const cwd = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-cwd-"));
+	const root = join(agentDir, "remote-control");
+	await writeFile(
+		join(agentDir, "models.json"),
+		JSON.stringify({
+			providers: {
+				"fixture-provider": {
+					baseUrl: "http://127.0.0.1:1/v1",
+					api: "openai-completions",
+					auth: "none",
+					models: [
+						{
+							id: "voice-model1",
+							name: "Voice fixture",
+							reasoning: true,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 128000,
+							maxTokens: 8192,
+						},
+					],
+				},
+			},
+		}),
+		{ mode: 0o600 },
+	);
+	const sessions = await new ManagedRemoteSessions(root, cwd, {
+		workerCommand: [process.execPath, cliPath],
+		workerEnv: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
+	});
+	try {
+		await sessions.initialize();
+		const started = await sessions.start({
+			cwd,
+			model: "voice-model1",
+			modelProvider: "fixture-provider",
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandbox: "danger-full-access",
+			ephemeral: false,
+			historyMode: "paginated",
+			dynamicTools: [],
+			config: {
+				"realtime.version": "v3",
+				"features.realtime_conversation": true,
+				"features.concurrent_reasoning_summaries": true,
+			},
+		});
+		const threadId = String(started.thread.id);
+		const resumed = await started.call("phone-replay", "thread/resume", { threadId, excludeTurns: true });
+		expect(resumed).toMatchObject({
+			thread: { id: threadId, cwd },
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandbox: { type: "dangerFullAccess" },
+		});
+	} finally {
+		await sessions.close(true);
 		await rm(agentDir, { recursive: true, force: true });
 		await rm(cwd, { recursive: true, force: true });
 	}

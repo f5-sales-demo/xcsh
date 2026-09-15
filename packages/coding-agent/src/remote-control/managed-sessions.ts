@@ -264,6 +264,20 @@ function thinkingLevel(value: unknown): ThinkingLevel | undefined {
 		: undefined;
 }
 
+export function managedSandboxPolicy(sandbox: unknown, cwd: string): Record<string, unknown> {
+	if (sandbox === "danger-full-access") return { type: "dangerFullAccess" };
+	if (sandbox === "workspace-write") {
+		return {
+			type: "workspaceWrite",
+			writableRoots: [cwd],
+			networkAccess: false,
+			excludeTmpdirEnvVar: false,
+			excludeSlashTmp: false,
+		};
+	}
+	throw new ProtocolError(-32602, "Unsupported sandbox policy override");
+}
+
 function threadFromRecord(record: ManagedThreadRecord, turns: unknown[] = []): Record<string, unknown> {
 	return {
 		id: record.id,
@@ -344,7 +358,7 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 	const configure: Record<string, unknown> = { threadId: session.sessionId };
 	for (const field of ["model", "effort", "serviceTier", "approvalPolicy", "approvalsReviewer", "multiAgentMode"])
 		if (request.params[field] != null) configure[field] = request.params[field];
-	if (request.params.sandbox != null) configure.sandboxPolicy = request.params.sandbox;
+	if (request.params.sandbox != null) configure.sandboxPolicy = managedSandboxPolicy(request.params.sandbox, cwd);
 	if (request.params.collaborationMode != null) configure.collaborationMode = request.params.collaborationMode;
 	if (Object.keys(configure).length > 1)
 		await remote.call("managed-session-config", "thread/settings/update", configure);
