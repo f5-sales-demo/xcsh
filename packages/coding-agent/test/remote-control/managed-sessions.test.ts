@@ -209,6 +209,7 @@ test("model and effort changes are durably reflected in the cold catalog", async
 		await first.start({ cwd: "/tmp" });
 		Object.assign(thread, { model: "gpt-6-astra", reasoningEffort: "high" });
 		publish?.({ method: "thread/settings/updated", params: { threadId: thread.id } });
+		publish?.({ method: "thread/name/updated", params: { threadId: thread.id, threadName: "Generated title" } });
 		await first.close();
 		const catalog = (await Bun.file(join(root, "sessions.json")).json()) as any;
 		expect(catalog.threads[0]).toMatchObject({ workerSocket, workerProcess });
@@ -218,7 +219,14 @@ test("model and effort changes are durably reflected in the cold catalog", async
 			sessionsRoot: "/tmp",
 		}).initialize();
 		expect(second.list()).toMatchObject([
-			{ id: thread.id, model: "gpt-6-astra", reasoningEffort: "high", status: { type: "notLoaded" } },
+			{
+				id: thread.id,
+				model: "gpt-6-astra",
+				reasoningEffort: "high",
+				name: "Generated title",
+				originator: "xcsh",
+				status: { type: "notLoaded" },
+			},
 		]);
 		await second.close();
 	} finally {

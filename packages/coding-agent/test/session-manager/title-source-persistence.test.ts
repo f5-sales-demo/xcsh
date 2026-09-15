@@ -90,4 +90,11 @@ describe("session title source persistence", () => {
 		expect(reopened.getSessionName()).toBe("Manual title");
 		expect(reopened.titleSource).toBe("user");
 	});
+
+	it("does not persist or claim the reserved voice placeholder", async () => {
+		const session = SessionManager.create(cwd);
+		expect(await session.setSessionName("New Realtime Voice Chat", "user")).toBe(false);
+		expect(session.getSessionName()).toBeUndefined();
+		expect(session.titleSource).toBeUndefined();
+	});
 });

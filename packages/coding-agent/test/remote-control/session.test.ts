@@ -61,7 +61,94 @@ test("phone rename follows the pinned trim, response and notification contract",
 	await expect(
 		a.remote.call("empty-rename", "thread/name/set", { threadId: "a", name: " \n\t " }),
 	).rejects.toMatchObject({ code: -32602 });
+	expect(
+		await a.remote.call("placeholder", "thread/name/set", { threadId: "a", name: "New Realtime Voice Chat" }),
+	).toEqual({});
+	expect(a.remote.thread()).toMatchObject({ name: "xcsh Remote New", originator: "xcsh" });
+	expect(events).toHaveLength(1);
 	a.remote.dispose();
+});
+
+test("turn lifecycle emits truthful status and usage in Codex 0.154 order", async () => {
+	let listener: ((event: any) => void) | undefined;
+	let finishPrompt!: () => void;
+	const messages: any[] = [];
+	const target = {
+		sessionId: "usage",
+		sessionName: undefined,
+		sessionFile: "/tmp/usage.jsonl",
+		model: { id: "fixture", provider: "fixture", contextWindow: 12345 },
+		messages,
+		isStreaming: false,
+		settings: Settings.isolated({ "sandbox.enabled": false }),
+		modelRegistry: { getAvailable: () => [], getApiKey: async () => undefined },
+		sessionManager: { getCwd: () => "/tmp", getSessionName: () => undefined, titleSource: undefined },
+		subscribe: (next: (event: any) => void) => {
+			listener = next;
+			return () => {};
+		},
+		prompt: async () => await new Promise<void>(resolve => (finishPrompt = resolve)),
+		abort: async () => finishPrompt(),
+		steer: async () => {},
+		setSessionName: async () => false,
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	await remote.call("start", "turn/start", { threadId: "usage", input: [{ type: "text", text: "hello" }] });
+	listener?.({ type: "agent_start" });
+	const assistant = {
+		role: "assistant",
+		content: [{ type: "text", text: "done" }],
+		usage: {
+			input: 10,
+			output: 5,
+			cacheRead: 3,
+			cacheWrite: 2,
+			totalTokens: 20,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: 1,
+	};
+	messages.push(assistant);
+	listener?.({ type: "message_start", message: assistant });
+	listener?.({ type: "message_end", message: assistant });
+	listener?.({ type: "agent_end", messages });
+	listener?.({ type: "agent_end", messages });
+	finishPrompt();
+
+	expect(events.map(event => event.method)).toEqual([
+		"thread/status/changed",
+		"turn/started",
+		"item/started",
+		"item/completed",
+		"thread/tokenUsage/updated",
+		"thread/status/changed",
+		"turn/completed",
+	]);
+	expect(events[0]?.params.status).toEqual({ type: "active", activeFlags: [] });
+	expect(events[4]?.params.tokenUsage).toEqual({
+		total: {
+			totalTokens: 20,
+			inputTokens: 15,
+			cachedInputTokens: 3,
+			cacheWriteInputTokens: 2,
+			outputTokens: 5,
+			reasoningOutputTokens: 0,
+		},
+		last: {
+			totalTokens: 20,
+			inputTokens: 15,
+			cachedInputTokens: 3,
+			cacheWriteInputTokens: 2,
+			outputTokens: 5,
+			reasoningOutputTokens: 0,
+		},
+		modelContextWindow: 12345,
+	});
+	expect(events[5]?.params.status).toEqual({ type: "idle" });
+	remote.dispose();
 });
 test("two sessions preserve identity/model and route prompts to their existing owner exactly once", async () => {
 	const a = fixture("a");

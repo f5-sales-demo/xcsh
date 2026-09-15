@@ -2345,6 +2345,7 @@ export class SessionManager {
 	 *   Auto-generated titles are silently ignored when the user has already set a name.
 	 */
 	async setSessionName(name: string, source: "auto" | "user" = "auto"): Promise<boolean> {
+		if (name === "New Realtime Voice Chat") return false;
 		// User-set names take permanent precedence over auto-generated ones.
 		if (this.#titleSource === "user" && source === "auto") return false;
 

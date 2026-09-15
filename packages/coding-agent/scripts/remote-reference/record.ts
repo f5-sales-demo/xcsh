@@ -1,19 +1,26 @@
-import { createHash } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { startTraceCollector } from "../../src/remote-control/trace-collector";
-import manifest from "./source-manifest.json";
+import { loadReferenceBaseline, verifyArtifactHash } from "./baseline";
 
-const [socket, file, scenario, artifact] = Bun.argv.slice(2);
-if (!socket || !file || !scenario || !artifact || !/^[a-z0-9-]{1,64}$/.test(scenario)) {
-	throw new Error("Usage: bun record.ts <private-socket-path> <private-jsonl-path> <scenario> <codex-artifact>");
+const [version, socket, file, scenario, artifact, expectedArtifactSha256] = Bun.argv.slice(2);
+if (
+	!version ||
+	!socket ||
+	!file ||
+	!scenario ||
+	!artifact ||
+	!expectedArtifactSha256 ||
+	!/^[a-z0-9-]{1,64}$/.test(scenario)
+) {
+	throw new Error(
+		"Usage: bun record.ts <0.153.4|0.154.0> <private-socket-path> <private-jsonl-path> <scenario> <codex-artifact> <artifact-sha256>",
+	);
 }
-if (!/^[a-f0-9]{40}$/.test(manifest.sourceCommit)) throw new Error("Pinned source manifest has no full commit");
-const artifactSha256 = createHash("sha256")
-	.update(readFileSync(realpathSync(artifact)))
-	.digest("hex");
+const manifest = await loadReferenceBaseline(version);
+const artifactSha256 = await verifyArtifactHash(realpathSync(artifact), expectedArtifactSha256);
 const collector = await startTraceCollector(socket, file, {
 	source: "codex",
-	version: "0.153.4",
+	version: manifest.version,
 	sourceCommit: manifest.sourceCommit,
 	artifactSha256,
 	scenario,

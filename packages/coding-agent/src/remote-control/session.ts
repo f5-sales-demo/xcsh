@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import type { Model } from "@f5-sales-demo/pi-ai";
+import type { Model, Usage } from "@f5-sales-demo/pi-ai";
 import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
 	applyRemotePermissionProfile,
@@ -12,6 +12,7 @@ import {
 	remotePermissionProfile,
 } from "../sandbox/remote-permissions";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import { coordinateSessionTitle, RESERVED_PROVISIONAL_TITLE, subscribeSessionTitle } from "../utils/title-generator";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";
 import {
@@ -156,6 +157,7 @@ export class RemoteSession {
 	#closing?: Promise<void>;
 	#unsubscribeTransitions?: () => void;
 	#unsubscribeDispose?: () => void;
+	#unsubscribeTitle?: () => void;
 	#interactions?: RemoteInteractions;
 	#effects = new Set<Promise<unknown>>();
 	#voiceHistoryOwner!: SessionVoiceHistory;
@@ -174,12 +176,16 @@ export class RemoteSession {
 	#itemId = "";
 	#nextId = randomUUID();
 	#startedItems = new Set<string>();
+	#completedItems = new Set<string>();
 	#commandPreviews = new Map<string, Record<string, unknown>>();
 	#commandSettlements = new Set<string>();
 	#forwardedBackgroundProgress = new WeakSet<object>();
 	#messageIds = new Map<string, string>();
 	#pendingClients: { text: string; id: string }[] = [];
 	#startedAtMs = 0;
+	#lastProviderUsage?: Usage;
+	#usageEmitted = new Set<string>();
+	#threadStatus: "active" | "idle" = "idle";
 	get #durable(): boolean {
 		return typeof this.target.sessionManager.getBranch === "function";
 	}
@@ -287,6 +293,9 @@ export class RemoteSession {
 				},
 			);
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
+		this.#unsubscribeTitle = subscribeSessionTitle(target.sessionManager, title =>
+			this.#emit("thread/name/updated", { threadName: title }),
+		);
 		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
 			if (phase === "before") {
 				target.userInteractions?.cancelAll();
@@ -302,6 +311,7 @@ export class RemoteSession {
 				this.#clientIds.clear();
 				this.#messageIds.clear();
 				this.#startedItems.clear();
+				this.#completedItems.clear();
 				this.#pendingClients = [];
 				this.#itemId = "";
 				this.#nextId = randomUUID();
@@ -309,6 +319,10 @@ export class RemoteSession {
 				this.#commandPreviews.clear();
 				this.#commandSettlements.clear();
 				this.#restoreIdentity();
+				this.#unsubscribeTitle?.();
+				this.#unsubscribeTitle = subscribeSessionTitle(target.sessionManager, title =>
+					this.#emit("thread/name/updated", { threadName: title }),
+				);
 				this.#suspended = false;
 			}
 		});
@@ -333,6 +347,7 @@ export class RemoteSession {
 				this.#hydrateActiveStream();
 			}
 		}
+		this.#threadStatus = this.#active || this.target.isStreaming ? "active" : "idle";
 	}
 	#historyToolContext(message: AgentMessage): HistoryToolContext | undefined {
 		if (message.role === "bashExecution" || message.role === "pythonExecution")
@@ -399,6 +414,7 @@ export class RemoteSession {
 		this.#disposed = true;
 		this.#unsubscribeTransitions?.();
 		this.#unsubscribeDispose?.();
+		this.#unsubscribeTitle?.();
 		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
 		this.#interactions?.close();
@@ -435,6 +451,54 @@ export class RemoteSession {
 		if ((this.#disposed && !allowClosing) || this.#boundId !== this.target.sessionId) return;
 		this.#updatedAt = Math.floor(Date.now() / 1000);
 		for (const listener of this.#listeners) listener({ method, params: { ...params, threadId: this.#threadId } });
+	}
+	#emitThreadStatus(status: "active" | "idle"): void {
+		if (this.#threadStatus === status) return;
+		this.#threadStatus = status;
+		this.#emit("thread/status/changed", {
+			status: status === "active" ? { type: "active", activeFlags: [] } : { type: "idle" },
+		});
+	}
+	#usageBreakdown(usage: Usage) {
+		return {
+			totalTokens: usage.totalTokens,
+			inputTokens: usage.input + usage.cacheRead + usage.cacheWrite,
+			cachedInputTokens: usage.cacheRead,
+			cacheWriteInputTokens: usage.cacheWrite,
+			outputTokens: usage.output,
+			reasoningOutputTokens: 0,
+		};
+	}
+	#emitTokenUsage(turnId: string): void {
+		if (!this.#lastProviderUsage || this.#usageEmitted.has(turnId)) return;
+		this.#usageEmitted.add(turnId);
+		const usages = this.target.messages.flatMap(message =>
+			message.role === "assistant" && message.usage ? [message.usage] : [],
+		);
+		if (!usages.some(usage => usage === this.#lastProviderUsage)) usages.push(this.#lastProviderUsage);
+		const total: Usage = {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		};
+		for (const usage of usages) {
+			total.input += usage.input;
+			total.output += usage.output;
+			total.cacheRead += usage.cacheRead;
+			total.cacheWrite += usage.cacheWrite;
+			total.totalTokens += usage.totalTokens;
+		}
+		this.#emit("thread/tokenUsage/updated", {
+			turnId,
+			tokenUsage: {
+				total: this.#usageBreakdown(total),
+				last: this.#usageBreakdown(this.#lastProviderUsage),
+				modelContextWindow: this.target.model?.contextWindow ?? null,
+			},
+		});
 	}
 	#cacheCommandPreview(item: Record<string, unknown>): void {
 		const id = String(item.id);
@@ -606,6 +670,7 @@ export class RemoteSession {
 			path: this.target.sessionFile ?? null,
 			cwd: this.target.sessionManager.getCwd(),
 			cliVersion: this.version,
+			originator: "xcsh",
 			source: "cli",
 			threadSource: null,
 			agentNickname: null,
@@ -836,6 +901,7 @@ export class RemoteSession {
 		}
 		if (method === "thread/name/set") {
 			if (typeof params.name !== "string") throw new ProtocolError(-32602, "Invalid thread name");
+			if (params.name === RESERVED_PROVISIONAL_TITLE) return {};
 			const name = params.name.trim();
 			if (!name) throw new ProtocolError(-32602, "Thread name must not be empty");
 			const stored = await this.#effect(epoch, async () => {
@@ -1266,6 +1332,9 @@ export class RemoteSession {
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
 		if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
 		else this.#applyEffort(params.effort);
+		const hadUserMessages = this.target.messages.some(message => message.role === "user");
+		if (!hadUserMessages && !this.target.sessionManager.getSessionName?.())
+			void coordinateSessionTitle(this.target, text);
 		const active = this.#beginTurn();
 		if (this.#durable) {
 			try {
@@ -1444,6 +1513,8 @@ export class RemoteSession {
 			});
 			this.#active = undefined;
 			this.#pendingClients = [];
+			this.#emitTokenUsage(id);
+			this.#emitThreadStatus("idle");
 			this.#emit("turn/completed", { turn: this.history().find(value => value.id === id) });
 			return;
 		}
@@ -1452,6 +1523,8 @@ export class RemoteSession {
 		if (status === "completed" && (latest?.status === "failed" || latest?.status === "interrupted"))
 			status = latest.status;
 		this.#active = undefined;
+		this.#emitTokenUsage(active.id);
+		this.#emitThreadStatus("idle");
 		this.#emit("turn/completed", {
 			turn: {
 				...active,
@@ -1488,6 +1561,7 @@ export class RemoteSession {
 				});
 		}
 		if (event.type === "message_end" && event.message.role === "assistant") {
+			this.#lastProviderUsage = event.message.usage;
 			for (const [index, part] of event.message.content.entries())
 				if (part.type === "text")
 					this.#voiceOutput({ id: `${this.#itemId}:${index}`, text: part.text, phase: part.phase, done: true });
@@ -1522,6 +1596,8 @@ export class RemoteSession {
 	#beginTurn(): Turn {
 		const active = turn(this.#nextTurnId(), "inProgress");
 		this.#active = active;
+		this.#lastProviderUsage = undefined;
+		this.#emitThreadStatus("active");
 		if (this.#durable) {
 			this.#nextId = randomUUID();
 			this.#startedAtMs = Date.now();
@@ -1547,7 +1623,10 @@ export class RemoteSession {
 		const index = this.#active.items.findIndex(value => value.id === id);
 		if (index < 0) this.#active.items.push(item);
 		else this.#active.items[index] = item;
-		if (done) this.#emit("item/completed", { turnId: this.#active.id, item });
+		if (done && !this.#completedItems.has(id)) {
+			this.#completedItems.add(id);
+			this.#emit("item/completed", { turnId: this.#active.id, item });
+		}
 	}
 	#durableEvent(event: AgentSessionEvent): void {
 		if (event.type === "agent_start" && !this.#active) this.#emit("turn/started", { turn: this.#beginTurn() });
@@ -1573,6 +1652,7 @@ export class RemoteSession {
 		}
 		if (event.type === "message_end" && event.message.role !== "toolResult") {
 			const message = event.message;
+			if (message.role === "assistant") this.#lastProviderUsage = message.usage;
 			const key = messageKey(message);
 			const id =
 				(message.role === "assistant" ? this.#itemId : this.#messageIds.get(key)) ||

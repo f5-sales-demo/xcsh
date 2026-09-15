@@ -37,6 +37,7 @@ const threadWireFields = [
 	"path",
 	"cwd",
 	"cliVersion",
+	"originator",
 	"source",
 	"threadSource",
 	"agentNickname",
@@ -55,6 +56,7 @@ function threadWireView(
 	const wire: Record<string, unknown> = {};
 	for (const field of threadWireFields) {
 		if (field === "sessionId" && experimental) wire.extra = null;
+		if (field === "originator") wire.originator = typeof thread.originator === "string" ? thread.originator : null;
 		if (field === "threadSource" && experimental) wire.canAcceptDirectInput = canAcceptDirectInput;
 		if (Object.hasOwn(thread, field)) wire[field] = thread[field];
 	}
@@ -189,11 +191,13 @@ export class RemoteRouter {
 		this.#experimental.clear();
 		this.#notificationOptOuts.clear();
 		this.#delivered.clear();
+		this.#lifecycleNotifications.clear();
 	}
 	#clients = new Map<string, Set<string>>();
 	#experimental = new Set<string>();
 	#notificationOptOuts = new Map<string, Set<string>>();
 	#delivered = new Map<string, Map<string, string>>();
+	#lifecycleNotifications = new Map<string, Map<string, string>>();
 	constructor(
 		private readonly home: string,
 		private readonly version: string,
@@ -210,7 +214,31 @@ export class RemoteRouter {
 		return [...this.#clients.values()].some(threads => threads.has(threadId));
 	}
 	#emit(client: string, event: Notification): void {
-		if (!this.#notificationOptOuts.get(client)?.has(event.method)) this.notify(client, event);
+		if (this.#notificationOptOuts.get(client)?.has(event.method)) return;
+		const threadId = String(event.params.threadId ?? "");
+		const turn = event.params.turn as { id?: unknown } | undefined;
+		const item = event.params.item as { id?: unknown } | undefined;
+		const key =
+			event.method === "thread/status/changed"
+				? `${threadId}:status`
+				: event.method === "thread/tokenUsage/updated"
+					? `${threadId}:usage:${String(event.params.turnId ?? "")}`
+					: event.method === "turn/started" || event.method === "turn/completed"
+						? `${threadId}:${event.method}:${String(turn?.id ?? "")}`
+						: event.method === "item/started" || event.method === "item/completed"
+							? `${threadId}:${event.method}:${String(item?.id ?? "")}`
+							: undefined;
+		if (key) {
+			let delivered = this.#lifecycleNotifications.get(client);
+			if (!delivered) {
+				delivered = new Map();
+				this.#lifecycleNotifications.set(client, delivered);
+			}
+			const fingerprint = JSON.stringify(event.params);
+			if (delivered.get(key) === fingerprint) return;
+			delivered.set(key, fingerprint);
+		}
+		this.notify(client, event);
 	}
 	replayThreadSettings(client: string, threadId: string, response: unknown): void {
 		if (!this.subscribed(client, threadId) || !response || typeof response !== "object" || Array.isArray(response))
@@ -263,6 +291,7 @@ export class RemoteRouter {
 		this.#experimental.delete(client);
 		this.#notificationOptOuts.delete(client);
 		this.#delivered.delete(client);
+		this.#lifecycleNotifications.delete(client);
 		this.#processes.close(client);
 	}
 	#deliver(client: string, event: InteractionRequest): void {
@@ -354,6 +383,14 @@ export class RemoteRouter {
 			if (name !== null && typeof name !== "string") return;
 			session.thread.name = name;
 			for (const client of this.#clients.keys()) this.#emit(client, event);
+			return;
+		}
+		if (event.method === "thread/status/changed") {
+			const status = event.params.status;
+			if (!status || typeof status !== "object" || Array.isArray(status)) return;
+			if (isDeepStrictEqual(session.thread.status, status)) return;
+			session.thread.status = structuredClone(status);
+			for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
 			return;
 		}
 		if (event.method === "thread/settings/updated") {

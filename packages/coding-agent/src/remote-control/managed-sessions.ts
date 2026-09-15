@@ -301,6 +301,7 @@ function threadFromRecord(record: ManagedThreadRecord, turns: unknown[] = []): R
 		path: record.path,
 		cwd: record.cwd,
 		cliVersion: VERSION,
+		originator: "xcsh",
 		source: "vscode",
 		threadSource: record.threadSource,
 		agentNickname: null,
@@ -548,6 +549,15 @@ export class ManagedRemoteSessions implements RemoteThreadLifecycle {
 		this.#lastUsed.set(id, Date.now());
 		runtime.setPublisher?.(event => {
 			endpoint.thread = { ...endpoint.thread, updatedAt: Math.floor(Date.now() / 1000) };
+			if (event.method === "thread/name/updated") {
+				const name = event.params.threadName;
+				if (name === null || typeof name === "string") endpoint.thread.name = name;
+			}
+			if (event.method === "thread/status/changed") {
+				const status = event.params.status;
+				if (status && typeof status === "object" && !Array.isArray(status))
+					endpoint.thread.status = structuredClone(status);
+			}
 			const current = this.#records.get(id);
 			if (current)
 				Object.assign(current, this.#record(endpoint, params, forkedFromId), {

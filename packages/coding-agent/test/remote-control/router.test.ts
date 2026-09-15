@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RemoteRouter } from "../../src/remote-control/router";
@@ -26,7 +26,7 @@ test("initialization is per phone stream; lists and attaches registered terminal
 	).toMatchObject({ result: { userAgent: "xcsh/21.22.0", codexHome: "/tmp/xcsh" } });
 	expect(await router.handle("other", { id: 3, method: "thread/list" })).toMatchObject({ error: { code: -32002 } });
 	expect(await router.handle("phone", { id: 4, method: "thread/list" })).toMatchObject({
-		result: { data: [{ id: "fixture-thread" }], nextCursor: null },
+		result: { data: [{ id: "fixture-thread", originator: null }], nextCursor: null },
 	});
 	expect(
 		await router.handle("phone", { id: 5, method: "thread/resume", params: { threadId: "fixture-thread" } }),
@@ -262,6 +262,33 @@ test("initialize notification opt-outs suppress exact methods for only that clie
 		).toMatchObject({ error: { code: -32602 } });
 });
 
+test("provider and reconnect lifecycle replays are deduplicated per client", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const methods: string[] = [];
+	router.notify = (_client, event) => methods.push(event.method);
+	router.sessions.set("fixture", { thread: { id: "fixture", status: { type: "idle" } }, call: async () => ({}) });
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	await router.handle("phone", { id: 2, method: "thread/resume", params: { threadId: "fixture" } });
+	const events = [
+		{ method: "thread/status/changed", params: { threadId: "fixture", status: { type: "active", activeFlags: [] } } },
+		{ method: "turn/started", params: { threadId: "fixture", turn: { id: "turn-1" } } },
+		{ method: "item/completed", params: { threadId: "fixture", item: { id: "item-1" } } },
+		{ method: "thread/tokenUsage/updated", params: { threadId: "fixture", turnId: "turn-1", tokenUsage: {} } },
+		{ method: "thread/status/changed", params: { threadId: "fixture", status: { type: "idle" } } },
+		{ method: "turn/completed", params: { threadId: "fixture", turn: { id: "turn-1" } } },
+	];
+	for (const event of events) {
+		router.publish(event);
+		router.publish(structuredClone(event));
+	}
+	expect(methods).toEqual(events.map(event => event.method));
+	router.dispose();
+});
+
 test("a newly registered live thread is announced once with capability-specific wire fields", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	const notifications: Array<{ client: string; event: any }> = [];
@@ -339,6 +366,7 @@ test("a newly registered live thread is announced once with capability-specific 
 		"path",
 		"cwd",
 		"cliVersion",
+		"originator",
 		"source",
 		"threadSource",
 		"agentNickname",
@@ -369,6 +397,7 @@ test("a newly registered live thread is announced once with capability-specific 
 		"path",
 		"cwd",
 		"cliVersion",
+		"originator",
 		"source",
 		"canAcceptDirectInput",
 		"threadSource",
@@ -505,6 +534,7 @@ test("thread wire views gate experimental fields and never expose internal model
 		"path",
 		"cwd",
 		"cliVersion",
+		"originator",
 		"source",
 		"threadSource",
 		"agentNickname",
@@ -1041,7 +1071,7 @@ test("a new phone conversation can enter voice before its first turn", async () 
 		while (!notifications.some(event => event.method === "process/exited") && Date.now() < preflightDeadline)
 			await Bun.sleep(5);
 		expect(notifications.find(event => event.method === "process/exited")).toMatchObject({
-			params: { processHandle: "blank-chat-preflight", exitCode: 0, stdout: "/tmp" },
+			params: { processHandle: "blank-chat-preflight", exitCode: 0, stdout: await realpath("/tmp") },
 		});
 		expect(
 			await router.handle("phone", {

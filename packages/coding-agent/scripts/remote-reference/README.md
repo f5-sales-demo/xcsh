@@ -2,8 +2,10 @@
 
 This development harness records ordinary ChatGPT-to-Codex conversations for
 comparison with native xcsh. It is not a product dependency or a replacement
-agent. The reference is Codex 0.153.4, commit
-`3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`.
+agent. Codex 0.154.0 at peeled commit
+`6b9826e3aa83b1a5947db50f4332cb9c65f1b340` is the default comparison baseline.
+Codex 0.153.4 at `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`
+remains available for the existing versioned fixtures.
 
 ## Completed-output source fixtures
 
@@ -43,8 +45,9 @@ directory, which the generator removes afterward.
 
 ## Reference preparation
 
-Use a separate copy of the pinned source. `bun install.ts <source-directory>`
-checks the SHA-256 of every patched source file before applying the observation
+Use a separate copy of the pinned source. `bun install.ts <0.153.4|0.154.0>
+<source-directory>` requires an explicit baseline, verifies the annotated tag and
+peeled full commit, and checks the SHA-256 of every patched source file before applying the observation
 patch and installing two private Rust helper modules. Existing Codex binaries and
 the user's running daemon are not modified. The patch contains Apache-2.0 Codex
 source context; see `../../src/remote-control/NOTICE.md` and its accompanying license.
@@ -88,7 +91,7 @@ sandbox configuration.
 Start the recorder before the reference process:
 
 ```text
-bun record.ts <private-directory>/capture.sock <private-directory>/reference.jsonl <scenario> <instrumented-codex-binary>
+bun record.ts 0.154.0 <private-directory>/capture.sock <private-directory>/reference.jsonl <scenario> <instrumented-codex-binary> <artifact-sha256>
 ```
 
 The directory must be owned by the current user and have mode 0700. Pass
