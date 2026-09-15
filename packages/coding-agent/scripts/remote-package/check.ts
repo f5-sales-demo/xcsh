@@ -407,9 +407,9 @@ try {
 	assert.equal(phoneStarted.thread.cwd, "/fixture/phone");
 	assert.equal(phoneStarted.model, "model");
 	assert.equal(phoneStarted.modelProvider, "package-fixture");
-	assert(
-		(await rpc("model/list")).data.some((model: any) => model.id === "model" && model.provider === "package-fixture"),
-	);
+	const listedPhoneModel = (await rpc("model/list")).data.find((model: any) => model.id === "model");
+	assert.equal(listedPhoneModel?.displayName, "Offline package fixture");
+	assert.equal(Object.hasOwn(listedPhoneModel, "provider"), false);
 	const phoneParams = {
 		threadId: phoneThreadId,
 		clientUserMessageId: "fixture-phone",
