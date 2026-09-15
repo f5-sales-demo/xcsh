@@ -436,11 +436,27 @@ export class RemoteRouter {
 	}
 	#processParams(method: string, params: Record<string, unknown>): Record<string, unknown> {
 		if (method !== "process/spawn" || params.cwd !== "/") return params;
-		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return params;
+		let isolated = params;
+		const command = params.command;
+		if (
+			Array.isArray(command) &&
+			command.length === 3 &&
+			command[0] === "/bin/sh" &&
+			command[1] === "-lc" &&
+			typeof command[2] === "string" &&
+			command[2].includes("Documents/Codex") &&
+			command[2].includes("new-realtime-voice-chat-")
+		)
+			isolated = {
+				...params,
+				command: [command[0], command[1], command[2].replaceAll("Documents/Codex", "Documents/xcsh")],
+			};
+		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return isolated;
 		// Blank-chat clients use root as a placeholder before choosing a workspace.
-		// Map only that placeholder to the exposed primary; unrelated paths still fail.
+		// Map only that placeholder to the exposed primary. The phone's known blank-chat
+		// bootstrap is also confined to xcsh's documents namespace instead of Codex's.
 		const cwd = this.#currentSession()?.thread.cwd;
-		return typeof cwd === "string" && isAbsolute(cwd) && normalize(cwd) === cwd ? { ...params, cwd } : params;
+		return typeof cwd === "string" && isAbsolute(cwd) && normalize(cwd) === cwd ? { ...isolated, cwd } : isolated;
 	}
 	#defer(client: string, event: Notification): void {
 		setTimeout(() => this.#emit(client, event), 0);

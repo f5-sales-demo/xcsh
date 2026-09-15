@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { RemoteRouter } from "../../src/remote-control/router";
 import bootstrapReference from "./fixtures/codex-0.153.4-phone-bootstrap.json";
 import voiceFirstTrace from "./fixtures/iphone-voice-first-sanitized.json";
@@ -786,6 +789,59 @@ test("cold managed resume is single-flight and read does not load a worker", asy
 	]);
 	expect(resumes).toBe(1);
 	router.dispose();
+});
+
+test("phone workspace bootstrap uses the xcsh documents namespace", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-workspace-"));
+	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const router = new RemoteRouter(join(root, ".xcsh"), "21.29.0");
+	router.notify = (_client, event) => notifications.push(event);
+	router.registerSession("primary", {
+		thread: { id: "primary", cwd: root, turns: [], updatedAt: 1 },
+		call: async () => ({}),
+	});
+	try {
+		await router.handle("phone", {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" } },
+		});
+		expect(
+			await router.handle("phone", {
+				id: 2,
+				method: "process/spawn",
+				params: {
+					processHandle: "phone-workspace-bootstrap",
+					cwd: "/",
+					command: [
+						"/bin/sh",
+						"-lc",
+						'target="$PWD/Documents/Codex/2026-09-15/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"',
+					],
+					tty: false,
+					streamStdin: false,
+					streamStdoutStderr: false,
+					timeoutMs: 1000,
+					outputBytesCap: 4096,
+				},
+			}),
+		).toEqual({ id: 2, result: {} });
+		const deadline = Date.now() + 3000;
+		while (!notifications.some(event => event.method === "process/exited") && Date.now() < deadline)
+			await Bun.sleep(5);
+		const expected = join(root, "Documents", "xcsh", "2026-09-15", "new-realtime-voice-chat-1");
+		expect(notifications.find(event => event.method === "process/exited")?.params.stdout).toBe(expected);
+		expect((await stat(expected)).isDirectory()).toBe(true);
+		expect(
+			await stat(join(root, "Documents", "Codex")).then(
+				() => true,
+				() => false,
+			),
+		).toBe(false);
+	} finally {
+		router.dispose();
+		await rm(root, { recursive: true, force: true });
+	}
 });
 
 test("a new phone conversation can enter voice before its first turn", async () => {
