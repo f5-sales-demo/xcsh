@@ -555,6 +555,7 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 			model: "gpt-5.6-luna",
 			modelProvider: "openai-codex",
 			reasoningEffort: "medium",
+			source: "appServer",
 			turns: [],
 			createdAt: 1,
 			updatedAt: 1,
@@ -562,7 +563,7 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 		call: async (_identity: string, method: string, params: Record<string, unknown>) => {
 			calls.push({ method, params });
 			return {
-				thread: endpoint(id, cwd, forkedFromId).thread,
+				thread: { ...endpoint(id, cwd, forkedFromId).thread, source: "cli" },
 				model: "gpt-5.6-luna",
 				modelProvider: "openai-codex",
 				serviceTier: null,
@@ -617,7 +618,7 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 	await router.handle("observer", {
 		id: 10,
 		method: "initialize",
-		params: { clientInfo: { name: "observer", version: "1" }, capabilities: { experimentalApi: true } },
+		params: { clientInfo: { name: "observer", version: "1" } },
 	});
 
 	const started = (await router.handle("phone", {
@@ -629,6 +630,9 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 	expect(notifications).toEqual([]);
 	await Bun.sleep(1);
 	expect(notifications[0]).toMatchObject({ client: "phone", method: "thread/started" });
+	expect(notifications[0].params.thread).toEqual(started.result.thread);
+	expect(notifications[1].params.thread as Record<string, unknown>).not.toHaveProperty("extra");
+	expect(notifications[1].params.thread as Record<string, unknown>).not.toHaveProperty("canAcceptDirectInput");
 	expect(notifications.filter(value => value.method === "thread/started").map(value => value.client)).toEqual([
 		"phone",
 		"observer",

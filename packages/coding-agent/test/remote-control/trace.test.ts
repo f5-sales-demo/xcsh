@@ -1,8 +1,24 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { compareProtocolTraces, ProtocolTrace, redactProtocolValue } from "../../src/remote-control/trace";
+import { artifactTraceProvenance } from "../../src/remote-control/trace-runtime";
+
+test("native trace provenance binds the embedded full commit to exact artifact bytes", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-trace-provenance-"));
+	try {
+		const artifact = join(root, "xcsh");
+		await writeFile(artifact, "immutable fixture artifact");
+		expect(artifactTraceProvenance(artifact, { commit: "a".repeat(40) })).toEqual({
+			sourceCommit: "a".repeat(40),
+			artifactSha256: "a47432a170204275ab5bb81fe3c417024cd177319f94cb2517478948bc054dcc",
+		});
+		expect(() => artifactTraceProvenance(artifact, { commit: "abbreviated" })).toThrow("embedded full source commit");
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
 
 test("parity capture removes credentials, media, paths, and private text while preserving protocol structure", () => {
 	const raw = {

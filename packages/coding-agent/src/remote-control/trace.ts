@@ -140,6 +140,7 @@ export interface TraceManifest {
 	source: "codex" | "xcsh";
 	version: string;
 	sourceCommit: string;
+	artifactSha256?: string;
 	scenario: string;
 }
 export class ProtocolTrace {

@@ -448,12 +448,19 @@ export class RemoteRouter {
 	#deferAll(event: Notification): void {
 		for (const client of this.#clients.keys()) this.#defer(client, event);
 	}
+	#deferThreadStarted(thread: Record<string, unknown>): void {
+		for (const client of this.#clients.keys())
+			this.#defer(client, {
+				method: "thread/started",
+				params: { thread: threadWireView(thread, this.#experimental.has(client), true) },
+			});
+	}
 	async #lifecycleResponse(
 		client: string,
 		id: string | number,
 		endpoint: SessionEndpoint,
 		includeTurns: boolean,
-	): Promise<unknown> {
+	): Promise<{ result: unknown; thread: Record<string, unknown> }> {
 		const threadId = String(endpoint.thread.id);
 		this.registerManagedSession(threadId, endpoint);
 		this.#clients.get(client)?.add(threadId);
@@ -461,7 +468,18 @@ export class RemoteRouter {
 			threadId,
 			excludeTurns: !includeTurns,
 		});
-		return projectLifecycleResponse(resumed, this.#experimental.has(client));
+		// The resume call refreshes endpoint.thread. Snapshot it once so the response
+		// and following notification cannot project different worker views.
+		const experimental = this.#experimental.has(client);
+		const thread = { ...endpoint.thread };
+		const projected = projectLifecycleResponse(
+			resumed && typeof resumed === "object" && !Array.isArray(resumed)
+				? { ...(resumed as Record<string, unknown>), thread }
+				: { thread },
+			experimental,
+		);
+		const result = projected && typeof projected === "object" && !Array.isArray(projected) ? projected : { thread };
+		return { result, thread };
 	}
 	#deferLifecycleActivation(threadId: string): void {
 		setTimeout(() => this.lifecycle?.activate?.(threadId), 0);
@@ -538,13 +556,9 @@ export class RemoteRouter {
 						if (!this.lifecycle) throw new ProtocolError(-32000, "Managed remote sessions are unavailable");
 						const cwd = await this.#startCwd(params);
 						const endpoint = await this.lifecycle.start({ ...params, cwd });
-						result = await this.#lifecycleResponse(client, id!, endpoint, false);
-						this.#deferAll({
-							method: "thread/started",
-							params: {
-								thread: threadWireView(endpoint.thread, this.#experimental.has(client), true),
-							},
-						});
+						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, false);
+						result = lifecycle.result;
+						this.#deferThreadStarted(lifecycle.thread);
 						this.#deferLifecycleActivation(String(endpoint.thread.id));
 						break;
 					}
@@ -559,13 +573,9 @@ export class RemoteRouter {
 						const cwd = params.cwd == null ? source.cwd : await this.#startCwd(params);
 						if (typeof cwd !== "string") throw new ProtocolError(-32602, "Working directory is unavailable");
 						const endpoint = await this.lifecycle.fork(params.threadId, { ...params, cwd }, source);
-						result = await this.#lifecycleResponse(client, id!, endpoint, params.excludeTurns !== true);
-						this.#deferAll({
-							method: "thread/started",
-							params: {
-								thread: threadWireView(endpoint.thread, this.#experimental.has(client), true),
-							},
-						});
+						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, params.excludeTurns !== true);
+						result = lifecycle.result;
+						this.#deferThreadStarted(lifecycle.thread);
 						this.#deferLifecycleActivation(String(endpoint.thread.id));
 						break;
 					}
