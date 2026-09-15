@@ -631,8 +631,11 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 	await Bun.sleep(1);
 	expect(notifications[0]).toMatchObject({ client: "phone", method: "thread/started" });
 	expect(notifications[0].params.thread).toEqual(started.result.thread);
+	expect(notifications[1].params.thread as Record<string, unknown>).not.toHaveProperty("extra");
+	expect(notifications[1].params.thread as Record<string, unknown>).not.toHaveProperty("canAcceptDirectInput");
 	expect(notifications.filter(value => value.method === "thread/started").map(value => value.client)).toEqual([
 		"phone",
+		"observer",
 	]);
 
 	const forked = (await router.handle("phone", {
