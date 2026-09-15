@@ -816,7 +816,7 @@ test("phone workspace bootstrap uses the xcsh documents namespace", async () => 
 					command: [
 						"/bin/sh",
 						"-lc",
-						'target="$PWD/Documents/Codex/2026-09-15/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"',
+						'target="$PWD/Documents/""Codex""/2026-09-15/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"',
 					],
 					tty: false,
 					streamStdin: false,

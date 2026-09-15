@@ -444,12 +444,12 @@ export class RemoteRouter {
 			command[0] === "/bin/sh" &&
 			command[1] === "-lc" &&
 			typeof command[2] === "string" &&
-			command[2].includes("Documents/Codex") &&
+			command[2].includes("Codex") &&
 			command[2].includes("new-realtime-voice-chat-")
 		)
 			isolated = {
 				...params,
-				command: [command[0], command[1], command[2].replaceAll("Documents/Codex", "Documents/xcsh")],
+				command: [command[0], command[1], command[2].replaceAll("Codex", "xcsh")],
 			};
 		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return isolated;
 		// Blank-chat clients use root as a placeholder before choosing a workspace.
