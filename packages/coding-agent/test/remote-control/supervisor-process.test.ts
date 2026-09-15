@@ -59,7 +59,13 @@ test("the real supervisor replaces a killed host once and an intentional disable
 		}),
 		{ mode: 0o600 },
 	);
-	const environment = { ...process.env, PI_CODING_AGENT_DIR: agentDir };
+	const environment = {
+		...process.env,
+		PI_CODING_AGENT_DIR: agentDir,
+		XDG_CONFIG_HOME: join(agentDir, "config"),
+		XDG_RUNTIME_DIR: join(agentDir, "runtime"),
+		DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(agentDir, "runtime", "bus")}`,
+	};
 	const supervisor = Bun.spawn([process.execPath, "src/cli.ts", "remote-control", "supervisor"], {
 		cwd: join(import.meta.dir, "../.."),
 		env: environment,
