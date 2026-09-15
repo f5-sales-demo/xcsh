@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RemoteRouter } from "../../src/remote-control/router";
@@ -793,14 +793,21 @@ test("cold managed resume is single-flight and read does not load a worker", asy
 
 test("phone workspace bootstrap uses the xcsh documents namespace", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-workspace-"));
+	const workspaceRoot = join(root, "Documents", "xcsh");
+	await mkdir(workspaceRoot, { recursive: true });
 	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
 	const router = new RemoteRouter(join(root, ".xcsh"), "21.29.0");
 	router.notify = (_client, event) => notifications.push(event);
 	router.registerSession("primary", {
-		thread: { id: "primary", cwd: root, turns: [], updatedAt: 1 },
+		thread: { id: "primary", cwd: workspaceRoot, turns: [], updatedAt: 1 },
 		call: async () => ({}),
 	});
 	try {
+		const bootstrapScript =
+			'target="$PWD/Documents/""Codex""/2026-09-15/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"; #'.padEnd(
+				737,
+				"x",
+			);
 		await router.handle("phone", {
 			id: 1,
 			method: "initialize",
@@ -813,15 +820,11 @@ test("phone workspace bootstrap uses the xcsh documents namespace", async () => 
 				params: {
 					processHandle: "phone-workspace-bootstrap",
 					cwd: "/",
-					command: [
-						"/bin/sh",
-						"-lc",
-						'target="$PWD/Documents/""Codex""/2026-09-15/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"',
-					],
+					command: ["/bin/sh", "-lc", bootstrapScript],
 					tty: false,
 					streamStdin: false,
 					streamStdoutStderr: false,
-					timeoutMs: 1000,
+					timeoutMs: 20_000,
 					outputBytesCap: 4096,
 				},
 			}),
@@ -829,11 +832,13 @@ test("phone workspace bootstrap uses the xcsh documents namespace", async () => 
 		const deadline = Date.now() + 3000;
 		while (!notifications.some(event => event.method === "process/exited") && Date.now() < deadline)
 			await Bun.sleep(5);
-		const expected = join(root, "Documents", "xcsh", "2026-09-15", "new-realtime-voice-chat-1");
-		expect(notifications.find(event => event.method === "process/exited")?.params.stdout).toBe(expected);
-		expect((await stat(expected)).isDirectory()).toBe(true);
+		const workspace = notifications.find(event => event.method === "process/exited")?.params.stdout;
+		expect(workspace).toBeString();
+		expect(workspace as string).toStartWith(`${workspaceRoot}/`);
+		expect(workspace as string).toMatch(/\/new-realtime-voice-chat-1$/);
+		expect((await stat(workspace as string)).isDirectory()).toBe(true);
 		expect(
-			await stat(join(root, "Documents", "Codex")).then(
+			await stat(join(workspaceRoot, "Documents", "Codex")).then(
 				() => true,
 				() => false,
 			),

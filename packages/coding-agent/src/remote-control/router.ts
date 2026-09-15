@@ -1,5 +1,5 @@
-import { stat } from "node:fs/promises";
-import { isAbsolute, normalize } from "node:path";
+import { mkdir, stat } from "node:fs/promises";
+import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
@@ -434,7 +434,7 @@ export class RemoteRouter {
 		}
 		return candidate;
 	}
-	#processParams(method: string, params: Record<string, unknown>): Record<string, unknown> {
+	async #processParams(method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
 		if (method !== "process/spawn" || params.cwd !== "/") return params;
 		let isolated = params;
 		const command = params.command;
@@ -444,13 +444,39 @@ export class RemoteRouter {
 			command[0] === "/bin/sh" &&
 			command[1] === "-lc" &&
 			typeof command[2] === "string" &&
-			command[2].includes("Codex") &&
-			command[2].includes("new-realtime-voice-chat-")
-		)
-			isolated = {
-				...params,
-				command: [command[0], command[1], command[2].replaceAll("Codex", "xcsh")],
-			};
+			Buffer.byteLength(command[2]) === 737 &&
+			params.timeoutMs === 20_000 &&
+			params.outputBytesCap === 4096 &&
+			params.tty === false &&
+			params.streamStdin === false &&
+			params.streamStdoutStderr === false
+		) {
+			const root = this.lifecycle?.defaultCwd ?? this.#currentSession()?.thread.cwd;
+			if (typeof root !== "string" || !isAbsolute(root) || normalize(root) !== root)
+				throw new ProtocolError(-32602, "xcsh workspace root is unavailable");
+			const now = new Date();
+			const day = [
+				now.getFullYear(),
+				String(now.getMonth() + 1).padStart(2, "0"),
+				String(now.getDate()).padStart(2, "0"),
+			].join("-");
+			const parent = join(root, day);
+			await mkdir(parent, { recursive: true });
+			let workspace: string | undefined;
+			for (let index = 1; index <= 10_000; index++) {
+				const candidate = join(parent, `new-realtime-voice-chat-${index}`);
+				try {
+					await mkdir(candidate);
+					workspace = candidate;
+					break;
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code !== "EEXIST")
+						throw new ProtocolError(-32000, "Unable to create xcsh workspace");
+				}
+			}
+			if (!workspace) throw new ProtocolError(-32000, "xcsh workspace limit reached");
+			isolated = { ...params, command: ["/usr/bin/printf", "%s", workspace] };
+		}
 		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return isolated;
 		// Blank-chat clients use root as a placeholder before choosing a workspace.
 		// Map only that placeholder to the exposed primary. The phone's known blank-chat
@@ -626,7 +652,7 @@ export class RemoteRouter {
 							client,
 							JSON.stringify(id),
 							request.method,
-							this.#processParams(request.method, params),
+							await this.#processParams(request.method, params),
 						);
 						break;
 					case "config/read": {
