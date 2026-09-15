@@ -1,5 +1,11 @@
 import type { RemoteModelDescriptor } from "./session";
 
+function remoteInputModalities(
+	modalities: RemoteModelDescriptor["inputModalities"],
+): Array<"text" | "image" | "audio"> {
+	return [...modalities, "audio"];
+}
+
 /** Read-only compatibility views. These never load or change Codex configuration. */
 export function configResponse(thread: Record<string, unknown> | undefined, includeLayers: boolean) {
 	// Null denotes an unset Codex-specific setting, rather than a promise about
@@ -56,7 +62,10 @@ export function modelResponse(threads: Record<string, unknown>[], catalog: Remot
 			hidden: false,
 			supportedReasoningEfforts: model.supportedReasoningEfforts,
 			defaultReasoningEffort: model.defaultReasoningEffort,
-			inputModalities: model.inputModalities,
+			// The remote surface accepts realtime audio for every selectable execution
+			// model, even though the underlying AgentSession consumes the delegated text.
+			// Advertising that capability lets clients start voice before a first turn.
+			inputModalities: remoteInputModalities(model.inputModalities),
 			supportsPersonality: false,
 			multiAgentVersion: null,
 			additionalSpeedTiers: [],
@@ -79,7 +88,7 @@ export function modelResponse(threads: Record<string, unknown>[], catalog: Remot
 			hidden: false,
 			supportedReasoningEfforts: thread.supportedReasoningEfforts ?? [],
 			defaultReasoningEffort: thread.defaultReasoningEffort ?? thread.reasoningEffort ?? "medium",
-			inputModalities: ["text"],
+			inputModalities: ["text", "audio"],
 			supportsPersonality: false,
 			multiAgentVersion: null,
 			additionalSpeedTiers: [],

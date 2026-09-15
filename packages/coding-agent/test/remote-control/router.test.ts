@@ -783,7 +783,7 @@ test("cold managed resume is single-flight and read does not load a worker", asy
 	router.dispose();
 });
 
-test("phone bootstrap can create a managed thread, negotiate v3 SDP, and delegate voice work", async () => {
+test("a new phone conversation can enter voice before its first turn", async () => {
 	const methods: string[] = [];
 	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
 	const managedThread = {
@@ -880,6 +880,11 @@ test("phone bootstrap can create a managed thread, negotiate v3 SDP, and delegat
 	};
 	router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
 	router.notify = (_client, event) => notifications.push(event);
+	router.registerSession("primary", {
+		thread: { ...managedThread, id: "primary", sessionId: "primary" },
+		models: endpoint.models,
+		call: async () => ({}),
+	});
 	try {
 		expect(
 			await router.handle("phone", {
@@ -889,7 +894,7 @@ test("phone bootstrap can create a managed thread, negotiate v3 SDP, and delegat
 			}),
 		).toMatchObject({ result: { userAgent: "xcsh/21.29.0" } });
 		expect(await router.handle("phone", { id: 2, method: "model/list", params: {} })).toMatchObject({
-			result: { data: [] },
+			result: { data: [{ id: "gpt-5.6-luna", inputModalities: ["text", "audio"] }] },
 		});
 		expect(await router.handle("phone", { id: 3, method: "thread/start", params: { cwd: "/tmp" } })).toMatchObject({
 			result: { thread: { id: managedThread.id } },
@@ -920,6 +925,7 @@ test("phone bootstrap can create a managed thread, negotiate v3 SDP, and delegat
 		expect(notifications.map(event => event.method)).toEqual(
 			expect.arrayContaining(["thread/realtime/started", "thread/realtime/sdp", "turn/started", "turn/completed"]),
 		);
+		expect(methods).not.toContain("turn/start");
 		expect(methods).toEqual(["thread/resume", "thread/realtime/start", "thread/realtime/appendText"]);
 	} finally {
 		router.dispose();
