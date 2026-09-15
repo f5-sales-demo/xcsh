@@ -48,11 +48,35 @@ describe("session title generation", () => {
 
 	test("rejects malformed or non-exact JSON and sanitizes Unicode output", () => {
 		expect(sanitizeGeneratedSessionTitle("not json")).toBeNull();
+		expect(sanitizeGeneratedSessionTitle('```json\n{"title":"fenced"}\n```')).toBeNull();
 		expect(sanitizeGeneratedSessionTitle('{"title":"ok","extra":true}')).toBeNull();
 		expect(sanitizeGeneratedSessionTitle(JSON.stringify({ title: "  修复\u0000票据，ABC-123！  " }))).toBe(
 			"修复票据，ABC-123！",
 		);
 		expect([...sanitizeGeneratedSessionTitle(`{"title":"${"界".repeat(50)}"}`)!]).toHaveLength(36);
+	});
+
+	test("accepts a single provider-enforced structured title", async () => {
+		const complete = vi.spyOn(ai, "completeSimple").mockResolvedValue({
+			stopReason: "toolUse",
+			content: [
+				{
+					type: "toolCall",
+					id: "title-1",
+					name: "submit_title",
+					arguments: { title: "Validate session titles" },
+				},
+			],
+		} as never);
+		const { registry, settings } = titleDependencies();
+		expect(await generateSessionTitle("fixture", registry as never, settings as never, "fixture", model)).toBe(
+			"Validate session titles",
+		);
+		const context = complete.mock.calls[0]?.[1];
+		const options = complete.mock.calls[0]?.[2];
+		expect(context?.tools?.[0]?.name).toBe("submit_title");
+		expect(options?.toolChoice).toEqual({ type: "tool", name: "submit_title" });
+		complete.mockRestore();
 	});
 
 	test("truncates without splitting UTF-8 sequences", () => {
@@ -82,6 +106,35 @@ describe("session title generation", () => {
 		expect(
 			await generateSessionTitle("credentials", failingCredentials as never, settings as never, "fixture", model),
 		).toBeNull();
+		complete.mockRestore();
+	});
+
+	test("falls back to the current model when the configured title model returns invalid output", async () => {
+		const currentModel = { ...model, provider: "openai-codex", id: "gpt-5.6-luna" } as typeof model;
+		const complete = vi
+			.spyOn(ai, "completeSimple")
+			.mockResolvedValueOnce({ stopReason: "stop", content: [{ type: "text", text: "```json fenced```" }] } as never)
+			.mockResolvedValueOnce({
+				stopReason: "toolUse",
+				content: [
+					{ type: "toolCall", id: "title-2", name: "submit_title", arguments: { title: "Use current model" } },
+				],
+			} as never);
+		const registry = {
+			getAvailable: () => [model],
+			getApiKey: async () => "test-key",
+		};
+		const settings = {
+			getModelRole: (role: string) => (role === "smol" ? "anthropic/claude-sonnet-4-5" : undefined),
+			getStorage: () => undefined,
+		};
+		expect(await generateSessionTitle("fixture", registry as never, settings as never, "fixture", currentModel)).toBe(
+			"Use current model",
+		);
+		expect(complete.mock.calls.map(call => `${call[0].provider}/${call[0].id}`)).toEqual([
+			"anthropic/claude-sonnet-4-5",
+			"openai-codex/gpt-5.6-luna",
+		]);
 		complete.mockRestore();
 	});
 });

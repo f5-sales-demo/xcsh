@@ -6,6 +6,7 @@ import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Api, Model } from "@f5-sales-demo/pi-ai";
 import { completeSimple } from "@f5-sales-demo/pi-ai";
 import { logger, prompt } from "@f5-sales-demo/pi-utils";
+import { Type } from "@sinclair/typebox";
 import type { ModelRegistry } from "../config/model-registry";
 import { resolveRoleSelection } from "../config/model-resolver";
 import type { Settings } from "../config/settings";
@@ -47,23 +48,35 @@ export function sanitizeGeneratedSessionTitle(value: string): string | null {
 	return [...sanitized].slice(0, MAX_TITLE_CHARACTERS).join("").trim() || null;
 }
 
-function getTitleModel(
+function getTitleModels(
 	registry: ModelRegistry,
 	settings: Settings,
 	currentModel?: Model<Api>,
-): { model: Model<Api>; thinkingLevel?: ThinkingLevel } | undefined {
+): Array<{ model: Model<Api>; thinkingLevel?: ThinkingLevel }> {
 	const availableModels = registry.getAvailable();
 	const titleModel = resolveRoleSelection(["commit", "smol"], settings, availableModels, registry);
-	if (titleModel) {
-		return { model: titleModel.model, thinkingLevel: titleModel.thinkingLevel };
-	}
-
-	if (currentModel) {
-		return { model: currentModel };
-	}
-
-	return undefined;
+	const candidates: Array<{ model: Model<Api>; thinkingLevel?: ThinkingLevel }> = [];
+	if (titleModel) candidates.push({ model: titleModel.model, thinkingLevel: titleModel.thinkingLevel });
+	if (
+		currentModel &&
+		!candidates.some(
+			candidate => candidate.model.provider === currentModel.provider && candidate.model.id === currentModel.id,
+		)
+	)
+		candidates.push({ model: currentModel });
+	return candidates;
 }
+
+const TITLE_TOOL_NAME = "submit_title";
+const TITLE_TOOL = {
+	name: TITLE_TOOL_NAME,
+	description: "Return the generated session title as strict JSON.",
+	strict: true,
+	parameters: Type.Object(
+		{ title: Type.String({ maxLength: MAX_TITLE_CHARACTERS }) },
+		{ additionalProperties: false },
+	),
+} as const;
 
 /**
  * Generate a title for a session based on the first user message.
@@ -80,8 +93,8 @@ export async function generateSessionTitle(
 	sessionId?: string,
 	currentModel?: Model<Api>,
 ): Promise<string | null> {
-	const candidate = getTitleModel(registry, settings, currentModel);
-	if (!candidate) {
+	const candidates = getTitleModels(registry, settings, currentModel);
+	if (candidates.length === 0) {
 		logger.debug("title-generator: no title model found");
 		return null;
 	}
@@ -91,75 +104,77 @@ export async function generateSessionTitle(
 ${truncatedMessage}
 </user-message>`;
 
-	const request = {
-		model: `${candidate.model.provider}/${candidate.model.id}`,
-		systemPrompt: TITLE_SYSTEM_PROMPT,
-		userMessage,
-		maxTokens: 80,
-	};
-	logger.debug("title-generator: request", {
-		model: request.model,
-		sourceBytes: Buffer.byteLength(truncatedMessage),
-		sourceTruncated: truncatedMessage !== firstMessage,
-	});
+	for (const [attempt, candidate] of candidates.entries()) {
+		const model = `${candidate.model.provider}/${candidate.model.id}`;
+		logger.debug("title-generator: request", {
+			model,
+			attempt: attempt + 1,
+			sourceBytes: Buffer.byteLength(truncatedMessage),
+			sourceTruncated: truncatedMessage !== firstMessage,
+		});
+		try {
+			const apiKey = await registry.getApiKey(candidate.model, sessionId);
+			if (!apiKey) {
+				logger.debug("title-generator: no API key for title model", {
+					provider: candidate.model.provider,
+					id: candidate.model.id,
+					attempt: attempt + 1,
+				});
+				continue;
+			}
+			const response = await completeSimple(
+				candidate.model,
+				{
+					systemPrompt: TITLE_SYSTEM_PROMPT,
+					messages: [{ role: "user", content: userMessage, timestamp: Date.now() }],
+					tools: [TITLE_TOOL],
+				},
+				{
+					apiKey,
+					maxTokens: 80,
+					reasoning: toReasoningEffort(candidate.thinkingLevel),
+					toolChoice: { type: "tool", name: TITLE_TOOL_NAME },
+				},
+			);
 
-	try {
-		const apiKey = await registry.getApiKey(candidate.model, sessionId);
-		if (!apiKey) {
-			logger.debug("title-generator: no API key for title model", {
-				provider: candidate.model.provider,
-				id: candidate.model.id,
-			});
-			return null;
-		}
-		const response = await completeSimple(
-			candidate.model,
-			{
-				systemPrompt: request.systemPrompt,
-				messages: [{ role: "user", content: request.userMessage, timestamp: Date.now() }],
-			},
-			{
-				apiKey,
-				maxTokens: request.maxTokens,
-				reasoning: toReasoningEffort(candidate.thinkingLevel),
-			},
-		);
+			if (response.stopReason === "error") {
+				logger.debug("title-generator: response error", {
+					model,
+					attempt: attempt + 1,
+					stopReason: response.stopReason,
+				});
+				continue;
+			}
 
-		if (response.stopReason === "error") {
-			logger.debug("title-generator: response error", {
-				model: request.model,
+			const toolCalls = response.content.filter(content => content.type === "toolCall");
+			const title =
+				toolCalls.length === 1 && toolCalls[0]!.name === TITLE_TOOL_NAME
+					? sanitizeGeneratedSessionTitle(JSON.stringify(toolCalls[0]!.arguments) ?? "")
+					: sanitizeGeneratedSessionTitle(
+							response.content
+								.filter(content => content.type === "text")
+								.map(content => content.text)
+								.join("")
+								.trim(),
+						);
+
+			logger.debug("title-generator: response", {
+				model,
+				attempt: attempt + 1,
+				titleAccepted: title !== null,
+				titleCharacters: title ? [...title].length : 0,
 				stopReason: response.stopReason,
 			});
-			return null;
+			if (title) return title;
+		} catch (err) {
+			logger.debug("title-generator: error", {
+				model,
+				attempt: attempt + 1,
+				errorType: err instanceof Error ? err.name : "unknown",
+			});
 		}
-
-		let payload = "";
-		for (const content of response.content) {
-			if (content.type === "text") {
-				payload += content.text;
-			}
-		}
-		const title = sanitizeGeneratedSessionTitle(payload.trim());
-
-		logger.debug("title-generator: response", {
-			model: request.model,
-			titleAccepted: title !== null,
-			titleCharacters: title ? [...title].length : 0,
-			stopReason: response.stopReason,
-		});
-
-		if (!title) {
-			return null;
-		}
-
-		return title;
-	} catch (err) {
-		logger.debug("title-generator: error", {
-			model: request.model,
-			errorType: err instanceof Error ? err.name : "unknown",
-		});
-		return null;
 	}
+	return null;
 }
 
 interface SessionTitleManager {
