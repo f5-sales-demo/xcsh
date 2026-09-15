@@ -3,6 +3,8 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { Model } from "@f5-sales-demo/pi-ai";
+import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
 	applyRemotePermissionProfile,
 	initializeRemotePermissionProfile,
@@ -27,6 +29,7 @@ import {
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import { RemoteInteractions } from "./interactions";
 import { getSessionVoiceHistory, type SessionVoiceHistory } from "./session-voice-history";
+import { resolveRemoteThreadId, validRemoteThreadId } from "./thread-identity";
 import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
@@ -54,6 +57,8 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 	| "setRealtimeMode"
+	| "compact"
+	| "navigateTree"
 	| "settings"
 	| "skills"
 	| "skillWarnings"
@@ -75,6 +80,16 @@ export type RemoteCollaborationMode = "plan" | "default";
 export interface RemoteSessionControls {
 	getCollaborationMode?: () => RemoteCollaborationMode;
 	setCollaborationMode?: (mode: RemoteCollaborationMode) => Promise<void>;
+	setModel?: (model: Model, thinkingLevel: ThinkingLevel | undefined) => Promise<void>;
+}
+export interface RemoteModelDescriptor {
+	id: string;
+	provider: string;
+	displayName: string;
+	description: string;
+	supportedReasoningEfforts: Array<{ reasoningEffort: string; description: string }>;
+	defaultReasoningEffort: string;
+	inputModalities: Array<"text" | "image">;
 }
 export interface Notification {
 	id?: string;
@@ -132,16 +147,6 @@ function canonicalJson(value: unknown): string {
 	}
 	return JSON.stringify(value) ?? "null";
 }
-function validSessionId(value: unknown): string | undefined {
-	return typeof value === "string" &&
-		value.length > 0 &&
-		value.length <= 256 &&
-		!isAbsolute(value) &&
-		!value.includes("/") &&
-		!value.includes("\\")
-		? value
-		: undefined;
-}
 export class RemoteSession {
 	#epoch = 0;
 	#boundId = "";
@@ -159,6 +164,7 @@ export class RemoteSession {
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
 	#voice?: NativeVoice;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
+	#configurationTail: Promise<void> = Promise.resolve();
 	#clientIds = new Map<string, string>();
 	#listeners = new Set<(notification: Notification) => void>();
 	#unsubscribe: () => void;
@@ -309,8 +315,7 @@ export class RemoteSession {
 	}
 	#restoreIdentity(): void {
 		this.#boundId = this.target.sessionId;
-		const remoteThreadId = this.target.sessionManager.getHeader?.()?.remoteThreadId;
-		this.#threadId = validSessionId(remoteThreadId) ?? this.#boundId;
+		this.#threadId = resolveRemoteThreadId(this.target);
 		this.#unsubscribeVoiceHistory?.();
 		this.#voiceHistoryOwner = getSessionVoiceHistory(this.target);
 		this.#unsubscribeVoiceHistory = this.#voiceHistoryOwner.subscribe((method, params) =>
@@ -556,7 +561,7 @@ export class RemoteSession {
 		const header = this.target.sessionManager.getHeader?.();
 		const explicitFork = header?.forkedFromId;
 		const parentSession = header?.parentSession;
-		const forkedFromId = validSessionId(explicitFork) ?? validSessionId(parentSession) ?? null;
+		const forkedFromId = validRemoteThreadId(explicitFork) ?? validRemoteThreadId(parentSession) ?? null;
 		return {
 			id: this.#threadId,
 			sessionId: this.#threadId,
@@ -609,6 +614,42 @@ export class RemoteSession {
 			name: this.target.sessionName ?? null,
 			turns: includeTurns ? this.history() : [],
 		};
+	}
+	models(): RemoteModelDescriptor[] {
+		const current = this.target.model;
+		const available = filterCurrentBrowserModels(this.target.modelRegistry?.getAvailable?.() ?? []);
+		const currentCatalogModel = current
+			? available.find(model => model.provider === current.provider && model.id === current.id)
+			: undefined;
+		const candidates = current
+			? [
+					...(currentCatalogModel ? [currentCatalogModel] : []),
+					...available.filter(model => model.provider === current.provider),
+				]
+			: available;
+		const seen = new Set<string>();
+		return candidates.flatMap(model => {
+			const key = `${model.provider}\0${model.id}`;
+			if (seen.has(key) || model.visibility === "hide") return [];
+			seen.add(key);
+			return [
+				{
+					id: model.id,
+					provider: model.provider,
+					displayName: model.name || model.id,
+					description: model.description || `Available through ${model.provider}.`,
+					supportedReasoningEfforts:
+						model.thinking?.supportedLevels.map(level => ({
+							reasoningEffort: level.effort,
+							description: level.description,
+						})) ?? [],
+					defaultReasoningEffort: model.thinking?.defaultLevel ?? "none",
+					inputModalities: (model.input ?? ["text"]).filter(
+						(modality): modality is "text" | "image" => modality === "text" || modality === "image",
+					),
+				},
+			];
+		});
 	}
 	pendingRequests() {
 		return this.#interactions?.pending() ?? [];
@@ -672,7 +713,19 @@ export class RemoteSession {
 		} catch (error) {
 			return Promise.reject(error);
 		}
-		const result = this.#execute(method, params, signature);
+		const execute = () => {
+			this.#assertCurrent();
+			return this.#execute(method, params, signature);
+		};
+		const result =
+			method === "thread/settings/update" || method === "turn/start"
+				? this.#configurationTail.then(execute, execute)
+				: execute();
+		if (method === "thread/settings/update" || method === "turn/start")
+			this.#configurationTail = result.then(
+				() => undefined,
+				() => undefined,
+			);
 		this.#requests.set(identity, { signature, result });
 		return result;
 	}
@@ -899,29 +952,41 @@ export class RemoteSession {
 						"threadId",
 						"effort",
 						"model",
+						"serviceTier",
 						"cwd",
 						"summary",
 						"collaborationMode",
 						"approvalPolicy",
 						"approvalsReviewer",
 						"sandboxPolicy",
+						"multiAgentMode",
 					].includes(key) &&
 					params[key] != null
 				)
 					throw new ProtocolError(-32602, "Unsupported terminal settings override");
 			const permissionProfile = this.#parsePermissionProfile(params);
-			if (params.model != null && params.model !== this.target.model?.id)
-				throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
+			if (params.multiAgentMode != null && params.multiAgentMode !== "explicitRequestOnly")
+				throw new ProtocolError(-32602, "Unsupported multi-agent mode");
+			if (params.serviceTier != null) throw new ProtocolError(-32602, "Service tiers are not supported");
 			if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
 				throw new ProtocolError(-32602, "Unsupported working directory override");
 			if (params.summary != null && !["auto", "concise", "detailed", "none"].includes(String(params.summary)))
 				throw new ProtocolError(-32602, "Unsupported reasoning summary");
-			const collaborationMode = this.#parseCollaborationMode(params.collaborationMode);
-			this.#validateEffort(params.effort);
+			const selectedModel = this.#resolveModel(params.model);
+			this.#validateEffort(params.effort, selectedModel);
+			const collaborationMode = this.#parseCollaborationMode(params.collaborationMode, selectedModel);
+			const changesModel =
+				selectedModel.id !== this.target.model?.id || selectedModel.provider !== this.target.model?.provider;
+			if (changesModel) await this.#applyModel(epoch, selectedModel, params.effort);
 			if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
-			else this.#applyEffort(params.effort);
+			else if (!changesModel) this.#applyEffort(params.effort);
 			if (params.approvalPolicy != null || params.approvalsReviewer != null || params.sandboxPolicy != null)
 				applyRemotePermissionProfile(this.target.settings, permissionProfile);
+			if (this.#durable)
+				await this.#effect(epoch, async () => {
+					await this.target.sessionManager.ensureOnDisk();
+					await this.target.sessionManager.flush();
+				});
 			const effort = this.thread().reasoningEffort;
 			const activePermission = remotePermissionProfile(this.target.settings);
 			this.#emit("thread/settings/updated", {
@@ -948,6 +1013,14 @@ export class RemoteSession {
 			return {};
 		}
 		if (method === "thread/goal/get") return { goal: null };
+		if (method === "xcsh/thread/flush") {
+			if (this.#durable)
+				await this.#effect(epoch, async () => {
+					await this.target.sessionManager.ensureOnDisk();
+					await this.target.sessionManager.flush();
+				});
+			return {};
+		}
 		if (method === "thread/queue/list") {
 			const limit = params.limit ?? 100;
 			if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
@@ -969,6 +1042,47 @@ export class RemoteSession {
 			};
 		}
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
+		if (method === "thread/compact/start") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Compaction requires persisted session history");
+			void this.#effect(epoch, () => this.target.compact()).catch(() => {
+				this.#emit("error", { message: "Thread compaction failed" });
+			});
+			return {};
+		}
+		if (method === "thread/revert") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Revert requires persisted session history");
+			if (typeof params.beforeTurnId !== "string") throw new ProtocolError(-32602, "Invalid revert turn");
+			const snapshot = projectHistorySnapshot(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active) || this.target.isStreaming,
+				this.target.sessionManager.getCwd(),
+			);
+			const firstItem = snapshot.timeline.find(
+				row => row.entry.type === "item" && row.entry.turnId === params.beforeTurnId,
+			);
+			if (!firstItem) throw new ProtocolError(-32602, "Revert turn not found");
+			await this.#effect(epoch, async () => {
+				if (this.#active || this.target.isStreaming) await this.target.abort();
+				const navigation = await this.target.navigateTree(firstItem.sourceId);
+				if (navigation.cancelled) throw new ProtocolError(-32000, "Thread revert was cancelled");
+				await this.target.sessionManager.flush();
+			});
+			const history = this.history();
+			const thread = this.thread(false);
+			setTimeout(() => this.#emit("thread/reverted", {}), 0);
+			return {
+				thread,
+				turnsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "turns" },
+					history.at(-1)?.id,
+				),
+				itemsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "items" },
+					history.flatMap(value => value.items).at(-1)?.id as string | undefined,
+				),
+			};
+		}
 		if (method === "thread/timeline/list") {
 			if (!this.#durable) throw new ProtocolError(-32601, "Timeline requires persisted session history");
 			const snapshot = projectHistorySnapshot(
@@ -1180,15 +1294,45 @@ export class RemoteSession {
 		);
 		return { turn: { ...active } };
 	}
-	#validateEffort(effort: unknown): ThinkingLevel | undefined {
+	#resolveModel(value: unknown): Model {
+		const current = this.target.model;
+		if (value == null || value === current?.id) {
+			if (!current) throw new ProtocolError(-32602, "No model is selected");
+			return current;
+		}
+		if (typeof value !== "string" || !value || value.length > 256)
+			throw new ProtocolError(-32602, "Invalid model selection");
+		const available = filterCurrentBrowserModels(this.target.modelRegistry?.getAvailable?.() ?? []);
+		const preferred = available.find(model => model.provider === current?.provider && model.id === value);
+		const matches = available.filter(model => model.id === value);
+		const selected = preferred ?? (matches.length === 1 ? matches[0] : undefined);
+		if (!selected) throw new ProtocolError(-32602, "Selected model is unavailable");
+		return selected;
+	}
+	#validateEffort(effort: unknown, model = this.target.model): ThinkingLevel | undefined {
 		if (effort == null) return undefined;
-		const supported = this.target.model?.thinking?.supportedLevels;
+		const supported = model?.thinking?.supportedLevels;
 		if (
 			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(effort)) ||
 			(supported && !supported.some(level => level.effort === effort))
 		)
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
 		return (effort === "none" ? "off" : effort) as ThinkingLevel;
+	}
+	async #applyModel(epoch: number, model: Model, effort: unknown): Promise<void> {
+		if (!this.controls.setModel) throw new ProtocolError(-32602, "The terminal cannot change model");
+		if (this.target.isStreaming || this.#active)
+			throw new ProtocolError(-32000, "The selected model cannot change while a turn is running");
+		const level = this.#validateEffort(effort, model);
+		try {
+			await this.#effect(epoch, () => this.controls.setModel!(model, level));
+		} catch {
+			throw new ProtocolError(-32000, "Could not change the selected model");
+		}
+		this.#assertCurrent(epoch);
+		if (this.target.model?.id !== model.id || this.target.model?.provider !== model.provider)
+			throw new ProtocolError(-32000, "The selected model did not become active");
+		this.#updatedAt = Math.floor(Date.now() / 1000);
 	}
 	#applyEffort(effort: unknown): void {
 		const level = this.#validateEffort(effort);
@@ -1199,7 +1343,10 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
 		}
 	}
-	#parseCollaborationMode(value: unknown): { mode: RemoteCollaborationMode; reasoningEffort: unknown } | undefined {
+	#parseCollaborationMode(
+		value: unknown,
+		model = this.target.model,
+	): { mode: RemoteCollaborationMode; reasoningEffort: unknown } | undefined {
 		if (value == null) return undefined;
 		if (typeof value !== "object" || Array.isArray(value))
 			throw new ProtocolError(-32602, "Invalid collaboration mode");
@@ -1217,11 +1364,11 @@ export class RemoteSession {
 		const settings = collaboration.settings as Record<string, unknown>;
 		if (Object.keys(settings).some(key => !["model", "reasoning_effort", "developer_instructions"].includes(key)))
 			throw new ProtocolError(-32602, "Unsupported custom collaboration mode settings");
-		if (typeof settings.model !== "string" || settings.model !== this.target.model?.id)
+		if (typeof settings.model !== "string" || settings.model !== model?.id)
 			throw new ProtocolError(-32602, "Collaboration mode must preserve the terminal's selected model");
 		if (settings.developer_instructions != null)
 			throw new ProtocolError(-32602, "Custom collaboration instructions are not supported");
-		this.#validateEffort(settings.reasoning_effort);
+		this.#validateEffort(settings.reasoning_effort, model);
 		return { mode: collaboration.mode, reasoningEffort: settings.reasoning_effort };
 	}
 	async #applyCollaborationMode(
@@ -1257,7 +1404,7 @@ export class RemoteSession {
 					return;
 				}
 				if (result.status === "interrupted") {
-					resolve("The task was cancelled.");
+					resolve("The active turn was interrupted. This does not confirm that completed actions were undone.");
 					return;
 				}
 				resolve(

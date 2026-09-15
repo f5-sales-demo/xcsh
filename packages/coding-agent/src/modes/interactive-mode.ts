@@ -65,6 +65,7 @@ import { EventController } from "./controllers/event-controller";
 import { ExtensionUiController } from "./controllers/extension-ui-controller";
 import { InputController } from "./controllers/input-controller";
 import { MCPCommandController } from "./controllers/mcp-command-controller";
+import { applyModelSelection, prepareModelSelection } from "./controllers/model-selection";
 import { SelectorController } from "./controllers/selector-controller";
 import { SSHCommandController } from "./controllers/ssh-command-controller";
 import { OAuthManualInputManager } from "./oauth-manual-input";
@@ -2532,6 +2533,24 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#stopRemoteBridge ??= startSessionBridge(this.session, undefined, undefined, {
 			getCollaborationMode: () => this.getRemoteCollaborationMode(),
 			setCollaborationMode: mode => this.setRemoteCollaborationMode(mode),
+			setModel: async (model, thinkingLevel) => {
+				const resolvedThinking = (thinkingLevel ??
+					(model.thinking?.defaultLevel === "none"
+						? "off"
+						: (model.thinking?.defaultLevel ?? "inherit"))) as ThinkingLevel;
+				const selection = {
+					scope: "conversation" as const,
+					model,
+					selector: `${model.provider}/${model.id}`,
+					thinkingLevel: resolvedThinking,
+				};
+				const proposal = prepareModelSelection(this.session, selection, this.session.sessionId);
+				if (!proposal) throw new Error("The selected model is no longer available");
+				await applyModelSelection(this.session, proposal.target);
+				this.statusLine.invalidate();
+				this.updateEditorBorderColor();
+				this.ui.requestRender();
+			},
 		});
 	}
 }

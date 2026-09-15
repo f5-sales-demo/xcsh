@@ -1,7 +1,7 @@
 # Packaged remote-session check
 
-This Linux integration check runs the production xcsh binary, its background host
-and two actual terminal sessions inside a disposable Ubuntu container. The
+This Linux integration check runs the production xcsh binary, its background host,
+one current terminal session and one phone-created managed session inside a disposable Ubuntu container. The
 container has no Codex, standalone Bun, repository checkout or package dependencies.
 Networking is disabled. The host-side Bun harness drives real pseudo-terminals
 and the native host's local socket; it never creates an AgentSession itself.
@@ -22,19 +22,25 @@ directory. The container runs as the invoking user, with all capabilities droppe
 a read-only root filesystem and an empty writable home for logs and native-addon
 extraction. Cleanup removes only its uniquely named container and its processes.
 
-The provider supplies deterministic model responses; the packaged terminal agent
-executes the ordinary `write` and `read` tools. The fixture rejects tool errors and
+The provider supplies deterministic model responses; the packaged terminal and
+managed agents execute the ordinary `write` and `read` tools. The fixture rejects tool errors and
 checks that the actual read result contains the written marker before replying.
 Enrollment is synthetic and cannot reach the service. This checks packaged
 independence and session integration, not subscription enrollment, live model
-capabilities, phone behavior, voice or complete protocol parity.
+capabilities, WebRTC voice or complete physical-phone protocol parity.
 
-The assertions cover default-off status, discovery of two named terminal owners,
+The assertions cover default-off status, discovery of one current terminal owner,
 correct working-directory routing, native file-change facts and successful read
 results in history, clean and abrupt host restart, active terminal work surviving
 host process loss, stable-request replay without repeated turns, compiled
 `--resume` with preserved identity/history/extension model, durable replay after
-the terminal process itself restarts, and removal on terminal exit.
+the terminal process itself restarts, and removal on terminal exit. The packaged
+phone bootstrap additionally verifies dynamic model discovery, explicit cwd routing,
+real tool delegation, durable worker survival across host replacement, cold resume
+after a worker crash, and exactly-once replay. Lifecycle checks cover supervised
+crash replacement, intentional disable terminating an unloaded worker, stale
+process-state recovery, one winner under concurrent supervisor startup, and
+non-spawning degradation after a bounded crash loop.
 
 The evidence directory retains terminal/host logs, saved sessions, history
 responses and `result.json`. The result records binary, harness and provider
@@ -58,4 +64,5 @@ prove the persisted client-message ledger prevents a second execution.
 `evidence-permission-boundary-2026-09-10.json` records the clean `b3953eecc`
 artifact after permission-profile discovery and explicit unowned permission/MCP
 request rejection. It passed all ten checks under Bun 1.4.2 before that exact
-binary started the four-session trace-bound live checkpoint.
+binary started the now-superseded four-session trace-bound live checkpoint. Current
+qualification uses one current terminal with its dynamic model catalog.

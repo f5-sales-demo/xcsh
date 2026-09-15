@@ -26,6 +26,7 @@ import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
 import { getLoginOptions } from "../modes/controllers/login-options";
 import { theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
+import { resolveRemoteThreadId } from "../remote-control/thread-identity";
 import { ContextService } from "../services/xcsh-context";
 import { handleFastCommand } from "./fast-command";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
@@ -682,11 +683,56 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 	},
 	{
 		name: "remote",
-		description: "Show native xcsh remote host status",
-		handle: async (_command, runtime) => {
-			const { remoteStatus } = await import("../remote-control/control");
-			const status = await remoteStatus();
-			runtime.ctx.showStatus(`Remote: ${status.relay}; live terminal sessions: ${status.liveSessions}`);
+		description: "Manage the native xcsh remote connection",
+		subcommands: [
+			{ name: "status", description: "Show relay and current terminal status" },
+			{ name: "enable", description: "Establish the remote connection" },
+			{ name: "restart", description: "Restart the remote connection" },
+			{ name: "disable", description: "Stop the remote connection" },
+			{ name: "pair", description: "Create a phone pairing code" },
+			{ name: "clients", description: "List paired remote clients" },
+			{ name: "revoke", description: "Revoke one client", usage: "<client-id>" },
+		],
+		allowArgs: true,
+		handle: async (command, runtime) => {
+			const [action = "status", ...rest] = command.args.trim().toLowerCase().split(/\s+/).filter(Boolean);
+			if (!(["status", "enable", "restart", "disable", "pair", "clients", "revoke"] as string[]).includes(action)) {
+				runtime.ctx.showError("Usage: /remote [status|enable|restart|disable|pair|clients|revoke <client-id>]");
+				runtime.ctx.editor.setText("");
+				return;
+			}
+			if (action === "revoke" && rest.length !== 1) {
+				runtime.ctx.showError("Usage: /remote revoke <client-id>");
+				runtime.ctx.editor.setText("");
+				return;
+			}
+			try {
+				const { runRemoteControl } = await import("../remote-control/control");
+				const result = (await runRemoteControl(
+					action,
+					action === "revoke"
+						? { clientId: rest[0] }
+						: action === "enable"
+							? {
+									cwd: runtime.ctx.sessionManager.getCwd(),
+									primarySessionId: resolveRemoteThreadId(runtime.ctx.session),
+								}
+							: {},
+				)) as Record<string, unknown> | undefined;
+				if (action === "pair" && result && typeof result.manual_pairing_code === "string")
+					runtime.ctx.showStatus(`Remote pairing code: ${result.manual_pairing_code}`);
+				else if (action === "clients" && Array.isArray(result?.data))
+					runtime.ctx.showStatus(
+						result.data.length
+							? result.data.map(client => String((client as Record<string, unknown>).clientId)).join("\n")
+							: "No paired remote clients.",
+					);
+				else if (result && typeof result.relay === "string")
+					runtime.ctx.showStatus(`Remote: ${result.relay}; live terminal sessions: ${result.liveSessions ?? 0}`);
+				else runtime.ctx.showStatus(`Remote ${action} completed.`);
+			} catch (error) {
+				runtime.ctx.showError(error instanceof Error ? error.message : "Remote action failed");
+			}
 			runtime.ctx.editor.setText("");
 		},
 	},

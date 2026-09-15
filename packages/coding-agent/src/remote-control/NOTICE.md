@@ -39,7 +39,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   terminal answer broker, tool-call binding and host routing are native xcsh code.
 - `codex-rs/app-server/src/request_processors/thread_lifecycle.rs` and
   `app-server-protocol/src/protocol/v2/thread.rs`: pending-request retirement before
-  unload and the `thread/closed` notification. Its schema fixture is unchanged.
+  unload and the `thread/closed` notification. The start, fork, archive,
+  unarchive, delete, compact, and revert request/response/notification schema
+  fixtures are unchanged copies of the pinned source.
 - `codex-rs/app-server-protocol/src/protocol/item_builders.rs`: file-change
   conversion, raw add/delete contents, rename suffix and UTF-8 path ordering.
   The fixture generator executes the original converter functions with local

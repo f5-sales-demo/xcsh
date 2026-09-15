@@ -1,0 +1,110 @@
+{
+  "source": "Sanitized physical iPhone trace",
+  "scope": "Voice-first blank-chat attempt after process preflight",
+  "redaction": "Only method order, parameter keys, JSON types, UTF-8 byte lengths, response classes, and protocol error codes are retained.",
+  "events": [
+    {
+      "direction": "in",
+      "method": "initialize",
+      "parameterKeys": ["capabilities", "clientInfo"],
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "method": "model/list",
+      "parameterKeys": [],
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "method": "fs/readFile",
+      "parameterKeys": ["path"],
+      "responseClass": "error",
+      "errorCode": -32602
+    },
+    {
+      "direction": "in",
+      "method": "fs/readFile",
+      "parameterKeys": ["path"],
+      "responseClass": "error",
+      "errorCode": -32602
+    },
+    {
+      "direction": "in",
+      "method": "process/spawn",
+      "parameterKeys": [
+        "command",
+        "cwd",
+        "outputBytesCap",
+        "processHandle",
+        "streamStdin",
+        "streamStdoutStderr",
+        "timeoutMs",
+        "tty"
+      ],
+      "parameterShape": {
+        "command": { "type": "array", "length": 3 },
+        "cwd": { "type": "string", "bytes": 1 },
+        "processHandle": { "type": "string", "bytes": 51 }
+      },
+      "responseClass": "result"
+    },
+    {
+      "direction": "out",
+      "method": "process/exited",
+      "parameterKeys": [
+        "exitCode",
+        "processHandle",
+        "stderr",
+        "stderrCapReached",
+        "stdout",
+        "stdoutCapReached"
+      ],
+      "parameterShape": {
+        "processHandle": { "type": "string", "bytes": 51 },
+        "stderr": { "type": "string", "bytes": 0 },
+        "stdout": { "type": "string", "bytes": 63 }
+      },
+      "responseClass": "notification"
+    },
+    {
+      "direction": "in",
+      "method": "thread/start",
+      "parameterKeys": [
+        "approvalPolicy",
+        "approvalsReviewer",
+        "config",
+        "cwd",
+        "developerInstructions",
+        "dynamicTools",
+        "ephemeral",
+        "historyMode",
+        "model",
+        "sandbox",
+        "threadSource"
+      ],
+      "parameterShape": {
+        "approvalPolicy": { "type": "string", "bytes": 5 },
+        "approvalsReviewer": { "type": "string", "bytes": 4 },
+        "config": {
+          "type": "object",
+          "keys": [
+            "experimental_realtime_ws_model",
+            "features.concurrent_reasoning_summaries",
+            "features.realtime_conversation",
+            "model_reasoning_effort",
+            "realtime.version"
+          ]
+        },
+        "cwd": { "type": "string", "bytes": 62 },
+        "developerInstructions": { "type": "string", "bytes": 420 },
+        "dynamicTools": { "type": "array", "length": 0 },
+        "model": { "type": "string", "bytes": 12 },
+        "sandbox": { "type": "string", "bytes": 18 }
+      },
+      "responseClass": "error",
+      "errorCode": -32602,
+      "errorMessageBytes": 35
+    }
+  ]
+}

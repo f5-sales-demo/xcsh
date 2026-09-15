@@ -10,6 +10,11 @@ Pass all path `{placeholder}` values via `params`, e.g. `{ namespace: "default",
 Body is sent for all methods except GET when `payload` is provided — including DELETE operations that require a body.
 Payload values like `$XCSH_NAMESPACE` are auto-expanded from the active context.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
+For a scoped question about one resource type, set `expandDiscovery: false` on single-path GETs. This retrieves the requested endpoint's full response, including available creator metadata and pagination, without automatically expanding to unrelated resource types. Use batch namespace discovery for broad inventory requests. Once returned metadata answers the question, do not repeat detail GETs just to reconfirm it.
+When the user also requests a context switch, first complete `xcsh_context` activation and check its effective target and connection result. Then issue the resource query. Do not query an old tenant after a failed or cancelled selection.
+Set `contextName` to the user's requested context on subsequent API calls. This precondition rejects calls targeting a different active context before they contact the tenant. It complements selection; it does not perform a switch.
+
+For a human creator filter, first use an explicitly supplied tenant-specific creator ID or retrieve `xcsh://user` for a confirmed, user-owned ID for this tenant. Otherwise correlate a known human identifier with an authoritative tenant identity response using catalog-documented operations. A token's principal, profile email alone, or accessible inventory does not establish the human's creator ID. If no human identifier is known, ask one concise question for the creator ID before searching identity catalogs. Stop discovery when identity remains unavailable; do not guess or search unrelated identity features. Filter returned `creator_id` or `system_metadata.creator_id`; fetch details only when that metadata is missing. Report unknown attribution, namespace/type coverage, pagination and access gaps honestly. Never label all accessible resources as the user's resources.
 The payload templates below are reference examples. When the API catalog is available,
 prefer `xcsh://api-catalog/?resource={resource_name}&compact=true` for the current minimum payload
 over these static templates.

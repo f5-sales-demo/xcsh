@@ -1,8 +1,11 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import { ModelRegistry } from "../../src/config/model-registry";
 import { Settings } from "../../src/config/settings";
+import { applyModelSelection } from "../../src/modes/controllers/model-selection";
+import { RemoteSession } from "../../src/remote-control/session";
 import { createAgentSession } from "../../src/sdk";
 import { AuthStorage } from "../../src/session/auth-storage";
 import { SessionManager } from "../../src/session/session-manager";
@@ -27,7 +30,15 @@ async function fixture() {
 		models: models.map(id => ({
 			id,
 			name: id,
-			reasoning: false,
+			reasoning: true,
+			thinking: {
+				supportedLevels: [
+					{ effort: "low", description: "Low" },
+					{ effort: "high", description: "High" },
+				],
+				defaultLevel: "low",
+				mode: "effort",
+			},
 			input: ["text"],
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			contextWindow: 128000,
@@ -89,6 +100,44 @@ test.each(models)("explicit resume with %s remains selected on the next implicit
 	await selected.dispose();
 	const resumed = await create(await SessionManager.open(file));
 	expect(resumed.session.model?.id).toBe(model);
+});
+
+test("an iPhone model and effort selection survives a complete session restart", async () => {
+	const { dir, create } = await fixture();
+	const { session } = await create(SessionManager.create(dir, dir), "gpt-6-astra");
+	const remote = new RemoteSession(session, "21.22.0", {
+		setModel: async (model, thinkingLevel) => {
+			await applyModelSelection(session, {
+				scope: "conversation",
+				model,
+				selector: `${model.provider}/${model.id}`,
+				thinkingLevel: thinkingLevel ?? ThinkingLevel.Inherit,
+			});
+		},
+	});
+	await remote.call("phone-model", "thread/settings/update", {
+		threadId: session.sessionId,
+		model: "gpt-5.6-sol",
+		effort: "high",
+		serviceTier: null,
+	});
+	expect(session.model?.id).toBe("gpt-5.6-sol");
+	expect(session.thinkingLevel).toBe(ThinkingLevel.High);
+	const file = session.sessionFile!;
+	await remote.call("phone-effort", "thread/settings/update", {
+		threadId: session.sessionId,
+		model: "gpt-5.6-sol",
+		effort: "low",
+		serviceTier: null,
+	});
+	const persistedBeforeShutdown = await SessionManager.open(file);
+	expect(persistedBeforeShutdown.buildSessionContext().thinkingLevel).toBe(ThinkingLevel.Low);
+	remote.dispose();
+	await session.dispose();
+
+	const { session: resumed } = await create(await SessionManager.open(file));
+	expect(resumed.model?.id).toBe("gpt-5.6-sol");
+	expect(resumed.thinkingLevel).toBe(ThinkingLevel.Low);
 });
 
 test.each(models.flatMap(model => ["branch", "tree", "handoff"].map(operation => ({ model, operation }))))(

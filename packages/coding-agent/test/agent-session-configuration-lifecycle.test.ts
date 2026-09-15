@@ -163,7 +163,7 @@ test.each(["new", "close", "selection", "abort"])(
 		};
 		await session.prompt("Trigger fallback");
 		await session.waitForIdle();
-		expect(session.model).toEqual(target);
+		expect(session.model).toMatchObject({ provider: target.provider, id: target.id });
 		expect(requests).toEqual([original.id, target.id]);
 		registry.suppressSelector(`${original.provider}/${original.id}`, 0);
 		const entered = Promise.withResolvers<void>();
@@ -186,7 +186,7 @@ test.each(["new", "close", "selection", "abort"])(
 			release.resolve();
 			await pending;
 		}
-		expect(session.model).toEqual(target);
+		expect(session.model).toMatchObject({ provider: target.provider, id: target.id });
 		expect(manager.getBranch().filter(entry => entry.type === "model_change")).toEqual(
 			before.filter(entry => entry.type === "model_change"),
 		);

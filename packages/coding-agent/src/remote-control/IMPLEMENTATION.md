@@ -192,6 +192,7 @@ From the feature worktree:
 
 ```sh
 bun packages/coding-agent/src/cli.ts remote-control enable --json
+bun packages/coding-agent/src/cli.ts remote-control restart --json
 bun packages/coding-agent/src/cli.ts remote-control status --json
 bun packages/coding-agent/src/cli.ts remote-control pair
 bun packages/coding-agent/src/cli.ts remote-control disable
@@ -2747,3 +2748,115 @@ same current scope before freezing its snapshot. The regression creates
 distinct project-A and project-B summaries, moves the session, and asserts that
 the rebuilt prompt and memory reader contain B but not A. Memory remains
 project-scoped; no summaries are copied or aggregated across roots.
+
+## Shared mobile model selection
+
+The remote model catalog is now registered by each attached AgentSession and
+validated by the private host. It uses the same current-model filter as the TUI
+and publishes user-facing names, input modalities, supported effort values, and
+defaults through the pinned `model/list` schema.
+
+The iPhone's existing `thread/settings/update` control can change model and
+effort as one operation. The adapter resolves only a currently available model,
+validates effort against the destination model before mutation, and invokes the
+TUI's conversation-scoped model transaction. That transaction handles credential
+validation, provider-session reset, manual routing pinning, session history,
+rollback, and synchronous persistence. Effort-only changes are flushed before
+acknowledgement. A settings notification immediately refreshes the host's thread
+snapshot and the app's selected controls.
+The app also sends its advertised `multiAgentMode` value with settings changes;
+xcsh accepts the canonical `explicitRequestOnly` value and rejects other modes.
+After a successful resume response, the host replays the active settings
+snapshot to that subscribed client. This compensates for the iPhone control
+rehydrating from the catalog default while preserving the model catalog's
+global default and the thread's actual effort, collaboration mode, and
+permission state.
+Settings updates and turn starts share an admission queue, so sending immediately
+after a tap waits for credential validation and persistence instead of racing the
+old model. Once any owner publishes a validated catalog, the compatibility
+fallback cannot reintroduce a historical active model.
+
+## Durable remote-control lifecycle — issue 3873
+
+The 2026-09-14 lifecycle implementation replaces the one-shot host with an
+owner-only supervisor. `enable`, `restart`, and `disable` serialize through one
+lifecycle lock and are idempotent. On Linux, `enable` atomically reconciles and
+enables `xcsh-remote-control.service` in the user systemd manager. The unit has
+no credentials, starts only the supervisor, restarts it on failure, and uses
+`KillMode=mixed` so graceful shutdown reaches the supervisor before its host.
+Other platforms use the same supervisor as a detached process.
+
+The supervisor owns one host generation. Its PID records contain the PID,
+process start time, resolved executable path, executable SHA-256, and generation.
+Signals and stale-record removal require an exact identity match. A replacement
+supervisor may adopt a surviving host only when that record is still live and
+belongs to the current generation. Private state, sockets, and logs use owner-only
+permissions. A competing supervisor must win the socket bind before publishing
+its PID, so a failed contender cannot overwrite the live owner.
+
+The host is probed every two seconds with a one-second deadline and receives ten
+seconds to start. An exit or three failed probes triggers a full-jitter restart
+delay beginning at 500 ms and capped at 30 seconds. Five failures in five minutes
+persist a non-spawning degraded state across supervisor restarts. Only an explicit
+`enable` or `restart` creates a new generation and resets that breaker. Startup
+transitions restore the preceding lifecycle snapshot and enabled flag if service
+startup fails.
+
+Shutdown stops admission and waits up to 60 seconds for in-flight routing and
+unacknowledged outbound relay work. It then signals only an identity-verified
+process, escalating from TERM to KILL within a bounded service stop window. An
+intentional `disable` writes the disabled state before stopping the service, so
+systemd cannot restart either process at login or after a failure.
+
+Relay clients are keyed by `(clientId, streamId)`. Same-stream initialization
+replaces and completely clears the old logical owner, while sibling streams remain
+independent. Unknown non-initialize traffic is discarded without retaining codec
+state. Clients expire after ten idle minutes on a 30-second sweep; client closure,
+outbound termination, shutdown, and replacement all release subscriptions,
+interaction delivery ownership, process ownership, codec state, and bounded
+queues. Ingress and outbound queues are capped at 128. Saturated requests receive
+`-32001` with `Server overloaded; retry later.` without closing healthy streams.
+Cursor and unacknowledged output survive relay reconnects; heartbeat and reconnect
+timing use 10-second pings, a 60-second pong deadline, and capped full jitter.
+
+Deterministic coverage includes process-identity mismatch, stale/corrupt state and
+locks, socket collision, concurrent supervisor startup, persisted degradation,
+host crash replacement, intentional disable, bounded drain, relay replacement and
+expiry, overload isolation, reconnect replay, one current-session registration,
+and model/effort selection persistence. The iPhone host label is exactly
+`xcsh - <workstation>`: `xcsh` is always lowercase. The live Ubuntu runtime is not
+changed until a new full-SHA immutable package passes every offline gate.
+
+## Phone-created session lifecycle — issue 3873 supersession
+
+The 2026-09-14 session-lifecycle work supersedes earlier dated statements that
+`thread/start`, `thread/fork`, or phone-created sessions are unsupported. The host
+still exposes exactly one selected terminal initially. A phone may additionally
+create durable or ephemeral sessions, and those managed sessions then remain
+visible alongside the selected terminal.
+
+Managed sessions use ordinary `AgentSession` construction, extension and tool
+discovery, approval handling, history, model selection, and context bootstrap.
+Their cwd is selected in this order: an explicit normalized phone cwd, the exposed
+terminal cwd, then the cwd saved by `/remote enable`. Durable metadata is written
+to an owner-only catalog. Cold read does not load a worker; concurrent resume is
+single-flight; idle unsubscribed workers unload after 30 minutes; and archived
+history remains cold-readable and restorable.
+
+Each loaded phone session is owned by a separate worker process and owner-only
+Unix socket. Host replacement detaches rather than cancels durable workers, so an
+active turn continues and its bounded event queue replays once to the replacement.
+Worker PID records use the same PID, start-time, executable-path, executable-hash,
+and generation checks as host lifecycle records. Delete, archive, idle unload, and
+intentional disable wait for session disposal and terminate only the exact worker;
+ordinary host replacement does not. Catalog paths are constrained to the session,
+archive, and worker roots before they can be opened, moved, or deleted.
+
+The implemented Codex 0.153.4 lifecycle surface is `thread/start`, `thread/fork`,
+`thread/archive`, `thread/unarchive`, `thread/delete`, `thread/compact/start`, and
+`thread/revert`. Stable and experimental thread projections, pagination, ephemeral
+fork history, response-before-notification ordering, and explicit protocol errors
+are covered by pinned schemas. Voice on a managed session uses the same WebRTC v3,
+persona, delegation, approval, cancellation, and replay implementation as the
+terminal session. Context changes remain tool-owned through `xcsh_context`; the
+voice model does not parse the TUI-only `/context` command.

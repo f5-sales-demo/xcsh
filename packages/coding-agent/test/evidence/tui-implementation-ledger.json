@@ -7900,6 +7900,166 @@
     },
     {
       "surface": {
+        "id": "/remote <arguments>",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "typed-arguments",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote clients",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote disable",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote enable",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote pair",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote restart",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote revoke",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/remote status",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/remote"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "/rename",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"
@@ -9426,6 +9586,34 @@
       "fingerprint": null,
       "notes": [
         "Automated approval and cancellation tests pass. Physical terminal and iPhone acceptance remain pending."
+      ]
+    },
+    {
+      "surface": {
+        "id": "dialog:packages/coding-agent/src/tools/xcsh-context.ts:select:1",
+        "source": "packages/coding-agent/src/tools/xcsh-context.ts",
+        "kind": "extension-dialog"
+      },
+      "status": "in-progress",
+      "adapter": "Existing ExtensionUIContext.select and attached-session interaction owner",
+      "reviewPolicy": "Ask approves a configuration-checked context selection; Plan blocks selection; cancellation and changed targets cannot commit",
+      "states": [
+        "approval",
+        "decline",
+        "cancel",
+        "late response"
+      ],
+      "tests": [
+        "packages/coding-agent/test/xcsh-context-tool.test.ts"
+      ],
+      "persistence": [
+        "Current process environment overlay only; saved context files remain unchanged"
+      ],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Automated approval and cancellation tests cover the selection contract. Physical terminal and phone interaction evaluation remains pending."
       ]
     },
     {

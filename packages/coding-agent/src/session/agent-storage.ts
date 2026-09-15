@@ -73,10 +73,13 @@ export class AgentStorage {
 	 * AuthCredentialStore handles auth_credentials and cache tables.
 	 */
 	#initializeSchema(): void {
+		// Configure lock waiting before the first pragma that can need a write lock.
+		// The remote-control host and TUIs routinely initialize this database in
+		// separate processes during the same startup window.
+		this.#db.run("PRAGMA busy_timeout=5000;");
 		this.#db.run(`
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
-PRAGMA busy_timeout=5000;
 
 CREATE TABLE IF NOT EXISTS model_usage (
 	model_key TEXT PRIMARY KEY,

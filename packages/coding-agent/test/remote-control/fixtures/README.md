@@ -15,6 +15,8 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSetName{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadNameUpdatedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadStartedNotification.json`
+- `codex-rs/app-server-protocol/schema/json/v2/Thread{Start,Fork,Archive,Unarchive,Delete,CompactStart,Revert}{Params,Response}.json`
+- `codex-rs/app-server-protocol/schema/json/v2/Thread{Archived,Unarchived,Deleted,Reverted}Notification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtime{Started,Closed,Error,TranscriptDelta,TranscriptDone}Notification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtimeItem{Started,Completed,TranscriptDelta}Notification.json`
 
@@ -33,6 +35,13 @@ copies of the pinned source. Their SHA-256 values are
 `ThreadStartedNotification.json` is also a byte-for-byte copy. Its SHA-256 is
 `d66a9b4563471c5fe99de18cb2bd3c83e7b6aac8deb0b0579406b3b7c74d7b35`.
 It validates the replacement-thread announcement after a terminal session change.
+
+The lifecycle schemas are also byte-for-byte copies. The large start, fork,
+unarchive, and revert response fixture SHA-256 values are respectively
+`656f8fd0fe91f533126cbfdb9369cfab550927a229e48dd46460f6f015d2b186`,
+`c15e43ec275b370df2d831cb5147f7ff399aab2e74d091c07cdb3de57db11f94`,
+`1df1bd13818b3c22a2fb4a64c55b393778e0eaa65547744333d8df9bb40a29cd`,
+and `de7206155e188cea30dfd81fb3295d6e2554a7cc7b58202c4b0a49e9623affe1`.
 
 `PermissionProfileListParams.json` and `PermissionProfileListResponse.json` are
 also byte-for-byte copies. Their SHA-256 values are

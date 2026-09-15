@@ -15,6 +15,7 @@ completion of another. Codex baseline: 0.153.4,
 | Private per-user host and state; default off | Fresh isolated CLI and package checks report disabled by default; host startup rejects a live owner and safely reclaims only a dead current-user socket. On final artifact `12d945ac4-r2`, the live state directory is `0700`; host state, log and socket are `0600`; final credential/raw-audio pattern scans returned no matches | Retain these checks in CI |
 | Discover every live top-level terminal, exclude subagents | Automated lifecycle coverage includes 128 owners, last-page routing, heartbeat expiry and subagent exclusion. Final artifact `12d945ac4-r2` reports exactly Luna, Astra, Sol and Terra with stable IDs and work models; Robin confirmed all four were discoverable on the iPhone after cutover | Retain exactly four canonical sessions through release; phone-created headless sessions remain excluded |
 | Preserve session identity, name, cwd, history and work model | Four-model lifecycle and compiled-resume checks preserve identity/history/model. The accepted `acfa258` Plan checkpoint retained Luna's durable phone thread while local execution moved. Final artifact `12d945ac4-r2` preserves all four IDs/names/models; Robin confirmed their prior transcripts were visible | Complete remaining iPhone fork/catalog presentation without repeating the accepted Plan checkpoint |
+| Model and effort buttons match the TUI | Both surfaces share the current catalog filter and target-model effort metadata. Phone-shaped bridge tests switch model and effort together, update discovery immediately, reject stale or unsupported choices, and restore the exact pair after restart | Confirm Luna, Terra, Sol, and Astra labels, effort menus, taps, and post-reconnect state on the physical iPhone |
 | One executor and persistence owner | RemoteSession uses the existing AgentSession and durable request ledger. On `12d945ac4-r2`, a second client attached mid-turn and an identical retry returned the original turn without another history entry; cross-interface steering kept the terminal turn ID and produced one replacement fixture | Manual iPhone confirmation of concurrent control without duplicate tools |
 | Canonical complete history and pagination | Persisted branch/timeline, visible item projections, fork ancestry, Plan/Default modes and skill bootstrap match pinned schemas. On `12d945ac4-r2`, stable and experimental discovery each paged twice; every turn and item across all four sessions paged without gaps or duplicates; a second client attached while Terra was `inProgress` and observed completion | Phone catalog/fork and mid-stream presentation acceptance |
 | Typed prompts and streamed turns | Manual routing and real AgentSession tool execution passed. Current `12d945ac4-r2` history pagination matched live reads, a second client attached during active work, and the completed marker persisted with stable identity | Concurrent iPhone/terminal presentation acceptance |
@@ -473,3 +474,54 @@ prompt, `memory://root`, and every fresh voice snapshot; `/move` also rebuilds
 the effective prompt after the project changes. An A-to-B regression proves
 that only project B memory is retained. Automated parity and a new immutable
 runtime must pass before Robin repeats the physical Sol observation.
+
+## Durable lifecycle acceptance gate — 2026-09-14
+
+Issue #3873 now requires process and relay recovery before physical phone
+acceptance. Automated tests cover lock serialization, atomic owner-only state,
+PID reuse and executable mismatch, stale and corrupt records, socket collisions,
+systemd-user reconciliation, host crash replacement, persisted disable, graceful
+drain, and the five-failures-in-five-minutes degraded breaker. Relay tests cover
+same-stream replacement, sibling streams, unknown traffic, idle and explicit
+closure, bounded ingress/outbound queues, isolated overload replies, replay,
+heartbeat timeout, and capped jittered reconnects.
+
+The default remote catalog now presents one current terminal, with that terminal's
+own dynamic model and effort catalog. The recovery test re-registers that current
+session and requires its identity, selected model, history, pending approval, and
+stable request result to survive without a second tenant execution. Historical
+multi-session fixtures remain test evidence only; they are not a product default.
+
+Release acceptance still requires all of the following against one clean merged
+source revision: the full remote-control and guarded coding-agent suites; type,
+Biome, prompt, documentation, bundle, pinned-source, PII, secret, and whitespace
+checks; the network-disabled 17-check packaged receipt plus cleanup; and the clean 16-case
+context evaluator with private review of every synthetic answer. A newly named
+immutable artifact must embed the full 40-character source SHA and pass permission
+and hash verification before replacing the current host.
+
+After offline qualification, the supervised Ubuntu host must be killed once. The
+result is accepted only if exactly one replacement appears, the relay reconnects,
+the current session returns with unchanged identity, selected model, and history
+summary, no turn/approval/tenant request duplicates occur, and the systemd user
+service remains enabled. Physical iPhone checks then cover workstation-state
+presentation, combined and follow-up speech, corrections, missing names,
+approval/denial/cancellation UI, interruption, target ordering, and concise spoken
+output. No merge is allowed before those observations pass.
+
+## Phone session lifecycle supersession — 2026-09-14
+
+Earlier dated rows and checkpoints that call `thread/fork` unsupported or exclude
+phone-created headless sessions describe prior immutable artifacts. They are
+superseded for the issue #3873 candidate by pinned-schema coverage for start, exact
+history fork, archive, unarchive, delete, compact, and revert. Automated bootstrap
+coverage now exercises initialize, model discovery, `thread/start`, WebRTC v3 SDP,
+and voice delegation in order.
+
+The candidate keeps one deterministic terminal visible at startup and adds only
+sessions created by the phone. Durable workers survive host replacement without
+duplicating turns, tools, approvals, or tenant requests; cold resume is
+single-flight; idle workers unload; and intentional disable also stops durable
+workers that the replacement host has not loaded. This is automated evidence only.
+The final physical iPhone checks and immutable-artifact/cutover gates below remain
+required.
