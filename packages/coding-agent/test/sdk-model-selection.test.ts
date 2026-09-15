@@ -81,6 +81,50 @@ describe("createAgentSession deferred model pattern resolution", () => {
 		expect(modelFallbackMessage).toBeUndefined();
 	});
 
+	test("discovers extension models from an explicit agent directory", async () => {
+		const extensionsDir = path.join(tempDir, "extensions");
+		fs.mkdirSync(extensionsDir, { recursive: true });
+		fs.writeFileSync(
+			path.join(extensionsDir, "agent-dir-provider.ts"),
+			`export default function agentDirProvider(pi: any) {
+	pi.registerProvider("agent-dir-provider", {
+		baseUrl: "https://agent-dir.example.com/v1",
+		apiKey: "fixture-key",
+		api: "openai-completions",
+		models: [{
+			id: "agent-dir-model",
+			name: "Agent directory model",
+			reasoning: false,
+			input: ["text"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 128000,
+			maxTokens: 8192,
+		}],
+	});
+}
+`,
+		);
+		const { session, modelFallbackMessage } = await createAgentSession({
+			cwd: tempDir,
+			agentDir: tempDir,
+			sessionManager: SessionManager.inMemory(tempDir),
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+			modelPattern: "agent-dir-provider/agent-dir-model",
+		});
+
+		try {
+			expect(session.model).toMatchObject({ provider: "agent-dir-provider", id: "agent-dir-model" });
+			expect(modelFallbackMessage).toBeUndefined();
+		} finally {
+			await session.dispose();
+		}
+	});
+
 	test("restores a saved extension model and thinking level after provider registration", async () => {
 		const authStorage = await AuthStorage.create(":memory:");
 		authStorage.setRuntimeApiKey("runtime-provider", "fixture-key");

@@ -1,4 +1,5 @@
 import * as os from "node:os";
+import * as path from "node:path";
 import {
 	Agent,
 	type AgentEvent,
@@ -1371,7 +1372,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			}
 		} else {
 			// Merge CLI extension paths with settings extension paths
-			const configuredPaths = [...(options.additionalExtensionPaths ?? []), ...(settings.get("extensions") ?? [])];
+			const configuredPaths = [
+				path.join(agentDir, "extensions"),
+				...(options.additionalExtensionPaths ?? []),
+				...(settings.get("extensions") ?? []),
+			];
 			const disabledExtensionIds = settings.get("disabledExtensions") ?? [];
 			extensionsResult = await logger.time(
 				"discoverAndLoadExtensions",
