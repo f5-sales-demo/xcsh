@@ -445,9 +445,6 @@ export class RemoteRouter {
 	#defer(client: string, event: Notification): void {
 		setTimeout(() => this.#emit(client, event), 0);
 	}
-	#deferAll(event: Notification): void {
-		for (const client of this.#clients.keys()) this.#defer(client, event);
-	}
 	#deferThreadStarted(thread: Record<string, unknown>): void {
 		for (const client of this.#clients.keys())
 			this.#defer(client, {
