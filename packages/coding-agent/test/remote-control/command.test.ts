@@ -8,10 +8,17 @@ test.each(["status", "help"] as const)(
 	async surface => {
 		const dir = await mkdtemp(join(tmpdir(), "xcsh-remote-cli-"));
 		try {
+			const isolatedEnv = {
+				...process.env,
+				PI_CODING_AGENT_DIR: dir,
+				XDG_CONFIG_HOME: join(dir, "config"),
+				XDG_RUNTIME_DIR: join(dir, "runtime"),
+				DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(dir, "runtime", "bus")}`,
+			};
 			const command = async (args: string[]) => {
 				const child = Bun.spawn([process.execPath, "src/cli.ts", "remote-control", ...args], {
 					cwd: join(import.meta.dir, "../.."),
-					env: { ...process.env, PI_CODING_AGENT_DIR: dir },
+					env: isolatedEnv,
 					stdout: "pipe",
 					stderr: "pipe",
 				});
@@ -58,10 +65,17 @@ test("remote client controls are discoverable and reject revoke without an expli
 
 test("isolated CLI exercises every management action without ambient remote state", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-remote-actions-"));
+	const isolatedEnv = {
+		...process.env,
+		PI_CODING_AGENT_DIR: dir,
+		XDG_CONFIG_HOME: join(dir, "config"),
+		XDG_RUNTIME_DIR: join(dir, "runtime"),
+		DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(dir, "runtime", "bus")}`,
+	};
 	const command = async (args: readonly string[]) => {
 		const child = Bun.spawn([process.execPath, "src/cli.ts", "remote-control", ...args], {
 			cwd: join(import.meta.dir, "../.."),
-			env: { ...process.env, PI_CODING_AGENT_DIR: dir },
+			env: isolatedEnv,
 			stdout: "pipe",
 			stderr: "pipe",
 		});
