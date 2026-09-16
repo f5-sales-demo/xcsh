@@ -1,0 +1,445 @@
+const builtinMarketplaceSnapshot = `{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "f5-sales-demo-marketplace",
+  "version": "1.0.0",
+  "metadata": {
+    "description": "Claude Code plugins for f5-sales-demo documentation repositories"
+  },
+  "owner": {
+    "name": "f5-sales-demo",
+    "url": "https://github.com/f5-sales-demo"
+  },
+  "plugins": [
+    {
+      "name": "docs-tools",
+      "description": "MDX content validation and review tools for f5-sales-demo docs repos",
+      "version": "1.1.5",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/docs-tools",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/docs-tools",
+      "license": "Apache-2.0",
+      "keywords": ["mdx", "documentation", "validation", "starlight", "astro"],
+      "tags": ["docs", "linting", "content-review", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "sales-engineer",
+      "description": "Sales Engineer persona framework for F5 XC demo repositories — demo execution, environment operations, presentation, Q&A, post-session debrief",
+      "version": "1.0.10",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/sales-engineer",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/sales-engineer",
+      "license": "Apache-2.0",
+      "keywords": ["sales-engineer", "demo", "persona", "presentation", "f5xc"],
+      "tags": ["demo", "sales", "persona", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "docs-pipeline",
+      "description": "Documentation pipeline architecture — config ownership, release dispatch chain, content authoring, managed files, local preview",
+      "version": "1.0.5",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/docs-pipeline",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/docs-pipeline",
+      "license": "Apache-2.0",
+      "keywords": ["docs", "pipeline", "astro", "starlight", "content", "authoring"],
+      "tags": ["docs", "pipeline", "content", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "brand",
+      "description": "F5 corporate branding enforcement — colors, typography, logos, icons, accessibility, and visual identity standards across all content types",
+      "version": "1.0.5",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/brand",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/brand",
+      "license": "Apache-2.0",
+      "keywords": ["brand", "design-system", "colors", "typography", "accessibility"],
+      "tags": ["brand", "design", "visual-identity", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "meddpicc",
+      "description": "MEDDPICC sales qualification and deal-execution framework — evidence-based deal management, stakeholder mapping, mutual action plans, and forecast integrity for complex enterprise B2B sales",
+      "version": "7.5.8",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/meddpicc",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/meddpicc",
+      "license": "Apache-2.0",
+      "keywords": [
+        "meddpicc",
+        "sales-qualification",
+        "deal-management",
+        "enterprise-sales",
+        "forecast",
+        "champion",
+        "economic-buyer",
+        "mutual-action-plan",
+        "f5xc"
+      ],
+      "tags": ["sales", "qualification", "deal-management", "forecast", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "devcontainer",
+      "description": "Container awareness — tool catalog, self-identity, self-diagnosis, and maintenance for the f5-sales-demo devcontainer",
+      "version": "1.1.12",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/devcontainer",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/devcontainer",
+      "license": "Apache-2.0",
+      "keywords": ["devcontainer", "tools", "catalog", "cli", "inventory", "container"],
+      "tags": ["devcontainer", "tools", "catalog", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "platform",
+      "description": "F5 Distributed Cloud automation with provider-neutral Secure Mesh Site v2 capabilities, typed configuration, one-use bootstrap checkout, status evidence, console access, and spec-aware REST operations.",
+      "version": "5.0.1",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/platform",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/platform",
+      "license": "Apache-2.0",
+      "keywords": [
+        "console",
+        "browser",
+        "automation",
+        "azure-sso",
+        "mcp",
+        "chrome-devtools",
+        "f5xc",
+        "api",
+        "rest",
+        "platform",
+        "openapi",
+        "crud",
+        "spec-aware"
+      ],
+      "tags": ["console", "browser", "automation", "f5xc", "api", "platform", "openapi"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "osint-framework",
+      "description": "OSINT Framework tool catalog and investigation skills — 1,064 free intelligence-gathering tools across 34 categories, mapped from osintframework.com. Category-based skills, executable investigation pipelines, CLI tool execution, and OPSEC-aware workflows.",
+      "version": "1.0.7",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/osint-framework",
+      "category": "security",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/osint-framework",
+      "license": "Apache-2.0",
+      "keywords": ["osint", "reconnaissance", "intelligence", "investigation", "security"],
+      "tags": ["osint", "recon", "security", "intelligence"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "firecrawl",
+      "description": "Local self-hosted firecrawl web scraping — scrape, crawl, and map websites via the local firecrawl API on port 3002. No API keys, no subscriptions, fully open-source.",
+      "version": "1.1.3",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/firecrawl",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/firecrawl",
+      "license": "Apache-2.0",
+      "keywords": ["firecrawl", "scrape", "crawl", "web-scraping", "markdown", "self-hosted", "local", "open-source"],
+      "tags": ["firecrawl", "scraping", "web", "local"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "salesforce",
+      "description": "Salesforce pipeline intelligence — native xcsh tools (sf_setup, sf_query, sf_org_display, sf_pipeline_report), container-adapted authentication, context discovery, and pipeline reporting. Bridge to forcedotcom/afv-library skills for Apex, LWC, Flow, SOQL, metadata, and deployment.",
+      "version": "1.3.13",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/salesforce",
+      "category": "development",
+      "keywords": [
+        "salesforce",
+        "sf",
+        "apex",
+        "lwc",
+        "soql",
+        "metadata",
+        "deploy",
+        "testing",
+        "sfdx",
+        "agentforce",
+        "pipeline",
+        "xcsh"
+      ],
+      "tags": ["salesforce", "development", "cli", "crm", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/salesforce",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "sf",
+          "installCmd": "brew install sf",
+          "detectCmd": "sf version",
+          "authDetectCmd": "sf org display --json",
+          "authLoginCmd": "sf org login web"
+        }
+      ]
+    },
+    {
+      "name": "cloudstatus",
+      "description": "Live cloud status and Internet network intelligence for xcsh — current incidents, routing, registration, RPKI, peering, facilities, F5 Regional Edge evidence, and bounded path diagnostics",
+      "version": "1.5.3",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/cloudstatus",
+      "category": "productivity",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/cloudstatus",
+      "license": "Apache-2.0",
+      "keywords": [
+        "status",
+        "monitoring",
+        "incidents",
+        "maintenance",
+        "statuspage",
+        "operational-intelligence",
+        "network-intelligence",
+        "bgp",
+        "rdap",
+        "rpki",
+        "routing",
+        "location",
+        "peeringdb",
+        "facilities",
+        "f5xc",
+        "atlassian"
+      ],
+      "tags": ["status", "network-intelligence", "routing", "peering", "f5xc"],
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "azure",
+      "description": "Azure CLI integration with official-source research, live F5 Customer Edge discovery, immutable plans, approved apply/resume, lifecycle, status, and diagnostics",
+      "version": "4.3.2",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/azure",
+      "category": "development",
+      "keywords": ["azure", "az", "cloud", "f5xc", "customer-edge", "secure-mesh-site"],
+      "tags": ["azure", "cloud", "f5xc", "customer-edge", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/azure",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "az",
+          "installCmd": "brew install azure-cli",
+          "detectCmd": "az version",
+          "authDetectCmd": "az account show --output json",
+          "authLoginCmd": "az login"
+        }
+      ]
+    },
+    {
+      "name": "aws",
+      "description": "AWS CLI integration with current-source F5 Customer Edge discovery, immutable plans, approved apply/resume, lifecycle, status, NLB/TGW networking, and diagnostics",
+      "version": "2.0.1",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/aws",
+      "category": "development",
+      "keywords": ["aws", "amazon", "cloud", "f5xc", "customer-edge", "secure-mesh-site", "tgw", "nlb"],
+      "tags": ["aws", "cloud", "f5xc", "customer-edge", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/aws",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "aws",
+          "installCmd": "brew install awscli",
+          "detectCmd": "aws --version",
+          "authDetectCmd": "aws sts get-caller-identity --output json",
+          "authLoginCmd": "aws sso login"
+        }
+      ]
+    },
+    {
+      "name": "kvm",
+      "description": "Deterministic F5 Secure Mesh Site v2 lifecycle for KVM, libvirt, Terraform-owned FRR routing, health, traffic, drift recovery, destroy, and rebuild",
+      "version": "1.0.2",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/kvm",
+      "category": "development",
+      "keywords": ["kvm", "libvirt", "qemu", "f5xc", "customer-edge", "secure-mesh-site", "frr", "terraform"],
+      "tags": ["kvm", "libvirt", "f5xc", "customer-edge", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/kvm",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "terraform",
+          "installCmd": "brew install terraform",
+          "detectCmd": "terraform version",
+          "authDetectCmd": "virsh --connect qemu:///system uri",
+          "authLoginCmd": "virsh --connect qemu:///system uri"
+        }
+      ]
+    },
+    {
+      "name": "gcloud",
+      "description": "Google Cloud CLI integration — container-adapted auth, context injection, CLI operator agent, token expiry detection, and welcome screen status",
+      "version": "1.2.8",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/gcloud",
+      "category": "development",
+      "keywords": ["gcloud", "google", "cloud"],
+      "tags": ["gcloud", "google", "cloud", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/gcloud",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "gcloud",
+          "installCmd": "brew install google-cloud-sdk",
+          "detectCmd": "gcloud version",
+          "authDetectCmd": "gcloud auth print-access-token --quiet",
+          "authLoginCmd": "gcloud auth login"
+        }
+      ]
+    },
+    {
+      "name": "gitlab",
+      "description": "GitLab CLI integration — native xcsh tools, container-adapted auth, context injection, CLI operator agent, and welcome screen status via glab CLI",
+      "version": "1.2.7",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/gitlab",
+      "category": "development",
+      "keywords": ["gitlab", "glab", "issues", "git"],
+      "tags": ["gitlab", "development", "cli", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/gitlab",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "glab",
+          "installCmd": "brew install glab",
+          "detectCmd": "glab version",
+          "authDetectCmd": "glab auth status",
+          "authLoginCmd": "glab auth login"
+        }
+      ]
+    },
+    {
+      "name": "github",
+      "description": "Poweruser GitHub & Git Operations plugin combining direct native CLI mastery (git and gh) with complete Git SOPs workflow governance (issue-driven development, PR lifecycle, CI polling, auto-merge, post-merge teardown, and rate limit management)",
+      "version": "2.0.4",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/github",
+      "category": "development",
+      "keywords": ["github", "gh", "git", "pr", "issues", "ci", "workflow", "git-sops", "github-ops"],
+      "tags": ["github", "development", "cli", "workflow", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/github",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": true,
+      "prerequisites": [
+        {
+          "tool": "git",
+          "detectCmd": "git --version"
+        },
+        {
+          "tool": "gh",
+          "installCmd": "brew install gh",
+          "detectCmd": "gh version",
+          "authDetectCmd": "gh auth status",
+          "authLoginCmd": "gh auth login"
+        }
+      ]
+    },
+    {
+      "name": "herdr",
+      "description": "Control Herdr, a terminal multiplexer for coding agents — inspect workspaces, tabs and panes, split panes, run commands without stealing focus, read pane output, and coordinate sibling agents. Requires HERDR_ENV=1.",
+      "version": "1.0.3",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/herdr",
+      "category": "development",
+      "keywords": ["herdr", "terminal", "multiplexer", "panes", "agents"],
+      "tags": ["terminal", "orchestration", "agents", "xcsh-extension"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/herdr",
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    },
+    {
+      "name": "asm-migration",
+      "description": "Deterministic BIG-IP ASM conversion and guarded F5 Distributed Cloud deployment",
+      "version": "2.0.10",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/asm-migration",
+      "category": "security",
+      "keywords": ["asm", "waf", "migration", "f5xc", "xcsh-extension"],
+      "tags": ["asm", "waf", "security", "migration", "f5xc"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/asm-migration",
+      "repository": "https://github.com/f5-sales-demo/marketplace",
+      "recommended": false
+    },
+    {
+      "name": "terraform",
+      "description": "Senior DevOps Infrastructure-as-Code plugin providing HashiCorp Registry proactive version checks, HCL authoring, testing frameworks, and troubleshooting playbooks.",
+      "version": "2.0.0",
+      "author": {
+        "name": "f5-sales-demo"
+      },
+      "source": "./plugins/terraform",
+      "category": "development",
+      "keywords": ["terraform", "hcl", "iac", "devops", "hashicorp", "testing", "troubleshooting"],
+      "tags": ["terraform", "iac", "devops", "f5xc"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/f5-sales-demo/marketplace/tree/main/plugins/terraform",
+      "repository": "https://github.com/f5-sales-demo/marketplace"
+    }
+  ]
+}\n`;
+
+export default builtinMarketplaceSnapshot;

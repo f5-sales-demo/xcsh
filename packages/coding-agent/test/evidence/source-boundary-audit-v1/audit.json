@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
-  "fingerprint": "deba20a7382daf979056f80a163ca7a2aff101e7b877d1a86c756837edbd18c7",
+  "revision": "da5318f1d4780ec8e1aa66ff5b92231f82110c97",
+  "fingerprint": "652ae3a2ba1ecca20bc5f9ac5ffae5a53522b819e425abdaccd036ca8a6d5dee",
   "counts": {
     "total": 241,
     "components": 95,
@@ -30,6 +30,7 @@
         "packages/coding-agent/test/discovery/disabled-extensions.test.ts",
         "packages/coding-agent/test/extension-dashboard.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
+        "packages/coding-agent/test/marketplace/recommended.test.ts",
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts"
       ],
       "classification": "packages/coding-agent/src/autoresearch/dashboard.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -2103,7 +2104,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "5c9056099ccc5f7af3ca6612ba72e958c55e436fd0ce6866d72876f122993ba7",
+      "sha256": "c214d4ca393b8a15e34d52378a8007bd6565d50ced111ab4eddca2cbc46ca5b0",
       "exports": [
         "applySearch",
         "buildTabs",
@@ -4510,7 +4511,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "38ab7646b2ff146311dcce9ea8d86b52fe5e6f2d413c8f1d2e67aa197d294824",
+      "sha256": "19441abf7193652a7ed599b7b74ecd6720e639f0939854e7970f2e22fc1fcb62",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4607,12 +4608,13 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "de44ea81cb6e0af2b7094cc459797565eea7e3727536dbfbe66d4b1a240f3136",
+      "sha256": "d3159d0e7022008375ee5bcec8b193fe9bac2be806406b883afcf02330d005ff",
       "exports": [
         "PluginScope",
         "PluginSetupResult",
         "PreparedInstalledPluginAction",
         "PreparedMarketplaceAddition",
+        "PreparedMarketplaceEnabled",
         "PreparedMarketplaceRemoval",
         "PreparedPluginInstall",
         "PreparedPluginSetup",
@@ -4624,6 +4626,7 @@
         "executePluginUpgrade",
         "executePluginUpgradeAll",
         "prepareMarketplaceAddition",
+        "prepareMarketplaceEnabled",
         "prepareMarketplaceRemoval",
         "preparePluginEnabled",
         "preparePluginInstall",

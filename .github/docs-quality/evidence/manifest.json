@@ -12,10 +12,9 @@
       "verificationLevel": "executed-offline",
       "cleanupResult": "temporary-download-removed",
       "sections": [
-        "docs/en/getting-started/installation.mdx",
-        "docs/en/getting-started/installation.mdx#How do I confirm the selected executable?",
-        "docs/en/getting-started/installation.mdx#How do I install on Ubuntu or Debian?",
-        "docs/en/getting-started/installation.mdx#How do I remove it?"
+        "docs/en/index.mdx",
+        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Install xcsh"
       ]
     },
     {
@@ -100,18 +99,16 @@
         "docs/en/getting-started/index.mdx",
         "docs/en/getting-started/index.mdx#What do I need before I begin?",
         "docs/en/getting-started/index.mdx#Which path matches my goal?",
-        "docs/en/getting-started/installation.mdx",
-        "docs/en/getting-started/installation.mdx#How do I confirm the selected executable?",
-        "docs/en/getting-started/installation.mdx#How do I install on Ubuntu or Debian?",
-        "docs/en/getting-started/installation.mdx#How do I remove it?",
+        "docs/en/index.mdx",
+        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Install xcsh",
         "docs/en/getting-started/model-authentication.mdx",
         "docs/en/getting-started/model-authentication.mdx#How do I select a model explicitly?",
         "docs/en/getting-started/model-authentication.mdx#Which authentication method should I choose?",
         "docs/en/getting-started/quickstart.mdx",
         "docs/en/getting-started/quickstart.mdx#How do I run a bounded first prompt?",
         "docs/en/getting-started/quickstart.mdx#What should I inspect if the prompt fails?",
-        "docs/en/index.mdx",
-        "docs/en/index.mdx#Where should I start?",
+        "docs/en/index.mdx#Run the quickstart",
         "docs/en/integrations-deployment/chrome.mdx",
         "docs/en/integrations-deployment/chrome.mdx#What is the safe operating boundary?",
         "docs/en/integrations-deployment/chrome.mdx#Which Chrome capabilities does xcsh expose?",
@@ -334,18 +331,16 @@
         "docs/en/getting-started/index.mdx",
         "docs/en/getting-started/index.mdx#What do I need before I begin?",
         "docs/en/getting-started/index.mdx#Which path matches my goal?",
-        "docs/en/getting-started/installation.mdx",
-        "docs/en/getting-started/installation.mdx#How do I confirm the selected executable?",
-        "docs/en/getting-started/installation.mdx#How do I install on Ubuntu or Debian?",
-        "docs/en/getting-started/installation.mdx#How do I remove it?",
+        "docs/en/index.mdx",
+        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Install xcsh",
         "docs/en/getting-started/model-authentication.mdx",
         "docs/en/getting-started/model-authentication.mdx#How do I select a model explicitly?",
         "docs/en/getting-started/model-authentication.mdx#Which authentication method should I choose?",
         "docs/en/getting-started/quickstart.mdx",
         "docs/en/getting-started/quickstart.mdx#How do I run a bounded first prompt?",
         "docs/en/getting-started/quickstart.mdx#What should I inspect if the prompt fails?",
-        "docs/en/index.mdx",
-        "docs/en/index.mdx#Where should I start?",
+        "docs/en/index.mdx#Run the quickstart",
         "docs/en/integrations-deployment/chrome.mdx",
         "docs/en/integrations-deployment/chrome.mdx#What is the safe operating boundary?",
         "docs/en/integrations-deployment/chrome.mdx#Which Chrome capabilities does xcsh expose?",
@@ -414,12 +409,10 @@
         "docs/en/f5-distributed-cloud/get-export-delete.mdx",
         "docs/en/f5-distributed-cloud/get-export-delete.mdx#How do I delete and prove absence?",
         "docs/en/f5-distributed-cloud/get-export-delete.mdx#How do I retrieve or export one resource?",
-        "docs/en/getting-started/installation.mdx",
-        "docs/en/getting-started/installation.mdx#How do I confirm the selected executable?",
-        "docs/en/getting-started/installation.mdx#How do I install on Ubuntu or Debian?",
-        "docs/en/getting-started/installation.mdx#How do I remove it?",
         "docs/en/index.mdx",
-        "docs/en/index.mdx#Where should I start?",
+        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Install xcsh",
+        "docs/en/index.mdx#Run the quickstart",
         "docs/en/integrations-deployment/index.mdx",
         "docs/en/integrations-deployment/index.mdx#Which integration fits?"
       ]
@@ -465,10 +458,40 @@
       "sections": [
         "docs/en/architecture-contribution/storage-artifacts.mdx#How is filesystem discovery cached?",
         "docs/en/getting-started/quickstart.mdx#How do I run a bounded first prompt?",
-        "docs/en/index.mdx#Where should I start?",
+        "docs/en/index.mdx#Run the quickstart",
         "docs/en/reference-troubleshooting/configuration-schema.mdx#How do I inspect the effective schema-backed values?",
         "docs/en/reference-troubleshooting/configuration-schema.mdx#Which key namespaces exist?",
         "docs/en/use-xcsh/tui-navigation.mdx#How do I move through the session tree?"
+      ]
+    },
+    {
+      "id": "install-channels-20260916",
+      "receipt": ".github/docs-quality/evidence/install-channels-20260916.txt",
+      "receiptSha256": "0c18832d54ca668418bb7241e2330d8764352be51a8d9701ae5f94a54eb4f788",
+      "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
+      "xcshVersion": "21.29.2 release; 21.29.1 published package channels",
+      "command": "disposable installer, npm, apt availability, container, and release CI verification",
+      "exitStatus": 0,
+      "verificationLevel": "executed-with-recorded-channel-lag",
+      "cleanupResult": "completed",
+      "sections": [
+        "docs/en/index.mdx#Install xcsh",
+        "docs/en/index.mdx#Verify the active installation"
+      ]
+    },
+    {
+      "id": "production-build-20260916",
+      "receipt": ".github/docs-quality/evidence/production-build-20260916.txt",
+      "receiptSha256": "4df5c7dcf005c5871797f632913e7b2ede18b2a4f0822dd28c8b454d0f866c97",
+      "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
+      "xcshVersion": "21.29.2",
+      "command": "shared production builder plus Puppeteer desktop, mobile, theme, tab, and sidebar checks",
+      "exitStatus": 0,
+      "verificationLevel": "executed",
+      "cleanupResult": "completed",
+      "sections": [
+        "docs/en/index.mdx",
+        "docs/en/index.mdx#Install xcsh"
       ]
     }
   ]

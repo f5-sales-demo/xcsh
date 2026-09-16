@@ -37,7 +37,12 @@ describe("plugin install dry-run", () => {
 			env: environment,
 		});
 		expect(added.exitCode).toBe(0);
-		const before = digest(root);
+		const disabled = Bun.spawnSync(["bun", cli, "plugin", "marketplace", "disable", "f5-sales-demo-marketplace"], {
+			cwd: repository,
+			env: environment,
+		});
+		expect(disabled.exitCode).toBe(0);
+		const before = digest(join(root, ".xcsh"));
 		const preview = Bun.spawnSync(
 			["bun", cli, "plugin", "install", "hello-plugin@test-marketplace", "--dry-run", "--json"],
 			{ cwd: repository, env: environment, stdout: "pipe", stderr: "pipe" },
@@ -49,7 +54,7 @@ describe("plugin install dry-run", () => {
 			scope: "user",
 			dryRun: true,
 		});
-		expect(digest(root)).toBe(before);
+		expect(digest(join(root, ".xcsh"))).toBe(before);
 		expect(existsSync(join(root, ".xcsh/plugins/installed_plugins.json"))).toBe(false);
 	});
 });

@@ -1,11 +1,15 @@
 """Regression tests for the documentation quality contract checker."""
 
+# pylint: disable=too-many-public-methods
+
 # ruff: noqa: INP001
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER = ROOT / "scripts" / "check_docs_quality.py"
+GIT_EXECUTABLE = shutil.which("git") or "git"
 
 
 class DocsQualityCheckerTests(unittest.TestCase):
@@ -114,17 +119,78 @@ class DocsQualityCheckerTests(unittest.TestCase):
         return temp
 
     def run_checker(self, root: Path) -> subprocess.CompletedProcess[str]:
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
         return subprocess.run(  # noqa: S603 - fixed interpreter and checker paths
             [sys.executable, str(CHECKER), "--root", str(root)],
             text=True,
             capture_output=True,
             check=False,
+            env=env,
         )
 
     def assert_rejected(self, root: Path, needle: str) -> None:
         result = self.run_checker(root)
         assert result.returncode != 0, result.stdout + result.stderr
         assert needle in result.stdout + result.stderr
+
+    def add_fidelity(self, root: Path) -> dict:
+        page = root / "docs" / "en" / "task.mdx"
+        block = (
+            '<p id="fidelity-lc-fixture-concept" data-fidelity="lc-fixture-concept">'
+            "<strong>Legacy task.</strong> The task resolves one configuration value.</p>"
+        )
+        page.write_text(page.read_text() + "\n" + block + "\n", encoding="utf-8")
+        source = root / "packages" / "coding-agent" / "src" / "cli.ts"
+        source.parent.mkdir(parents=True)
+        source.write_text("export const task = 'configuration';\n", encoding="utf-8")
+        legacy = json.loads(
+            (root / ".github" / "docs-quality" / "legacy-concepts.json").read_text()
+        )
+        concept = legacy["concepts"][0]
+        unit = "\0".join(
+            str(concept[key])
+            for key in ("legacyPath", "legacyHeading", "legacyBlob", "knowledgeSummary")
+        )
+        row = {
+            "id": concept["id"],
+            "legacyUnitDigestSha256": hashlib.sha256(unit.encode()).hexdigest(),
+            "destinationPage": "docs/en/task.mdx",
+            "destinationHeading": "Do the task",
+            "contentBlockLocator": "fidelity-lc-fixture-concept",
+            "destinationDigestSha256": hashlib.sha256(block.encode()).hexdigest(),
+            "claims": {
+                "preserved": ["The task resolves one configuration value."],
+                "corrected": [],
+                "superseded": [],
+            },
+            "authorityLocators": [
+                {
+                    "kind": "help",
+                    "path": "packages/coding-agent/src/cli.ts",
+                    "lineStart": 1,
+                    "lineEnd": 1,
+                    "matchedToken": "configuration",
+                    "sourceDigestSha256": hashlib.sha256(
+                        source.read_bytes()
+                    ).hexdigest(),
+                }
+            ],
+            "evidenceIdentifiers": ["offline-version"],
+        }
+        fidelity = {
+            "schemaVersion": 1,
+            "legacyCommit": "fixture",
+            "legacyTree": "b" * 40,
+            "conceptCount": 374,
+            "concepts": [row],
+        }
+        fidelity_path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
+        fidelity_path.write_text(json.dumps(fidelity), encoding="utf-8")
+        return fidelity
 
     def test_rejects_known_boilerplate(self) -> None:
         root = self.fixture(
@@ -266,6 +332,83 @@ class DocsQualityCheckerTests(unittest.TestCase):
         ledger["concepts"][0]["disposition"] = "superseded"
         path.write_text(json.dumps(ledger), encoding="utf-8")
         self.assert_rejected(root, "unexplained superseded or corrected concept")
+
+    def test_rejects_missing_git_metadata(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        self.add_fidelity(root)
+        self.assert_rejected(root, "immutable legacy Git metadata is unavailable")
+
+    def test_rejects_shallow_history_without_legacy_commit(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        self.add_fidelity(root)
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
+        subprocess.run(  # noqa: S603 - resolved Git executable with fixed arguments
+            [GIT_EXECUTABLE, "init", "-q", str(root)], check=True, env=env
+        )
+        self.assert_rejected(root, "immutable legacy commit is unavailable")
+
+    def test_rejects_stale_fidelity_content_digest(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        fidelity = self.add_fidelity(root)
+        fidelity["concepts"][0]["destinationDigestSha256"] = "0" * 64
+        path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
+        path.write_text(json.dumps(fidelity), encoding="utf-8")
+        self.assert_rejected(root, "stale fidelity destination digest")
+
+    def test_rejects_unrelated_fidelity_authority(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        fidelity = self.add_fidelity(root)
+        locator = fidelity["concepts"][0]["authorityLocators"][0]
+        locator["path"] = "docs/en/task.mdx"
+        locator["sourceDigestSha256"] = hashlib.sha256(
+            (root / "docs" / "en" / "task.mdx").read_bytes()
+        ).hexdigest()
+        path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
+        path.write_text(json.dumps(fidelity), encoding="utf-8")
+        self.assert_rejected(root, "unrelated fidelity authority")
+
+    def test_rejects_shared_self_attestation(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        fidelity = self.add_fidelity(root)
+        second = dict(fidelity["concepts"][0])
+        second["id"] = "lc-second-concept"
+        fidelity["concepts"].append(second)
+        legacy_path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        legacy = json.loads(legacy_path.read_text())
+        second_legacy = dict(legacy["concepts"][0])
+        second_legacy["id"] = "lc-second-concept"
+        legacy["concepts"].append(second_legacy)
+        legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
+        path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
+        path.write_text(json.dumps(fidelity), encoding="utf-8")
+        self.assert_rejected(root, "unexplained shared fidelity block")
+
+    def test_rejects_long_sidebar_label(self) -> None:
+        root = self.fixture(
+            '---\ntitle: Task\nsidebar:\n  label: "This label is much too long"\n---\n'
+            "## Do the task\n\nRun it.\n"
+        )
+        self.add_fidelity(root)
+        self.assert_rejected(root, "sidebar label exceeds 24 characters")
+
+    def test_rejects_anchor_collision(self) -> None:
+        root = self.fixture(
+            "---\ntitle: Task\n---\n## Do the task\n\nRun it.\n"
+            "## Do the task!\n\nRun it again.\n"
+        )
+        self.add_fidelity(root)
+        self.assert_rejected(root, "anchor collision")
+
+    def test_rejects_orphaned_llm_selector(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        self.add_fidelity(root)
+        llms = root / "docs" / "llms-config.json"
+        llms.write_text(json.dumps({"promote": ["missing/**"]}), encoding="utf-8")
+        self.assert_rejected(root, "orphaned LLM selector")
 
 
 if __name__ == "__main__":

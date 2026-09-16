@@ -17,6 +17,33 @@ docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
 
 Pin a version tag or digest for automation. Mount only the task directory and inject credentials through the runtime's secret mechanism.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-2f4663a857e23a8a" data-fidelity="lc-2f4663a857e23a8a"><strong>Prerequisites.</strong> Install Docker Engine with the Docker Compose plugin to use the local development service.</p>
+
+<p id="fidelity-lc-0a4c9818628936fd" data-fidelity="lc-0a4c9818628936fd"><strong>Pulling release images.</strong> Pull the latest stable release image from GHCR: Tagged releases publish a versioned tag (v‹VERSION›), a minor release tag (‹MAJOR›.‹MINOR›), and latest. Current implementation
+points include v‹VERSION›, ‹MAJOR›.‹MINOR›, latest.</p>
+
+<p id="fidelity-lc-61a76dd3595fe570" data-fidelity="lc-61a76dd3595fe570"><strong>Building the development service.</strong> From a local repository clone, build and launch the hardened development service: The service idles without running xcsh directly, mounts the repository checkout read-only at
+/workspace, and allows you to run commands on demand: The Compose development servi Current implementation points include /workspace, 1000:1000, cap_drop: [ALL].</p>
+
+<p id="fidelity-lc-67a1879312089171" data-fidelity="lc-67a1879312089171"><strong>Configuring the Docker Compose environment.</strong> The Docker Compose configuration and UAT scripts recognize the following environment variables. Compose mounts host credentials into these read-only container paths: Live tests
+copy required credentials into temporary directories on startup, clear them on exit Current implementation points include UID, 1000, GID.</p>
+
+<p id="fidelity-lc-b8ee0f3c341ec2da" data-fidelity="lc-b8ee0f3c341ec2da"><strong>Running verification tests.</strong> Run the deterministic end-to-end test suite without cloud credentials: This script builds the container image, verifies unprivileged execution and security hardening settings,
+checks bundled CLIs, and tears down the container service without contacting externa Current implementation points include --live.</p>
+
+<p id="fidelity-lc-0042a1ac1bae68f3" data-fidelity="lc-0042a1ac1bae68f3"><strong>Running native ARM64 Podman UAT.</strong> This release acceptance workflow runs on Apple Silicon macOS hosts with Podman. Current implementation points include jq, --runs, --warmups.</p>
+
+<p id="fidelity-lc-0539c4d9d0ed5aa2" data-fidelity="lc-0539c4d9d0ed5aa2"><strong>Verifying published container images.</strong> Inspect the multi-architecture manifest of a published image: Verify that both linux/amd64 and linux/arm64 appear in the manifest list. Current implementation points include
+linux/amd64, linux/arm64.</p>
+
+<p id="fidelity-lc-59c7a618a612fb60" data-fidelity="lc-59c7a618a612fb60"><strong>Cleaning up resources.</strong> Stop and remove the development container service and associated networks: Test scripts run this cleanup command automatically upon completion or interruption.</p>
+
+<p id="fidelity-lc-cde8c6cdc1e41664" data-fidelity="lc-cde8c6cdc1e41664"><strong>Localization policy.</strong> Author container documentation in English within docs/en/. Current implementation points include docs/en/.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## What must remain outside the image?
 
 Keep user contexts, provider tokens, and writable session data in explicit mounts or secret stores. Do not bake them into a derived layer.

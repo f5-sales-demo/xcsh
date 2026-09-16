@@ -76,18 +76,33 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 // ── Marketplaces registry ────────────────────────────────────────────
 
 function emptyMarketplacesRegistry(): MarketplacesRegistry {
-	return { version: 1, marketplaces: [] };
+	return { version: 2, marketplaces: [] };
 }
 
 export async function readMarketplacesRegistry(filePath: string): Promise<MarketplacesRegistry> {
 	try {
 		const content = await Bun.file(filePath).text();
-		const data = tryParseJson<MarketplacesRegistry>(content);
-		if (!data || typeof data !== "object" || data.version !== 1 || !Array.isArray(data.marketplaces)) {
+		const data = tryParseJson<{ version?: unknown; marketplaces?: unknown }>(content);
+		if (
+			!data ||
+			typeof data !== "object" ||
+			(data.version !== 1 && data.version !== 2) ||
+			!Array.isArray(data.marketplaces)
+		) {
 			logger.warn("Invalid marketplaces registry, returning empty", { path: filePath });
 			return emptyMarketplacesRegistry();
 		}
-		return data;
+
+		const migrated: MarketplacesRegistry = {
+			version: 2,
+			marketplaces: (data.marketplaces as MarketplaceRegistryEntry[]).map(entry => ({
+				...entry,
+				enabled: entry.enabled !== false,
+				builtIn: entry.builtIn === true,
+			})),
+		};
+		if (data.version === 1) await atomicWriteJson(filePath, migrated);
+		return migrated;
 	} catch (err) {
 		if (isEnoent(err)) return emptyMarketplacesRegistry();
 		throw err;

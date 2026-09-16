@@ -12,9 +12,26 @@ System prompts are executable product policy. Edit the smallest owned prompt fra
 
 State role and scope, concrete objectives, available tools, tool-use rules, constraints, output contract, uncertainty behavior, and completion criteria. Use direct instructions with observable conditions. Keep provider-specific details out of shared prompts unless the adapter cannot represent them elsewhere.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-0b4a5e9e6d6b1446" data-fidelity="lc-0b4a5e9e6d6b1446"><strong>The eight-point system prompt checklist.</strong> Current implementation points include ‹role›, ‹defensive_scope›, ‹governance›.</p>
+
+<p id="fidelity-lc-afd71d4241c64008" data-fidelity="lc-afd71d4241c64008"><strong>Verification and audit standard.</strong> Prior to merging any new or updated prompt file (.md agents, system prompts, or skills), verify compliance against the eight-point checklist above. Current implementation points
+include *.md.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How is the system prompt composed?
 
 The runtime builds the system prompt from the core fragment plus active capabilities, workspace guidance, plan state, memory, and extension contributions. Ordering and deduplication tests protect mandatory boundaries. An absent optional plugin must not remove core safety or file-operation instructions.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-dc9ef701347a451f" data-fidelity="lc-dc9ef701347a451f"><strong>Lifecycle workflow.</strong> 1. Current implementation points include createAgentSession(), .claude/rules, .xcsh/rules.</p>
+
+<p id="fidelity-lc-fe0f9cd4c600f92c" data-fidelity="lc-fe0f9cd4c600f92c"><strong>Related implementation files.</strong> Current implementation points include src/session/agent-session.ts, src/export/ttsr.ts, TtsrManager.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## How do I audit a prompt change?
 

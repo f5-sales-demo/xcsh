@@ -3,7 +3,7 @@ title: "Operate and author MCP servers"
 description: "Trace MCP connection caching, tool bridging, reload, teardown, and server contracts."
 sidebar:
   order: 9
-  label: "MCP runtime and authoring"
+  label: "MCP runtime"
 ---
 
 xcsh keeps Model Context Protocol (MCP) transport concerns below capability discovery. A connected server contributes normalized tools; the agent loop invokes those tools through the same result boundary used for built-in and extension tools.
@@ -24,9 +24,58 @@ manager                      transport                server
 
 The manager resolves configuration, establishes one connection per active server, caches that connection, lists capabilities, and registers bridged tools. JSON-remote procedure call (RPC) request identifiers correlate replies while notifications flow independently. Transport closure rejects outstanding work and moves the server to a reconnectable failure state.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-37d6901110293cfe" data-fidelity="lc-37d6901110293cfe"><strong>Scope and responsibilities.</strong> Current implementation points include stdio.</p>
+
+<p id="fidelity-lc-798cbd23e32504fd" data-fidelity="lc-798cbd23e32504fd"><strong>Primary implementation files.</strong> Current implementation points include packages/coding-agent/src/mcp/types.ts, packages/coding-agent/src/mcp/transports/stdio.ts, stdio.</p>
+
+<p id="fidelity-lc-0dd70e10e850a79e" data-fidelity="lc-0dd70e10e850a79e"><strong>Architecture and layer separation.</strong> The protocol layer coordinates method sequencing, capability negotiation, and message schema enforcement. Current implementation points include MCPClient, initialize,
+notifications/initialized.</p>
+
+<p id="fidelity-lc-57f8cec06597e8ea" data-fidelity="lc-57f8cec06597e8ea"><strong>Transport selection rules.</strong> The client factory createTransport() instantiates the appropriate transport based on configuration Current implementation points include createTransport(), type: "stdio", type.</p>
+
+<p id="fidelity-lc-7c1fbc34cb619229" data-fidelity="lc-7c1fbc34cb619229"><strong>JSON-RPC message flow and request correlation.</strong> Transports generate unique alphanumeric correlation identifiers per request using timestamp tokens. Current implementation points include stdio, \n, #pendingRequests.</p>
+
+<p id="fidelity-lc-91a5e55648a8fe45" data-fidelity="lc-91a5e55648a8fe45"><strong>Transport implementations.</strong> StdioTransport manages an isolated operating system subprocess communicating via standard input and output: HttpTransport connects to remote endpoints over HTTP and HTTPS Current
+implementation points include stdio, StdioTransport, Transport closed.</p>
+
+<p id="fidelity-lc-bfcb9eb666fda51d" data-fidelity="lc-bfcb9eb666fda51d"><strong>Error handling and failure modes.</strong> Current implementation points include stdio, Transport closed, HTTP ‹STATUS›: ‹TEXT›.</p>
+
+<p id="fidelity-lc-a6a86351a17a209d" data-fidelity="lc-a6a86351a17a209d"><strong>Architectural boundaries.</strong> MCP transports own process or network framing and JSON-RPC correlation; the manager owns connection lifecycle, while capability bridging owns normalized tools and resources.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do reload and teardown work?
 
 A refresh compares the normalized server set, closes removed or changed connections, and preserves reusable connections. Session shutdown closes transports and child processes. Server implementations must also handle client cancellation and EOF so local processes do not outlive xcsh.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-9fbec232a0cc030c" data-fidelity="lc-9fbec232a0cc030c"><strong>Lifecycle overview.</strong> 1. Current implementation points include createAgentSession(), discoverAndLoadMCPTools(), loadAllMCPConfigs().</p>
+
+<p id="fidelity-lc-36b9cf7b5fbf6e4a" data-fidelity="lc-36b9cf7b5fbf6e4a"><strong>Discovery and loading.</strong> CreateAgentSession() (packages/coding-agent/src/SDK.ts) manages MCP initialization: loadAllMCPConfigs() (packages/coding-agent/src/mcp/config.ts) applies the following filters
+Current implementation points include createAgentSession(), packages/coding-agent/src/SDK.ts, discoverAndLoadMCPTools(cwd, ｛ ... ｝).</p>
+
+<p id="fidelity-lc-60d0419b691aad77" data-fidelity="lc-60d0419b691aad77"><strong>Manager state model.</strong> MCPManager tracks runtime state across internal registries: getConnectionStatus(name) reports one of three states Current implementation points include MCPManager, #connections,
+MCPServerConnection.</p>
+
+<p id="fidelity-lc-98da071f89c6cddc" data-fidelity="lc-98da071f89c6cddc"><strong>Connection establishment and caching.</strong> To prevent slow MCP servers from delaying CLI startup, connectServers() races connection establishment against a 250 millisecond threshold: Pending connection promises continue
+executing in the background Current implementation points include connectServers(), MCPTool, DeferredMCPTool.</p>
+
+<p id="fidelity-lc-6ccb62ff42dc48b2" data-fidelity="lc-6ccb62ff42dc48b2"><strong>Runtime tool invocation.</strong> Both wrapper types catch transport and tool errors and format them as structured tool error responses. Current implementation points include MCPTool, DeferredMCPTool,
+waitForConnection(server).</p>
+
+<p id="fidelity-lc-0bf8e2f609eca0d3" data-fidelity="lc-0bf8e2f609eca0d3"><strong>Dynamic reload and refresh.</strong> Executing /mcp reload updates server configurations during an active session. Current implementation points include /mcp reload, mcpManager.disconnectAll(),
+mcpManager.discoverAndConnect().</p>
+
+<p id="fidelity-lc-9ec4920218f44759" data-fidelity="lc-9ec4920218f44759"><strong>Teardown semantics.</strong> Current implementation points include disconnectServer, mcp_, disconnectAll.</p>
+
+<p id="fidelity-lc-bf3f7b758309a799" data-fidelity="lc-bf3f7b758309a799"><strong>Failure modes and recovery.</strong> Current implementation points include DeferredMCPTool, /mcp reload.</p>
+
+<p id="fidelity-lc-eaf7538fd57bdf63" data-fidelity="lc-eaf7538fd57bdf63"><strong>Primary implementation files.</strong> Current implementation points include packages/coding-agent/src/mcp/loader.ts, LoadedCustomTool, packages/coding-agent/src/mcp/manager.ts.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## What makes a tool server compatible?
 
@@ -41,3 +90,31 @@ Publish stable tool names, JSON Schema input definitions, bounded results, and a
 7. Shutdown.
 
 Read `packages/coding-agent/src/mcp` for the manager, transport selection, and tool bridging.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-c1d9a1b7acfdae30" data-fidelity="lc-c1d9a1b7acfdae30"><strong>Architecture overview.</strong> 1. Current implementation points include .xcsh/mcp.json, ~/.xcsh/mcp.json, mcp.json.</p>
+
+<p id="fidelity-lc-9b522e87789481aa" data-fidelity="lc-9b522e87789481aa"><strong>1. Server configuration schema and validation.</strong> Server configuration schema and validation for mcp server tool authoring. packages/coding-agent/src/mcp/types.ts defines the supported configuration properties:
+validateServerConfig() (packages/coding-agent/src/mcp/config.ts) enforces the following constraints: packages/coding-agent/src/mcp/config-writer.ts validates server Current
+implementation points include packages/coding-agent/src/mcp/types.ts, stdio, type.</p>
+
+<p id="fidelity-lc-4dd57fc192170472" data-fidelity="lc-4dd57fc192170472"><strong>2. Discovery, normalization, and provider precedence.</strong> Discovery, normalization, and provider precedence for mcp server tool authoring. loadAllMCPConfigs() aggregates server definitions across registered capability providers. Current
+implementation points include loadAllMCPConfigs(), server.name, .xcsh/mcp.json.</p>
+
+<p id="fidelity-lc-90f1fbaa7f009684" data-fidelity="lc-90f1fbaa7f009684"><strong>3. Credential and variable resolution.</strong> Credential and variable resolution for mcp server tool authoring. MCPManager.prepareConfig() (packages/coding-agent/src/mcp/manager.ts) performs environment variable and credential
+substitution prior to connection: When a server defines an OAuth credential binding (auth: ｛ type: "oauth", credentialId: "‹CREDENTIALID›" ｝ Current implementation points include
+MCPManager.prepareConfig(), packages/coding-agent/src/mcp/manager.ts, Authorization: Bearer ‹ACCESS_TOKEN›.</p>
+
+<p id="fidelity-lc-28b042f027005d84" data-fidelity="lc-28b042f027005d84"><strong>4. Tool bridging and execution.</strong> Tool bridging and execution for mcp server tool authoring. packages/coding-agent/src/mcp/tool-bridge.ts converts MCP tool definitions into CustomTool instances. Discovered tools
+are registered using the following template. Sanitization rules: MCPTool.execute() and DeferredMCPTool.execute() Current implementation points include
+packages/coding-agent/src/mcp/tool-bridge.ts, CustomTool, _.</p>
+
+<p id="fidelity-lc-199c32e4ddef92a3" data-fidelity="lc-199c32e4ddef92a3"><strong>5. Management commands and dynamic reload.</strong> Management commands and dynamic reload for mcp server tool authoring. The interactive CLI provides /mcp management commands: Configuration updates are written atomically using
+temporary files and rename operations. Current implementation points include /mcp, /mcp add, /mcp remove ‹SERVER_NAME›.</p>
+
+<p id="fidelity-lc-68f20ae39ee95c2e" data-fidelity="lc-68f20ae39ee95c2e"><strong>6. Authoring best practices.</strong> Authoring best practices for mcp server tool authoring. 1. Current implementation points include type, "http", "stdio".</p>
+
+<p id="fidelity-lc-d6c309784afdbda9" data-fidelity="lc-d6c309784afdbda9"><strong>Primary implementation files.</strong> Current implementation points include packages/coding-agent/src/mcp/types.ts, packages/coding-agent/src/mcp/config.ts, packages/coding-agent/src/mcp/config-writer.ts.</p>
+
+<span data-fidelity-generated="end"></span>

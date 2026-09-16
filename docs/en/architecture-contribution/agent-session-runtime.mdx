@@ -22,6 +22,43 @@ user message
 
 Start at `packages/coding-agent/src/cli.ts`, follow the session factory and event handlers, then inspect the persisted JSON Lines (JSONL) rather than relying only on terminal rendering. Provider and tool tests should assert the event sequence that caused the visible result.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-79163e2d4655b8f1" data-fidelity="lc-79163e2d4655b8f1"><strong>Error classification.</strong> On turn completion (agentend), AgentSession.#isRetryableError() evaluates assistant errors Current implementation points include agent_end, AgentSession.#isRetryableError().</p>
+
+<p id="fidelity-lc-ddda81d9507d7029" data-fidelity="lc-ddda81d9507d7029"><strong>Exponential backoff and retry lifecycle.</strong> When a retryable error occurs, the session coordinates recovery. Current implementation points include #retryAttempt, #retryAttempt › retry.maxRetries, auto_retry_start.</p>
+
+<p id="fidelity-lc-48b4718cfc006fcc" data-fidelity="lc-48b4718cfc006fcc"><strong>Configuration settings.</strong> Configure auto-retry behavior in config.yml or settings Current implementation points include config.yml, retry.enabled, true.</p>
+
+<p id="fidelity-lc-6d7ba76398dc58ab" data-fidelity="lc-6d7ba76398dc58ab"><strong>Related implementation files.</strong> Current implementation points include src/session/agent-session.ts, agent.continue(), src/config/settings-schema.ts.</p>
+
+<p id="fidelity-lc-acadacdb14d41ff3" data-fidelity="lc-acadacdb14d41ff3"><strong>Storage directory structure.</strong> Sessions persist as newline-delimited JSON (.jsonl) files in a directory derived from the working directory Current implementation points include .jsonl,
+~/.xcsh/agent/blobs/‹sha256›, ~/.xcsh/agent/terminal-sessions/‹terminal-id›.</p>
+
+<p id="fidelity-lc-15b25d90a2dfc21b" data-fidelity="lc-15b25d90a2dfc21b"><strong>File format and entry schema.</strong> The first line of every .jsonl file contains the session header. Current implementation points include .jsonl, SessionEntry, SessionHeader.</p>
+
+<p id="fidelity-lc-21e9fc22cbb723c5" data-fidelity="lc-21e9fc22cbb723c5"><strong>Context reconstruction (buildSessionContext).</strong> When xcsh initializes or resumes a session, buildSessionContext() reconstructs the LLM prompt payload. Current implementation points include buildSessionContext(), leafId,
+thinking_level_change.</p>
+
+<p id="fidelity-lc-2cb94fbe12910272" data-fidelity="lc-2cb94fbe12910272"><strong>Related implementation files.</strong> Current implementation points include src/session/session-manager.ts, src/session/messages.ts, src/session/session-storage.ts.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## Where does compaction act?
 
 Compaction transforms older conversation context before the next model turn; it does not rewrite the original session evidence. Test both the summary and subsequent message construction.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-441f76a0810bf5b0" data-fidelity="lc-441f76a0810bf5b0"><strong>Session entry models.</strong> Compaction and branch summaries are first-class session entries in packages/coding-agent Current implementation points include packages/coding-agent, CompactionEntry, type:
+"compaction".</p>
+
+<p id="fidelity-lc-91efb8615be60204" data-fidelity="lc-91efb8615be60204"><strong>Compaction pipeline.</strong> Compaction triggers in three scenarios. Current implementation points include /compact [instructions], AgentSession.compact(), contextWindow - compaction.reserveTokens.</p>
+
+<p id="fidelity-lc-b9e95c492a6fa119" data-fidelity="lc-b9e95c492a6fa119"><strong>Branch summarization pipeline.</strong> When navigating session trees via /tree or navigateTree(). Current implementation points include /tree, navigateTree(), options.summarize.</p>
+
+<p id="fidelity-lc-43e60fc63a161424" data-fidelity="lc-43e60fc63a161424"><strong>Configuration settings.</strong> Configure compaction and summarization behavior in settings Current implementation points include compaction.enabled, true, compaction.reserveTokens.</p>
+
+<p id="fidelity-lc-4cb8faf8c59e3592" data-fidelity="lc-4cb8faf8c59e3592"><strong>Related implementation files.</strong> Current implementation points include src/session/compaction/compaction.ts, src/session/compaction/branch-summarization.ts, src/session/compaction/pruning.ts.</p>
+
+<span data-fidelity-generated="end"></span>

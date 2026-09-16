@@ -14,8 +14,11 @@ import { readDirEntries, readFile } from "../capability/fs";
 import { parseRuleConditionAndScope, type Rule, type RuleFrontmatter } from "../capability/rule";
 import type { Skill, SkillFrontmatter } from "../capability/skill";
 import type { LoadContext, LoadResult, SourceMeta } from "../capability/types";
+import {
+	isInstalledPluginEffectivelyEnabled,
+	type MarketplaceRegistryEntry,
+} from "../extensibility/plugins/marketplace/types";
 import { parseThinkingLevel } from "../thinking";
-
 import { buildPluginDirRoot } from "./plugin-dir-roots";
 
 /**
@@ -613,6 +616,7 @@ export interface XcshPluginEntry {
 	lastUpdated: string;
 	gitCommitSha?: string;
 	enabled?: boolean;
+	enabledAt?: string;
 }
 
 /**
@@ -753,6 +757,14 @@ export async function listXcshPluginRoots(
 	const roots: XcshPluginRoot[] = [];
 	const warnings: string[] = [];
 	const projectRoots: XcshPluginRoot[] = [];
+	const marketplaceStates = new Map<string, MarketplaceRegistryEntry>();
+	const marketplacesContent = await readFile(path.join(home, getConfigDirName(), "marketplaces.json"));
+	if (marketplacesContent) {
+		const marketplacesRegistry = tryParseJson<{ marketplaces?: MarketplaceRegistryEntry[] }>(marketplacesContent);
+		for (const marketplace of marketplacesRegistry?.marketplaces ?? []) {
+			if (marketplace && typeof marketplace.name === "string") marketplaceStates.set(marketplace.name, marketplace);
+		}
+	}
 
 	// ── Installed plugins registry ───────────────────────────────────────────
 	// Path derived from `home` (not os.homedir()) so test isolation works when home is overridden.
@@ -777,7 +789,7 @@ export async function listXcshPluginRoots(
 						warnings.push(`Plugin ${pluginId} entry has no installPath`);
 						continue;
 					}
-					if (entry.enabled === false) continue;
+					if (!isInstalledPluginEffectivelyEnabled(entry, marketplaceStates.get(marketplace))) continue;
 					if (roots.some(r => r.id === pluginId && r.path === entry.installPath)) continue;
 
 					roots.push({
@@ -818,7 +830,7 @@ export async function listXcshPluginRoots(
 							warnings.push(`Plugin ${pluginId} entry has no installPath`);
 							continue;
 						}
-						if (entry.enabled === false) continue;
+						if (!isInstalledPluginEffectivelyEnabled(entry, marketplaceStates.get(marketplace))) continue;
 						projectRoots.push({
 							id: pluginId,
 							marketplace,

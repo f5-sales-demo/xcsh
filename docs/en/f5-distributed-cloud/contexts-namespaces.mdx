@@ -3,7 +3,7 @@ title: "Manage contexts and namespaces"
 description: "Store named tenant connections, activate the intended context, and scope operations to a namespace."
 sidebar:
   order: 1
-  label: "Manage contexts and namespaces"
+  label: "Contexts and namespaces"
 ---
 
 A context chooses the tenant endpoint and credential. A namespace chooses the resource scope inside that tenant. They are separate decisions.
@@ -15,3 +15,21 @@ Launch with `xcsh --context <NAME>` and inspect `/context status`. For automatio
 ## Where is context data stored?
 
 Context files live under `.xcsh/contexts/` at project scope or the xcsh user data directory. Never commit them: they can contain credentials and tenant identifiers.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-5e2355c0989f040b" data-fidelity="lc-5e2355c0989f040b"><strong>Getting started.</strong> Obtain your tenant endpoint URL, an API certificate/token, and your target namespace from the F5 XC Console, then run: Alternatively, launch the guided setup wizard. Activate a
+context by specifying its name: Once activated, xcsh injects tenant credentials int Current implementation points include *. The destination uses current source and candidate
+evidence instead of preserving a version-specific legacy statement.</p>
+
+<p id="fidelity-lc-42a3eaa0254e3297" data-fidelity="lc-42a3eaa0254e3297"><strong>Command reference.</strong> Current implementation points include /context, /context ‹NAME›, /context -. The destination uses current source and candidate evidence instead of preserving a version-specific
+legacy statement.</p>
+
+<p id="fidelity-lc-93224762e9e6d1a4" data-fidelity="lc-93224762e9e6d1a4"><strong>Namespace management.</strong> Update the active namespace within the current context: Auto-completion queries active namespaces from the connected tenant.</p>
+
+<p id="fidelity-lc-b8b2fb0a808558b7" data-fidelity="lc-b8b2fb0a808558b7"><strong>Custom context environment variables.</strong> Contexts can define custom environment variables that xcsh injects upon activation</p>
+
+<p id="fidelity-lc-a032be6e01743bc1" data-fidelity="lc-a032be6e01743bc1"><strong>Environment variable precedence.</strong> If XCSHAPIURL and XCSHAPITOKEN are set in the host shell prior to launching xcsh, environment variables override context configurations. Current implementation points include
+XCSH_API_URL, XCSH_API_TOKEN, /context.</p>
+
+<span data-fidelity-generated="end"></span>

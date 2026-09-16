@@ -258,10 +258,30 @@ async function handleMarketplace(args: string[], _flags: PluginCommandArgs["flag
 			}
 			break;
 		}
+		case "enable":
+		case "disable": {
+			const name = args[1];
+			if (!name) {
+				console.error(chalk.red(`Usage: ${APP_NAME} plugin marketplace ${subcommand} <name>`));
+				process.exit(1);
+			}
+			try {
+				await manager.setMarketplaceEnabled(name, subcommand === "enable");
+				console.log(
+					chalk.green(
+						`${theme.status.success} ${subcommand === "enable" ? "Enabled" : "Disabled"} marketplace: ${name}`,
+					),
+				);
+			} catch (err) {
+				console.error(chalk.red(`${theme.status.error} Failed to ${subcommand} marketplace: ${err}`));
+				process.exit(1);
+			}
+			break;
+		}
 		default: {
 			if (subcommand !== "list") {
 				console.error(chalk.red(`Unknown marketplace subcommand: ${subcommand}`));
-				console.error(chalk.dim("Valid subcommands: add, remove, update, list"));
+				console.error(chalk.dim("Valid subcommands: add, remove, update, enable, disable, list"));
 				process.exit(1);
 			}
 			try {
@@ -273,7 +293,9 @@ async function handleMarketplace(args: string[], _flags: PluginCommandArgs["flag
 				}
 				console.log(chalk.bold("Configured Marketplaces:\n"));
 				for (const mp of marketplaces) {
-					console.log(`  ${chalk.cyan(mp.name)}  ${chalk.dim(mp.sourceUri)}`);
+					const state = mp.enabled ? chalk.green("enabled") : chalk.yellow("disabled");
+					const kind = mp.builtIn ? chalk.dim("built-in") : chalk.dim("custom");
+					console.log(`  ${chalk.cyan(mp.name)}  ${state}  ${kind}  ${chalk.dim(mp.sourceUri)}`);
 				}
 			} catch (err) {
 				console.error(chalk.red(`${theme.status.error} Failed to list marketplaces: ${err}`));

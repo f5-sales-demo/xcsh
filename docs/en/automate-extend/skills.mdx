@@ -12,6 +12,28 @@ A skill is a directory centered on `SKILL.md`. It tells an agent when and how to
 
 Use project scope under `.xcsh/skills/` for repository-specific instructions and user scope under the xcsh data directory for personal skills. Project instructions should be reviewable with the repository.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-d27f2fc5c0f567f2" data-fidelity="lc-d27f2fc5c0f567f2"><strong>Core skill data model.</strong> A discovered skill represents the following metadata Current implementation points include name, description, filePath.</p>
+
+<p id="fidelity-lc-cdf166a40cb5a47a" data-fidelity="lc-cdf166a40cb5a47a"><strong>Directory layout and file conventions.</strong> Provider loaders scan for skills located exactly one subdirectory level below the configured root (‹ROOT›/skills/‹SKILLNAME›/SKILL.md): SKILL.md files define metadata using YAML
+frontmatter: Frontmatter parsing rules Current implementation points include ‹ROOT›/skills/‹SKILL_NAME›/SKILL.md, skills.customDirectories, customDirectories.</p>
+
+<p id="fidelity-lc-3260330f0ac1012d" data-fidelity="lc-3260330f0ac1012d"><strong>Discovery pipeline and precedence.</strong> DiscoverSkills() (src/extensibility/skills.ts) executes a two-phase discovery workflow. Current implementation points include discoverSkills(), src/extensibility/skills.ts,
+loadCapability("skills").</p>
+
+<p id="fidelity-lc-184800d8bc767820" data-fidelity="lc-184800d8bc767820"><strong>Runtime interaction models.</strong> When the read tool is enabled, src/system-prompt.ts appends a list of available skill names and descriptions to the system prompt. Current implementation points include read,
+src/system-prompt.ts, /skill:‹NAME›.</p>
+
+<p id="fidelity-lc-9dabfb15c0815ca8" data-fidelity="lc-9dabfb15c0815ca8"><strong>The skill:// URI protocol.</strong> The skill:// protocol handler (src/internal-urls/skill-protocol.ts) provides sandboxed access to skill files Current implementation points include skill://,
+src/internal-urls/skill-protocol.ts, skill://‹NAME›.</p>
+
+<p id="fidelity-lc-212eab0ccc5d669a" data-fidelity="lc-212eab0ccc5d669a"><strong>Skills compared with other extensibility mechanisms.</strong> Current implementation points include AGENTS.md, XCSH.md.</p>
+
+<p id="fidelity-lc-e47b4d078a8b3c4a" data-fidelity="lc-e47b4d078a8b3c4a"><strong>Authoring best practices.</strong> Current implementation points include SKILL.md, description, skill://‹NAME›/....</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I test one?
 
 Start xcsh with `--skills <GLOB>` to narrow discovery, invoke a prompt that matches the trigger, and inspect the tools and output. Use `--no-skills` to confirm behavior without it.

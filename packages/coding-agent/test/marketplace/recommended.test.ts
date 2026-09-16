@@ -7,6 +7,7 @@ import {
 	applySearch,
 	buildTabs,
 	filterByTab,
+	loadAllPlugins,
 	normalizePluginDisplayName,
 	refreshState,
 } from "../../src/modes/components/plugins/state-manager";
@@ -200,6 +201,34 @@ describe("refreshState", () => {
 		expect(refreshed.searchQuery).toBe("a");
 		expect(refreshed.searchFiltered[refreshed.selectedIndex]?.id).toBe("beta@mkt");
 		expect(refreshed.searchFiltered[refreshed.selectedIndex]?.version).toBe("2.0.0");
+	});
+});
+
+describe("dashboard effective marketplace state", () => {
+	it("shows an installed plugin as disabled when its marketplace makes it ineffective", async () => {
+		const mgr = {
+			listInstalledPlugins: async () => [
+				{
+					id: "plugin@mkt",
+					scope: "user",
+					effectiveEnabled: false,
+					entries: [
+						{
+							scope: "user",
+							installPath: "/plugin",
+							version: "1.0.0",
+							installedAt: "2025-01-01T00:00:00Z",
+							lastUpdated: "2025-01-01T00:00:00Z",
+							enabled: true,
+						},
+					],
+				},
+			],
+			checkForUpdates: async () => [],
+			listMarketplaces: async () => [],
+		} as unknown as MarketplaceManager;
+		const npmMgr = { list: async () => [] } as unknown as PluginManager;
+		expect((await loadAllPlugins(mgr, npmMgr))[0]?.enabled).toBe(false);
 	});
 });
 
