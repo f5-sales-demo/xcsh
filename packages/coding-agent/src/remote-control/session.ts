@@ -990,6 +990,13 @@ export class RemoteSession {
 						this.target.sessionManager.appendCustomEntry("remote-realtime", record);
 						await this.target.sessionManager.flush();
 					}),
+				title: text => {
+					if (
+						!this.target.messages.some(message => message.role === "user") &&
+						!this.target.sessionManager.getSessionName?.()
+					)
+						void coordinateSessionTitle(this.target, text);
+				},
 				delegate: (id, text, output) => {
 					try {
 						this.#assertCurrent(epoch);

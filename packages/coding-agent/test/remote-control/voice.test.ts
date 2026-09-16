@@ -19,6 +19,7 @@ function fixture(records: Record<string, unknown>[] = []) {
 	const sent: unknown[] = [];
 	const events: { method: string; params: Record<string, unknown> }[] = [];
 	const delegated: string[] = [];
+	const titles: string[] = [];
 	let receive: (data: string) => void = () => {};
 	let closed = 0;
 	let finish: (text: string) => void = () => {};
@@ -46,6 +47,9 @@ function fixture(records: Record<string, unknown>[] = []) {
 		record: async record => {
 			records.push(record);
 		},
+		title: text => {
+			titles.push(text);
+		},
 		delegate: async (_id, text) => {
 			delegated.push(text);
 			return new Promise<string>(resolve => {
@@ -59,6 +63,7 @@ function fixture(records: Record<string, unknown>[] = []) {
 		sent,
 		events,
 		delegated,
+		titles,
 		records,
 		receive: (event: unknown) => receive(JSON.stringify(event)),
 		closed: () => closed,
@@ -285,6 +290,18 @@ test("transcripts persist with provenance but never execute; delegation executes
 		content: [{ type: "input_text", text: "Updated the fixture." }],
 	});
 	f.voice.stop();
+});
+test("completed user speech requests one title without requiring delegation", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	const userDone = { type: "turn.done", turn: { id: "quick-user", role: "user", transcript: "quick answer" } };
+	f.receive(userDone);
+	f.receive(userDone);
+	f.receive({ type: "turn.done", turn: { id: "quick-assistant", role: "assistant", transcript: "response" } });
+	await Bun.sleep(0);
+	expect(f.titles).toEqual(["quick answer"]);
+	expect(f.delegated).toEqual([]);
+	await f.voice.stop();
 });
 test("persisted delegation identities suppress replay after attachment recreation", async () => {
 	const f = fixture();

@@ -40,6 +40,7 @@ export interface VoiceDependencies {
 	emit(method: string, params: Record<string, unknown>): void;
 	records(): Record<string, unknown>[];
 	record(record: Record<string, unknown>): Promise<void>;
+	title?(text: string): void;
 	delegate(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string>;
 }
 function connectionFailure(error: unknown): "http" | "upgradeRejected" | "closed" | "timeout" | "transport" {
@@ -729,6 +730,12 @@ export class NativeVoice {
 					role: event.role,
 					text: event.text,
 				});
+				if (event.role === "user" && event.text.trim())
+					try {
+						this.deps.title?.(event.text);
+					} catch {
+						// Title generation is presentation-only and must not fail voice.
+					}
 			}
 			this.#trackTranscript(event);
 			await this.#history?.transcript(event.role, event.text, event.done);
