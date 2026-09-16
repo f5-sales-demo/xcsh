@@ -12,12 +12,63 @@ The agent loop sees a common tool contract, but each runtime owns its validation
 
 The Bash tool validates the request, launches through the configured shell boundary, streams bounded output, and spills oversized results to an artifact. Notebook editing changes cell structure; kernel execution is a separate Python gateway operation with its own environment and Multipurpose Internet Mail Extensions (MIME) rendering.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-b11be210083acaaf" data-fidelity="lc-b11be210083acaaf"><strong>Execution entry points.</strong> xcsh provides two distinct shell execution interfaces. Current implementation points include bash, BashTool.execute(), !cmd.</p>
+
+<p id="fidelity-lc-5a2b3e4e9ba00875" data-fidelity="lc-5a2b3e4e9ba00875"><strong>Execution pipeline.</strong> When a tool call occurs, BashTool.execute() normalizes command strings via normalizeBashCommand(): If bashInterceptor.enabled is active, the tool checks the command against
+configured regex rules before spawning processes: xcsh chooses PTY execution (ru Current implementation points include BashTool.execute(), normalizeBashCommand(), | head -n N.</p>
+
+<p id="fidelity-lc-515c05a8280a0ba0" data-fidelity="lc-515c05a8280a0ba0"><strong>Output streaming, truncation, and artifact spill.</strong> Output is processed through OutputSink in src/session/streaming-output.ts Current implementation points include OutputSink, src/session/streaming-output.ts, artifact://‹ID›.</p>
+
+<p id="fidelity-lc-dd70ca3a60c2e0a7" data-fidelity="lc-dd70ca3a60c2e0a7"><strong>Filesystem sandboxing and containment.</strong> xcsh enforces filesystem containment boundaries using platform-native security primitives Current implementation points include seatbelt, landlock, scanner-only.</p>
+
+<p id="fidelity-lc-46efd2a69b63f4d4" data-fidelity="lc-46efd2a69b63f4d4"><strong>Related implementation files.</strong> Current implementation points include src/tools/bash.ts, src/tools/bash-normalize.ts, src/tools/bash-interceptor.ts.</p>
+
+<p id="fidelity-lc-bb9cebaaf9ad4955" data-fidelity="lc-bb9cebaaf9ad4955"><strong>Architectural boundary: editing vs. execution.</strong> Execution for notebook tool runtime. The notebook tool performs atomic JSON mutations on .ipynb files on disk: Interactive execution of cell-style code is handled exclusively by
+the python tool Current implementation points include src/tools/notebook.ts, notebook, .ipynb.</p>
+
+<p id="fidelity-lc-e000948937631a2c" data-fidelity="lc-e000948937631a2c"><strong>Cell manipulation semantics.</strong> When modifying cell content, xcsh splits incoming source text into string arrays preserving line endings (\n). Current implementation points include \n, edit, source.</p>
+
+<p id="fidelity-lc-c58b2d4bf617890f" data-fidelity="lc-c58b2d4bf617890f"><strong>Related implementation files.</strong> Current implementation points include src/tools/notebook.ts, src/tools/python.ts, src/ipy/executor.ts.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How are deferred actions resolved?
 
 Deferred actions are pushed onto a last-in, first-out stack and resolved only at the runtime checkpoint that owns them. Custom tools use the host application programming interface (API) to register actions; they must pair cancellation and cleanup with any external resource they create.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-111ec25bfab919cd" data-fidelity="lc-111ec25bfab919cd"><strong>Overview of deferred actions.</strong> The resolve tool provides a confirmation and commit boundary for staged actions: If no action is staged when resolve is called, the tool returns an error indicating that no pending
+actions exist. Current implementation points include resolve, action: "apply", apply(reason).</p>
+
+<p id="fidelity-lc-d7110a2963329e18" data-fidelity="lc-d7110a2963329e18"><strong>Action stack semantics (LIFO).</strong> Pending actions are managed by PendingActionStore as a Last-In, First-Out (LIFO) stack: When multiple previews are registered sequentially, resolve processes the most recently
+staged action first. Current implementation points include PendingActionStore, push(action), peek().</p>
+
+<p id="fidelity-lc-65d36f9b51d2231e" data-fidelity="lc-65d36f9b51d2231e"><strong>Custom tool integration (pushPendingAction).</strong> Custom tools register staged operations through CustomToolAPI.pushPendingAction(...) Current implementation points include CustomToolAPI.pushPendingAction(...), Prepared rename
+plan for $｛params.files.length｝ files, Batch rename: $｛params.files.length｝ files.</p>
+
+<p id="fidelity-lc-675bd5a51bc14910" data-fidelity="lc-675bd5a51bc14910"><strong>Related implementation files.</strong> Current implementation points include src/tools/resolve.ts, src/tools/pending-action.ts, PendingActionStore.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## How are commands and task agents discovered?
 
 Slash-command templates and agent definitions are discovered from normalized user, project, plugin, and bundled providers. Precedence resolves duplicate identifiers before execution. Argument expansion produces prompt input; it must not bypass tool policy or agent execution guardrails.
 
 Read `packages/coding-agent/src/tools/bash.ts` for the shell boundary, `packages/coding-agent/src/tools/notebook.ts` for cell editing, and `packages/coding-agent/src/slash-commands/builtin-registry.ts` for command discovery.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-43c242d8a16c5896" data-fidelity="lc-43c242d8a16c5896"><strong>Capability discovery and precedence.</strong> Slash commands are managed as an extensible capability (id: "slash-commands") identified by command name. Current implementation points include id: "slash-commands", native, 100.</p>
+
+<p id="fidelity-lc-93dd55c4e61ace52" data-fidelity="lc-93dd55c4e61ace52"><strong>Command template format and argument expansion.</strong> File-based slash commands are Markdown files with optional YAML frontmatter: When a user executes /command arg1 arg2, the prompt engine substitutes positional and aggregate tokens
+Current implementation points include /command arg1 arg2, $1, $2.</p>
+
+<p id="fidelity-lc-cae5141ae5a56288" data-fidelity="lc-cae5141ae5a56288"><strong>Prompt execution pipeline.</strong> When user input is submitted, AgentSession.prompt() evaluates input through the following stages. Current implementation points include AgentSession.prompt(),
+session.customCommands.</p>
+
+<p id="fidelity-lc-a7ccad65d24930bb" data-fidelity="lc-a7ccad65d24930bb"><strong>Related implementation files.</strong> Current implementation points include src/extensibility/slash-commands.ts, src/capability/slash-command.ts, src/discovery/builtin.ts.</p>
+
+<span data-fidelity-generated="end"></span>

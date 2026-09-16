@@ -3,7 +3,7 @@ title: "Microsoft Office task pane"
 description: "Serve or sideload the embedded task pane for Excel, Word, and PowerPoint."
 sidebar:
   order: 2
-  label: "Microsoft Office task pane"
+  label: "Office task pane"
 ---
 
 The Office pane packages an xcsh sidebar for supported Excel, Word, and PowerPoint hosts. `xcsh office --help` describes the installed serve, print, and sideload actions.
@@ -11,6 +11,14 @@ The Office pane packages an xcsh sidebar for supported Excel, Word, and PowerPoi
 ## Who owns the test surface?
 
 Package tests own pane components, bridge messages, and host-independent state. Office-host integration tests own document application programming interfaces (APIs), sideloading, and task-pane lifecycle. A change that crosses the bridge requires both suites; a passing browser-style component test does not prove Word, Excel, or PowerPoint host behavior.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-4bce21dd6d3b37ed" data-fidelity="lc-4bce21dd6d3b37ed"><strong>Test suites and domain ownership.</strong> Current implementation points include packages/office-pane/src/**/*.test.ts, packages/office-pane/test/integration/, packages/office-pane/test/e2e/.</p>
+
+<p id="fidelity-lc-ca15d3e733d2ebcb" data-fidelity="lc-ca15d3e733d2ebcb"><strong>Maintenance responsibilities.</strong> Current implementation points include office-pane.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## What must be running?
 

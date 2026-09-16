@@ -3,7 +3,7 @@ title: "Build extensions and custom tools"
 description: "Add TypeScript behavior, slash commands, providers, or schema-validated tools."
 sidebar:
   order: 3
-  label: "Build extensions and custom tools"
+  label: "Extensions and tools"
 ---
 
 Extensions load TypeScript behavior with `--extension` or `--hook`; project discovery can also load extensions, tools, hooks, commands, and rules under `.xcsh/`.
@@ -11,6 +11,49 @@ Extensions load TypeScript behavior with `--extension` or `--hook`; project disc
 ## How do I test an extension boundary?
 
 Load one explicit file with `-e <PATH>` and disable discovery with `--no-extensions`. Confirm its registered command or tool, then test shutdown and error handling.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-2f654120321fed4f" data-fidelity="lc-2f654120321fed4f"><strong>Extension architecture.</strong> An extension is a TypeScript or JavaScript module that exports a default factory function: A single extension module can register and combine multiple capabilities Current
+implementation points include pi.on(...), pi.registerTool(...), pi.registerCommand(...).</p>
+
+<p id="fidelity-lc-cfcb92cc4785d019" data-fidelity="lc-cfcb92cc4785d019"><strong>Runtime execution model.</strong> The extension lifecycle proceeds through the following stages. Current implementation points include ExtensionRunner.initialize(...), tool_call, tool_result.</p>
+
+<p id="fidelity-lc-2615c868fda667e3" data-fidelity="lc-2615c868fda667e3"><strong>Quick start guide.</strong> The following example registers an extension with event interception, a custom tool, and a slash command Current implementation points include Extension loaded in $｛ctx.cwd｝,
+Hello, $｛params.name｝!, Pending messages: $｛ctx.hasPendingMessages()｝. The destination uses current source and candidate evidence instead of preserving a version-specific legacy
+statement.</p>
+
+<p id="fidelity-lc-5add4e1e1e61feae" data-fidelity="lc-5add4e1e1e61feae"><strong>Extension API reference.</strong> Core methods available on the pi API object: In interactive mode, input handlers execute prior to automatic session titling. Current implementation points include ExtensionAPI, pi,
+on(event, handler).</p>
+
+<p id="fidelity-lc-1f53044b827aeb2e" data-fidelity="lc-1f53044b827aeb2e"><strong>Event system reference.</strong> Cancelable pre-event return structures Current implementation points include session_start, session_before_switch, session_switch.</p>
+
+<p id="fidelity-lc-d95271c3abb8cf35" data-fidelity="lc-d95271c3abb8cf35"><strong>Tool implementation reference.</strong> Register tools using pi.registerTool(...) with the following schema: Tool interception via toolcall and toolresult applies globally to all registered tools, including built-in
+tools. Current implementation points include pi.registerTool(...), tool_call, tool_result.</p>
+
+<p id="fidelity-lc-22a3b734cb2de019" data-fidelity="lc-22a3b734cb2de019"><strong>User interface integration.</strong> Ctx.ui provides the ExtensionUIContext interface across execution modes. Current implementation points include ctx.ui, ExtensionUIContext, select.</p>
+
+<p id="fidelity-lc-55d9920be580b603" data-fidelity="lc-55d9920be580b603"><strong>Session state management.</strong> To persist extension state across session switches and restarts. Current implementation points include pi.appendEntry("custom_type", stateData), session_start, session_branch.</p>
+
+<p id="fidelity-lc-e3b4fc30eedb9cd9" data-fidelity="lc-e3b4fc30eedb9cd9"><strong>Custom visual renderers.</strong> Define renderCall and renderResult within registerTool to render specialized TUI widgets for tool arguments and results. Current implementation points include renderCall,
+renderResult, registerTool.</p>
+
+<p id="fidelity-lc-b207b97ab69ebaab" data-fidelity="lc-b207b97ab69ebaab"><strong>Operational constraints.</strong> Current implementation points include ｛ block: true ｝, tool_call, Ctrl+C.</p>
+
+<p id="fidelity-lc-794dde32ab870ee6" data-fidelity="lc-794dde32ab870ee6"><strong>Comparing extensions, hooks, and custom tools.</strong> When building packages that require coordinated policy enforcement, custom tools, slash commands, and user interface elements, use the unified extension system. Current
+implementation points include src/extensibility/extensions/*, src/extensibility/hooks/*, src/extensibility/custom-tools/*.</p>
+
+<p id="fidelity-lc-db746036e62b5f40" data-fidelity="lc-db746036e62b5f40"><strong>Terminology boundaries.</strong> An extension is the loadable module, a custom tool is a model-callable capability it registers, and a hook is an event handler with separate ordering and failure semantics.</p>
+
+<p id="fidelity-lc-85aee9df85c39254" data-fidelity="lc-85aee9df85c39254"><strong>Discovery and registration workflows.</strong> xcsh loads custom tools through two mechanisms. Current implementation points include options.customTools, ~/.xcsh/agent/tools/, .xcsh/tools/.</p>
+
+<p id="fidelity-lc-3a37cdcd717b290b" data-fidelity="lc-3a37cdcd717b290b"><strong>Module structure and factory pattern.</strong> A custom tool module exports a factory conforming to CustomToolFactory Current implementation points include CustomToolFactory, Found $｛files.length｝ matching files.</p>
+
+<p id="fidelity-lc-998d504100f3c0cf" data-fidelity="lc-998d504100f3c0cf"><strong>Host API surface (CustomToolAPI).</strong> Factory functions receive a CustomToolAPI instance containing Current implementation points include CustomToolAPI, cwd, exec(command, args, options?).</p>
+
+<p id="fidelity-lc-c507429c24d372b1" data-fidelity="lc-c507429c24d372b1"><strong>Lifecycle and cancellation handling.</strong> Current implementation points include execute(), signal, onSession(event, ctx).</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## Where do hooks and rules belong?
 

@@ -1,0 +1,24 @@
+date_utc: 2026-09-16
+source_commit: a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c
+workflow_commit: b68cf1496e1a695751efee5114ddfe24f7cd9e35
+builder_image: ghcr.io/f5-sales-demo/docs-builder@sha256:06be6f363e32f8b78898f4f4bdcb1ef86f698073c68a77701327e78611af2bce
+
+build_result: passed
+generated_pages: 833
+pagefind_html_files: 834
+english_routes: 64
+removed_route_absent: /xcsh/en/getting-started/installation/
+
+llm_checks:
+  - Platform installation tab content is present in llms-small.txt and llms-full.txt.
+  - Fidelity content is present in llms-full.txt and the section corpora.
+
+browser_checks:
+  desktop_light: passed at 1440x1000
+  desktop_dark: passed at 1440x1000
+  mobile_light: passed at 390x844 with no horizontal overflow
+  tabs: macOS, Ubuntu or Debian, Windows, Container, Advanced
+  keyboard: ArrowRight moved selection from macOS to Ubuntu or Debian
+  sidebar: no clipped labels at 1280x900
+
+cleanup: Preview server, port forward, screenshots, and generated output are disposable and excluded from Git.

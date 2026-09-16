@@ -14,16 +14,85 @@
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "docs/en/integrations-deployment/herdr.mdx"
       ],
-      "evidence": ["source-authority", "candidate-cli"],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
       "headings": [
-        { "text": "Current delivery checklist", "readerQuestion": "Which delivery stages are proven and which remain open?", "purpose": "Prevent partial implementation or deferred required work from appearing complete.", "evidence": ["source-authority", "candidate-cli"], "legacyConceptIds": [] },
-        { "text": "What is proven now?", "readerQuestion": "Which parity claims have evidence today?", "purpose": "Separate source, unit, installed-interface, and missing evidence.", "evidence": ["source-authority", "candidate-cli"], "legacyConceptIds": [] },
-        { "text": "Which invariants define parity?", "readerQuestion": "Which identities and lifecycle boundaries must implementations preserve?", "purpose": "Define the three-plane contract and durable ordering rules.", "evidence": ["source-authority"], "legacyConceptIds": [] },
-        { "text": "What do statuses mean?", "readerQuestion": "How must native states appear in UI and Manager behavior?", "purpose": "Prevent false completion and preserve waiting, failure, cancellation, and loss distinctions.", "evidence": ["source-authority"], "legacyConceptIds": [] },
-        { "text": "Which ordered work packages close the gaps?", "readerQuestion": "Who must implement each gap and in what dependency order?", "purpose": "Provide actionable owner-specific work packages and gates.", "evidence": ["source-authority"], "legacyConceptIds": [] },
-        { "text": "What end-to-end tests are required?", "readerQuestion": "Which scenarios prove the complete durable path?", "purpose": "Specify unit, integration, staged, and live acceptance coverage.", "evidence": ["source-authority"], "legacyConceptIds": [] },
-        { "text": "How is completion gated?", "readerQuestion": "When may the feature be shown as accepted?", "purpose": "Keep plan, implementation, testing, installation, live verification, and acceptance distinct.", "evidence": ["source-authority"], "legacyConceptIds": [] },
-        { "text": "What decisions and risks need review?", "readerQuestion": "Which contract decisions and operational risks require explicit review?", "purpose": "Record recommended decisions and fail-closed risks.", "evidence": ["source-authority"], "legacyConceptIds": [] }
+        {
+          "text": "Current delivery checklist",
+          "readerQuestion": "Which delivery stages are proven and which remain open?",
+          "purpose": "Prevent partial implementation or deferred required work from appearing complete.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What is proven now?",
+          "readerQuestion": "Which parity claims have evidence today?",
+          "purpose": "Separate source, unit, installed-interface, and missing evidence.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which invariants define parity?",
+          "readerQuestion": "Which identities and lifecycle boundaries must implementations preserve?",
+          "purpose": "Define the three-plane contract and durable ordering rules.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What do statuses mean?",
+          "readerQuestion": "How must native states appear in UI and Manager behavior?",
+          "purpose": "Prevent false completion and preserve waiting, failure, cancellation, and loss distinctions.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which ordered work packages close the gaps?",
+          "readerQuestion": "Who must implement each gap and in what dependency order?",
+          "purpose": "Provide actionable owner-specific work packages and gates.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What end-to-end tests are required?",
+          "readerQuestion": "Which scenarios prove the complete durable path?",
+          "purpose": "Specify unit, integration, staged, and live acceptance coverage.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How is completion gated?",
+          "readerQuestion": "When may the feature be shown as accepted?",
+          "purpose": "Keep plan, implementation, testing, installation, live verification, and acceptance distinct.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What decisions and risks need review?",
+          "readerQuestion": "Which contract decisions and operational risks require explicit review?",
+          "purpose": "Record recommended decisions and fail-closed risks.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        }
       ]
     },
     {
@@ -687,56 +756,72 @@
           "text": "What flow should an interactive manager use?",
           "readerQuestion": "What sequence should an interactive manager follow?",
           "purpose": "Define the stable browse, inspect, act, and outcome flow through the reference selectors.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "How should a selector look?",
           "readerQuestion": "Which frame, width, gutter, column, density, and highlight conventions apply?",
           "purpose": "Define the adaptable visual language for wide and narrow terminals.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "How should input and navigation behave?",
           "readerQuestion": "How do search, navigation, confirmation, and Escape work?",
           "purpose": "Define predictable keyboard and input editing behavior without shortcut collisions.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "Which states must the copy distinguish?",
           "readerQuestion": "How should plugin and asynchronous states be communicated without relying on color?",
           "purpose": "Separate availability, installation, enabled state, scope, updates, and operation feedback.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "How do confirmation and review screens work?",
           "readerQuestion": "How should explicit actions, installation review, removal confirmation, and bulk review behave?",
           "purpose": "Keep mutations deliberate and make their scope and prerequisite effects visible.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "What should reviewers check?",
           "readerQuestion": "Which concrete checks establish interaction and rendering quality?",
           "purpose": "Provide a repeatable review checklist for responsive, accessible, and asynchronous behavior.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "What did the slash-command library review identify?",
           "readerQuestion": "Which command surfaces need usability improvements and what is their adoption status?",
           "purpose": "Track every built-in command and the extensible discovery contract with prioritized, explicitly incomplete adoption work.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         },
         {
           "text": "Where should the guide be adopted next?",
           "readerQuestion": "Which interactive surfaces should adopt the contract first?",
           "purpose": "Prioritize focused follow-up passes without authorizing a repository-wide redesign.",
-          "evidence": ["source-authority"],
+          "evidence": [
+            "source-authority"
+          ],
           "legacyConceptIds": []
         }
       ]
@@ -2310,66 +2395,6 @@
       ]
     },
     {
-      "path": "docs/en/getting-started/installation.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Install xcsh: Install a verified xcsh release with Homebrew, apt, the installer, npm or Bun, a standalone binary, or a container.",
-      "purpose": "Answer the distinct task or decision described by Install xcsh.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "scripts/install.sh",
-        ".github/workflows/release-reconcile.yml"
-      ],
-      "evidence": [
-        "source-authority",
-        "installed-release",
-        "candidate-cli",
-        "browser-build",
-        "legacy-enrichment"
-      ],
-      "headings": [
-        {
-          "text": "How do I install on Ubuntu or Debian?",
-          "readerQuestion": "How do I install on Ubuntu or Debian?",
-          "purpose": "Answer this question within Install xcsh: How do I install on Ubuntu or Debian?.",
-          "evidence": [
-            "source-authority",
-            "installed-release",
-            "candidate-cli",
-            "browser-build",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "How do I confirm the selected executable?",
-          "readerQuestion": "How do I confirm the selected executable?",
-          "purpose": "Answer this question within Install xcsh: How do I confirm the selected executable?.",
-          "evidence": [
-            "source-authority",
-            "installed-release",
-            "candidate-cli",
-            "browser-build",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "How do I remove it?",
-          "readerQuestion": "How do I remove it?",
-          "purpose": "Answer this question within Install xcsh: How do I remove it?.",
-          "evidence": [
-            "source-authority",
-            "installed-release",
-            "candidate-cli",
-            "browser-build",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        }
-      ]
-    },
-    {
       "path": "docs/en/getting-started/model-authentication.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
@@ -2470,23 +2495,77 @@
         ".github/workflows/release-reconcile.yml"
       ],
       "evidence": [
-        "source-authority",
-        "candidate-cli",
         "browser-build",
+        "candidate-cli",
+        "install-channels-20260916",
+        "installed-release",
+        "legacy-build-browser",
         "legacy-enrichment",
-        "legacy-build-browser"
+        "production-build-20260916",
+        "source-authority"
       ],
       "headings": [
         {
-          "text": "Where should I start?",
-          "readerQuestion": "Where should I start?",
-          "purpose": "Answer this question within xcsh: Where should I start?.",
+          "text": "Install xcsh",
+          "readerQuestion": "How do I install, verify, upgrade, switch, or remove xcsh?",
+          "purpose": "Provide the canonical installation procedure for every supported channel.",
           "evidence": [
-            "source-authority",
-            "candidate-cli",
             "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
             "legacy-enrichment",
-            "legacy-build-browser"
+            "production-build-20260916",
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Verify the active installation",
+          "readerQuestion": "How do I prove which xcsh installation is active?",
+          "purpose": "Detect PATH and channel conflicts before configuration.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Authenticate a provider",
+          "readerQuestion": "How do I authenticate a model provider safely?",
+          "purpose": "Route readers to provider authentication before their first prompt.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Run the quickstart",
+          "readerQuestion": "How do I run a bounded first prompt?",
+          "purpose": "Prove the executable and model route without tools or persistence.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority"
           ],
           "legacyConceptIds": [
             "lc-c7aaa3df3c68b247",
@@ -3453,16 +3532,82 @@
         "scripts/run-ts-tests.ts",
         "tests/test_ci_capacity_contract.py"
       ],
-      "evidence": ["source-authority"],
+      "evidence": [
+        "source-authority"
+      ],
       "headings": [
-        {"text": "Purpose", "readerQuestion": "Why is a bounded worker count a cross-file contract?", "purpose": "Explain why every qualification boundary must be updated together.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Required changes", "readerQuestion": "Which files must change for a new worker count?", "purpose": "List the workflow, harness, launcher, and contract updates.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Source and harness must agree", "readerQuestion": "Why must the frozen source accept the new worker count?", "purpose": "Prevent a source-side package test from rejecting a harness-only parallelism update.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Bounded implementation pattern", "readerQuestion": "How is a worker count carried to Bun safely?", "purpose": "Define the explicit experiment-to-worker path and bounded scheduling rule.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Preflight before dispatch", "readerQuestion": "Which checks prove the new route before a workload runs?", "purpose": "Provide focused validation and dispatch readiness checks.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Settings that remain fixed during a screen", "readerQuestion": "Which controls must not change during a parallelism screen?", "purpose": "Preserve a comparable, bounded benchmark environment.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Failure signatures and the missing contract", "readerQuestion": "How do setup failures identify the missing update?", "purpose": "Map failures to the contract that requires repair.", "evidence": ["source-authority"], "legacyConceptIds": []},
-        {"text": "Promotion boundary", "readerQuestion": "When may a qualified count change normal CI?", "purpose": "Separate qualification enablement from production promotion and rollback.", "evidence": ["source-authority"], "legacyConceptIds": []}
+        {
+          "text": "Purpose",
+          "readerQuestion": "Why is a bounded worker count a cross-file contract?",
+          "purpose": "Explain why every qualification boundary must be updated together.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Required changes",
+          "readerQuestion": "Which files must change for a new worker count?",
+          "purpose": "List the workflow, harness, launcher, and contract updates.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Source and harness must agree",
+          "readerQuestion": "Why must the frozen source accept the new worker count?",
+          "purpose": "Prevent a source-side package test from rejecting a harness-only parallelism update.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Bounded implementation pattern",
+          "readerQuestion": "How is a worker count carried to Bun safely?",
+          "purpose": "Define the explicit experiment-to-worker path and bounded scheduling rule.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Preflight before dispatch",
+          "readerQuestion": "Which checks prove the new route before a workload runs?",
+          "purpose": "Provide focused validation and dispatch readiness checks.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Settings that remain fixed during a screen",
+          "readerQuestion": "Which controls must not change during a parallelism screen?",
+          "purpose": "Preserve a comparable, bounded benchmark environment.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Failure signatures and the missing contract",
+          "readerQuestion": "How do setup failures identify the missing update?",
+          "purpose": "Map failures to the contract that requires repair.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Promotion boundary",
+          "readerQuestion": "When may a qualified count change normal CI?",
+          "purpose": "Separate qualification enablement from production promotion and rollback.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        }
       ]
     }
   ]

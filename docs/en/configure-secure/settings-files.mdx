@@ -3,7 +3,7 @@ title: "Understand settings precedence"
 description: "Predict which user, project, environment, and command-line value xcsh resolves."
 sidebar:
   order: 1
-  label: "Understand settings precedence"
+  label: "Settings precedence"
 ---
 
 Project settings apply to one repository; user settings apply across projects; command flags override both for one invocation. Use `xcsh config list --json` to inspect effective values.
@@ -11,6 +11,37 @@ Project settings apply to one repository; user settings apply across projects; c
 ## How is configuration resolved?
 
 Discovery collects fixed user, project, environment, and command-line sources, normalizes each through the schema-backed configuration wrapper, then resolves values by explicit priority. Capability-specific discovery uses the same roots but owns its own merge and deduplication rules. Native `.xcsh` providers participate through the documented provider interface, not an implicit recursive scan.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-7c58ff2f74340c26" data-fidelity="lc-7c58ff2f74340c26"><strong>Scope.</strong> Current implementation points include src/config.ts, src/config/settings.ts, src/config/settings-schema.ts.</p>
+
+<p id="fidelity-lc-59610404fc89535f" data-fidelity="lc-59610404fc89535f"><strong>Resolution flow.</strong> Configuration discovery collects ordered roots, loads schema-backed files, normalizes capability sources, and resolves explicit higher-priority values over lower-priority defaults.</p>
+
+<p id="fidelity-lc-1f3128e3d9f47890" data-fidelity="lc-1f3128e3d9f47890"><strong>Config roots and source order.</strong> Src/config.ts defines a fixed source priority order. Current implementation points include src/config.ts, .xcsh, .claude.</p>
+
+<p id="fidelity-lc-7dd3b13d149985a4" data-fidelity="lc-7dd3b13d149985a4"><strong>Core discovery helpers.</strong> Returns ordered directory entries. Supported options: This API handles directory-based configuration lookups (commands, hooks, tools, agents, and related assets). Current
+implementation points include getConfigDirs(subpath, options), user, true.</p>
+
+<p id="fidelity-lc-8714baaf5dfa222d" data-fidelity="lc-8714baaf5dfa222d"><strong>File configuration wrapper.</strong> ConfigFile‹T› (src/config.ts) provides schema-validated loading for individual configuration files. Current implementation points include ConfigFile‹T›, src/config.ts, .yml.</p>
+
+<p id="fidelity-lc-b31f4ac2a616f9f9" data-fidelity="lc-b31f4ac2a616f9f9"><strong>Settings resolution model.</strong> The runtime settings model applies layered resolution. Current implementation points include ~/.xcsh/agent/config.yml, settings.json, SETTINGS_SCHEMA.</p>
+
+<p id="fidelity-lc-ec4b1c79b91baaf1" data-fidelity="lc-ec4b1c79b91baaf1"><strong>Capability and discovery integration.</strong> Non-core configuration loading flows through the capability registry (src/capability/index.ts and src/discovery/index.ts). Current implementation points include
+src/capability/index.ts, src/discovery/index.ts, builtin.ts.</p>
+
+<p id="fidelity-lc-33ec88ff30f6649f" data-fidelity="lc-33ec88ff30f6649f"><strong>Native .xcsh provider behavior.</strong> The native provider (id: native, defined in src/discovery/builtin.ts) reads from: builtin.ts includes a configuration root only if the directory exists and is non-empty
+(ifNonEmptyDir). Current implementation points include id: native, src/discovery/builtin.ts, ‹cwd›/.xcsh/....</p>
+
+<p id="fidelity-lc-873cb563f339cc59" data-fidelity="lc-873cb563f339cc59"><strong>How major subsystems consume configuration.</strong> Current implementation points include Settings.init(), config.yml, settings.json.</p>
+
+<p id="fidelity-lc-63c5a3bf985de960" data-fidelity="lc-63c5a3bf985de960"><strong>Precedence rules and priority resolution.</strong> When reasoning about configuration precedence, apply this sequence. Current implementation points include config.ts, Settings.#loadProjectSettings().</p>
+
+<p id="fidelity-lc-13c3b3135193667d" data-fidelity="lc-13c3b3135193667d"><strong>Legacy and compatibility behaviors.</strong> The runtime preserves the following backward-compatibility behaviors: When deprecating any compatibility path in code, update this document to maintain alignment with active
+runtime behavior. Current implementation points include ConfigFile, settings.json, agent.db. The prerelease clean break removes compatibility behavior; the destination documents
+only the supported current resolution path.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## Where are settings stored?
 

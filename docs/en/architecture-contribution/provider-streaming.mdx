@@ -23,6 +23,24 @@ provider wire events        adapter                      agent loop
 
 Tool arguments can arrive as JavaScript Object Notation (JSON) fragments. The adapter accumulates fragments per call identifier and emits a tool request only after a complete valid value exists. Parse failure remains an error with provider context; silently truncating or inventing arguments would cross the provider boundary.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-5feb37d721591493" data-fidelity="lc-5feb37d721591493"><strong>End-to-end streaming architecture.</strong> 1. Current implementation points include streamSimple(), packages/ai/src/stream.ts, anthropic.ts.</p>
+
+<p id="fidelity-lc-f4ffe110f23f4eb5" data-fidelity="lc-f4ffe110f23f4eb5"><strong>Unified stream contract (AssistantMessageEvent).</strong> All provider drivers emit events conforming to the AssistantMessageEvent union Current implementation points include AssistantMessageEvent, start, text_start.</p>
+
+<p id="fidelity-lc-32ae7a7a7c35f6dd" data-fidelity="lc-32ae7a7a7c35f6dd"><strong>Provider-specific normalization logic.</strong> Only if its tool definition has strict: true, strict-schema adaptation succeeds, and the adapted schema stays within Anthropic's documented complexity limits. Current
+implementation points include anthropic-messages, message_start, content_block_start.</p>
+
+<p id="fidelity-lc-10c2b38d66429a31" data-fidelity="lc-10c2b38d66429a31"><strong>Tool call JSON accumulation and error recovery.</strong> Incremental tool arguments are parsed via parseStreamingJson() (packages/ai/src/utils/json-parse.ts). Current implementation points include parseStreamingJson(),
+packages/ai/src/utils/json-parse.ts, JSON.parse.</p>
+
+<p id="fidelity-lc-42c02b01c8fcb680" data-fidelity="lc-42c02b01c8fcb680"><strong>Cancellation and lifecycle boundaries.</strong> Current implementation points include options.signal, signal.aborted, AgentSession.abort().</p>
+
+<p id="fidelity-lc-ef3308c1c93428e7" data-fidelity="lc-ef3308c1c93428e7"><strong>Related implementation files.</strong> Current implementation points include packages/ai/src/stream.ts, packages/ai/src/utils/event-stream.ts, packages/ai/src/utils/json-parse.ts.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How does a stream cancel and finish exactly once?
 
 Cancellation propagates to the active provider request and prevents later deltas from reopening the turn. A terminal success, cancellation, or error settles the stream once. Retry and model fallback happen above normalization so an adapter does not conceal which provider produced an event.

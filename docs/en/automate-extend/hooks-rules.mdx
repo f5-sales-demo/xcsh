@@ -12,9 +12,73 @@ Rules contribute normalized instructions to the prompt. Hooks execute code at na
 
 Rule providers scan project and user roots, parse frontmatter, normalize identifiers, then deduplicate by precedence. Classification separates ordinary rulebook entries, always-apply guidance, and time-to-self-reflect material. The `rule://` handler resolves the final normalized item rather than reading an arbitrary path.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-ab6e6363752d8705" data-fidelity="lc-ab6e6363752d8705"><strong>Primary implementation files.</strong> Current implementation points include packages/coding-agent/src/capability/rule.ts, packages/coding-agent/src/capability/index.ts, packages/coding-agent/src/discovery/index.ts.</p>
+
+<p id="fidelity-lc-bb4d10cd93f144ab" data-fidelity="lc-bb4d10cd93f144ab"><strong>1. Canonical rule data structure.</strong> Canonical rule data structure for rulebook matching pipeline. All discovery providers normalize rule definitions into the Rule interface: The capability registry deduplicates rules
+using rule.name as the primary key (ruleCapability.key = rule =› rule.name). Current implementation points include Rule, rule.name, ruleCapability.key = rule =› rule.name.</p>
+
+<p id="fidelity-lc-ade1177333549b21" data-fidelity="lc-ade1177333549b21"><strong>2. Discovery providers and normalization rules.</strong> Discovery providers and normalization rules for rulebook matching pipeline. The discovery subsystem registers four rule providers. Discovers xcsh rule files from. Normalization
+behavior. Discovers rules from: Normalization rules (transformMDCRule). Discovers rules from. Normalization behavior: Traverses upward from the current worki Current implementation
+points include native, 100, cursor.</p>
+
+<p id="fidelity-lc-782ac363123da9d4" data-fidelity="lc-782ac363123da9d4"><strong>3. Frontmatter parsing and fallback handling.</strong> Frontmatter parsing and fallback handling for rulebook matching pipeline. Providers parse frontmatter blocks using parseFrontmatter (utils/frontmatter.ts). Current implementation
+points include parseFrontmatter, utils/frontmatter.ts, ---.</p>
+
+<p id="fidelity-lc-af607648cd42c960" data-fidelity="lc-af607648cd42c960"><strong>4. Provider precedence and deduplication.</strong> Provider precedence and deduplication for rulebook matching pipeline. loadCapability("rules") aggregates discovered rules across providers and resolves duplicate rule names Current
+implementation points include loadCapability("rules"), native, cursor.</p>
+
+<p id="fidelity-lc-4cc89febb53017b3" data-fidelity="lc-4cc89febb53017b3"><strong>5. Classification into Rulebook, Always-Apply, and TTSR categories.</strong> Classification into rulebook, always-apply, and ttsr categories for rulebook matching pipeline. During session initialization in createAgentSession (SDK.ts), discovered rules are
+partitioned into three execution buckets. Current implementation points include createAgentSession, SDK.ts, condition.</p>
+
+<p id="fidelity-lc-690cafe3122e9f5a" data-fidelity="lc-690cafe3122e9f5a"><strong>6. Runtime metadata utilization.</strong> Runtime metadata utilization for rulebook matching pipeline. Current implementation points include description, ‹rules›, rule://.</p>
+
+<p id="fidelity-lc-235ba350d282111d" data-fidelity="lc-235ba350d282111d"><strong>7. System prompt integration.</strong> System prompt integration for rulebook matching pipeline. buildSystemPromptInternal constructs the final prompt context. Current implementation points include
+buildSystemPromptInternal, # Rules, rule://‹NAME›.</p>
+
+<p id="fidelity-lc-4c571629f6528882" data-fidelity="lc-4c571629f6528882"><strong>8. The rule:// URI protocol handler.</strong> The rule:// URI protocol handler for rulebook matching pipeline. RuleProtocolHandler resolves rule:// URIs against combined rulebook and always-apply collections Current
+implementation points include RuleProtocolHandler, rule://, rule://unit-testing.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## What determines hook execution order?
 
 A hook module exports handlers for supported events. Discovery determines the module set, and registration order determines sequential mutation when more than one handler sees the same payload. A thrown error follows the event's propagation contract; it is not converted into a successful empty result.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-8b6f1f9f10b74254" data-fidelity="lc-8b6f1f9f10b74254"><strong>Current runtime status.</strong> The hook package (src/extensibility/hooks/) provides a public API surface, while the default CLI runtime initializes the extension runner path: This document covers the hook
+subsystem implementation (types, loader, runner, and wrapper), including backward-co Current implementation points include src/extensibility/hooks/, --hook, --extension. The
+destination uses current source and candidate evidence instead of preserving a version-specific legacy statement.</p>
+
+<p id="fidelity-lc-304620d56af6ed9b" data-fidelity="lc-304620d56af6ed9b"><strong>Key files.</strong> Current implementation points include src/extensibility/hooks/types.ts, src/extensibility/hooks/loader.ts, src/extensibility/hooks/runner.ts.</p>
+
+<p id="fidelity-lc-424f036abbd0772c" data-fidelity="lc-424f036abbd0772c"><strong>Hook module anatomy.</strong> A hook module must provide a default export of a factory function: The factory function supports the following operations Current implementation points include pi.on(...),
+pi.sendMessage(...), pi.appendEntry(...).</p>
+
+<p id="fidelity-lc-98ace5603ac8abfb" data-fidelity="lc-98ace5603ac8abfb"><strong>Discovery and loading.</strong> DiscoverAndLoadHooks(configuredPaths, cwd) executes the following sequence. Current implementation points include discoverAndLoadHooks(configuredPaths, cwd),
+loadCapability("hooks"), loadHooks(allPaths, cwd).</p>
+
+<p id="fidelity-lc-8bd1ccd95789e19e" data-fidelity="lc-8bd1ccd95789e19e"><strong>Event surfaces.</strong> Hook events are strongly typed in types.ts. Current implementation points include types.ts, session_start, session_before_switch.</p>
+
+<p id="fidelity-lc-caa4738fab97625f" data-fidelity="lc-caa4738fab97625f"><strong>Execution model and mutation semantics.</strong> HookToolWrapper.execute() emits toolcall before executing the underlying tool: The underlying tool executes normally if no handler blocks the call. Current implementation points
+include tool_call, HookToolWrapper.execute(), ｛ block: true ｝.</p>
+
+<p id="fidelity-lc-552e547e2f526f67" data-fidelity="lc-552e547e2f526f67"><strong>Ordering and conflict resolution.</strong> Capability providers are sorted in descending order by numeric priority. Current implementation points include hooks, $｛type｝:$｛tool｝:$｛name｝, discoverAndLoadHooks.</p>
+
+<p id="fidelity-lc-0b0dc8b1d195a3dd" data-fidelity="lc-0b0dc8b1d195a3dd"><strong>User-interface interactions.</strong> HookUIContext exposes the following methods: ctx.hasUI indicates whether interactive UI capabilities are available. Current implementation points include HookUIContext, select,
+confirm.</p>
+
+<p id="fidelity-lc-14bffd628b7259ba" data-fidelity="lc-14bffd628b7259ba"><strong>Error handling and propagation.</strong> HookRunner.emit(...) catches handler errors for most event types, emits a HookError event (hookPath, event, error) to registered listeners, and continues execution. Current
+implementation points include LoadHooksResult.errors, HookRunner.emit(...), HookError.</p>
+
+<p id="fidelity-lc-5f8ecb52a59185b3" data-fidelity="lc-5f8ecb52a59185b3"><strong>API examples.</strong> Current implementation points include Allow execution: $｛cmd｝.</p>
+
+<p id="fidelity-lc-9827f14378b7555e" data-fidelity="lc-9827f14378b7555e"><strong>Exported package surface.</strong> Src/extensibility/hooks/index.ts exports: The package root (src/index.ts) re-exports hook TypeScript types for backward compatibility. Current implementation points include
+src/extensibility/hooks/index.ts, discoverAndLoadHooks, loadHooks.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## How do I test the hook boundary?
 
