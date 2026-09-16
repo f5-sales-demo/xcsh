@@ -195,6 +195,7 @@ test("partial media export retries only unresolved files after renewed review", 
 	h.input("\r");
 	await waitFor(
 		async () =>
+			h.text().includes("writes unresolved") &&
 			(await Bun.file(sidecar).exists()) &&
 			!(await Bun.file(destination).exists()) &&
 			!(await fs.readdir(h.root)).some(name => name.startsWith(".xcsh-export-")),
