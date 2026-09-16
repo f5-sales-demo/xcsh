@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "kind": "anthropic-fable-live-uat",
+  "capturedAt": "2026-09-16T18:53:29Z",
+  "host": {
+    "os": "Ubuntu",
+    "architecture": "x86_64",
+    "worktree": "/data/robin-GIT/xcsh-fable-3913"
+  },
+  "source": {
+    "commit": "a31dd11f596003b1e16ed51284962e9a029d6324"
+  },
+  "packagedArtifact": {
+    "version": "21.29.2",
+    "sha256": "78a7269b416576d9e702e1dab64506298c0cf2b69564d08ef80047bb054e2afb"
+  },
+  "authentication": {
+    "kind": "anthropic-oauth",
+    "accountClass": "Claude Pro subscription",
+    "credentialsRecorded": false
+  },
+  "fable": [
+    {
+      "target": "source",
+      "selector": "fable",
+      "selectedModel": "anthropic/claude-fable-5-1",
+      "returnedModel": null,
+      "requestCount": 1,
+      "retryEvents": 0,
+      "status": "expected-entitlement-failure"
+    },
+    {
+      "target": "source",
+      "selector": "anthropic/claude-fable-5",
+      "selectedModel": "anthropic/claude-fable-5",
+      "returnedModel": null,
+      "requestCount": 1,
+      "retryEvents": 0,
+      "status": "expected-entitlement-failure"
+    },
+    {
+      "target": "packaged",
+      "selector": "fable",
+      "selectedModel": "anthropic/claude-fable-5-1",
+      "returnedModel": null,
+      "requestCount": 1,
+      "retryEvents": 0,
+      "status": "expected-entitlement-failure"
+    },
+    {
+      "target": "packaged",
+      "selector": "anthropic/claude-fable-5",
+      "selectedModel": "anthropic/claude-fable-5",
+      "returnedModel": null,
+      "requestCount": 1,
+      "retryEvents": 0,
+      "status": "expected-entitlement-failure"
+    }
+  ],
+  "opusControls": [
+    {
+      "target": "source",
+      "selectedModel": "anthropic/claude-opus-5",
+      "returnedModel": "claude-opus-5",
+      "requestCount": 1,
+      "tools": [
+        "read",
+        "bash"
+      ],
+      "assertions": [
+        "text response matched",
+        "read completed without error",
+        "bash completed without error"
+      ],
+      "status": "passed"
+    },
+    {
+      "target": "packaged",
+      "selectedModel": "anthropic/claude-opus-5",
+      "returnedModel": "claude-opus-5",
+      "requestCount": 1,
+      "tools": [
+        "read",
+        "bash"
+      ],
+      "assertions": [
+        "text response matched",
+        "read completed without error",
+        "bash completed without error",
+        "provider attribution matched"
+      ],
+      "status": "passed"
+    }
+  ],
+  "sanitization": {
+    "rawTranscriptsCommitted": false,
+    "credentialsCommitted": false,
+    "temporaryRawTranscriptsRemoved": true
+  },
+  "acceptanceStatus": "oauth entitlement-failure and Opus control gates passed; Fable success and API-key matrices require entitled credentials"
+}
