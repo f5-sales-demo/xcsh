@@ -9,7 +9,7 @@ import { type MouseRoutable, routeSgrMouseInput } from "./mouse";
 import { setAlternateScreenActive, type Terminal } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";
 import { isInsideTerminalMultiplexer } from "./terminal-multiplexer";
-import { extractSegments, sliceByColumn, sliceWithWidth, visibleWidth } from "./utils";
+import { extractSegments, getSegmenter, sliceByColumn, sliceWithWidth, visibleWidth } from "./utils";
 
 const SEGMENT_RESET = "\x1b[0m";
 const LINE_FIT_MIN_SOURCE_CODE_UNITS = 4096;
@@ -142,6 +142,60 @@ export function isFocusable(component: Component | null): component is Component
  * TUI finds and strips this marker, then positions the hardware cursor there.
  */
 export const CURSOR_MARKER = "\x1b_pi:c\x07";
+
+function insertCursorMarkerAtColumn(line: string, column: number): string {
+	if (column <= 0 || line.length === 0) return CURSOR_MARKER + line;
+
+	let index = 0;
+	let visualColumn = 0;
+	while (index < line.length && visualColumn < column) {
+		if (line.charCodeAt(index) === 0x1b) {
+			const end = ansiSequenceEnd(line, index);
+			if (end === -1) break;
+			const sequenceWidth = visibleWidth(line.slice(index, end));
+			if (visualColumn + sequenceWidth > column) break;
+			visualColumn += sequenceWidth;
+			index = end;
+			continue;
+		}
+
+		const escapeIndex = line.indexOf("\x1b", index);
+		const textEnd = escapeIndex === -1 ? line.length : escapeIndex;
+		const text = line.slice(index, textEnd);
+		const textStart = index;
+		for (const { segment, index: segmentIndex } of getSegmenter().segment(text)) {
+			const segmentStart = textStart + segmentIndex;
+			const segmentWidth = visibleWidth(segment);
+			if (visualColumn + segmentWidth > column) {
+				return line.slice(0, segmentStart) + CURSOR_MARKER + line.slice(segmentStart);
+			}
+			visualColumn += segmentWidth;
+			index = segmentStart + segment.length;
+			if (visualColumn === column) break;
+		}
+	}
+
+	return line.slice(0, index) + CURSOR_MARKER + line.slice(index);
+}
+
+function fitLinePreservingCursor(raw: string, width: number): string {
+	const markerIndex = raw.indexOf(CURSOR_MARKER);
+	const withoutCursor = markerIndex === -1 ? raw : raw.replaceAll(CURSOR_MARKER, "");
+	let fitted = lineFitSource(withoutCursor, width);
+	const sourceWasFitted = fitted !== withoutCursor;
+	const fittedWidth = visibleWidth(fitted);
+	const widthWasClamped = fittedWidth > width;
+	if (widthWasClamped) fitted = sliceByColumn(fitted, 0, width, true);
+
+	if (markerIndex === -1) return fitted;
+
+	const boundedBeforeCursor = lineFitSource(raw.slice(0, markerIndex), width);
+	const cursorColumn = visibleWidth(boundedBeforeCursor);
+	const maxCursorColumn = Math.max(0, Math.min(width - 1, visibleWidth(fitted)));
+	if (!sourceWasFitted && !widthWasClamped && cursorColumn <= maxCursorColumn) return raw;
+
+	return insertCursorMarkerAtColumn(fitted, Math.min(cursorColumn, maxCursorColumn));
+}
 
 export { visibleWidth };
 
@@ -1191,14 +1245,10 @@ export class TUI extends Container {
 
 		// Clamp any oversized lines before dirty-checking so the truncated form
 		// matches what we store in #previousLines, preventing perpetual repaints.
-		// Strip CURSOR_MARKER before measuring — visibleWidth miscounts APC sequences
-		// as visible chars; the marker is extracted later in #extractCursorPosition.
+		// Preserve CURSOR_MARKER's visual column while keeping width work bounded.
 		for (let i = 0; i < newLines.length; i++) {
 			if (TERMINAL.isImageLine(newLines[i])) continue;
-			const hadMarker = newLines[i].includes(CURSOR_MARKER);
-			let fitted = lineFitSource(newLines[i].replaceAll(CURSOR_MARKER, ""), width);
-			if (visibleWidth(fitted) > width) fitted = sliceByColumn(fitted, 0, width, true);
-			newLines[i] = fitted + (hadMarker ? CURSOR_MARKER : "");
+			newLines[i] = fitLinePreservingCursor(newLines[i], width);
 		}
 
 		// Composite overlays into the rendered lines (before differential compare)

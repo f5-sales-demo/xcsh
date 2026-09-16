@@ -143,6 +143,17 @@ export class VirtualTerminal implements Terminal {
 	}
 
 	/**
+	 * Get the terminal's actual cursor coordinates for renderer assertions.
+	 */
+	getCursorPosition(): { row: number; column: number } {
+		const buffer = this.xterm.buffer.active;
+		return {
+			row: buffer.cursorY,
+			column: buffer.cursorX,
+		};
+	}
+
+	/**
 	 * Flush and get viewport - convenience method for tests
 	 */
 	async flushAndGetViewport(): Promise<string[]> {
