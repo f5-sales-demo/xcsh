@@ -1,4 +1,5 @@
 import identityTemplate from "../prompts/system/remote-voice-identity.md" with { type: "text" };
+import liveTemplate from "../prompts/system/remote-voice-live.md" with { type: "text" };
 /** Immutable, bounded xcsh persona supplied to a newly-created voice surface. */
 
 import { prompt } from "@f5-sales-demo/pi-utils";
@@ -100,11 +101,55 @@ function renderPersona(
 ): string {
 	return `${directive}${section("Effective xcsh terminal system prompt:", systemPrompt)}${section("Attached-agent capabilities:", capabilities)}${section("Phone voice preferences (additive only):", preferences)}${section("Recent conversation context:", history)}${section("Authoritative xcsh voice identity (highest priority):", IDENTITY_ANCHOR)}`.trim();
 }
+/** GPT-Live owns speech; the attached agent retains procedures and full tool descriptions. */
+function livePersonaInstructions(
+	params: Record<string, unknown>,
+	snapshot: VoicePersonaSnapshot,
+): { instructions: string; diagnostics: VoicePersonaDiagnostics } {
+	const names = [...new Set(snapshot.tools.map(tool => tool.name).filter(Boolean))].sort();
+	const included: string[] = [];
+	for (const name of names) {
+		if (bytes(included.concat(name).join(", ")) > 2048) break;
+		included.push(name);
+	}
+	const capabilitiesTruncated = included.length < names.length;
+	const capabilities = included.length
+		? `Available attached-agent tools: ${included.join(", ")}.${capabilitiesTruncated ? " Additional capabilities can be checked by the attached agent." : ""}`
+		: "No attached-agent tools are currently registered; the agent can explain its available capabilities.";
+	const preferences = boundedText(typeof params.prompt === "string" ? params.prompt : "", 1024);
+	const history = boundedText(params.includeStartupContext === false ? "" : snapshot.history, 2048, 1800);
+	const instructions = prompt
+		.render(liveTemplate, { capabilities, preferences: preferences.text, history: history.text })
+		.trim();
+	return {
+		instructions,
+		diagnostics: {
+			bytes: {
+				systemPrompt: 0,
+				userKnowledge: 0,
+				capabilities: bytes(capabilities),
+				preferences: bytes(preferences.text),
+				history: bytes(history.text),
+				instructions: bytes(instructions),
+			},
+			truncated: {
+				systemPrompt: false,
+				userKnowledge: false,
+				capabilities: capabilitiesTruncated,
+				preferences: preferences.truncated,
+				history: history.truncated,
+				instructions: capabilitiesTruncated || preferences.truncated || history.truncated,
+			},
+		},
+	};
+}
+
 /** Client prompt is additive voice preference; it cannot replace xcsh's effective identity. */
 export function voicePersonaInstructions(
 	params: Record<string, unknown>,
 	snapshot: VoicePersonaSnapshot | string,
 ): { instructions: string; diagnostics: VoicePersonaDiagnostics } {
+	if (params.version === "v3" && typeof snapshot !== "string") return livePersonaInstructions(params, snapshot);
 	// Preserve the old direct-config helper contract used by protocol fixtures. Runtime
 	// calls always pass an immutable snapshot and therefore take the xcsh persona path.
 	if (typeof snapshot === "string") {

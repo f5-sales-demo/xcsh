@@ -1,4 +1,4 @@
-// Test-only observational hook for Codex 0.153.4. No credentials or audio are
+// Test-only observational hook for a pinned Codex baseline. No credentials or audio are
 // written here: decoded messages cross a private Unix socket to the redactor.
 // This file is not part of the native xcsh runtime.
 use std::io::Write;

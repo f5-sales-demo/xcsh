@@ -51,7 +51,7 @@ and [profile-collectors.ts](https://github.com/f5-sales-demo/xcsh/blob/b0fae9452
 | Managed `Primary Human` prompt | Include compact saved identity; require `xcsh://user` for identity, communications and PII questions. | Mandatory capability guidance is restored, including custom prompt paths. |
 | `xcsh://user` handler | Plain read loads saved data. `?seed=true` collects and writes, then returns profile/report. | Plain read and schema restored. Mutating read deliberately replaced by an approved explicit tool operation. |
 | `xcsh://computer` handler | Plain read loads machine cache; `?refresh=true` collects and saves. | Excluded by the original repair plan; no accidental restoration should be claimed. |
-| Conversational recording | The profile supported observations, but historical core call sites had no general conversation writer. | Explicit user facts use `update`; inferred observations have a distinct service and tool path. |
+| Conversational recording | Profile supported observations, but inspected core call sites have no general conversation-to-observation writer. `saveProfile` callers are seeding, reconciliation and language discovery. | Explicit user facts use `update`; inferred observations have a service method but no attached agent tool path. A general learner is not proven by the observation type alone. |
 
 Historical entry points:
 [language discovery](https://github.com/f5-sales-demo/xcsh/blob/b0fae945221c094cfda26f884970aa146e8f5370/packages/coding-agent/src/discovery/language.ts),

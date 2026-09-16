@@ -110,3 +110,45 @@ test("optional descriptions and history use only space left by identity, names, 
 	expect(diagnostics.truncated.capabilities || diagnostics.truncated.history).toBe(true);
 	expect(JSON.stringify(diagnostics)).not.toContain("description-");
 });
+
+test("Live instructions keep backend procedures and tool schemas in the attached agent", () => {
+	const { instructions, diagnostics } = voicePersonaInstructions(
+		{ version: "v3" },
+		{
+			systemPrompt: "BACKEND_ONLY_PROCEDURE ".repeat(8000),
+			tools: [{ name: "xcsh_context", description: "PRIVATE_TOOL_PROCEDURE ".repeat(1000) }],
+			history: "Previous short turn",
+		},
+	);
+	expect(instructions).not.toContain("BACKEND_ONLY_PROCEDURE");
+	expect(instructions).not.toContain("PRIVATE_TOOL_PROCEDURE");
+	expect(instructions).toContain("xcsh_context");
+	expect(instructions).toContain("Backchannel policy:");
+	expect(instructions).toContain("Interruption policy:");
+	expect(instructions).toContain("Delegation policy:");
+	expect(instructions).toContain("Do not use backchannel");
+	expect(instructions).toContain("Stopping speech does not cancel");
+	expect(diagnostics.bytes.systemPrompt).toBe(0);
+	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(8192);
+});
+
+test("Live startup stays bounded with large registries, preferences and history", () => {
+	const { instructions, diagnostics } = voicePersonaInstructions(
+		{ version: "v3", prompt: "🌳".repeat(20000) },
+		{
+			systemPrompt: "BACKEND_ONLY_PROCEDURE",
+			tools: Array.from({ length: 1000 }, (_, i) => ({
+				name: `example_tool_${i}`,
+				description: "Backend procedure",
+			})),
+			history: "H".repeat(40000),
+		},
+	);
+	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(8192);
+	expect(instructions).not.toContain("BACKEND_ONLY_PROCEDURE");
+	expect(instructions).not.toContain("Backend procedure");
+	expect(instructions).toContain("I'm xcsh, F5's sales-engineering assistant.");
+	expect(diagnostics.truncated.capabilities).toBe(true);
+	expect(diagnostics.truncated.preferences).toBe(true);
+	expect(diagnostics.truncated.history).toBe(true);
+});

@@ -1,3 +1,11 @@
+import type { RemoteModelDescriptor } from "./session";
+
+function remoteInputModalities(
+	modalities: RemoteModelDescriptor["inputModalities"],
+): Array<"text" | "image" | "audio"> {
+	return [...modalities, "audio"];
+}
+
 /** Read-only compatibility views. These never load or change Codex configuration. */
 export function configResponse(thread: Record<string, unknown> | undefined, includeLayers: boolean) {
 	// Null denotes an unset Codex-specific setting, rather than a promise about
@@ -38,9 +46,37 @@ export function configResponse(thread: Record<string, unknown> | undefined, incl
 	return { config, origins: {}, ...(includeLayers ? { layers: [] } : {}) };
 }
 
-export function modelResponse(threads: Record<string, unknown>[]) {
+export function modelResponse(threads: Record<string, unknown>[], catalog: RemoteModelDescriptor[] = []) {
 	const models = new Map<string, Record<string, unknown>>();
-	for (const thread of threads) {
+	const preferredModel = typeof threads[0]?.model === "string" ? threads[0].model : undefined;
+	const defaultModel = catalog.some(model => model.id === preferredModel) ? preferredModel : catalog[0]?.id;
+	for (const model of catalog) {
+		if (models.has(model.id)) continue;
+		models.set(model.id, {
+			id: model.id,
+			model: model.id,
+			displayName: model.displayName,
+			description: model.description,
+			upgrade: null,
+			upgradeInfo: null,
+			availabilityNux: null,
+			modelSpecialty: null,
+			hidden: false,
+			supportedReasoningEfforts: model.supportedReasoningEfforts,
+			defaultReasoningEffort: model.defaultReasoningEffort,
+			// The remote surface accepts realtime audio for every selectable execution
+			// model, even though the underlying AgentSession consumes the delegated text.
+			// Advertising that capability lets clients start voice before a first turn.
+			inputModalities: remoteInputModalities(model.inputModalities),
+			supportsPersonality: false,
+			multiAgentVersion: null,
+			additionalSpeedTiers: [],
+			serviceTiers: [],
+			defaultServiceTier: null,
+			isDefault: model.id === defaultModel,
+		});
+	}
+	for (const thread of catalog.length === 0 ? threads : []) {
 		if (typeof thread.model !== "string" || models.has(thread.model)) continue;
 		models.set(thread.model, {
 			id: thread.model,
@@ -54,13 +90,13 @@ export function modelResponse(threads: Record<string, unknown>[]) {
 			hidden: false,
 			supportedReasoningEfforts: thread.supportedReasoningEfforts ?? [],
 			defaultReasoningEffort: thread.defaultReasoningEffort ?? thread.reasoningEffort ?? "medium",
-			inputModalities: ["text"],
+			inputModalities: ["text", "audio"],
 			supportsPersonality: false,
 			multiAgentVersion: null,
 			additionalSpeedTiers: [],
 			serviceTiers: [],
 			defaultServiceTier: null,
-			isDefault: false,
+			isDefault: models.size === 0,
 		});
 	}
 	return { data: [...models.values()], nextCursor: null };

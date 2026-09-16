@@ -1,17 +1,14 @@
-import { createHash } from "node:crypto";
-import { copyFile, readFile } from "node:fs/promises";
+import { copyFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import manifest from "./source-manifest.json";
+import { loadReferenceBaseline, verifyReferenceCheckout, verifyReferenceFiles } from "./baseline";
 
-const root = Bun.argv[2] && resolve(Bun.argv[2]);
-if (!root) throw new Error("Usage: bun install.ts <pristine pinned Codex source directory>");
-for (const [file, expected] of Object.entries(manifest.files)) {
-	const actual = createHash("sha256")
-		.update(await readFile(join(root, file)))
-		.digest("hex");
-	if (actual !== expected) throw new Error(`Reference source differs from the pinned baseline: ${file}`);
-}
-const patch = join(import.meta.dir, "codex-0.153.4.patch");
+const [version, source] = Bun.argv.slice(2);
+const root = source && resolve(source);
+if (!version || !root) throw new Error("Usage: bun install.ts <0.153.4|0.154.0> <pristine tagged Codex checkout>");
+const manifest = await loadReferenceBaseline(version);
+verifyReferenceCheckout(root, manifest);
+await verifyReferenceFiles(root, manifest);
+const patch = join(import.meta.dir, `codex-${manifest.version}.patch`);
 for (const check of [true, false]) {
 	const result = Bun.spawnSync(["git", "apply", "--unidiff-zero", ...(check ? ["--check"] : []), patch], {
 		cwd: root,

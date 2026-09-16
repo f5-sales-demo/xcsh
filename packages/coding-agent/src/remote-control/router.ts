@@ -1,10 +1,11 @@
-import { isAbsolute, normalize } from "node:path";
+import { mkdir, stat } from "node:fs/promises";
+import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
-import { type Notification, ProtocolError } from "./session";
+import { type Notification, ProtocolError, type RemoteModelDescriptor } from "./session";
 import { voices } from "./voice-protocol";
 
 interface InitializeCapabilities {
@@ -36,6 +37,7 @@ const threadWireFields = [
 	"path",
 	"cwd",
 	"cliVersion",
+	"originator",
 	"source",
 	"threadSource",
 	"agentNickname",
@@ -54,6 +56,7 @@ function threadWireView(
 	const wire: Record<string, unknown> = {};
 	for (const field of threadWireFields) {
 		if (field === "sessionId" && experimental) wire.extra = null;
+		if (field === "originator") wire.originator = typeof thread.originator === "string" ? thread.originator : null;
 		if (field === "threadSource" && experimental) wire.canAcceptDirectInput = canAcceptDirectInput;
 		if (Object.hasOwn(thread, field)) wire[field] = thread[field];
 	}
@@ -86,6 +89,8 @@ function initializeCapabilities(value: unknown): InitializeCapabilities {
 }
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
+	collaborationMode?: "plan" | "default";
+	models?: RemoteModelDescriptor[];
 	requests?: InteractionRequest[];
 	skills?: Array<{
 		name: string;
@@ -98,12 +103,87 @@ export interface SessionEndpoint {
 	skillErrors?: Array<{ path: string; message: string }>;
 	call: (identity: string, method: string, params: Record<string, unknown>) => Promise<unknown>;
 }
+export interface RemoteThreadLifecycle {
+	defaultCwd?: string;
+	activate?: (threadId: string) => void;
+	list: (params?: Record<string, unknown>) => Record<string, unknown>[];
+	start: (params: Record<string, unknown>) => Promise<SessionEndpoint>;
+	resume: (threadId: string) => Promise<SessionEndpoint | undefined>;
+	read: (threadId: string, params: Record<string, unknown>) => Promise<unknown>;
+	fork: (
+		threadId: string,
+		params: Record<string, unknown>,
+		source?: Record<string, unknown>,
+	) => Promise<SessionEndpoint>;
+	archive: (threadId: string) => Promise<void>;
+	unarchive: (threadId: string) => Promise<Record<string, unknown>>;
+	delete: (threadId: string) => Promise<void>;
+	close?: () => void | Promise<void>;
+}
+
+const lifecycleResponseFields = [
+	"thread",
+	"model",
+	"modelProvider",
+	"serviceTier",
+	"cwd",
+	"runtimeWorkspaceRoots",
+	"instructionSources",
+	"approvalPolicy",
+	"approvalsReviewer",
+	"sandbox",
+	"activePermissionProfile",
+	"reasoningEffort",
+	"multiAgentMode",
+] as const;
+
+function projectLifecycleResponse(result: unknown, experimental: boolean): unknown {
+	if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+	const source = result as Record<string, unknown>;
+	const projected: Record<string, unknown> = {};
+	for (const field of lifecycleResponseFields) if (Object.hasOwn(source, field)) projected[field] = source[field];
+	if (source.thread && typeof source.thread === "object" && !Array.isArray(source.thread))
+		projected.thread = threadWireView(source.thread as Record<string, unknown>, experimental, true);
+	return projected;
+}
 export class RemoteRouter {
 	sessions = new Map<string, SessionEndpoint>();
 	notify: (client: string, event: Notification) => void = () => {};
+	#currentSessionId: string | undefined;
+	#managed = new Set<string>();
+	#currentSession(): SessionEndpoint | undefined {
+		return (
+			(this.#currentSessionId ? this.sessions.get(this.#currentSessionId) : undefined) ??
+			[...this.sessions].find(([id]) => !this.#managed.has(id))?.[1]
+		);
+	}
+	#visibleSessions(): SessionEndpoint[] {
+		if (!this.#currentSessionId) {
+			const terminals = [...this.sessions].flatMap(([id, session]) => (this.#managed.has(id) ? [] : [session]));
+			return terminals.length ? terminals : [...this.sessions.values()];
+		}
+		const current = this.#currentSession();
+		return [
+			...(current ? [current] : []),
+			...[...this.sessions].flatMap(([id, session]) =>
+				this.#managed.has(id) && session !== current ? [session] : [],
+			),
+		];
+	}
+	#visibleThreads(params?: Record<string, unknown>): Record<string, unknown>[] {
+		const loaded = this.#visibleSessions().map(session => session.thread);
+		const ids = new Set(loaded.map(thread => String(thread.id)));
+		return [...loaded, ...(this.lifecycle?.list(params) ?? []).filter(thread => !ids.has(String(thread.id)))];
+	}
+	#isCurrent(threadId: string): boolean {
+		return this.#currentSession()?.thread.id === threadId;
+	}
+	#isVisible(threadId: string): boolean {
+		return this.#isCurrent(threadId) || this.#managed.has(threadId);
+	}
 	#processes = new RemoteProcesses(
 		(client, event) => this.#emit(client, event),
-		cwd => [...this.sessions.values()].some(session => session.thread.cwd === cwd),
+		cwd => this.#visibleThreads().some(thread => thread.cwd === cwd),
 	);
 	dispose(): void {
 		this.#processes.close();
@@ -111,14 +191,18 @@ export class RemoteRouter {
 		this.#experimental.clear();
 		this.#notificationOptOuts.clear();
 		this.#delivered.clear();
+		this.#lifecycleNotifications.clear();
 	}
 	#clients = new Map<string, Set<string>>();
 	#experimental = new Set<string>();
 	#notificationOptOuts = new Map<string, Set<string>>();
 	#delivered = new Map<string, Map<string, string>>();
+	#lifecycleNotifications = new Map<string, Map<string, string>>();
 	constructor(
 		private readonly home: string,
 		private readonly version: string,
+		private readonly lifecycle?: RemoteThreadLifecycle,
+		private readonly preferredPrimaryId?: string,
 	) {}
 	isInitialized(client: string): boolean {
 		return this.#clients.has(client);
@@ -126,14 +210,88 @@ export class RemoteRouter {
 	subscribed(client: string, threadId: string): boolean {
 		return this.#clients.get(client)?.has(threadId) ?? false;
 	}
+	hasSubscribers(threadId: string): boolean {
+		return [...this.#clients.values()].some(threads => threads.has(threadId));
+	}
 	#emit(client: string, event: Notification): void {
-		if (!this.#notificationOptOuts.get(client)?.has(event.method)) this.notify(client, event);
+		if (this.#notificationOptOuts.get(client)?.has(event.method)) return;
+		const threadId = String(event.params.threadId ?? "");
+		const turn = event.params.turn as { id?: unknown } | undefined;
+		const item = event.params.item as { id?: unknown } | undefined;
+		const key =
+			event.method === "thread/status/changed"
+				? `${threadId}:status`
+				: event.method === "thread/tokenUsage/updated"
+					? `${threadId}:usage:${String(event.params.turnId ?? "")}`
+					: event.method === "turn/started" || event.method === "turn/completed"
+						? `${threadId}:${event.method}:${String(turn?.id ?? "")}`
+						: event.method === "item/started" || event.method === "item/completed"
+							? `${threadId}:${event.method}:${String(item?.id ?? "")}`
+							: undefined;
+		if (key) {
+			let delivered = this.#lifecycleNotifications.get(client);
+			if (!delivered) {
+				delivered = new Map();
+				this.#lifecycleNotifications.set(client, delivered);
+			}
+			const fingerprint = JSON.stringify(event.params);
+			if (delivered.get(key) === fingerprint) return;
+			delivered.set(key, fingerprint);
+		}
+		this.notify(client, event);
+	}
+	replayThreadSettings(client: string, threadId: string, response: unknown): void {
+		if (!this.subscribed(client, threadId) || !response || typeof response !== "object" || Array.isArray(response))
+			return;
+		const resumed = response as Record<string, unknown>;
+		const session = this.sessions.get(threadId);
+		const model = resumed.model;
+		const modelProvider = resumed.modelProvider;
+		const cwd = resumed.cwd;
+		const effort = resumed.reasoningEffort;
+		if (
+			!session ||
+			typeof model !== "string" ||
+			typeof modelProvider !== "string" ||
+			typeof cwd !== "string" ||
+			(effort !== null && typeof effort !== "string") ||
+			model !== session.thread.model ||
+			modelProvider !== session.thread.modelProvider ||
+			cwd !== session.thread.cwd ||
+			effort !== session.thread.reasoningEffort
+		)
+			return;
+		this.#emit(client, {
+			method: "thread/settings/updated",
+			params: {
+				threadId,
+				threadSettings: {
+					cwd,
+					approvalPolicy: resumed.approvalPolicy,
+					approvalsReviewer: resumed.approvalsReviewer,
+					sandboxPolicy: resumed.sandbox,
+					activePermissionProfile: resumed.activePermissionProfile ?? null,
+					model,
+					modelProvider,
+					serviceTier: resumed.serviceTier ?? null,
+					effort,
+					summary: null,
+					collaborationMode: {
+						mode: session.collaborationMode ?? "default",
+						settings: { model, reasoning_effort: effort, developer_instructions: null },
+					},
+					multiAgentMode: "explicitRequestOnly",
+					personality: null,
+				},
+			},
+		});
 	}
 	close(client: string): void {
 		this.#clients.delete(client);
 		this.#experimental.delete(client);
 		this.#notificationOptOuts.delete(client);
 		this.#delivered.delete(client);
+		this.#lifecycleNotifications.delete(client);
 		this.#processes.close(client);
 	}
 	#deliver(client: string, event: InteractionRequest): void {
@@ -172,7 +330,12 @@ export class RemoteRouter {
 		// Heartbeats retain the same live owner, including calls already awaiting a response.
 		const current = previous ? Object.assign(previous, endpoint) : endpoint;
 		this.sessions.set(threadId, current);
-		if (!previous) {
+		if (
+			(!this.#currentSessionId && this.#currentSession()?.thread.id === threadId) ||
+			this.preferredPrimaryId === threadId
+		)
+			this.#currentSessionId = threadId;
+		if (!previous && this.#isCurrent(threadId)) {
 			for (const [client, subscriptions] of this.#clients) {
 				if (replacedThreadId && subscriptions.has(replacedThreadId)) subscriptions.add(threadId);
 				this.#emit(client, {
@@ -181,28 +344,73 @@ export class RemoteRouter {
 				});
 			}
 		}
-		for (const request of current.requests ?? [])
-			for (const client of this.#clients.keys()) this.#deliver(client, request);
+		if (this.#isCurrent(threadId))
+			for (const request of current.requests ?? [])
+				for (const client of this.#clients.keys()) this.#deliver(client, request);
+	}
+	registerManagedSession(threadId: string, endpoint: SessionEndpoint): void {
+		const previous = this.sessions.get(threadId);
+		this.#managed.add(threadId);
+		this.sessions.set(threadId, previous ? Object.assign(previous, endpoint) : endpoint);
 	}
 	removeSession(threadId: string): void {
 		if (!this.sessions.has(threadId)) return;
+		const wasCurrent = this.#isCurrent(threadId);
+		const wasManaged = this.#managed.delete(threadId);
 		for (const request of this.sessions.get(threadId)?.requests ?? [])
 			this.publish({ method: "serverRequest/resolved", params: { threadId, requestId: request.id } });
-		this.publish({ method: "thread/closed", params: { threadId } });
+		if (wasCurrent) this.publish({ method: "thread/closed", params: { threadId } });
 		this.sessions.delete(threadId);
+		if (wasCurrent) this.#currentSessionId = [...this.sessions.keys()].find(id => !this.#managed.has(id));
 		for (const subscriptions of this.#clients.values()) subscriptions.delete(threadId);
 		for (const delivered of this.#delivered.values())
 			for (const [id, thread] of delivered) if (thread === threadId) delivered.delete(id);
+		const next = this.#currentSession();
+		if (wasCurrent && next)
+			for (const client of this.#clients.keys())
+				this.#emit(client, {
+					method: "thread/started",
+					params: { thread: threadWireView(next.thread, this.#experimental.has(client), true) },
+				});
+		if (wasManaged) return;
 	}
 	publish(event: Notification): void {
 		const threadId = String(event.params.threadId);
 		const session = this.sessions.get(threadId);
-		if (!session) return;
+		if (!session || !this.#isVisible(threadId)) return;
 		if (event.method === "thread/name/updated") {
 			const name = event.params.threadName;
 			if (name !== null && typeof name !== "string") return;
 			session.thread.name = name;
 			for (const client of this.#clients.keys()) this.#emit(client, event);
+			return;
+		}
+		if (event.method === "thread/status/changed") {
+			const status = event.params.status;
+			if (!status || typeof status !== "object" || Array.isArray(status)) return;
+			session.thread.status = structuredClone(status);
+			for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
+			return;
+		}
+		if (event.method === "thread/settings/updated") {
+			const settings = event.params.threadSettings;
+			if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+				const model = (settings as Record<string, unknown>).model;
+				const provider = (settings as Record<string, unknown>).modelProvider;
+				const effort = (settings as Record<string, unknown>).effort;
+				const mode = ((settings as Record<string, unknown>).collaborationMode as { mode?: unknown } | undefined)
+					?.mode;
+				if (typeof model === "string") session.thread.model = model;
+				if (typeof provider === "string") session.thread.modelProvider = provider;
+				if (effort === null || typeof effort === "string") session.thread.reasoningEffort = effort;
+				if (mode === "plan" || mode === "default") session.collaborationMode = mode;
+				const descriptor = session.models?.find(item => item.id === model && item.provider === provider);
+				if (descriptor) {
+					session.thread.supportedReasoningEfforts = descriptor.supportedReasoningEfforts;
+					session.thread.defaultReasoningEffort = descriptor.defaultReasoningEffort;
+				}
+			}
+			for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
 			return;
 		}
 		if (event.id !== undefined) {
@@ -250,6 +458,115 @@ export class RemoteRouter {
 			/* JSON-RPC responses have no response. Keep the question pending for a valid answer. */
 		}
 		return null;
+	}
+	async #startCwd(params: Record<string, unknown>): Promise<string> {
+		const candidate = params.cwd ?? this.#currentSession()?.thread.cwd ?? this.lifecycle?.defaultCwd;
+		if (typeof candidate !== "string" || !isAbsolute(candidate) || normalize(candidate) !== candidate)
+			throw new ProtocolError(-32602, "A normalized absolute working directory is required");
+		try {
+			if (!(await stat(candidate)).isDirectory()) throw new Error();
+		} catch {
+			throw new ProtocolError(-32602, "Working directory does not exist");
+		}
+		return candidate;
+	}
+	async #loadManagedSession(threadId: string): Promise<boolean> {
+		if (this.sessions.has(threadId) || !this.lifecycle) return false;
+		if (!this.#visibleThreads().some(thread => String(thread.id) === threadId)) return false;
+		const endpoint = await this.lifecycle.resume(threadId);
+		if (!endpoint) return false;
+		const coldResume = !this.sessions.has(threadId);
+		this.registerManagedSession(threadId, endpoint);
+		return coldResume;
+	}
+	async #processParams(method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
+		if (method !== "process/spawn" || params.cwd !== "/") return params;
+		let isolated = params;
+		const command = params.command;
+		if (
+			Array.isArray(command) &&
+			command.length === 3 &&
+			command[0] === "/bin/sh" &&
+			command[1] === "-lc" &&
+			typeof command[2] === "string" &&
+			Buffer.byteLength(command[2]) === 737 &&
+			params.timeoutMs === 20_000 &&
+			params.outputBytesCap === 4096 &&
+			params.tty === false &&
+			params.streamStdin === false &&
+			params.streamStdoutStderr === false
+		) {
+			const root = this.lifecycle?.defaultCwd ?? this.#currentSession()?.thread.cwd;
+			if (typeof root !== "string" || !isAbsolute(root) || normalize(root) !== root)
+				throw new ProtocolError(-32602, "xcsh workspace root is unavailable");
+			const now = new Date();
+			const day = [
+				now.getFullYear(),
+				String(now.getMonth() + 1).padStart(2, "0"),
+				String(now.getDate()).padStart(2, "0"),
+			].join("-");
+			const parent = join(root, day);
+			await mkdir(parent, { recursive: true });
+			let workspace: string | undefined;
+			for (let index = 1; index <= 10_000; index++) {
+				const candidate = join(parent, `new-realtime-voice-chat-${index}`);
+				try {
+					await mkdir(candidate);
+					workspace = candidate;
+					break;
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code !== "EEXIST")
+						throw new ProtocolError(-32000, "Unable to create xcsh workspace");
+				}
+			}
+			if (!workspace) throw new ProtocolError(-32000, "xcsh workspace limit reached");
+			isolated = { ...params, command: ["/usr/bin/printf", "%s", workspace] };
+		}
+		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return isolated;
+		// Blank-chat clients use root as a placeholder before choosing a workspace.
+		// Map only that placeholder to the exposed primary. The phone's known blank-chat
+		// bootstrap is also confined to xcsh's documents namespace instead of Codex's.
+		const cwd = this.#currentSession()?.thread.cwd;
+		return typeof cwd === "string" && isAbsolute(cwd) && normalize(cwd) === cwd ? { ...isolated, cwd } : isolated;
+	}
+	#defer(client: string, event: Notification): void {
+		setTimeout(() => this.#emit(client, event), 0);
+	}
+	#deferThreadStarted(thread: Record<string, unknown>): void {
+		for (const client of this.#clients.keys())
+			this.#defer(client, {
+				method: "thread/started",
+				params: { thread: threadWireView(thread, this.#experimental.has(client), true) },
+			});
+	}
+	async #lifecycleResponse(
+		client: string,
+		id: string | number,
+		endpoint: SessionEndpoint,
+		includeTurns: boolean,
+	): Promise<{ result: unknown; thread: Record<string, unknown> }> {
+		const threadId = String(endpoint.thread.id);
+		this.registerManagedSession(threadId, endpoint);
+		this.#clients.get(client)?.add(threadId);
+		const resumed = await endpoint.call(JSON.stringify([client, id]), "thread/resume", {
+			threadId,
+			excludeTurns: !includeTurns,
+		});
+		// The resume call refreshes endpoint.thread. Snapshot it once so the response
+		// and following notification cannot project different worker views.
+		const experimental = this.#experimental.has(client);
+		const thread = { ...endpoint.thread };
+		const projected = projectLifecycleResponse(
+			resumed && typeof resumed === "object" && !Array.isArray(resumed)
+				? { ...(resumed as Record<string, unknown>), thread }
+				: { thread },
+			experimental,
+		);
+		const result = projected && typeof projected === "object" && !Array.isArray(projected) ? projected : { thread };
+		return { result, thread };
+	}
+	#deferLifecycleActivation(threadId: string): void {
+		setTimeout(() => this.lifecycle?.activate?.(threadId), 0);
 	}
 	async handle(client: string, input: unknown): Promise<unknown> {
 		const request = input as {
@@ -312,23 +629,85 @@ export class RemoteRouter {
 								if (field === "projectId" ? Object.hasOwn(params, field) : params[field] != null)
 									throw new ProtocolError(-32600, `thread/list.${field} requires experimentalApi capability`);
 						}
-						const page = threadList(
-							[...this.sessions.values()].map(session => session.thread),
-							params,
-						);
+						const page = threadList(this.#visibleThreads(params), params);
 						result = {
 							...page,
 							data: page.data.map(thread => threadWireView(thread, this.#experimental.has(client), null)),
 						};
 						break;
 					}
+					case "thread/start": {
+						if (!this.lifecycle) throw new ProtocolError(-32000, "Managed remote sessions are unavailable");
+						const cwd = await this.#startCwd(params);
+						const endpoint = await this.lifecycle.start({ ...params, cwd });
+						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, false);
+						result = lifecycle.result;
+						this.#deferThreadStarted(lifecycle.thread);
+						this.#deferLifecycleActivation(String(endpoint.thread.id));
+						break;
+					}
+					case "thread/fork": {
+						if (!this.lifecycle) throw new ProtocolError(-32000, "Managed remote sessions are unavailable");
+						if (typeof params.threadId !== "string") throw new ProtocolError(-32602, "Thread not found");
+						const source = this.#visibleThreads().find(thread => thread.id === params.threadId);
+						if (!source) throw new ProtocolError(-32602, "Thread not found");
+						const loadedSource = this.sessions.get(params.threadId);
+						if (loadedSource)
+							await loadedSource.call(JSON.stringify([client, id, "fork-flush"]), "xcsh/thread/flush", {});
+						const cwd = params.cwd == null ? source.cwd : await this.#startCwd(params);
+						if (typeof cwd !== "string") throw new ProtocolError(-32602, "Working directory is unavailable");
+						const endpoint = await this.lifecycle.fork(params.threadId, { ...params, cwd }, source);
+						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, params.excludeTurns !== true);
+						result = lifecycle.result;
+						this.#deferThreadStarted(lifecycle.thread);
+						this.#deferLifecycleActivation(String(endpoint.thread.id));
+						break;
+					}
+					case "thread/archive":
+					case "thread/delete": {
+						if (!this.lifecycle || typeof params.threadId !== "string")
+							throw new ProtocolError(-32602, "Thread not found");
+						const threadId = params.threadId;
+						if (!this.#visibleThreads().some(thread => thread.id === threadId) || this.#isCurrent(threadId))
+							throw new ProtocolError(-32602, "Thread not found");
+						if (request.method === "thread/archive") await this.lifecycle.archive(threadId);
+						else await this.lifecycle.delete(threadId);
+						this.removeSession(threadId);
+						for (const initialized of this.#clients.keys())
+							this.#defer(initialized, {
+								method: request.method === "thread/archive" ? "thread/archived" : "thread/deleted",
+								params: { threadId },
+							});
+						result = {};
+						break;
+					}
+					case "thread/unarchive": {
+						if (!this.lifecycle || typeof params.threadId !== "string")
+							throw new ProtocolError(-32602, "Thread not found");
+						const thread = await this.lifecycle.unarchive(params.threadId);
+						result = { thread: threadWireView(thread, this.#experimental.has(client), false) };
+						for (const initialized of this.#clients.keys())
+							this.#defer(initialized, { method: "thread/unarchived", params: { threadId: params.threadId } });
+						break;
+					}
 					case "process/spawn":
 					case "process/kill":
 					case "process/writeStdin":
-						result = await this.#processes.call(client, JSON.stringify(id), request.method, params);
+						result = await this.#processes.call(
+							client,
+							JSON.stringify(id),
+							request.method,
+							await this.#processParams(request.method, params),
+						);
 						break;
 					case "config/read": {
-						const matching = [...this.sessions.values()].filter(session => session.thread.cwd === params.cwd);
+						const matching =
+							params.cwd == null
+								? // Global bootstrap config inherits model defaults from the exposed primary.
+									[this.#currentSession()].filter(
+										(session): session is SessionEndpoint => session !== undefined,
+									)
+								: this.#visibleSessions().filter(session => session.thread.cwd === params.cwd);
 						result = configResponse(
 							matching.length === 1 ? matching[0].thread : undefined,
 							params.includeLayers === true,
@@ -340,7 +719,10 @@ export class RemoteRouter {
 						break;
 					case "model/list":
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
-						result = modelResponse([...this.sessions.values()].map(session => session.thread));
+						result = modelResponse(
+							this.#visibleSessions().map(session => session.thread),
+							this.#visibleSessions().flatMap(session => session.models ?? []),
+						);
 						break;
 					case "permissionProfile/list": {
 						if (
@@ -404,11 +786,15 @@ export class RemoteRouter {
 							requested.length > 0
 								? (requested as string[])
 								: ([
-										...new Set([...this.sessions.values()].map(session => session.thread.cwd).filter(String)),
+										...new Set(
+											this.#visibleSessions()
+												.map(session => session.thread.cwd)
+												.filter(String),
+										),
 									] as string[]);
 						result = {
 							data: cwds.map(cwd => {
-								const matches = [...this.sessions.values()].filter(session => session.thread.cwd === cwd);
+								const matches = this.#visibleSessions().filter(session => session.thread.cwd === cwd);
 								const skills = new Map<string, NonNullable<SessionEndpoint["skills"]>[number]>();
 								const errors: Array<{ path: string; message: string }> = [];
 								for (const session of matches) {
@@ -430,7 +816,7 @@ export class RemoteRouter {
 							normalize(params.path) !== params.path
 						)
 							throw new ProtocolError(-32602, "File path must be absolute and normalized");
-						const owner = [...this.sessions.values()].find(session =>
+						const owner = this.#visibleSessions().find(session =>
 							session.skills?.some(skill => skill.path === params.path),
 						);
 						if (!owner) throw new ProtocolError(-32602, "File is not an advertised live-session skill");
@@ -449,7 +835,10 @@ export class RemoteRouter {
 						result = { data: [], nextCursor: null };
 						break;
 					case "thread/loaded/list":
-						result = loadedThreadList([...this.sessions.keys()], params);
+						result = loadedThreadList(
+							this.#visibleSessions().map(session => String(session.thread.id)),
+							params,
+						);
 						break;
 					case "thread/unsubscribe": {
 						const threadId = String(params.threadId);
@@ -477,6 +866,8 @@ export class RemoteRouter {
 					case "thread/realtime/appendText":
 					case "thread/realtime/appendSpeech":
 					case "thread/realtime/appendAudio":
+					case "thread/compact/start":
+					case "thread/revert":
 					case "turn/interrupt": {
 						if (
 							(request.method === "thread/settings/update" || request.method === "turn/start") &&
@@ -488,7 +879,15 @@ export class RemoteRouter {
 								`${request.method}.collaborationMode requires experimentalApi capability`,
 							);
 						const threadId = String(params.threadId);
-						const session = this.sessions.get(threadId);
+						if (request.method === "thread/read" && !this.sessions.has(threadId) && this.lifecycle) {
+							result = projectThreadResult(
+								await this.lifecycle.read(threadId, params),
+								this.#experimental.has(client),
+							);
+							break;
+						}
+						const coldResume = await this.#loadManagedSession(threadId);
+						const session = this.#isVisible(threadId) ? this.sessions.get(threadId) : undefined;
 						if (!session)
 							throw new ProtocolError(
 								-32602,
@@ -501,6 +900,7 @@ export class RemoteRouter {
 						if (request.method === "thread/read" || request.method === "thread/resume")
 							result = projectThreadResult(result, this.#experimental.has(client));
 						for (const event of session.requests ?? []) this.#deliver(client, event);
+						if (coldResume) this.#deferLifecycleActivation(threadId);
 						break;
 					}
 					default:

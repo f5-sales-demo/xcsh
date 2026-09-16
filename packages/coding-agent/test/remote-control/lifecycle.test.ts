@@ -301,6 +301,15 @@ test("the bridge keeps the subscribed remote thread across a Plan execution sess
 		},
 	});
 	await phone.call("protocol", { request: { id: 2, method: "thread/resume", params: { threadId: oldId } } });
+	const settingsDeadline = Date.now() + 1000;
+	while (events.length < 1 && Date.now() < settingsDeadline) await Bun.sleep(5);
+	expect(events).toMatchObject([
+		{
+			method: "thread/settings/updated",
+			params: { threadId: oldId, threadSettings: { model: session.model?.id, effort: null } },
+		},
+	]);
+	events.length = 0;
 	await session.newSession({ forkedFromId: oldId, remoteThreadId: oldId });
 	const executionSessionId = session.sessionId;
 	expect(executionSessionId).not.toBe(oldId);
@@ -331,9 +340,11 @@ test("the bridge keeps the subscribed remote thread across a Plan execution sess
 		}),
 	).toMatchObject({ id: 4, result: { turn: { status: "inProgress" } } });
 	const streamDeadline = Date.now() + 1000;
-	while (events.length < 2 && Date.now() < streamDeadline) await Bun.sleep(5);
+	while (events.length < 4 && Date.now() < streamDeadline) await Bun.sleep(5);
 	expect(events).toMatchObject([
+		{ method: "thread/status/changed", params: { threadId: oldId, status: { type: "active" } } },
 		{ method: "turn/started", params: { threadId: oldId, turn: { status: "inProgress" } } },
+		{ method: "thread/status/changed", params: { threadId: oldId, status: { type: "idle" } } },
 		{ method: "turn/completed", params: { threadId: oldId, turn: { status: "completed" } } },
 	]);
 });

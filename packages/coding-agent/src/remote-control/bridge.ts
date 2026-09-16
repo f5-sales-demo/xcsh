@@ -50,9 +50,11 @@ export function startSessionBridge(
 				const catalog = remote.skills();
 				await peer.call("register", {
 					thread: remote.thread(),
+					collaborationMode: controls.getCollaborationMode?.() ?? "default",
 					requests: remote.pendingRequests(),
 					skills: catalog.skills,
 					skillErrors: catalog.errors,
+					models: remote.models(),
 				});
 			} catch {
 				peer?.close();

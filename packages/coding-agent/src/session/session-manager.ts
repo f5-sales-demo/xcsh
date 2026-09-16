@@ -2345,6 +2345,7 @@ export class SessionManager {
 	 *   Auto-generated titles are silently ignored when the user has already set a name.
 	 */
 	async setSessionName(name: string, source: "auto" | "user" = "auto"): Promise<boolean> {
+		if (name === "New Realtime Voice Chat") return false;
 		// User-set names take permanent precedence over auto-generated ones.
 		if (this.#titleSource === "user" && source === "auto") return false;
 
@@ -3119,6 +3120,34 @@ export class SessionManager {
 		manager.sanitizeLoadedOpenAIResponsesReplayMetadata();
 		manager.#buildIndex();
 		await manager.#rewriteFile();
+		return manager;
+	}
+
+	/**
+	 * Fork a persisted session into memory without creating a session file.
+	 * The new session keeps the exact selected source branch and a fresh identity,
+	 * but disappears when its owning process exits.
+	 */
+	static async inMemoryForkFrom(
+		sourcePath: string,
+		cwd: string,
+		storage: SessionStorage = new FileSessionStorage(),
+	): Promise<SessionManager> {
+		const manager = new SessionManager(cwd, "", false, new MemorySessionStorage());
+		const forkEntries = structuredClone(await loadEntriesFromFile(sourcePath, storage)) as FileEntry[];
+		migrateToCurrentVersion(forkEntries);
+		await resolveBlobRefsInEntries(forkEntries, manager.#blobStore);
+		const sourceHeader = forkEntries.find(entry => entry.type === "session") as SessionHeader | undefined;
+		const historyEntries = forkEntries.filter(entry => entry.type !== "session") as SessionEntry[];
+		manager.#newSessionSync({ parentSession: sourceHeader?.id });
+		const newHeader = manager.#fileEntries[0] as SessionHeader;
+		newHeader.title = sourceHeader?.title;
+		newHeader.titleSource = sourceHeader?.titleSource;
+		manager.#fileEntries = [newHeader, ...historyEntries];
+		manager.#sessionName = newHeader.title;
+		manager.#titleSource = newHeader.titleSource;
+		manager.sanitizeLoadedOpenAIResponsesReplayMetadata();
+		manager.#buildIndex();
 		return manager;
 	}
 

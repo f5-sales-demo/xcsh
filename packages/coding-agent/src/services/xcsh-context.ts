@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
@@ -487,7 +488,34 @@ export class ContextService {
 		return context;
 	}
 
-	async activate(name: string): Promise<XCSHContext> {
+	/** In-memory approval fingerprint. Never expose this credential-derived digest to tools or logs. */
+	#activationRevision(context: XCSHContext): string {
+		return createHash("sha256")
+			.update(
+				JSON.stringify({
+					context,
+					epoch: this.#activationEpoch,
+					active: this.#activeContext,
+					env: Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith("XCSH_"))),
+				}),
+			)
+			.digest("hex");
+	}
+
+	prepareActivation(name: string): { name: string; apiUrl: string; namespace: string; revision: string } {
+		this.#validateContextName(name);
+		const context = this.#readContext(name);
+		if (!context) throw new ContextError("Context not found. Use xcsh_context list or /context list.");
+		this.#assertCompatibleVersion(context);
+		return {
+			name: context.name,
+			apiUrl: context.apiUrl,
+			namespace: process.env[XCSH_NAMESPACE] || context.defaultNamespace,
+			revision: this.#activationRevision(context),
+		};
+	}
+
+	async activate(name: string, options?: { revision: string; beforeCommit: () => void }): Promise<XCSHContext> {
 		// Reject activation when env overrides are present — before any I/O
 		if (process.env[XCSH_API_URL]) {
 			throw new ContextError(
@@ -507,6 +535,12 @@ export class ContextService {
 		}
 
 		this.#assertCompatibleVersion(context);
+
+		// No await between this guard and the synchronous runtime-state commit.
+		options?.beforeCommit();
+		if (options && options.revision !== this.#activationRevision(context)) {
+			throw new ContextError("Context selection changed during approval. Inspect and retry the selection.");
+		}
 
 		if (this.#activeContext && this.#activeContext.name !== name) {
 			this.#previousContextName = this.#activeContext.name;
@@ -1047,6 +1081,7 @@ export class ContextService {
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
 
 		const checkedAt = Date.now();
+		const epoch = this.#activationEpoch;
 		const shared = await validateXcshApiCredentials({
 			apiUrl: effectiveUrl,
 			apiToken: effectiveToken,
@@ -1062,7 +1097,7 @@ export class ContextService {
 						? "network"
 						: undefined;
 		const result: TokenValidationResult = { ...shared, ...(errorClass ? { errorClass } : {}) };
-		if (!adHoc) {
+		if (!adHoc && epoch === this.#activationEpoch) {
 			this.#lastAuthLatencyMs = shared.latencyMs;
 			this.#lastAuthCheckedAt = checkedAt;
 			this.#authStatus = shared.status;

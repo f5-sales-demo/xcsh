@@ -58,6 +58,12 @@ function loadAllowedNamespaceTypes(domain?: string): ReadonlySet<NamespaceType> 
 }
 
 const xcshApiSchema = Type.Object({
+	contextName: Type.Optional(
+		Type.String({
+			description:
+				"Expected active context name. Rejects the call before network I/O if this session is using a different context. Supply the user's requested context after selection.",
+		}),
+	),
 	method: Type.Union(
 		[Type.Literal("GET"), Type.Literal("POST"), Type.Literal("PUT"), Type.Literal("PATCH"), Type.Literal("DELETE")],
 		{ description: "HTTP method" },
@@ -81,6 +87,12 @@ const xcshApiSchema = Type.Object({
 		}),
 	),
 	payload: Type.Optional(Type.Unknown({ description: "JSON body for POST/PUT/PATCH/DELETE requests" })),
+	expandDiscovery: Type.Optional(
+		Type.Boolean({
+			description:
+				"Set false for a scoped GET of one resource type: preserve its full response and avoid automatic namespace-wide discovery. Defaults to true for compatibility. Applies to single path GETs.",
+		}),
+	),
 });
 
 type XcshApiParams = Static<typeof xcshApiSchema>;
@@ -124,7 +136,7 @@ export interface XcshApiToolDetails {
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
 
-const BATCH_CACHE_VERSION = 2;
+const BATCH_CACHE_VERSION = 3;
 const BATCH_CACHE_DIR = path.join(os.tmpdir(), "xcsh", `batch-cache-v${BATCH_CACHE_VERSION}`);
 
 function sha256(value: string): string {
@@ -223,6 +235,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	readonly description: string;
 	readonly parameters = xcshApiSchema;
 	#contextEnv: ContextEnv;
+	#getContextService?: ToolSession["getContextService"];
+	#getActiveTools?: () => string[];
 	#lastApiBase = "";
 	#listablePathsCache: string[] | null = null;
 	#autoExpandPathsCache: string[] | null = null;
@@ -234,6 +248,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	) {
 		this.description = prompt.render(xcshApiDescription);
 		this.#contextEnv = createContextEnv(session.settings);
+		this.#getContextService = session.getContextService;
+		this.#getActiveTools = session.getActiveTools;
 		this.#warmTls();
 	}
 
@@ -354,6 +370,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		let externalVisibleItems = 0;
 		let unknownScopeItems = 0;
 		let successfulPaths = 0;
+		let incomplete = false;
 		for (const ns of allNs) {
 			const nsParams = { namespace: ns };
 			this.#expandedNamespaces.add(ns);
@@ -364,19 +381,23 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			externalVisibleItems += result.details?.batchExternalVisibleItems ?? 0;
 			unknownScopeItems += result.details?.batchUnknownScopeItems ?? 0;
 			successfulPaths += result.details?.batchSuccessCount ?? 0;
+			incomplete ||= result.isError === true || (result.details?.batchSuccessCount ?? 0) < paths.length;
 		}
 
 		const durationMs = Math.round(performance.now() - startMs);
 		const combined =
 			nsSections.length > 0
 				? nsSections.join("\n") +
-					"\n\nTenant-wide inventory request complete. Each namespace section uses authoritative membership evidence."
+					(incomplete
+						? "\n\nTenant-wide inventory is incomplete; inspect the failed requests in each namespace section."
+						: "\n\nTenant-wide inventory request complete. Each namespace section uses authoritative membership evidence.")
 				: "No resources found across accessible namespaces.";
 
 		return {
 			content: [{ type: "text", text: combined }],
+			...(incomplete && successfulPaths === 0 ? { isError: true } : {}),
 			details: {
-				status: 200,
+				status: incomplete ? (successfulPaths === 0 ? 502 : 207) : 200,
 				url: apiBase,
 				method: "GET",
 				requestId: crypto.randomUUID(),
@@ -525,6 +546,47 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		}
 
 		const durationMs = Math.round(performance.now() - startMs);
+		const failedResults = results.filter(result => result.status < 200 || result.status >= 300);
+		const hasDirectResponse = results.some(
+			result =>
+				result.status >= 200 &&
+				result.status < 300 &&
+				result.parsed &&
+				!Array.isArray(result.parsed.items) &&
+				Object.keys(result.parsed).length > 0,
+		);
+		// Detail and identity GETs are not namespace list envelopes. Preserve their evidence;
+		// compacting them as lists used to silently turn populated results into an empty inventory.
+		// Failed batches also retain per-request status and are never cached as empty success.
+		if (hasDirectResponse || (failedResults.length > 0 && failedResults.length === results.length)) {
+			const allFailed = failedResults.length === results.length;
+			return {
+				content: [
+					{
+						type: "text",
+						text: JSON.stringify({
+							results: results.map(result => ({
+								path: result.path,
+								status: result.status,
+								body: result.parsed ?? result.rawBody,
+							})),
+							complete: failedResults.length === 0,
+						}),
+					},
+				],
+				...(allFailed ? { isError: true } : {}),
+				details: {
+					status: allFailed ? failedResults[0]?.status || 502 : failedResults.length > 0 ? 207 : 200,
+					url: apiBase,
+					method: "GET",
+					requestId,
+					durationMs,
+					contextName,
+					batchSize: paths.length,
+					batchSuccessCount: results.length - failedResults.length,
+				},
+			};
+		}
 
 		type ScopedBatchEntry = BatchEntry & {
 			confirmedItems: Array<Record<string, unknown>>;
@@ -756,7 +818,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		const batchTotalItems = relevantData.reduce((sum, r) => sum + r.confirmedItems.length, 0);
 		sections.unshift(`Namespace member inventory: ${batchTotalItems} confirmed member(s) in ${ns}.\n`);
 		sections.push(
-			"\nInventory request complete. Membership totals and resource summaries include only items with consistent namespace metadata.",
+			failedResults.length > 0
+				? `\nPartial inventory: ${failedResults.length} request(s) failed. ${JSON.stringify(failedResults.map(result => ({ path: result.path, status: result.status })))}`
+				: "\nInventory request complete. Membership totals and resource summaries include only items with consistent namespace metadata.",
 		);
 		const text = sections.join("\n");
 		const batchSize = paths.length;
@@ -765,15 +829,16 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// Cache for subsequent invocations
 		try {
-			await writeBatchCacheAtomically(cachePath, {
-				ts: Date.now(),
-				text,
-				batchSize,
-				batchSuccessCount,
-				batchTotalItems,
-				batchExternalVisibleItems: externalVisibleItems,
-				batchUnknownScopeItems: unknownScopeItems,
-			});
+			if (failedResults.length === 0)
+				await writeBatchCacheAtomically(cachePath, {
+					ts: Date.now(),
+					text,
+					batchSize,
+					batchSuccessCount,
+					batchTotalItems,
+					batchExternalVisibleItems: externalVisibleItems,
+					batchUnknownScopeItems: unknownScopeItems,
+				});
 		} catch {
 			// Cache write failure is non-fatal
 		}
@@ -823,6 +888,34 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	}
 
 	async execute(_toolCallId: string, params: XcshApiParams, signal?: AbortSignal): Promise<XcshApiResult> {
+		if (params.contextName !== undefined && params.contextName !== this.#contextEnv.getContextName()) {
+			return this.#errorResult(
+				"Context does not match the requested target. Complete xcsh_context activation and inspect its result before querying resources.\n" +
+					JSON.stringify({
+						expectedContext: params.contextName,
+						actualContext: this.#contextEnv.getContextName(),
+						contextSelectionToolAvailable: this.#getActiveTools?.().includes("xcsh_context"),
+					}),
+			);
+		}
+		if (params.contextName !== undefined && this.#getContextService) {
+			try {
+				const status = (await this.#getContextService()).getStatus();
+				if (
+					status.credentialSource !== "environment" &&
+					(status.activeContextName !== params.contextName || status.authStatus !== "connected")
+				) {
+					return this.#errorResult(
+						"Selected context is not connected. Inspect the xcsh_context result before querying resources.\n" +
+							JSON.stringify({ expectedContext: params.contextName, authStatus: status.authStatus }),
+					);
+				}
+			} catch {
+				return this.#errorResult(
+					"Selected context readiness could not be verified. Inspect the xcsh_context result before querying resources.",
+				);
+			}
+		}
 		const [apiBase, apiToken] = this.#resolveCredentials();
 		if (apiBase && apiBase !== this.#lastApiBase) this.#warmTls();
 		if (!apiBase) {
@@ -869,7 +962,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// Per-namespace auto-expand: when the model GETs a namespace list endpoint,
 		// batch ALL types for that namespace on first access. Each namespace expands once.
 		// File-based cache in #executeBatch prevents redundant API calls across sessions.
-		if (params.method === "GET" && !params.payload) {
+		if (params.method === "GET" && !params.payload && params.expandDiscovery !== false) {
 			const listablePaths = this.#loadListablePaths();
 			// Use the auto-expand trigger list (excludes healthcheck) to decide WHETHER to expand.
 			// The batch itself uses the full listablePaths (includes healthcheck) for content.

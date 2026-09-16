@@ -1,0 +1,38 @@
+--- a/codex-rs/app-server-transport/src/lib.rs
++++ b/codex-rs/app-server-transport/src/lib.rs
+@@ -1,0 +2 @@
++mod reference_capture;
+--- a/codex-rs/codex-api/src/lib.rs
++++ b/codex-rs/codex-api/src/lib.rs
+@@ -9,0 +10 @@
++mod reference_capture;
+--- a/codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs
++++ b/codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs
+@@ -132,0 +133 @@
++                crate::reference_capture::record("rpc", "in", &serde_json::json!(message));
+@@ -260,0 +262 @@
++                    crate::reference_capture::record("rpc", "out", &serde_json::json!(queued_message.message));
+--- a/codex-rs/app-server-transport/src/transport/remote_control/websocket.rs
++++ b/codex-rs/app-server-transport/src/transport/remote_control/websocket.rs
+@@ -962 +962,4 @@
+-                send_result = websocket_writer.send(tungstenite::Message::Text(payload.into())) => {
++                send_result = async {
++                    crate::reference_capture::json("relay", "out", &payload);
++                    websocket_writer.send(tungstenite::Message::Text(payload.into())).await
++                } => {
+@@ -1055 +1058,4 @@
+-                    send_result = websocket_writer.send(tungstenite::Message::Text(payload.into())) => {
++                    send_result = async {
++                    crate::reference_capture::json("relay", "out", &payload);
++                    websocket_writer.send(tungstenite::Message::Text(payload.into())).await
++                } => {
+@@ -1158,0 +1165 @@
++                    crate::reference_capture::json("relay", "in", &text);
+--- a/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
++++ b/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
+@@ -419,0 +420 @@
++            crate::reference_capture::json("realtime", "out", &payload);
+@@ -487,0 +489 @@
++        crate::reference_capture::json("realtime", "out", &payload);
+@@ -539,0 +542 @@
++                    crate::reference_capture::json("realtime", "in", &text);

@@ -1,2 +1,8 @@
-Generate a very short title (3-6 words) for a coding session based on the user's first message. The title **MUST** capture the main task or topic.
-You **MUST** output ONLY the title, nothing else. You **MUST NOT** include quotes or punctuation at the end.
+Generate a concise title for a coding session from the user's first message.
+
+- Return strict JSON with exactly one string field: `{"title":"…"}`.
+- Use the user's language.
+- Prefer fewer than five imperative words.
+- Preserve ticket identifiers such as `ABC-123`.
+- Keep the title at most 36 Unicode characters.
+- Do not add commentary or Markdown.

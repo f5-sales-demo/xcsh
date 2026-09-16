@@ -168,6 +168,7 @@ import {
 	shouldCompact,
 } from "./compaction";
 import { DEFAULT_PRUNE_CONFIG, pruneToolOutputs } from "./compaction/pruning";
+import { requestsContextActivation } from "./context-selection-intent";
 import { finalAnswerText } from "./final-answer";
 import {
 	type BashExecutionMessage,
@@ -3333,10 +3334,26 @@ export class AgentSession {
 			return;
 		}
 
+		if (
+			!options?.synthetic &&
+			options?.toolChoice == null &&
+			this.#toolChoiceQueue.inspect().length === 0 &&
+			this.getActiveToolNames().includes("xcsh_context") &&
+			requestsContextActivation(expandedText)
+		) {
+			const contextChoice = buildNamedToolChoice("xcsh_context", this.model);
+			if (contextChoice && typeof contextChoice !== "string") {
+				this.#toolChoiceQueue.pushOnce(contextChoice, { label: "context-selection" });
+			}
+		}
+
 		// Skip eager todo prelude when the user has already queued a directive
-		const hasPendingUserDirective = this.#toolChoiceQueue.inspect().includes("user-force");
+		const pendingDirectives = this.#toolChoiceQueue.inspect();
+		const hasPendingUserDirective = pendingDirectives.includes("user-force");
 		const eagerTodoPrelude =
-			!options?.synthetic && !hasPendingUserDirective ? this.#createEagerTodoPrelude(expandedText) : undefined;
+			!options?.synthetic && !hasPendingUserDirective && !pendingDirectives.includes("context-selection")
+				? this.#createEagerTodoPrelude(expandedText)
+				: undefined;
 
 		const userContent: (TextContent | ImageContent)[] = [{ type: "text", text: expandedText }];
 		if (options?.images) {

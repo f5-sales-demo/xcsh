@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6f58ec9c2a3d2008b51841e0299d86cfa4559e65",
-  "fingerprint": "b7abcf0d7950e3292514cd1b11c47ef60c33df2de043afefefcaee9b946afa3b",
+  "revision": "f75e722482664f565433f8fab5d94d3b1c648687",
+  "fingerprint": "deba20a7382daf979056f80a163ca7a2aff101e7b877d1a86c756837edbd18c7",
   "counts": {
     "total": 241,
     "components": 95,
@@ -1601,6 +1601,7 @@
         "packages/coding-agent/test/core/hashline.test.ts",
         "packages/coding-agent/test/modes/components/session-selector-mouse.test.ts",
         "packages/coding-agent/test/python-execution-outcome.test.ts",
+        "packages/coding-agent/test/remote-control/trace-assembler.test.ts",
         "packages/coding-agent/test/remote-control/trace.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
@@ -1910,7 +1911,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "02bcafae109fda239f16ab5a20bc04c6d43d34c59a9afb225fdfb32edbf39095",
+      "sha256": "a27fe290a94ac12a8d48d72ae6f43262298675a26eeaf9fcc753a4140aaf8fcf",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",
@@ -1943,7 +1944,8 @@
         "packages/coding-agent/test/model-selector-provider-tabs.test.ts",
         "packages/coding-agent/test/model-selector-registry-integration.test.ts",
         "packages/coding-agent/test/model-selector-role-badge-thinking.test.ts",
-        "packages/coding-agent/test/provider-selector-layout.test.ts"
+        "packages/coding-agent/test/provider-selector-layout.test.ts",
+        "packages/coding-agent/test/remote-control/model-lifecycle.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/model-selector.ts is individually classified as caller-owned-draft in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2983,6 +2985,7 @@
       "directTests": [
         "packages/coding-agent/test/modes/components/user-message-selector-navigation.test.ts",
         "packages/coding-agent/test/remote-control/session.test.ts",
+        "packages/coding-agent/test/title-generator.test.ts",
         "packages/coding-agent/test/user-message-hotswap.test.ts",
         "packages/coding-agent/test/user-message.test.ts"
       ],
@@ -3289,7 +3292,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "0f190d034da4ec60f894df9cf8e2d1a0eef8c3f6c29547ce3e2909d5a33e0b4a",
+      "sha256": "b3360c1c4ae98e9989530801ec29c491d0b602d26906fe93684a2877c0a26bf8",
       "exports": [
         "InputController"
       ],
@@ -3300,8 +3303,7 @@
       "persistenceSignals": [
         "file-write",
         "file-replace",
-        "session-persistence",
-        "settings-mutation"
+        "session-persistence"
       ],
       "directTests": [
         "packages/coding-agent/test/input-controller-background.test.ts",
@@ -3466,6 +3468,7 @@
       "directTests": [
         "packages/coding-agent/test/commit-model-selection-role-thinking.test.ts",
         "packages/coding-agent/test/model-selection-session.test.ts",
+        "packages/coding-agent/test/remote-control/model-lifecycle.test.ts",
         "packages/coding-agent/test/sdk-model-selection.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/model-selection.ts is individually classified as runtime-lifecycle in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -3681,7 +3684,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "18846e00f9119e1175e5770aa3de0cc87f900d5835c3e6f5f36f907c7d792cd6",
+      "sha256": "7c82d753b7aa28a589f6cb10ae3c5ef4896b60ad64c7118a704365e9d4806e3f",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -3909,6 +3912,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
+        "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
@@ -3926,8 +3930,7 @@
         "packages/coding-agent/test/herdr-terminal.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
-        "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
-        "packages/coding-agent/test/internal-urls/mcp-protocol.test.ts"
+        "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/shared.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4340,7 +4343,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "f808800569602cbfa7aebb1a24b095a78afad6e213e5b0de17b1daaa9cf60ac4",
+      "sha256": "b2a4ecc37d9435f3baea25683f6849f81aedad64ae278aa91aca658dcda74b35",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -4408,7 +4411,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "18ef10e14ed5657cb0bc99682fb1ebcda752fc68bb2b7a87820b4d3dfdc90621",
+      "sha256": "428cd2c233e097cccccd81ec1751306e6028b604dd276035826bf189fffafc72",
       "exports": [
         "BranchSummaryEntry",
         "CURRENT_SESSION_VERSION",
@@ -4507,7 +4510,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "8bbee159c3799dead85c44c6d473ff5447ab7ece9865fd51e743ff6aaacdba28",
+      "sha256": "38ab7646b2ff146311dcce9ea8d86b52fe5e6f2d413c8f1d2e67aa197d294824",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -5622,14 +5625,14 @@
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
+        "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
         "packages/coding-agent/test/auto-config-read.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/autocomplete-max-visible.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/background-terminal.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/block-images.test.ts"
+        "packages/coding-agent/test/bash-executor.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/write.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

@@ -2,7 +2,9 @@ import { lstat, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, normalize } from "node:path";
 import type { Enrollment } from "./enrollment";
 import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
+import { ManagedRemoteSessions } from "./managed-sessions";
 import { RelayCodec } from "./relay";
+import { RELAY_SWEEP_MS, ReconnectBackoff, RelayClientTracker, RelayHeartbeat } from "./relay-lifecycle";
 import { RemoteRouter, type SessionEndpoint } from "./router";
 import { type Notification, ProtocolError } from "./session";
 import { type TraceSink, traceFromEnvironment, traceJson } from "./trace-runtime";
@@ -14,7 +16,7 @@ async function prepareSocketPath(socketPath: string): Promise<void> {
 		peer.close();
 		active = true;
 	} catch (error) {
-		if (!["ECONNREFUSED", "ENOENT"].includes(String((error as NodeJS.ErrnoException).code))) throw error;
+		if (!["ECONNREFUSED", "ENOENT", "ENOTSOCK"].includes(String((error as NodeJS.ErrnoException).code))) throw error;
 	}
 	if (active) throw new Error("An xcsh remote host is already running");
 	try {
@@ -70,13 +72,94 @@ function registrationSkillErrors(value: unknown): NonNullable<SessionEndpoint["s
 	return value as NonNullable<SessionEndpoint["skillErrors"]>;
 }
 
+function registrationModels(value: unknown): NonNullable<SessionEndpoint["models"]> {
+	if (value == null) return [];
+	if (!Array.isArray(value) || value.length > 512) throw new ProtocolError(-32602, "Invalid model registration");
+	const effortValues = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+	const identities = new Set<string>();
+	for (const model of value) {
+		const identity =
+			model && typeof model === "object"
+				? `${String((model as { provider?: unknown }).provider)}\0${String((model as { id?: unknown }).id)}`
+				: "";
+		if (
+			!model ||
+			typeof model !== "object" ||
+			typeof model.id !== "string" ||
+			!model.id ||
+			model.id.length > 256 ||
+			typeof model.provider !== "string" ||
+			!model.provider ||
+			model.provider.length > 256 ||
+			typeof model.displayName !== "string" ||
+			model.displayName.length > 512 ||
+			typeof model.description !== "string" ||
+			model.description.length > 4096 ||
+			!Array.isArray(model.supportedReasoningEfforts) ||
+			model.supportedReasoningEfforts.length > 16 ||
+			model.supportedReasoningEfforts.some(
+				(level: unknown) =>
+					!level ||
+					typeof level !== "object" ||
+					typeof (level as { reasoningEffort?: unknown }).reasoningEffort !== "string" ||
+					!effortValues.has(String((level as { reasoningEffort?: unknown }).reasoningEffort)) ||
+					typeof (level as { description?: unknown }).description !== "string" ||
+					String((level as { description?: unknown }).description).length > 1024,
+			) ||
+			typeof model.defaultReasoningEffort !== "string" ||
+			!effortValues.has(model.defaultReasoningEffort) ||
+			!Array.isArray(model.inputModalities) ||
+			model.inputModalities.length === 0 ||
+			model.inputModalities.length > 2 ||
+			model.inputModalities.some((modality: unknown) => modality !== "text" && modality !== "image") ||
+			identities.has(identity)
+		)
+			throw new ProtocolError(-32602, "Invalid model registration");
+		identities.add(identity);
+	}
+	return value as NonNullable<SessionEndpoint["models"]>;
+}
+
+function registrationCollaborationMode(value: unknown): NonNullable<SessionEndpoint["collaborationMode"]> {
+	if (value == null) return "default";
+	if (value !== "plan" && value !== "default")
+		throw new ProtocolError(-32602, "Invalid collaboration mode registration");
+	return value;
+}
+
+function replayResumeSettings(
+	router: RemoteRouter,
+	client: string,
+	request: unknown,
+	response: unknown,
+	defer: boolean,
+): void {
+	if (!request || typeof request !== "object" || Array.isArray(request)) return;
+	const message = request as { method?: unknown; params?: { threadId?: unknown } };
+	if (message.method !== "thread/resume" || typeof message.params?.threadId !== "string") return;
+	if (!response || typeof response !== "object" || Array.isArray(response)) return;
+	const envelope = response as { error?: unknown; result?: unknown };
+	if (envelope.error != null || !Object.hasOwn(envelope, "result")) return;
+	const replay = () => router.replayThreadSettings(client, message.params!.threadId as string, envelope.result);
+	if (defer) setTimeout(replay, 0);
+	else replay();
+}
+
 export async function startLocalHost(
 	socketPath: string,
 	version: string,
 	trace: TraceSink | undefined = traceFromEnvironment("host", version),
+	options: { defaultCwd?: string; primarySessionId?: string } = {},
 ) {
 	await prepareSocketPath(socketPath);
-	const router = new RemoteRouter(dirname(socketPath), version);
+	const managed = await new ManagedRemoteSessions(
+		dirname(socketPath),
+		options.defaultCwd ?? process.cwd(),
+	).initialize();
+	const router = new RemoteRouter(dirname(socketPath), version, managed, options.primarySessionId);
+	managed.publish = event => router.publish(event);
+	managed.detached = threadId => router.removeSession(threadId);
+	managed.hasSubscribers = threadId => router.hasSubscribers(threadId);
 	const peers = new Set<LocalPeer>();
 	const localClients = new Map<string, LocalPeer>();
 	let publishClient = (_client: string, _event: Notification) => {};
@@ -87,8 +170,12 @@ export async function startLocalHost(
 	};
 	const owners = new Map<LocalPeer, { id: string; lastSeen: number }>();
 	let closed = false;
+	let accepting = true;
+	let inFlight = 0;
+	let pendingOutbound = () => 0;
 	let relayStatus = "disconnected";
 	let stopRelay = () => {};
+	let terminateManagedOnClose = false;
 	const server = await listenLocal(socketPath, peer => {
 		peers.add(peer);
 		const localClient = `local-${crypto.randomUUID()}`;
@@ -105,23 +192,46 @@ export async function startLocalHost(
 			peers.delete(peer);
 		};
 		peer.handle = async (method, params) => {
-			if (method === "protocol") return router.handle(localClient, params.request);
+			if (method === "protocol") {
+				if (!accepting) throw new ProtocolError(-32000, "Remote host is draining");
+				inFlight++;
+				try {
+					const result = await router.handle(localClient, params.request);
+					replayResumeSettings(router, localClient, params.request, result, true);
+					return result;
+				} finally {
+					inFlight--;
+				}
+			}
 			if (method === "status")
 				return {
 					enabled: true,
 					relay: relayStatus,
 					liveSessions: router.sessions.size,
+					managedSessions: managed.counts().total,
+					loadedManagedSessions: managed.counts().loaded,
+					archivedManagedSessions: managed.counts().archived,
+					defaultCwd: managed.defaultCwd,
+					primarySession: options.primarySessionId ?? null,
 					sessions: [...router.sessions.values()].map(s => ({
 						id: s.thread.id,
 						name: s.thread.name,
 						model: s.thread.model,
 					})),
 				};
-			if (method === "stop") {
+			if (method === "drain" || method === "stop") {
+				accepting = false;
+				terminateManagedOnClose ||= params.terminateManaged === true;
+				const timeout =
+					typeof params.timeoutMs === "number" && params.timeoutMs >= 0
+						? Math.min(params.timeoutMs, 60_000)
+						: 60_000;
+				const deadline = Date.now() + timeout;
+				while (inFlight + pendingOutbound() > 0 && Date.now() < deadline) await Bun.sleep(25);
 				setTimeout(() => {
 					void close();
 				}, 20);
-				return {};
+				return { drained: inFlight + pendingOutbound() === 0 };
 			}
 			if (method === "unregister") {
 				remove();
@@ -138,6 +248,8 @@ export async function startLocalHost(
 				const requests = router.validateSessionRequests(thread.id, params.requests ?? []);
 				const skills = registrationSkills(params.skills);
 				const skillErrors = registrationSkillErrors(params.skillErrors);
+				const models = registrationModels(params.models);
+				const collaborationMode = registrationCollaborationMode(params.collaborationMode);
 				router.registerSession(
 					thread.id,
 					{
@@ -145,6 +257,8 @@ export async function startLocalHost(
 						requests,
 						skills,
 						skillErrors,
+						models,
+						collaborationMode,
 						call: (identity, command, input) =>
 							peer.call("session/call", { identity, method: command, params: input }),
 					},
@@ -172,6 +286,7 @@ export async function startLocalHost(
 		if (closed) return;
 		closed = true;
 		router.dispose();
+		await managed.close(terminateManagedOnClose);
 		clearInterval(sweep);
 		stopRelay();
 		for (const peer of peers) peer.close();
@@ -185,19 +300,34 @@ export async function startLocalHost(
 		refresh?: () => Promise<Enrollment>,
 	): void {
 		const codec = new RelayCodec();
+		pendingOutbound = () => codec.pendingMessages;
 		const clients = new Map<string, { clientId: string; streamId: string }>();
+		const tracker = new RelayClientTracker({
+			onClose: key => {
+				const client = clients.get(key);
+				router.close(key);
+				clients.delete(key);
+				if (client) codec.closeClient(client.clientId, client.streamId);
+			},
+		});
 		let socket: WebSocket | undefined;
 		let timer: ReturnType<typeof setTimeout> | undefined;
-		let attempts = 0;
+		const backoff = new ReconnectBackoff();
+		const heartbeat = new RelayHeartbeat();
 		let refreshBeforeConnect = false;
 		const send = (clientId: string, streamId: string, message: unknown, event?: string) => {
 			if (!event || event === "server_message") trace?.record("rpc", "out", message);
-			const frames = codec.send(clientId, streamId, message, event);
-			if (socket?.readyState === WebSocket.OPEN)
-				for (const frame of frames) {
-					traceJson(trace, "relay", "out", frame);
-					socket.send(frame);
-				}
+			try {
+				const frames = codec.send(clientId, streamId, message, event);
+				if (socket?.readyState === WebSocket.OPEN)
+					for (const frame of frames) {
+						traceJson(trace, "relay", "out", frame);
+						socket.send(frame);
+					}
+			} catch (error) {
+				tracker.close(RelayClientTracker.key(clientId, streamId), "outbound_terminated");
+				throw error;
+			}
 		};
 		const connect = async () => {
 			if (closed) return;
@@ -235,7 +365,8 @@ export async function startLocalHost(
 			connection.onopen = () => {
 				if (socket !== connection) return;
 				relayStatus = "connected";
-				attempts = 0;
+				backoff.reset();
+				heartbeat.opened();
 				for (const frame of codec.replay()) {
 					traceJson(trace, "relay", "out", frame);
 					connection.send(frame);
@@ -244,6 +375,7 @@ export async function startLocalHost(
 			connection.onmessage = event => {
 				if (socket !== connection) return;
 				try {
+					heartbeat.pong();
 					if (typeof event.data !== "string") throw new Error();
 					traceJson(trace, "relay", "in", event.data);
 					const incoming = codec.receive(event.data);
@@ -255,11 +387,29 @@ export async function startLocalHost(
 						return;
 					}
 					if (incoming.event === "client_closed") {
-						router.close(key);
-						clients.delete(key);
+						tracker.close(key, "client_closed");
+						return;
+					}
+					const message = incoming.message as { id?: string | number; method?: string } | undefined;
+					if (!accepting) {
+						if (message?.id !== undefined)
+							send(clientId, streamId, {
+								id: message.id,
+								error: { code: -32000, message: "Remote host is draining" },
+							});
+						return;
+					}
+					const admitted = tracker.admit(clientId, streamId, message?.method, message?.id);
+					if (admitted.kind === "dropped") {
+						codec.closeClient(clientId, streamId);
 						return;
 					}
 					clients.set(key, { clientId, streamId });
+					if (!tracker.begin(key, admitted.generation)) {
+						if (message?.id !== undefined) send(clientId, streamId, tracker.overload(message.id));
+						return;
+					}
+					inFlight++;
 					trace?.record("rpc", "in", incoming.message);
 					// Diagnostics contain protocol method names only, never payloads or client identifiers.
 					const method = (incoming.message as { method?: string }).method;
@@ -310,18 +460,24 @@ export async function startLocalHost(
 					void router
 						.handle(key, incoming.message)
 						.then(result => {
-							if (result !== null) {
+							if (result !== null && tracker.isCurrent(key, admitted.generation)) {
 								const error = (result as { error?: { code: number } }).error;
 								if (error)
 									process.stdout.write(
 										`${JSON.stringify({ stage: "relay", method: safeMethod, errorCode: error.code, at: Date.now() })}\n`,
 									);
 								send(clientId, streamId, result);
+								replayResumeSettings(router, key, incoming.message, result, false);
 							}
 						})
 						.catch(() => {
+							if (!tracker.isCurrent(key, admitted.generation)) return;
 							relayStatus = "protocol-error";
 							if (socket === connection) connection.close();
+						})
+						.finally(() => {
+							tracker.complete(key, admitted.generation);
+							inFlight--;
 						});
 				} catch {
 					relayStatus = "protocol-error";
@@ -340,14 +496,14 @@ export async function startLocalHost(
 				if (!closed) {
 					relayStatus = "reconnecting";
 					if (timer) clearTimeout(timer);
-					timer = setTimeout(
-						() => {
-							timer = undefined;
-							void connect();
-						},
-						Math.min(30_000, 500 * 2 ** Math.min(attempts++, 6)),
-					);
+					timer = setTimeout(() => {
+						timer = undefined;
+						void connect();
+					}, backoff.nextDelay());
 				}
+			};
+			(connection as WebSocket & { onpong?: () => void }).onpong = () => {
+				if (socket === connection) heartbeat.pong();
 			};
 		};
 		publishClient = (key, event) => {
@@ -357,12 +513,28 @@ export async function startLocalHost(
 				send(client.clientId, client.streamId, event);
 			} catch {
 				relayStatus = "buffer-limit";
-				socket?.close();
+				tracker.close(key, "outbound_terminated");
 			}
 		};
+		const heartbeatTimer = setInterval(() => {
+			if (socket?.readyState !== WebSocket.OPEN) return;
+			const action = heartbeat.poll();
+			if (action === "timeout") {
+				relayStatus = "heartbeat-timeout";
+				socket.close();
+				return;
+			}
+			if (action === "ping") {
+				const transport = socket as WebSocket & { ping?: () => void };
+				transport.ping?.();
+				heartbeat.sentPing();
+			}
+		}, 10_000);
+		heartbeatTimer.unref?.();
 
 		let refreshing = false;
 		const refreshTimer = setInterval(() => {
+			tracker.sweep();
 			if (!refresh || refreshing || closed || Date.parse(enrollment.expires_at) > Date.now() + 60_000) return;
 			refreshing = true;
 			void refresh()
@@ -381,10 +553,12 @@ export async function startLocalHost(
 				.finally(() => {
 					refreshing = false;
 				});
-		}, 30_000);
+		}, RELAY_SWEEP_MS);
 		stopRelay = () => {
 			clearInterval(refreshTimer);
+			clearInterval(heartbeatTimer);
 			if (timer) clearTimeout(timer);
+			tracker.closeAll("shutdown");
 			socket?.close();
 		};
 		void connect();

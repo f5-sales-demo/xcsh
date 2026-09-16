@@ -2,8 +2,10 @@
 
 This development harness records ordinary ChatGPT-to-Codex conversations for
 comparison with native xcsh. It is not a product dependency or a replacement
-agent. The reference is Codex 0.153.4, commit
-`3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`.
+agent. Codex 0.154.0 at peeled commit
+`6b9826e3aa83b1a5947db50f4332cb9c65f1b340` is the default comparison baseline.
+Codex 0.153.4 at `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`
+remains available for the existing versioned fixtures.
 
 ## Completed-output source fixtures
 
@@ -43,8 +45,9 @@ directory, which the generator removes afterward.
 
 ## Reference preparation
 
-Use a separate copy of the pinned source. `bun install.ts <source-directory>`
-checks the SHA-256 of every patched source file before applying the observation
+Use a separate copy of the pinned source. `bun install.ts <0.153.4|0.154.0>
+<source-directory>` requires an explicit baseline, verifies the annotated tag and
+peeled full commit, and checks the SHA-256 of every patched source file before applying the observation
 patch and installing two private Rust helper modules. Existing Codex binaries and
 the user's running daemon are not modified. The patch contains Apache-2.0 Codex
 source context; see `../../src/remote-control/NOTICE.md` and its accompanying license.
@@ -88,7 +91,7 @@ sandbox configuration.
 Start the recorder before the reference process:
 
 ```text
-bun record.ts <private-directory>/capture.sock <private-directory>/reference.jsonl <scenario>
+bun record.ts 0.154.0 <private-directory>/capture.sock <private-directory>/reference.jsonl <scenario> <instrumented-codex-binary> <artifact-sha256>
 ```
 
 The directory must be owned by the current user and have mode 0700. Pass
@@ -115,16 +118,36 @@ producer sequence counters begin at one. Do not reuse a failed capture path.
 Launch the native xcsh test host and session processes with:
 
 - `XCSH_REMOTE_TRACE_DIRECTORY`: an existing private directory.
-- `XCSH_REMOTE_TRACE_COMMIT`: the exact 40-character implementation commit.
 - `XCSH_REMOTE_TRACE_SCENARIO`: the controlled scenario name.
 - `XCSH_REMOTE_TRACE_SALT`: a fresh random 32-byte hex salt, shared across the
   processes in this capture window. Do not publish it with the evidence.
+
+xcsh capture manifests derive their full source commit from the binary's embedded
+build information and hash the running executable. A caller-supplied commit is
+intentionally ignored, so a trace cannot claim provenance for a different artifact.
 
 Each host and realtime connection gets a separate trace. The shared salt preserves
 cross-process identity correlation; manifest clock origins support timeline
 assembly. Close each recorded connection and test host to finalize their footers.
 Capture is off when the directory variable is absent. Never restart a user's
 active voice call merely to enable recording; coordinate the test boundary.
+
+After every producer has closed cleanly, assemble the post-TLS corpus with
+`bun assemble.ts host=host.jsonl voice=voice.jsonl`. For an immutable older capture
+whose manifest predates `artifactSha256`, add `--artifact host=/exact/path/to/xcsh`.
+The assembler streams the artifact hash and requires the manifest's full source
+commit to occur in those exact bytes; it never trusts a caller-supplied commit or
+rewrites the capture. The command rejects missing footers, sequence gaps, and mixed
+artifact provenance, then emits one deterministic fixture with synchronized ordering
+and a transport summary. Packet captures remain private and are never inputs to the
+replay corpus.
+
+For a voice-first pair, run
+`bun voice-first-report.ts reference-assembled.json candidate-assembled.json`. The
+report correlates the `thread/start` response and `thread/started` notification on
+the requesting relay stream, checks their thread and source shapes, and records
+whether that client progresses to `thread/realtime/start` before cleanup. It uses
+only sanitized identities, field shapes, ordering, and timing.
 
 `bun compare.ts <reference.jsonl> <xcsh.jsonl>` produces an inventory of signals,
 correlated requests and replies, errors, unanswered requests, timings, and a

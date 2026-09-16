@@ -14,6 +14,42 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 		sessionId: "fixture",
 		sessionName: "Fixture",
 		model: { id: "gpt-6-astra", provider: "openai-codex" },
+		modelRegistry: {
+			getAvailable: () => [
+				{
+					id: "gpt-6-astra",
+					name: "GPT-6 Astra",
+					description: "Maximum capability",
+					provider: "openai-codex",
+					input: ["text", "image"],
+					thinking: {
+						supportedLevels: [{ effort: "high", description: "High" }],
+						defaultLevel: "high",
+					},
+				},
+				{
+					id: "gpt-5.6-sol",
+					name: "GPT-5.6 Sol",
+					description: "Deep reasoning",
+					provider: "openai-codex",
+					input: ["text", "image"],
+					thinking: {
+						supportedLevels: [
+							{ effort: "medium", description: "Medium" },
+							{ effort: "high", description: "High" },
+						],
+						defaultLevel: "medium",
+					},
+				},
+				{
+					id: "gpt-5.4",
+					name: "GPT-5.4",
+					description: "Historical model",
+					provider: "openai-codex",
+					input: ["text", "image"],
+				},
+			],
+		},
 		messages: [],
 		skills: [
 			{
@@ -35,6 +71,10 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 		setCollaborationMode: async mode => {
 			collaborationModes.push(mode);
 		},
+		setModel: async (model, thinkingLevel) => {
+			(target as any).model = model;
+			(target as any).thinkingLevel = thinkingLevel;
+		},
 	});
 	try {
 		const deadline = Date.now() + 1000;
@@ -43,6 +83,7 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 		expect(host.router.sessions.get("fixture")?.skills).toMatchObject([
 			{ name: "fixture", path: join(dir, "SKILL.md"), scope: "repo", enabled: true },
 		]);
+		expect(host.router.sessions.get("fixture")?.models).toHaveLength(2);
 		await host.router.handle("phone", {
 			id: 1,
 			method: "initialize",
@@ -59,6 +100,44 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 			}),
 		).toEqual({ id: 2, result: {} });
 		expect(collaborationModes).toEqual(["plan"]);
+		expect(
+			await host.router.handle("phone", {
+				id: 3,
+				method: "model/list",
+				params: {},
+			}),
+		).toMatchObject({
+			id: 3,
+			result: {
+				data: [
+					{ id: "gpt-6-astra", displayName: "GPT-6 Astra" },
+					{
+						id: "gpt-5.6-sol",
+						displayName: "GPT-5.6 Sol",
+						defaultReasoningEffort: "medium",
+						supportedReasoningEfforts: [
+							{ reasoningEffort: "medium", description: "Medium" },
+							{ reasoningEffort: "high", description: "High" },
+						],
+					},
+				],
+			},
+		});
+		expect(
+			await host.router.handle("phone", {
+				id: 4,
+				method: "thread/settings/update",
+				params: {
+					threadId: "fixture",
+					model: "gpt-5.6-sol",
+					effort: "high",
+					serviceTier: null,
+					multiAgentMode: "explicitRequestOnly",
+				},
+			}),
+		).toEqual({ id: 4, result: {} });
+		expect(target.model?.id).toBe("gpt-5.6-sol");
+		expect(host.router.sessions.get("fixture")?.thread.model).toBe("gpt-5.6-sol");
 		stop();
 		await Bun.sleep(20);
 		expect(host.router.sessions.has("fixture")).toBe(false);

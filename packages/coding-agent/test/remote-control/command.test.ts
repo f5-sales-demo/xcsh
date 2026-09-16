@@ -8,10 +8,17 @@ test.each(["status", "help"] as const)(
 	async surface => {
 		const dir = await mkdtemp(join(tmpdir(), "xcsh-remote-cli-"));
 		try {
+			const isolatedEnv = {
+				...process.env,
+				PI_CODING_AGENT_DIR: dir,
+				XDG_CONFIG_HOME: join(dir, "config"),
+				XDG_RUNTIME_DIR: join(dir, "runtime"),
+				DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(dir, "runtime", "bus")}`,
+			};
 			const command = async (args: string[]) => {
 				const child = Bun.spawn([process.execPath, "src/cli.ts", "remote-control", ...args], {
 					cwd: join(import.meta.dir, "../.."),
-					env: { ...process.env, PI_CODING_AGENT_DIR: dir },
+					env: isolatedEnv,
 					stdout: "pipe",
 					stderr: "pipe",
 				});
@@ -24,12 +31,23 @@ test.each(["status", "help"] as const)(
 			if (surface === "status") {
 				const status = await command(["status", "--json"]);
 				expect(status.code).toBe(0);
-				expect(JSON.parse(status.stdout)).toMatchObject({ enabled: false, relay: "stopped", liveSessions: 0 });
+				expect(JSON.parse(status.stdout)).toMatchObject({
+					enabled: false,
+					relay: "stopped",
+					liveSessions: 0,
+					supervisorState: "stopped",
+					hostState: "stopped",
+					startupManager: "none",
+					generation: 0,
+					restartCount: 0,
+					degradedReason: null,
+				});
 			} else {
 				const help = await command(["--help"]);
 				expect(help.code).toBe(0);
 				expect(help.stdout).toContain("remote-control");
 				expect(help.stdout).toContain("pair");
+				expect(help.stdout).toContain("restart");
 			}
 		} finally {
 			await rm(dir, { recursive: true, force: true });
@@ -47,10 +65,17 @@ test("remote client controls are discoverable and reject revoke without an expli
 
 test("isolated CLI exercises every management action without ambient remote state", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-remote-actions-"));
+	const isolatedEnv = {
+		...process.env,
+		PI_CODING_AGENT_DIR: dir,
+		XDG_CONFIG_HOME: join(dir, "config"),
+		XDG_RUNTIME_DIR: join(dir, "runtime"),
+		DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(dir, "runtime", "bus")}`,
+	};
 	const command = async (args: readonly string[]) => {
 		const child = Bun.spawn([process.execPath, "src/cli.ts", "remote-control", ...args], {
 			cwd: join(import.meta.dir, "../.."),
-			env: { ...process.env, PI_CODING_AGENT_DIR: dir },
+			env: isolatedEnv,
 			stdout: "pipe",
 			stderr: "pipe",
 		});

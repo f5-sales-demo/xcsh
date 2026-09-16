@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
+import { mkdir, mkdtemp, realpath, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { RemoteRouter } from "../../src/remote-control/router";
 import bootstrapReference from "./fixtures/codex-0.153.4-phone-bootstrap.json";
+import voiceFirstTrace from "./fixtures/iphone-voice-first-sanitized.json";
 
 test("initialization is per phone stream; lists and attaches registered terminal only", async () => {
 	const calls: unknown[] = [];
@@ -22,13 +26,100 @@ test("initialization is per phone stream; lists and attaches registered terminal
 	).toMatchObject({ result: { userAgent: "xcsh/21.22.0", codexHome: "/tmp/xcsh" } });
 	expect(await router.handle("other", { id: 3, method: "thread/list" })).toMatchObject({ error: { code: -32002 } });
 	expect(await router.handle("phone", { id: 4, method: "thread/list" })).toMatchObject({
-		result: { data: [{ id: "fixture-thread" }], nextCursor: null },
+		result: { data: [{ id: "fixture-thread", originator: null }], nextCursor: null },
 	});
 	expect(
 		await router.handle("phone", { id: 5, method: "thread/resume", params: { threadId: "fixture-thread" } }),
 	).toMatchObject({ result: { thread: { id: "fixture-thread" } } });
 	expect(calls).toHaveLength(1);
-	expect(await router.handle("phone", { id: 6, method: "thread/start" })).toMatchObject({ error: { code: -32601 } });
+	expect(await router.handle("phone", { id: 6, method: "thread/start" })).toMatchObject({ error: { code: -32000 } });
+});
+
+test("the vanilla remote catalog exposes one active terminal and only its dynamic models", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const calls: Array<{ id: string; method: string }> = [];
+	const endpoint = (id: string, model: string, models: any[]) => ({
+		thread: {
+			id,
+			name: id,
+			model,
+			modelProvider: "openai-codex",
+			cwd: `/tmp/${id}`,
+			updatedAt: 1,
+			createdAt: 1,
+			turns: [],
+		},
+		models,
+		call: async (_identity: string, method: string) => {
+			calls.push({ id, method });
+			return {};
+		},
+	});
+	const primaryModels = [
+		{
+			id: "gpt-5.6-luna",
+			provider: "openai-codex",
+			displayName: "Luna",
+			description: "Primary",
+			supportedReasoningEfforts: [],
+			defaultReasoningEffort: "medium",
+			inputModalities: ["text"],
+		},
+		{
+			id: "gpt-6-astra",
+			provider: "openai-codex",
+			displayName: "Astra",
+			description: "Selectable",
+			supportedReasoningEfforts: [],
+			defaultReasoningEffort: "medium",
+			inputModalities: ["text"],
+		},
+	];
+	router.registerSession("primary", endpoint("primary", "gpt-5.6-luna", primaryModels));
+	router.registerSession(
+		"fixture-secondary",
+		endpoint("fixture-secondary", "gpt-5.6-sol", [
+			{
+				id: "gpt-5.6-sol",
+				provider: "openai-codex",
+				displayName: "Sol",
+				description: "Fixture only",
+				supportedReasoningEfforts: [],
+				defaultReasoningEffort: "medium",
+				inputModalities: ["text" as const],
+			},
+		]),
+	);
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(await router.handle("phone", { id: 2, method: "thread/list", params: {} })).toMatchObject({
+		result: { data: [{ id: "primary" }] },
+	});
+	expect(await router.handle("phone", { id: 3, method: "model/list", params: {} })).toMatchObject({
+		result: { data: [{ id: "gpt-5.6-luna" }, { id: "gpt-6-astra" }] },
+	});
+	expect(
+		await router.handle("phone", {
+			id: 4,
+			method: "thread/settings/update",
+			params: { threadId: "fixture-secondary", model: "gpt-5.6-sol", effort: "medium" },
+		}),
+	).toMatchObject({ error: { code: -32602 } });
+	expect(
+		await router.handle("phone", {
+			id: 5,
+			method: "thread/settings/update",
+			params: { threadId: "primary", model: "gpt-6-astra", effort: "medium" },
+		}),
+	).toMatchObject({ result: {} });
+	expect(calls).toEqual([{ id: "primary", method: "thread/settings/update" }]);
+	router.removeSession("primary");
+	expect(await router.handle("phone", { id: 6, method: "thread/list", params: {} })).toMatchObject({
+		result: { data: [{ id: "fixture-secondary" }] },
+	});
 });
 test("malformed and experimental unsupported operations are explicit errors", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
@@ -171,6 +262,37 @@ test("initialize notification opt-outs suppress exact methods for only that clie
 		).toMatchObject({ error: { code: -32602 } });
 });
 
+test("provider and reconnect lifecycle replays are deduplicated per client", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const methods: string[] = [];
+	router.notify = (_client, event) => methods.push(event.method);
+	router.sessions.set("fixture", { thread: { id: "fixture", status: { type: "idle" } }, call: async () => ({}) });
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	await router.handle("phone", { id: 2, method: "thread/resume", params: { threadId: "fixture" } });
+	const events = [
+		{ method: "thread/status/changed", params: { threadId: "fixture", status: { type: "active", activeFlags: [] } } },
+		{ method: "turn/started", params: { threadId: "fixture", turn: { id: "turn-1" } } },
+		{ method: "item/completed", params: { threadId: "fixture", item: { id: "item-1" } } },
+		{ method: "thread/tokenUsage/updated", params: { threadId: "fixture", turnId: "turn-1", tokenUsage: {} } },
+		{ method: "thread/status/changed", params: { threadId: "fixture", status: { type: "idle" } } },
+		{ method: "turn/completed", params: { threadId: "fixture", turn: { id: "turn-1" } } },
+	];
+	for (const event of events) {
+		// Managed sessions synchronize their catalog projection before publishing.
+		// That must not suppress the first client notification for the transition.
+		if (event.method === "thread/status/changed")
+			router.sessions.get("fixture")!.thread.status = structuredClone(event.params.status);
+		router.publish(event);
+		router.publish(structuredClone(event));
+	}
+	expect(methods).toEqual(events.map(event => event.method));
+	router.dispose();
+});
+
 test("a newly registered live thread is announced once with capability-specific wire fields", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	const notifications: Array<{ client: string; event: any }> = [];
@@ -248,6 +370,7 @@ test("a newly registered live thread is announced once with capability-specific 
 		"path",
 		"cwd",
 		"cliVersion",
+		"originator",
 		"source",
 		"threadSource",
 		"agentNickname",
@@ -278,6 +401,7 @@ test("a newly registered live thread is announced once with capability-specific 
 		"path",
 		"cwd",
 		"cliVersion",
+		"originator",
 		"source",
 		"canAcceptDirectInput",
 		"threadSource",
@@ -414,6 +538,7 @@ test("thread wire views gate experimental fields and never expose internal model
 		"path",
 		"cwd",
 		"cliVersion",
+		"originator",
 		"source",
 		"threadSource",
 		"agentNickname",
@@ -451,16 +576,578 @@ test("thread wire views gate experimental fields and never expose internal model
 	});
 	expect(
 		await router.handle("experimental", { id: 10, method: "thread/fork", params: { threadId: thread.id } }),
-	).toMatchObject({ error: { code: -32601 } });
+	).toMatchObject({ error: { code: -32000 } });
+});
+
+test("phone-created thread lifecycle uses cwd precedence and remains visible beside one primary terminal", async () => {
+	const notifications: Array<{ client: string; method: string; params: Record<string, unknown> }> = [];
+	const calls: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const managed = new Map<string, any>();
+	const endpoint = (id: string, cwd: string, forkedFromId: string | null = null) => ({
+		thread: {
+			id,
+			sessionId: id,
+			forkedFromId,
+			cwd,
+			model: "gpt-5.6-luna",
+			modelProvider: "openai-codex",
+			reasoningEffort: "medium",
+			source: "vscode",
+			turns: [],
+			createdAt: 1,
+			updatedAt: 1,
+		},
+		call: async (_identity: string, method: string, params: Record<string, unknown>) => {
+			calls.push({ method, params });
+			return {
+				thread: { ...endpoint(id, cwd, forkedFromId).thread, source: "cli" },
+				model: "gpt-5.6-luna",
+				modelProvider: "openai-codex",
+				serviceTier: null,
+				cwd,
+				runtimeWorkspaceRoots: [cwd],
+				instructionSources: [],
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandbox: { type: "dangerFullAccess" },
+				activePermissionProfile: null,
+				reasoningEffort: "medium",
+				multiAgentMode: "explicitRequestOnly",
+			};
+		},
+	});
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [...managed.values()].map(value => value.thread),
+		start: async (params: Record<string, unknown>) => {
+			const value = endpoint("managed-start", String(params.cwd));
+			managed.set(value.thread.id, value);
+			return value;
+		},
+		resume: async (threadId: string) => managed.get(threadId),
+		read: async (threadId: string) => ({ thread: managed.get(threadId).thread }),
+		fork: async (threadId: string, params: Record<string, unknown>) => {
+			const value = endpoint("managed-fork", String(params.cwd), threadId);
+			managed.set(value.thread.id, value);
+			return value;
+		},
+		archive: async (threadId: string) => {
+			managed.delete(threadId);
+		},
+		unarchive: async (threadId: string) => {
+			const value = endpoint(threadId, "/tmp");
+			managed.set(threadId, value);
+			return value.thread;
+		},
+		delete: async (threadId: string) => {
+			managed.delete(threadId);
+		},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	router.notify = (client, event) => notifications.push({ client, ...event });
+	router.registerSession("primary", endpoint("primary", "/tmp/primary"));
+	router.registerSession("secondary", endpoint("secondary", "/tmp/secondary"));
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	await router.handle("observer", {
+		id: 10,
+		method: "initialize",
+		params: { clientInfo: { name: "observer", version: "1" } },
+	});
+
+	const started = (await router.handle("phone", {
+		id: 2,
+		method: "thread/start",
+		params: { cwd: "/tmp", model: "gpt-5.6-luna", effort: "medium" },
+	})) as any;
+	expect(started.result).toMatchObject({ thread: { id: "managed-start", cwd: "/tmp" } });
+	expect(notifications).toEqual([]);
+	await Bun.sleep(1);
+	expect(notifications[0]).toMatchObject({ client: "phone", method: "thread/started" });
+	expect(notifications[0].params.thread).toEqual(started.result.thread);
+	expect(notifications[1].params.thread as Record<string, unknown>).not.toHaveProperty("extra");
+	expect(notifications[1].params.thread as Record<string, unknown>).not.toHaveProperty("canAcceptDirectInput");
+	expect(notifications.filter(value => value.method === "thread/started").map(value => value.client)).toEqual([
+		"phone",
+		"observer",
+	]);
+
+	const forked = (await router.handle("phone", {
+		id: 3,
+		method: "thread/fork",
+		params: { threadId: "managed-start", excludeTurns: true },
+	})) as any;
+	expect(forked.result.thread).toMatchObject({ id: "managed-fork", forkedFromId: "managed-start" });
+	await Bun.sleep(1);
+	expect((await router.handle("phone", { id: 4, method: "thread/list", params: {} })) as any).toMatchObject({
+		result: { data: [{ id: "primary" }, { id: "managed-start" }, { id: "managed-fork" }] },
+	});
+	expect(calls.filter(value => value.method === "thread/resume")).toHaveLength(2);
+
+	expect(
+		await router.handle("phone", { id: 5, method: "thread/archive", params: { threadId: "managed-fork" } }),
+	).toEqual({ id: 5, result: {} });
+	await Bun.sleep(1);
+	expect(notifications.at(-1)).toMatchObject({ method: "thread/archived", params: { threadId: "managed-fork" } });
+	const restored = (await router.handle("phone", {
+		id: 6,
+		method: "thread/unarchive",
+		params: { threadId: "managed-fork" },
+	})) as any;
+	expect(restored.result.thread).toMatchObject({ id: "managed-fork" });
+	expect(
+		await router.handle("phone", { id: 7, method: "thread/delete", params: { threadId: "managed-fork" } }),
+	).toEqual({ id: 7, result: {} });
+	await Bun.sleep(1);
+	expect(notifications.at(-1)).toMatchObject({ method: "thread/deleted", params: { threadId: "managed-fork" } });
+	router.dispose();
+});
+
+test("thread fork hands the selected terminal history source to the managed lifecycle", async () => {
+	const source = {
+		id: "primary",
+		sessionId: "primary",
+		cwd: "/tmp",
+		path: "/tmp/primary.jsonl",
+		model: "gpt-5.6-luna",
+		modelProvider: "openai-codex",
+		turns: [],
+	};
+	let receivedSource: Record<string, unknown> | undefined;
+	const sourceCalls: string[] = [];
+	const fork = {
+		...source,
+		id: "fork",
+		sessionId: "fork",
+		forkedFromId: source.id,
+		path: "/tmp/fork.jsonl",
+	};
+	const response = (thread: Record<string, unknown>) => ({
+		thread,
+		model: thread.model,
+		modelProvider: thread.modelProvider,
+		cwd: thread.cwd,
+		approvalPolicy: "never",
+		approvalsReviewer: "user",
+		sandbox: { type: "dangerFullAccess" },
+	});
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [],
+		start: async () => ({ thread: fork, call: async () => response(fork) }),
+		resume: async () => undefined,
+		read: async () => ({ thread: source }),
+		fork: async (_threadId: string, _params: Record<string, unknown>, selected?: Record<string, unknown>) => {
+			receivedSource = selected;
+			return { thread: fork, call: async () => response(fork) };
+		},
+		archive: async () => {},
+		unarchive: async () => fork,
+		delete: async () => {},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	router.registerSession(source.id, {
+		thread: source,
+		call: async (_identity, method) => {
+			sourceCalls.push(method);
+			return { thread: source };
+		},
+	});
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(
+		await router.handle("phone", { id: 2, method: "thread/fork", params: { threadId: source.id } }),
+	).toMatchObject({ result: { thread: { id: fork.id, forkedFromId: source.id } } });
+	expect(receivedSource).toBe(source);
+	expect(sourceCalls).toEqual(["xcsh/thread/flush"]);
+	router.dispose();
+});
+
+test("cold managed resume is single-flight and read does not load a worker", async () => {
+	let resumes = 0;
+	let reads = 0;
+	const thread = {
+		id: "cold",
+		sessionId: "cold",
+		cwd: "/tmp",
+		model: "gpt-5.6-luna",
+		modelProvider: "openai-codex",
+		turns: [],
+	};
+	const endpoint = {
+		thread,
+		call: async (_identity: string, method: string) => {
+			if (method === "thread/goal/get") return { goal: null };
+			if (method === "thread/queue/list") return { data: [], nextCursor: null };
+			return { thread, model: thread.model, modelProvider: thread.modelProvider, cwd: thread.cwd };
+		},
+	};
+	let pending: Promise<typeof endpoint> | undefined;
+	const lifecycle = {
+		defaultCwd: "/tmp/default",
+		list: () => [thread],
+		start: async () => endpoint,
+		fork: async () => endpoint,
+		read: async () => {
+			reads++;
+			return { thread };
+		},
+		resume: async () => {
+			pending ??= (async () => {
+				resumes++;
+				await Bun.sleep(5);
+				return endpoint;
+			})();
+			return pending;
+		},
+		archive: async () => {},
+		unarchive: async () => thread,
+		delete: async () => {},
+	};
+	const router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(await router.handle("phone", { id: 2, method: "thread/read", params: { threadId: "cold" } })).toMatchObject({
+		result: { thread: { id: "cold" } },
+	});
+	expect(reads).toBe(1);
+	expect(resumes).toBe(0);
+	const results = await Promise.all([
+		router.handle("phone", { id: "goal", method: "thread/goal/get", params: { threadId: "cold" } }),
+		router.handle("phone", {
+			id: "queue",
+			method: "thread/queue/list",
+			params: { threadId: "cold", limit: 20 },
+		}),
+		router.handle("phone", {
+			id: "process",
+			method: "process/spawn",
+			params: {
+				processHandle: "cold-status",
+				cwd: "/tmp",
+				command: [process.execPath, "-e", ""],
+			},
+		}),
+		router.handle("phone", { id: 3, method: "thread/resume", params: { threadId: "cold" } }),
+		router.handle("phone", { id: 4, method: "thread/resume", params: { threadId: "cold" } }),
+	]);
+	expect(results).toEqual([
+		{ id: "goal", result: { goal: null } },
+		{ id: "queue", result: { data: [], nextCursor: null } },
+		{ id: "process", result: {} },
+		expect.objectContaining({
+			id: 3,
+			result: expect.objectContaining({ thread: expect.objectContaining({ id: "cold" }) }),
+		}),
+		expect.objectContaining({
+			id: 4,
+			result: expect.objectContaining({ thread: expect.objectContaining({ id: "cold" }) }),
+		}),
+	]);
+	expect(resumes).toBe(1);
+	router.dispose();
+});
+
+test("phone workspace bootstrap uses the xcsh documents namespace", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-workspace-"));
+	const workspaceRoot = join(root, "Documents", "xcsh");
+	await mkdir(workspaceRoot, { recursive: true });
+	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const router = new RemoteRouter(join(root, ".xcsh"), "21.29.0");
+	router.notify = (_client, event) => notifications.push(event);
+	router.registerSession("primary", {
+		thread: { id: "primary", cwd: workspaceRoot, turns: [], updatedAt: 1 },
+		call: async () => ({}),
+	});
+	try {
+		const bootstrapScript =
+			'target="$PWD/Documents/""Codex""/2026-09-15/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"; #'.padEnd(
+				737,
+				"x",
+			);
+		await router.handle("phone", {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" } },
+		});
+		expect(
+			await router.handle("phone", {
+				id: 2,
+				method: "process/spawn",
+				params: {
+					processHandle: "phone-workspace-bootstrap",
+					cwd: "/",
+					command: ["/bin/sh", "-lc", bootstrapScript],
+					tty: false,
+					streamStdin: false,
+					streamStdoutStderr: false,
+					timeoutMs: 20_000,
+					outputBytesCap: 4096,
+				},
+			}),
+		).toEqual({ id: 2, result: {} });
+		const deadline = Date.now() + 3000;
+		while (!notifications.some(event => event.method === "process/exited") && Date.now() < deadline)
+			await Bun.sleep(5);
+		const workspace = notifications.find(event => event.method === "process/exited")?.params.stdout;
+		expect(workspace).toBeString();
+		expect(workspace as string).toStartWith(`${workspaceRoot}/`);
+		expect(workspace as string).toMatch(/\/new-realtime-voice-chat-1$/);
+		expect((await stat(workspace as string)).isDirectory()).toBe(true);
+		expect(
+			await stat(join(workspaceRoot, "Documents", "Codex")).then(
+				() => true,
+				() => false,
+			),
+		).toBe(false);
+	} finally {
+		router.dispose();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("a new phone conversation can enter voice before its first turn", async () => {
+	expect(voiceFirstTrace.events.map(event => `${event.direction}/${event.method}`)).toEqual([
+		"in/initialize",
+		"in/model/list",
+		"in/fs/readFile",
+		"in/fs/readFile",
+		"in/process/spawn",
+		"out/process/exited",
+		"in/thread/start",
+	]);
+	expect(voiceFirstTrace.events.at(-1)).toMatchObject({
+		method: "thread/start",
+		responseClass: "error",
+		errorCode: -32602,
+		errorMessageBytes: 35,
+		parameterShape: { sandbox: { type: "string", bytes: 18 } },
+	});
+	const methods: string[] = [];
+	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const managedThread = {
+		id: "managed-voice",
+		sessionId: "managed-voice",
+		forkedFromId: null,
+		parentThreadId: null,
+		preview: "",
+		ephemeral: false,
+		section: null,
+		sectionEnteredAt: null,
+		projectId: null,
+		historyMode: "paginated",
+		modelProvider: "openai-codex",
+		model: "gpt-5.6-luna",
+		reasoningEffort: "medium",
+		createdAt: 1,
+		updatedAt: 1,
+		recencyAt: 1,
+		status: { type: "idle" },
+		path: "/tmp/managed-voice.jsonl",
+		cwd: "/tmp",
+		cliVersion: "21.29.0",
+		source: "vscode",
+		threadSource: null,
+		agentNickname: null,
+		agentRole: null,
+		gitInfo: null,
+		name: null,
+		turns: [],
+	};
+	let router!: RemoteRouter;
+	const endpoint = {
+		thread: managedThread,
+		models: [
+			{
+				id: "gpt-5.6-luna",
+				provider: "openai-codex",
+				displayName: "Luna",
+				description: "Fast",
+				supportedReasoningEfforts: [{ reasoningEffort: "medium", description: "Medium" }],
+				defaultReasoningEffort: "medium",
+				inputModalities: ["text" as const],
+			},
+		],
+		call: async (_identity: string, method: string) => {
+			methods.push(method);
+			if (method === "thread/resume")
+				return {
+					thread: managedThread,
+					model: managedThread.model,
+					modelProvider: managedThread.modelProvider,
+					serviceTier: null,
+					cwd: managedThread.cwd,
+					instructionSources: [],
+					approvalPolicy: "never",
+					approvalsReviewer: "user",
+					sandbox: { type: "dangerFullAccess" },
+					reasoningEffort: "medium",
+				};
+			if (method === "thread/realtime/start") {
+				router.publish({
+					method: "thread/realtime/started",
+					params: { threadId: managedThread.id, realtimeSessionId: "fixture-realtime", version: "v3" },
+				});
+				router.publish({
+					method: "thread/realtime/sdp",
+					params: { threadId: managedThread.id, sdp: "v=0\\r\\nfixture" },
+				});
+			}
+			if (method === "thread/realtime/appendText") {
+				router.publish({
+					method: "turn/started",
+					params: { threadId: managedThread.id, turn: { id: "managed-voice-turn", status: "inProgress" } },
+				});
+				router.publish({
+					method: "turn/completed",
+					params: { threadId: managedThread.id, turn: { id: "managed-voice-turn", status: "completed" } },
+				});
+			}
+			return {};
+		},
+	};
+	const lifecycle = {
+		defaultCwd: "/tmp",
+		list: () => [managedThread],
+		start: async () => endpoint,
+		resume: async () => endpoint,
+		read: async () => ({ thread: managedThread }),
+		fork: async () => endpoint,
+		archive: async () => {},
+		unarchive: async () => managedThread,
+		delete: async () => {},
+	};
+	router = new RemoteRouter("/tmp/xcsh", "21.29.0", lifecycle);
+	router.notify = (_client, event) => notifications.push(event);
+	router.registerSession("primary", {
+		thread: { ...managedThread, id: "primary", sessionId: "primary" },
+		models: endpoint.models,
+		call: async () => ({}),
+	});
+	try {
+		expect(
+			await router.handle("phone", {
+				id: 1,
+				method: "initialize",
+				params: { clientInfo: { name: "fixture-phone", version: "1" }, capabilities: { experimentalApi: true } },
+			}),
+		).toMatchObject({ result: { userAgent: "xcsh/21.29.0" } });
+		expect(
+			await router.handle("phone", { id: 2, method: "config/read", params: { includeLayers: true } }),
+		).toMatchObject({
+			result: {
+				config: {
+					model: "gpt-5.6-luna",
+					model_provider: "openai-codex",
+					model_reasoning_effort: "medium",
+				},
+			},
+		});
+		expect(await router.handle("phone", { id: 2, method: "model/list", params: {} })).toMatchObject({
+			result: { data: [{ id: "gpt-5.6-luna", inputModalities: ["text", "audio"], isDefault: true }] },
+		});
+		expect(
+			await router.handle("phone", {
+				id: "blank-chat-preflight",
+				method: "process/spawn",
+				params: {
+					processHandle: "blank-chat-preflight",
+					cwd: "/",
+					command: [process.execPath, "-e", "process.stdout.write(process.cwd())"],
+					tty: false,
+					streamStdin: false,
+					streamStdoutStderr: false,
+					timeoutMs: 1000,
+					outputBytesCap: 4096,
+				},
+			}),
+		).toEqual({ id: "blank-chat-preflight", result: {} });
+		const preflightDeadline = Date.now() + 3000;
+		while (!notifications.some(event => event.method === "process/exited") && Date.now() < preflightDeadline)
+			await Bun.sleep(5);
+		expect(notifications.find(event => event.method === "process/exited")).toMatchObject({
+			params: { processHandle: "blank-chat-preflight", exitCode: 0, stdout: await realpath("/tmp") },
+		});
+		expect(
+			await router.handle("phone", {
+				id: "unrelated-cwd",
+				method: "process/spawn",
+				params: { processHandle: "unrelated-cwd", cwd: "/var", command: [process.execPath, "-e", ""] },
+			}),
+		).toMatchObject({ error: { code: -32602 } });
+		const startParams = {
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			config: {
+				experimental_realtime_ws_model: "fixture-realtime",
+				"features.concurrent_reasoning_summaries": true,
+				"features.realtime_conversation": true,
+				model_reasoning_effort: "medium",
+				"realtime.version": "v3",
+			},
+			cwd: "/tmp",
+			developerInstructions: "x".repeat(420),
+			dynamicTools: [],
+			ephemeral: false,
+			historyMode: "paginated",
+			model: "gpt-5.6-luna",
+			sandbox: "danger-full-access",
+			threadSource: "fixture-source",
+		};
+		const observedStart = voiceFirstTrace.events.find(event => event.method === "thread/start")!;
+		expect(Object.keys(startParams).sort()).toEqual([...observedStart.parameterKeys].sort());
+		expect(await router.handle("phone", { id: 3, method: "thread/start", params: startParams })).toMatchObject({
+			result: { thread: { id: managedThread.id } },
+		});
+		expect(await router.handle("phone", { id: 4, method: "model/list", params: {} })).toMatchObject({
+			result: { data: [{ id: "gpt-5.6-luna", defaultReasoningEffort: "medium" }] },
+		});
+		expect(
+			await router.handle("phone", {
+				id: 5,
+				method: "thread/realtime/start",
+				params: {
+					threadId: managedThread.id,
+					version: "v3",
+					outputModality: "audio",
+					transport: { type: "webrtc", sdp: "v=0\\r\\noffer" },
+				},
+			}),
+		).toEqual({ id: 5, result: {} });
+		expect(notifications.map(event => event.method)).toContain("thread/realtime/sdp");
+		expect(
+			await router.handle("phone", {
+				id: 6,
+				method: "thread/realtime/appendText",
+				params: { threadId: managedThread.id, text: "delegate fixture work", role: "user" },
+			}),
+		).toEqual({ id: 6, result: {} });
+		expect(notifications.map(event => event.method)).toEqual(
+			expect.arrayContaining(["thread/realtime/started", "thread/realtime/sdp", "turn/started", "turn/completed"]),
+		);
+		expect(methods).not.toContain("turn/start");
+		expect(methods).toEqual(["thread/resume", "thread/realtime/start", "thread/realtime/appendText"]);
+	} finally {
+		router.dispose();
+	}
 });
 
 test("phone bootstrap metadata describes the attached live runtime", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
-	router.sessions.set("alpha", {
+	router.registerSession("alpha", {
 		thread: { id: "alpha", cwd: "/tmp/alpha", model: "gpt-5.6-luna", modelProvider: "openai-codex" },
 		call: async () => ({}),
 	});
-	router.sessions.set("beta", {
+	router.registerSession("beta", {
 		thread: { id: "beta", cwd: "/tmp/beta", model: "gpt-6-astra", modelProvider: "openai-codex" },
 		call: async () => ({}),
 	});
@@ -474,9 +1161,7 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 	expect(await call("config/read", { cwd: "/tmp/alpha", includeLayers: true })).toMatchObject({
 		result: { config: { model: "gpt-5.6-luna", model_provider: "openai-codex" }, origins: {}, layers: [] },
 	});
-	expect(await call("config/read", { cwd: "/tmp/beta" })).toMatchObject({
-		result: { config: { model: "gpt-6-astra" } },
-	});
+	expect(await call("config/read", { cwd: "/tmp/beta" })).toMatchObject({ result: { config: { model: null } } });
 	expect(await call("configRequirements/read")).toMatchObject({ result: { requirements: null } });
 	const collaborationModes = bootstrapReference.events.find(event => event.response === "collaborationMode/list")!;
 	expect(await call("collaborationMode/list")).toEqual({
@@ -486,9 +1171,7 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 	expect(await call("plugin/installed", { cwds: ["/tmp/alpha"] })).toMatchObject({
 		result: { marketplaces: [], marketplaceLoadErrors: [] },
 	});
-	expect(await call("model/list")).toMatchObject({
-		result: { data: [{ id: "gpt-5.6-luna" }, { id: "gpt-6-astra" }], nextCursor: null },
-	});
+	expect(await call("model/list")).toMatchObject({ result: { data: [{ id: "gpt-5.6-luna" }], nextCursor: null } });
 	expect(await call("config/read", { cwd: "/unknown" })).toMatchObject({ result: { config: { model: null } } });
 	expect(await call("thread/goal/get", { threadId: "missing" })).toMatchObject({ error: { code: -32602 } });
 });

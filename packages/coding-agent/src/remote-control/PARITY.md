@@ -1161,3 +1161,80 @@ prompt, `memory://root`, and a new WebRTC or standalone voice snapshot. After a
 reviewed `/move`, xcsh rebuilds the effective TUI prompt before accepting the
 next turn. A two-project regression rejects stale project-A memory and requires
 project-B memory on both surfaces.
+
+## iPhone model and effort controls
+
+The ChatGPT model and effort buttons now operate on the attached xcsh session.
+Both interfaces use the same current-model catalog filter, so OpenAI subscription
+OAuth presents Luna, Terra, Sol, and Astra instead of historical and internal
+registry entries. Each catalog row carries the model's display name, input
+modalities, exact supported effort ladder, and default effort.
+
+`thread/settings/update` resolves the selected model against the live session's
+available catalog, validates effort against that target model, and applies the
+pair through the same conversation-scoped model-selection transaction as the
+TUI. The transaction records manual routing pin and persists the session before
+acknowledging the tap. Effort-only changes are also flushed before the response.
+The validator accepts the app's canonical
+`multiAgentMode: "explicitRequestOnly"` setting and rejects unsupported values.
+After every successful `thread/resume` response, the host sends that client the
+current settings notification. This restores the effort control from the live
+thread instead of the model catalog's default when the iPhone reopens the
+conversation.
+Unavailable models, hidden historical models, unsupported efforts, service
+tiers, and changes during an active turn fail without switching models. The
+resulting settings notification updates host discovery immediately instead of
+waiting for the registration heartbeat.
+
+A prompt sent immediately after a model tap waits for that settings transaction
+to finish. Historical active models are excluded once the shared catalog is
+available, including from the legacy thread-metadata fallback.
+
+Synthetic phone-shaped bridge tests cover catalog rendering, a model-and-effort
+tap, immediate thread state, invalid choices, active-turn exclusion, persistence
+before shutdown, and full restart restoration. Physical iPhone rendering and
+tap acceptance remain a separate human checkpoint.
+
+## Durable relay and process lifecycle parity
+
+The 2026-09-14 lifecycle port keeps the existing v3 wire fields and adds no
+client-visible replacement protocol. Logical relay state now follows pinned Codex
+behavior by keying clients on `(clientId, streamId)`, replacing only the same
+stream, dropping unknown non-initialize traffic, expiring idle owners, bounding
+both queue directions at 128, returning retryable `-32001` overload errors, and
+retaining cursor plus unacknowledged output across reconnects. Cleanup retires
+subscriptions, delivered approval ownership, remote processes, codec state, and
+queues without cancelling the attached terminal's work.
+
+The additive `status` fields report supervisor and host state, startup manager,
+generation, restart count, and a sanitized degraded reason while retaining
+`enabled`, `relay`, `liveSessions`, and `sessions`. `restart` joins the existing
+management actions without changing pairing or client-management contracts.
+
+Linux startup parity is implemented as an owner-only systemd user unit with no
+credentials. Exact process identity includes PID, process start time, resolved
+executable path and SHA-256, plus lifecycle generation. The supervisor uses the
+specified health cadence, startup allowance, jittered retry, persistent breaker,
+and graceful drain. Automated four-session recovery proves stable identity,
+metadata, history, approval replay, and tenant-call deduplication. A source-matched
+packaged harness and one controlled Ubuntu crash/cutover remain required before
+this section can claim live lifecycle acceptance; iPhone behavior remains a
+separate human observation.
+
+## Managed iPhone session parity supersession
+
+As of the 2026-09-14 issue #3873 candidate, the historical unsupported-fork and
+excluded-phone-session observations above are retained only as evidence for older
+artifacts. The current source supports the pinned Codex 0.153.4 start, fork,
+archive, unarchive, delete, compact, and revert contracts. It projects one chosen
+terminal plus phone-created sessions, keeps cold durable history discoverable, and
+uses response-before-notification ordering for lifecycle broadcasts.
+
+Phone-created sessions run full `AgentSession` workers with the same dynamic model
+catalog, tools, extensions, approvals, context bootstrap, WebRTC v3 voice, and
+history paths as a terminal. A worker survives host replacement, replays bounded
+unacknowledged events once, unloads when idle and unsubscribed, and is terminated
+on archive, delete, or intentional disable. Exact process identity and catalog-root
+validation prevent stale PID or corrupt-path cleanup from targeting another
+process or file. Automated protocol parity is not physical iPhone acceptance;
+the device flow remains an explicit release gate.

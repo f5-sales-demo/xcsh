@@ -3,6 +3,8 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import type { Model, Usage } from "@f5-sales-demo/pi-ai";
+import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
 	applyRemotePermissionProfile,
 	initializeRemotePermissionProfile,
@@ -10,6 +12,7 @@ import {
 	remotePermissionProfile,
 } from "../sandbox/remote-permissions";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import { coordinateSessionTitle, RESERVED_PROVISIONAL_TITLE, subscribeSessionTitle } from "../utils/title-generator";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";
 import {
@@ -27,6 +30,7 @@ import {
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import { RemoteInteractions } from "./interactions";
 import { getSessionVoiceHistory, type SessionVoiceHistory } from "./session-voice-history";
+import { resolveRemoteThreadId, validRemoteThreadId } from "./thread-identity";
 import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
@@ -54,6 +58,8 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 	| "setRealtimeMode"
+	| "compact"
+	| "navigateTree"
 	| "settings"
 	| "skills"
 	| "skillWarnings"
@@ -75,6 +81,16 @@ export type RemoteCollaborationMode = "plan" | "default";
 export interface RemoteSessionControls {
 	getCollaborationMode?: () => RemoteCollaborationMode;
 	setCollaborationMode?: (mode: RemoteCollaborationMode) => Promise<void>;
+	setModel?: (model: Model, thinkingLevel: ThinkingLevel | undefined) => Promise<void>;
+}
+export interface RemoteModelDescriptor {
+	id: string;
+	provider: string;
+	displayName: string;
+	description: string;
+	supportedReasoningEfforts: Array<{ reasoningEffort: string; description: string }>;
+	defaultReasoningEffort: string;
+	inputModalities: Array<"text" | "image">;
 }
 export interface Notification {
 	id?: string;
@@ -132,16 +148,6 @@ function canonicalJson(value: unknown): string {
 	}
 	return JSON.stringify(value) ?? "null";
 }
-function validSessionId(value: unknown): string | undefined {
-	return typeof value === "string" &&
-		value.length > 0 &&
-		value.length <= 256 &&
-		!isAbsolute(value) &&
-		!value.includes("/") &&
-		!value.includes("\\")
-		? value
-		: undefined;
-}
 export class RemoteSession {
 	#epoch = 0;
 	#boundId = "";
@@ -151,6 +157,7 @@ export class RemoteSession {
 	#closing?: Promise<void>;
 	#unsubscribeTransitions?: () => void;
 	#unsubscribeDispose?: () => void;
+	#unsubscribeTitle?: () => void;
 	#interactions?: RemoteInteractions;
 	#effects = new Set<Promise<unknown>>();
 	#voiceHistoryOwner!: SessionVoiceHistory;
@@ -159,21 +166,27 @@ export class RemoteSession {
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
 	#voice?: NativeVoice;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
+	#configurationTail: Promise<void> = Promise.resolve();
 	#clientIds = new Map<string, string>();
 	#listeners = new Set<(notification: Notification) => void>();
 	#unsubscribe: () => void;
 	#active?: Turn;
+	#promptOwnedTurnId?: string;
 	#createdAt = Math.floor(Date.now() / 1000);
 	#updatedAt = this.#createdAt;
 	#itemId = "";
 	#nextId = randomUUID();
 	#startedItems = new Set<string>();
+	#completedItems = new Set<string>();
 	#commandPreviews = new Map<string, Record<string, unknown>>();
 	#commandSettlements = new Set<string>();
 	#forwardedBackgroundProgress = new WeakSet<object>();
 	#messageIds = new Map<string, string>();
 	#pendingClients: { text: string; id: string }[] = [];
 	#startedAtMs = 0;
+	#lastProviderUsage?: Usage;
+	#usageEmitted = new Set<string>();
+	#threadStatus: "active" | "idle" = "idle";
 	get #durable(): boolean {
 		return typeof this.target.sessionManager.getBranch === "function";
 	}
@@ -281,6 +294,9 @@ export class RemoteSession {
 				},
 			);
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
+		this.#unsubscribeTitle = subscribeSessionTitle(target.sessionManager, title =>
+			this.#emit("thread/name/updated", { threadName: title }),
+		);
 		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
 			if (phase === "before") {
 				target.userInteractions?.cancelAll();
@@ -293,9 +309,11 @@ export class RemoteSession {
 				this.#epoch++;
 				this.#voice = undefined;
 				this.#active = undefined;
+				this.#promptOwnedTurnId = undefined;
 				this.#clientIds.clear();
 				this.#messageIds.clear();
 				this.#startedItems.clear();
+				this.#completedItems.clear();
 				this.#pendingClients = [];
 				this.#itemId = "";
 				this.#nextId = randomUUID();
@@ -303,14 +321,17 @@ export class RemoteSession {
 				this.#commandPreviews.clear();
 				this.#commandSettlements.clear();
 				this.#restoreIdentity();
+				this.#unsubscribeTitle?.();
+				this.#unsubscribeTitle = subscribeSessionTitle(target.sessionManager, title =>
+					this.#emit("thread/name/updated", { threadName: title }),
+				);
 				this.#suspended = false;
 			}
 		});
 	}
 	#restoreIdentity(): void {
 		this.#boundId = this.target.sessionId;
-		const remoteThreadId = this.target.sessionManager.getHeader?.()?.remoteThreadId;
-		this.#threadId = validSessionId(remoteThreadId) ?? this.#boundId;
+		this.#threadId = resolveRemoteThreadId(this.target);
 		this.#unsubscribeVoiceHistory?.();
 		this.#voiceHistoryOwner = getSessionVoiceHistory(this.target);
 		this.#unsubscribeVoiceHistory = this.#voiceHistoryOwner.subscribe((method, params) =>
@@ -328,6 +349,7 @@ export class RemoteSession {
 				this.#hydrateActiveStream();
 			}
 		}
+		this.#threadStatus = this.#active || this.target.isStreaming ? "active" : "idle";
 	}
 	#historyToolContext(message: AgentMessage): HistoryToolContext | undefined {
 		if (message.role === "bashExecution" || message.role === "pythonExecution")
@@ -394,6 +416,7 @@ export class RemoteSession {
 		this.#disposed = true;
 		this.#unsubscribeTransitions?.();
 		this.#unsubscribeDispose?.();
+		this.#unsubscribeTitle?.();
 		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
 		this.#interactions?.close();
@@ -430,6 +453,54 @@ export class RemoteSession {
 		if ((this.#disposed && !allowClosing) || this.#boundId !== this.target.sessionId) return;
 		this.#updatedAt = Math.floor(Date.now() / 1000);
 		for (const listener of this.#listeners) listener({ method, params: { ...params, threadId: this.#threadId } });
+	}
+	#emitThreadStatus(status: "active" | "idle"): void {
+		if (this.#threadStatus === status) return;
+		this.#threadStatus = status;
+		this.#emit("thread/status/changed", {
+			status: status === "active" ? { type: "active", activeFlags: [] } : { type: "idle" },
+		});
+	}
+	#usageBreakdown(usage: Usage) {
+		return {
+			totalTokens: usage.totalTokens,
+			inputTokens: usage.input + usage.cacheRead + usage.cacheWrite,
+			cachedInputTokens: usage.cacheRead,
+			cacheWriteInputTokens: usage.cacheWrite,
+			outputTokens: usage.output,
+			reasoningOutputTokens: 0,
+		};
+	}
+	#emitTokenUsage(turnId: string): void {
+		if (!this.#lastProviderUsage || this.#usageEmitted.has(turnId)) return;
+		this.#usageEmitted.add(turnId);
+		const usages = this.target.messages.flatMap(message =>
+			message.role === "assistant" && message.usage ? [message.usage] : [],
+		);
+		if (!usages.some(usage => usage === this.#lastProviderUsage)) usages.push(this.#lastProviderUsage);
+		const total: Usage = {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		};
+		for (const usage of usages) {
+			total.input += usage.input;
+			total.output += usage.output;
+			total.cacheRead += usage.cacheRead;
+			total.cacheWrite += usage.cacheWrite;
+			total.totalTokens += usage.totalTokens;
+		}
+		this.#emit("thread/tokenUsage/updated", {
+			turnId,
+			tokenUsage: {
+				total: this.#usageBreakdown(total),
+				last: this.#usageBreakdown(this.#lastProviderUsage),
+				modelContextWindow: this.target.model?.contextWindow ?? null,
+			},
+		});
 	}
 	#cacheCommandPreview(item: Record<string, unknown>): void {
 		const id = String(item.id);
@@ -556,7 +627,7 @@ export class RemoteSession {
 		const header = this.target.sessionManager.getHeader?.();
 		const explicitFork = header?.forkedFromId;
 		const parentSession = header?.parentSession;
-		const forkedFromId = validSessionId(explicitFork) ?? validSessionId(parentSession) ?? null;
+		const forkedFromId = validRemoteThreadId(explicitFork) ?? validRemoteThreadId(parentSession) ?? null;
 		return {
 			id: this.#threadId,
 			sessionId: this.#threadId,
@@ -601,6 +672,7 @@ export class RemoteSession {
 			path: this.target.sessionFile ?? null,
 			cwd: this.target.sessionManager.getCwd(),
 			cliVersion: this.version,
+			originator: "xcsh",
 			source: "cli",
 			threadSource: null,
 			agentNickname: null,
@@ -609,6 +681,42 @@ export class RemoteSession {
 			name: this.target.sessionName ?? null,
 			turns: includeTurns ? this.history() : [],
 		};
+	}
+	models(): RemoteModelDescriptor[] {
+		const current = this.target.model;
+		const available = filterCurrentBrowserModels(this.target.modelRegistry?.getAvailable?.() ?? []);
+		const currentCatalogModel = current
+			? available.find(model => model.provider === current.provider && model.id === current.id)
+			: undefined;
+		const candidates = current
+			? [
+					...(currentCatalogModel ? [currentCatalogModel] : []),
+					...available.filter(model => model.provider === current.provider),
+				]
+			: available;
+		const seen = new Set<string>();
+		return candidates.flatMap(model => {
+			const key = `${model.provider}\0${model.id}`;
+			if (seen.has(key) || model.visibility === "hide") return [];
+			seen.add(key);
+			return [
+				{
+					id: model.id,
+					provider: model.provider,
+					displayName: model.name || model.id,
+					description: model.description || `Available through ${model.provider}.`,
+					supportedReasoningEfforts:
+						model.thinking?.supportedLevels.map(level => ({
+							reasoningEffort: level.effort,
+							description: level.description,
+						})) ?? [],
+					defaultReasoningEffort: model.thinking?.defaultLevel ?? "none",
+					inputModalities: (model.input ?? ["text"]).filter(
+						(modality): modality is "text" | "image" => modality === "text" || modality === "image",
+					),
+				},
+			];
+		});
 	}
 	pendingRequests() {
 		return this.#interactions?.pending() ?? [];
@@ -672,7 +780,19 @@ export class RemoteSession {
 		} catch (error) {
 			return Promise.reject(error);
 		}
-		const result = this.#execute(method, params, signature);
+		const execute = () => {
+			this.#assertCurrent();
+			return this.#execute(method, params, signature);
+		};
+		const result =
+			method === "thread/settings/update" || method === "turn/start"
+				? this.#configurationTail.then(execute, execute)
+				: execute();
+		if (method === "thread/settings/update" || method === "turn/start")
+			this.#configurationTail = result.then(
+				() => undefined,
+				() => undefined,
+			);
 		this.#requests.set(identity, { signature, result });
 		return result;
 	}
@@ -783,6 +903,7 @@ export class RemoteSession {
 		}
 		if (method === "thread/name/set") {
 			if (typeof params.name !== "string") throw new ProtocolError(-32602, "Invalid thread name");
+			if (params.name === RESERVED_PROVISIONAL_TITLE) return {};
 			const name = params.name.trim();
 			if (!name) throw new ProtocolError(-32602, "Thread name must not be empty");
 			const stored = await this.#effect(epoch, async () => {
@@ -869,6 +990,13 @@ export class RemoteSession {
 						this.target.sessionManager.appendCustomEntry("remote-realtime", record);
 						await this.target.sessionManager.flush();
 					}),
+				title: text => {
+					if (
+						!this.target.messages.some(message => message.role === "user") &&
+						!this.target.sessionManager.getSessionName?.()
+					)
+						void coordinateSessionTitle(this.target, text);
+				},
 				delegate: (id, text, output) => {
 					try {
 						this.#assertCurrent(epoch);
@@ -899,29 +1027,41 @@ export class RemoteSession {
 						"threadId",
 						"effort",
 						"model",
+						"serviceTier",
 						"cwd",
 						"summary",
 						"collaborationMode",
 						"approvalPolicy",
 						"approvalsReviewer",
 						"sandboxPolicy",
+						"multiAgentMode",
 					].includes(key) &&
 					params[key] != null
 				)
 					throw new ProtocolError(-32602, "Unsupported terminal settings override");
 			const permissionProfile = this.#parsePermissionProfile(params);
-			if (params.model != null && params.model !== this.target.model?.id)
-				throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
+			if (params.multiAgentMode != null && params.multiAgentMode !== "explicitRequestOnly")
+				throw new ProtocolError(-32602, "Unsupported multi-agent mode");
+			if (params.serviceTier != null) throw new ProtocolError(-32602, "Service tiers are not supported");
 			if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
 				throw new ProtocolError(-32602, "Unsupported working directory override");
 			if (params.summary != null && !["auto", "concise", "detailed", "none"].includes(String(params.summary)))
 				throw new ProtocolError(-32602, "Unsupported reasoning summary");
-			const collaborationMode = this.#parseCollaborationMode(params.collaborationMode);
-			this.#validateEffort(params.effort);
+			const selectedModel = this.#resolveModel(params.model);
+			this.#validateEffort(params.effort, selectedModel);
+			const collaborationMode = this.#parseCollaborationMode(params.collaborationMode, selectedModel);
+			const changesModel =
+				selectedModel.id !== this.target.model?.id || selectedModel.provider !== this.target.model?.provider;
+			if (changesModel) await this.#applyModel(epoch, selectedModel, params.effort);
 			if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
-			else this.#applyEffort(params.effort);
+			else if (!changesModel) this.#applyEffort(params.effort);
 			if (params.approvalPolicy != null || params.approvalsReviewer != null || params.sandboxPolicy != null)
 				applyRemotePermissionProfile(this.target.settings, permissionProfile);
+			if (this.#durable)
+				await this.#effect(epoch, async () => {
+					await this.target.sessionManager.ensureOnDisk();
+					await this.target.sessionManager.flush();
+				});
 			const effort = this.thread().reasoningEffort;
 			const activePermission = remotePermissionProfile(this.target.settings);
 			this.#emit("thread/settings/updated", {
@@ -948,6 +1088,14 @@ export class RemoteSession {
 			return {};
 		}
 		if (method === "thread/goal/get") return { goal: null };
+		if (method === "xcsh/thread/flush") {
+			if (this.#durable)
+				await this.#effect(epoch, async () => {
+					await this.target.sessionManager.ensureOnDisk();
+					await this.target.sessionManager.flush();
+				});
+			return {};
+		}
 		if (method === "thread/queue/list") {
 			const limit = params.limit ?? 100;
 			if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
@@ -969,6 +1117,47 @@ export class RemoteSession {
 			};
 		}
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
+		if (method === "thread/compact/start") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Compaction requires persisted session history");
+			void this.#effect(epoch, () => this.target.compact()).catch(() => {
+				this.#emit("error", { message: "Thread compaction failed" });
+			});
+			return {};
+		}
+		if (method === "thread/revert") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Revert requires persisted session history");
+			if (typeof params.beforeTurnId !== "string") throw new ProtocolError(-32602, "Invalid revert turn");
+			const snapshot = projectHistorySnapshot(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active) || this.target.isStreaming,
+				this.target.sessionManager.getCwd(),
+			);
+			const firstItem = snapshot.timeline.find(
+				row => row.entry.type === "item" && row.entry.turnId === params.beforeTurnId,
+			);
+			if (!firstItem) throw new ProtocolError(-32602, "Revert turn not found");
+			await this.#effect(epoch, async () => {
+				if (this.#active || this.target.isStreaming) await this.target.abort();
+				const navigation = await this.target.navigateTree(firstItem.sourceId);
+				if (navigation.cancelled) throw new ProtocolError(-32000, "Thread revert was cancelled");
+				await this.target.sessionManager.flush();
+			});
+			const history = this.history();
+			const thread = this.thread(false);
+			setTimeout(() => this.#emit("thread/reverted", {}), 0);
+			return {
+				thread,
+				turnsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "turns" },
+					history.at(-1)?.id,
+				),
+				itemsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "items" },
+					history.flatMap(value => value.items).at(-1)?.id as string | undefined,
+				),
+			};
+		}
 		if (method === "thread/timeline/list") {
 			if (!this.#durable) throw new ProtocolError(-32601, "Timeline requires persisted session history");
 			const snapshot = projectHistorySnapshot(
@@ -1152,6 +1341,9 @@ export class RemoteSession {
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
 		if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
 		else this.#applyEffort(params.effort);
+		const hadUserMessages = this.target.messages.some(message => message.role === "user");
+		if (!hadUserMessages && !this.target.sessionManager.getSessionName?.())
+			void coordinateSessionTitle(this.target, text);
 		const active = this.#beginTurn();
 		if (this.#durable) {
 			try {
@@ -1170,6 +1362,11 @@ export class RemoteSession {
 			this.#pendingClients.push({ text, id: params.clientUserMessageId });
 		// The existing AgentSession remains the only executor and persistence owner.
 		this.#emit("turn/started", { turn: active });
+		// AgentSession can emit an intermediate agent_end before provider recovery
+		// or an automatic retry. Its prompt promise does not settle until that work
+		// is finished, so keep the accepted remote turn active until the promise
+		// resolves. Locally initiated turns still settle directly from agent_end.
+		this.#promptOwnedTurnId = active.id;
 		void this.target.prompt(text).then(
 			() => {
 				if (epoch === this.#epoch) this.#finish("completed", active.id);
@@ -1180,15 +1377,45 @@ export class RemoteSession {
 		);
 		return { turn: { ...active } };
 	}
-	#validateEffort(effort: unknown): ThinkingLevel | undefined {
+	#resolveModel(value: unknown): Model {
+		const current = this.target.model;
+		if (value == null || value === current?.id) {
+			if (!current) throw new ProtocolError(-32602, "No model is selected");
+			return current;
+		}
+		if (typeof value !== "string" || !value || value.length > 256)
+			throw new ProtocolError(-32602, "Invalid model selection");
+		const available = filterCurrentBrowserModels(this.target.modelRegistry?.getAvailable?.() ?? []);
+		const preferred = available.find(model => model.provider === current?.provider && model.id === value);
+		const matches = available.filter(model => model.id === value);
+		const selected = preferred ?? (matches.length === 1 ? matches[0] : undefined);
+		if (!selected) throw new ProtocolError(-32602, "Selected model is unavailable");
+		return selected;
+	}
+	#validateEffort(effort: unknown, model = this.target.model): ThinkingLevel | undefined {
 		if (effort == null) return undefined;
-		const supported = this.target.model?.thinking?.supportedLevels;
+		const supported = model?.thinking?.supportedLevels;
 		if (
 			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(effort)) ||
 			(supported && !supported.some(level => level.effort === effort))
 		)
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
 		return (effort === "none" ? "off" : effort) as ThinkingLevel;
+	}
+	async #applyModel(epoch: number, model: Model, effort: unknown): Promise<void> {
+		if (!this.controls.setModel) throw new ProtocolError(-32602, "The terminal cannot change model");
+		if (this.target.isStreaming || this.#active)
+			throw new ProtocolError(-32000, "The selected model cannot change while a turn is running");
+		const level = this.#validateEffort(effort, model);
+		try {
+			await this.#effect(epoch, () => this.controls.setModel!(model, level));
+		} catch {
+			throw new ProtocolError(-32000, "Could not change the selected model");
+		}
+		this.#assertCurrent(epoch);
+		if (this.target.model?.id !== model.id || this.target.model?.provider !== model.provider)
+			throw new ProtocolError(-32000, "The selected model did not become active");
+		this.#updatedAt = Math.floor(Date.now() / 1000);
 	}
 	#applyEffort(effort: unknown): void {
 		const level = this.#validateEffort(effort);
@@ -1199,7 +1426,10 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
 		}
 	}
-	#parseCollaborationMode(value: unknown): { mode: RemoteCollaborationMode; reasoningEffort: unknown } | undefined {
+	#parseCollaborationMode(
+		value: unknown,
+		model = this.target.model,
+	): { mode: RemoteCollaborationMode; reasoningEffort: unknown } | undefined {
 		if (value == null) return undefined;
 		if (typeof value !== "object" || Array.isArray(value))
 			throw new ProtocolError(-32602, "Invalid collaboration mode");
@@ -1217,11 +1447,11 @@ export class RemoteSession {
 		const settings = collaboration.settings as Record<string, unknown>;
 		if (Object.keys(settings).some(key => !["model", "reasoning_effort", "developer_instructions"].includes(key)))
 			throw new ProtocolError(-32602, "Unsupported custom collaboration mode settings");
-		if (typeof settings.model !== "string" || settings.model !== this.target.model?.id)
+		if (typeof settings.model !== "string" || settings.model !== model?.id)
 			throw new ProtocolError(-32602, "Collaboration mode must preserve the terminal's selected model");
 		if (settings.developer_instructions != null)
 			throw new ProtocolError(-32602, "Custom collaboration instructions are not supported");
-		this.#validateEffort(settings.reasoning_effort);
+		this.#validateEffort(settings.reasoning_effort, model);
 		return { mode: collaboration.mode, reasoningEffort: settings.reasoning_effort };
 	}
 	async #applyCollaborationMode(
@@ -1257,7 +1487,7 @@ export class RemoteSession {
 					return;
 				}
 				if (result.status === "interrupted") {
-					resolve("The task was cancelled.");
+					resolve("The active turn was interrupted. This does not confirm that completed actions were undone.");
 					return;
 				}
 				resolve(
@@ -1284,6 +1514,7 @@ export class RemoteSession {
 	#finish(status: string, expectedId?: string): void {
 		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
 		if (!this.#active || (expectedId !== undefined && this.#active.id !== expectedId)) return;
+		if (this.#promptOwnedTurnId === this.#active.id) this.#promptOwnedTurnId = undefined;
 		if (this.#durable) {
 			const id = this.#active.id;
 			const latest = this.history().find(value => value.id === id);
@@ -1297,6 +1528,8 @@ export class RemoteSession {
 			});
 			this.#active = undefined;
 			this.#pendingClients = [];
+			this.#emitTokenUsage(id);
+			this.#emitThreadStatus("idle");
 			this.#emit("turn/completed", { turn: this.history().find(value => value.id === id) });
 			return;
 		}
@@ -1305,6 +1538,8 @@ export class RemoteSession {
 		if (status === "completed" && (latest?.status === "failed" || latest?.status === "interrupted"))
 			status = latest.status;
 		this.#active = undefined;
+		this.#emitTokenUsage(active.id);
+		this.#emitThreadStatus("idle");
 		this.#emit("turn/completed", {
 			turn: {
 				...active,
@@ -1341,6 +1576,7 @@ export class RemoteSession {
 				});
 		}
 		if (event.type === "message_end" && event.message.role === "assistant") {
+			this.#lastProviderUsage = event.message.usage;
 			for (const [index, part] of event.message.content.entries())
 				if (part.type === "text")
 					this.#voiceOutput({ id: `${this.#itemId}:${index}`, text: part.text, phase: part.phase, done: true });
@@ -1356,7 +1592,7 @@ export class RemoteSession {
 				turnId: this.#active?.id,
 				item: this.#assistantItem(this.#itemId, textOf(event.message)),
 			});
-		if (event.type === "agent_end") this.#finish("completed");
+		if (event.type === "agent_end" && this.#promptOwnedTurnId !== this.#active?.id) this.#finish("completed");
 	}
 	#voiceOutput(update: VoiceOutputUpdate): void {
 		let delegated = false;
@@ -1375,6 +1611,8 @@ export class RemoteSession {
 	#beginTurn(): Turn {
 		const active = turn(this.#nextTurnId(), "inProgress");
 		this.#active = active;
+		this.#lastProviderUsage = undefined;
+		this.#emitThreadStatus("active");
 		if (this.#durable) {
 			this.#nextId = randomUUID();
 			this.#startedAtMs = Date.now();
@@ -1400,7 +1638,10 @@ export class RemoteSession {
 		const index = this.#active.items.findIndex(value => value.id === id);
 		if (index < 0) this.#active.items.push(item);
 		else this.#active.items[index] = item;
-		if (done) this.#emit("item/completed", { turnId: this.#active.id, item });
+		if (done && !this.#completedItems.has(id)) {
+			this.#completedItems.add(id);
+			this.#emit("item/completed", { turnId: this.#active.id, item });
+		}
 	}
 	#durableEvent(event: AgentSessionEvent): void {
 		if (event.type === "agent_start" && !this.#active) this.#emit("turn/started", { turn: this.#beginTurn() });
@@ -1426,6 +1667,7 @@ export class RemoteSession {
 		}
 		if (event.type === "message_end" && event.message.role !== "toolResult") {
 			const message = event.message;
+			if (message.role === "assistant") this.#lastProviderUsage = message.usage;
 			const key = messageKey(message);
 			const id =
 				(message.role === "assistant" ? this.#itemId : this.#messageIds.get(key)) ||
@@ -1571,7 +1813,7 @@ export class RemoteSession {
 			}
 		}
 		if (event.type === "agent_end") {
-			this.#finish("completed");
+			if (this.#promptOwnedTurnId !== this.#active?.id) this.#finish("completed");
 			this.#startedItems.clear();
 			this.#messageIds.clear();
 		}

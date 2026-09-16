@@ -96,20 +96,15 @@ export function threadList(threads: readonly Thread[], params: Thread) {
 		throw new ProtocolError(-32600, "parentThreadId and ancestorThreadId are mutually exclusive");
 	if (key === "section_position" && params.sectionId == null)
 		throw new ProtocolError(-32600, "section-position sorting requires a section filter");
-	// This host exposes live top-level terminals. They have no remote projects,
-	// sections, archived entries or spawned descendants. No agent work is started.
+	// The host exposes one primary terminal plus managed remote threads. Internal
+	// archived metadata is filtered here and is never projected onto the wire.
 	if (params.projectId != null) throw new ProtocolError(-32602, "Remote project not found");
 	const wireCursor = cursorString(params.cursor);
 	const anchor = wireCursor === undefined ? undefined : parseAnchor(wireCursor, key);
 	const value = (thread: Thread) => Number(thread[sortFields[key]] ?? 0);
 	let data = threads.filter(thread => {
-		if (
-			params.archived === true ||
-			params.sectionId != null ||
-			params.parentThreadId != null ||
-			params.ancestorThreadId != null
-		)
-			return false;
+		if (params.sectionId != null || params.parentThreadId != null || params.ancestorThreadId != null) return false;
+		if ((thread.archived === true) !== (params.archived === true)) return false;
 		if (providers?.length && !providers.includes(String(thread.modelProvider))) return false;
 		if (sources?.length && !sources.includes(String(thread.source ?? "cli"))) return false;
 		if (normalizedCwds && !normalizedCwds.includes(resolve(String(thread.cwd ?? "")))) return false;

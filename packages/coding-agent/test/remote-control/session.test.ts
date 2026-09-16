@@ -10,6 +10,7 @@ function fixture(
 	controls: {
 		getCollaborationMode?: () => "plan" | "default";
 		setCollaborationMode?: (mode: "plan" | "default") => Promise<void>;
+		setModel?: (model: any, thinkingLevel: any) => Promise<void>;
 	} = {},
 ) {
 	const prompts: string[] = [];
@@ -60,7 +61,167 @@ test("phone rename follows the pinned trim, response and notification contract",
 	await expect(
 		a.remote.call("empty-rename", "thread/name/set", { threadId: "a", name: " \n\t " }),
 	).rejects.toMatchObject({ code: -32602 });
+	expect(
+		await a.remote.call("placeholder", "thread/name/set", { threadId: "a", name: "New Realtime Voice Chat" }),
+	).toEqual({});
+	expect(a.remote.thread()).toMatchObject({ name: "xcsh Remote New", originator: "xcsh" });
+	expect(events).toHaveLength(1);
 	a.remote.dispose();
+});
+
+test("turn lifecycle emits truthful status and usage in Codex 0.154 order", async () => {
+	let listener: ((event: any) => void) | undefined;
+	let finishPrompt!: () => void;
+	const messages: any[] = [];
+	const target = {
+		sessionId: "usage",
+		sessionName: undefined,
+		sessionFile: "/tmp/usage.jsonl",
+		model: { id: "fixture", provider: "fixture", contextWindow: 12345 },
+		messages,
+		isStreaming: false,
+		settings: Settings.isolated({ "sandbox.enabled": false }),
+		modelRegistry: { getAvailable: () => [], getApiKey: async () => undefined },
+		sessionManager: { getCwd: () => "/tmp", getSessionName: () => undefined, titleSource: undefined },
+		subscribe: (next: (event: any) => void) => {
+			listener = next;
+			return () => {};
+		},
+		prompt: async () => await new Promise<void>(resolve => (finishPrompt = resolve)),
+		abort: async () => finishPrompt(),
+		steer: async () => {},
+		setSessionName: async () => false,
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	await remote.call("start", "turn/start", { threadId: "usage", input: [{ type: "text", text: "hello" }] });
+	listener?.({ type: "agent_start" });
+	const assistant = {
+		role: "assistant",
+		content: [{ type: "text", text: "done" }],
+		usage: {
+			input: 10,
+			output: 5,
+			cacheRead: 3,
+			cacheWrite: 2,
+			totalTokens: 20,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: 1,
+	};
+	messages.push(assistant);
+	listener?.({ type: "message_start", message: assistant });
+	listener?.({ type: "message_end", message: assistant });
+	listener?.({ type: "agent_end", messages });
+	listener?.({ type: "agent_end", messages });
+	finishPrompt();
+	await Bun.sleep(0);
+
+	expect(events.map(event => event.method)).toEqual([
+		"thread/status/changed",
+		"turn/started",
+		"item/started",
+		"item/completed",
+		"thread/tokenUsage/updated",
+		"thread/status/changed",
+		"turn/completed",
+	]);
+	expect(events[0]?.params.status).toEqual({ type: "active", activeFlags: [] });
+	expect(events[4]?.params.tokenUsage).toEqual({
+		total: {
+			totalTokens: 20,
+			inputTokens: 15,
+			cachedInputTokens: 3,
+			cacheWriteInputTokens: 2,
+			outputTokens: 5,
+			reasoningOutputTokens: 0,
+		},
+		last: {
+			totalTokens: 20,
+			inputTokens: 15,
+			cachedInputTokens: 3,
+			cacheWriteInputTokens: 2,
+			outputTokens: 5,
+			reasoningOutputTokens: 0,
+		},
+		modelContextWindow: 12345,
+	});
+	expect(events[5]?.params.status).toEqual({ type: "idle" });
+	remote.dispose();
+});
+
+test("provider recovery remains within one remotely initiated turn", async () => {
+	let listener: ((event: any) => void) | undefined;
+	let continueRetry!: () => void;
+	const messages: any[] = [];
+	const target = {
+		sessionId: "retry",
+		sessionName: "Retry fixture",
+		sessionFile: "/tmp/retry.jsonl",
+		model: { id: "fixture", provider: "fixture", contextWindow: 12345 },
+		messages,
+		isStreaming: false,
+		settings: Settings.isolated({ "sandbox.enabled": false }),
+		sessionManager: { getCwd: () => "/tmp", getSessionName: () => "Retry fixture" },
+		subscribe: (next: (event: any) => void) => {
+			listener = next;
+			return () => {};
+		},
+		prompt: async () => {
+			listener?.({ type: "agent_start" });
+			const failed = {
+				role: "assistant",
+				content: [],
+				usage: { input: 1, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 1 },
+				stopReason: "error",
+				errorMessage: "retryable fixture",
+				timestamp: 1,
+			};
+			messages.push(failed);
+			listener?.({ type: "message_start", message: failed });
+			listener?.({ type: "message_end", message: failed });
+			listener?.({ type: "agent_end", messages });
+			await new Promise<void>(resolve => (continueRetry = resolve));
+			listener?.({ type: "agent_start" });
+			const recovered = {
+				role: "assistant",
+				content: [{ type: "text", text: "recovered" }],
+				usage: { input: 2, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 3 },
+				stopReason: "stop",
+				timestamp: 2,
+			};
+			messages.push(recovered);
+			listener?.({ type: "message_start", message: recovered });
+			listener?.({ type: "message_end", message: recovered });
+			listener?.({ type: "agent_end", messages });
+		},
+		abort: async () => continueRetry(),
+		steer: async () => {},
+		setSessionName: async () => false,
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	await remote.call("start", "turn/start", {
+		threadId: "retry",
+		input: [{ type: "text", text: "recover" }],
+	});
+	await Bun.sleep(0);
+	expect(events.filter(event => event.method === "turn/started")).toHaveLength(1);
+	expect(events.filter(event => event.method === "turn/completed")).toHaveLength(0);
+	expect(
+		events.filter(event => event.method === "thread/status/changed").map(event => event.params.status.type),
+	).toEqual(["active"]);
+	continueRetry();
+	await Bun.sleep(0);
+	expect(events.filter(event => event.method === "turn/started")).toHaveLength(1);
+	expect(events.filter(event => event.method === "turn/completed")).toHaveLength(1);
+	expect(
+		events.filter(event => event.method === "thread/status/changed").map(event => event.params.status.type),
+	).toEqual(["active", "idle"]);
+	remote.dispose();
 });
 test("two sessions preserve identity/model and route prompts to their existing owner exactly once", async () => {
 	const a = fixture("a");
@@ -90,6 +251,74 @@ test("rejects unsupported input/model overrides before running anything", async 
 test("unsupported methods return explicit protocol errors", async () => {
 	const a = fixture("a");
 	await expect(a.remote.call("r", "thread/delete", { threadId: "a" })).rejects.toMatchObject({ code: -32601 });
+	a.remote.dispose();
+});
+
+test("manual compaction starts asynchronously and revert selects the exact pre-turn branch", async () => {
+	const a = fixture("a");
+	let release = () => {};
+	let compactCalls = 0;
+	let navigated = "";
+	const ordering: string[] = [];
+	a.remote.subscribe(event => {
+		if (event.method === "thread/reverted") ordering.push("notification");
+	});
+	const entries = [
+		{
+			type: "message",
+			id: "user-one",
+			parentId: null,
+			timestamp: "2026-09-14T00:00:00.000Z",
+			message: { role: "user", content: [{ type: "text", text: "one" }], timestamp: 1 },
+		},
+		{
+			type: "message",
+			id: "assistant-one",
+			parentId: "user-one",
+			timestamp: "2026-09-14T00:00:01.000Z",
+			message: {
+				role: "assistant",
+				content: [{ type: "text", text: "done" }],
+				stopReason: "stop",
+				timestamp: 2,
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { total: 0 } },
+			},
+		},
+		{
+			type: "message",
+			id: "user-two",
+			parentId: "assistant-one",
+			timestamp: "2026-09-14T00:00:02.000Z",
+			message: { role: "user", content: [{ type: "text", text: "two" }], timestamp: 3 },
+		},
+	] as any[];
+	Object.assign(a.remote.target.sessionManager, { getBranch: () => entries, flush: async () => {} });
+	Object.assign(a.remote.target, {
+		compact: async () => {
+			compactCalls++;
+			await new Promise<void>(resolve => {
+				release = resolve;
+			});
+		},
+		navigateTree: async (entryId: string) => {
+			navigated = entryId;
+			return { cancelled: false };
+		},
+	});
+	expect(await a.remote.call("compact", "thread/compact/start", { threadId: "a" })).toEqual({});
+	expect(compactCalls).toBe(1);
+	const reverted = (await a.remote.call("revert", "thread/revert", {
+		threadId: "a",
+		beforeTurnId: "a-turn-user-two",
+	})) as any;
+	ordering.push("response");
+	expect(navigated).toBe("user-two");
+	expect(reverted.thread).toMatchObject({ id: "a", turns: [] });
+	expect(reverted).toHaveProperty("turnsBackwardsCursor");
+	expect(ordering).toEqual(["response"]);
+	await Bun.sleep(1);
+	expect(ordering).toEqual(["response", "notification"]);
+	release();
 	a.remote.dispose();
 });
 
@@ -353,6 +582,199 @@ test("phone settings update applies effort and truthful Ask or Full permission p
 	).rejects.toMatchObject({ code: -32602 });
 	expect(levels).toEqual(["medium"]);
 	expect(a.remote.target.model?.id).toBe("gpt-6-astra");
+	a.remote.dispose();
+});
+
+test("phone model and effort buttons apply one exact session selection and publish the resulting state", async () => {
+	const levels = [
+		{ effort: "low", description: "Low" },
+		{ effort: "high", description: "High" },
+	];
+	const selected: Array<{ id: string; effort: string }> = [];
+	const a = fixture("a", {
+		setModel: async (model, thinkingLevel) => {
+			selected.push({ id: model.id, effort: thinkingLevel });
+			(a.remote.target as any).model = model;
+			(a.remote.target as any).thinkingLevel = thinkingLevel;
+		},
+	});
+	(a.remote.target as any).modelRegistry = {
+		getAvailable: () => [
+			(a.remote.target as any).model,
+			{
+				id: "gpt-5.6-sol",
+				name: "GPT-5.6 Sol",
+				description: "Deep reasoning",
+				provider: "openai-codex",
+				input: ["text", "image"],
+				thinking: { supportedLevels: levels, defaultLevel: "high" },
+			},
+		],
+	};
+	const events: any[] = [];
+	a.remote.subscribe(event => events.push(event));
+
+	expect(
+		await a.remote.call("model", "thread/settings/update", {
+			threadId: "a",
+			model: "gpt-5.6-sol",
+			effort: "high",
+			serviceTier: null,
+		}),
+	).toEqual({});
+	expect(selected).toEqual([{ id: "gpt-5.6-sol", effort: "high" }]);
+	expect(a.remote.thread()).toMatchObject({
+		model: "gpt-5.6-sol",
+		modelProvider: "openai-codex",
+		reasoningEffort: "high",
+		supportedReasoningEfforts: levels.map(level => ({
+			reasoningEffort: level.effort,
+			description: level.description,
+		})),
+	});
+	expect(events.at(-1)).toMatchObject({
+		method: "thread/settings/updated",
+		params: { threadSettings: { model: "gpt-5.6-sol", effort: "high" } },
+	});
+	a.remote.dispose();
+});
+
+test("phone model changes validate the target effort before changing session state", async () => {
+	let changed = false;
+	const a = fixture("a", {
+		setModel: async () => {
+			changed = true;
+		},
+	});
+	(a.remote.target as any).modelRegistry = {
+		getAvailable: () => [
+			(a.remote.target as any).model,
+			{
+				id: "gpt-5.6-luna",
+				provider: "openai-codex",
+				thinking: {
+					supportedLevels: [{ effort: "low", description: "Low" }],
+					defaultLevel: "low",
+				},
+			},
+			{ id: "gpt-5.4", provider: "openai-codex" },
+		],
+	};
+
+	await expect(
+		a.remote.call("bad-effort", "thread/settings/update", {
+			threadId: "a",
+			model: "gpt-5.6-luna",
+			effort: "high",
+		}),
+	).rejects.toMatchObject({ code: -32602 });
+	await expect(
+		a.remote.call("missing-model", "thread/settings/update", {
+			threadId: "a",
+			model: "gpt-missing",
+			effort: "low",
+		}),
+	).rejects.toMatchObject({ code: -32602 });
+	await expect(
+		a.remote.call("historical-model", "thread/settings/update", {
+			threadId: "a",
+			model: "gpt-5.4",
+		}),
+	).rejects.toMatchObject({ code: -32602 });
+	await expect(
+		a.remote.call("unsupported-multi-agent", "thread/settings/update", {
+			threadId: "a",
+			multiAgentMode: "autonomous",
+		}),
+	).rejects.toMatchObject({ code: -32602 });
+	expect(changed).toBe(false);
+	expect(a.remote.thread().model).toBe("gpt-6-astra");
+	a.remote.dispose();
+});
+
+test("phone model changes cannot race an active turn", async () => {
+	let changed = false;
+	const a = fixture("a", {
+		setModel: async () => {
+			changed = true;
+		},
+	});
+	(a.remote.target as any).modelRegistry = {
+		getAvailable: () => [(a.remote.target as any).model, { id: "gpt-5.6-sol", provider: "openai-codex" }],
+	};
+	await a.remote.call("turn", "turn/start", {
+		threadId: "a",
+		input: [{ type: "text", text: "keep running" }],
+	});
+	await expect(
+		a.remote.call("model-during-turn", "thread/settings/update", {
+			threadId: "a",
+			model: "gpt-5.6-sol",
+		}),
+	).rejects.toMatchObject({ code: -32000 });
+	expect(changed).toBe(false);
+	expect(a.remote.thread().model).toBe("gpt-6-astra");
+	a.finish();
+	a.remote.dispose();
+});
+
+test("an immediate prompt waits for the phone model tap to finish", async () => {
+	const release = Promise.withResolvers<void>();
+	const a = fixture("a", {
+		setModel: async (model, thinkingLevel) => {
+			await release.promise;
+			(a.remote.target as any).model = model;
+			(a.remote.target as any).thinkingLevel = thinkingLevel;
+		},
+	});
+	(a.remote.target as any).modelRegistry = {
+		getAvailable: () => [
+			(a.remote.target as any).model,
+			{
+				id: "gpt-5.6-sol",
+				provider: "openai-codex",
+				thinking: {
+					supportedLevels: [{ effort: "high", description: "High" }],
+					defaultLevel: "high",
+				},
+			},
+		],
+	};
+	a.remote.target.setThinkingLevel = level => {
+		(a.remote.target as any).thinkingLevel = level;
+	};
+	const settings = a.remote.call("model", "thread/settings/update", {
+		threadId: "a",
+		model: "gpt-5.6-sol",
+		effort: "high",
+	});
+	const turn = a.remote.call("turn", "turn/start", {
+		threadId: "a",
+		model: "gpt-5.6-sol",
+		effort: "high",
+		input: [{ type: "text", text: "use the selected model" }],
+	});
+	await Bun.sleep(0);
+	expect(a.prompts).toEqual([]);
+	release.resolve();
+	await settings;
+	await turn;
+	expect(a.remote.target.model?.id).toBe("gpt-5.6-sol");
+	expect(a.prompts).toEqual(["use the selected model"]);
+	a.finish();
+	a.remote.dispose();
+});
+
+test("the phone catalog excludes a historical active model", () => {
+	const a = fixture("a");
+	(a.remote.target as any).model = { id: "gpt-5.4", provider: "openai-codex" };
+	(a.remote.target as any).modelRegistry = {
+		getAvailable: () => [
+			(a.remote.target as any).model,
+			{ id: "gpt-5.6-luna", provider: "openai-codex", input: ["text"] },
+		],
+	};
+	expect(a.remote.models().map(model => model.id)).toEqual(["gpt-5.6-luna"]);
 	a.remote.dispose();
 });
 test("phone collaboration modes validate before applying and precede turn execution", async () => {
