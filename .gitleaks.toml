@@ -22,4 +22,4 @@ description = "Public Git commit identifiers captured by the generated documenta
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^[0-9a-f]{40}$''']
-paths = ['''^\.github/docs-quality/legacy-fidelity\.json$''']
+paths = ['''(?:^|/)\.github/docs-quality/legacy-fidelity\.json$''']
