@@ -1,0 +1,29 @@
+date_utc: 2026-09-16
+source_commit: a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c
+release: v21.29.2
+
+standalone_binary:
+  command: scripts/install.sh --binary with PI_INSTALL_DIR set to a disposable directory
+  result: xcsh/21.29.2
+
+npm_package:
+  command: npm install --global --prefix DISPOSABLE_DIR @f5-sales-demo/xcsh@21.29.1
+  result: xcsh/21.29.1
+  note: v21.29.2 npm publication was still in progress; the registry's current version was tested.
+
+apt_repository:
+  command: curl -fI https://f5-sales-demo.github.io/apt-repo/dists/stable/InRelease
+  result: HTTP 404
+  disposition: The homepage requires this preflight and directs users to the standalone installer when the signed index is unavailable.
+
+container:
+  image: ghcr.io/f5-sales-demo/xcsh@sha256:ee24a3ffb1ca5ed9f5f0488ad702ba191f0c340e9eac55365ceda7d6c878b83d
+  command: docker run --rm IMAGE_DIGEST --version
+  result: xcsh/21.29.1
+
+platform_release_evidence:
+  release_assets: xcsh-darwin-arm64.pkg, xcsh-darwin-x64.pkg, xcsh-windows-x64.exe
+  ci_run: https://github.com/f5-sales-demo/xcsh/actions/runs/35125779396
+  result: macOS arm64/x64 signing, Windows x64 build, and Homebrew installation jobs passed.
+
+cleanup: All disposable installation directories and containers were removed.

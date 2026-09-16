@@ -109,6 +109,49 @@ Trace the affected module and compare it with the pinned upstream lineage. A gen
 defect may belong upstream; an xcsh resource command, integration, or packaging change belongs
 here.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-2cca768a66e8520f" data-fidelity="lc-2cca768a66e8520f"><strong>Last sync point.</strong> Update this section after completing each sync operation; do not reuse previous commit ranges. Current implementation points include b21b42d032919de2f2e6920a76fa9a37c3920c0a. The
+destination uses current source and candidate evidence instead of preserving a version-specific legacy statement.</p>
+
+<p id="fidelity-lc-0063cb85ae2aea3b" data-fidelity="lc-0063cb85ae2aea3b"><strong>Step 1: Define the scope.</strong> Define an upstream port by commit range and subsystem, then list the xcsh-owned behavior that the import must preserve before copying code.</p>
+
+<p id="fidelity-lc-971e6fcffe4ef764" data-fidelity="lc-971e6fcffe4ef764"><strong>Step 2: Import code safely.</strong> Import only the selected upstream files, inspect the complete diff, and reapply xcsh-specific contracts deliberately instead of copying repository metadata or unrelated history.</p>
+
+<p id="fidelity-lc-4a0adaf892a63e62" data-fidelity="lc-4a0adaf892a63e62"><strong>Step 3: Match import extension conventions.</strong> Most runtime TypeScript sources omit .js in internal imports, whereas select test and benchmark entry points retain .js for ESM runtime compatibility. Current implementation points
+include .js, packages/coding-agent, packages/tui/test.</p>
+
+<p id="fidelity-lc-79eafac8c1513f46" data-fidelity="lc-79eafac8c1513f46"><strong>Step 4: Replace import scopes.</strong> Upstream packages use different organizational scopes. Current implementation points include @mariozechner/pi-coding-agent, @f5-sales-demo/xcsh, @mariozechner/pi-agent-core.</p>
+
+<p id="fidelity-lc-6b72ef61c29c4c27" data-fidelity="lc-6b72ef61c29c4c27"><strong>Step 5: Adopt Bun APIs.</strong> This project runs on Bun. Current implementation points include child_process.spawn, $, Bun.spawn.</p>
+
+<p id="fidelity-lc-2c483798229873ae" data-fidelity="lc-2c483798229873ae"><strong>Step 6: Use Bun embeds for assets.</strong> Do not copy runtime assets or vendor files during the build process. Current implementation points include with ｛ type: "text" ｝, .md, import.meta.dir.</p>
+
+<p id="fidelity-lc-5cb47d2d3669808e" data-fidelity="lc-5cb47d2d3669808e"><strong>Step 7: Update package.json manifests.</strong> Treat package.json as a package contract. Current implementation points include package.json, name, version.</p>
+
+<p id="fidelity-lc-6075bc50df6fd4ff" data-fidelity="lc-6075bc50df6fd4ff"><strong>Step 8: Align coding style and conventions.</strong> Current implementation points include any, .md, packages/coding-agent.</p>
+
+<p id="fidelity-lc-012a87a096d142d8" data-fidelity="lc-012a87a096d142d8"><strong>Step 9: Remove obsolete compatibility shims.</strong> Unless backward compatibility is explicitly requested, eliminate legacy upstream shims Current implementation points include *_v2.</p>
+
+<p id="fidelity-lc-0731b955bee1b7de" data-fidelity="lc-0731b955bee1b7de"><strong>Step 10: Update documentation and references.</strong> Update public guides, internal links, package references, and contributor notes to the post-port names and behavior in the same reviewed change.</p>
+
+<p id="fidelity-lc-9a8298f23dedde99" data-fidelity="lc-9a8298f23dedde99"><strong>Step 11: Validate the port.</strong> Run standard verification commands following changes: If the repository contains pre-existing test failures unrelated to your changes, note them explicitly. Current implementation
+points include bun test.</p>
+
+<p id="fidelity-lc-74a90d846107abfb" data-fidelity="lc-74a90d846107abfb"><strong>Step 12: Protect fork enhancements.</strong> Treat local enhancements as non-negotiable requirements. Current implementation points include package.json, exports.</p>
+
+<p id="fidelity-lc-d4aab6e2af1c3baf" data-fidelity="lc-d4aab6e2af1c3baf"><strong>Step 13: Handle refactored upstream code.</strong> Before porting a file, inspect upstream git diffs to detect architectural refactoring: When upstream refactors a module (introducing new abstractions, merged files, or restructured
+control flows).</p>
+
+<p id="fidelity-lc-0058518e01277fde" data-fidelity="lc-0058518e01277fde"><strong>Step 14: Verification checklist.</strong> Complete the following verification checklist before finalizing a port Current implementation points include .js, @f5-sales-demo/*, package.json.</p>
+
+<p id="fidelity-lc-8b33f6b844143f87" data-fidelity="lc-8b33f6b844143f87"><strong>Step 15: Commit message format.</strong> When committing backported changes, format the commit header as ‹type›(scope): ‹past-tense description› and include the sync commit range: Example Current implementation points
+include ‹type›(scope): ‹past-tense description›.</p>
+
+<p id="fidelity-lc-4b291b0270d9094f" data-fidelity="lc-4b291b0270d9094f"><strong>Intentional architectural divergences.</strong> This repository contains intentional design divergences from upstream. Current implementation points include FooterDataProvider, StatusLineComponent, ctx.ui.setHeader().</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I preserve attribution?
 
 Keep upstream license notices and document imported changes. Avoid copying a patch blindly across

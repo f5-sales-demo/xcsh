@@ -12,6 +12,38 @@ Model Context Protocol (MCP) configuration is discovered from user and project r
 
 A local server uses a command plus arguments and communicates over stdio. A remote server declares an HTTP-capable uniform resource locator (URL) and the supported transport options. The runtime selects from the declared shape; it does not silently reinterpret a malformed local entry as a remote one.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-c0ca596493f9e44e" data-fidelity="lc-c0ca596493f9e44e"><strong>Implementation references.</strong> Current implementation points include packages/coding-agent/src/mcp/types.ts, packages/coding-agent/src/mcp/config-writer.ts, packages/coding-agent/src/mcp/config.ts.</p>
+
+<p id="fidelity-lc-e3af633507fd993c" data-fidelity="lc-e3af633507fd993c"><strong>Configuration file locations.</strong> The xcsh runtime discovers MCP server definitions from multiple configuration sources. Current implementation points include .xcsh/mcp.json, ~/.xcsh/mcp.json, mcp.json.</p>
+
+<p id="fidelity-lc-b6acdb637ebc3942" data-fidelity="lc-b6acdb637ebc3942"><strong>Schema declaration.</strong> Include the $schema reference in your configuration file to enable validation and autocompletion in your editor: CLI management commands (/mcp add, /mcp enable, /mcp disable, /mcp
+reauth) insert this schema reference automatically. Current implementation points include $schema, /mcp add, /mcp enable.</p>
+
+<p id="fidelity-lc-3f5a13633f5c49d9" data-fidelity="lc-3f5a13633f5c49d9"><strong>Configuration file structure.</strong> MCP configuration files use the following schema: Server identifiers must match the regular expression ^[a-zA-Z0-9.-]｛1,100｝$. Current implementation points include $schema,
+mcpServers, disabledServers.</p>
+
+<p id="fidelity-lc-6c5bcfeb108312ff" data-fidelity="lc-6c5bcfeb108312ff"><strong>Server configuration properties.</strong> The following properties apply to all transport types: stdio serves as the default transport when type is omitted. Current implementation points include enabled, true, timeout.</p>
+
+<p id="fidelity-lc-49799863a23cf20b" data-fidelity="lc-49799863a23cf20b"><strong>Authentication configuration.</strong> Use auth to persist credential binding metadata across agent sessions. Current implementation points include auth, oauth.</p>
+
+<p id="fidelity-lc-54149048dbe07c9b" data-fidelity="lc-54149048dbe07c9b"><strong>Configuration examples.</strong> Current implementation points include stdio.</p>
+
+<p id="fidelity-lc-10a41173b5851932" data-fidelity="lc-10a41173b5851932"><strong>Variable resolution and secrets management.</strong> Before initializing a server process or issuing HTTP requests, the runtime evaluates values in env and headers. Current implementation points include .xcsh/mcp.json, env, headers.</p>
+
+<p id="fidelity-lc-79d5d1bb23ef2789" data-fidelity="lc-79d5d1bb23ef2789"><strong>Disabling discovered servers (disabledServers).</strong> Define disabledServers in /.xcsh/mcp.json to prevent specific servers discovered from third-party tools from loading Current implementation points include disabledServers,
+~/.xcsh/mcp.json.</p>
+
+<p id="fidelity-lc-f1f9b8f02c5f2f58" data-fidelity="lc-f1f9b8f02c5f2f58"><strong>Management commands.</strong> Current implementation points include /mcp add, /mcp reload, /mcp list.</p>
+
+<p id="fidelity-lc-86788f048e67e36d" data-fidelity="lc-86788f048e67e36d"><strong>Validation rules.</strong> ValidateServerConfig (packages/coding-agent/src/mcp/config.ts) enforces the following invariants Current implementation points include validateServerConfig,
+packages/coding-agent/src/mcp/config.ts, stdio.</p>
+
+<p id="fidelity-lc-b78b27ccdf2d5e84" data-fidelity="lc-b78b27ccdf2d5e84"><strong>Troubleshooting.</strong> Remote endpoints require "type": "http". Current implementation points include Server "‹NAME›": stdio server requires "command" field, "type": "http", type.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I resolve variables without embedding secrets?
 
 Configuration values can reference environment-backed variables. Credential resolution happens before connection establishment, and unresolved required variables fail that server without printing the secret. Keep tokens outside committed `mcp.json` files.

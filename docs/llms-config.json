@@ -36,21 +36,21 @@
       ]
     },
     {
-      "label": "Integrations and deployment",
+      "label": "Integrations",
       "description": "Deploy containers and connect source-verified VS Code, Office, Chrome, and Herdr integrations.",
       "paths": [
         "integrations-deployment/**"
       ]
     },
     {
-      "label": "Reference and troubleshooting",
+      "label": "Reference",
       "description": "Look up CLI, slash commands, keybindings, configuration schema, and symptom-driven diagnostics.",
       "paths": [
         "reference-troubleshooting/**"
       ]
     },
     {
-      "label": "Architecture and contribution",
+      "label": "Architecture",
       "description": "Trace agent, storage, tool, provider, extension, native, TUI, prompt, upstream, build, and release internals.",
       "paths": [
         "architecture-contribution/**"
@@ -60,7 +60,6 @@
   "promote": [
     "index*",
     "getting-started/index*",
-    "getting-started/installation*",
     "getting-started/quickstart*",
     "getting-started/model-authentication*",
     "getting-started/f5-xc-connection*",

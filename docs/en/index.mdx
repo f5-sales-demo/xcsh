@@ -1,6 +1,6 @@
 ---
 title: xcsh
-description: Independent open-source agentic shell for terminal work and F5 Distributed Cloud workflows.
+description: Install xcsh, authenticate a model provider, and begin a reviewable terminal or F5 Distributed Cloud workflow.
 template: splash
 editUrl: false
 hero:
@@ -9,7 +9,7 @@ hero:
     html: '<img src="/xcsh/images/xcsh-workflow.svg" alt="Prompt, tools, and F5 Distributed Cloud workflow" width="560" height="360" />'
   actions:
     - text: Install xcsh
-      link: /xcsh/en/getting-started/installation/
+      link: "#install-xcsh"
       icon: right-arrow
       variant: primary
     - text: Run the quickstart
@@ -25,11 +25,173 @@ head:
       .hero h1 { text-wrap: balance; }
 ---
 
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
 xcsh combines an interactive coding agent with deterministic F5 Distributed Cloud resource commands. It is an independent open-source project, not an F5 product.
 
-## Where should I start?
+## Install xcsh
 
-- New installation: [install xcsh](./getting-started/installation/), then run the [quickstart](./getting-started/quickstart/).
-- F5 Distributed Cloud change: select a [context and namespace](./f5-distributed-cloud/contexts-namespaces/), then [validate and diff](./f5-distributed-cloud/validate-diff/).
-- Existing session: review the [interactive shell](./use-xcsh/interactive-tui/) and [session controls](./use-xcsh/sessions-memory/).
-- Automation: choose a [headless mode](./automate-extend/headless-protocols/) or use the [software development kit (SDK)](./automate-extend/sdk/).
+Choose one channel and use the same channel for upgrades. Mixing package-manager and standalone installations can leave more than one `xcsh` on `PATH`.
+
+<Tabs syncKey="install-platform">
+  <TabItem label="macOS" icon="seti:apple">
+    The Homebrew formula installs the signed release archive and supports Apple silicon and Intel Macs:
+
+    ```bash
+    brew install f5-sales-demo/tap/xcsh
+    ```
+
+    The managed cask installs the signed macOS package instead:
+
+    ```bash
+    brew install --cask f5-sales-demo/tap/xcsh
+    ```
+
+    Use one of these Homebrew packages, not both. Confirm the architecture and executable after installation:
+
+    ```bash
+    uname -m
+    command -v xcsh
+    xcsh --version
+    ```
+  </TabItem>
+
+  <TabItem label="Ubuntu or Debian" icon="seti:ubuntu">
+    The apt repository supports amd64 and arm64 and keeps xcsh on the normal system upgrade path:
+
+    <Aside type="caution" title="Verify repository availability">
+      Require `curl -fI https://f5-sales-demo.github.io/apt-repo/dists/stable/InRelease` to succeed before adding the source. If the signed index is unavailable, use the standalone installer below; do not configure a broken apt source.
+    </Aside>
+
+    ```bash
+    sudo install -d -m 0755 /etc/apt/keyrings
+    curl -fsSL https://f5-sales-demo.github.io/apt-repo/f5xc-archive-keyring.gpg \
+      | sudo tee /etc/apt/keyrings/f5xc-archive-keyring.gpg >/dev/null
+    echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/f5xc-archive-keyring.gpg] https://f5-sales-demo.github.io/apt-repo stable main" \
+      | sudo tee /etc/apt/sources.list.d/f5xc.list
+    sudo apt-get update
+    sudo apt-get install xcsh
+    ```
+
+    For a user-local standalone release, run the installer. It selects the current Linux architecture and installs the executable and matching native add-ons in `${PI_INSTALL_DIR:-$HOME/.local/bin}`:
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
+    ```
+
+    Add `$HOME/.local/bin` to `PATH` if `command -v xcsh` does not find it. You may also download `xcsh-linux-x64` or `xcsh-linux-arm64` and its matching `pi_natives` assets from [GitHub Releases](https://github.com/f5-sales-demo/xcsh/releases).
+  </TabItem>
+
+  <TabItem label="Windows" icon="seti:windows">
+    xcsh publishes a Windows x64 executable. Run the installer from PowerShell:
+
+    ```powershell
+    irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1 | iex
+    ```
+
+    The installer writes `xcsh.exe` and its native add-ons to `%LOCALAPPDATA%\\xcsh`, adds that directory to the user `PATH`, and configures Git Bash when it can find it. Restart the terminal after a new `PATH` entry.
+
+    <Aside type="caution" title="Bash is required">
+      Install Git for Windows, WSL, Cygwin, or MSYS2 before using tool-backed sessions. Set `shellPath` in `%USERPROFILE%\\.xcsh\\agent\\settings.json` when Bash is not in a standard location.
+    </Aside>
+
+    ```powershell
+    Get-Command xcsh
+    xcsh --version
+    xcsh --help
+    ```
+  </TabItem>
+
+  <TabItem label="Container" icon="seti:docker">
+    Docker and Podman can run the same multi-architecture image for linux/amd64 and linux/arm64:
+
+    ```bash
+    docker pull ghcr.io/f5-sales-demo/xcsh:latest
+    docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
+    # Podman accepts the same pull and run arguments.
+    ```
+
+    Pin a release tag for repeatable upgrades and an immutable digest for deployment:
+
+    ```bash
+    docker pull ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
+    docker image inspect --format '{{index .RepoDigests 0}}' ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
+    docker run --rm ghcr.io/f5-sales-demo/xcsh@sha256:<digest> --version
+    ```
+
+    Mount only the working tree and state required by the task. Pass provider credentials at runtime through a secret manager or environment file; never bake them into an image layer.
+
+    ```bash
+    docker run --rm -it \
+      --mount type=bind,src="$PWD",dst=/workspace \
+      --mount type=bind,src="$HOME/.xcsh",dst=/home/xcsh/.xcsh \
+      --env-file ./xcsh.env \
+      ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
+    ```
+  </TabItem>
+
+  <TabItem label="Advanced" icon="seti:config">
+    Use the package or source channels when you need a JavaScript toolchain or an unreleased ref:
+
+    ```bash
+    bun install --global @f5-sales-demo/xcsh
+    npm install --global @f5-sales-demo/xcsh
+    curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh \
+      | sh -s -- --source --ref main
+    ```
+
+    Source installs require Git and Bun 1.4.2 or newer. A `--ref` without `--source` also selects the source path; use a tag for reproducibility.
+  </TabItem>
+</Tabs>
+
+### Verify the active installation
+
+<Steps>
+1. Resolve the executable before diagnosing a version mismatch.
+
+       command -v xcsh
+       type -a xcsh
+       xcsh --version
+
+1. Upgrade through the channel that installed it.
+
+       brew upgrade xcsh                         # Homebrew formula
+       brew upgrade --cask xcsh                  # managed macOS package
+       sudo apt-get update && sudo apt-get install --only-upgrade xcsh
+       bun update --global @f5-sales-demo/xcsh   # Bun package
+       npm update --global @f5-sales-demo/xcsh   # npm package
+
+   Re-run the shell or PowerShell installer to replace a standalone release. Resolve and remove an older executable before switching channels.
+
+1. Remove only the selected channel. Settings, contexts, and sessions remain available unless you deliberately remove the path reported by `xcsh config path`.
+
+       brew uninstall xcsh
+       brew uninstall --cask xcsh
+       sudo apt-get remove xcsh
+       bun remove --global @f5-sales-demo/xcsh
+       npm uninstall --global @f5-sales-demo/xcsh
+
+</Steps>
+
+## Authenticate a provider
+
+Keep model credentials in the provider-supported environment or subscription login, never in a prompt or committed settings file. Follow [model authentication](./getting-started/model-authentication/) and confirm the selected provider can enumerate models:
+
+    xcsh --list-models PROVIDER
+
+## Run the quickstart
+
+Start with a bounded prompt that disables tools and session persistence, then add integrations only when the executable and model route are working:
+
+    xcsh --no-session --no-tools -p "Reply with only: xcsh is ready"
+
+Continue with the [quickstart](./getting-started/quickstart/), or select a [context and namespace](./f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud change.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-c7aaa3df3c68b247" data-fidelity="lc-c7aaa3df3c68b247"><strong>Languages and localization.</strong> Choose your language on the documentation portal</p>
+
+<p id="fidelity-lc-bd4c386fa2a16e57" data-fidelity="lc-bd4c386fa2a16e57"><strong>Documentation catalog.</strong> The English catalog grouped configuration, containers, extensions, MCP, native runtime, providers, tools, sessions, TUI, Office ownership, and prompt guidance as distinct knowledge
+areas.</p>
+
+<span data-fidelity-generated="end"></span>
