@@ -161,6 +161,7 @@ ${truncatedMessage}
 			logger.debug("title-generator: response", {
 				model,
 				attempt: attempt + 1,
+				title,
 				titleAccepted: title !== null,
 				titleCharacters: title ? [...title].length : 0,
 				stopReason: response.stopReason,

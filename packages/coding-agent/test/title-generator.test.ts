@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "bun:test";
 import * as ai from "@f5-sales-demo/pi-ai";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
+import { logger } from "@f5-sales-demo/pi-utils";
 import {
 	coordinateSessionTitle,
 	generateSessionTitle,
@@ -57,6 +58,7 @@ describe("session title generation", () => {
 	});
 
 	test("accepts a single provider-enforced structured title", async () => {
+		const debug = vi.spyOn(logger, "debug").mockImplementation(() => {});
 		const complete = vi.spyOn(ai, "completeSimple").mockResolvedValue({
 			stopReason: "toolUse",
 			content: [
@@ -76,7 +78,16 @@ describe("session title generation", () => {
 		const options = complete.mock.calls[0]?.[2];
 		expect(context?.tools?.[0]?.name).toBe("submit_title");
 		expect(options?.toolChoice).toEqual({ type: "tool", name: "submit_title" });
+		expect(debug).toHaveBeenCalledWith(
+			"title-generator: response",
+			expect.objectContaining({
+				title: "Validate session titles",
+				titleAccepted: true,
+				titleCharacters: 23,
+			}),
+		);
 		complete.mockRestore();
+		debug.mockRestore();
 	});
 
 	test("truncates without splitting UTF-8 sequences", () => {

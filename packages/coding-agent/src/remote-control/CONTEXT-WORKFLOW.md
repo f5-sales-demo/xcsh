@@ -114,8 +114,11 @@ the assistant preserves intent, asks only useful questions, waits for execution,
 and speaks a concise evidence-grounded response.
 
 Keep real prompts, transcripts, audio, profile values, tenant data, and credentials
-out of committed evidence. Record live tool names, outcome categories, counts, and
-booleans. Only generated synthetic fixtures and their algorithms belong in source.
+out of committed evidence. Session titles are user-visible operational identifiers:
+retain their exact text in runtime diagnostics and UAT evidence so title generation
+and catalog synchronization remain directly observable. Record other live activity
+as tool names, outcome categories, counts, and booleans. Only generated synthetic
+fixtures and their algorithms belong in source.
 
 ## Diagnostic comparisons
 
