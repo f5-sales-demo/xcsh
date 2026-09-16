@@ -235,7 +235,13 @@ export class RemoteRouter {
 				this.#lifecycleNotifications.set(client, delivered);
 			}
 			const fingerprint = JSON.stringify(event.params);
-			if (delivered.get(key) === fingerprint) return;
+			// Turn, item, and usage notifications are one-shot events identified by
+			// their stable key. Provider recovery and worker replay can enrich their
+			// payloads, but must not announce the same lifecycle transition twice.
+			// Status is stateful, so retain fingerprint comparison to allow active
+			// followed by idle while suppressing an exact repeated state.
+			if (delivered.has(key) && (event.method !== "thread/status/changed" || delivered.get(key) === fingerprint))
+				return;
 			delivered.set(key, fingerprint);
 		}
 		this.notify(client, event);

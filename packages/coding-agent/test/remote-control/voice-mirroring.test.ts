@@ -210,6 +210,7 @@ test.each([undefined, "command", "fileChange"] as const)(
 		try {
 			await remote.call("voice", "thread/realtime/start", { ...start, threadId: "fixture" });
 			listener({ type: "agent_start" });
+			listener({ type: "message_start", message: { role: "user", content: "begin", timestamp: 0 } });
 			const message: any = {
 				role: "assistant",
 				timestamp: 1,

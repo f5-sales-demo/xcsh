@@ -1644,7 +1644,12 @@ export class RemoteSession {
 		}
 	}
 	#durableEvent(event: AgentSessionEvent): void {
-		if (event.type === "agent_start" && !this.#active) this.#emit("turn/started", { turn: this.#beginTurn() });
+		// A provider recovery can replay agent_start after the remotely owned
+		// prompt promise has settled.  That is not a new semantic turn.  Locally
+		// initiated turns acquire their identity when their user message begins;
+		// remote turns already have an active identity before prompt() is called.
+		if (event.type === "message_start" && event.message.role === "user" && !this.#active)
+			this.#emit("turn/started", { turn: this.#beginTurn() });
 		if (event.type === "message_start" && event.message.role !== "toolResult") {
 			const id = `${this.target.sessionId}-item-${randomUUID()}`;
 			this.#messageIds.set(messageKey(event.message), id);
