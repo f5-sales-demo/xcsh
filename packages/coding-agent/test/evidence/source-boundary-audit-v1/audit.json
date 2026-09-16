@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "fe6ed5c4072a064c7beed1a5f527351244ecc86a",
-  "fingerprint": "d9d90335ee11d23bc9b62123fd49eef488841b8a479166a27ea90e2b7a6281b6",
+  "revision": "f75e722482664f565433f8fab5d94d3b1c648687",
+  "fingerprint": "deba20a7382daf979056f80a163ca7a2aff101e7b877d1a86c756837edbd18c7",
   "counts": {
     "total": 241,
     "components": 95,
@@ -1601,6 +1601,7 @@
         "packages/coding-agent/test/core/hashline.test.ts",
         "packages/coding-agent/test/modes/components/session-selector-mouse.test.ts",
         "packages/coding-agent/test/python-execution-outcome.test.ts",
+        "packages/coding-agent/test/remote-control/trace-assembler.test.ts",
         "packages/coding-agent/test/remote-control/trace.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
@@ -2984,6 +2985,7 @@
       "directTests": [
         "packages/coding-agent/test/modes/components/user-message-selector-navigation.test.ts",
         "packages/coding-agent/test/remote-control/session.test.ts",
+        "packages/coding-agent/test/title-generator.test.ts",
         "packages/coding-agent/test/user-message-hotswap.test.ts",
         "packages/coding-agent/test/user-message.test.ts"
       ],
@@ -3290,7 +3292,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "0f190d034da4ec60f894df9cf8e2d1a0eef8c3f6c29547ce3e2909d5a33e0b4a",
+      "sha256": "b3360c1c4ae98e9989530801ec29c491d0b602d26906fe93684a2877c0a26bf8",
       "exports": [
         "InputController"
       ],
@@ -3301,8 +3303,7 @@
       "persistenceSignals": [
         "file-write",
         "file-replace",
-        "session-persistence",
-        "settings-mutation"
+        "session-persistence"
       ],
       "directTests": [
         "packages/coding-agent/test/input-controller-background.test.ts",
@@ -4410,7 +4411,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "9c89b23f401933508d30fca35f7a40f995ff9cfdf955f103028a1912ced44bd5",
+      "sha256": "428cd2c233e097cccccd81ec1751306e6028b604dd276035826bf189fffafc72",
       "exports": [
         "BranchSummaryEntry",
         "CURRENT_SESSION_VERSION",
