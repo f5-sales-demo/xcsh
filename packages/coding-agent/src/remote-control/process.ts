@@ -22,7 +22,13 @@ export class RemoteProcesses {
 			for (const process of processes.values()) process.kill();
 		}
 	}
-	call(client: string, identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
+	call(
+		client: string,
+		identity: string,
+		method: string,
+		params: Record<string, unknown>,
+		additionalAllowedCwd?: string,
+	): Promise<unknown> {
 		const key = JSON.stringify([client, identity]);
 		const signature = JSON.stringify({ method, params });
 		const previous = this.#requests.get(key);
@@ -32,11 +38,16 @@ export class RemoteProcesses {
 				: Promise.reject(new ProtocolError(-32600, "Request identity reused with different input"));
 		if (this.#requests.size >= 4096)
 			return Promise.reject(new ProtocolError(-32000, "Process request limit reached"));
-		const result = this.#execute(client, method, params);
+		const result = this.#execute(client, method, params, additionalAllowedCwd);
 		this.#requests.set(key, { signature, result });
 		return result;
 	}
-	async #execute(client: string, method: string, p: Record<string, unknown>): Promise<unknown> {
+	async #execute(
+		client: string,
+		method: string,
+		p: Record<string, unknown>,
+		additionalAllowedCwd?: string,
+	): Promise<unknown> {
 		if (typeof p.processHandle !== "string" || !p.processHandle || p.processHandle.length > 256)
 			throw new ProtocolError(-32602, "Invalid process handle");
 		const handle = p.processHandle;
@@ -72,7 +83,11 @@ export class RemoteProcesses {
 		}
 		if (method !== "process/spawn") throw new ProtocolError(-32601, "Unsupported process operation");
 		if (p.tty === true || p.size != null) throw new ProtocolError(-32602, "Remote PTY processes are not supported");
-		if (typeof p.cwd !== "string" || !isAbsolute(p.cwd) || !this.allowedCwd(p.cwd))
+		if (
+			typeof p.cwd !== "string" ||
+			!isAbsolute(p.cwd) ||
+			(!this.allowedCwd(p.cwd) && p.cwd !== additionalAllowedCwd)
+		)
 			throw new ProtocolError(-32602, "Process working directory must match a live terminal");
 		if (
 			!Array.isArray(p.command) ||

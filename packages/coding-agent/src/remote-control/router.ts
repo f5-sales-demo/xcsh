@@ -485,9 +485,13 @@ export class RemoteRouter {
 		this.registerManagedSession(threadId, endpoint);
 		return coldResume;
 	}
-	async #processParams(method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
-		if (method !== "process/spawn" || params.cwd !== "/") return params;
+	async #processParams(
+		method: string,
+		params: Record<string, unknown>,
+	): Promise<{ params: Record<string, unknown>; additionalAllowedCwd?: string }> {
+		if (method !== "process/spawn" || params.cwd !== "/") return { params };
 		let isolated = params;
+		let additionalAllowedCwd: string | undefined;
 		const command = params.command;
 		if (
 			Array.isArray(command) &&
@@ -526,14 +530,18 @@ export class RemoteRouter {
 				}
 			}
 			if (!workspace) throw new ProtocolError(-32000, "xcsh workspace limit reached");
-			isolated = { ...params, command: ["/usr/bin/printf", "%s", workspace] };
+			isolated = { ...params, cwd: workspace, command: ["/usr/bin/printf", "%s", workspace] };
+			additionalAllowedCwd = workspace;
 		}
-		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return isolated;
+		if (additionalAllowedCwd) return { params: isolated, additionalAllowedCwd };
+		if (this.#visibleSessions().some(session => session.thread.cwd === "/")) return { params: isolated };
 		// Blank-chat clients use root as a placeholder before choosing a workspace.
 		// Map only that placeholder to the exposed primary. The phone's known blank-chat
 		// bootstrap is also confined to xcsh's documents namespace instead of Codex's.
 		const cwd = this.#currentSession()?.thread.cwd;
-		return typeof cwd === "string" && isAbsolute(cwd) && normalize(cwd) === cwd ? { ...isolated, cwd } : isolated;
+		return {
+			params: typeof cwd === "string" && isAbsolute(cwd) && normalize(cwd) === cwd ? { ...isolated, cwd } : isolated,
+		};
 	}
 	#defer(client: string, event: Notification): void {
 		setTimeout(() => this.#emit(client, event), 0);
@@ -698,14 +706,17 @@ export class RemoteRouter {
 					}
 					case "process/spawn":
 					case "process/kill":
-					case "process/writeStdin":
+					case "process/writeStdin": {
+						const processRequest = await this.#processParams(request.method, params);
 						result = await this.#processes.call(
 							client,
 							JSON.stringify(id),
 							request.method,
-							await this.#processParams(request.method, params),
+							processRequest.params,
+							processRequest.additionalAllowedCwd,
 						);
 						break;
+					}
 					case "config/read": {
 						const matching =
 							params.cwd == null
