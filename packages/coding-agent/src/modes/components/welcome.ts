@@ -35,28 +35,31 @@ export const F5_LOGO_ROWS: readonly string[] = [
 	"              (▒▒▒▒▓▓▓▓▓▓▓▓▒▒▒▒)",
 ];
 
+const FULL_LOGO_MIN_WIDTH = 50;
+const FULL_LOGO_CANVAS_WIDTH = 46;
+const MAX_FRAME_WIDTH = 52;
+const blankRow = { content: "", selected: false } as const;
+
 export class WelcomeComponent implements Component {
-	constructor(
-		private readonly version: string,
-		private readonly terminalRows: () => number = () => process.stdout.rows || 24,
-	) {}
+	constructor(private readonly version: string) {}
 	invalidate(): void {}
 
 	render(termWidth: number): string[] {
-		if (termWidth < 4) return [];
-		const width = Math.min(52, termWidth);
-		const budget = Math.max(4, Math.floor(this.terminalRows() / 2));
-		const fullLogo = F5_LOGO_ROWS.length + 6 <= budget && selectorFrameContentWidth(width) >= 46;
-		return selectorFrame(
-			width,
-			budget,
-			`${APP_NAME} v${this.version}`,
-			"",
-			[],
-			fullLogo ? F5_LOGO_ROWS.map(line => this.#f5ColorLine(line)) : [theme.bold(theme.fg("accent", "F5"))],
-			[],
-			[],
-		);
+		if (termWidth < 5) return [];
+		const width = Math.min(MAX_FRAME_WIDTH, termWidth);
+		const contentWidth = selectorFrameContentWidth(width);
+		const fullLogo = termWidth >= FULL_LOGO_MIN_WIDTH;
+		const logo = fullLogo
+			? F5_LOGO_ROWS.map(line => this.#centerInCanvas(this.#f5ColorLine(line), FULL_LOGO_CANVAS_WIDTH, contentWidth))
+			: [this.#centerInCanvas(theme.bold(theme.fg("accent", "F5")), 2, contentWidth)];
+		const body = [blankRow, ...logo, blankRow];
+		return selectorFrame(width, body.length + 4, `${APP_NAME} v${this.version}`, "", [], body, [], []);
+	}
+
+	#centerInCanvas(value: string, canvasWidth: number, contentWidth: number): string {
+		const left = Math.floor((contentWidth - canvasWidth) / 2);
+		const right = contentWidth - canvasWidth - left;
+		return `${" ".repeat(Math.max(0, left))}${value}${" ".repeat(Math.max(0, right))}`;
 	}
 
 	#f5ColorLine(line: string): string {

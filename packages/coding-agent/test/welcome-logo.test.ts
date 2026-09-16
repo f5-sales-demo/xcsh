@@ -3,28 +3,30 @@ import { visibleWidth } from "@f5-sales-demo/pi-tui";
 import { F5_LOGO_ROWS, WelcomeComponent } from "../src/modes/components/welcome";
 import { getThemeByName, setThemeInstance } from "../src/modes/theme/theme";
 
-it("welcome reserves space for the editor and adapts without clipping the logo on resize", async () => {
+it("welcome keeps the full logo independent of terminal height and switches only at 50 columns", async () => {
 	setThemeInstance((await getThemeByName("xcsh-dark"))!);
-	let rows = 20;
-	const welcome = new WelcomeComponent("fixture", () => rows);
-	for (const [width, height] of [
-		[60, 20],
-		[80, 24],
-		[100, 32],
-		[140, 40],
-	]) {
-		rows = height;
+	const welcome = new WelcomeComponent("fixture");
+	for (const width of [50, 51, 52, 60, 80, 100, 140]) {
 		const lines = welcome.render(width);
-		expect(lines.length).toBeLessThanOrEqual(6);
+		expect(lines.length).toBe(F5_LOGO_ROWS.length + 6);
 		expect(lines.every(line => visibleWidth(line) <= Math.min(width, 100))).toBe(true);
 		expect(Bun.stripANSI(lines.join("\n"))).toContain("xcsh vfixture");
-		expect(Bun.stripANSI(lines.join("\n"))).toContain("F5");
+		expect(Bun.stripANSI(lines.join("\n"))).toContain("█");
 	}
-	rows = 80;
-	expect(welcome.render(100).length).toBeGreaterThan(F5_LOGO_ROWS.length);
-	rows = 20;
-	expect(welcome.render(100).length).toBeLessThanOrEqual(6);
-	expect(welcome.render(30).every(line => visibleWidth(line) <= 30)).toBe(true);
+	for (const width of [49, 30]) {
+		const output = welcome.render(width);
+		expect(Bun.stripANSI(output.join("\n"))).toContain("F5");
+		expect(Bun.stripANSI(output.join("\n"))).not.toContain("█");
+		expect(output.every(line => visibleWidth(line) <= width)).toBe(true);
+	}
+});
+
+it("preserves the intended logo ANSI colors", async () => {
+	setThemeInstance((await getThemeByName("xcsh-dark"))!);
+	const output = new WelcomeComponent("fixture").render(52).join("\n");
+	expect(output).toContain("\x1b[38;5;160m");
+	expect(output).toContain("\x1b[1;37m");
+	expect(output).toContain("\x1b[48;5;88m");
 });
 
 /**
