@@ -99,7 +99,7 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 		["self-hosted", "Linux", "X64", "xcsh", "ubuntu-24.04"],
 		["self-hosted", "Linux", "X64", "xcsh", "container-build"],
 	];
-	const candidateRoutes = new Set(["xcsh-compute-d16-candidate", "xcsh-compute-f32-candidate"]);
+	const candidateRoutes = new Set(["xcsh-compute-16-vcpu-candidate", "xcsh-compute-f32-candidate"]);
 	const observedArcRoutes = new Set<string>();
 
 	expect(workflows.length).toBeGreaterThan(0);
@@ -139,8 +139,9 @@ test("compute qualification is manual, frozen-source, and derives bounded worker
 		expect(source).toContain(input);
 	}
 	expect(source).toContain("d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a");
-	expect(source).toContain("xcsh-compute-d16-candidate");
+	expect(source).toContain("xcsh-compute-16-vcpu-candidate");
 	expect(source).toContain("xcsh-compute-f32-candidate");
+	expect(source).toContain("dkr\\.ecr\\.us-east-1\\.amazonaws\\.com");
 	expect(source).not.toContain("xcsh-compute-bun-candidate");
 	expect(source).not.toContain("pull_request:");
 	expect(source).not.toContain("types: [labeled]");
