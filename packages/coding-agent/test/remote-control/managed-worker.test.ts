@@ -118,6 +118,89 @@ test("worker stop acknowledges only after the session runtime is durably closed"
 	}
 });
 
+test("worker snapshots retain generated titles across later events and host replacement", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-managed-worker-title-"));
+	const socket = join(root, "worker.sock");
+	let publish: ((event: { method: string; params: Record<string, unknown> }) => void) | undefined;
+	const thread = {
+		id: "managed-title",
+		cwd: root,
+		name: null as string | null,
+		status: { type: "idle" },
+	};
+	const worker = await startManagedSessionWorker(socket, {
+		createRuntime: async () => ({
+			endpoint: { thread, call: async () => ({}) },
+			setPublisher: listener => {
+				publish = listener;
+			},
+			close: async () => {},
+		}),
+	});
+	try {
+		const first = await connectPeer(socket);
+		const snapshots: any[] = [];
+		first.handle = async (method, params) => {
+			if (method === "worker/event") snapshots.push(params.endpoint);
+			return { ack: params.seq };
+		};
+		await first.call("worker/initialize", { request: { kind: "start", params: { cwd: root } } });
+		publish?.({
+			method: "thread/name/updated",
+			params: { threadId: thread.id, threadName: "Verify ABC-3900" },
+		});
+		publish?.({
+			method: "thread/status/changed",
+			params: { threadId: thread.id, status: { type: "active", activeFlags: [] } },
+		});
+		publish?.({
+			method: "thread/settings/updated",
+			params: {
+				threadId: thread.id,
+				threadSettings: {
+					model: "gpt-6-astra",
+					modelProvider: "openai-codex",
+					effort: "high",
+					collaborationMode: { mode: "plan" },
+				},
+			},
+		});
+		for (let attempt = 0; attempt < 100 && snapshots.length < 3; attempt++) await Bun.sleep(1);
+		expect(snapshots).toHaveLength(3);
+		expect(snapshots[0].thread.name).toBe("Verify ABC-3900");
+		expect(snapshots[1].thread).toMatchObject({
+			name: "Verify ABC-3900",
+			status: { type: "active", activeFlags: [] },
+		});
+		expect(snapshots[2]).toMatchObject({
+			thread: {
+				name: "Verify ABC-3900",
+				status: { type: "active", activeFlags: [] },
+				model: "gpt-6-astra",
+				modelProvider: "openai-codex",
+				reasoningEffort: "high",
+			},
+			collaborationMode: "plan",
+		});
+		first.close();
+
+		const replacement = await connectPeer(socket);
+		const described = (await replacement.call("worker/describe", {})) as any;
+		expect(described.endpoint.thread).toMatchObject({
+			name: "Verify ABC-3900",
+			status: { type: "active", activeFlags: [] },
+			model: "gpt-6-astra",
+			modelProvider: "openai-codex",
+			reasoningEffort: "high",
+		});
+		expect(described.endpoint.collaborationMode).toBe("plan");
+		replacement.close();
+	} finally {
+		await worker.close();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
 test("voice-first replay crosses a real managed worker with a deterministic realtime transport", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-managed-worker-voice-"));
 	const socket = join(root, "worker.sock");

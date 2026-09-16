@@ -54,6 +54,32 @@ function workerDescription(runtime: ManagedRuntime, events: QueuedWorkerEvent[])
 	return { endpoint: endpointView(runtime), events: [...events], pid: process.pid };
 }
 
+function applyNotification(runtime: ManagedRuntime, event: Notification): void {
+	const thread = runtime.endpoint.thread;
+	if (event.params.threadId !== thread.id) return;
+	if (event.method === "thread/name/updated") {
+		const name = event.params.threadName;
+		if (name === null || typeof name === "string") thread.name = name;
+		return;
+	}
+	if (event.method === "thread/status/changed") {
+		const status = event.params.status;
+		if (status && typeof status === "object" && !Array.isArray(status)) thread.status = structuredClone(status);
+		return;
+	}
+	if (event.method !== "thread/settings/updated") return;
+	const settings = event.params.threadSettings;
+	if (!settings || typeof settings !== "object" || Array.isArray(settings)) return;
+	const model = (settings as Record<string, unknown>).model;
+	const provider = (settings as Record<string, unknown>).modelProvider;
+	const effort = (settings as Record<string, unknown>).effort;
+	const mode = ((settings as Record<string, unknown>).collaborationMode as { mode?: unknown } | undefined)?.mode;
+	if (typeof model === "string") thread.model = model;
+	if (typeof provider === "string") thread.modelProvider = provider;
+	if (effort === null || typeof effort === "string") thread.reasoningEffort = effort;
+	if (mode === "plan" || mode === "default") runtime.endpoint.collaborationMode = mode;
+}
+
 /**
  * Owns one phone-created AgentSession independently from the relay host.
  * A replacement host can reconnect to this owner without restarting work.
@@ -77,6 +103,7 @@ export async function startManagedSessionWorker(
 		while (events[0] && events[0].seq <= through) events.shift();
 	};
 	const publish = (event: Notification): void => {
+		if (runtime) applyNotification(runtime, event);
 		const queued = { seq: nextSequence++, event };
 		events.push(queued);
 		if (events.length > 128) events.shift();
