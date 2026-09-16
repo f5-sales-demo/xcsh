@@ -34,7 +34,7 @@ and [profile-collectors.ts](https://github.com/f5-sales-demo/xcsh/blob/b0fae9452
 | `runCli` | Execute a CLI with a killable timeout. | Restored with cancellation, bounded output and suppressed stderr. |
 | `splitFullName` | First whitespace token becomes given name; remainder becomes family name. | Restored heuristic; not proof of a person's legal name structure. |
 | Salesforce `available`, `collect`, `parseSalesforceUserRecord` | Detect authenticated CLI, resolve current username, query User record, map contact/employment/manager/address/ID. | Restored basic adapter. Invented employer fallback removed. Does not restore the richer plugin discovery below. |
-| GitHub `available`, `collect`, `parseGithubUserJson` | Check authentication, call `gh api user`, map name, public email, bio, website, GitHub/Twitter IDs and links. | Restored. Did not enumerate private email addresses or all authenticated accounts. |
+| GitHub `available`, `collect`, `parseGithubUserJson` | Check authentication, call `gh api user`, map name, public email, bio, site, GitHub/Twitter IDs and links. | Restored. Did not enumerate private email addresses or all authenticated accounts. |
 | Git `available`, `collect` | Read effective `user.name` and `user.email`, including project configuration. | Uses global configuration now to preserve the cross-project person boundary. |
 | `detectDarwinLanguages`, `detectLinuxLanguages` | Read OS language preferences or locale environment. | Collector helpers restored. UI application path is missing. |
 | `detectSystemFullName` and system `available`/`collect` | Read local account full name plus language candidates. Linux incorrectly selected the shell column as GECOS. | UID-based GECOS column-five fix restored. Machine hardware belongs to a different collector. |
@@ -51,7 +51,7 @@ and [profile-collectors.ts](https://github.com/f5-sales-demo/xcsh/blob/b0fae9452
 | Managed `Primary Human` prompt | Include compact saved identity; require `xcsh://user` for identity, communications and PII questions. | Mandatory capability guidance is restored, including custom prompt paths. |
 | `xcsh://user` handler | Plain read loads saved data. `?seed=true` collects and writes, then returns profile/report. | Plain read and schema restored. Mutating read deliberately replaced by an approved explicit tool operation. |
 | `xcsh://computer` handler | Plain read loads machine cache; `?refresh=true` collects and saves. | Excluded by the original repair plan; no accidental restoration should be claimed. |
-| Conversational recording | Profile supported arbitrary observations, but the inspected core call sites contain no general background conversation-to-observation writer. `saveProfile` callers are seeding, reconciliation and language discovery. | Explicit user facts use `update`; inferred observations have a service method but no attached agent tool path. A general learner is not historically proven by the observation type alone. |
+| Conversational recording | Profile supported observations, but inspected core call sites have no general conversation-to-observation writer. `saveProfile` callers are seeding, reconciliation and language discovery. | Explicit user facts use `update`; inferred observations have a service method but no attached agent tool path. A general learner is not proven by the observation type alone. |
 
 Historical entry points:
 [language discovery](https://github.com/f5-sales-demo/xcsh/blob/b0fae945221c094cfda26f884970aa146e8f5370/packages/coding-agent/src/discovery/language.ts),
