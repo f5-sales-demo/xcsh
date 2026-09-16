@@ -117,6 +117,7 @@ test("turn lifecycle emits truthful status and usage in Codex 0.154 order", asyn
 	listener?.({ type: "agent_end", messages });
 	listener?.({ type: "agent_end", messages });
 	finishPrompt();
+	await Bun.sleep(0);
 
 	expect(events.map(event => event.method)).toEqual([
 		"thread/status/changed",
@@ -148,6 +149,78 @@ test("turn lifecycle emits truthful status and usage in Codex 0.154 order", asyn
 		modelContextWindow: 12345,
 	});
 	expect(events[5]?.params.status).toEqual({ type: "idle" });
+	remote.dispose();
+});
+
+test("provider recovery remains within one remotely initiated turn", async () => {
+	let listener: ((event: any) => void) | undefined;
+	let continueRetry!: () => void;
+	const messages: any[] = [];
+	const target = {
+		sessionId: "retry",
+		sessionName: "Retry fixture",
+		sessionFile: "/tmp/retry.jsonl",
+		model: { id: "fixture", provider: "fixture", contextWindow: 12345 },
+		messages,
+		isStreaming: false,
+		settings: Settings.isolated({ "sandbox.enabled": false }),
+		sessionManager: { getCwd: () => "/tmp", getSessionName: () => "Retry fixture" },
+		subscribe: (next: (event: any) => void) => {
+			listener = next;
+			return () => {};
+		},
+		prompt: async () => {
+			listener?.({ type: "agent_start" });
+			const failed = {
+				role: "assistant",
+				content: [],
+				usage: { input: 1, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 1 },
+				stopReason: "error",
+				errorMessage: "retryable fixture",
+				timestamp: 1,
+			};
+			messages.push(failed);
+			listener?.({ type: "message_start", message: failed });
+			listener?.({ type: "message_end", message: failed });
+			listener?.({ type: "agent_end", messages });
+			await new Promise<void>(resolve => (continueRetry = resolve));
+			listener?.({ type: "agent_start" });
+			const recovered = {
+				role: "assistant",
+				content: [{ type: "text", text: "recovered" }],
+				usage: { input: 2, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 3 },
+				stopReason: "stop",
+				timestamp: 2,
+			};
+			messages.push(recovered);
+			listener?.({ type: "message_start", message: recovered });
+			listener?.({ type: "message_end", message: recovered });
+			listener?.({ type: "agent_end", messages });
+		},
+		abort: async () => continueRetry(),
+		steer: async () => {},
+		setSessionName: async () => false,
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	await remote.call("start", "turn/start", {
+		threadId: "retry",
+		input: [{ type: "text", text: "recover" }],
+	});
+	await Bun.sleep(0);
+	expect(events.filter(event => event.method === "turn/started")).toHaveLength(1);
+	expect(events.filter(event => event.method === "turn/completed")).toHaveLength(0);
+	expect(
+		events.filter(event => event.method === "thread/status/changed").map(event => event.params.status.type),
+	).toEqual(["active"]);
+	continueRetry();
+	await Bun.sleep(0);
+	expect(events.filter(event => event.method === "turn/started")).toHaveLength(1);
+	expect(events.filter(event => event.method === "turn/completed")).toHaveLength(1);
+	expect(
+		events.filter(event => event.method === "thread/status/changed").map(event => event.params.status.type),
+	).toEqual(["active", "idle"]);
 	remote.dispose();
 });
 test("two sessions preserve identity/model and route prompts to their existing owner exactly once", async () => {

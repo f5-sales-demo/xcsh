@@ -120,6 +120,11 @@ test("branch selection excludes sibling messages and preserves ancestor item ide
 
 test("one persisted turn owns steering and its stream identities survive reattachment", async () => {
 	const f = fixture();
+	let finishPrompt!: () => void;
+	f.target.prompt = async () =>
+		new Promise<void>(resolve => {
+			finishPrompt = resolve;
+		});
 	const result = (await f.remote.call("start", "turn/start", {
 		threadId: "durable",
 		clientUserMessageId: "phone-one",
@@ -137,6 +142,8 @@ test("one persisted turn owns steering and its stream identities survive reattac
 	f.message(user("adjust"));
 	f.message(assistant("finished"));
 	f.emit({ type: "agent_end" });
+	finishPrompt();
+	await Bun.sleep(0);
 	const history = f.remote.history();
 	expect(history).toHaveLength(1);
 	expect(history[0]).toMatchObject({ id: result.turn.id, status: "completed" });
@@ -585,7 +592,7 @@ test("live tool completion updates history and emits the same canonical item", (
 	expect(f.events.filter(event => event.method === "item/completed").at(-1)?.params.item).toEqual(tool);
 });
 
-test("a late prompt promise cannot finish a newer active turn", async () => {
+test("a remote turn remains active until prompt recovery settles", async () => {
 	const f = fixture();
 	let finishOld!: () => void;
 	f.target.prompt = async () =>
@@ -596,13 +603,17 @@ test("a late prompt promise cannot finish a newer active turn", async () => {
 	f.message(user("old"));
 	f.message(assistant("done"));
 	f.emit({ type: "agent_end" });
+	await expect(
+		f.remote.call("too-soon", "turn/start", { threadId: "durable", input: [{ type: "text", text: "next" }] }),
+	).rejects.toMatchObject({ code: -32000 });
+	finishOld();
+	await Bun.sleep(0);
+	expect(f.events.filter(event => event.method === "turn/completed")).toHaveLength(1);
 	f.target.prompt = async () => new Promise<void>(() => {});
 	const next = (await f.remote.call("next", "turn/start", {
 		threadId: "durable",
 		input: [{ type: "text", text: "next" }],
 	})) as { turn: { id: string } };
-	finishOld();
-	await Bun.sleep(0);
 	expect(f.remote.history().at(-1)).toMatchObject({ id: next.turn.id, status: "inProgress" });
 	expect(f.events.filter(event => event.method === "turn/completed")).toHaveLength(1);
 });

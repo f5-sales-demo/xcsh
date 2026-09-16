@@ -171,6 +171,7 @@ export class RemoteSession {
 	#listeners = new Set<(notification: Notification) => void>();
 	#unsubscribe: () => void;
 	#active?: Turn;
+	#promptOwnedTurnId?: string;
 	#createdAt = Math.floor(Date.now() / 1000);
 	#updatedAt = this.#createdAt;
 	#itemId = "";
@@ -308,6 +309,7 @@ export class RemoteSession {
 				this.#epoch++;
 				this.#voice = undefined;
 				this.#active = undefined;
+				this.#promptOwnedTurnId = undefined;
 				this.#clientIds.clear();
 				this.#messageIds.clear();
 				this.#startedItems.clear();
@@ -1353,6 +1355,11 @@ export class RemoteSession {
 			this.#pendingClients.push({ text, id: params.clientUserMessageId });
 		// The existing AgentSession remains the only executor and persistence owner.
 		this.#emit("turn/started", { turn: active });
+		// AgentSession can emit an intermediate agent_end before provider recovery
+		// or an automatic retry. Its prompt promise does not settle until that work
+		// is finished, so keep the accepted remote turn active until the promise
+		// resolves. Locally initiated turns still settle directly from agent_end.
+		this.#promptOwnedTurnId = active.id;
 		void this.target.prompt(text).then(
 			() => {
 				if (epoch === this.#epoch) this.#finish("completed", active.id);
@@ -1500,6 +1507,7 @@ export class RemoteSession {
 	#finish(status: string, expectedId?: string): void {
 		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
 		if (!this.#active || (expectedId !== undefined && this.#active.id !== expectedId)) return;
+		if (this.#promptOwnedTurnId === this.#active.id) this.#promptOwnedTurnId = undefined;
 		if (this.#durable) {
 			const id = this.#active.id;
 			const latest = this.history().find(value => value.id === id);
@@ -1577,7 +1585,7 @@ export class RemoteSession {
 				turnId: this.#active?.id,
 				item: this.#assistantItem(this.#itemId, textOf(event.message)),
 			});
-		if (event.type === "agent_end") this.#finish("completed");
+		if (event.type === "agent_end" && this.#promptOwnedTurnId !== this.#active?.id) this.#finish("completed");
 	}
 	#voiceOutput(update: VoiceOutputUpdate): void {
 		let delegated = false;
@@ -1798,7 +1806,7 @@ export class RemoteSession {
 			}
 		}
 		if (event.type === "agent_end") {
-			this.#finish("completed");
+			if (this.#promptOwnedTurnId !== this.#active?.id) this.#finish("completed");
 			this.#startedItems.clear();
 			this.#messageIds.clear();
 		}
