@@ -159,6 +159,34 @@ test("one persisted turn owns steering and its stream identities survive reattac
 	expect(fixture(f.manager).remote.history()).toEqual(history);
 });
 
+test("a late agent_start replay does not create a second remote turn identity", async () => {
+	const f = fixture();
+	let finishPrompt!: () => void;
+	f.target.prompt = async () =>
+		new Promise<void>(resolve => {
+			finishPrompt = resolve;
+		});
+	const result = (await f.remote.call("start", "turn/start", {
+		threadId: "durable",
+		clientUserMessageId: "phone-late-agent-start",
+		input: [{ type: "text", text: "begin" }],
+	})) as { turn: { id: string } };
+	f.emit({ type: "agent_start" });
+	f.message(user("begin"));
+	f.message(assistant("finished"));
+	f.emit({ type: "agent_end" });
+	finishPrompt();
+	await Bun.sleep(0);
+
+	// Provider recovery and worker replay can deliver this after prompt()
+	// settles. It has no new user message, so it cannot begin another turn.
+	f.emit({ type: "agent_start" });
+	expect(f.events.filter(event => event.method === "turn/started").map(event => event.params.turn.id)).toEqual([
+		result.turn.id,
+	]);
+	expect(f.events.filter(event => event.method === "turn/completed")).toHaveLength(1);
+});
+
 test("accepted client message identities survive a complete adapter restart", async () => {
 	const manager = SessionManager.inMemory("/tmp/durable-retry");
 	const first = fixture(manager);

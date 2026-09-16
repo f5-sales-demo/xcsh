@@ -276,6 +276,7 @@ test("provider and reconnect lifecycle replays are deduplicated per client", asy
 	const events = [
 		{ method: "thread/status/changed", params: { threadId: "fixture", status: { type: "active", activeFlags: [] } } },
 		{ method: "turn/started", params: { threadId: "fixture", turn: { id: "turn-1" } } },
+		{ method: "item/started", params: { threadId: "fixture", item: { id: "item-1" } } },
 		{ method: "item/completed", params: { threadId: "fixture", item: { id: "item-1" } } },
 		{ method: "thread/tokenUsage/updated", params: { threadId: "fixture", turnId: "turn-1", tokenUsage: {} } },
 		{ method: "thread/status/changed", params: { threadId: "fixture", status: { type: "idle" } } },
@@ -287,7 +288,13 @@ test("provider and reconnect lifecycle replays are deduplicated per client", asy
 		if (event.method === "thread/status/changed")
 			router.sessions.get("fixture")!.thread.status = structuredClone(event.params.status);
 		router.publish(event);
-		router.publish(structuredClone(event));
+		const replay = structuredClone(event) as any;
+		if (event.method === "turn/started") replay.params.turn.status = "inProgress";
+		if (event.method === "turn/completed") replay.params.turn.status = "completed";
+		if (event.method === "item/started") replay.params.item.status = "inProgress";
+		if (event.method === "item/completed") replay.params.item.status = "completed";
+		if (event.method === "thread/tokenUsage/updated") replay.params.tokenUsage = { total: { totalTokens: 1 } };
+		router.publish(replay);
 	}
 	expect(methods).toEqual(events.map(event => event.method));
 	router.dispose();
