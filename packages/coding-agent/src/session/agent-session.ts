@@ -45,6 +45,7 @@ import type {
 import {
 	calculateRateLimitBackoffMs,
 	getSupportedEfforts,
+	isAnthropicPermanentErrorMessage,
 	isContextOverflow,
 	isUsageLimitError,
 	modelsAreEqual,
@@ -6660,6 +6661,7 @@ export class AgentSession {
 		if (isContextOverflow(message, contextWindow)) return false;
 
 		const err = message.errorMessage;
+		if (isAnthropicPermanentErrorMessage(err)) return false;
 		return this.#isTransientErrorMessage(err) || isUsageLimitError(err);
 	}
 

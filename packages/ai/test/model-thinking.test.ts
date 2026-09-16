@@ -49,6 +49,33 @@ function expectThinking(
 }
 
 describe("model thinking metadata", () => {
+	it("bundles Fable 5 and 5.1 with their live Anthropic limits, pricing, and adaptive effort range", () => {
+		const fable5 = getBundledModel("anthropic", "claude-fable-5");
+		const fable51 = getBundledModel("anthropic", "claude-fable-5-1");
+
+		expect(fable5).toMatchObject({
+			input: ["text", "image"],
+			cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
+			contextWindow: 1_000_000,
+			maxTokens: 128_000,
+		});
+		expect(fable51).toMatchObject({
+			input: ["text", "image"],
+			cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
+			contextWindow: 1_000_000,
+			maxTokens: 128_000,
+		});
+		for (const model of [fable5, fable51]) {
+			expectThinking(
+				model,
+				[Effort.Minimal, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max],
+				"anthropic-adaptive",
+				Effort.High,
+			);
+			expect(mapEffortToAnthropicAdaptiveEffort(model, Effort.Minimal)).toBe("low");
+		}
+	});
+
 	it("bundles GPT-5.6 Sol for LiteLLM with the live-verified effort range", () => {
 		const model = getBundledModel("litellm", "gpt-5.6-sol");
 

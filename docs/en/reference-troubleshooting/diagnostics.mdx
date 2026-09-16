@@ -16,6 +16,11 @@ Run `command -v xcsh` and `xcsh --version`. If the path belongs to an old instal
 
 Run `xcsh --list-models <PROVIDER>`. If no models appear, verify the relevant credential is present without echoing it. Retry with a provider-qualified `--model` name.
 
+For Fable, `credits_required` means the authenticated Anthropic account is not entitled or funded
+for that model; xcsh reports it once without retrying. Check Claude subscription access or API
+billing for the credential in use. An obsolete-client error also does not retry: upgrade xcsh so
+its Claude Code compatibility header matches the current client, then try again.
+
 ## A context or resource command fails
 
 Confirm `/context status` and the explicit namespace. Run `validate` to separate local manifest errors from live application programming interface (API) errors, then retry a read-only `get` or `diff`.

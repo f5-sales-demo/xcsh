@@ -19,3 +19,8 @@ xcsh --model p-openai/gpt-5.2 --no-tools -p "Summarize README.md"
 ```
 
 Replace the example with a model shown by your installed build. Provider-qualified names avoid an accidental fuzzy match when several providers expose similar model names.
+
+For Anthropic, either complete `/login anthropic` with a Claude subscription or export
+`ANTHROPIC_API_KEY` for direct API billing. `--model fable` and `--model anthropic/fable` are exact
+aliases for `anthropic/claude-fable-5-1`; use `anthropic/claude-fable-5` when you specifically need
+the earlier Fable 5 model. Fable access depends on the selected account's entitlement.

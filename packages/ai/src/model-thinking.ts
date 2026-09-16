@@ -120,7 +120,12 @@ const ANTHROPIC_ADAPTIVE_EFFORTS: readonly Effort[] = [
  * Adding a version here without a probe is the defect this set exists to
  * prevent: an unprobed model must fail closed to DEFAULT_REASONING_EFFORTS.
  */
-const ANTHROPIC_EXTENDED_EFFORT_VERSIONS: ReadonlySet<string> = new Set(["5.0"]);
+const ANTHROPIC_EXTENDED_EFFORT_MODELS: ReadonlySet<string> = new Set([
+	"fable-5.0",
+	"fable-5.1",
+	"opus-5.0",
+	"sonnet-5.0",
+]);
 
 const GEMINI_3_PRO_EFFORTS: readonly Effort[] = [Effort.Low, Effort.Medium, Effort.High];
 const GEMINI_3_FLASH_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
@@ -135,7 +140,7 @@ type SemVer = {
 };
 
 type GeminiKind = "pro" | "flash";
-type AnthropicKind = "opus" | "sonnet";
+type AnthropicKind = "fable" | "opus" | "sonnet";
 type OpenAIVariant = "base" | "codex" | "codex-max" | "codex-mini" | "codex-spark" | "mini" | "max" | "nano";
 
 const CODEX_GPT_5_4_PRIORITY_BY_VARIANT: Partial<Record<OpenAIVariant, number>> = {
@@ -453,6 +458,9 @@ function inferModelThinking<TApi extends Api>(model: ApiModel<TApi>): ThinkingCo
 		supportedLevels: efforts.map(effort => ({ effort, description: EFFORT_DESCRIPTIONS[effort] })),
 		defaultLevel: efforts.includes(ReasoningEffort.Medium) ? ReasoningEffort.Medium : efforts[0]!,
 	};
+	if (parsedModel.family === "anthropic" && parsedModel.kind === "fable") {
+		thinking.defaultLevel = Effort.High;
+	}
 	if (
 		model.provider === "google-vertex" &&
 		parsedModel.family === "gemini" &&
@@ -572,7 +580,9 @@ function inferAnthropicSupportedEfforts<TApi extends Api>(
 		// every future Claude the moment it lands in the catalog — the same
 		// open-ended grant that caused this bug. Unprobed versions fail closed to
 		// the conservative range; add one here only with a probe to back it.
-		return ANTHROPIC_EXTENDED_EFFORT_VERSIONS.has(`${parsedModel.version.major}.${parsedModel.version.minor}`)
+		return ANTHROPIC_EXTENDED_EFFORT_MODELS.has(
+			`${parsedModel.kind}-${parsedModel.version.major}.${parsedModel.version.minor}`,
+		)
 			? ANTHROPIC_ADAPTIVE_EFFORTS
 			: DEFAULT_REASONING_EFFORTS;
 	}
@@ -667,7 +677,7 @@ function parseGeminiModel(modelId: string): GeminiModel | null {
 }
 
 function parseAnthropicModel(modelId: string): AnthropicModel | null {
-	const match = /claude-(opus|sonnet)-(\d{1,2}(?:[.-]\d{1,2}){0,2})\b/.exec(modelId);
+	const match = /claude-(fable|opus|sonnet)-(\d{1,2}(?:[.-]\d{1,2}){0,2})\b/.exec(modelId);
 	if (!match) {
 		return null;
 	}
@@ -676,6 +686,12 @@ function parseAnthropicModel(modelId: string): AnthropicModel | null {
 		return null;
 	}
 	return { family: "anthropic", kind: match[1] as AnthropicKind, version };
+}
+
+/** Whether the model requires adaptive thinking on every request. */
+export function isAnthropicAlwaysThinkingModel<TApi extends Api>(model: ApiModel<TApi>): boolean {
+	const parsed = parseKnownModel(model.id);
+	return model.api === "anthropic-messages" && parsed.family === "anthropic" && parsed.kind === "fable";
 }
 
 function parseOpenAIModel(modelId: string): OpenAIModel | null {
