@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+# ruff: noqa: PERF401
 """Enforce the xcsh documentation purpose and evidence contract."""
+
+# pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
 from __future__ import annotations
 
@@ -193,11 +196,15 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
     for page in pages:
         text = page.read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1] if text.startswith("---") else ""
-        match = re.search(r'^\s{2}label:\s*["\']?([^"\'\n]+)', frontmatter, re.MULTILINE)
+        match = re.search(
+            r'^\s{2}label:\s*["\']?([^"\'\n]+)', frontmatter, re.MULTILINE
+        )
         if match:
             label = match.group(1).strip()
             if len(label) > MAX_SIDEBAR_LABEL_LENGTH:
-                errors.append(f"sidebar label exceeds 24 characters: {page.relative_to(root)} {label}")
+                errors.append(
+                    f"sidebar label exceeds 24 characters: {page.relative_to(root)} {label}"
+                )
             sibling = labels[page.parent]
             folded = label.casefold()
             if folded in sibling:
@@ -207,7 +214,9 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
             sibling[folded] = page.relative_to(root).as_posix()
         text_anchors = {_slug(heading) for heading in _headings(text)}
         heading_slugs = [_slug(heading) for heading in _headings(text)]
-        for duplicate in sorted({value for value in heading_slugs if heading_slugs.count(value) > 1}):
+        for duplicate in sorted(
+            {value for value in heading_slugs if heading_slugs.count(value) > 1}
+        ):
             errors.append(f"anchor collision: {page.relative_to(root)}#{duplicate}")
         text_anchors.update(re.findall(r'<[^>]+\sid=["\']([^"\']+)["\']', text))
         anchors[page] = text_anchors
@@ -215,6 +224,7 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
     for page in pages:
         text = page.read_text(encoding="utf-8")
         for href in re.findall(r"(?<!!)\[[^\]]+\]\(([^)\s]+)", text):
+            target: Path | None
             if re.match(r"(?:https?:|mailto:)", href):
                 continue
             target_value, _, fragment = href.partition("#")
@@ -227,12 +237,16 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
                 candidate = (page.parent / target_value).resolve()
                 choices = [candidate]
                 if candidate.suffix not in {".md", ".mdx"}:
-                    choices.extend([candidate.with_suffix(".mdx"), candidate / "index.mdx"])
+                    choices.extend(
+                        [candidate.with_suffix(".mdx"), candidate / "index.mdx"]
+                    )
                 target = next((choice for choice in choices if choice in pages), None)
             if target is None:
                 errors.append(f"broken internal link: {page.relative_to(root)} {href}")
             elif fragment and fragment not in anchors[target]:
-                errors.append(f"broken internal anchor: {page.relative_to(root)} {href}")
+                errors.append(
+                    f"broken internal anchor: {page.relative_to(root)} {href}"
+                )
 
     llms_path = root / "docs" / "llms-config.json"
     if llms_path.is_file():
@@ -253,7 +267,9 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
     return errors
 
 
-def _check_fidelity(root: Path, fidelity: dict, legacy: dict, evidence_entries: dict) -> list[str]:
+def _check_fidelity(
+    root: Path, fidelity: dict, legacy: dict, evidence_entries: dict
+) -> list[str]:
     errors: list[str] = []
     if fidelity.get("schemaVersion") != FIDELITY_SCHEMA_VERSION:
         errors.append("legacy fidelity schema must be version 1")
@@ -261,35 +277,56 @@ def _check_fidelity(root: Path, fidelity: dict, legacy: dict, evidence_entries: 
     row_ids = [row.get("id") for row in rows]
     errors.extend(
         f"duplicate fidelity concept id: {concept_id}"
-        for concept_id in sorted({value for value in row_ids if value and row_ids.count(value) > 1})
+        for concept_id in sorted(
+            {value for value in row_ids if value and row_ids.count(value) > 1}
+        )
     )
-    legacy_by_id = {concept.get("id"): concept for concept in legacy.get("concepts", [])}
+    legacy_by_id = {
+        concept.get("id"): concept for concept in legacy.get("concepts", [])
+    }
     if set(row_ids) != set(legacy_by_id):
         errors.append("fidelity concept set does not match immutable legacy ledger")
-    if fidelity.get("conceptCount") != LEGACY_CONCEPT_COUNT or len(rows) != LEGACY_CONCEPT_COUNT:
+    if (
+        fidelity.get("conceptCount") != LEGACY_CONCEPT_COUNT
+        or len(rows) != LEGACY_CONCEPT_COUNT
+    ):
         errors.append("fidelity ledger must contain exactly 374 concepts")
 
     file_digest_cache: dict[Path, str] = {}
     locator_owners: dict[tuple[str, str], list[dict]] = defaultdict(list)
     required = (
-        "id", "legacyUnitDigestSha256", "destinationPage", "destinationHeading",
-        "contentBlockLocator", "destinationDigestSha256", "claims",
-        "authorityLocators", "evidenceIdentifiers",
+        "id",
+        "legacyUnitDigestSha256",
+        "destinationPage",
+        "destinationHeading",
+        "contentBlockLocator",
+        "destinationDigestSha256",
+        "claims",
+        "authorityLocators",
+        "evidenceIdentifiers",
     )
     allowed_authority_roots = ("packages/", "crates/", "scripts/", ".github/workflows/")
     for row in rows:
         concept_id = row.get("id", "<missing>")
         errors.extend(
             f"fidelity field missing: {concept_id} {field}"
-            for field in required if row.get(field) in (None, "", [])
+            for field in required
+            if row.get(field) in (None, "", [])
         )
         legacy_concept = legacy_by_id.get(concept_id)
         if legacy_concept:
             payload = "\0".join(
                 str(legacy_concept[key])
-                for key in ("legacyPath", "legacyHeading", "legacyBlob", "knowledgeSummary")
+                for key in (
+                    "legacyPath",
+                    "legacyHeading",
+                    "legacyBlob",
+                    "knowledgeSummary",
+                )
             )
-            if hashlib.sha256(payload.encode()).hexdigest() != row.get("legacyUnitDigestSha256"):
+            if hashlib.sha256(payload.encode()).hexdigest() != row.get(
+                "legacyUnitDigestSha256"
+            ):
                 errors.append(f"stale legacy unit digest: {concept_id}")
         page_value = row.get("destinationPage", "")
         page = root / page_value
@@ -304,22 +341,38 @@ def _check_fidelity(root: Path, fidelity: dict, legacy: dict, evidence_entries: 
                 re.DOTALL,
             )
             matches = marker.findall(text)
-            if len(matches) != 1 or f'id="{block_locator}"' not in (matches[0] if matches else ""):
+            if len(matches) != 1 or f'id="{block_locator}"' not in (
+                matches[0] if matches else ""
+            ):
                 errors.append(f"unresolved fidelity content block: {concept_id}")
-            elif hashlib.sha256(matches[0].encode()).hexdigest() != row.get("destinationDigestSha256"):
+            elif hashlib.sha256(matches[0].encode()).hexdigest() != row.get(
+                "destinationDigestSha256"
+            ):
                 errors.append(f"stale fidelity destination digest: {concept_id}")
         claims = row.get("claims", {})
-        statuses = [name for name in ("preserved", "corrected", "superseded") if claims.get(name)]
+        statuses = [
+            name
+            for name in ("preserved", "corrected", "superseded")
+            if claims.get(name)
+        ]
         if len(statuses) != 1:
             errors.append(f"fidelity claim disposition must be singular: {concept_id}")
-        if statuses and statuses[0] != "preserved" and not str(row.get("rationale", "")).strip():
+        if (
+            statuses
+            and statuses[0] != "preserved"
+            and not str(row.get("rationale", "")).strip()
+        ):
             errors.append(f"fidelity correction rationale missing: {concept_id}")
         for evidence_id in row.get("evidenceIdentifiers", []):
             if evidence_id not in evidence_entries:
-                errors.append(f"fidelity references unknown evidence: {concept_id} {evidence_id}")
+                errors.append(
+                    f"fidelity references unknown evidence: {concept_id} {evidence_id}"
+                )
         for locator in row.get("authorityLocators", []):
             authority = locator.get("path", "")
-            if authority != "DEVELOPING.md" and not authority.startswith(allowed_authority_roots):
+            if authority != "DEVELOPING.md" and not authority.startswith(
+                allowed_authority_roots
+            ):
                 errors.append(f"unrelated fidelity authority: {concept_id} {authority}")
                 continue
             authority_path = root / authority
@@ -328,17 +381,31 @@ def _check_fidelity(root: Path, fidelity: dict, legacy: dict, evidence_entries: 
                 continue
             line_start = locator.get("lineStart")
             line_end = locator.get("lineEnd")
-            line_count = len(authority_path.read_text(encoding="utf-8", errors="ignore").splitlines())
-            if not isinstance(line_start, int) or not isinstance(line_end, int) or not (1 <= line_start <= line_end <= line_count):
-                errors.append(f"invalid fidelity authority locator: {concept_id} {authority}")
+            line_count = len(
+                authority_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            )
+            if (
+                not isinstance(line_start, int)
+                or not isinstance(line_end, int)
+                or not (1 <= line_start <= line_end <= line_count)
+            ):
+                errors.append(
+                    f"invalid fidelity authority locator: {concept_id} {authority}"
+                )
             actual_digest = file_digest_cache.setdefault(
                 authority_path, hashlib.sha256(authority_path.read_bytes()).hexdigest()
             )
             if actual_digest != locator.get("sourceDigestSha256"):
-                errors.append(f"stale fidelity authority digest: {concept_id} {authority}")
+                errors.append(
+                    f"stale fidelity authority digest: {concept_id} {authority}"
+                )
     for locator, owners in locator_owners.items():
-        if len(owners) > 1 and any(not str(row.get("sharedCoverageRationale", "")).strip() for row in owners):
-            errors.append(f"unexplained shared fidelity block: {locator[0]}#{locator[1]}")
+        if len(owners) > 1 and any(
+            not str(row.get("sharedCoverageRationale", "")).strip() for row in owners
+        ):
+            errors.append(
+                f"unexplained shared fidelity block: {locator[0]}#{locator[1]}"
+            )
     return errors
 
 
@@ -386,18 +453,18 @@ def _check_legacy_coverage(
         if baseline.get(field) in (None, "")
     )
     expected = {
-            "commit": LEGACY_COMMIT,
-            "treeDigest": LEGACY_TREE,
-            "pageCount": LEGACY_PAGE_COUNT,
-            "conceptCount": LEGACY_CONCEPT_COUNT,
-            "conceptDigestSha256": LEGACY_UNIT_DIGEST,
-            "headingLevel": 2,
-        }
+        "commit": LEGACY_COMMIT,
+        "treeDigest": LEGACY_TREE,
+        "pageCount": LEGACY_PAGE_COUNT,
+        "conceptCount": LEGACY_CONCEPT_COUNT,
+        "conceptDigestSha256": LEGACY_UNIT_DIGEST,
+        "headingLevel": 2,
+    }
     errors.extend(
-            f"legacy baseline mismatch: {field}"
-            for field, value in expected.items()
-            if baseline.get(field) != value
-        )
+        f"legacy baseline mismatch: {field}"
+        for field, value in expected.items()
+        if baseline.get(field) != value
+    )
     if not (root / ".git").exists():
         errors.append("immutable legacy Git metadata is unavailable")
     else:

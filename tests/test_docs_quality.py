@@ -1,5 +1,7 @@
 """Regression tests for the documentation quality contract checker."""
 
+# pylint: disable=too-many-public-methods
+
 # ruff: noqa: INP001
 
 from __future__ import annotations
@@ -7,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER = ROOT / "scripts" / "check_docs_quality.py"
+GIT_EXECUTABLE = shutil.which("git") or "git"
 
 
 class DocsQualityCheckerTests(unittest.TestCase):
@@ -115,7 +119,11 @@ class DocsQualityCheckerTests(unittest.TestCase):
         return temp
 
     def run_checker(self, root: Path) -> subprocess.CompletedProcess[str]:
-        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
         return subprocess.run(  # noqa: S603 - fixed interpreter and checker paths
             [sys.executable, str(CHECKER), "--root", str(root)],
             text=True,
@@ -166,7 +174,9 @@ class DocsQualityCheckerTests(unittest.TestCase):
                     "lineStart": 1,
                     "lineEnd": 1,
                     "matchedToken": "configuration",
-                    "sourceDigestSha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    "sourceDigestSha256": hashlib.sha256(
+                        source.read_bytes()
+                    ).hexdigest(),
                 }
             ],
             "evidenceIdentifiers": ["offline-version"],
@@ -331,8 +341,14 @@ class DocsQualityCheckerTests(unittest.TestCase):
     def test_rejects_shallow_history_without_legacy_commit(self) -> None:
         root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
         self.add_fidelity(root)
-        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-        subprocess.run(["git", "init", "-q", str(root)], check=True, env=env)
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
+        subprocess.run(  # noqa: S603 - resolved Git executable with fixed arguments
+            [GIT_EXECUTABLE, "init", "-q", str(root)], check=True, env=env
+        )
         self.assert_rejected(root, "immutable legacy commit is unavailable")
 
     def test_rejects_stale_fidelity_content_digest(self) -> None:
