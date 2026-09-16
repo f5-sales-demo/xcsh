@@ -181,9 +181,9 @@ test("a late agent_start replay does not create a second remote turn identity", 
 	// Provider recovery and worker replay can deliver this after prompt()
 	// settles. It has no new user message, so it cannot begin another turn.
 	f.emit({ type: "agent_start" });
-	expect(f.events.filter(event => event.method === "turn/started").map(event => event.params.turn.id)).toEqual([
-		result.turn.id,
-	]);
+	expect(
+		f.events.filter(event => event.method === "turn/started").map(event => (event.params.turn as { id: string }).id),
+	).toEqual([result.turn.id]);
 	expect(f.events.filter(event => event.method === "turn/completed")).toHaveLength(1);
 });
 

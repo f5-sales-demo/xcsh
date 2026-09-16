@@ -35,7 +35,7 @@ function installedToDashboard(summary: InstalledPluginSummary, updateMap: Map<st
 		scope: summary.scope,
 		version: entry?.version,
 		installed: true,
-		enabled: entry?.enabled !== false,
+		enabled: summary.effectiveEnabled ?? entry?.enabled !== false,
 		shadowedBy: summary.shadowedBy,
 		hasUpdate: !!updateVersion,
 		updateVersion,

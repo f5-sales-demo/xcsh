@@ -119,8 +119,10 @@ describe("marketplace registry CRUD", () => {
 		catalogPath: "/tmp/market/catalog.json",
 		addedAt: "2025-01-01T00:00:00.000Z",
 		updatedAt: "2025-01-01T00:00:00.000Z",
+		enabled: true,
+		builtIn: false,
 	};
-	const empty: MarketplacesRegistry = { version: 1, marketplaces: [] };
+	const empty: MarketplacesRegistry = { version: 2, marketplaces: [] };
 
 	it("addMarketplaceEntry + getMarketplaceEntry round-trip", () => {
 		const reg = addMarketplaceEntry(empty, entry);
@@ -214,13 +216,13 @@ describe("registry file I/O", () => {
 
 	it("readMarketplacesRegistry returns empty on missing file", async () => {
 		const reg = await readMarketplacesRegistry(marketplacesPath);
-		expect(reg).toEqual({ version: 1, marketplaces: [] });
+		expect(reg).toEqual({ version: 2, marketplaces: [] });
 	});
 
 	it("readMarketplacesRegistry returns empty on malformed JSON", async () => {
 		await Bun.write(marketplacesPath, "not json{{{");
 		const reg = await readMarketplacesRegistry(marketplacesPath);
-		expect(reg).toEqual({ version: 1, marketplaces: [] });
+		expect(reg).toEqual({ version: 2, marketplaces: [] });
 	});
 
 	it("marketplaces registry round-trip", async () => {
@@ -231,14 +233,54 @@ describe("registry file I/O", () => {
 			catalogPath: path.join(tmpDir, "cache", "marketplaces", "test-market", "marketplace.json"),
 			addedAt: "2025-01-15T10:00:00.000Z",
 			updatedAt: "2025-01-15T10:00:00.000Z",
+			enabled: true,
+			builtIn: false,
 		};
 		const reg: MarketplacesRegistry = {
-			version: 1,
+			version: 2,
 			marketplaces: [entry],
 		};
 		await writeMarketplacesRegistry(marketplacesPath, reg);
 		const read = await readMarketplacesRegistry(marketplacesPath);
 		expect(read).toEqual(reg);
+	});
+
+	it("atomically migrates a v1 registry while preserving custom marketplaces", async () => {
+		await Bun.write(
+			marketplacesPath,
+			JSON.stringify({
+				version: 1,
+				marketplaces: [
+					{
+						name: "custom",
+						sourceType: "github",
+						sourceUri: "owner/custom",
+						catalogPath: "/cache/custom/marketplace.json",
+						addedAt: "2025-01-01T00:00:00.000Z",
+						updatedAt: "2025-01-01T00:00:00.000Z",
+					},
+				],
+			}),
+		);
+
+		const migrated = await readMarketplacesRegistry(marketplacesPath);
+		expect(migrated).toEqual({
+			version: 2,
+			marketplaces: [
+				{
+					name: "custom",
+					sourceType: "github",
+					sourceUri: "owner/custom",
+					catalogPath: "/cache/custom/marketplace.json",
+					addedAt: "2025-01-01T00:00:00.000Z",
+					updatedAt: "2025-01-01T00:00:00.000Z",
+					enabled: true,
+					builtIn: false,
+				},
+			],
+		});
+		expect(JSON.parse(await Bun.file(marketplacesPath).text()).version).toBe(2);
+		expect(fs.existsSync(`${marketplacesPath}.tmp`)).toBe(false);
 	});
 
 	// ── Installed plugins registry ───────────────────────────────────
