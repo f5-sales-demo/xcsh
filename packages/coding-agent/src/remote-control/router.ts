@@ -388,7 +388,6 @@ export class RemoteRouter {
 		if (event.method === "thread/status/changed") {
 			const status = event.params.status;
 			if (!status || typeof status !== "object" || Array.isArray(status)) return;
-			if (isDeepStrictEqual(session.thread.status, status)) return;
 			session.thread.status = structuredClone(status);
 			for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
 			return;

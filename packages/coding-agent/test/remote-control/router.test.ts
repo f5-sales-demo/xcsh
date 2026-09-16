@@ -282,6 +282,10 @@ test("provider and reconnect lifecycle replays are deduplicated per client", asy
 		{ method: "turn/completed", params: { threadId: "fixture", turn: { id: "turn-1" } } },
 	];
 	for (const event of events) {
+		// Managed sessions synchronize their catalog projection before publishing.
+		// That must not suppress the first client notification for the transition.
+		if (event.method === "thread/status/changed")
+			router.sessions.get("fixture")!.thread.status = structuredClone(event.params.status);
 		router.publish(event);
 		router.publish(structuredClone(event));
 	}
