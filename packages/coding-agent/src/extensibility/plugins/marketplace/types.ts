@@ -145,7 +145,7 @@ export interface PluginSourceNpm {
 // ── Marketplaces registry (stored in <configRoot>/marketplaces.json) ─
 
 export interface MarketplacesRegistry {
-	version: 1;
+	version: 2;
 	marketplaces: MarketplaceRegistryEntry[];
 }
 
@@ -158,6 +158,12 @@ export interface MarketplaceRegistryEntry {
 	catalogPath: string;
 	addedAt: string;
 	updatedAt: string;
+	/** Whether discovery and lifecycle operations are allowed for this marketplace. */
+	enabled: boolean;
+	/** Built-in entries are reconciled by xcsh and cannot be removed. */
+	builtIn: boolean;
+	/** Most recent marketplace disable time. Used to keep older installs inactive after re-enable. */
+	pluginsDisabledAt?: string;
 }
 
 // ── Installed plugins registry ───────────────────────────────────────
@@ -183,6 +189,8 @@ export interface InstalledPluginEntry {
 	gitCommitSha?: string;
 	/** OMP extension — CLI/UI concern only in v1. */
 	enabled?: boolean;
+	/** Most recent explicit plugin enable time. */
+	enabledAt?: string;
 }
 
 /**
@@ -196,6 +204,21 @@ export interface InstalledPluginSummary {
 	id: string;
 	scope: "user" | "project" | "local";
 	entries: InstalledPluginEntry[];
+	/** Effective state after applying both plugin and marketplace enablement. */
+	effectiveEnabled?: boolean;
 	/** Set when a user-scoped plugin is overridden by a project-scoped install. */
 	shadowedBy?: "project";
+}
+
+export function isInstalledPluginEffectivelyEnabled(
+	entry: Pick<InstalledPluginEntry, "enabled" | "enabledAt" | "installedAt">,
+	marketplace?: Pick<MarketplaceRegistryEntry, "enabled" | "pluginsDisabledAt">,
+): boolean {
+	if (entry.enabled === false || marketplace?.enabled === false) return false;
+	if (!marketplace?.pluginsDisabledAt) return true;
+	const disabledAt = Date.parse(marketplace.pluginsDisabledAt);
+	if (!Number.isFinite(disabledAt)) return true;
+	const installedAt = Date.parse(entry.installedAt);
+	const explicitlyEnabledAt = entry.enabledAt ? Date.parse(entry.enabledAt) : Number.NEGATIVE_INFINITY;
+	return installedAt > disabledAt || explicitlyEnabledAt > disabledAt;
 }

@@ -11,6 +11,7 @@ import {
 	executePluginUpgrade,
 	executePluginUpgradeAll,
 	prepareMarketplaceAddition,
+	prepareMarketplaceEnabled,
 	preparePluginEnabled,
 	preparePluginInstall,
 	preparePluginRemoval,
@@ -37,6 +38,7 @@ async function fixture(): Promise<{
 		projectInstalledRegistryPath: path.join(root, "project", ".xcsh", "plugins", "installed_plugins.json"),
 		marketplacesCacheDir: path.join(root, "cache", "marketplaces"),
 		pluginsCacheDir: path.join(root, "cache", "plugins"),
+		includeBuiltinMarketplace: false,
 	};
 	return { root, source, manager: () => new MarketplaceManager(options) };
 }
@@ -131,6 +133,15 @@ test("marketplace addition resolves identity before review and rejects source dr
 		StaleActionReviewError,
 	);
 	expect(await f.manager().listMarketplaces()).toEqual([]);
+});
+
+test("marketplace enablement is reviewed and no-ops when the requested state already matches", async () => {
+	const f = await fixture();
+	await f.manager().addMarketplace(f.source);
+	const prepared = await prepareMarketplaceEnabled(f.manager(), "test-marketplace", false);
+	expect(prepared?.review.changes[0]).toMatchObject({ before: "Enabled", after: "Disabled" });
+	await f.manager().setMarketplaceEnabled(prepared!.target.name, prepared!.target.enabled);
+	expect(await prepareMarketplaceEnabled(f.manager(), "test-marketplace", false)).toBeNull();
 });
 
 test("--force remains a reviewed reinstall operation rather than consent", async () => {

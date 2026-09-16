@@ -61,6 +61,11 @@ export interface PreparedMarketplaceRemoval {
 	target: MarketplaceRegistryEntry;
 }
 
+export interface PreparedMarketplaceEnabled {
+	review: ActionReview;
+	target: { name: string; enabled: boolean };
+}
+
 export interface PreparedPluginSetup {
 	review: ActionReview;
 	target: {
@@ -92,6 +97,7 @@ function installedRevision(target: InstalledTarget): string {
 		entries: target.summary.entries.map(entry => ({
 			version: entry.version,
 			enabled: entry.enabled !== false,
+			enabledAt: entry.enabledAt ?? null,
 			installPath: entry.installPath,
 			installedAt: entry.installedAt,
 			lastUpdated: entry.lastUpdated,
@@ -565,5 +571,33 @@ export async function prepareMarketplaceRemoval(
 			}`,
 		},
 		target: marketplace,
+	};
+}
+
+export async function prepareMarketplaceEnabled(
+	manager: MarketplaceManager,
+	name: string,
+	enabled: boolean,
+): Promise<PreparedMarketplaceEnabled | null> {
+	const marketplace = (await manager.listMarketplaces()).find(candidate => candidate.name === name);
+	if (!marketplace) throw new Error(`Marketplace "${name}" is not configured.`);
+	if (marketplace.enabled === enabled) return null;
+	return {
+		review: {
+			identity: `marketplace:${name}`,
+			scope: "User marketplace registry and installed plugin capabilities",
+			revision: JSON.stringify(marketplace),
+			changes: [
+				{
+					field: "Marketplace state",
+					before: marketplace.enabled ? "Enabled" : "Disabled",
+					after: enabled ? "Enabled" : "Disabled",
+				},
+			],
+			consequence: enabled
+				? "Restores discovery and lifecycle operations. Plugins installed before the last disable remain inactive until individually enabled."
+				: "Stops discovery, install, refresh, upgrade, and capability loading for every plugin from this marketplace.",
+		},
+		target: { name, enabled },
 	};
 }

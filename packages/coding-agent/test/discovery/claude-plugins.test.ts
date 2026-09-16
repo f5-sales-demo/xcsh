@@ -102,6 +102,54 @@ describe("listXcshPluginRoots", () => {
 		});
 	});
 
+	test("applies marketplace disable and explicit re-enable timestamps to capability roots", async () => {
+		const configDir = path.join(tempDir, ".xcsh");
+		const pluginsDir = path.join(configDir, "plugins");
+		await fs.mkdir(pluginsDir, { recursive: true });
+		const registryPath = path.join(pluginsDir, "installed_plugins.json");
+		const marketplacesPath = path.join(configDir, "marketplaces.json");
+		const registry = {
+			version: 2,
+			plugins: {
+				"test-plugin@test-market": [
+					{
+						scope: "user",
+						installPath: "/path/to/test-plugin",
+						version: "1.0.0",
+						installedAt: "2025-01-01T00:00:00Z",
+						lastUpdated: "2025-01-01T00:00:00Z",
+						enabledAt: undefined as string | undefined,
+					},
+				],
+			},
+		};
+		const marketplace = {
+			version: 2,
+			marketplaces: [
+				{
+					name: "test-market",
+					enabled: false,
+					pluginsDisabledAt: "2025-01-02T00:00:00Z",
+				},
+			],
+		};
+		await fs.writeFile(registryPath, JSON.stringify(registry));
+		await fs.writeFile(marketplacesPath, JSON.stringify(marketplace));
+		expect((await listXcshPluginRoots(tempDir)).roots).toEqual([]);
+
+		marketplace.marketplaces[0]!.enabled = true;
+		await fs.writeFile(marketplacesPath, JSON.stringify(marketplace));
+		clearXcshPluginRootsCache();
+		clearFsCache();
+		expect((await listXcshPluginRoots(tempDir)).roots).toEqual([]);
+
+		registry.plugins["test-plugin@test-market"][0]!.enabledAt = "2025-01-03T00:00:00Z";
+		await fs.writeFile(registryPath, JSON.stringify(registry));
+		clearXcshPluginRootsCache();
+		clearFsCache();
+		expect((await listXcshPluginRoots(tempDir)).roots).toHaveLength(1);
+	});
+
 	test("parses plugin with project scope", async () => {
 		const pluginsDir = path.join(tempDir, ".xcsh", "plugins");
 		await fs.mkdir(pluginsDir, { recursive: true });
