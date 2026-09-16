@@ -922,6 +922,108 @@ test("phone workspace bootstrap uses the xcsh documents namespace", async () => 
 	}
 });
 
+test("phone workspace bootstrap works with zero loaded sessions", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-workspace-empty-"));
+	const workspaceRoot = join(root, "Documents", "xcsh");
+	await mkdir(workspaceRoot, { recursive: true });
+	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
+	let startedCwd: string | undefined;
+	const lifecycle = {
+		defaultCwd: workspaceRoot,
+		list: () => [],
+		start: async (params: Record<string, unknown>) => {
+			startedCwd = String(params.cwd);
+			const thread = {
+				id: "fresh-phone-thread",
+				sessionId: "fresh-phone-thread",
+				cwd: startedCwd,
+				model: "gpt-5.6-luna",
+				modelProvider: "openai-codex",
+				reasoningEffort: "high",
+				turns: [],
+			};
+			return {
+				thread,
+				call: async () => ({
+					thread,
+					model: thread.model,
+					modelProvider: thread.modelProvider,
+					cwd: thread.cwd,
+					reasoningEffort: thread.reasoningEffort,
+				}),
+			};
+		},
+		resume: async () => undefined,
+		read: async () => undefined,
+		fork: async () => {
+			throw new Error("not used");
+		},
+		archive: async () => {},
+		unarchive: async () => ({}),
+		delete: async () => {},
+	};
+	const router = new RemoteRouter(join(root, ".xcsh"), "21.29.3", lifecycle);
+	router.notify = (_client, event) => notifications.push(event);
+	try {
+		const bootstrapScript =
+			'target="$PWD/Documents/""Codex""/2026-09-16/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"; #'.padEnd(
+				737,
+				"x",
+			);
+		await router.handle("phone", {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" } },
+		});
+		expect(
+			await router.handle("phone", {
+				id: 2,
+				method: "process/spawn",
+				params: {
+					processHandle: "phone-workspace-bootstrap-empty",
+					cwd: "/",
+					command: ["/bin/sh", "-lc", bootstrapScript],
+					tty: false,
+					streamStdin: false,
+					streamStdoutStderr: false,
+					timeoutMs: 20_000,
+					outputBytesCap: 4096,
+				},
+			}),
+		).toEqual({ id: 2, result: {} });
+		const deadline = Date.now() + 3000;
+		while (!notifications.some(event => event.method === "process/exited") && Date.now() < deadline)
+			await Bun.sleep(5);
+		const workspace = notifications.find(event => event.method === "process/exited")?.params.stdout;
+		expect(workspace).toBeString();
+		const workspacePath = workspace as string;
+		expect(workspacePath).toStartWith(`${workspaceRoot}/`);
+		expect((await stat(workspacePath)).isDirectory()).toBe(true);
+		expect(
+			await router.handle("phone", {
+				id: 3,
+				method: "thread/start",
+				params: { cwd: workspacePath, model: "gpt-5.6-luna", effort: "high" },
+			}),
+		).toMatchObject({ result: { thread: { id: "fresh-phone-thread", cwd: workspacePath } } });
+		expect(startedCwd).toBe(workspacePath);
+		expect(
+			await router.handle("phone", {
+				id: 4,
+				method: "process/spawn",
+				params: {
+					processHandle: "unrelated-root-process",
+					cwd: "/",
+					command: [process.execPath, "-e", ""],
+				},
+			}),
+		).toMatchObject({ error: { code: -32602 } });
+	} finally {
+		router.dispose();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
 test("a new phone conversation can enter voice before its first turn", async () => {
 	expect(voiceFirstTrace.events.map(event => `${event.direction}/${event.method}`)).toEqual([
 		"in/initialize",
