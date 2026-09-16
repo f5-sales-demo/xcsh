@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "kind": "anthropic-fable-live-uat",
-  "capturedAt": "2026-09-16T21:34:22Z",
+  "capturedAt": "2026-09-16T21:45:43Z",
   "host": {
     "os": "Ubuntu",
     "architecture": "x86_64",
     "worktree": "/data/robin-GIT/xcsh-fable-3913"
   },
   "source": {
-    "testedHead": "1794bcb5f532991b5034c0df84bbf8bb1856b671",
+    "testedHead": "f6fee58c9a5b930641ba5683b2f020bb2ceabefc",
     "implementationCommit": "a31dd11f596003b1e16ed51284962e9a029d6324"
   },
   "packagedArtifact": {
-    "version": "21.29.2",
-    "sha256": "78a7269b416576d9e702e1dab64506298c0cf2b69564d08ef80047bb054e2afb"
+    "version": "21.29.3",
+    "sha256": "e1d2cc94caaaea0b63694b6733478c3798e81abc35e90ed60e6eedc7cf89c49f"
   },
   "authentication": {
     "kind": "anthropic-oauth",
@@ -71,6 +71,32 @@
       "status": "passed"
     }
   ],
+  "postMergeRevalidation": {
+    "capturedAt": "2026-09-16T21:45:43Z",
+    "head": "f6fee58c9a5b930641ba5683b2f020bb2ceabefc",
+    "selector": "fable",
+    "selectedModel": "anthropic/claude-fable-5-1",
+    "returnedModel": "claude-fable-5-1",
+    "thinking": "high",
+    "targets": [
+      {
+        "target": "source",
+        "requestCount": 2,
+        "tools": ["read", "bash"],
+        "assertion": "FABLE_MERGED_SOURCE_READY",
+        "status": "passed"
+      },
+      {
+        "target": "packaged",
+        "requestCount": 2,
+        "tools": ["read", "bash"],
+        "assertion": "FABLE_MERGED_PACKAGE_READY",
+        "status": "passed"
+      }
+    ],
+    "retryEvents": 0,
+    "status": "passed"
+  },
   "fableScenarios": [
     {
       "name": "streaming-and-model-attribution",
