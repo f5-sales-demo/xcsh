@@ -16,3 +16,10 @@ regexes = [
   '''00000000-0000-0000-0000-000000000000''',
   '''00000000-0000-4000-8000-[0-9a-f]{12}''',
 ]
+
+[[allowlists]]
+description = "Public Git commit identifiers captured by the generated documentation fidelity ledger"
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{40}$''']
+paths = ['''(?:^|/)\.github/docs-quality/legacy-fidelity\.json$''']
