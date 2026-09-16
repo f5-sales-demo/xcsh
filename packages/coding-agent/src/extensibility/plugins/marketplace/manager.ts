@@ -12,6 +12,12 @@ import * as path from "node:path";
 
 import { isEnoent, logger } from "@f5-sales-demo/pi-utils";
 
+import {
+	BUILTIN_MARKETPLACE_NAME,
+	createBuiltinMarketplaceEntry,
+	getBuiltinMarketplaceSnapshot,
+	isBuiltinMarketplaceSource,
+} from "./builtin";
 import { cachePlugin } from "./cache";
 import { classifySource, fetchMarketplace, parseMarketplaceCatalog, promoteCloneToCache } from "./fetcher";
 import {
@@ -36,7 +42,7 @@ import type {
 	MarketplacePluginEntry,
 	MarketplaceRegistryEntry,
 } from "./types";
-import { buildPluginId, parsePluginId } from "./types";
+import { buildPluginId, isInstalledPluginEffectivelyEnabled, parsePluginId } from "./types";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
@@ -60,6 +66,8 @@ export interface MarketplaceManagerOptions {
 	 *  Receives any additional file paths that should also be invalidated from the fs cache.
 	 */
 	clearPluginRootsCache?: (extraPaths?: readonly string[]) => void;
+	/** Test-only escape hatch; production always includes the built-in marketplace. */
+	includeBuiltinMarketplace?: boolean;
 }
 
 export interface PluginUpdate {
@@ -95,13 +103,60 @@ export class MarketplaceManager {
 		this.#opts.clearPluginRootsCache?.(extra);
 	}
 
+	async #readMarketplacesRegistry(): Promise<Awaited<ReturnType<typeof readMarketplacesRegistry>>> {
+		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		if (this.#opts.includeBuiltinMarketplace === false) return reg;
+		const catalogPath = path.join(this.#opts.marketplacesCacheDir, BUILTIN_MARKETPLACE_NAME, "marketplace.json");
+		const canonical = createBuiltinMarketplaceEntry(catalogPath);
+		const existing = reg.marketplaces.find(entry => entry.name === BUILTIN_MARKETPLACE_NAME);
+		const reconciled = existing
+			? {
+					...existing,
+					name: canonical.name,
+					sourceType: canonical.sourceType,
+					sourceUri: canonical.sourceUri,
+					catalogPath: canonical.catalogPath,
+					enabled: existing.enabled !== false,
+					builtIn: true,
+				}
+			: canonical;
+		const marketplaces = [
+			reconciled,
+			...reg.marketplaces.filter(
+				entry => entry.name !== BUILTIN_MARKETPLACE_NAME && !isBuiltinMarketplaceSource(entry.sourceUri),
+			),
+		];
+		const updated = { version: 2 as const, marketplaces };
+
+		const { json: snapshot } = getBuiltinMarketplaceSnapshot();
+		let catalogUsable = false;
+		try {
+			parseMarketplaceCatalog(await Bun.file(catalogPath).text(), catalogPath);
+			catalogUsable = true;
+		} catch {
+			// A missing or invalid cache is repaired from the integrity-checked embedded snapshot.
+		}
+		if (!catalogUsable) {
+			await fs.mkdir(path.dirname(catalogPath), { recursive: true });
+			await Bun.write(catalogPath, snapshot);
+		}
+
+		if (JSON.stringify(updated) !== JSON.stringify(reg)) {
+			await writeMarketplacesRegistry(this.#opts.marketplacesRegistryPath, updated);
+		}
+		return updated;
+	}
+
 	// ── Marketplace lifecycle ─────────────────────────────────────────────────
 
 	async addMarketplace(
 		source: string,
 		validateCatalogBeforeCommit?: (catalog: MarketplaceCatalog) => void,
 	): Promise<MarketplaceRegistryEntry> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const reg = await this.#readMarketplacesRegistry();
+		if (isBuiltinMarketplaceSource(source)) {
+			throw new Error(`Marketplace "${BUILTIN_MARKETPLACE_NAME}" is built in and its canonical source is reserved.`);
+		}
 		const existingNames = new Set(reg.marketplaces.map(m => m.name));
 
 		const { catalog, clonePath } = await fetchMarketplace(source, this.#opts.marketplacesCacheDir);
@@ -143,6 +198,8 @@ export class MarketplaceManager {
 			catalogPath,
 			addedAt: now,
 			updatedAt: now,
+			enabled: true,
+			builtIn: false,
 		};
 
 		const updated = addMarketplaceEntry(reg, entry);
@@ -153,7 +210,11 @@ export class MarketplaceManager {
 	}
 
 	async removeMarketplace(name: string): Promise<void> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const reg = await this.#readMarketplacesRegistry();
+		const existing = getMarketplaceEntry(reg, name);
+		if (existing?.builtIn) {
+			throw new Error(`Marketplace "${name}" is built in and cannot be removed. Disable it instead.`);
+		}
 		// removeMarketplaceEntry throws if not found — propagate to caller.
 		const updated = removeMarketplaceEntry(reg, name);
 		await writeMarketplacesRegistry(this.#opts.marketplacesRegistryPath, updated);
@@ -167,10 +228,13 @@ export class MarketplaceManager {
 	}
 
 	async updateMarketplace(name: string): Promise<MarketplaceRegistryEntry> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const reg = await this.#readMarketplacesRegistry();
 		const existing = getMarketplaceEntry(reg, name);
 		if (!existing) {
 			throw new Error(`Marketplace "${name}" not found`);
+		}
+		if (!existing.enabled) {
+			throw new Error(`Marketplace "${name}" is disabled. Enable it before updating.`);
 		}
 
 		const fetchResult: { catalog: MarketplaceCatalog; clonePath?: string } = await fetchMarketplace(
@@ -215,7 +279,7 @@ export class MarketplaceManager {
 	}
 
 	async updateAllMarketplaces(): Promise<MarketplaceRegistryEntry[]> {
-		const marketplaces = await this.listMarketplaces();
+		const marketplaces = (await this.listMarketplaces()).filter(marketplace => marketplace.enabled);
 		const results: MarketplaceRegistryEntry[] = [];
 		for (const m of marketplaces) {
 			const updated = await this.updateMarketplace(m.name);
@@ -225,8 +289,27 @@ export class MarketplaceManager {
 	}
 
 	async listMarketplaces(): Promise<MarketplaceRegistryEntry[]> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const reg = await this.#readMarketplacesRegistry();
 		return reg.marketplaces;
+	}
+
+	async setMarketplaceEnabled(name: string, enabled: boolean): Promise<MarketplaceRegistryEntry> {
+		const reg = await this.#readMarketplacesRegistry();
+		const existing = getMarketplaceEntry(reg, name);
+		if (!existing) throw new Error(`Marketplace "${name}" not found`);
+		if (existing.enabled === enabled) return existing;
+		const now = new Date().toISOString();
+		const updatedEntry: MarketplaceRegistryEntry = {
+			...existing,
+			enabled,
+			...(!enabled ? { pluginsDisabledAt: now } : {}),
+		};
+		await writeMarketplacesRegistry(this.#opts.marketplacesRegistryPath, {
+			...reg,
+			marketplaces: reg.marketplaces.map(entry => (entry.name === name ? updatedEntry : entry)),
+		});
+		this.#clearCache();
+		return updatedEntry;
 	}
 
 	/**
@@ -234,10 +317,13 @@ export class MarketplaceManager {
 	 * fetches every selected marketplace and isolates failures so cached catalogs remain usable.
 	 */
 	async refreshMarketplaces(names?: readonly string[]): Promise<MarketplaceRefreshResult> {
-		const selected = names ?? (await this.listMarketplaces()).map(marketplace => marketplace.name);
+		const enabled = (await this.listMarketplaces()).filter(marketplace => marketplace.enabled);
+		const enabledNames = new Set(enabled.map(marketplace => marketplace.name));
+		const selected = names ?? [...enabledNames];
 		const result: MarketplaceRefreshResult = { successful: [], failed: [] };
 
 		for (const name of new Set(selected)) {
+			if (!enabledNames.has(name)) continue;
 			try {
 				await this.updateMarketplace(name);
 				result.successful.push(name);
@@ -255,9 +341,10 @@ export class MarketplaceManager {
 
 	/** Fetch current catalogs without mutating persistent state (used by dry-run workflows). */
 	async previewMarketplacePlugins(names?: readonly string[]): Promise<MarketplaceCatalogPreview> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
-		const selectedNames = names ?? reg.marketplaces.map(marketplace => marketplace.name);
-		const selected = new Map(reg.marketplaces.map(marketplace => [marketplace.name, marketplace]));
+		const reg = await this.#readMarketplacesRegistry();
+		const enabledMarketplaces = reg.marketplaces.filter(marketplace => marketplace.enabled);
+		const selectedNames = names ?? enabledMarketplaces.map(marketplace => marketplace.name);
+		const selected = new Map(enabledMarketplaces.map(marketplace => [marketplace.name, marketplace]));
 		const previewDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-marketplace-preview-"));
 		const result: MarketplaceCatalogPreview = { successful: [], failed: [], plugins: [] };
 
@@ -297,19 +384,21 @@ export class MarketplaceManager {
 	// ── Plugin discovery ──────────────────────────────────────────────────────
 
 	async listAvailablePlugins(marketplace?: string): Promise<MarketplacePluginEntry[]> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const reg = await this.#readMarketplacesRegistry();
 
 		if (marketplace !== undefined) {
 			const entry = reg.marketplaces.find(m => m.name === marketplace);
 			if (!entry) {
 				throw new Error(`Marketplace "${marketplace}" not found`);
 			}
+			if (!entry.enabled) return [];
 			const catalog = await this.#readCatalog(entry);
 			return catalog.plugins;
 		}
 
 		const all: MarketplacePluginEntry[] = [];
 		for (const entry of reg.marketplaces) {
+			if (!entry.enabled) continue;
 			try {
 				const catalog = await this.#readCatalog(entry);
 				all.push(...catalog.plugins);
@@ -337,10 +426,13 @@ export class MarketplaceManager {
 		const registryPath = this.#registryPath(scope);
 
 		// 1. Find marketplace entry
-		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const mktReg = await this.#readMarketplacesRegistry();
 		const mktEntry = getMarketplaceEntry(mktReg, marketplace);
 		if (!mktEntry) {
 			throw new Error(`Marketplace "${marketplace}" not found`);
+		}
+		if (!mktEntry.enabled) {
+			throw new Error(`Marketplace "${marketplace}" is disabled. Enable it before installing plugins.`);
 		}
 
 		// 2. Find plugin in catalog
@@ -547,6 +639,8 @@ export class MarketplaceManager {
 	// ── Plugin state ──────────────────────────────────────────────────────────
 
 	async listInstalledPlugins(): Promise<InstalledPluginSummary[]> {
+		const marketplaceReg = await this.#readMarketplacesRegistry();
+		const marketplaces = new Map(marketplaceReg.marketplaces.map(entry => [entry.name, entry]));
 		const userReg = await readInstalledPluginsRegistry(this.#opts.installedRegistryPath);
 		const projectReg = this.#opts.projectInstalledRegistryPath
 			? await readInstalledPluginsRegistry(this.#opts.projectInstalledRegistryPath)
@@ -557,7 +651,16 @@ export class MarketplaceManager {
 		const activeProjectIds = new Set(
 			projectReg
 				? Object.entries(projectReg.plugins)
-						.filter(([, entries]) => entries.length > 0 && entries[0].enabled !== false)
+						.filter(([id, entries]) => {
+							const parsed = parsePluginId(id);
+							return (
+								entries.length > 0 &&
+								isInstalledPluginEffectivelyEnabled(
+									entries[0],
+									parsed ? marketplaces.get(parsed.marketplace) : undefined,
+								)
+							);
+						})
 						.map(([id]) => id)
 				: [],
 		);
@@ -566,15 +669,27 @@ export class MarketplaceManager {
 		// Project entries first
 		if (projectReg) {
 			for (const [id, entries] of Object.entries(projectReg.plugins)) {
-				results.push({ id, scope: "project", entries });
+				const parsed = parsePluginId(id);
+				results.push({
+					id,
+					scope: "project",
+					entries,
+					effectiveEnabled: entries.some(entry =>
+						isInstalledPluginEffectivelyEnabled(entry, parsed ? marketplaces.get(parsed.marketplace) : undefined),
+					),
+				});
 			}
 		}
 		// User entries (shadow-marked if overridden by project)
 		for (const [id, entries] of Object.entries(userReg.plugins)) {
+			const parsed = parsePluginId(id);
 			results.push({
 				id,
 				scope: "user",
 				entries,
+				effectiveEnabled: entries.some(entry =>
+					isInstalledPluginEffectivelyEnabled(entry, parsed ? marketplaces.get(parsed.marketplace) : undefined),
+				),
 				...(activeProjectIds.has(id) ? { shadowedBy: "project" as const } : {}),
 			});
 		}
@@ -620,7 +735,11 @@ export class MarketplaceManager {
 			...reg,
 			plugins: {
 				...reg.plugins,
-				[pluginId]: entries.map(e => ({ ...e, enabled })),
+				[pluginId]: entries.map(e => ({
+					...e,
+					enabled,
+					...(enabled ? { enabledAt: new Date().toISOString() } : {}),
+				})),
 			},
 		};
 		await writeInstalledPluginsRegistry(registryPath, updated);
@@ -635,9 +754,10 @@ export class MarketplaceManager {
 	// Refresh marketplace catalogs that haven't been updated in more than 24 h.
 	// Per-marketplace failures are silently swallowed — offline is fine.
 	async refreshStaleMarketplaces(): Promise<void> {
-		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const reg = await this.#readMarketplacesRegistry();
 		const staleMs = 24 * 60 * 60 * 1000;
 		for (const entry of reg.marketplaces) {
+			if (!entry.enabled) continue;
 			if (Date.now() - Date.parse(entry.updatedAt) >= staleMs) {
 				try {
 					await this.updateMarketplace(entry.name);
@@ -656,7 +776,7 @@ export class MarketplaceManager {
 		// comparing, so freshly-published versions are seen. Passive callers (startup notify,
 		// dashboard poll) omit it and rely on the 24h TTL (refreshStaleMarketplaces).
 		if (opts?.refresh) await this.refreshMarketplaces();
-		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const mktReg = await this.#readMarketplacesRegistry();
 		return this.#collectUpdates(mktReg);
 	}
 
@@ -665,11 +785,12 @@ export class MarketplaceManager {
 	 * No registry, persistent cache, installed plugin, or timestamp is changed.
 	 */
 	async previewPluginUpdates(): Promise<PluginUpdate[]> {
-		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const mktReg = await this.#readMarketplacesRegistry();
 		const previewDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-plugin-upgrade-preview-"));
 		try {
 			const catalogs = new Map<string, MarketplaceCatalog>();
 			for (const marketplace of mktReg.marketplaces) {
+				if (!marketplace.enabled) continue;
 				const { catalog } = await fetchMarketplace(marketplace.sourceUri, previewDir);
 				if (catalog.name !== marketplace.name) {
 					throw new Error(
@@ -712,7 +833,7 @@ export class MarketplaceManager {
 				if (!installed) continue;
 
 				const mktEntry = mktReg.marketplaces.find(m => m.name === parsed.marketplace);
-				if (!mktEntry) continue;
+				if (!mktEntry?.enabled) continue;
 
 				let catalogVersion: string | undefined;
 				if (catalogs) {

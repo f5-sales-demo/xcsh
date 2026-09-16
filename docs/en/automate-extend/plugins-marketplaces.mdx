@@ -8,6 +8,12 @@ sidebar:
 
 A plugin bundles capabilities and configuration. A marketplace is an index of plugins; installing from one still executes code under the user's account.
 
+xcsh registers `f5-sales-demo/marketplace` automatically. Its catalog snapshot is embedded in xcsh, so discovery and the recommended view work offline. Installation still refreshes the live repository before any plugin code is copied.
+
+Use `xcsh plugin marketplace list` to see whether each marketplace is enabled. Disable or re-enable one with `xcsh plugin marketplace disable <name>` and `xcsh plugin marketplace enable <name>`. Disabled marketplaces do not participate in discovery, installation, refresh, upgrades, or capability loading. Re-enabling a marketplace does not reactivate plugins installed before it was disabled; enable each trusted plugin explicitly. Plugins installed after re-enabling are active normally.
+
+The built-in marketplace cannot be removed because xcsh reconciles its canonical name and source on startup. Disable it instead. Custom marketplaces remain removable.
+
 ## How do I inspect before installing?
 
 Run `xcsh plugin discover` or the marketplace action shown by `xcsh plugin --help`. Review the package source, version, requested features, and install scope.

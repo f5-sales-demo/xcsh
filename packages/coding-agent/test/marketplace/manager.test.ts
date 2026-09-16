@@ -3,7 +3,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { MarketplaceManager, readInstalledPluginsRegistry } from "../../src/extensibility/plugins/marketplace";
+import {
+	BUILTIN_MARKETPLACE_NAME,
+	BUILTIN_MARKETPLACE_PROVENANCE,
+	BUILTIN_MARKETPLACE_SOURCE,
+	getBuiltinMarketplaceSnapshot,
+	MarketplaceManager,
+	readInstalledPluginsRegistry,
+} from "../../src/extensibility/plugins/marketplace";
 
 // Fixture: the valid-marketplace directory used across all tests.
 const FIXTURE_DIR = path.join(import.meta.dir, "fixtures", "valid-marketplace");
@@ -39,6 +46,7 @@ function createTestContext(): TestContext {
 		clearPluginRootsCache: () => {
 			count++;
 		},
+		includeBuiltinMarketplace: false,
 	});
 
 	return { manager, tmpDir, clearCount: () => count };
@@ -55,6 +63,83 @@ describe("MarketplaceManager", () => {
 
 	afterEach(() => {
 		fs.rmSync(ctx.tmpDir, { recursive: true, force: true });
+	});
+
+	it("reconciles an integrity-checked built-in marketplace and discovers its snapshot offline", async () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-builtin-marketplace-"));
+		const manager = new MarketplaceManager({
+			marketplacesRegistryPath: path.join(root, "marketplaces.json"),
+			installedRegistryPath: path.join(root, "plugins", "installed_plugins.json"),
+			marketplacesCacheDir: path.join(root, "plugins", "cache", "marketplaces"),
+			pluginsCacheDir: path.join(root, "plugins", "cache", "plugins"),
+		});
+		try {
+			const first = await manager.listMarketplaces();
+			expect(first).toHaveLength(1);
+			expect(first[0]).toMatchObject({
+				name: BUILTIN_MARKETPLACE_NAME,
+				sourceUri: BUILTIN_MARKETPLACE_SOURCE,
+				enabled: true,
+				builtIn: true,
+			});
+			expect(await manager.listMarketplaces()).toEqual(first);
+			expect((await manager.listAvailablePlugins()).some(plugin => plugin.recommended)).toBe(true);
+			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
+			expect(getBuiltinMarketplaceSnapshot().catalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
+				"37f6507b6bc3fe1940abe1ad689b17047142770fc58d1bc8e7a27d99c285662d",
+			);
+			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	it("reconciles the reserved built-in name and source while preserving custom entries", async () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-builtin-reconcile-"));
+		const registryPath = path.join(root, "marketplaces.json");
+		fs.writeFileSync(
+			registryPath,
+			JSON.stringify({
+				version: 1,
+				marketplaces: [
+					{
+						name: BUILTIN_MARKETPLACE_NAME,
+						sourceType: "local",
+						sourceUri: "/wrong",
+						catalogPath: "/wrong/catalog.json",
+						addedAt: "2025-01-01T00:00:00.000Z",
+						updatedAt: "2025-01-01T00:00:00.000Z",
+					},
+					{
+						name: "custom",
+						sourceType: "local",
+						sourceUri: "/custom",
+						catalogPath: "/custom/marketplace.json",
+						addedAt: "2025-01-01T00:00:00.000Z",
+						updatedAt: "2025-01-01T00:00:00.000Z",
+					},
+				],
+			}),
+		);
+		const manager = new MarketplaceManager({
+			marketplacesRegistryPath: registryPath,
+			installedRegistryPath: path.join(root, "plugins", "installed_plugins.json"),
+			marketplacesCacheDir: path.join(root, "plugins", "cache", "marketplaces"),
+			pluginsCacheDir: path.join(root, "plugins", "cache", "plugins"),
+		});
+		try {
+			const marketplaces = await manager.listMarketplaces();
+			expect(marketplaces.map(entry => entry.name)).toEqual([BUILTIN_MARKETPLACE_NAME, "custom"]);
+			expect(marketplaces[0]).toMatchObject({
+				sourceType: "github",
+				sourceUri: BUILTIN_MARKETPLACE_SOURCE,
+				builtIn: true,
+			});
+			await expect(manager.removeMarketplace(BUILTIN_MARKETPLACE_NAME)).rejects.toThrow(/Disable it instead/);
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true });
+		}
 	});
 
 	// ── Marketplace lifecycle ──────────────────────────────────────────────
@@ -255,6 +340,32 @@ describe("MarketplaceManager", () => {
 		const before = ctx.clearCount();
 		await ctx.manager.setPluginEnabled("hello-plugin@test-marketplace", false);
 		expect(ctx.clearCount()).toBe(before + 1);
+	});
+
+	it("marketplace disable blocks lifecycle operations and requires explicit plugin re-enable", async () => {
+		await ctx.manager.addMarketplace(FIXTURE_DIR);
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace");
+
+		const disabled = await ctx.manager.setMarketplaceEnabled("test-marketplace", false);
+		expect(disabled.pluginsDisabledAt).toBeDefined();
+		expect(await ctx.manager.listAvailablePlugins("test-marketplace")).toEqual([]);
+		expect(await ctx.manager.refreshMarketplaces(["test-marketplace"])).toEqual({ successful: [], failed: [] });
+		await expect(ctx.manager.updateMarketplace("test-marketplace")).rejects.toThrow(/disabled/);
+		await expect(ctx.manager.installPlugin("hello-plugin", "test-marketplace", { force: true })).rejects.toThrow(
+			/disabled/,
+		);
+		expect(await ctx.manager.checkForUpdates()).toEqual([]);
+
+		await ctx.manager.setMarketplaceEnabled("test-marketplace", true);
+		expect((await ctx.manager.listInstalledPlugins())[0]?.effectiveEnabled).toBe(false);
+		await Bun.sleep(2);
+		await ctx.manager.setPluginEnabled("hello-plugin@test-marketplace", true);
+		expect((await ctx.manager.listInstalledPlugins())[0]?.effectiveEnabled).toBe(true);
+
+		await ctx.manager.uninstallPlugin("hello-plugin@test-marketplace");
+		await Bun.sleep(2);
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace");
+		expect((await ctx.manager.listInstalledPlugins())[0]?.effectiveEnabled).toBe(true);
 	});
 
 	// ── version fallback ───────────────────────────────────────────────────

@@ -37,6 +37,7 @@ import {
 	executePluginUpgrade,
 	executePluginUpgradeAll,
 	prepareMarketplaceAddition,
+	prepareMarketplaceEnabled,
 	prepareMarketplaceRemoval,
 	preparePluginEnabled,
 	preparePluginInstall,
@@ -1339,12 +1340,47 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								}
 								break;
 							}
+							case "enable":
+							case "disable": {
+								if (!mktRest) {
+									runtime.ctx.showStatus(`Usage: /plugin marketplace ${mktSub} <name>`);
+									return;
+								}
+								const enabled = mktSub === "enable";
+								const prepared = await prepareMarketplaceEnabled(mgr, mktRest, enabled);
+								if (!prepared) {
+									runtime.ctx.showStatus(`Marketplace ${mktRest} is already ${mktSub}d.`);
+									break;
+								}
+								const outcome = await runReviewedAction(runtime.ctx, `marketplace ${mktSub}`, {
+									review: prepared.review,
+									resolve: async () => {
+										const current = await prepareMarketplaceEnabled(mgr, mktRest, enabled);
+										if (!current) return undefined;
+										return { review: current.review, target: current.target };
+									},
+									execute: async target => {
+										await mgr.setMarketplaceEnabled(target.name, target.enabled);
+									},
+								});
+								if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+								else if (outcome === "succeeded")
+									runtime.ctx.showStatus(`Marketplace ${mktRest} ${enabled ? "enabled" : "disabled"}.`);
+								else if (outcome === "unresolved")
+									runtime.ctx.showError(
+										`Marketplace ${mktSub} remains unresolved; retry from a fresh review.`,
+									);
+								break;
+							}
 							default: {
 								const marketplaces = await mgr.listMarketplaces();
 								if (marketplaces.length === 0) {
 									runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredGetStarted"));
 								} else {
-									const lines = marketplaces.map(m => `  ${m.name}  ${m.sourceUri}`);
+									const lines = marketplaces.map(
+										m =>
+											`  ${m.name}  ${m.enabled ? "enabled" : "disabled"}  ${m.builtIn ? "built-in" : "custom"}  ${m.sourceUri}`,
+									);
 									runtime.ctx.showStatus(
 										`Marketplaces:\n${lines.join("\n")}\n\n${t("commands.plugin.marketplace.listHint")}`,
 									);

@@ -339,10 +339,9 @@ xcsh plugin list --json \
   | jq -e '.marketplace[] | select(.id == "meddpicc@f5-sales-demo-marketplace")'
 ```
 
-If the marketplace or plugin is absent, add the approved repository catalog and install the plugin:
+The approved repository catalog is built in. Refresh it and install the plugin if the plugin is absent:
 
 ```bash
-xcsh plugin marketplace add f5-sales-demo/marketplace
 xcsh plugin marketplace update f5-sales-demo-marketplace
 xcsh plugin install meddpicc@f5-sales-demo-marketplace
 ```

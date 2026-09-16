@@ -72,6 +72,7 @@ const ADD_MARKETPLACE = `
 		pluginsCacheDir: getPluginsCacheDir(),
 	});
 	await manager.addMarketplace(process.env.TEST_MARKETPLACE_SOURCE);
+	await manager.setMarketplaceEnabled("f5-sales-demo-marketplace", false);
 `;
 
 afterEach(() => {
@@ -104,6 +105,7 @@ describe("interactive marketplace refresh surfaces", () => {
 			};
 			const key = value => dashboard.handleInput(value);
 			await waitFor("Plugin information is up to date.");
+			key("hello-plugin");
 			key("\\r");
 			await waitFor("Review installation");
 			if (render().includes("Installed version:")) throw new Error("Catalog entry claims to be installed");
@@ -156,7 +158,7 @@ describe("interactive marketplace refresh surfaces", () => {
 		if (result.code !== 0) throw new Error(result.stderr || result.stdout);
 	}, 60_000);
 
-	it("opening an empty dashboard does not silently configure a default marketplace", async () => {
+	it("opening a fresh dashboard configures and discovers the built-in marketplace", async () => {
 		const { home, source } = makeEnvironment();
 		const result = await runScript(
 			`import { registerLocales } from "@f5-sales-demo/pi-utils";
@@ -179,8 +181,9 @@ describe("interactive marketplace refresh surfaces", () => {
 			   marketplacesCacheDir: getMarketplacesCacheDir(),
 			   pluginsCacheDir: getPluginsCacheDir(),
 			 });
-			 if ((await manager.listMarketplaces()).length !== 0) throw new Error("dashboard configured a marketplace without review");
-			 if (!render().includes("No plugins are installed")) throw new Error(render());`,
+			 const marketplaces = await manager.listMarketplaces();
+			 if (marketplaces.length !== 1 || !marketplaces[0].builtIn) throw new Error("built-in marketplace missing");
+			 if (!render().includes("Recommended")) throw new Error(render());`,
 			home,
 			source,
 		);
@@ -205,6 +208,7 @@ describe("interactive marketplace refresh surfaces", () => {
 			   throw new Error("Missing " + text + "\\n" + render());
 			 };
 			 await waitFor("Plugin information is up to date.");
+			 dashboard.handleInput("hello-plugin");
 			 dashboard.handleInput("\\r");
 			 dashboard.handleInput("\\r");
 			 await waitFor("Cancel installation");
@@ -382,7 +386,7 @@ describe("interactive marketplace refresh surfaces", () => {
 			 if (!Bun.stripANSI(dashboard.render(100).join("\\n")).includes("Loading plugin information"))
 			   throw new Error("dashboard did not render its loading state immediately");
 			 let catalog;
-			 for (let i = 0; i < 100; i++) {
+				 for (let i = 0; i < 300; i++) {
 			   await Bun.sleep(10);
 			   catalog = JSON.parse(await Bun.file(catalogPath).text());
 			   if (catalog.plugins[0].version === "2.0.0") break;
@@ -393,7 +397,7 @@ describe("interactive marketplace refresh surfaces", () => {
 			 catalog.plugins[0].version = "3.0.0";
 			 await Bun.write(sourcePath, JSON.stringify(catalog, null, 2) + "\\n");
 			 dashboard.handleInput("\\x12");
-			 for (let i = 0; i < 100; i++) {
+				 for (let i = 0; i < 300; i++) {
 			   await Bun.sleep(10);
 			   const refreshed = JSON.parse(await Bun.file(catalogPath).text());
 			   if (refreshed.plugins[0].version === "3.0.0") process.exit(0);
