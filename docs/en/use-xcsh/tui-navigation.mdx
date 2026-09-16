@@ -12,6 +12,24 @@ The interactive terminal user interface (TUI) keeps the session model separate f
 
 Use `/tree` to open the branch navigator. Arrow keys move between visible nodes, `Enter` selects a branch, and `Escape` closes the overlay. A selected historical node changes the active leaf only through the session operation exposed by the interface; it does not delete sibling branches.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-3f0dc9acee44951a" data-fidelity="lc-3f0dc9acee44951a"><strong>Data model and leaf semantics.</strong> Sessions persist as append-only .jsonl entries where each non-header entry contains an id and parentId Current implementation points include .jsonl, id, parentId.</p>
+
+<p id="fidelity-lc-67bd6224bf91e158" data-fidelity="lc-67bd6224bf91e158"><strong>Navigation and branching commands.</strong> The /tree command navigates conversational history within the current session file. Current implementation points include /tree, branch_summary, buildSessionContext().</p>
+
+<p id="fidelity-lc-1be7e57d7394d49f" data-fidelity="lc-1be7e57d7394d49f"><strong>Related implementation files.</strong> Current implementation points include src/session/session-manager.ts, src/session/agent-session.ts, navigateTree().</p>
+
+<p id="fidelity-lc-e38ed7fc4adfd67b" data-fidelity="lc-e38ed7fc4adfd67b"><strong>Opening the tree navigator.</strong> Open the tree navigator using any of the following methods Current implementation points include /tree, Escape, doubleEscapeAction = "tree".</p>
+
+<p id="fidelity-lc-3d1f1b81f8d9ce71" data-fidelity="lc-3d1f1b81f8d9ce71"><strong>Navigation and selection semantics.</strong> Current implementation points include •.</p>
+
+<p id="fidelity-lc-c97da639c6a42a1f" data-fidelity="lc-c97da639c6a42a1f"><strong>Keyboard shortcuts.</strong> Current implementation points include Up, Down, Left.</p>
+
+<p id="fidelity-lc-b9841a03c584a199" data-fidelity="lc-b9841a03c584a199"><strong>Related implementation files.</strong> Current implementation points include src/modes/components/tree-selector.ts, src/modes/controllers/selector-controller.ts, src/session/agent-session.ts.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I read the active keyboard map?
 
 Open `/hotkeys` for the bindings registered by the running build. The prompt editor handles text navigation before global shortcuts, while overlays receive keys while focused. Treat the displayed map as current, because terminal key encodings and extension-provided actions change the available set between builds.
@@ -29,3 +47,15 @@ xcsh config set theme.forceSlot auto|dark|light
 `theme.dark` and `theme.light` each name one theme, defaulting to `xcsh-dark` and `xcsh-light`, and the terminal's reported background selects between them. Set `theme.forceSlot` to `dark` or `light` where that detection is unreliable, as inside tmux.
 
 Theme files define semantic tokens rather than terminal escape sequences, so components share colors for text, borders, status, tools, diffs, and diagnostics. Keep custom themes under the configured xcsh data roots and check contrast in both the main transcript and modal overlays.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-63c52f78867bac41" data-fidelity="lc-63c52f78867bac41"><strong>Theme system capabilities.</strong> The xcsh theming engine configures visual styling across multiple terminal subsystems Current implementation points include getMarkdownTheme(), unicode, nerd.</p>
+
+<p id="fidelity-lc-d1427eed6e84a095" data-fidelity="lc-d1427eed6e84a095"><strong>Color token taxonomy.</strong> Themes define required color tokens under the colors object map Current implementation points include colors, accent, border.</p>
+
+<p id="fidelity-lc-b7d7062813a3635d" data-fidelity="lc-b7d7062813a3635d"><strong>Custom theme specification.</strong> Custom theme definitions reside in /.xcsh/agent/themes/‹theme-name›.json Current implementation points include ~/.xcsh/agent/themes/‹theme-name›.json.</p>
+
+<p id="fidelity-lc-3cad9a3be2691bcb" data-fidelity="lc-3cad9a3be2691bcb"><strong>Related implementation files.</strong> Current implementation points include src/modes/theme/theme.ts, src/modes/theme/theme-schema.json, src/modes/theme/defaults/xcsh-dark.json.</p>
+
+<span data-fidelity-generated="end"></span>

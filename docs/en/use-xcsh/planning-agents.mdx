@@ -15,3 +15,16 @@ State the objective, scope boundaries, exact files or systems, ordered changes, 
 ## When should I use a specialized agent?
 
 Use a bounded agent when its definition matches one independent subtask. Export editable bundled definitions with `xcsh agents unpack --project`, review `.xcsh/agents/`, and inspect the agent result before accepting it. The parent session remains responsible for integration and validation.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-3e06c1ff6001856e" data-fidelity="lc-3e06c1ff6001856e"><strong>Agent definition schema.</strong> Task agents are represented as AgentDefinition records (src/task/types.ts) Current implementation points include AgentDefinition, src/task/types.ts, name.</p>
+
+<p id="fidelity-lc-7b4444969da7a780" data-fidelity="lc-7b4444969da7a780"><strong>Discovery sources and precedence.</strong> The task subsystem discovers agents across four configuration tiers, evaluated in priority order. Current implementation points include .xcsh, ‹CWD›/.xcsh/agents/*.md,
+~/.xcsh/agent/agents/*.md.</p>
+
+<p id="fidelity-lc-f8acfb1258948a8b" data-fidelity="lc-f8acfb1258948a8b"><strong>Execution guardrails and constraints.</strong> Even when discovered, agents may be constrained at runtime by security policies Current implementation points include session.getSessionSpawns(), task.maxRecursionDepth, task.</p>
+
+<p id="fidelity-lc-b7ba73e507e70ac4" data-fidelity="lc-b7ba73e507e70ac4"><strong>Related implementation files.</strong> Current implementation points include src/task/discovery.ts, src/task/agents.ts, src/task/types.ts.</p>
+
+<span data-fidelity-generated="end"></span>

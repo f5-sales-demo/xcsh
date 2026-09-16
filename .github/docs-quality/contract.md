@@ -76,7 +76,24 @@ Inventory schema v2 assigns every stable concept ID to exactly one current page 
 
 `corrected` and `superseded` records also explain why the legacy statement is no longer presented as current behavior. The ledger is an audit input, not published legacy prose and not a compatibility route.
 
-The checker rejects baseline drift, missing or duplicate IDs, unknown mappings, stale pages or headings, absent current authority, missing evidence, and an unexplained correction or supersession.
+`legacy-fidelity.json` schema v1 is the candidate-facing ledger. It contains exactly one row for each
+of the 374 immutable units and records the legacy-unit digest, current destination heading,
+`data-fidelity` content-block locator and digest, preserved/corrected/superseded claims, exact
+source/test/help authority locators and digests, evidence identifiers, and any required rationale.
+The frozen PR #3693 audit remains immutable; remediation is recorded only in the candidate ledger.
+
+The checker fails closed when Git metadata or the immutable legacy commit is unavailable. It rejects
+baseline drift, missing or duplicate IDs, stale or unresolved content blocks, stale destination or
+authority digests, unrelated authorities, missing evidence, unexplained correction or supersession,
+and reuse of one block for unrelated concepts without an explicit shared-coverage rationale.
+
+## Keep navigation and generated corpora usable
+
+Displayed sidebar labels must be at most 24 characters and unique among siblings. Page titles may
+remain longer and descriptive. Every internal link and fragment must resolve, generated heading IDs
+must not collide, and every selector in `docs/llms-config.json` must resolve to authored content.
+Removing an English route requires updating all links and LLM selectors; do not leave a compatibility
+redirect for a prerelease route.
 
 ## Automated rejection rules
 
@@ -97,5 +114,10 @@ The checker rejects:
 - output blocks and procedure/outcome headings without evidence;
 - page or heading inventory entries without a reader need and purpose;
 - pages without a source authority.
+- a fidelity ledger with anything other than 374 current, uniquely located concept rows;
+- unavailable immutable Git history, stale content or authority digests, unrelated authorities, or
+  unexplained shared-block coverage;
+- sidebar labels longer than 24 characters or colliding sibling labels;
+- broken internal links or anchors, duplicate generated anchors, and orphaned LLM selectors.
 
 The Git pre-commit hook runs the checker when documentation-quality or English MDX files are staged. Set `XCSH_DOCS_QUALITY_CHECK=0` only for an intermediate local commit that cannot yet contain a complete cross-file inventory; CI never uses that escape hatch. `bun run ci:check:full` always runs the checker and its fixture suite.

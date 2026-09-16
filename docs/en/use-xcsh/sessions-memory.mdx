@@ -3,7 +3,7 @@ title: "Resume and export sessions"
 description: "Continue, locate, fork, or export persisted conversations."
 sidebar:
   order: 5
-  label: "Resume and export sessions"
+  label: "Sessions and memory"
 ---
 
 Sessions persist conversation and tool events. Use `--continue` for the latest directory session, `--resume` to select one, and `--fork` to create an independent continuation.
@@ -12,10 +12,59 @@ Sessions persist conversation and tool events. Use `--continue` for the latest d
 
 In the terminal user interface (TUI), `/tree` shows the conversation structure, `/branch` or `/fork` creates another path, and `/compact` replaces older context with a summary. Inspect the summary before relying on it.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-4b86c511821c6bf6" data-fidelity="lc-4b86c511821c6bf6"><strong>Operation reference matrix.</strong> Current implementation points include /dump, /export [path], --export ‹file› [path].</p>
+
+<p id="fidelity-lc-20d582d5230b0036" data-fidelity="lc-20d582d5230b0036"><strong>Export and clipboard dump.</strong> Generate standalone HTML transcripts embedding system prompts, tool invocations, code blocks, and conversation turns: Copies complete linear conversation context directly to the
+operating system clipboard, including system guidance, tool declarations, tool out Current implementation points include /export, --export, /dump.</p>
+
+<p id="fidelity-lc-04c8a6d13597240c" data-fidelity="lc-04c8a6d13597240c"><strong>Share operations (/share).</strong> When you execute /share, xcsh. Current implementation points include /share, $TMPDIR, ~/.xcsh/agent/share.｛ts,js,mjs｝.</p>
+
+<p id="fidelity-lc-0b14f37353a36a3e" data-fidelity="lc-0b14f37353a36a3e"><strong>Forking sessions (/fork).</strong> Creates an independent branching session from the current conversation point. Current implementation points include .jsonl, parentSession.</p>
+
+<p id="fidelity-lc-9949f7a59fb8d077" data-fidelity="lc-9949f7a59fb8d077"><strong>Resuming and continuing sessions.</strong> Current implementation points include /resume, xcsh --resume ‹id›, xcsh --continue.</p>
+
+<p id="fidelity-lc-1c3af79836c3a21e" data-fidelity="lc-1c3af79836c3a21e"><strong>Related implementation files.</strong> Current implementation points include src/session/agent-session.ts, exportToHtml, fork.</p>
+
+<p id="fidelity-lc-c8b77c1cb3fe0316" data-fidelity="lc-c8b77c1cb3fe0316"><strong>Session discovery and storage hierarchy.</strong> Session files are stored in .jsonl format organized by encoded workspace working directory. Current implementation points include .jsonl, getRecentSessions, SessionManager.list.</p>
+
+<p id="fidelity-lc-1f5efb3f4ce29653" data-fidelity="lc-1f5efb3f4ce29653"><strong>Resume resolution order.</strong> When you pass the --resume or --continue flags at startup. Current implementation points include --resume, --continue, ~/.xcsh/agent/terminal-sessions/‹terminal-id›.</p>
+
+<p id="fidelity-lc-636f0ae91fec28f5" data-fidelity="lc-636f0ae91fec28f5"><strong>Runtime session switching (switchSession).</strong> When switching active sessions via /resume. Current implementation points include /resume, session_before_switch, reason: "resume".</p>
+
+<p id="fidelity-lc-d70f4f84994f8d2c" data-fidelity="lc-d70f4f84994f8d2c"><strong>Related implementation files.</strong> Current implementation points include src/session/session-manager.ts, src/session/agent-session.ts, switchSession().</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How does project memory differ?
 
 Memory holds durable project facts across sessions; a session holds one conversation history. Start with `--no-memories` when stored context must not influence the run. Keep credentials and transient outputs out of memory files.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-3e8c15579946bac0" data-fidelity="lc-3e8c15579946bac0"><strong>Memory context and URL schemes.</strong> At session initialization, xcsh loads the consolidated memory summary for the active project and injects a Memory Guidance block into the LLM system prompt. Current implementation
+points include memory://, read, memory://root.</p>
+
+<p id="fidelity-lc-8a3a44a43266f7c2" data-fidelity="lc-8a3a44a43266f7c2"><strong>Pipeline architecture.</strong> Current implementation points include minRolloutIdleHours, maxRolloutAgeDays, default.</p>
+
+<p id="fidelity-lc-bf5382572f028f7a" data-fidelity="lc-bf5382572f028f7a"><strong>Configuration options.</strong> Current implementation points include memories.enabled, false, memories.maxRolloutAgeDays.</p>
+
+<p id="fidelity-lc-b20d0cac888424cf" data-fidelity="lc-b20d0cac888424cf"><strong>Related implementation files.</strong> Current implementation points include src/memories/index.ts, src/memories/storage.ts, src/internal-urls/memory-protocol.ts.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I export a record?
 
 Run `xcsh --export <SESSION_FILE>` to create HyperText Markup Language (HTML) from a session file. Review the export for sensitive content before sharing it.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-47663273e5d67408" data-fidelity="lc-47663273e5d67408"><strong>Command dispatch and validation.</strong> When you run /handoff [instructions], the command controller executes the following validation checks. Current implementation points include /handoff [instructions], /handoff,
+type: "message".</p>
+
+<p id="fidelity-lc-060264aa3d26c649" data-fidelity="lc-060264aa3d26c649"><strong>Generation lifecycle and state transitions.</strong> 1. Current implementation points include agent_end, sessionManager.flush(), sessionManager.newSession().</p>
+
+<p id="fidelity-lc-5f38769696df23d3" data-fidelity="lc-5f38769696df23d3"><strong>Related implementation files.</strong> Current implementation points include src/session/agent-session.ts, handoff(), src/session/session-manager.ts.</p>
+
+<span data-fidelity-generated="end"></span>

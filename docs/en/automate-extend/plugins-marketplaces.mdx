@@ -3,7 +3,7 @@ title: "Install plugins and marketplaces"
 description: "Discover, install, configure, update, and diagnose xcsh plugins."
 sidebar:
   order: 6
-  label: "Install plugins and marketplaces"
+  label: "Plugins and marketplaces"
 ---
 
 A plugin bundles capabilities and configuration. A marketplace is an index of plugins; installing from one still executes code under the user's account.
@@ -12,6 +12,61 @@ A plugin bundles capabilities and configuration. A marketplace is an index of pl
 
 Run `xcsh plugin discover` or the marketplace action shown by `xcsh plugin --help`. Review the package source, version, requested features, and install scope.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-d8bacb8f587744bf" data-fidelity="lc-d8bacb8f587744bf"><strong>Quick start.</strong> Install a marketplace catalog and a targeted plugin: Run /marketplace without arguments to launch the interactive plugin browser. Current implementation points include
+/marketplace. The destination uses current source and candidate evidence instead of preserving a version-specific legacy statement.</p>
+
+<p id="fidelity-lc-a8c97165d314b190" data-fidelity="lc-a8c97165d314b190"><strong>Core concepts.</strong> Project-scoped plugin installations shadow user-scoped installations of the same plugin identifier. Current implementation points include .xcsh-plugin/marketplace.json,
+‹PLUGIN_NAME›@‹MARKETPLACE_NAME›, code-review@f5-sales-demo-marketplace.</p>
+
+<p id="fidelity-lc-90bb1a6a60b45c40" data-fidelity="lc-90bb1a6a60b45c40"><strong>Command reference.</strong> The preceding operations are also available through direct CLI invocations Current implementation points include /marketplace, /marketplace add ‹SOURCE›, /marketplace remove
+‹NAME›. The destination uses current source and candidate evidence instead of preserving a version-specific legacy statement.</p>
+
+<p id="fidelity-lc-54433be682a95961" data-fidelity="lc-54433be682a95961"><strong>Supported marketplace sources.</strong> When registering a catalog using /marketplace add ‹SOURCE›, the runtime classifies the source format automatically: The runtime clones or reads the source, validates
+.xcsh-plugin/marketplace.json, and caches catalog metadata locally. Current implementation points include /marketplace add ‹SOURCE›, owner/repo,
+anthropics/f5-sales-demo-marketplace.</p>
+
+<p id="fidelity-lc-7a61e4123efef937" data-fidelity="lc-7a61e4123efef937"><strong>Catalog manifest format (marketplace.json).</strong> The marketplace catalog resides at .xcsh-plugin/marketplace.json at the root of the source repository: The source descriptor supports the following formats Current implementation
+points include .xcsh-plugin/marketplace.json, name, owner.name.</p>
+
+<p id="fidelity-lc-8dca5123decf808b" data-fidelity="lc-8dca5123decf808b"><strong>Filesystem layout.</strong> Marketplace catalogs and installed plugin packages occupy separate directories under the resolved configuration roots; metadata points to package content without making the catalog
+executable.</p>
+
+<p id="fidelity-lc-43371f2ef065c8de" data-fidelity="lc-43371f2ef065c8de"><strong>Identifier naming constraints.</strong> Marketplace and plugin identifiers must comply with the following validation rules: Combined plugin identifiers (‹NAME›@‹MARKETPLACE›) must not exceed 128 characters in total
+length. Current implementation points include -, ., ‹NAME›@‹MARKETPLACE›.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I diagnose a plugin?
 
 Use `xcsh plugin list --json` and `xcsh plugin doctor`. Disable one plugin at a time when isolating startup or discovery failures.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-3bd1ca45ddec3961" data-fidelity="lc-3bd1ca45ddec3961"><strong>Architecture and scope.</strong> The codebase provides two plugin management modules. Current implementation points include PluginManager, src/extensibility/plugins/manager.ts,
+src/extensibility/plugins/installer.ts.</p>
+
+<p id="fidelity-lc-284478c2d442749c" data-fidelity="lc-284478c2d442749c"><strong>Lifecycle: CLI invocation to runtime capabilities.</strong> The following sequence illustrates how plugin commands execute and activate capabilities. Current implementation points include src/commands/plugin.ts, runPluginCommand(...),
+src/cli/plugin-cli.ts.</p>
+
+<p id="fidelity-lc-f56bddc3ae3cd33f" data-fidelity="lc-f56bddc3ae3cd33f"><strong>On-disk state model.</strong> Global plugin state resides under /.xcsh/plugins/: Project-specific overrides reside at ‹cwd›/.xcsh/plugin-overrides.json. Current implementation points include ~/.xcsh/plugins/,
+package.json, bun install.</p>
+
+<p id="fidelity-lc-b1f662a9fa1fe699" data-fidelity="lc-b1f662a9fa1fe699"><strong>Package specification parsing and metadata resolution.</strong> The parsePluginSpec utility (parser.ts) supports the following package specification patterns: extractPackageName strips version suffixes to determine on-disk module paths. Current
+implementation points include parsePluginSpec, parser.ts, pkg.</p>
+
+<p id="fidelity-lc-fa1aafd818623e7b" data-fidelity="lc-fa1aafd818623e7b"><strong>Plugin lifecycle workflows.</strong> 1. Current implementation points include PluginManager.install, package.json, ~/.xcsh/plugins/.</p>
+
+<p id="fidelity-lc-9972429f8f3c2ed4" data-fidelity="lc-9972429f8f3c2ed4"><strong>Runtime capability discovery.</strong> GetEnabledPlugins(cwd) inspects installed dependencies and applies the following filters: For each enabled plugin, the runtime resolves exported capability paths: Paths expand
+based on base entries and active feature selections. Current implementation points include getEnabledPlugins(cwd), package.json, xcsh.</p>
+
+<p id="fidelity-lc-ab85df21656831e6" data-fidelity="lc-ab85df21656831e6"><strong>Security boundaries and validation.</strong> Package specifications undergo validation against regex rules and a shell metacharacter denylist ([;＆|$()｛｝[]‹›\\]) before invoking Bun subprocesses. Current implementation points
+include [;＆|.</p>
+
+<p id="fidelity-lc-6f0b0fbe4cba57be" data-fidelity="lc-6f0b0fbe4cba57be"><strong>Error handling and failure modes.</strong> Plugin state operations do not use distributed transactions: Run xcsh plugin doctor --fix to diagnose and reconcile inconsistencies between installed packages and lockfile
+metadata. Current implementation points include bun install, node_modules, bun uninstall.</p>
+
+<p id="fidelity-lc-17a2893a70f6c0a9" data-fidelity="lc-17a2893a70f6c0a9"><strong>Primary implementation files.</strong> Current implementation points include packages/coding-agent/src/commands/plugin.ts, packages/coding-agent/src/cli/plugin-cli.ts.</p>
+
+<span data-fidelity-generated="end"></span>

@@ -12,15 +12,40 @@ The terminal user interface (TUI) renders session and runtime state through comp
 
 Terminal decoding turns bytes and escape sequences into key events. Focused overlays receive input before the prompt editor and global actions. State changes schedule a render, layout produces the next frame, and the diff layer emits only changed terminal regions.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-74ab2eb29ee8b7c0" data-fidelity="lc-74ab2eb29ee8b7c0"><strong>Architecture layers.</strong> Current implementation points include packages/tui, packages/coding-agent.</p>
+
+<p id="fidelity-lc-9321002188e7211c" data-fidelity="lc-9321002188e7211c"><strong>Rendering lifecycle and differential diffing.</strong> 1. Current implementation points include process.nextTick, chatContainer, statusContainer.</p>
+
+<p id="fidelity-lc-ca927b9fc35b8d2f" data-fidelity="lc-ca927b9fc35b8d2f"><strong>Terminal input and Kitty keyboard protocol.</strong> Current implementation points include StdinBuffer, Ctrl+Enter, Enter.</p>
+
+<p id="fidelity-lc-235e58f068c97d4e" data-fidelity="lc-235e58f068c97d4e"><strong>Related implementation files.</strong> Current implementation points include packages/tui/src/tui.ts, packages/tui/src/terminal.ts, ProcessTerminal.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I extend interactive surfaces?
 
 Extensions can open a modal through `ctx.ui.custom` only when an interactive UI host exists. Custom tools may provide renderers for calls and results while preserving a plain-text representation for headless clients. A renderer must not become the only copy of durable tool output.
 
 Read `packages/tui/src` for the component and rendering contracts, and `packages/coding-agent/src/tui` for the session-aware components built on them.
 
-Use the [TUI interaction style guide](../tui-style-guide/) when adding a selector or manager. It
+Use the [TUI interaction style guide](./tui-style-guide/) when adding a selector or manager. It
 defines the shared frame, responsive density, search and escape behavior, plain-text state semantics,
 and asynchronous feedback expected from interactive surfaces.
+
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-f699c356c5bf6ff4" data-fidelity="lc-f699c356c5bf6ff4"><strong>Component interface contract.</strong> All custom interactive widgets implement the Component interface from @f5-sales-demo/pi-tui. Current implementation points include Component, @f5-sales-demo/pi-tui, render(width).</p>
+
+<p id="fidelity-lc-94f545b986e8ab0c" data-fidelity="lc-94f545b986e8ab0c"><strong>Extension interactive modals (ctx.ui.custom).</strong> Extensions can take over the primary editor area to render selection lists, confirmations, or wizards Current implementation points include Selected: $｛choice｝.</p>
+
+<p id="fidelity-lc-7afdf244bb09f1fa" data-fidelity="lc-7afdf244bb09f1fa"><strong>Custom tool renderers.</strong> Custom tools customize how tool arguments and results render in the conversation stream by implementing renderCall and renderResult Current implementation points include
+renderCall, renderResult.</p>
+
+<p id="fidelity-lc-d17a0facdbe118b7" data-fidelity="lc-d17a0facdbe118b7"><strong>Related implementation files.</strong> Current implementation points include packages/tui/src/tui.ts, Component, Focusable.</p>
+
+<span data-fidelity-generated="end"></span>
 
 ## How are development native prerequisites kept current?
 

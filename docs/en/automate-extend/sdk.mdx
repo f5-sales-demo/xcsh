@@ -12,6 +12,42 @@ The coding-agent software development kit (SDK) embeds session creation, provide
 
 Use `--mode json`, `rpc`, or `acp` for a process boundary. Use the SDK for direct TypeScript integration. Use `xcsh worker` for a headless extension bridge and `xcsh manager` for the detached control server that spawns and reaps workers.
 
+<span data-fidelity-generated="start"></span>
+
+<p id="fidelity-lc-558f49eb064606f8" data-fidelity="lc-558f49eb064606f8"><strong>Installation.</strong> Install the package via Bun</p>
+
+<p id="fidelity-lc-688df75cb7dc13ce" data-fidelity="lc-688df75cb7dc13ce"><strong>Primary entry points.</strong> @f5-sales-demo/xcsh exports the SDK API surface from the root package Current implementation points include @f5-sales-demo/xcsh, createAgentSession, SessionManager.</p>
+
+<p id="fidelity-lc-119cf318758ae731" data-fidelity="lc-119cf318758ae731"><strong>Quick start.</strong> The following example demonstrates launching a session with default discovery Current implementation points include $｛modelFallbackMessage｝\n. The destination uses current source
+and candidate evidence instead of preserving a version-specific legacy statement.</p>
+
+<p id="fidelity-lc-9c83c6a02ed1bf17" data-fidelity="lc-9c83c6a02ed1bf17"><strong>Default discovery behavior.</strong> CreateAgentSession() follows a "provide to override, omit to discover" convention. Current implementation points include createAgentSession(), cwd, getProjectDir().</p>
+
+<p id="fidelity-lc-19b73091c4925ad4" data-fidelity="lc-19b73091c4925ad4"><strong>Session manager persistence models.</strong> AgentSession requires a SessionManager instance. Current implementation points include AgentSession, SessionManager, session.sessionFile.</p>
+
+<p id="fidelity-lc-5e5b060c78af845b" data-fidelity="lc-5e5b060c78af845b"><strong>Model and authentication wiring.</strong> CreateAgentSession() integrates ModelRegistry and AuthStorage to resolve models and API credentials. Current implementation points include createAgentSession(), ModelRegistry,
+AuthStorage.</p>
+
+<p id="fidelity-lc-6419c25438b16c50" data-fidelity="lc-6419c25438b16c50"><strong>Event subscription model.</strong> Register listeners via session.subscribe(listener). Current implementation points include session.subscribe(listener), AgentSessionEvent, AgentEvent.</p>
+
+<p id="fidelity-lc-ef9e91c3950bf8f0" data-fidelity="lc-ef9e91c3950bf8f0"><strong>Prompt execution lifecycle.</strong> Session.prompt(text, options?) provides the primary interaction method. Current implementation points include session.prompt(text, options?), streamingBehavior: "steer" |
+"followUp", sendUserMessage(content, ｛ deliverAs? ｝).</p>
+
+<p id="fidelity-lc-bc38c675a06db767" data-fidelity="lc-bc38c675a06db767"><strong>Tools and extension integration.</strong> AgentSession supports updating active tools at runtime: When active tools change, the runtime regenerates the system prompt automatically. Current implementation points include
+createTools(...), BUILTIN_TOOLS, toolNames.</p>
+
+<p id="fidelity-lc-3f52a42a0f27f0db" data-fidelity="lc-3f52a42a0f27f0db"><strong>Capability discovery helpers.</strong> Use these helper functions when customizing discovery behavior Current implementation points include discoverAuthStorage(agentDir?), discoverExtensions(cwd?), discoverSkills(cwd?,
+_agentDir?, settings?).</p>
+
+<p id="fidelity-lc-42c2d5a6699ba3cc" data-fidelity="lc-42c2d5a6699ba3cc"><strong>Subagent and orchestrator options.</strong> When building multi-agent systems or orchestrators Current implementation points include outputSchema, requireSubmitResultTool, submit_result.</p>
+
+<p id="fidelity-lc-b3222f40f2623179" data-fidelity="lc-b3222f40f2623179"><strong>Return structure of createAgentSession().</strong> Invoke setToolUIContext(...) when your application provides custom UI dialogs or renderers for extensions. Current implementation points include setToolUIContext(...).</p>
+
+<p id="fidelity-lc-1afb2df5d6fdb306" data-fidelity="lc-1afb2df5d6fdb306"><strong>Complete integration example.</strong> A complete SDK host creates a configured session, subscribes before prompting, handles messages and tool events, awaits the final result, and disposes the session on every exit
+path.</p>
+
+<span data-fidelity-generated="end"></span>
+
 ## How do I keep the integration testable?
 
 Pin the package version, record protocol fixtures, close sessions and workers explicitly, and assert both final messages and tool events. Treat undocumented internal modules as unstable.
