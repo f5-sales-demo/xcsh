@@ -1,0 +1,123 @@
+---
+name: Release GitHub backfill
+run-name: Backfill GitHub release ${{ inputs.tag }} from run ${{ inputs.source_run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Missing immutable release tag (vX.Y.Z)"
+        required: true
+        type: string
+      source_run_id:
+        description: "Original CI tag run containing successful release artifacts"
+        required: true
+        type: string
+
+permissions:
+  actions: read # Required to inspect the source run and download its artifacts.
+  contents: read # Required to check out the controller and immutable tag.
+
+concurrency:
+  group: release-github-backfill-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    name: Backfill immutable GitHub release
+    environment: release
+    runs-on: xcsh-socketless
+    timeout-minutes: 90
+    steps:
+      - name: Checkout trusted backfill controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+          path: .release-source
+          lfs: true
+
+      - name: Setup Bun 1.4.2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+
+      - name: Validate immutable tag and source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::TAG must be an exact stable vX.Y.Z tag"
+            exit 1
+          }
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || {
+            echo "::error::SOURCE_RUN_ID must be numeric"
+            exit 1
+          }
+
+          tag_sha=$(git -C .release-source rev-parse 'HEAD^{commit}')
+          run=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")
+          jq -e --arg tag "$TAG" --arg tag_sha "$tag_sha" '
+            .event == "push" and .head_branch == $tag and .head_sha == $tag_sha
+          ' <<<"$run" >/dev/null || {
+            echo "::error::Source run is not the original push run for ${TAG}@${tag_sha}"
+            exit 1
+          }
+
+          jobs=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/attempts/1/jobs?per_page=100")
+          jq -e '
+            ([.jobs[] | select(.name == "check" or .name == "test" or .name == "Test installation methods")] | length == 3) and
+            (all(.jobs[] | select(.name == "check" or .name == "test" or .name == "Test installation methods"); .conclusion == "success")) and
+            ([.jobs[] | select(.name | startswith("Native build ("))] | length >= 8) and
+            (all(.jobs[] | select(.name | startswith("Native build (")); .conclusion == "success"))
+          ' <<<"$jobs" >/dev/null || {
+            echo "::error::Source run attempt 1 lacks green check, test, installation, or native-build prerequisites"
+            exit 1
+          }
+
+      - name: Download Linux and Windows binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+          name: release-binaries-linux-win
+          path: .release-source/packages/coding-agent/binaries
+
+      - name: Download signed macOS binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+          pattern: release-binaries-macos-*-signed
+          path: .release-source/packages/coding-agent/binaries
+          merge-multiple: true
+
+      - name: Build deterministic archives twice
+        working-directory: .release-source
+        run: |
+          set -euo pipefail
+          SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
+          [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]
+          export SOURCE_DATE_EPOCH
+          bun scripts/ci-release-homebrew.ts --package-only
+          sha256sum packages/coding-agent/binaries/*.zip packages/coding-agent/binaries/*.tar.gz | LC_ALL=C sort > "$RUNNER_TEMP/archives-first.sha256"
+          bun scripts/ci-release-homebrew.ts --package-only
+          sha256sum packages/coding-agent/binaries/*.zip packages/coding-agent/binaries/*.tar.gz | LC_ALL=C sort > "$RUNNER_TEMP/archives-second.sha256"
+          diff -u "$RUNNER_TEMP/archives-first.sha256" "$RUNNER_TEMP/archives-second.sha256"
+
+      - name: Create or resume immutable GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: bash scripts/ci-release-github-backfill.sh "$REPOSITORY" "$TAG" ".release-source/packages/coding-agent/binaries"
