@@ -81,12 +81,13 @@ runs:
         PROFILE_FILE_WORKERS: ${{ inputs.file-workers }}
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
         PROFILE_PHASE_SET: ${{ inputs.phase-set }}
+        PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}
         XCSH_TEST_RUNNER: ${{ github.action_path }}/../../../scripts/run-ts-tests.ts
       run: |
         "${{ github.action_path }}/../../../scripts/runner-optimization-profile.sh" \
           "$PROFILE_EXPERIMENT" "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
           "$PROFILE_FILE_WORKERS" "$RUNNER_TEMP/runner-profile-evidence" \
-          "$PROFILE_PHASE_SET"
+          "$PROFILE_PHASE_SET" "$PROFILE_SOURCE_SHA"
     - name: Upload redacted workload evidence
       if: always()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -2,17 +2,18 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0..32-file-workers> <output-dir> <all|native|rust|typescript>" >&2
+  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0..32-file-workers> <output-dir> <all|native|rust|typescript> <source-sha>" >&2
   exit 2
 }
 
-[[ $# -eq 6 ]] || usage
+[[ $# -eq 7 ]] || usage
 experiment=$1
 cache_state=$2
 pair_id=$3
 file_workers=$4
 output_dir=$5
 phase_set=$6
+expected_source_sha=$7
 
 case "$experiment" in
 image-control | image-candidate | d16-serial | d16-parallel | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
@@ -24,6 +25,7 @@ if [[ ! "$file_workers" =~ ^(0|[1-9][0-9]*)$ ]] || ((file_workers > 32)); then
 fi
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
+[[ "$expected_source_sha" =~ ^[0-9a-f]{40}$ ]] || usage
 case "$experiment:$file_workers" in
 d16-parallel:*) ((file_workers > 0)) || usage ;;
 *:0)
@@ -37,7 +39,10 @@ repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 export XCSH_SOURCE_ROOT=$repo_root
 source_commit=$(git rev-parse HEAD)
-test "$source_commit" = d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a
+if [[ "$source_commit" != "$expected_source_sha" ]]; then
+  echo "checked-out source SHA $source_commit does not match expected source SHA $expected_source_sha" >&2
+  exit 1
+fi
 SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$source_commit")
 [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]
 export SOURCE_DATE_EPOCH

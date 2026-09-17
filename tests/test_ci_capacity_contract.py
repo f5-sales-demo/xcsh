@@ -75,6 +75,9 @@ class CiCapacityContractTests(unittest.TestCase):
         legacy_setup = (
             ROOT / "scripts/prepare-runner-optimization-toolchain.sh"
         ).read_text(encoding="utf-8")
+        profiler = (ROOT / "scripts/runner-optimization-profile.sh").read_text(
+            encoding="utf-8"
+        )
         runner = (ROOT / "scripts/run-ts-tests.ts").read_text(encoding="utf-8")
         self.assertIn("  workflow_dispatch:\n", benchmark)
         for input_name in ("source_sha", "experiment", "cache_state", "pair_id"):
@@ -111,7 +114,17 @@ class CiCapacityContractTests(unittest.TestCase):
             "qualification harness SHA $harness_commit does not match expected source SHA $PROFILE_SOURCE_SHA",
             action,
         )
+        self.assertIn("PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}", action)
+        self.assertIn('"$PROFILE_PHASE_SET" "$PROFILE_SOURCE_SHA"', action)
         self.assertIn("source-sha: ${{ inputs.source_sha }}", benchmark)
+        self.assertNotIn("d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a", profiler)
+        self.assertIn(
+            '[[ "$expected_source_sha" =~ ^[0-9a-f]{40}$ ]] || usage', profiler
+        )
+        self.assertIn(
+            "checked-out source SHA $source_commit does not match expected source SHA $expected_source_sha",
+            profiler,
+        )
         self.assertIn("profile_phase=setup", legacy_setup)
         self.assertIn('profile_phase="setup-$phase_set"', legacy_setup)
         self.assertIn(
