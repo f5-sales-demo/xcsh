@@ -15,3 +15,9 @@ Use catalog discovery in the interactive shell, or inspect the generated resourc
 ## What if a kind is absent?
 
 Do not substitute a similar name. Use console automation only when that interface is explicitly supported, or wait for catalog support. An absent kind cannot be made safe by adding arbitrary fields to a manifest.
+
+The catalog is a normalized view of resource metadata used by resource commands; it is not evidence
+that the active credential may mutate every listed kind. Resolve a kind, inspect its schema and
+scope, and distinguish namespace-scoped from system-scoped resources before building a manifest. An
+absent kind blocks the workflow: verify the installed xcsh version and catalog source instead of
+guessing an endpoint or plural name.

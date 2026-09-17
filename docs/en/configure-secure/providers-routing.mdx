@@ -4,6 +4,11 @@ description: "Select models directly or map default, smol, slow, and plan roles.
 sidebar:
   order: 3
   label: "Providers and models"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 xcsh resolves a requested model against available providers and credentials. A provider-qualified model name is the most explicit route.
@@ -11,44 +16,6 @@ xcsh resolves a requested model against available providers and credentials. A p
 ## How do I confirm a route?
 
 Run `xcsh --list-models <PROVIDER>`, then pass one returned name to `--model`. Environment keys and supported subscription sessions authenticate providers; never store tokens in committed settings.
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-a2f95043769a4b5f" data-fidelity="lc-a2f95043769a4b5f"><strong>Core implementation architecture.</strong> Model configuration and runtime resolution are implemented across the following modules Current implementation points include src/config/model-registry.ts,
-src/config/model-resolver.ts, src/config/settings-schema.ts.</p>
-
-<p id="fidelity-lc-1336dccf5b2a2514" data-fidelity="lc-1336dccf5b2a2514"><strong>Configuration file path.</strong> Default configuration path Current implementation points include ~/.xcsh/agent/models.yml, models.yml, models.json. The destination uses current source and candidate evidence
-instead of preserving a version-specific legacy statement.</p>
-
-<p id="fidelity-lc-4fb0c7e335422d3b" data-fidelity="lc-4fb0c7e335422d3b"><strong>Schema structure.</strong> Current implementation points include openai-completions, openai-responses, openai-codex-responses.</p>
-
-<p id="fidelity-lc-63abc9a1d18fdd52" data-fidelity="lc-63abc9a1d18fdd52"><strong>Validation rules.</strong> The following fields are required: Must specify at least one of Current implementation points include models, baseUrl, apiKey.</p>
-
-<p id="fidelity-lc-91534f5bcb77f50e" data-fidelity="lc-91534f5bcb77f50e"><strong>Merge and override hierarchy.</strong> When initializing or refreshing the model registry, xcsh applies configuration in the following order. Current implementation points include @f5-sales-demo/pi-ai,
-~/.xcsh/agent/models.yml, baseUrl.</p>
-
-<p id="fidelity-lc-3f5a77851800b0c2" data-fidelity="lc-3f5a77851800b0c2"><strong>Canonical model equivalence and coalescing.</strong> xcsh groups equivalent model checkpoints from different providers under canonical upstream identifiers (for example, claude-sonnet-4, gpt-5.3-codex) Current implementation points
-include claude-sonnet-4, gpt-5.3-codex, equivalence.overrides.</p>
-
-<p id="fidelity-lc-07ee6fc5a7e7bd7b" data-fidelity="lc-07ee6fc5a7e7bd7b"><strong>Runtime model discovery.</strong> xcsh detects local inference runtimes automatically Current implementation points include http://127.0.0.1:11434/api/tags, OLLAMA_BASE_URL, http://127.0.0.1:1234/v1/models.</p>
-
-<p id="fidelity-lc-37970377e13ca182" data-fidelity="lc-37970377e13ca182"><strong>Credential resolution hierarchy.</strong> When resolving API keys for a provider, xcsh evaluates sources in the following priority order. Current implementation points include --api-key, agent.db, OPENAI_API_KEY.</p>
-
-<p id="fidelity-lc-8487bae147454d35" data-fidelity="lc-8487bae147454d35"><strong>Corporate Google Cloud Vertex AI login.</strong> /login lists Google Cloud Vertex AI (Corporate) first. Current implementation points include /login, global, google-vertex/gemini-3.7-flash:high.</p>
-
-<p id="fidelity-lc-f02a47fe7278b759" data-fidelity="lc-f02a47fe7278b759"><strong>Model roles and selection.</strong> xcsh supports logical role aliases configured via settings.modelRoles: Each role definition can include thinking intensity suffixes (for example, pi/smol:minimal,
-claude-sonnet-4:high). Current implementation points include settings.modelRoles, default, smol.</p>
-
-<p id="fidelity-lc-78ca4001d3ee0055" data-fidelity="lc-78ca4001d3ee0055"><strong>Context promotion and fallback.</strong> When a model context window overflows during a conversation turn (contextlengthexceeded), xcsh automatically promotes the session to a larger-context sibling model before
-initiating context compaction. Current implementation points include context_length_exceeded, contextPromotionTarget.</p>
-
-<p id="fidelity-lc-4ebb7fe5353fb256" data-fidelity="lc-4ebb7fe5353fb256"><strong>Manual Model Inventory Refresh.</strong> In the interactive model selector (/model or Ctrl+M), press r or run /model --refresh to trigger a manual inventory refresh. Current implementation points include /model, Ctrl+M,
-r.</p>
-
-<p id="fidelity-lc-5c0c278a723062ee" data-fidelity="lc-5c0c278a723062ee"><strong>LaTeX and Mathematical Formatting.</strong> xcsh natively renders LaTeX math blocks and inline formulas ($...$ and $$...$$) across the interactive TUI, markdown exports, and webviews with real-time Unicode glyph and KaTeX
-fallback formatting. Current implementation points include $...$, $$...$$.</p>
-
-<span data-fidelity-generated="end"></span>
 
 ## How do I select a model in a conversation?
 
@@ -140,3 +107,9 @@ The source-runtime preload keeps the pair in process memory; local compiled cand
 this file or its values into source control, logs, or UAT reports. CI does not read or recover workstation
 credentials: official release builds continue to receive the pair through GitHub secrets. Unit tests use
 fixture credentials; the live provider smoke script uses the same local preload as development UAT.
+
+Route selection is complete only when the provider, account, and model all match the intended
+boundary. Use `/model` in the TUI or the explicit model flag shown by `xcsh --help`, send a no-tool
+identity prompt, and inspect the session metadata. Switching a model affects subsequent turns; it
+does not rewrite earlier entries. Remove temporary route overrides and start a new session to verify
+the default path independently.

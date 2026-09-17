@@ -4,6 +4,11 @@ description: "Configure an API key or supported subscription login without placi
 sidebar:
   order: 2
   label: "Model authentication"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 Model credentials belong in the provider-supported environment or subscription login, not in prompts, settings committed to a repository, or command arguments.
@@ -11,20 +16,6 @@ Model credentials belong in the provider-supported environment or subscription l
 ## Which authentication method should I choose?
 
 Use a provider application programming interface (API) key for service-style automation. Use a supported subscription login for an interactive user session. Run `xcsh --list-models <PROVIDER>` after authentication to confirm the credential can enumerate models.
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-a482f6fd3f7bf483" data-fidelity="lc-a482f6fd3f7bf483"><strong>Claude subscription.</strong> Run /login anthropic or select Anthropic (Claude Pro/Max) from the login picker. Current implementation points include /login anthropic, code#state, smol.</p>
-
-<p id="fidelity-lc-cf70025e4db84f42" data-fidelity="lc-cf70025e4db84f42"><strong>Anthropic API key.</strong> For usage-based Anthropic Console access, set ANTHROPICAPIKEY. Current implementation points include ANTHROPIC_API_KEY, /login anthropic.</p>
-
-<p id="fidelity-lc-d925e179bca75142" data-fidelity="lc-d925e179bca75142"><strong>1. ChatGPT subscription (OAuth).</strong> Chatgpt subscription (oauth) for openai api access. To use your ChatGPT Plus or Pro subscription, run /login openai-codex or select ChatGPT Plus/Pro (Codex Subscription) in the
-/login interactive picker. Current implementation points include /login openai-codex, /login, agent.db.</p>
-
-<p id="fidelity-lc-b0fe128b1f895e3e" data-fidelity="lc-b0fe128b1f895e3e"><strong>2. OpenAI Platform API (usage-based billing).</strong> Openai platform api (usage-based billing) for openai api access. To use pay-as-you-go OpenAI Platform access, configure the OPENAIAPIKEY environment variable or provide it in
-models.yml: After starting xcsh, select an OpenAI model using /model. Current implementation points include OPENAI_API_KEY, models.yml, /model.</p>
-
-<span data-fidelity-generated="end"></span>
 
 ## How do I select a model explicitly?
 
@@ -38,3 +29,9 @@ For Anthropic, either complete `/login anthropic` with a Claude subscription or 
 `ANTHROPIC_API_KEY` for direct API billing. `--model fable` and `--model anthropic/fable` are exact
 aliases for `anthropic/claude-fable-5-1`; use `anthropic/claude-fable-5` when you specifically need
 the earlier Fable 5 model. Fable access depends on the selected account's entitlement.
+
+Start xcsh, enter `/login`, and choose only the provider you intend to use. Complete the
+provider-owned sign-in flow, return to the model picker, and select an explicit model.
+Authentication may store a refresh token or subscription session outside the repository; a prompt
+never needs the credential value. Send a no-tool prompt, inspect the selected provider and model,
+then use `/logout` when the account must not remain available on that workstation.

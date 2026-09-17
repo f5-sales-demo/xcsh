@@ -23,3 +23,9 @@ Type `/` in the prompt to list the registry active in the current session, and `
 | Session state | `/settings`, `/hotkeys`, `/memory`, `/usage`, `/plan` |
 
 `/context status`, `/mcp list`, and `/plugin list` report the current state of those subsystems without changing anything.
+
+Slash commands are resolved from the active built-in, extension, plugin, and project capability set,
+so `/help` is the complete lookup surface for the running session. Keybindings depend on the active
+component: a modal selector consumes keys before the prompt editor, and global actions apply only
+when no focused surface overrides them. If a shortcut differs from this page, record the xcsh
+version, active modal, and `/help` entry before filing a defect.

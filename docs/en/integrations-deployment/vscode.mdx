@@ -21,3 +21,11 @@ Editor menus and command palette entries belong to the extension host and change
 3. Inspect the persisted session file rather than the editor transcript when an exact sequence matters.
 
 A difference between the two points at extension configuration, not at the agent loop.
+
+| Need | Use VS Code? | Alternative |
+| --- | --- | --- |
+| Work with editor selection and workspace context | Yes | The terminal cannot infer the active editor selection. |
+| Reproduce provider, tool, or session behavior | Usually no | Reproduce with the xcsh CLI first. |
+| Run unattended automation | No | Use a headless protocol or the SDK. |
+
+The extension inherits the VS Code workspace trust and process environment but still uses xcsh provider and tool boundaries. Confirm the workspace root and selected file before applying an edit. Re-run the same prompt in the terminal when isolating whether a failure belongs to xcsh or the editor host.

@@ -12,14 +12,6 @@ The Office pane packages an xcsh sidebar for supported Excel, Word, and PowerPoi
 
 Package tests own pane components, bridge messages, and host-independent state. Office-host integration tests own document application programming interfaces (APIs), sideloading, and task-pane lifecycle. A change that crosses the bridge requires both suites; a passing browser-style component test does not prove Word, Excel, or PowerPoint host behavior.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-4bce21dd6d3b37ed" data-fidelity="lc-4bce21dd6d3b37ed"><strong>Test suites and domain ownership.</strong> Current implementation points include packages/office-pane/src/**/*.test.ts, packages/office-pane/test/integration/, packages/office-pane/test/e2e/.</p>
-
-<p id="fidelity-lc-ca15d3e733d2ebcb" data-fidelity="lc-ca15d3e733d2ebcb"><strong>Maintenance responsibilities.</strong> Current implementation points include office-pane.</p>
-
-<span data-fidelity-generated="end"></span>
-
 ## What must be running?
 
 The pane build and its local bridge server must match the xcsh version used for the session. One active sidebar binds to one server session at a time.
@@ -27,3 +19,11 @@ The pane build and its local bridge server must match the xcsh version used for 
 ## Which host steps vary by platform?
 
 Ribbon placement, the sideload mechanism, and trust prompts differ across Office on Windows, Office on macOS, and Office on the web. Read the sideload action from `xcsh office --help`, then follow the Microsoft sideloading procedure for the specific host you are targeting.
+
+| Goal | Recommended surface | Why |
+| --- | --- | --- |
+| Edit or analyze a standalone document | The document workflow | It can render and verify the saved artifact. |
+| Control the open Office task pane | The Office integration | It operates in the signed-in host application. |
+| Run a repeatable batch job | Headless mode or SDK | It avoids UI-dependent focus and selection. |
+
+The Office host, active document, selection, and signed-in account determine scope. Confirm all four before a write. Save to a test copy, reopen it, and inspect the changed region; closing a dialog is not proof that the document persisted.

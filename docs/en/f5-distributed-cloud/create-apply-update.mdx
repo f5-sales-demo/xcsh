@@ -4,6 +4,11 @@ description: "Choose strict creation, convergent apply, or explicit update for a
 sidebar:
   order: 4
   label: "Create and update"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 `create` requires absence, `update` requires an existing resource, and `apply` chooses create or update while preserving already-matching resources.

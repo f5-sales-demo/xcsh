@@ -18,3 +18,12 @@ The command-line interface (CLI) entry point supports an interactive terminal us
 | Local manifest check | `xcsh validate -f manifest.yaml` |
 
 Use resource subcommands for manifest lifecycle operations; do not ask a model to imitate them.
+
+| Mode | Best for | Persistence and output |
+| --- | --- | --- |
+| Interactive TUI | Human-guided work | Session history plus terminal rendering. |
+| Print | One bounded response | Human-readable stdout; persistence follows session flags. |
+| JSON | Event-consuming scripts | Framed stdout suitable for parsing. |
+| RPC or ACP | A controlling client | Bidirectional protocol lifecycle. |
+
+Choose the consumer before the mode. Do not parse TUI or print decorations as a stable protocol, and do not use `--no-session` when later resume is a requirement. See [headless modes](/xcsh/en/automate-extend/headless-protocols/) for lifecycle details.

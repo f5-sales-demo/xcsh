@@ -42,3 +42,9 @@ Use `xcsh config set <KEY> <VALUE>` only for a key present in the installed sche
 ## Which source defines a setting?
 
 The settings schema and its tests in the matching source release define type, default, and validation. `xcsh config list --json` reports the value after user, project, environment, and command-line precedence is applied. When the two disagree, the schema describes what is legal and the effective output describes what is active.
+
+Unknown keys and wrong value types are configuration errors, even when a nearby subsystem has a
+similarly named option. Consult the generated schema for the installed version, place the key under
+its documented namespace, and restart the process after editing. Use `/settings` to inspect
+effective interactive values. When diagnosing precedence, remove the highest-priority override and
+relaunch rather than editing several layers at once.

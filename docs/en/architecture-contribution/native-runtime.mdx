@@ -12,54 +12,9 @@ The public TypeScript layer owns ergonomic types and fallbacks. The loader selec
 
 Resolution considers operating system, CPU architecture, and supported hardware variants before trying packaged and extracted binary candidates. Embedded binaries are materialized in a controlled cache. `validateNative` checks the runtime surface so a mismatched binary fails near loading instead of at an unrelated call.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-c1132d8ea058afe9" data-fidelity="lc-c1132d8ea058afe9"><strong>Primary implementation files.</strong> Current implementation points include packages/natives/native/native.ts, packages/natives/native/embedded-addon.ts, packages/natives/native/bindings.ts.</p>
-
-<p id="fidelity-lc-4d5366775f513cea" data-fidelity="lc-4d5366775f513cea"><strong>Core responsibilities.</strong> Current implementation points include validateNative.</p>
-
-<p id="fidelity-lc-d2ff35a50586cd6f" data-fidelity="lc-d2ff35a50586cd6f"><strong>Platform resolution and hardware variants.</strong> The runtime resolves the active target using standard Node.js platform and architecture strings: ‹PLATFORM›-‹ARCH› (for example, linux-x64 or darwin-arm64). Current implementation
-points include ‹PLATFORM›-‹ARCH›, linux-x64, darwin-arm64.</p>
-
-<p id="fidelity-lc-764e20f2b427de14" data-fidelity="lc-764e20f2b427de14"><strong>Binary candidate resolution sequence.</strong> Candidate paths are evaluated in deterministic priority order based on execution mode. Current implementation points include ‹PACKAGE_DIR›/native/‹FILENAME›, ‹EXEC_DIR›/‹FILENAME›,
-‹VERSIONED_USER_DIR›/‹FILENAME›.</p>
-
-<p id="fidelity-lc-04fc1453040ff6fd" data-fidelity="lc-04fc1453040ff6fd"><strong>Embedded binary extraction.</strong> When running inside a compiled binary package (isCompiledBinary === true), maybeExtractEmbeddedAddon manages binary extraction. Current implementation points include
-isCompiledBinary === true, maybeExtractEmbeddedAddon, mkdirSync(..., ｛ recursive: true ｝).</p>
-
-<p id="fidelity-lc-100d40f53ffc3aa1" data-fidelity="lc-100d40f53ffc3aa1"><strong>Interface validation contract (validateNative).</strong> Before exposing bindings to the runtime, validateNative verifies that all expected functions exist on the loaded addon object: If any required symbol is missing, the loader records
-a validation failure and advances to the next candidate path. Current implementation points include validateNative, grep, glob.</p>
-
-<p id="fidelity-lc-3ff1081860dce165" data-fidelity="lc-3ff1081860dce165"><strong>Troubleshooting and diagnostics.</strong> When all candidate paths fail and the host platform is not present in SUPPORTEDPLATFORMS, the loader raises an explicit Unsupported platform: ‹TAG› error listing all supported
-target platforms. Current implementation points include SUPPORTED_PLATFORMS, Unsupported platform: ‹TAG›, PI_DEV=1.</p>
-
-<span data-fidelity-generated="end"></span>
-
 ## How do I keep bindings synchronized?
 
 Module augmentation describes native exports to TypeScript, wrappers translate public inputs and outputs, and Rust functions implement the Node-API boundary. Synchronous and asynchronous variants must agree on names, data conversions, error shapes, and cancellation. Update all three layers and their contract tests together.
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-55c13fd7d4e8188d" data-fidelity="lc-55c13fd7d4e8188d"><strong>Architecture overview.</strong> 1. Current implementation points include NativeBindings, packages/natives/native/bindings.ts, types.ts.</p>
-
-<p id="fidelity-lc-d010761453be63f5" data-fidelity="lc-d010761453be63f5"><strong>Primary implementation files.</strong> Current implementation points include packages/natives/native/bindings.ts, packages/natives/native/native.ts, packages/natives/native/index.ts.</p>
-
-<p id="fidelity-lc-46fdecd02d805738" data-fidelity="lc-46fdecd02d805738"><strong>Contract model and module augmentation.</strong> Packages/natives/native/bindings.ts defines core contracts: Each functional domain augments NativeBindings using TypeScript declaration merging: This model provides strong
-compile-time type safety across modular subdirectories without requiring a single monol Current implementation points include packages/natives/native/bindings.ts, NativeBindings.</p>
-
-<p id="fidelity-lc-c70fbd3b08baf60f" data-fidelity="lc-c70fbd3b08baf60f"><strong>Wrapper responsibilities.</strong> TypeScript wrappers provide convenience transformations without duplicating native algorithmic logic Current implementation points include (err, value).</p>
-
-<p id="fidelity-lc-9f1dfbc82b5a2ea8" data-fidelity="lc-9f1dfbc82b5a2ea8"><strong>JavaScript API and native export mapping.</strong> Current implementation points include grep(options, onMatch?), grep, Promise‹GrepResult›.</p>
-
-<p id="fidelity-lc-4a9cbe2549062979" data-fidelity="lc-4a9cbe2549062979"><strong>Synchronous and asynchronous contract guidelines.</strong> The native binding layer maintains strict separation between execution models Current implementation points include PtySession, Shell.</p>
-
-<p id="fidelity-lc-3fcc8b6991a67cc9" data-fidelity="lc-3fcc8b6991a67cc9"><strong>Mismatch detection and validation.</strong> Drift between TypeScript contracts and compiled Rust binaries is caught at two stages. Current implementation points include NativeBindings, validateNative, .node.</p>
-
-<p id="fidelity-lc-8782ee4a8c24d5ae" data-fidelity="lc-8782ee4a8c24d5ae"><strong>Maintainer checklist for binding updates.</strong> When adding or modifying native bindings. Current implementation points include packages/natives/native/‹MODULE›/types.ts, packages/natives/native/‹MODULE›/index.ts,
-packages/natives/native/native.ts.</p>
-
-<span data-fidelity-generated="end"></span>
 
 ## Which subsystems does the addon cover?
 
@@ -72,39 +27,8 @@ and best-effort ScreenSaver inhibition on Linux, and a dedicated execution-state
 
 Read `packages/natives` for the TypeScript wrappers and loader, and `crates/pi-natives/src` for the Rust implementations.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-7da279e75c433ac6" data-fidelity="lc-7da279e75c433ac6"><strong>Primary implementation files.</strong> Current implementation points include packages/natives/native/index.ts, packages/natives/native/native.ts, packages/natives/native/bindings.ts.</p>
-
-<p id="fidelity-lc-c687c250e6f477ac" data-fidelity="lc-c687c250e6f477ac"><strong>Layer 1: TypeScript wrapper and API layer.</strong> Packages/natives/native/index.ts organizes capabilities into domain-specific modules rather than exposing raw Node-API bindings: packages/natives/native/bindings.ts defines core
-contracts Current implementation points include packages/natives/native/index.ts, grep, glob.</p>
-
-<p id="fidelity-lc-b934a7528a1b7c11" data-fidelity="lc-b934a7528a1b7c11"><strong>Layer 2: Addon loading and validation.</strong> Packages/natives/native/native.ts dynamically resolves and loads native addons at runtime: Following require(candidate), validateNative validates that all required Node-API symbols
-are present on the loaded object. Current implementation points include packages/natives/native/native.ts, $｛process.platform｝-$｛process.arch｝, linux-x64.</p>
-
-<p id="fidelity-lc-b32bdc765e9af2c6" data-fidelity="lc-b32bdc765e9af2c6"><strong>Layer 3: Rust Node-API module layer.</strong> Crates/pi-natives/src/lib.rs exports performance-critical Rust modules to the JavaScript runtime Current implementation points include crates/pi-natives/src/lib.rs, clipboard, fd.</p>
-
-<p id="fidelity-lc-339c1bc798f4d313" data-fidelity="lc-339c1bc798f4d313"><strong>Architectural boundaries and responsibilities.</strong> Current implementation points include AbortSignal.</p>
-
-<p id="fidelity-lc-003589c617cb0c6d" data-fidelity="lc-003589c617cb0c6d"><strong>Runtime workflow.</strong> 1. Current implementation points include @f5-sales-demo/pi-natives, native, native.ts.</p>
-
-<p id="fidelity-lc-2943c5d47e56daa9" data-fidelity="lc-2943c5d47e56daa9"><strong>Implementation files.</strong> Current implementation points include crates/pi-natives/src/image.rs, crates/pi-natives/src/html.rs, crates/pi-natives/src/clipboard.rs.</p>
-
-<p id="fidelity-lc-8d2f469191801fc6" data-fidelity="lc-8d2f469191801fc6"><strong>Functional capabilities and API mapping.</strong> Current implementation points include PhotonImage.parse(bytes), PhotonImage::parse, image.rs.</p>
-
-<p id="fidelity-lc-0b4f64857c5f7e75" data-fidelity="lc-0b4f64857c5f7e75"><strong>Data formats and conversions.</strong> Current implementation points include image, Uint8Array, Arc‹DynamicImage›.</p>
-
-<p id="fidelity-lc-c0321b3ed11bab22" data-fidelity="lc-c0321b3ed11bab22"><strong>Implementation files.</strong> Current implementation points include crates/pi-natives/src/shell.rs, crates/pi-natives/src/shell/windows.rs, crates/pi-natives/src/pty.rs.</p>
-
-<p id="fidelity-lc-5c228610baeb093e" data-fidelity="lc-5c228610baeb093e"><strong>Subsystem architecture.</strong> The shell execution engine provides two execution modes. The PTY runtime manages interactive terminal sessions. Provides deterministic process discovery and termination without
-shell dependencies: Parses high-frequency terminal input Current implementation points include shell, executeShell, Shell.</p>
-
-<p id="fidelity-lc-2ac609b07cf82e6c" data-fidelity="lc-2ac609b07cf82e6c"><strong>TypeScript API and native export mapping.</strong> Current implementation points include executeShell(options, onChunk?), executeShell, new Shell(options?).</p>
-
-<p id="fidelity-lc-36c6d11178b944d0" data-fidelity="lc-36c6d11178b944d0"><strong>Implementation files.</strong> Current implementation points include packages/natives/native/grep/index.ts, packages/natives/native/glob/index.ts, packages/natives/native/text/index.ts.</p>
-
-<p id="fidelity-lc-ab4faacecd134613" data-fidelity="lc-ab4faacecd134613"><strong>Subsystem architectures.</strong> Fscache accelerates repeated directory lookups Current implementation points include grep, searchContent, hasMatch.</p>
-
-<p id="fidelity-lc-aaa065b9fc7ef652" data-fidelity="lc-aaa065b9fc7ef652"><strong>TypeScript API and native export mapping.</strong> Current implementation points include grep(options, onMatch?), grep, grep.rs.</p>
-
-<span data-fidelity-generated="end"></span>
+Addon selection is a trust boundary: the loader accepts only a candidate for the current operating
+system, architecture, and declared variant, then validates the complete export surface. A missing or
+mismatched export is a startup error, not permission to mix binaries from another build. For
+diagnosis, record the selected candidate and host tuple, rebuild with `bun
+scripts/ensure-dev-native.ts`, and repeat the validation in a new process.
