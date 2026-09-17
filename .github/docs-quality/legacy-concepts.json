@@ -4006,7 +4006,7 @@
       "knowledgeSummary": "Covers languages and localization for index. Choose your language on the documentation portal",
       "disposition": "retained",
       "destinationPage": "docs/en/index.mdx",
-      "destinationHeading": "Run the quickstart",
+      "destinationHeading": "Explore by goal",
       "currentSourceAuthorities": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -4028,7 +4028,7 @@
       "knowledgeSummary": "The English catalog grouped configuration, containers, extensions, MCP, native runtime, providers, tools, sessions, TUI, Office ownership, and prompt guidance as distinct knowledge areas.",
       "disposition": "retained",
       "destinationPage": "docs/en/index.mdx",
-      "destinationHeading": "Run the quickstart",
+      "destinationHeading": "Explore by goal",
       "currentSourceAuthorities": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
