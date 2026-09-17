@@ -13,7 +13,7 @@ the [Office add-in development guide](DEVELOPING.md).
 
 ## Setup
 
-1. Install the build under test (`brew upgrade xcsh`; confirm `xcsh --version`).
+1. Install the build under test (`brew upgrade --cask xcsh`; confirm `xcsh --version`).
 2. From the working directory you want the pane scoped to, sideload and serve in one
    command — it registers the add-in, then serves and blocks until Ctrl+C:
    `cd /tmp/xcsh-office-cwd && xcsh office sideload excel|word|powerpoint`.

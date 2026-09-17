@@ -155,7 +155,7 @@ export function paneUnavailableMessage(distDir: string, source: PaneSource): str
 	return (
 		"The Office pane is not included in the npm package — it ships as a build-time asset of the " +
 		"compiled binary, which is also what provides the sideload and the trusted certificate. " +
-		"Install it with `brew install f5-sales-demo/tap/xcsh` and run `xcsh office` from there."
+		"Install it with `brew install --cask f5-sales-demo/tap/xcsh` and run `xcsh office` from there."
 	);
 }
 

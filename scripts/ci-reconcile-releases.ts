@@ -31,11 +31,11 @@ export type ListReleases = () => Promise<string[]>;
 /** How the caller enumerates versions present on the npm registry. */
 export type ListNpmVersions = () => Promise<string[]>;
 /**
- * How the caller reads the tap's formula source. Raw text rather than a parsed
+ * How the caller reads the tap's cask source. Raw text rather than a parsed
  * version, so the parsing and the health checks live in the pure layer where
  * they can be tested.
  */
-export type ReadHomebrewFormula = () => Promise<string>;
+export type ReadHomebrewCask = () => Promise<string>;
 /**
  * How the caller maps a release's asset names to their published sha256. GitHub
  * exposes a `digest` per asset, so verifying the tap against the real artifacts
@@ -47,7 +47,7 @@ export interface ReconcileDeps {
 	listTags: ListTags;
 	listReleases: ListReleases;
 	listNpmVersions: ListNpmVersions;
-	readHomebrewFormula: ReadHomebrewFormula;
+	readHomebrewCask: ReadHomebrewCask;
 	listAssetDigests: ListAssetDigests;
 	log: (message: string) => void;
 }
@@ -72,10 +72,9 @@ export interface Divergence {
 	 */
 	readonly missingHomebrew: boolean;
 	/**
-	 * The tap serves the right version but the formula cannot install:
-	 * ci-release-homebrew.ts falls back to the literal "MISSING_SHA256" when an
-	 * archive checksum is absent, so a formula can look current and still be
-	 * unusable. Version equality alone would call that clean.
+	 * The tap serves the right version but the cask cannot install:
+	 * A missing, malformed, or stale archive checksum can leave a cask current by
+	 * version but unusable. Version equality alone would call that clean.
 	 */
 	readonly brokenHomebrew: boolean;
 }
@@ -98,7 +97,7 @@ export function describeDivergence(d: Divergence): string {
 		d.missingRelease ? "no GitHub release" : "",
 		d.missingNpm ? "not on npm" : "",
 		d.missingHomebrew ? "Homebrew tap is stale" : "",
-		d.brokenHomebrew ? "Homebrew formula is broken" : "",
+		d.brokenHomebrew ? "Homebrew cask is broken" : "",
 	]
 		.filter(Boolean)
 		.join(", ");
@@ -123,13 +122,13 @@ export async function reconcileReleases(
 	let tags: string[];
 	let releases: string[];
 	let npmVersions: string[];
-	let formula: string;
+	let cask: string;
 	try {
-		[tags, releases, npmVersions, formula] = await Promise.all([
+		[tags, releases, npmVersions, cask] = await Promise.all([
 			deps.listTags(),
 			deps.listReleases(),
 			deps.listNpmVersions(),
-			deps.readHomebrewFormula(),
+			deps.readHomebrewCask(),
 		]);
 	} catch (error) {
 		// Fail closed. A lookup that errored tells us nothing about the release
@@ -139,27 +138,26 @@ export async function reconcileReleases(
 		return { status: "unknown", divergences: [], detail: `lookup failed: ${detail}` };
 	}
 
-	const brewVersion = formula.match(/^\s*version\s+"([^"]+)"/m)?.[1];
+	const brewVersion = cask.match(/^\s*version\s+"([^"]+)"/m)?.[1];
 	if (brewVersion === undefined) {
-		// Unparseable formula tells us nothing about the tap's state.
-		return { status: "unknown", divergences: [], detail: "no version line in the Homebrew formula" };
+		// An unparseable cask tells us nothing about the tap's state.
+		return { status: "unknown", divergences: [], detail: "no version line in the Homebrew cask" };
 	}
-	// A formula can carry the right version and still not install. The generator
-	// substitutes the literal "MISSING_SHA256" when an archive is absent, an empty
-	// digest list is vacuously "all valid", and URLs are written independently of
-	// the version line so they can point at an older tag's assets.
+	// A cask can carry the right version and still not install. A missing or
+	// malformed digest map is invalid, and the URL is written independently of
+	// the version line so it can point at an older tag's assets.
 	//
-	// Limit worth stating: this checks the formula is internally coherent, not that
-	// each digest matches the artifact it names. Proving that needs the archives
-	// downloaded, which is a different job from a cheap scheduled check.
-	const digests = [...formula.matchAll(/sha256\s+"([^"]*)"/g)].map(m => m[1] ?? "");
-	const urlVersions = [...formula.matchAll(/url\s+"[^"]*?\/v?([0-9]+\.[0-9]+\.[0-9]+)\//g)].map(m => m[1]);
-	// Pair each url with the sha256 that follows it, so a checksum can be checked
-	// against the artifact it actually names.
-	const pairs = [...formula.matchAll(/url\s+"([^"]+)"\s*\n\s*sha256\s+"([^"]*)"/g)].map(m => ({
-		asset: (m[1] ?? "").split("/").pop() ?? "",
-		sha: m[2] ?? "",
-	}));
+	const digestMatch = cask.match(/^\s*sha256\s+arm:\s*"([^"]*)",\s*intel:\s*"([^"]*)"/m);
+	const digests = digestMatch ? [digestMatch[1] ?? "", digestMatch[2] ?? ""] : [];
+	const downloadUrl = cask.match(/^\s*url\s+"([^"]+)"/m)?.[1];
+	const expectedDownloadUrl =
+		"https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-#{arch}.zip";
+	const pairs = digestMatch
+		? [
+				{ asset: "xcsh-darwin-arm64.zip", sha: digestMatch[1] ?? "" },
+				{ asset: "xcsh-darwin-x64.zip", sha: digestMatch[2] ?? "" },
+			]
+		: [];
 
 	let assetDigests: Map<string, string>;
 	try {
@@ -169,10 +167,10 @@ export async function reconcileReleases(
 		return { status: "unknown", divergences: [], detail: `asset digest lookup failed: ${detail}` };
 	}
 
-	const brokenFormula =
+	const brokenCask =
 		digests.length === 0 ||
 		digests.some(d => !/^[a-f0-9]{64}$/.test(d)) ||
-		urlVersions.some(v => v !== toVersion(brewVersion)) ||
+		downloadUrl !== expectedDownloadUrl ||
 		// --clobber means an archive can be replaced after the tap was written, so a
 		// syntactically valid checksum proves nothing on its own.
 		pairs.some(({ asset, sha }) => assetDigests.get(asset) !== sha);
@@ -197,7 +195,7 @@ export async function reconcileReleases(
 		const missingNpm = !published.has(toVersion(tag));
 		const isNewest = tag === newestReleased;
 		const missingHomebrew = isNewest && toVersion(brewVersion) !== toVersion(tag);
-		const brokenHomebrew = isNewest && !missingHomebrew && brokenFormula;
+		const brokenHomebrew = isNewest && !missingHomebrew && brokenCask;
 		if (!missingRelease && !missingNpm && !missingHomebrew && !brokenHomebrew) continue;
 
 		const reason = allowlist[tag];
@@ -270,9 +268,14 @@ if (import.meta.main) {
 						.map(a => [a.name, (a.digest as string).replace(/^sha256:/, "")] as const),
 				);
 			},
-			readHomebrewFormula: async () => {
-				// Formulae live at the tap root, not under Formula/.
-				const rb = await sh(["gh", "api", "repos/f5-sales-demo/homebrew-tap/contents/xcsh.rb", "--jq", ".content"]);
+			readHomebrewCask: async () => {
+				const rb = await sh([
+					"gh",
+					"api",
+					"repos/f5-sales-demo/homebrew-tap/contents/Casks/xcsh.rb",
+					"--jq",
+					".content",
+				]);
 				return Buffer.from(rb.trim(), "base64").toString("utf8");
 			},
 			log: (message: string) => {

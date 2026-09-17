@@ -129,9 +129,7 @@ const addonFilenames = getAddonFilenames(platformTag, selectedVariant);
 const addonLabel = selectedVariant ? `${platformTag} (${selectedVariant})` : platformTag;
 const installedCandidates = getInstalledNativeCandidates({
 	platform: process.platform,
-	packageVersion,
 	addonFilenames,
-	execDir,
 	resolvedExecDir,
 });
 

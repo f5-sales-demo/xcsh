@@ -411,10 +411,10 @@ verify its embedded manifest:
 
 ```bash
 brew update
-if brew list --versions f5-sales-demo/tap/xcsh >/dev/null 2>&1; then
-  brew upgrade f5-sales-demo/tap/xcsh
+if brew list --cask --versions xcsh >/dev/null 2>&1; then
+  brew upgrade --cask xcsh
 else
-  brew install f5-sales-demo/tap/xcsh
+  brew install --cask f5-sales-demo/tap/xcsh
 fi
 command -v xcsh
 realpath "$(command -v xcsh)"
@@ -432,7 +432,7 @@ remedy, and emits no stack trace. Capture the command status before reading its 
 last command's status, not xcsh's status.
 
 ```bash
-XCSH_RELEASE_VERSION="$(brew info --json=v2 f5-sales-demo/tap/xcsh | jq -r '.formulae[0].versions.stable')"
+XCSH_RELEASE_VERSION="$(brew info --cask --json=v2 f5-sales-demo/tap/xcsh | jq -r '.casks[0].version')"
 set +e
 npx --yes --package "@f5-sales-demo/xcsh@${XCSH_RELEASE_VERSION}" \
   xcsh office manifest \
@@ -442,7 +442,7 @@ XCSH_NPM_STATUS=$?
 set -e
 
 test "$XCSH_NPM_STATUS" -eq 1
-rg 'brew install f5-sales-demo/tap/xcsh' /tmp/xcsh-office-npm-refusal.txt
+rg 'brew install --cask f5-sales-demo/tap/xcsh' /tmp/xcsh-office-npm-refusal.txt
 ! rg '^[[:space:]]+at ' /tmp/xcsh-office-npm-refusal.txt
 ```
 
@@ -568,8 +568,8 @@ bun packages/coding-agent/src/cli.ts office manifest \
 
 ### npm reports that Office is unavailable
 
-This is the expected npm contract. Install or upgrade `f5-sales-demo/tap/xcsh` with Homebrew. Do not copy the
-private pane into `node_modules`; that would bypass the compiled asset, release, and certificate contracts.
+This is the expected npm contract. Install or upgrade the `f5-sales-demo/tap/xcsh` Homebrew cask. Do not copy
+the private pane into `node_modules`; that would bypass the compiled asset, release, and certificate contracts.
 
 ### Tests cannot load the native add-on
 

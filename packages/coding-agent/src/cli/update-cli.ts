@@ -75,7 +75,7 @@ type UpdateTarget =
  * Detection order:
  * 1. bun  — binary is inside bun's global bin directory
  * 2. npm  — binary is a symlink whose resolution chain contains "node_modules"
- * 3. brew — binary path or realpath contains "Cellar" or "homebrew"
+ * 3. brew — binary path or realpath contains "Cellar", "Caskroom", or "homebrew"
  * 4. binary — fallback for standalone installs
  */
 function detectInstallMethod(binPath: string, bunBinDir: string | undefined): InstallMethod {
@@ -106,14 +106,18 @@ function detectInstallMethod(binPath: string, bunBinDir: string | undefined): In
 		// lstat/readlink may fail; fall through
 	}
 
-	// 3. brew: path or realpath contains Cellar or homebrew
+	// 3. brew: path or realpath contains Cellar, Caskroom, or homebrew
 	const lowerBinPath = binPath.toLowerCase();
-	if (lowerBinPath.includes("/cellar/") || lowerBinPath.includes("/homebrew/")) {
+	if (
+		lowerBinPath.includes("/cellar/") ||
+		lowerBinPath.includes("/caskroom/") ||
+		lowerBinPath.includes("/homebrew/")
+	) {
 		return "brew";
 	}
 	try {
 		const realPath = fs.realpathSync(binPath).toLowerCase();
-		if (realPath.includes("/cellar/") || realPath.includes("/homebrew/")) {
+		if (realPath.includes("/cellar/") || realPath.includes("/caskroom/") || realPath.includes("/homebrew/")) {
 			return "brew";
 		}
 	} catch {
@@ -322,12 +326,16 @@ async function updateViaNpm(expectedVersion: string): Promise<void> {
 function updateViaBrew(targetPath: string, expectedVersion: string): void {
 	console.log(chalk.yellow(`\n${APP_NAME} at ${targetPath} was installed via Homebrew.`));
 	console.log(chalk.yellow(`To update to ${expectedVersion}, run:`));
-	console.log(chalk.cyan(`  brew upgrade ${APP_NAME}`));
+	console.log(chalk.cyan(`  ${getBrewUpgradeCommand()}`));
 	console.log(chalk.dim("\nThis ensures the update goes through your organization's Homebrew tap."));
 	// #1874 Task 7: brew upgrade runs out-of-band, so we can't recycle automatically.
 	// Nudge the one command that applies it to the Chrome extension immediately.
 	console.log(chalk.dim(`Then run  ${APP_NAME} chrome recycle  to apply it to the extension now`));
 	console.log(chalk.dim("(otherwise it takes effect the next time you open Chrome)."));
+}
+
+export function getBrewUpgradeCommand(): string {
+	return `brew upgrade --cask ${APP_NAME}`;
 }
 
 /**

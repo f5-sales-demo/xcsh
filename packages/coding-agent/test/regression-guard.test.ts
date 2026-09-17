@@ -528,7 +528,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 	});
 });
 
-describe("CI verifies the published Homebrew formula end to end", () => {
+describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 	async function loadVerifyHomebrewJob(): Promise<string> {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const match = workflow.match(/\n {2}verify-homebrew-install:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/);
@@ -536,37 +536,42 @@ describe("CI verifies the published Homebrew formula end to end", () => {
 		return match?.[0] ?? "";
 	}
 
-	it("runs on macOS only after the Homebrew tap update", async () => {
+	it("runs on Apple silicon and Intel macOS after the Homebrew tap update", async () => {
 		const job = await loadVerifyHomebrewJob();
 		expect(job).toContain("needs: [update-homebrew]");
-		expect(job).toContain("runs-on: macos-14");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+		expect(job).toContain("runs-on: ${{ matrix.os }}");
+		expect(job).toContain("os: macos-14");
+		expect(job).toContain("arch: arm64");
+		expect(job).toContain("os: macos-15-intel");
+		expect(job).toContain("arch: x64");
 	});
 
-	it("installs from a clean tap state with bounded retries", async () => {
+	it("runs the cask UAT under a standard account", async () => {
 		const job = await loadVerifyHomebrewJob();
-		expect(job).toContain("brew untap f5-sales-demo/tap");
-		expect(job).toContain("brew install f5-sales-demo/tap/xcsh");
-		expect(job).toContain("brew install --cask f5-sales-demo/tap/xcsh");
-		expect(job).toContain("pkgutil --pkg-info com.f5.xcsh");
-		expect(job).toContain("max_attempts=");
+		expect(job).toContain("sysadminctl -addUser");
+		expect(job).toContain('id -Gn "$UAT_USER"');
+		expect(job).toContain('sudo -H -u "$UAT_USER"');
+		expect(job).toContain("scripts/ci-verify-homebrew-cask.sh");
 	});
 
-	it("requires the published version and launches the installed CLI", async () => {
-		const job = await loadVerifyHomebrewJob();
-		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal string match against YAML content
-		expect(job).toContain("EXPECTED_VERSION: ${{ github.ref_name }}");
-		expect(job).toContain("installed=$(xcsh --version");
-		expect(job).toContain('if [ "$installed" = "$expected" ]');
-		expect(job).toContain("xcsh --help >/dev/null");
-		expect(job).toContain('codesign --verify --deep --strict "$binary"');
-		expect(job).toContain('spctl --assess --verbose=4 --type install "$binary"');
-	});
-
-	it("runs the direct-home live-profile matrix against the installed binary", async () => {
-		const job = await loadVerifyHomebrewJob();
-		expect(job).toContain("release-binaries-macos-arm64-signed");
-		expect(job).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
-		expect(job).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+	it("enforces byte identity, provenance, native loading, and no package residue", async () => {
+		const script = await fs.readFile(
+			path.join(import.meta.dir, "../../../scripts/ci-verify-homebrew-cask.sh"),
+			"utf8",
+		);
+		expect(script).toContain("brew install --cask");
+		expect(script).toContain("brew upgrade --cask xcsh");
+		expect(script).toContain("brew uninstall --cask xcsh");
+		expect(script).toContain("shasum -a 256");
+		expect(script).toContain("codesign --verify --deep --strict");
+		expect(script).toContain("TeamIdentifier=97ZYL78T5F");
+		expect(script).toContain("source=Notarized Developer ID");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell variable expression
+		expect(script).toContain("Loaded native addon from ${installed_root}/libexec/");
+		expect(script).toContain("pkgutil --pkg-info com.f5.xcsh");
+		expect(script).toContain("/Library/Application Support/xcsh");
+		expect(script).toContain('test -f "$data_marker"');
 	});
 });
 

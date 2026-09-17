@@ -406,7 +406,7 @@ export function ChatPanel({
 					<h2 className="onboarding-title">Install xcsh to get started</h2>
 					<ol className="onboarding-steps">
 						<li>
-							Install: <code>brew install f5-sales-demo/tap/xcsh</code>
+							Install: <code>brew install --cask f5-sales-demo/tap/xcsh</code>
 						</li>
 						<li>
 							Start the Office bridge: <code>xcsh office serve</code>

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { renderCommandHelp } from "@f5-sales-demo/pi-utils/cli";
-import { _resolveUpdateMethodForTest, parseUpdateArgs } from "../src/cli/update-cli";
+import { _resolveUpdateMethodForTest, getBrewUpgradeCommand, parseUpdateArgs } from "../src/cli/update-cli";
 import SelfUpdate from "../src/commands/self-update";
 import Update, { parseUpdateInvocation } from "../src/commands/update";
 
@@ -158,6 +158,10 @@ describe("update command boundary", () => {
 });
 
 describe("update-cli install target detection", () => {
+	it("directs Homebrew installs to the cask upgrade command", () => {
+		expect(getBrewUpgradeCommand()).toBe("brew upgrade --cask xcsh");
+	});
+
 	it("preserves the package launcher channel for cached compiled binaries", () => {
 		expect(_resolveUpdateMethodForTest("/tmp/cache/xcsh", undefined, "bun")).toBe("bun");
 		expect(_resolveUpdateMethodForTest("/tmp/cache/xcsh", undefined, "npm")).toBe("npm");
@@ -193,6 +197,12 @@ describe("update-cli install target detection", () => {
 
 	it("uses brew update when path contains homebrew", () => {
 		const method = _resolveUpdateMethodForTest("/opt/homebrew/bin/xcsh", undefined);
+
+		expect(method).toBe("brew");
+	});
+
+	it("uses brew update when an Intel cask path contains Caskroom", () => {
+		const method = _resolveUpdateMethodForTest("/usr/local/Caskroom/xcsh/21.31.0/bin/xcsh", undefined);
 
 		expect(method).toBe("brew");
 	});
