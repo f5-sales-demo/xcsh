@@ -11,24 +11,24 @@ head:
     content: |
       main:has(.landing-hero) > .content-panel:first-of-type { padding-block-end: .5rem; }
       main:has(.landing-hero) > .content-panel:first-of-type + .content-panel { border-top: 0; padding-block-start: 0; }
-      .landing-hero { display: grid; gap: clamp(2rem, 4vw, 4rem); grid-template-columns: minmax(0, 1fr) minmax(18rem, 35rem); align-items: start; margin-block: .75rem 4rem; }
-      .landing-hero__content, .landing-hero__image, .landing-hero .expressive-code, .landing-command { min-width: 0; }
+      .landing-hero { display: grid; gap: clamp(2rem, 4vw, 4rem); grid-template-columns: minmax(0, 1fr) minmax(18rem, 35rem); align-items: start; margin-block: .75rem 2rem; }
+      .landing-hero__content, .landing-hero__image, .landing-installer, .landing-installer .expressive-code, .landing-command { min-width: 0; }
       h1#_top { max-width: 13ch; margin-block-end: 0; text-wrap: balance; }
       .landing-hero__lede { max-width: 42rem; color: var(--sl-color-gray-2); font-size: var(--sl-text-lg); }
-      .landing-hero__install { max-width: 46rem; margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: .75rem; background: var(--sl-color-bg-nav); }
-      .landing-hero__install h2 { margin: 0; font-size: var(--sl-text-lg); }
-      .landing-hero__install p { margin-block: .5rem 0; }
-      .landing-hero__install pre { max-width: 100%; overflow-x: hidden; }
-      .landing-hero__install .expressive-code .ec-line .code { padding-inline-end: 3.5rem; overflow-wrap: anywhere; }
-      .landing-hero__install .expressive-code .copy button { opacity: 1; }
+      .landing-installer { margin-block: 0 4rem; padding: clamp(1rem, 2vw, 1.5rem); border: 1px solid var(--sl-color-gray-5); border-radius: .75rem; background: var(--sl-color-bg-nav); }
+      .landing-installer h2 { margin: 0; font-size: var(--sl-text-lg); }
+      .landing-installer p { margin-block: .5rem 0; }
+      .landing-installer pre { max-width: 100%; overflow-x: auto; }
+      .landing-installer .expressive-code .ec-line .code { padding-inline-end: 3.5rem; white-space: pre; overflow-wrap: normal; }
+      .landing-installer .expressive-code .copy button { opacity: 1; }
       .landing-hero__image { margin: 0; }
       .landing-hero__image img { display: block; width: 100%; height: auto; aspect-ratio: 1442 / 1268; object-fit: contain; filter: drop-shadow(0 1rem 2.5rem color-mix(in srgb, var(--sl-color-accent) 28%, transparent)); }
       .landing-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-block: 1.5rem; }
       .landing-explore { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       details.landing-disclosure { margin-block: 1rem 0; padding: .75rem 1rem; border: 1px solid var(--sl-color-gray-5); border-radius: .5rem; background: var(--sl-color-bg-nav); }
       details.landing-disclosure summary { cursor: pointer; font-weight: 600; }
-      :is(.landing-hero, .landing-grid, .landing-disclosure) :is(a, button, summary):focus-visible { outline: 2px solid var(--sl-color-accent-high); outline-offset: 3px; }
-      @media (max-width: 50rem) { .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-block: .5rem 3rem; } .landing-hero__install { padding: 1rem; } .landing-grid { grid-template-columns: minmax(0, 1fr); } }
+      :is(.landing-hero, .landing-installer, .landing-grid, .landing-disclosure) :is(a, button, summary):focus-visible { outline: 2px solid var(--sl-color-accent-high); outline-offset: 3px; }
+      @media (max-width: 50rem) { .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-block: .5rem 2rem; } .landing-installer { margin-block-end: 3rem; padding: 1rem; } .landing-grid { grid-template-columns: minmax(0, 1fr); } }
 ---
 
 import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
@@ -37,24 +37,24 @@ import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
   <div class="landing-hero__content">
     <p class="landing-hero__lede">An AI-native terminal assistant for engineering, automation, and reviewable F5 Distributed Cloud workflows.</p>
     <p>xcsh is an independent open-source project derived from pi/pi-mono, specialized for F5 Distributed Cloud workflows; it is not an F5 product.</p>
-
-    <section class="landing-hero__install" aria-labelledby="install-xcsh">
-
-## Install xcsh
-
-      <p>Universal installer for macOS and Linux.</p>
-
-      ```bash wrap
-      curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
-      ```
-
-      <p>It installs the latest prebuilt release into <code>~/.local/bin</code>. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
-    </section>
   </div>
 
   <figure class="landing-hero__image">
     <img src="/xcsh/images/xcsh-ghostty-terminal.png" width="1442" height="1268" alt="xcsh running in a Ghostty terminal with the model selector, prompt, and session status visible." />
   </figure>
+</section>
+
+<section class="landing-installer" aria-labelledby="install-xcsh">
+
+## Install xcsh
+
+  <p>Universal installer for macOS and Linux.</p>
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
+  ```
+
+  <p>It installs the latest prebuilt release into <code>~/.local/bin</code>. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
 </section>
 
 ## What xcsh helps you do
