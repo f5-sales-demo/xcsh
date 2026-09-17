@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0|2|4|6|8-file-workers> <output-dir> <all|native|rust|typescript>" >&2
+  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0..32-file-workers> <output-dir> <all|native|rust|typescript>" >&2
   exit 2
 }
 
@@ -15,17 +15,19 @@ output_dir=$5
 phase_set=$6
 
 case "$experiment" in
-image-control | image-candidate | d16-serial | d16-parallel-2 | d16-parallel-4 | d16-parallel-6 | d16-parallel-8 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+image-control | image-candidate | d16-serial | d16-parallel | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
 *) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
-case "$file_workers" in 0 | 2 | 4 | 6 | 8) ;; *) usage ;; esac
+if [[ ! "$file_workers" =~ ^(0|[1-9][0-9]*)$ ]] || ((file_workers > 32)); then
+  usage
+fi
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
 case "$experiment:$file_workers" in
-d16-parallel-2:2 | d16-parallel-4:4 | d16-parallel-6:6 | d16-parallel-8:8) ;;
+d16-parallel:*) ((file_workers > 0)) || usage ;;
 *:0)
-  [[ "$experiment" != d16-parallel-2 && "$experiment" != d16-parallel-4 && "$experiment" != d16-parallel-6 && "$experiment" != d16-parallel-8 ]]
+  [[ "$experiment" != d16-parallel ]]
   ;;
 *) usage ;;
 esac

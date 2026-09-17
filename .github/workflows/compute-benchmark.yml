@@ -16,10 +16,7 @@ on:
           - image-control
           - image-candidate
           - d16-serial
-          - d16-parallel-2
-          - d16-parallel-4
-          - d16-parallel-6
-          - d16-parallel-8
+          - d16-parallel
           - d16-hardware
           - f32-hardware
           - d16-burst
@@ -31,6 +28,10 @@ on:
         required: true
         type: choice
         options: [cold, warm]
+      file_workers:
+        description: File-level worker count for d16-parallel (integer 1 through 32)
+        required: true
+        default: "1"
       pair_id:
         description: Matched pair number, 1 through 5
         required: true
@@ -42,9 +43,6 @@ permissions:
 concurrency:
   group: compute-qualification-${{ inputs.experiment }}-${{ inputs.cache_state }}-${{ inputs.pair_id }}
   cancel-in-progress: false
-
-env:
-  FROZEN_SOURCE_SHA: d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a
 
 jobs:
   prepare:
@@ -64,12 +62,14 @@ jobs:
           CACHE_STATE: ${{ inputs.cache_state }}
           CANDIDATE_IMAGE_DIGEST: ${{ vars.XCSH_COMPUTE_CANDIDATE_IMAGE_DIGEST }}
           EXPERIMENT: ${{ inputs.experiment }}
+          FILE_WORKERS: ${{ inputs.file_workers }}
           PAIR_ID: ${{ inputs.pair_id }}
           SOURCE_SHA: ${{ inputs.source_sha }}
           STABLE_IMAGE_DIGEST: ${{ vars.XCSH_COMPUTE_IMAGE_DIGEST }}
         run: |
           set -euo pipefail
-          test "$SOURCE_SHA" = "$FROZEN_SOURCE_SHA"
+          FILE_WORKERS=${FILE_WORKERS:?}
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$PAIR_ID" =~ ^[1-5]$ ]]
           [[ "$CACHE_STATE" =~ ^(cold|warm)$ ]]
 
@@ -81,7 +81,7 @@ jobs:
               runner_label=xcsh-compute
               expected_image_digest=$STABLE_IMAGE_DIGEST
               ;;
-            image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-hardware|dag-control|dag-candidate)
+            image-candidate|d16-serial|d16-parallel|d16-hardware|dag-control|dag-candidate)
               runner_label=xcsh-compute-16-vcpu-candidate
               expected_image_digest=$CANDIDATE_IMAGE_DIGEST
               ;;
@@ -92,10 +92,10 @@ jobs:
             *) exit 2 ;;
           esac
           case "$EXPERIMENT" in
-            d16-parallel-2) file_workers=2 ;;
-            d16-parallel-4) file_workers=4 ;;
-            d16-parallel-6) file_workers=6 ;;
-            d16-parallel-8) file_workers=8 ;;
+            d16-parallel)
+              [[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-2])$ ]]
+              file_workers=$FILE_WORKERS
+              ;;
             d16-burst)
               max_parallel=4
               matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[range(1;5) | {sample:($pair + "-slot-" + tostring)}]}')
@@ -135,7 +135,7 @@ jobs:
       - name: Check out qualification harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
           path: .qualification-harness
           sparse-checkout: |
@@ -170,7 +170,7 @@ jobs:
       - name: Check out qualification harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
           path: .qualification-harness
           sparse-checkout: |
@@ -205,7 +205,7 @@ jobs:
       - name: Check out qualification harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
           path: .qualification-harness
           sparse-checkout: |
@@ -258,7 +258,7 @@ jobs:
       - name: Check out qualification harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
           path: .qualification-harness
           sparse-checkout: |
@@ -298,7 +298,7 @@ jobs:
       - name: Check out qualification harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
           path: .qualification-harness
           sparse-checkout: |
