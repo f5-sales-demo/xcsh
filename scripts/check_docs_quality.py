@@ -355,11 +355,14 @@ def _check_fidelity(
         ]
         if len(statuses) != 1:
             errors.append(f"fidelity claim disposition must be singular: {concept_id}")
+        legacy_disposition = (
+            str(legacy_concept.get("disposition")) if legacy_concept else ""
+        )
         expected_status = {
             "retained": "preserved",
             "corrected": "corrected",
             "superseded": "superseded",
-        }.get(legacy_concept.get("disposition") if legacy_concept else None)
+        }.get(legacy_disposition)
         if statuses and statuses[0] != expected_status:
             errors.append(f"fidelity disposition mismatch: {concept_id}")
         if (
