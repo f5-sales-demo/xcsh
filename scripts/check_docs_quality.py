@@ -38,9 +38,16 @@ LEGACY_PAGE_COUNT = 59
 LEGACY_CONCEPT_COUNT = 374
 LEGACY_UNIT_DIGEST = "7378b8bd45b3b0ad48864a094d97af76b212ff4ab892d8f28b80f7dd43fd012e"
 INVENTORY_SCHEMA_VERSION = 2
-FIDELITY_SCHEMA_VERSION = 1
+FIDELITY_SCHEMA_VERSION = 2
 MAX_SIDEBAR_LABEL_LENGTH = 24
 GIT_EXECUTABLE = shutil.which("git")
+GENERATED_FIDELITY_MARKERS = (
+    "data-fidelity-generated",
+    "fidelity-generated:start",
+    "fidelity-generated:end",
+    "data-fidelity-insertion",
+    "data-fidelity=",
+)
 
 
 def _load_json(path: Path) -> dict:
@@ -108,6 +115,11 @@ def _check_page(
     errors: list[str] = []
     relative = page.relative_to(root).as_posix()
     text = page.read_text(encoding="utf-8")
+    errors.extend(
+        f"generated fidelity marker in {relative}: {marker}"
+        for marker in GENERATED_FIDELITY_MARKERS
+        if marker in text
+    )
     errors.extend(
         f"known boilerplate in {relative}: {phrase}"
         for phrase in BOILERPLATE
@@ -272,7 +284,7 @@ def _check_fidelity(
 ) -> list[str]:
     errors: list[str] = []
     if fidelity.get("schemaVersion") != FIDELITY_SCHEMA_VERSION:
-        errors.append("legacy fidelity schema must be version 1")
+        errors.append("legacy fidelity schema must be version 2")
     rows = fidelity.get("concepts", [])
     row_ids = [row.get("id") for row in rows]
     errors.extend(
@@ -291,16 +303,19 @@ def _check_fidelity(
         or len(rows) != LEGACY_CONCEPT_COUNT
     ):
         errors.append("fidelity ledger must contain exactly 374 concepts")
+    active_rows = [
+        row
+        for row in rows
+        if legacy_by_id.get(row.get("id"), {}).get("disposition") != "superseded"
+    ]
+    if fidelity.get("activeConceptCount") != 372 or len(active_rows) != 372:
+        errors.append("fidelity ledger must contain exactly 372 active concepts")
 
     file_digest_cache: dict[Path, str] = {}
     locator_owners: dict[tuple[str, str], list[dict]] = defaultdict(list)
     required = (
         "id",
         "legacyUnitDigestSha256",
-        "destinationPage",
-        "destinationHeading",
-        "contentBlockLocator",
-        "destinationDigestSha256",
         "claims",
         "authorityLocators",
         "evidenceIdentifiers",
@@ -328,27 +343,6 @@ def _check_fidelity(
                 "legacyUnitDigestSha256"
             ):
                 errors.append(f"stale legacy unit digest: {concept_id}")
-        page_value = row.get("destinationPage", "")
-        page = root / page_value
-        block_locator = row.get("contentBlockLocator", "")
-        locator_owners[(page_value, block_locator)].append(row)
-        if not page.is_file():
-            errors.append(f"missing fidelity destination: {concept_id} {page_value}")
-        else:
-            text = page.read_text(encoding="utf-8")
-            marker = re.compile(
-                rf'<p id="fidelity-{re.escape(str(concept_id))}" data-fidelity="{re.escape(str(concept_id))}">.*?</p>',
-                re.DOTALL,
-            )
-            matches = marker.findall(text)
-            if len(matches) != 1 or f'id="{block_locator}"' not in (
-                matches[0] if matches else ""
-            ):
-                errors.append(f"unresolved fidelity content block: {concept_id}")
-            elif hashlib.sha256(matches[0].encode()).hexdigest() != row.get(
-                "destinationDigestSha256"
-            ):
-                errors.append(f"stale fidelity destination digest: {concept_id}")
         claims = row.get("claims", {})
         statuses = [
             name
@@ -357,12 +351,73 @@ def _check_fidelity(
         ]
         if len(statuses) != 1:
             errors.append(f"fidelity claim disposition must be singular: {concept_id}")
+        expected_status = {
+            "retained": "preserved",
+            "corrected": "corrected",
+            "superseded": "superseded",
+        }.get(legacy_concept.get("disposition") if legacy_concept else None)
+        if statuses and statuses[0] != expected_status:
+            errors.append(f"fidelity disposition mismatch: {concept_id}")
         if (
             statuses
             and statuses[0] != "preserved"
             and not str(row.get("rationale", "")).strip()
         ):
             errors.append(f"fidelity correction rationale missing: {concept_id}")
+        if expected_status == "superseded":
+            forbidden = (
+                "destinationPage",
+                "destinationHeading",
+                "destinationAnchor",
+                "sectionDigestSha256",
+                "contentBlockLocator",
+            )
+            if any(row.get(field) not in (None, "") for field in forbidden):
+                errors.append(f"superseded fidelity concept has a reader locator: {concept_id}")
+        else:
+            destination_fields = (
+                "destinationPage",
+                "destinationHeading",
+                "destinationAnchor",
+                "sectionDigestSha256",
+            )
+            errors.extend(
+                f"fidelity field missing: {concept_id} {field}"
+                for field in destination_fields
+                if row.get(field) in (None, "")
+            )
+            page_value = row.get("destinationPage", "")
+            heading = row.get("destinationHeading", "")
+            anchor = row.get("destinationAnchor", "")
+            locator_owners[(page_value, anchor)].append(row)
+            page = root / page_value
+            if not page.is_file():
+                errors.append(f"missing fidelity destination: {concept_id} {page_value}")
+            else:
+                text = page.read_text(encoding="utf-8")
+                matches = list(
+                    re.finditer(rf"^## {re.escape(str(heading))}\s*$", text, re.MULTILINE)
+                )
+                if len(matches) != 1 or anchor != _slug(str(heading)):
+                    errors.append(f"unresolved fidelity section: {concept_id}")
+                else:
+                    start = matches[0].start()
+                    next_heading = re.search(
+                        r"^## ", text[matches[0].end() :], re.MULTILINE
+                    )
+                    end = (
+                        matches[0].end() + next_heading.start()
+                        if next_heading
+                        else len(text)
+                    )
+                    normalized = "\n".join(
+                        line.rstrip() for line in text[start:end].splitlines()
+                    )
+                    normalized = re.sub(r"\n{3,}", "\n\n", normalized).strip() + "\n"
+                    if hashlib.sha256(normalized.encode()).hexdigest() != row.get(
+                        "sectionDigestSha256"
+                    ):
+                        errors.append(f"stale fidelity section digest: {concept_id}")
         for evidence_id in row.get("evidenceIdentifiers", []):
             if evidence_id not in evidence_entries:
                 errors.append(
@@ -404,7 +459,7 @@ def _check_fidelity(
             not str(row.get("sharedCoverageRationale", "")).strip() for row in owners
         ):
             errors.append(
-                f"unexplained shared fidelity block: {locator[0]}#{locator[1]}"
+                f"unexplained shared fidelity section: {locator[0]}#{locator[1]}"
             )
     return errors
 
@@ -551,8 +606,6 @@ def _check_legacy_coverage(
         "readerQuestion",
         "knowledgeSummary",
         "disposition",
-        "destinationPage",
-        "destinationHeading",
         "currentSourceAuthorities",
         "evidenceIdentifiers",
     )
@@ -575,16 +628,29 @@ def _check_legacy_coverage(
             errors.append(f"generic legacy knowledge summary: {concept_id}")
         if concept.get("disposition") not in dispositions:
             errors.append(f"invalid legacy disposition: {concept_id}")
+        if concept.get("disposition") != "superseded":
+            errors.extend(
+                f"legacy concept field missing: {concept_id} {field}"
+                for field in ("destinationPage", "destinationHeading")
+                if concept.get(field) in (None, "")
+            )
         if (
             concept.get("disposition") in {"corrected", "superseded"}
             and not str(concept.get("rationale", "")).strip()
         ):
             errors.append(f"unexplained superseded or corrected concept: {concept_id}")
-        section = (
-            f"{concept.get('destinationPage')}#{concept.get('destinationHeading')}"
-        )
-        if section not in known_sections:
-            errors.append(f"stale legacy destination: {concept_id} {section}")
+        if concept.get("disposition") == "superseded":
+            if any(
+                concept.get(field) not in (None, "")
+                for field in ("destinationPage", "destinationHeading")
+            ):
+                errors.append(f"superseded legacy concept has a reader destination: {concept_id}")
+        else:
+            section = (
+                f"{concept.get('destinationPage')}#{concept.get('destinationHeading')}"
+            )
+            if section not in known_sections:
+                errors.append(f"stale legacy destination: {concept_id} {section}")
         errors.extend(
             f"legacy concept references unknown evidence: {concept_id} {evidence_id}"
             for evidence_id in concept.get("evidenceIdentifiers", [])
@@ -599,9 +665,19 @@ def _check_legacy_coverage(
             for concept_id in heading.get("legacyConceptIds", []):
                 mapped.append(concept_id)
                 mapped_destination.setdefault(concept_id, (path, heading.get("text")))
+    superseded_concepts = {
+        concept.get("id")
+        for concept in concepts
+        if concept.get("disposition") == "superseded"
+    }
+    active_concepts = known_concepts - superseded_concepts
     errors.extend(
         f"unknown legacy concept id: {concept_id}"
         for concept_id in sorted(set(mapped) - known_concepts)
+    )
+    errors.extend(
+        f"superseded legacy concept must not be mapped: {concept_id}"
+        for concept_id in sorted(set(mapped) & superseded_concepts)
     )
     errors.extend(
         f"duplicate legacy concept mapping: {concept_id}"
@@ -609,11 +685,11 @@ def _check_legacy_coverage(
     )
     errors.extend(
         f"unmapped legacy concept: {concept_id}"
-        for concept_id in sorted(known_concepts - set(mapped))
+        for concept_id in sorted(active_concepts - set(mapped))
     )
     for concept in concepts:
         concept_id = concept.get("id")
-        if concept_id not in mapped_destination:
+        if concept_id not in mapped_destination or concept_id in superseded_concepts:
             continue
         expected_destination = (
             concept.get("destinationPage"),

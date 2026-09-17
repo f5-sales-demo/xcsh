@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -139,11 +140,12 @@ class DocsQualityCheckerTests(unittest.TestCase):
 
     def add_fidelity(self, root: Path) -> dict:
         page = root / "docs" / "en" / "task.mdx"
-        block = (
-            '<p id="fidelity-lc-fixture-concept" data-fidelity="lc-fixture-concept">'
-            "<strong>Legacy task.</strong> The task resolves one configuration value.</p>"
-        )
-        page.write_text(page.read_text() + "\n" + block + "\n", encoding="utf-8")
+        text = page.read_text(encoding="utf-8")
+        match = re.search(r"^## Do the task\s*$", text, re.MULTILINE)
+        assert match is not None
+        section = "\n".join(
+            line.rstrip() for line in text[match.start() :].splitlines()
+        ).strip() + "\n"
         source = root / "packages" / "coding-agent" / "src" / "cli.ts"
         source.parent.mkdir(parents=True)
         source.write_text("export const task = 'configuration';\n", encoding="utf-8")
@@ -160,8 +162,8 @@ class DocsQualityCheckerTests(unittest.TestCase):
             "legacyUnitDigestSha256": hashlib.sha256(unit.encode()).hexdigest(),
             "destinationPage": "docs/en/task.mdx",
             "destinationHeading": "Do the task",
-            "contentBlockLocator": "fidelity-lc-fixture-concept",
-            "destinationDigestSha256": hashlib.sha256(block.encode()).hexdigest(),
+            "destinationAnchor": "do-the-task",
+            "sectionDigestSha256": hashlib.sha256(section.encode()).hexdigest(),
             "claims": {
                 "preserved": ["The task resolves one configuration value."],
                 "corrected": [],
@@ -182,10 +184,11 @@ class DocsQualityCheckerTests(unittest.TestCase):
             "evidenceIdentifiers": ["offline-version"],
         }
         fidelity = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "legacyCommit": "fixture",
             "legacyTree": "b" * 40,
             "conceptCount": 374,
+            "activeConceptCount": 372,
             "concepts": [row],
         }
         fidelity_path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
@@ -351,13 +354,13 @@ class DocsQualityCheckerTests(unittest.TestCase):
         )
         self.assert_rejected(root, "immutable legacy commit is unavailable")
 
-    def test_rejects_stale_fidelity_content_digest(self) -> None:
+    def test_rejects_stale_fidelity_section_digest(self) -> None:
         root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
         fidelity = self.add_fidelity(root)
-        fidelity["concepts"][0]["destinationDigestSha256"] = "0" * 64
+        fidelity["concepts"][0]["sectionDigestSha256"] = "0" * 64
         path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
         path.write_text(json.dumps(fidelity), encoding="utf-8")
-        self.assert_rejected(root, "stale fidelity destination digest")
+        self.assert_rejected(root, "stale fidelity section digest")
 
     def test_rejects_unrelated_fidelity_authority(self) -> None:
         root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
@@ -385,7 +388,48 @@ class DocsQualityCheckerTests(unittest.TestCase):
         legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
         path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
         path.write_text(json.dumps(fidelity), encoding="utf-8")
-        self.assert_rejected(root, "unexplained shared fidelity block")
+        self.assert_rejected(root, "unexplained shared fidelity section")
+
+    def test_rejects_old_generated_fidelity_marker(self) -> None:
+        root = self.fixture(
+            "---\ntitle: Task\n---\n## Do the task\n\n"
+            '<span data-fidelity-generated="start"></span>\n'
+        )
+        self.add_fidelity(root)
+        self.assert_rejected(root, "generated fidelity marker")
+
+    def test_rejects_superseded_concept_with_reader_locator(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        fidelity = self.add_fidelity(root)
+        legacy_path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        legacy = json.loads(legacy_path.read_text())
+        legacy["concepts"][0]["disposition"] = "superseded"
+        legacy["concepts"][0]["rationale"] = "The old behavior is no longer supported."
+        legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
+        fidelity["concepts"][0]["claims"] = {
+            "preserved": [],
+            "corrected": [],
+            "superseded": ["The old behavior is no longer supported."],
+        }
+        fidelity["concepts"][0]["rationale"] = "The old behavior is no longer supported."
+        path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
+        path.write_text(json.dumps(fidelity), encoding="utf-8")
+        self.assert_rejected(root, "superseded fidelity concept has a reader locator")
+
+    def test_generator_is_idempotent_and_does_not_rewrite_inputs(self) -> None:
+        protected = [
+            *sorted((ROOT / "docs" / "en").rglob("*.mdx")),
+            ROOT / ".github" / "docs-quality" / "inventory.json",
+            ROOT / ".github" / "docs-quality" / "legacy-concepts.json",
+            ROOT / ".github" / "docs-quality" / "evidence" / "manifest.json",
+        ]
+        before = {path: path.read_bytes() for path in protected}
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")], check=True)
+        first = (ROOT / ".github" / "docs-quality" / "legacy-fidelity.json").read_bytes()
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")], check=True)
+        second = (ROOT / ".github" / "docs-quality" / "legacy-fidelity.json").read_bytes()
+        self.assertEqual(first, second)
+        self.assertEqual(before, {path: path.read_bytes() for path in protected})
 
     def test_rejects_long_sidebar_label(self) -> None:
         root = self.fixture(

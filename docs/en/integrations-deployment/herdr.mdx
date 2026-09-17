@@ -4,6 +4,11 @@ description: "Understand Herdr workspace launch, terminal actions, protocol nego
 sidebar:
   order: 5
   label: "Herdr"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 Herdr support is optional and host-dependent. When the host does not provide it, xcsh terminal operation is unaffected.
@@ -11,22 +16,6 @@ Herdr support is optional and host-dependent. When the host does not provide it,
 ## How is the host protocol negotiated?
 
 The integration checks the available socket protocol and media or graphics capabilities before it requests a workspace. Missing negotiation support leaves ordinary xcsh terminal operation intact.
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-b03b75c1ad3cb4a9" data-fidelity="lc-b03b75c1ad3cb4a9"><strong>Media and graphics protocol negotiation.</strong> When a released Herdr version exposes HERDRKITTYGRAPHICS=1 alongside HERDRENV=1, xcsh enables the Kitty image protocol for TTY output even though Herdr reports TERM=xterm-256color.
-Current implementation points include HERDR_KITTY_GRAPHICS=1, HERDR_ENV=1, xcsh.</p>
-
-<p id="fidelity-lc-1e355a06dd861533" data-fidelity="lc-1e355a06dd861533"><strong>Launching conversation-owned workspaces.</strong> Launch a conversation-owned workspace from outside Herdr. The launcher executes the following sequence. Current implementation points include 0600, HerdrBindingV1, xcsh.</p>
-
-<p id="fidelity-lc-b1f433b68395d4c9" data-fidelity="lc-b1f433b68395d4c9"><strong>Terminal management actions.</strong> Within a conversation, users invoke /terminal and agents invoke herdrterminal. Current implementation points include /terminal, herdr_terminal, list.</p>
-
-<p id="fidelity-lc-fc126b63197fd31b" data-fidelity="lc-fc126b63197fd31b"><strong>Security and isolation.</strong> Ownership isolation is enforced through a randomly generated xcshowner metadata token attached to the workspace and each managed pane. Current implementation points include
-xcsh_owner, xcsh.</p>
-
-<p id="fidelity-lc-f4497b80fc1b75ee" data-fidelity="lc-f4497b80fc1b75ee"><strong>Socket protocol and resilience.</strong> The socket client communicates using Herdr protocol 18 over newline-delimited JSON across HERDRSOCKETPATH. Current implementation points include HERDR_SOCKET_PATH, ping.</p>
-
-<span data-fidelity-generated="end"></span>
 
 ## How is a conversation-owned workspace launched?
 
@@ -38,7 +27,11 @@ Connection and framing failures surface as integration diagnostics. The client m
 
 ## What lifecycle state does xcsh publish?
 
-xcsh publishes native turn phases rather than inferring completion from terminal idleness or process exit. With Herdr protocol 20 or 22 and the advertised `agent_turn_journal` capability, a tracked execution publishes a persisted session/turn identity and a bounded semantic result to Herdr's durable journal. The existing 80-character metadata preview remains display-only and is never completion evidence.
+xcsh publishes native turn phases rather than inferring completion from terminal idleness or process
+exit. With Herdr protocol 20 or 22 and the advertised `agent_turn_journal` capability, a tracked
+execution publishes a persisted session/turn identity and a bounded semantic result to Herdr's
+durable journal. The existing 80-character metadata preview remains display-only and is never
+completion evidence.
 Commentary, prompt content, tool data, and failed or cancelled partial output are excluded.
 
 ### External execution driver contract
@@ -106,6 +99,12 @@ The verified contract is:
 | Reconnect/order | Serialized queue and persisted event revision | Exact duplicates are idempotent; stale/conflicting revisions fail; terminal state is immutable. |
 | Application exit | `session_shutdown` | Active turn becomes `interrupted`, then pane authority is released; never success. |
 
-The protocol-22 producer integration is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791); its lifecycle foundation is tracked by [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The complete cross-project work packages and acceptance gates are in [Herdr native signaling gap-closing plan](../architecture-contribution/herdr-gap-closing-plan).
+The protocol-22 producer integration is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791); its lifecycle foundation is tracked by [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The active protocol and lifecycle behavior is described on this page; obsolete delivery checklists are not part of the runtime contract.
 
 Herdr lifecycle reconciliation is tracked by issue #5 in the F5 Herdr fork. Current source already recognizes the exact `("herdr:xcsh", "xcsh")` resume pair; deployed build provenance and live resume/fork acceptance remain required before feature acceptance.
+
+Treat the negotiated protocol and the pane lifecycle as separate checks. First confirm that the
+Herdr socket and protocol version are compatible, then launch one conversation-owned workspace and
+observe its published state through exit. xcsh owns only workspaces it created for that
+conversation; it must not close unrelated panes. After a forced socket failure, reconnect and verify
+that stale workspace state is reconciled before another launch.

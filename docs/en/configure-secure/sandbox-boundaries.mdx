@@ -19,3 +19,9 @@ Filesystem-aware tools resolve paths against their configured workspace boundary
 ## Where does remote authority differ from local authority?
 
 Browser, editor, Office, and remote-service integrations enforce different permission models. Confirm the active host, account, context, namespace, and target immediately before a mutation. A successful read proves connectivity, not authorization for a write.
+
+Sandboxing constrains the local tool implementation; it does not grant remote authority and it
+cannot retract a side effect already accepted by an external service. Begin with no tools, add the
+minimum file or process capability, and test an allowed path plus a denied path. Verify denial at
+the tool boundary and inspect the filesystem or process table for absence of change. Restore the
+narrower configuration after the test.

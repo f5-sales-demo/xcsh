@@ -47,3 +47,9 @@ Run these steps against the pinned executable:
 2. Write long flags rather than single-character aliases.
 3. Request `--result-file` or `--mode json` wherever the command supports it.
 4. Pass `--allow-path` once per additional directory; it accumulates rather than replacing.
+
+Treat `xcsh --help` and each subcommand's `--help` as the version-matched authority. Global flags
+must precede or follow arguments exactly as that help permits; protocol modes reserve stdout for
+framed data. Before scripting a mutating command, pin the xcsh version, pass the context and
+resource identifiers explicitly, and exercise the read or validation form. Exit status is the
+automation contract; terminal color and progress text are not.

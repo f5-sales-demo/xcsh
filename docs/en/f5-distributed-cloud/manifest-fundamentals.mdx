@@ -15,3 +15,9 @@ Prefer `xcsh export <KIND> <NAME> -f exported.yaml` for an existing resource. Fo
 ## How do I keep a directory deterministic?
 
 Use one resource per YAML document, stable names, and explicit namespaces. Run `xcsh validate -f manifests/ -R` so nested files are included intentionally.
+
+Start from the catalog schema for the exact kind and keep one resource per manifest while learning.
+Set metadata, namespace, and required specification fields explicitly; omit server-owned status and
+identifiers. Run local validation before any command that contacts the tenant, then run a live diff
+in the selected context. A clean local parse does not prove authorization, existence, or a safe
+remote change.

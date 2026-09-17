@@ -15,3 +15,11 @@ Use a dedicated profile and an authorized target. Confirm the visible account, u
 ## Which Chrome capabilities does xcsh expose?
 
 The `chrome` command inspects and arranges browser sessions, and `chrome-host` runs the native messaging host that connects the extension to the executable. Page-level interaction is driven by the browser tool inside a session rather than by a subcommand, so scope it with `--tools` in the same way as any other tool.
+
+| Need | Use Chrome integration? | Boundary |
+| --- | --- | --- |
+| Inspect a visible page or perform a supported console-only task | Yes | The browser profile and signed-in session define authority. |
+| Manage a resource with an xcsh catalog command | No | Prefer the typed resource workflow and its diff. |
+| Automate an unsupported site or a third-party account | No | The integration does not expand authorization. |
+
+Start with a read-only inspection and confirm the selected tab, URL, tenant, and browser profile. A click or submitted form can create an external side effect; the transcript must identify that boundary. Close temporary tabs and verify the intended page state after the task.

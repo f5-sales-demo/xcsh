@@ -4,6 +4,11 @@ description: "Integrate xcsh with scripts through print, JSON, JSON-RPC, agent c
 sidebar:
   order: 1
   label: "Headless modes"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 Headless integrations select `json`, `rpc`, or `acp` with `--mode`: a JavaScript Object Notation (JSON) event stream, JSON remote procedure call (RPC), or the agent client protocol (ACP). Each mode has a different framing contract; consumers must parse that protocol rather than decorated terminal text.
@@ -15,40 +20,6 @@ xcsh --mode json --no-session --no-tools -p "Return one sentence"
 ```
 
 Capture stdout as protocol data and stderr as diagnostics. Pin the xcsh version in automation and test framing against the exact release.
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-a7fee165c79f153a" data-fidelity="lc-a7fee165c79f153a"><strong>Starting RPC mode.</strong> Start the agent in RPC mode using the --mode rpc CLI flag: Runtime operational behavior Current implementation points include --mode rpc, @file, todo.*.</p>
-
-<p id="fidelity-lc-081979a05762ffd4" data-fidelity="lc-081979a05762ffd4"><strong>Transport and framing.</strong> Each transport frame consists of a single JSON object terminated by a newline (\n) character. Current implementation points include \n, RpcResponse, ｛ type: "response", ... ｝.</p>
-
-<p id="fidelity-lc-cd373e296faa5c69" data-fidelity="lc-cd373e296faa5c69"><strong>Request and response correlation.</strong> All inbound commands accept an optional identifier field (id?: string). Current implementation points include id?: string, id, RpcClient.</p>
-
-<p id="fidelity-lc-5d1ae30c94cc55d6" data-fidelity="lc-5d1ae30c94cc55d6"><strong>Command schema.</strong> The canonical RpcCommand schema is defined in src/modes/rpc/rpc-types.ts Current implementation points include RpcCommand, src/modes/rpc/rpc-types.ts, ｛ id?, type: "abort" ｝.</p>
-
-<p id="fidelity-lc-c3253c89c76643ca" data-fidelity="lc-c3253c89c76643ca"><strong>Response schema.</strong> All command responses adhere to the RpcResponse contract. Replaces the in-memory task tracking state for the active session and returns the normalized phases. Replaces the
-registered host-provided tools that the RPC server can invoke over stdio: Response pay Current implementation points include RpcResponse, get_state, set_todos.</p>
-
-<p id="fidelity-lc-6e537819ca89cb78" data-fidelity="lc-6e537819ca89cb78"><strong>Event stream schema.</strong> RPC mode streams AgentSessionEvent objects dispatched from AgentSession.subscribe(...). Current implementation points include AgentSessionEvent, AgentSession.subscribe(...),
-agent_start.</p>
-
-<p id="fidelity-lc-99db233cd82ba2bd" data-fidelity="lc-99db233cd82ba2bd"><strong>Prompt and queue concurrency.</strong> The prompt and abortandprompt commands return an immediate acknowledgment response: When an agent turn is actively streaming, AgentSession.prompt() requires the streamingBehavior
-parameter: Omitting streamingBehavior during active streaming causes th Current implementation points include prompt, abort_and_prompt, agent_end.</p>
-
-<p id="fidelity-lc-3599caeb8ac8ab13" data-fidelity="lc-3599caeb8ac8ab13"><strong>Extension UI sub-protocol.</strong> Extensions running in RPC mode interact with the embedding host using dedicated request/response frames. Current implementation points include RpcExtensionUIRequest, type:
-"extension_ui_request", select.</p>
-
-<p id="fidelity-lc-d91dca501bcdb766" data-fidelity="lc-d91dca501bcdb766"><strong>Host tool sub-protocol.</strong> Embedding hosts can expose host-native tools to the agent using sethosttools and service execution calls across stdio. Current implementation points include set_host_tools,
-isError: true, host_tool_result.</p>
-
-<p id="fidelity-lc-6010a15b9ecde8f2" data-fidelity="lc-6010a15b9ecde8f2"><strong>Error handling and recoverability.</strong> Command failures return success: false with a descriptive error message Current implementation points include success: false, error, parse.</p>
-
-<p id="fidelity-lc-a595169e37acbd45" data-fidelity="lc-a595169e37acbd45"><strong>Common execution workflows.</strong> Inbound stdin. Outbound stdout sequence. Inbound stdin. Inbound stdin. Outbound stdout: Inbound stdin</p>
-
-<p id="fidelity-lc-27bb8b5821793fad" data-fidelity="lc-27bb8b5821793fad"><strong>RPC client helper library.</strong> The helper class in src/modes/rpc/rpc-client.ts provides client-side transport management: For low-level integrations requiring complete protocol control, send raw JSON Lines
-frames directly over stdio. Current implementation points include src/modes/rpc/rpc-client.ts, bun ‹cliPath› --mode rpc, req_‹n›.</p>
-
-<span data-fidelity-generated="end"></span>
 
 ## How do I retain and resume a JSON-mode session?
 
@@ -71,4 +42,10 @@ xcsh --resume /var/lib/my-controller/xcsh-sessions/<timestamp>_<id>.jsonl "Conti
 
 ## When do I use the software development kit (SDK) instead?
 
-Use the SDK when the host process needs in-memory session control, tool registration, or provider events. See [SDK automation](./sdk/).
+Use the SDK when the host process needs in-memory session control, tool registration, or provider events. See [SDK automation](/xcsh/en/automate-extend/sdk/).
+
+Choose the boundary by ownership: JSON is a one-way event transcript, RPC supports a controlling
+client, ACP integrates an editor or agent host, and the SDK shares a process. Never parse progress
+text as protocol data. On shutdown, wait for the protocol's terminal event, close the input stream,
+and verify the child exits. Remove the dedicated session directory only when its retained transcript
+is no longer needed.

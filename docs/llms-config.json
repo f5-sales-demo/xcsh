@@ -60,9 +60,7 @@
   "promote": [
     "index*",
     "getting-started/index*",
-    "getting-started/quickstart*",
     "getting-started/model-authentication*",
-    "getting-started/f5-xc-connection*",
     "use-xcsh/agent-loop*",
     "f5-distributed-cloud/manifest-fundamentals*",
     "f5-distributed-cloud/validate-diff*",

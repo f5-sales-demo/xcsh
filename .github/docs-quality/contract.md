@@ -76,11 +76,13 @@ Inventory schema v2 assigns every stable concept ID to exactly one current page 
 
 `corrected` and `superseded` records also explain why the legacy statement is no longer presented as current behavior. The ledger is an audit input, not published legacy prose and not a compatibility route.
 
-`legacy-fidelity.json` schema v1 is the candidate-facing ledger. It contains exactly one row for each
-of the 374 immutable units and records the legacy-unit digest, current destination heading,
-`data-fidelity` content-block locator and digest, preserved/corrected/superseded claims, exact
-source/test/help authority locators and digests, evidence identifiers, and any required rationale.
-The frozen PR #3693 audit remains immutable; remediation is recorded only in the candidate ledger.
+`legacy-fidelity.json` schema v2 is the candidate-facing ledger. It contains exactly one row for each
+of the 374 immutable units. The 372 active units identify a canonical authored section by page,
+heading, generated anchor, and normalized section digest; related units may share one coherent
+section when each row records why. The two superseded units retain their claim, authority, evidence,
+and rationale but have no reader-facing locator. The generator reads authored MDX, inventory,
+legacy mappings, and evidence without rewriting them; it writes only this ledger. The frozen PR
+#3693 audit remains immutable.
 
 The checker fails closed when Git metadata or the immutable legacy commit is unavailable. It rejects
 baseline drift, missing or duplicate IDs, stale or unresolved content blocks, stale destination or
@@ -114,9 +116,10 @@ The checker rejects:
 - output blocks and procedure/outcome headings without evidence;
 - page or heading inventory entries without a reader need and purpose;
 - pages without a source authority.
-- a fidelity ledger with anything other than 374 current, uniquely located concept rows;
-- unavailable immutable Git history, stale content or authority digests, unrelated authorities, or
-  unexplained shared-block coverage;
+- a fidelity ledger with anything other than 374 records and exactly 372 active section mappings;
+- unavailable immutable Git history, stale section headings, anchors, or digests, unrelated
+  authorities, invalid supersession, or unexplained shared-section coverage;
+- generated fidelity markers or prose embedded in an authored MDX page;
 - sidebar labels longer than 24 characters or colliding sibling labels;
 - broken internal links or anchors, duplicate generated anchors, and orphaned LLM selectors.
 

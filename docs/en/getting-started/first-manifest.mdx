@@ -4,6 +4,11 @@ description: "Validate, compare, apply, inspect, export, and delete one resource
 sidebar:
   order: 5
   label: "First manifest"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 A manifest names one F5 Distributed Cloud resource with `kind`, `metadata`, and `spec`. Begin from an exported or catalog-backed example for the exact resource kind; do not invent schema fields. This page walks one resource from local validation to proven deletion, so run it against a lab namespace you are authorized to change.

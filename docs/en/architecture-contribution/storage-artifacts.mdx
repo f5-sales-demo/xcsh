@@ -12,34 +12,6 @@ xcsh separates append-only conversation state from large or generated payloads. 
 
 Storage helpers choose user or project roots, allocate collision-resistant identifiers, and record names separately from content addresses. Text artifacts remain inspectable; binary blobs are externalized and referenced by uniform resource locator (URL)-like identifiers. URL handlers validate the scheme and authority before opening the backing object.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-6ca08bcdfb518516" data-fidelity="lc-6ca08bcdfb518516"><strong>Why two storage systems exist.</strong> The runtime uses two distinct persistence mechanisms for different data structures: The two mechanisms serve distinct optimization goals Current implementation points include
-blob:sha256:‹hash›, ‹sessionFile-without-.jsonl›/.</p>
-
-<p id="fidelity-lc-5be552c0ca761281" data-fidelity="lc-5be552c0ca761281"><strong>Storage boundaries and on-disk layout.</strong> SessionManager constructs BlobStore(getBlobsDir()), which places blob files in a shared global blob directory rather than in an individual session directory. Current implementation
-points include SessionManager, BlobStore(getBlobsDir()), ‹blobsDir›/‹sha256-hex›.</p>
-
-<p id="fidelity-lc-514b09c094946a41" data-fidelity="lc-514b09c094946a41"><strong>Identifier and name allocation schemes.</strong> BlobStore.put() computes a SHA-256 digest over the raw binary bytes and returns: The blob store does not use session-local counters. Current implementation points include
-BlobStore.put(), hash, path.</p>
-
-<p id="fidelity-lc-df4eb14cb6f07d49" data-fidelity="lc-df4eb14cb6f07d49"><strong>Persistence dataflow.</strong> Before session entries are written (#rewriteFile or incremental persistence), SessionManager calls prepareEntryForPersistence() through truncateForPersistence. Current
-implementation points include #rewriteFile, SessionManager, prepareEntryForPersistence().</p>
-
-<p id="fidelity-lc-86ff868e29c7828d" data-fidelity="lc-86ff868e29c7828d"><strong>URL access model.</strong> The blob:sha256:‹hash› format is an internal persistence reference within session payloads rather than a routing protocol scheme. Current implementation points include blob:,
-blob:sha256:‹hash›, SessionManager.</p>
-
-<p id="fidelity-lc-297e0e4cdd68ec81" data-fidelity="lc-297e0e4cdd68ec81"><strong>Resume, fork, and move semantics.</strong> SessionManager.fork() creates a new session file with a unique session ID and a parentSession link, returning the old and new file paths. Current implementation points include
-ArtifactManager, ｛id｝.*.log, AgentOutputManager.</p>
-
-<p id="fidelity-lc-601e77746fcdfc14" data-fidelity="lc-601e77746fcdfc14"><strong>Failure handling and fallback paths.</strong> Current implementation points include blob:sha256:, BlobStore.get, null.</p>
-
-<p id="fidelity-lc-53678e0c688719f9" data-fidelity="lc-53678e0c688719f9"><strong>Binary blob externalization compared to text artifacts.</strong> Both mechanisms reduce session JSONL file size while maintaining distinct storage lifecycles and retrieval paths.</p>
-
-<p id="fidelity-lc-bc115eea40223a7f" data-fidelity="lc-bc115eea40223a7f"><strong>Implementation files.</strong> Current implementation points include src/session/blob-store.ts, src/session/artifacts.ts, src/session/streaming-output.ts.</p>
-
-<span data-fidelity-generated="end"></span>
-
 ## How do resume, fork, and move treat state?
 
 Resume rebuilds context from the selected session leaf. Forking creates a new branch without rewriting the source branch. Moves must update the session reference and its dependent stored values as one operation or leave the original valid; partial copies are not a successful move.
@@ -50,33 +22,8 @@ The scan cache partitions keys by root and discovery options, evicts by freshnes
 
 Read `packages/coding-agent/src/session` for the append-only event graph and `packages/coding-agent/src/discovery` for the scan cache.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-bc983019490f9fc5" data-fidelity="lc-bc983019490f9fc5"><strong>Purpose and design goals.</strong> The cache stores full directory-scan entry lists (GlobMatch[]) keyed by scan scope and traversal policy, enabling higher-level operations (such as glob filtering, fuzzy scoring,
-and grep candidate selection) to run against cached entries. Current implementation points include GlobMatch[], glob, fuzzyFind.</p>
-
-<p id="fidelity-lc-15e6d797eca5de51" data-fidelity="lc-15e6d797eca5de51"><strong>Ownership and public surface.</strong> Current implementation points include crates/pi-natives/src/fs_cache.rs, crates/pi-natives/src/glob.rs, crates/pi-natives/src/fd.rs.</p>
-
-<p id="fidelity-lc-1335fe2e89a0d8b8" data-fidelity="lc-1335fe2e89a0d8b8"><strong>Cache key partitioning.</strong> Each entry is keyed by. Key contract implications: The cache key does not partition on nodemodules inclusion. Current implementation points include root, include_hidden,
-use_gitignore.</p>
-
-<p id="fidelity-lc-1d4af5198eae8753" data-fidelity="lc-1d4af5198eae8753"><strong>Scan collection behavior.</strong> Cache population uses a deterministic directory walker (ignore::WalkBuilder) configured by includehidden and usegitignore: Search roots are resolved through resolvesearchpath
-Current implementation points include ignore::WalkBuilder, include_hidden, use_gitignore.</p>
-
-<p id="fidelity-lc-6f137fa3b919fdde" data-fidelity="lc-6f137fa3b919fdde"><strong>Freshness and eviction policy.</strong> Global policy configuration (overridable via environment variables): Runtime behavior Current implementation points include FS_SCAN_CACHE_TTL_MS, 1000, FS_SCAN_EMPTY_RECHECK_MS.</p>
-
-<p id="fidelity-lc-378791dd26380fe0" data-fidelity="lc-378791dd26380fe0"><strong>Empty-result fast recheck.</strong> Normal cache hit behavior. Empty-result fast recheck behavior: Active consumers Current implementation points include ScanResult.cache_age_ms, empty_recheck_ms(),
-force_rescan(...).</p>
-
-<p id="fidelity-lc-7792c359e01d9760" data-fidelity="lc-7792c359e01d9760"><strong>Consumer defaults and cache usage.</strong> Cache usage is opt-in across all exposed APIs (cache?: boolean, defaulting to false). Current implementation points include cache?: boolean, false, glob.</p>
-
-<p id="fidelity-lc-33d4aa48b809e2fe" data-fidelity="lc-33d4aa48b809e2fe"><strong>Invalidation contract.</strong> Native invalidation entrypoint: Path handling behavior Current implementation points include invalidateFsScanCache(path?: string), path.</p>
-
-<p id="fidelity-lc-7eda1389f8ae32fc" data-fidelity="lc-7eda1389f8ae32fc"><strong>Mutation flow responsibilities.</strong> Coding agent execution paths must invoke invalidation helpers after successful filesystem mutations. Current implementation points include invalidateFsScanAfterWrite(path),
-invalidateFsScanAfterDelete(path), invalidateFsScanAfterRename(oldPath, newPath).</p>
-
-<p id="fidelity-lc-f0b41bba9dff2afb" data-fidelity="lc-f0b41bba9dff2afb"><strong>Adding a new cache consumer.</strong> When introducing cache usage in a new scanning or search path. Current implementation points include .gitignore, get_or_scan, force_rescan.</p>
-
-<p id="fidelity-lc-632b1392b231ee68" data-fidelity="lc-632b1392b231ee68"><strong>Known boundaries.</strong> Current implementation points include DashMap, glob, fuzzyFind.</p>
-
-<span data-fidelity-generated="end"></span>
+Treat a session reference as durable only after its referenced artifact is readable. A failed move
+or fork must leave the original graph usable and must not publish a half-written destination. To
+verify a storage change, create a session with a text artifact and a binary blob, resume its leaf,
+fork it, and confirm that both branches resolve their own references. Remove only the temporary test
+root after those reads succeed.
