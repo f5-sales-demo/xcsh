@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "15446dd8e4ac725d395e5664e370820113f0c882",
-  "fingerprint": "6d65cb737b24e23b1b1cb7e1b2941073b62f25ef353f803ff099d9363339f2c5",
+  "revision": "608eef61f728e8ed253dd547e5c504be75663e2c",
+  "fingerprint": "d23adcc3f7abbd99eb24cc971e324703fea196f0846eac25d46eae13551df58b",
   "counts": {
     "total": 241,
     "components": 95,
@@ -6920,7 +6920,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "3c602984a9ba414652f737e3003f47acbb0057fe1c55fcc0eb075a566a629be7",
+      "sha256": "a63f717c9008d43ad8e3121aa0355a69bbce88261dde741310ecd125d8f7aea9",
       "exports": [
         "CURSOR_MARKER",
         "Component",
