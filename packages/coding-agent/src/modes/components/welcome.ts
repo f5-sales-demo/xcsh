@@ -37,7 +37,8 @@ export const F5_LOGO_ROWS: readonly string[] = [
 
 const FULL_LOGO_MIN_WIDTH = 50;
 const FULL_LOGO_CANVAS_WIDTH = 46;
-const MAX_FRAME_WIDTH = 52;
+// The 46-column artwork fits inside the shared frame's one-column gutters at 50 columns.
+const MAX_FRAME_WIDTH = 50;
 const blankRow = { content: "", selected: false } as const;
 
 export class WelcomeComponent implements Component {
@@ -52,7 +53,9 @@ export class WelcomeComponent implements Component {
 		const logo = fullLogo
 			? F5_LOGO_ROWS.map(line => this.#centerInCanvas(this.#f5ColorLine(line), FULL_LOGO_CANVAS_WIDTH, contentWidth))
 			: [this.#centerInCanvas(theme.bold(theme.fg("accent", "F5")), 2, contentWidth)];
-		const body = [blankRow, ...logo, blankRow];
+		// The underscore crown already reads as the logo's top spacing. Keep a single
+		// blank row only below the mark so the framed splash does not look top-heavy.
+		const body = [...logo, blankRow];
 		return selectorFrame(width, body.length + 4, `${APP_NAME} v${this.version}`, "", [], body, [], []);
 	}
 
