@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly FROZEN_SOURCE_SHA=d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a
 readonly BUN_VERSION=1.4.2
 readonly BUN_SHA256=36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913
 readonly ZIG_VERSION=0.16.0
@@ -15,7 +14,7 @@ readonly LLVM_DEB_SHA256=139cb82e16e75fcdd4a56562804ff9bfb482b65d0929580d621d280
 readonly UBUNTU_SNAPSHOT=20260810T000000Z
 
 usage() {
-  echo "usage: $0 <experiment> <cold|warm> <pair-id> <output-dir> <verifier> <all|native|rust|typescript>" >&2
+  echo "usage: $0 <experiment> <cold|warm> <pair-id> <output-dir> <verifier> <all|native|rust|typescript> <source-sha>" >&2
   exit 2
 }
 
@@ -136,13 +135,14 @@ if [[ ${1:-} == __run ]]; then
   exit 0
 fi
 
-[[ $# -eq 6 ]] || usage
+[[ $# -eq 7 ]] || usage
 experiment=$1
 cache_state=$2
 pair_id=$3
 output_dir=$4
 verifier=$5
 phase_set=$6
+expected_source_sha=$7
 case "$experiment" in
 image-control | image-candidate | d16-serial | d16-parallel | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
 *) usage ;;
@@ -150,10 +150,14 @@ esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
+[[ "$expected_source_sha" =~ ^[0-9a-f]{40}$ ]] || usage
 test -f "$verifier"
 
 source_commit=$(git rev-parse HEAD)
-test "$source_commit" = "$FROZEN_SOURCE_SHA"
+if [[ "$source_commit" != "$expected_source_sha" ]]; then
+  echo "checked-out source SHA $source_commit does not match expected source SHA $expected_source_sha" >&2
+  exit 1
+fi
 mkdir -p "$output_dir/manifests" "$output_dir/profiles"
 output_dir=$(cd "$output_dir" && pwd)
 verifier=$(cd "$(dirname "$verifier")" && pwd)/$(basename "$verifier")

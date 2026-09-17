@@ -147,6 +147,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
+          source-sha: ${{ inputs.source_sha }}
           experiment: ${{ inputs.experiment }}
           cache-state: ${{ inputs.cache_state }}
           pair-id: ${{ matrix.sample }}
@@ -182,6 +183,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
+          source-sha: ${{ inputs.source_sha }}
           experiment: dag-control
           cache-state: ${{ inputs.cache_state }}
           pair-id: ${{ inputs.pair_id }}
@@ -218,6 +220,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
+          source-sha: ${{ inputs.source_sha }}
           experiment: dag-candidate
           cache-state: ${{ inputs.cache_state }}
           pair-id: ${{ inputs.pair_id }}
@@ -270,6 +273,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
+          source-sha: ${{ inputs.source_sha }}
           experiment: dag-candidate
           cache-state: ${{ inputs.cache_state }}
           pair-id: ${{ inputs.pair_id }}
@@ -322,6 +326,7 @@ jobs:
           --source-sha "$SOURCE_SHA" --root "$GITHUB_WORKSPACE"
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
+          source-sha: ${{ inputs.source_sha }}
           experiment: dag-candidate
           cache-state: ${{ inputs.cache_state }}
           pair-id: ${{ inputs.pair_id }}

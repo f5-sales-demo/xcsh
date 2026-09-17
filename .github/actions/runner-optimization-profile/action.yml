@@ -1,6 +1,9 @@
 name: Profile xcsh runner workload
 description: Run redacted xcsh phase profiling with deterministic evidence
 inputs:
+  source-sha:
+    description: Exact frozen source and qualification-harness commit
+    required: true
   experiment:
     description: Independently promoted experiment side
     required: true
@@ -42,12 +45,23 @@ runs:
         PROFILE_EXPERIMENT: ${{ inputs.experiment }}
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
         PROFILE_PHASE_SET: ${{ inputs.phase-set }}
+        PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}
       run: |
+        source_commit=$(git rev-parse HEAD)
+        harness_commit=$(git -C "${{ github.action_path }}/../../.." rev-parse HEAD)
+        if [[ "$source_commit" != "$PROFILE_SOURCE_SHA" ]]; then
+          echo "checked-out source SHA $source_commit does not match expected source SHA $PROFILE_SOURCE_SHA" >&2
+          exit 1
+        fi
+        if [[ "$harness_commit" != "$PROFILE_SOURCE_SHA" ]]; then
+          echo "qualification harness SHA $harness_commit does not match expected source SHA $PROFILE_SOURCE_SHA" >&2
+          exit 1
+        fi
         "${{ github.action_path }}/../../../scripts/prepare-runner-optimization-toolchain.sh" \
           "$PROFILE_EXPERIMENT" "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
           "$RUNNER_TEMP/runner-profile-evidence" \
           "${{ github.action_path }}/../../../scripts/verify-self-hosted-tools.sh" \
-          "$PROFILE_PHASE_SET"
+          "$PROFILE_PHASE_SET" "$PROFILE_SOURCE_SHA"
     - name: Restore exact warm Rust cache
       if: inputs.cache-state == 'warm'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
