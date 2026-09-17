@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "2d712f1a4b8fa3f186a2cf85a287b8bdd518d585",
-  "fingerprint": "733c109f738c5b2e5dc7718bce0236912ea9682b0cae4ad33fb61b9f3e1898a0",
+  "revision": "92ff63c4b102b6c2f330a37db1ddb5f36eb50873",
+  "fingerprint": "c41fdec03fb58380f042f34569d2e6d32588678e175e5f48d3227d254a28d9a9",
   "counts": {
     "total": 241,
     "components": 95,
@@ -499,7 +499,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "1fa5dac3f91076d7f1ad95da852d30a0282c9d5356ffccb9dc6839645e4ac907",
+      "sha256": "5d60eab9c5395f35708a6432c593410ebe4bc88a94e7cd1373703d28f99863be",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -528,11 +528,11 @@
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/person-extension-contract.test.ts",
+        "packages/coding-agent/test/person-profile-source-contract.test.ts",
         "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
-        "packages/coding-agent/test/xcsh-context-service.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts"
+        "packages/coding-agent/test/xcsh-context-service.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -586,7 +586,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "cf386deb85597e12bba18eef200403fc158c81307a77aec0a3b04f2be932efdc",
+      "sha256": "991c228c8c400da9b4bfd4df96e3d993cb4613da9c978dd3e45da5ae4015e0b6",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -881,7 +881,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "3ecda0b4a9466971e438f68796cc4e9a68f1b3bbe9ca0c492d2c0a65df23ef18",
+      "sha256": "b50404ea2f50a4fff9a8a6fb9e157299870fa66b99fc8c93303634f2c74b8cb9",
       "exports": [
         "Container",
         "ExtensionEditorComponent",
@@ -896,7 +896,6 @@
         "VERSION",
         "discoverSlashCommands",
         "getAgentDir",
-        "loadProfile",
         "logger",
         "settings",
         "type FileSlashCommand"
@@ -6164,11 +6163,11 @@
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/person-extension-contract.test.ts",
+        "packages/coding-agent/test/person-profile-source-contract.test.ts",
         "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
-        "packages/coding-agent/test/xcsh-context-service.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts"
+        "packages/coding-agent/test/xcsh-context-service.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

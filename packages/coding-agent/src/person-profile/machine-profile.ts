@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { collectMachine } from "./machine-collectors";
-import { PrivateProfileStore } from "./private-store";
+import { PrivateProfileStore, type ProfileResetLease, type ProfileStoreStatus } from "./private-store";
 
 const text = Type.String({ minLength: 1, maxLength: 4096 });
 const count = Type.Integer({ minimum: 0 });
@@ -95,6 +95,7 @@ export class MachineProfileService {
 	constructor(
 		readonly path = join(homedir(), ".xcsh", "computer-profile.json"),
 		private readonly collect = collectMachine,
+		lockTimeoutMs = 10000,
 	) {
 		this.#store = new PrivateProfileStore<MachineProfile>(
 			path,
@@ -103,10 +104,21 @@ export class MachineProfileService {
 			profile => {
 				profile.state = Object.keys(profile.facts).length ? "ready" : "empty";
 			},
+			"computer",
+			lockTimeoutMs,
 		);
 	}
 	get(): Promise<MachineProfile> {
 		return this.#store.get();
+	}
+	status(): Promise<ProfileStoreStatus> {
+		return this.#store.status();
+	}
+	reset(signal?: AbortSignal): Promise<boolean> {
+		return this.#store.reset(signal);
+	}
+	acquireResetLease(signal?: AbortSignal): Promise<ProfileResetLease> {
+		return this.#store.acquireResetLease(signal);
 	}
 	async refresh(signal?: AbortSignal, freshForMs = 0, canCommit?: () => boolean): Promise<MachineProfile> {
 		if (signal?.aborted) throw new Error("Machine profile operation cancelled");

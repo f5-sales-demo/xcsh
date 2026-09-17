@@ -2,45 +2,47 @@ import { mapToSupportedLocale, setLocale } from "@f5-sales-demo/pi-utils";
 import type { MachineProfileService } from "./machine-profile";
 import type { PersonProfileService } from "./service";
 
-/** App-owned background discovery. Model tool writes still use the session approval owner. */
-export class ProfileBuilder {
+interface Client {
+	allowed(): boolean;
+	unavailable(): void;
+}
+
+class ProfileCoordinator {
+	readonly clients = new Set<Client>();
 	#controller?: AbortController;
 	#pending?: Promise<void>;
 	#timer?: ReturnType<typeof setInterval>;
-	#disposed = false;
 	constructor(
 		private readonly person: PersonProfileService,
 		private readonly machine: MachineProfileService,
-		private readonly allowed: () => boolean,
-		private readonly unavailable: () => void = () => {},
+		private readonly release: () => void,
 	) {}
 	start(): void {
-		if (this.#disposed || this.#timer) return;
+		if (this.#timer) return;
 		void this.refresh();
-		this.#timer = setInterval(() => {
-			void this.refresh();
-		}, 60000);
+		this.#timer = setInterval(() => void this.refresh(), 60000);
 		this.#timer.unref();
 	}
 	refresh(): Promise<void> {
-		if (this.#disposed || !this.allowed()) {
+		if (![...this.clients].some(client => client.allowed())) {
 			this.#controller?.abort();
 			return this.#pending ?? Promise.resolve();
 		}
 		if (this.#pending) return this.#pending;
 		const controller = new AbortController();
 		this.#controller = controller;
-		// A mode transition invalidates work already running, as does session disposal.
+		const allowed = () => [...this.clients].some(client => client.allowed());
 		const guard = setInterval(() => {
-			if (!this.allowed()) controller.abort();
+			if (!allowed()) controller.abort();
 		}, 25);
 		guard.unref();
 		this.#pending = Promise.allSettled([
-			this.person.reconcileFromCollectors(controller.signal, 5 * 60000, () => !this.#disposed && this.allowed()),
-			this.machine.refresh(controller.signal, 24 * 60 * 60000, () => !this.#disposed && this.allowed()),
+			this.person.reconcileFromCollectors(controller.signal, 5 * 60000, allowed),
+			this.machine.refresh(controller.signal, 24 * 60 * 60000, allowed),
 		])
 			.then(results => {
-				if (results.some(result => result.status === "rejected") && !controller.signal.aborted) this.unavailable();
+				if (results.some(result => result.status === "rejected") && !controller.signal.aborted)
+					for (const client of this.clients) client.unavailable();
 				const person = results[0];
 				if (
 					person.status === "fulfilled" &&
@@ -60,10 +62,48 @@ export class ProfileBuilder {
 			});
 		return this.#pending;
 	}
-	async dispose(): Promise<void> {
-		this.#disposed = true;
+	async detach(client: Client): Promise<void> {
+		this.clients.delete(client);
+		if (this.clients.size) return;
 		clearInterval(this.#timer);
 		this.#controller?.abort();
 		await this.#pending;
+		this.release();
+	}
+}
+
+const coordinators = new Map<string, ProfileCoordinator>();
+
+/** Session facade over one process-wide coordinator keyed by the canonical profile paths. */
+export class ProfileBuilder {
+	readonly #client: Client;
+	readonly #coordinator: ProfileCoordinator;
+	#disposed = false;
+	constructor(
+		person: PersonProfileService,
+		machine: MachineProfileService,
+		allowed: () => boolean,
+		unavailable: () => void = () => {},
+	) {
+		const key = `${person.path}\u0000${machine.path}`;
+		let coordinator = coordinators.get(key);
+		if (!coordinator) {
+			coordinator = new ProfileCoordinator(person, machine, () => coordinators.delete(key));
+			coordinators.set(key, coordinator);
+		}
+		this.#coordinator = coordinator;
+		this.#client = { allowed: () => !this.#disposed && allowed(), unavailable };
+		coordinator.clients.add(this.#client);
+	}
+	start(): void {
+		if (!this.#disposed) this.#coordinator.start();
+	}
+	refresh(): Promise<void> {
+		return this.#disposed ? Promise.resolve() : this.#coordinator.refresh();
+	}
+	async dispose(): Promise<void> {
+		if (this.#disposed) return;
+		this.#disposed = true;
+		await this.#coordinator.detach(this.#client);
 	}
 }

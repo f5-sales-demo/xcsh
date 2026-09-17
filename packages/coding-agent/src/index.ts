@@ -40,7 +40,7 @@ export * from "./modes/components";
 export * from "./modes/theme/theme";
 export type { PersonProfile, UserProfile, UserProfileObservation } from "./person-profile/schema";
 export type { ProfileCollection, ProfileCollector } from "./person-profile/service";
-export { loadProfile, PersonProfileService } from "./person-profile/service";
+export { PersonProfileService } from "./person-profile/service";
 export * from "./routing/classifier";
 export * from "./routing/coordinator";
 export * from "./routing/delegation";

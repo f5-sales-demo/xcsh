@@ -14,7 +14,7 @@ import type { ToolSession } from "./index";
 import { enforcePlanModeWrite } from "./plan-mode-guard";
 
 const schema = Type.Object(
-	{ action: Type.Union([Type.Literal("get"), Type.Literal("refresh")]) },
+	{ action: Type.Union([Type.Literal("get"), Type.Literal("status"), Type.Literal("refresh")]) },
 	{ additionalProperties: false },
 );
 export class MachineProfileTool implements AgentTool<typeof schema> {
@@ -32,6 +32,10 @@ export class MachineProfileTool implements AgentTool<typeof schema> {
 	): Promise<AgentToolResult<unknown>> {
 		if (!Value.Check(schema, args)) throw new Error("Invalid machine profile operation");
 		const service = this.session.machineProfileService ?? machineProfileService;
+		if (args.action === "status") {
+			const status = await service.status();
+			return { content: [{ type: "text", text: JSON.stringify(status) }], details: status };
+		}
 		if (args.action === "refresh") {
 			enforcePlanModeWrite(this.session, service.path);
 			if (isRemoteAsk(this.session.settings)) {

@@ -54,6 +54,7 @@ export function createSalesforceRelationshipCollector(
 	return {
 		id: "salesforce_relationships",
 		name: "Salesforce role and relationships",
+		dependsOn: ["salesforce"],
 		timeoutMs: 60000,
 		available: async () => available(),
 		async collect(signal) {
