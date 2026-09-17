@@ -14,22 +14,6 @@ The Python tool sends code to a managed gateway and kernel, captures text plus s
 
 Treat the gateway environment as executable code authority: restrict dependencies, working directories, and credentials at the process boundary.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-82a8d247fb1f10df" data-fidelity="lc-82a8d247fb1f10df"><strong>Architecture overview.</strong> Python execution is managed across several core modules Current implementation points include src/tools/python.ts, src/ipy/executor.ts, src/ipy/kernel.ts.</p>
-
-<p id="fidelity-lc-6705ddc7f84f98e5" data-fidelity="lc-6705ddc7f84f98e5"><strong>Tool parameter schema.</strong> The tool executes with concurrency: "exclusive", ensuring sequential execution per session. Current implementation points include concurrency: "exclusive".</p>
-
-<p id="fidelity-lc-b1a29946c2cda73d" data-fidelity="lc-b1a29946c2cda73d"><strong>Gateway lifecycle management.</strong> 1. Current implementation points include ~/.xcsh/agent/python-gateway/, gateway.lock, gateway.json.</p>
-
-<p id="fidelity-lc-c7f6aec448ac219a" data-fidelity="lc-c7f6aec448ac219a"><strong>Environment isolation and security.</strong> Before launching Python runtimes, xcsh filters environment variables. Current implementation points include PATH, HOME, VIRTUAL_ENV.</p>
-
-<p id="fidelity-lc-858c75ced326b3c8" data-fidelity="lc-858c75ced326b3c8"><strong>Output capture and MIME rendering.</strong> The runtime captures structured output across multiple MIME types Current implementation points include text/markdown, text/plain, application/json.</p>
-
-<p id="fidelity-lc-be41af333b4f9b4e" data-fidelity="lc-be41af333b4f9b4e"><strong>Troubleshooting.</strong> Current implementation points include jupyter_kernel_gateway, ipykernel, python.toolMode.</p>
-
-<span data-fidelity-generated="end"></span>
-
 ## How do I reduce the tool boundary?
 
 Use `--no-tools` for a text-only turn or `--tools read,grep` for an inspection-only run. Add `--no-mcp` and `--no-extensions` when discovery must not expand the set.
@@ -37,3 +21,9 @@ Use `--no-tools` for a text-only turn or `--tools read,grep` for an inspection-o
 ## Which tools require extra care?
 
 Shell and edit can change the filesystem; browser can change remote state; task agents can perform several tool calls. Read and grep are normally observational, but can still expose sensitive file contents to the selected model.
+
+Begin a sensitive task with `--no-tools`, then enable only the tool set the prompt requires. File
+and shell tools can change the workspace; Python execution can retain kernel state; web or tenant
+tools can cross a network boundary. Inspect every tool request before approval. Afterward, verify
+the affected file, process, or remote object directly and close retained kernels or background
+processes that the task created.

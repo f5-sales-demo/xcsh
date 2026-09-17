@@ -64,39 +64,8 @@ Shell execution inherits the launched process environment, subject to the sandbo
 
 Project configuration stays under `.xcsh/` even when `PI_CODING_AGENT_DIR` moves the user root. Never print a credential-bearing variable into a diagnostic receipt; name the variable and state whether it was set.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-3dd69974b3e03fca" data-fidelity="lc-3dd69974b3e03fca"><strong>Resolution model and precedence.</strong> Runtime lookups use the $env helper from @f5-sales-demo/pi-utils (packages/utils/src/env.ts). Current implementation points include $env, @f5-sales-demo/pi-utils,
-packages/utils/src/env.ts.</p>
-
-<p id="fidelity-lc-072648b4789eef91" data-fidelity="lc-072648b4789eef91"><strong>Model and provider authentication.</strong> The runtime consumes these variables via getEnvApiKey() (packages/ai/src/stream.ts) unless specified otherwise. Current implementation points include getEnvApiKey(),
-packages/ai/src/stream.ts, ANTHROPIC_OAUTH_TOKEN.</p>
-
-<p id="fidelity-lc-db62fc59bf4174cd" data-fidelity="lc-db62fc59bf4174cd"><strong>Provider-specific runtime configuration.</strong> When CLAUDECODEUSEFOUNDRY is active, Anthropic requests route to Foundry mode: ANTHROPICFOUNDRYAPIKEY —› ANTHROPICOAUTHTOKEN —› ANTHROPICAPIKEY. Current implementation points
-include CLAUDE_CODE_USE_FOUNDRY, FOUNDRY_BASE_URL, anthropic.</p>
-
-<p id="fidelity-lc-16e1571842a82d85" data-fidelity="lc-16e1571842a82d85"><strong>Web search subsystem.</strong> Packages/coding-agent/src/web/search/auth.ts resolves Anthropic web search credentials in this order. Current implementation points include EXA_API_KEY, BRAVE_API_KEY,
-PERPLEXITY_API_KEY.</p>
-
-<p id="fidelity-lc-0a2c3315ee284a2d" data-fidelity="lc-0a2c3315ee284a2d"><strong>Python tooling and kernel runtime.</strong> Additional runtime rules Current implementation points include PI_PY, 0, bash.</p>
-
-<p id="fidelity-lc-01499034a3bb1a77" data-fidelity="lc-01499034a3bb1a77"><strong>Agent and runtime behavior toggles.</strong> Current implementation points include PI_SMOL_MODEL, smol, --smol.</p>
-
-<p id="fidelity-lc-68837681d72a988e" data-fidelity="lc-68837681d72a988e"><strong>Storage and configuration root paths.</strong> These variables are consumed via @f5-sales-demo/pi-utils/dirs and govern data storage locations Current implementation points include @f5-sales-demo/pi-utils/dirs, PI_CONFIG_DIR,
-.xcsh.</p>
-
-<p id="fidelity-lc-4b75679a7904ef57" data-fidelity="lc-4b75679a7904ef57"><strong>Shell and tool execution environment.</strong> These variables govern subprocess management in packages/utils/src/procmgr.ts and the bash tool integration Current implementation points include packages/utils/src/procmgr.ts,
-PI_BASH_NO_CI, CI=true.</p>
-
-<p id="fidelity-lc-27a301499dc30dff" data-fidelity="lc-27a301499dc30dff"><strong>Terminal and session environment variables.</strong> The runtime detects the following environment variables automatically from the host environment Current implementation points include COLORTERM, TERM, WT_SESSION.</p>
-
-<p id="fidelity-lc-26da75b13fb20549" data-fidelity="lc-26da75b13fb20549"><strong>Native loader and debug flags.</strong> Current implementation points include PI_DEV, packages/natives.</p>
-
-<p id="fidelity-lc-e748c48441bf1889" data-fidelity="lc-e748c48441bf1889"><strong>Terminal user interface runtime flags.</strong> Current implementation points include PI_NOTIFICATIONS, off, 0.</p>
-
-<p id="fidelity-lc-db54d8b75cf79062" data-fidelity="lc-db54d8b75cf79062"><strong>Commit generation controls.</strong> Current implementation points include PI_COMMIT_TEST_FALLBACK, true, PI_COMMIT_NO_FALLBACK.</p>
-
-<p id="fidelity-lc-9dbdf3c34f0033d9" data-fidelity="lc-9dbdf3c34f0033d9"><strong>Security-sensitive variables.</strong> Protect the following variables as sensitive secrets; do not log or commit them: The Python runtime automatically strips these sensitive keys before spawning kernel subprocesses
-(packages/coding-agent/src/ipy/runtime.ts). Current implementation points include *_API_KEY, *_TOKEN, AWS_*.</p>
-
-<span data-fidelity-generated="end"></span>
+Set a variable only in the process that needs it, then use the relevant read-only command or a
+no-tool prompt to confirm selection. Environment values can override files and may be inherited by
+subprocesses; never print tokens while diagnosing precedence. To undo a test, unset the variable in
+the same shell and start a new xcsh process because an existing process has already captured its
+environment.

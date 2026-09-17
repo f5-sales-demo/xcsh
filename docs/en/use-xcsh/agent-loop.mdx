@@ -1,17 +1,63 @@
 ---
 title: "How xcsh works"
-description: "Understand how prompts, model turns, tool calls, results, and session entries form the agent loop."
+description: "Follow a prompt through model turns, tool execution, session persistence, steering, errors, and the final response."
 sidebar:
   order: 1
   label: "How xcsh works"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
-A user message enters the selected model. The model may request a tool; xcsh executes the allowed tool, appends its result, and continues until the model produces a final response or the run stops.
+xcsh runs a conversation as a sequence of model turns. A turn can return text, request one or more tools, or stop with an error. The terminal user interface (TUI) is a view of that process; it is not the process itself.
+
+```text
+prompt -> model turn -> tool request -> execution -> tool result
+   ^                                                   |
+   |_____________________ next model turn _____________|
+                              |
+                        final response
+```
+
+## What happens after I send a prompt?
+
+xcsh records the user message, resolves the selected provider and model, and constructs model input from the active session branch. That input can include the system prompt, earlier messages, applicable instructions, and tool definitions. The provider streams events back to the agent loop.
+
+Text and reasoning events extend the assistant message. A complete tool-call event pauses that model turn and identifies a tool plus validated arguments. xcsh dispatches the request through the matching tool runtime, records the normalized result, and starts another model turn with that result in context. The cycle continues until the model returns a final response with no further tool request.
+
+If the model requests no tool on its first turn, the streamed response becomes the final response. xcsh never invents a tool step merely because tools are available.
+
+## How do steering and follow-up differ?
+
+A steering message targets work that is still in progress. xcsh places it at the next safe turn boundary, after the current provider event or tool operation has settled, so the model can adjust the active task without corrupting an in-flight request.
+
+A follow-up message starts after the active response finishes. It creates the next user turn on the selected session branch. Use steering to redirect current work; use follow-up when the current result should remain complete and the new request depends on it.
+
+Neither message bypasses tool policy. If the redirected work needs a side effect, the resulting tool request still crosses the normal validation and execution boundary.
+
+## Where do errors and aborts stop the loop?
+
+Provider errors, invalid tool arguments, tool failures, and user aborts are distinct terminal
+conditions for the current operation. An abort cancels the active provider request or tool through
+its supported cancellation path; it does not claim that an external side effect was rolled back. A
+tool error is recorded and may be returned to the model for recovery when the runtime contract
+allows another turn. A provider or session error that cannot continue ends the turn and remains
+visible to the client.
+
+Terminal success, cancellation, or failure settles an operation once. Late stream events cannot reopen a settled turn, and cleanup remains safe to call after partial startup.
 
 ## Where is the durable record?
 
-Session JSON Lines (JSONL) stores messages and tool events. The terminal rendering is a view of that state, not the canonical record. Export or inspect the session when an exact sequence matters.
+The append-only session JSON Lines (JSONL) file is the durable conversation record. It stores the session header, user and assistant messages, tool requests and results, branch relationships, and relevant metadata. Resume rebuilds model context from the selected leaf. Forking adds another branch; compaction summarizes older context for later model turns without rewriting the original entries.
+
+The TUI renders that state plus transient progress, focus, and layout. Clearing or resizing the terminal changes only the view. Conversely, a streamed fragment can be visible before the corresponding durable entry is complete. When diagnosing behavior, inspect the JSONL event order and the provider or tool boundary, not only the final screen.
 
 ## Where are side effects introduced?
 
-Model text alone does not change files or external systems. Tools such as shell, edit, browser, and task agents can. Restrict a run with `--tools`, `--no-tools`, `--no-mcp`, or `--no-extensions` when the task needs a smaller boundary.
+Model output is a proposal until a tool executes it. File writes, process creation, browser interaction, and remote service calls occur inside tool or integration implementations under the current account and configuration. Session persistence is also a local write, but rendering text is not.
+
+Review the tool name, arguments, selected working directory, and remote context before approval. After execution, verify the affected system directly—for example with `git diff`, a process check, a browser read-back, or a resource `get`. A final natural-language response summarizes the recorded outcome; it is not independent proof that the side effect happened.
+
+Continue with [built-in tools](/xcsh/en/use-xcsh/built-in-tools/) to reduce the execution boundary, or [sessions and memory](/xcsh/en/use-xcsh/sessions-memory/) to manage the durable record.

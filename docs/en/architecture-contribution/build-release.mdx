@@ -27,3 +27,9 @@ Inspect the complete diff, then deliver only through a linked pull request.
 ## How are releases produced?
 
 Protected workflows build and verify binaries, npm packages, Homebrew artifacts, containers, and downstream apt packaging. Contributors do not publish those channels manually.
+
+Before pushing, confirm `git diff --check`, inspect every staged path, and run the narrowest package
+test that exercises the change. A documentation-only change does not authorize a release. A release
+workflow owns versioning, signing, publication, and provenance checks; a contributor-owned command
+stops at the pull request boundary. If a gate fails, reproduce it from the same commit instead of
+bypassing the gate or substituting an older artifact.

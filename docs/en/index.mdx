@@ -61,16 +61,15 @@ import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
 
 <div class="landing-grid landing-capabilities">
   <Card title="Agentic terminal work" icon="terminal">
-    Run interactive or print-mode prompts, inspect files, use tools, and keep durable session history when the task needs it. [Learn the agent loop](./use-xcsh/agent-loop/).
+    Run interactive or print-mode prompts, inspect files, use tools, and keep durable session history when the task needs it. [Learn the agent loop](/xcsh/en/use-xcsh/agent-loop/).
   </Card>
   <Card title="Reviewable F5 Distributed Cloud workflows" icon="document">
-    Discover schemas, validate manifests, and inspect proposed differences before an authorized resource change. [Use resource workflows](./f5-distributed-cloud/).
+    Discover schemas, validate manifests, and inspect proposed differences before an authorized resource change. [Use resource workflows](/xcsh/en/f5-distributed-cloud/).
   </Card>
   <Card title="Extensible automation" icon="puzzle">
-    Add headless workflows, custom tools, skills, plugins, or MCP servers when built-in commands are not enough. [Automate and extend](./automate-extend/).
+    Add headless workflows, custom tools, skills, plugins, or MCP servers when built-in commands are not enough. [Automate and extend](/xcsh/en/automate-extend/).
   </Card>
 </div>
-
 These workflows start with a working executable; choose another channel only when the universal installer is not the right fit.
 
 ## Installation options
@@ -201,13 +200,11 @@ At the xcsh prompt, open the provider picker:
 
 </div>
 
-Choose a provider and follow its sign-in flow. You can also enter `/login PROVIDER` to open a known provider directly. Keep credentials in the provider-supported environment or subscription login—never in a prompt or committed settings file. See [model authentication](./getting-started/model-authentication/) for provider-specific options.
+Choose a provider and follow its sign-in flow. You can also enter `/login PROVIDER` to open a known provider directly. Keep credentials in the provider-supported environment or subscription login—never in a prompt or committed settings file. See [model authentication](/xcsh/en/getting-started/model-authentication/) for provider-specific options.
 
 After sign-in selects a model, stay in the TUI and send a small first prompt.
 
-## Send your first prompt
-
-<span id="quickstart" aria-hidden="true"></span>
+## Quickstart
 
 At the xcsh prompt, enter:
 
@@ -219,7 +216,12 @@ Reply with only: xcsh is ready
 
 </div>
 
-A matching response confirms the installation, provider, and selected model are working together. Next, learn the [agent loop](./use-xcsh/agent-loop/) or choose a [context and namespace](./f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud change.
+A matching response confirms the installation, provider, and selected model are working together
+without granting a tool any file or network side effect. If it fails, verify the active executable
+with `command -v xcsh`, reopen `/login`, and confirm the selected model is available to that
+account. Next, learn the [interactive TUI](/xcsh/en/use-xcsh/interactive-tui/) or choose a [context and
+namespace](/xcsh/en/f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud
+change.
 
 From here, continue with the documentation path that matches your goal.
 
@@ -237,14 +239,3 @@ Choose the goal closest to your next task; each path starts from the verified in
   <LinkCard title="Integrations and deployment" icon="rocket" href="./integrations-deployment/">Containers plus VS Code, Chrome, Office, and Herdr.</LinkCard>
   <LinkCard title="Reference and troubleshooting" icon="information" href="./reference-troubleshooting/">Diagnostics, command reference, hotkeys, and configuration schema.</LinkCard>
 </div>
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-c7aaa3df3c68b247" data-fidelity="lc-c7aaa3df3c68b247"><strong>Languages and localization.</strong> Choose your language on the documentation portal</p>
-
-<p id="fidelity-lc-bd4c386fa2a16e57" data-fidelity="lc-bd4c386fa2a16e57"><strong>Documentation catalog.</strong> The English catalog grouped configuration, containers, extensions, MCP, native runtime, providers, tools, sessions, TUI, Office ownership, and prompt guidance as distinct knowledge
-areas.</p>
-
-<span data-fidelity-generated="end"></span>
-
-<span data-fidelity-insertion="Explore by goal"></span>

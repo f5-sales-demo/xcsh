@@ -12,41 +12,9 @@ Port code to Rust only for measured performance, platform integration, or resour
 
 Define the Rust implementation and Node-application programming interface (API) signature, expose it from the Rust package, update TypeScript declarations and wrappers, then extend validation and contract tests. Preserve the JavaScript fallback when the public contract requires one; otherwise fail explicitly when the addon is unavailable.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-6e59f393be3e7db1" data-fidelity="lc-6e59f393be3e7db1"><strong>When to port to native modules.</strong> Port execution paths to Rust when: Avoid porting operations that require access to JavaScript runtime state or dynamic module imports. Current implementation points include
-task::blocking, task::future.</p>
-
-<p id="fidelity-lc-9b986c98ba552679" data-fidelity="lc-9b986c98ba552679"><strong>Native export architecture.</strong> 1. Current implementation points include crates/pi-natives/, crates/pi-natives/src/‹MODULE›.rs, crates/pi-natives/src/lib.rs.</p>
-
-<p id="fidelity-lc-8e3598f36f09dda3" data-fidelity="lc-8e3598f36f09dda3"><strong>Step-by-step porting workflow.</strong> 1. Current implementation points include String, Vec‹String›, Uint8Array.</p>
-
-<p id="fidelity-lc-57d6497b17961855" data-fidelity="lc-57d6497b17961855"><strong>Troubleshooting common issues.</strong> The runtime loader prioritizes platform-tagged binaries (pinatives.‹PLATFORM›-‹ARCH›.node). Current implementation points include pi_natives.‹PLATFORM›-‹ARCH›.node, validateNative,
-#[napi].</p>
-
-<span data-fidelity-generated="end"></span>
-
 ## How do I build target variants?
 
 The build pipeline selects target triples and optional hardware variants, compiles release artifacts, and packages names the loader can resolve. Environment flags affect the build target or diagnostics, not the public API. Test the ordinary target plus any variant whose resolution order changed.
-
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-f0b5f3db94d4da25" data-fidelity="lc-f0b5f3db94d4da25"><strong>Implementation files.</strong> Current implementation points include packages/natives/scripts/build-native.ts, packages/natives/scripts/embed-native.ts, packages/natives/native/native.ts.</p>
-
-<p id="fidelity-lc-6fb1e580eca39e1f" data-fidelity="lc-6fb1e580eca39e1f"><strong>Build pipeline architecture.</strong> The package provides standard Bun scripts in packages/natives/package.json: packages/natives/scripts/build-native.ts executes Cargo in crates/pi-natives: Following compilation, the
-build script copies the shared library into packages/natives/native/ us Current implementation points include packages/natives/package.json, bun run build, crates/pi-natives.</p>
-
-<p id="fidelity-lc-ec6359672e406af8" data-fidelity="lc-ec6359672e406af8"><strong>Target and hardware variant model.</strong> Current implementation points include arm64, darwin-arm64, linux-arm64.</p>
-
-<p id="fidelity-lc-92236e7ffca4af4e" data-fidelity="lc-92236e7ffca4af4e"><strong>Environment and build configuration.</strong> Current implementation points include PI_DEV, 1, 0.</p>
-
-<p id="fidelity-lc-528bc5a12668270a" data-fidelity="lc-528bc5a12668270a"><strong>Common operational commands.</strong> Native development uses the package build script for target selection, Cargo checks for Rust correctness, binding tests for exports, and loader diagnostics for packaged binary
-resolution. The destination uses current source and candidate evidence instead of preserving a version-specific legacy statement.</p>
-
-<p id="fidelity-lc-ac75c97c6ae42f2b" data-fidelity="lc-ac75c97c6ae42f2b"><strong>Troubleshooting and diagnostics.</strong> Current implementation points include Native addon missing exports, .node, bun --cwd=packages/natives run build.</p>
-
-<span data-fidelity-generated="end"></span>
 
 ## How do I diagnose loading and cancellation?
 
@@ -54,17 +22,8 @@ Start with the resolved candidate list, platform identity, file permissions, and
 
 Change `crates/pi-natives/src` and `packages/natives` together; a signature that exists on only one side fails at load rather than at build.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-0d7a2cbd805795b6" data-fidelity="lc-0d7a2cbd805795b6"><strong>Implementation files.</strong> Current implementation points include crates/pi-natives/src/task.rs, crates/pi-natives/src/grep.rs, crates/pi-natives/src/glob.rs.</p>
-
-<p id="fidelity-lc-c4b75d9aa92cfcdb" data-fidelity="lc-c4b75d9aa92cfcdb"><strong>Task execution primitives.</strong> Crates/pi-natives/src/task.rs provides two primary execution abstractions Current implementation points include crates/pi-natives/src/task.rs, task::blocking, napi::AsyncTask.</p>
-
-<p id="fidelity-lc-a5682201e31ee9a4" data-fidelity="lc-a5682201e31ee9a4"><strong>Cancellation token architecture.</strong> CancelToken combines explicit timeout deadlines and JavaScript AbortSignal instances: Long-running loops across arbitrary filesystem hierarchies or match lists must invoke
-ct.heartbeat()? at stable intervals: If the cancellation token triggers due to a t Current implementation points include CancelToken, AbortSignal, ct.heartbeat()?.</p>
-
-<p id="fidelity-lc-ec026261bbdb7484" data-fidelity="lc-ec026261bbdb7484"><strong>TypeScript API and cancellation mapping.</strong> Current implementation points include grep(options, onMatch?), grep, task::blocking.</p>
-
-<p id="fidelity-lc-48700c3eee88f2db" data-fidelity="lc-48700c3eee88f2db"><strong>Best practices for native task authors.</strong> 1. Current implementation points include task::blocking, task::future, ct.heartbeat()?.</p>
-
-<span data-fidelity-generated="end"></span>
+Build from the repository root with `bun scripts/ensure-dev-native.ts`, then run the focused
+TypeScript contract test in a fresh process so the loader cannot reuse an already loaded addon.
+Inspect `git status --short` afterward: generated binaries and target directories are build
+products, not source changes. If the test fails, compare the exported Rust symbol, generated
+binding, wrapper name, and packaged filename before changing loader fallback behavior.

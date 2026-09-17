@@ -14,52 +14,6 @@ Discovery providers scan bundled, user, project, plugin, and compatible manifest
 
 Invalid frontmatter, manifests, or module factories produce diagnostics at their own layer so one bad optional capability does not masquerade as an empty catalog.
 
-<span data-fidelity-generated="start"></span>
-
-<p id="fidelity-lc-66b21a602f0336de" data-fidelity="lc-66b21a602f0336de"><strong>Pipeline overview.</strong> The extension loading subsystem constructs a prioritized list of entry points, dynamically imports each module with Bun, executes its factory function, and returns Current
-implementation points include ExtensionRunner.</p>
-
-<p id="fidelity-lc-6ea9cc8c7f684e3b" data-fidelity="lc-6ea9cc8c7f684e3b"><strong>Primary implementation files.</strong> Current implementation points include src/extensibility/extensions/loader.ts, src/extensibility/extensions/index.ts, src/extensibility/extensions/runner.ts.</p>
-
-<p id="fidelity-lc-e11139bbefbc255e" data-fidelity="lc-e11139bbefbc255e"><strong>Inputs to extension discovery.</strong> DiscoverAndLoadExtensions() queries discovery providers for extension-module capabilities and extracts native items from the following locations: Roots are determined by the native
-provider (SOURCEPATHS.native). Current implementation points include discoverAndLoadExtensions(), extension-module, ‹cwd›/.xcsh/extensions.</p>
-
-<p id="fidelity-lc-81f13468f49b345b" data-fidelity="lc-81f13468f49b345b"><strong>Enabling and disabling extensions.</strong> Operational differences: Use the disabledExtensions setting with the canonical extension identifier: Identifier names derive from entry paths via getExtensionNameFromPath Current
-implementation points include --no-extensions, disableExtensionDiscovery: true, additionalExtensionPaths.</p>
-
-<p id="fidelity-lc-6eb70ac384edb376" data-fidelity="lc-6eb70ac384edb376"><strong>Path and entry resolution.</strong> Configured paths undergo normalization before resolution. Current implementation points include ~, cwd, package.json.</p>
-
-<p id="fidelity-lc-332249d795cd4ce3" data-fidelity="lc-332249d795cd4ce3"><strong>Loading order and precedence.</strong> DiscoverAndLoadExtensions() constructs an ordered module list. Current implementation points include discoverAndLoadExtensions().</p>
-
-<p id="fidelity-lc-6cf554f8c17d0122" data-fidelity="lc-6cf554f8c17d0122"><strong>Module imports and factory contracts.</strong> The loader imports candidate modules dynamically: The exported factory must adhere to the ExtensionFactory function signature. Current implementation points include
-ExtensionFactory.</p>
-
-<p id="fidelity-lc-6ee8e662d53478a5" data-fidelity="lc-6ee8e662d53478a5"><strong>Error handling and execution isolation.</strong> Failures are isolated per module path as ｛ path, error ｝ records. Current implementation points include ｛ path, error ｝, EventBus, ExtensionRuntime.</p>
-
-<p id="fidelity-lc-76d8557977e732b4" data-fidelity="lc-76d8557977e732b4"><strong>Project and user directory structures.</strong> Checks/package.json declaration Current implementation points include checks/package.json.</p>
-
-<p id="fidelity-lc-1709bee6ad2c4a7f" data-fidelity="lc-1709bee6ad2c4a7f"><strong>Implementation files.</strong> Current implementation points include packages/coding-agent/src/discovery/gemini.ts, packages/coding-agent/src/discovery/builtin.ts, packages/coding-agent/src/discovery/helpers.ts.</p>
-
-<p id="fidelity-lc-78f04c21507395ca" data-fidelity="lc-78f04c21507395ca"><strong>Discovered paths.</strong> The Gemini capability provider (id: gemini, priority 60) registers an extensions loader that scans two fixed root directories: The loader resolves paths directly from ctx.home and
-ctx.cwd using getUserPath() and getProjectPath(). Current implementation points include id: gemini, 60, extensions.</p>
-
-<p id="fidelity-lc-15d5fe9dd6d924da" data-fidelity="lc-15d5fe9dd6d924da"><strong>Directory scanning rules.</strong> For each root directory, discovery executes the following sequence. Current implementation points include readDirEntries(root), entry.isDirectory(), ‹NAME›.</p>
-
-<p id="fidelity-lc-abd50b923b70835f" data-fidelity="lc-abd50b923b70835f"><strong>Manifest schema and normalization.</strong> The capability model defines the manifest structure as follows. Discovery applies flexible validation rules: The loader determines Extension.name using the following fallback
-order. Current implementation points include manifest, mcpServers, tools.</p>
-
-<p id="fidelity-lc-dcd2533331636923" data-fidelity="lc-dcd2533331636923"><strong>Materialization into capability items.</strong> A valid manifest file creates an Extension capability item: Operational details Current implementation points include Extension, _source.path, createSourceMeta().</p>
-
-<p id="fidelity-lc-0a778b4a7672947c" data-fidelity="lc-0a778b4a7672947c"><strong>Error handling and diagnostic warnings.</strong> Current implementation points include Invalid JSON in ‹MANIFEST_PATH›, extensions, gemini-extension.json.</p>
-
-<p id="fidelity-lc-f739a470b56176eb" data-fidelity="lc-f739a470b56176eb"><strong>Precedence and deduplication.</strong> The capability registry aggregates extensions across registered providers: Deduplication uses ext.name as the primary key (extensionCapability.key = ext =› ext.name). Current
-implementation points include extensions, native, packages/coding-agent/src/discovery/builtin.ts.</p>
-
-<p id="fidelity-lc-bb72a25806a613d2" data-fidelity="lc-bb72a25806a613d2"><strong>Architectural boundary between metadata and module loading.</strong> Discovery of gemini-extension.json produces declarative Extension capability records. Current implementation points include gemini-extension.json, Extension,
-discoverAndLoadExtensions().</p>
-
-<span data-fidelity-generated="end"></span>
-
 ## Where should a change go?
 
 Prefer a public extension, skill, plugin, Model Context Protocol (MCP) server, or software development kit (SDK) application programming interface (API) for optional behavior. Change the native layer only when a measured platform or performance requirement cannot be met in TypeScript.
@@ -69,3 +23,9 @@ Prefer a public extension, skill, plugin, Model Context Protocol (MCP) server, o
 Run focused TypeScript tests for the caller and Rust tests for the native implementation, then build the addon and exercise the public command. Do not expose a native detail as a public contract accidentally.
 
 Read `packages/coding-agent/src/discovery` for the provider scan and deduplication, and `packages/coding-agent/src/capability` for the normalized capability items.
+
+When two providers expose the same identifier, the higher-precedence normalized item wins; discovery
+does not merge two implementations. Test both the winning provider and the diagnostic for the
+shadowed or invalid candidate. After changing discovery, start with all optional sources disabled,
+enable one source at a time, and confirm that removal or reload clears its capabilities instead of
+leaving a stale registration.

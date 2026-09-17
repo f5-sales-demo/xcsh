@@ -4,6 +4,11 @@ description: "Catch local schema errors first, then compare desired state with l
 sidebar:
   order: 3
   label: "Validate and diff"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 Validation checks local structure; diff compares that desired state with the live resource. A passing validation does not authorize or predict a live mutation.

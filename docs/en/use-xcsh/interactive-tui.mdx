@@ -4,6 +4,11 @@ description: "Navigate the prompt editor, status line, model selector, tool outp
 sidebar:
   order: 3
   label: "Use the interactive TUI"
+head:
+  - tag: style
+    content: |
+      .sl-markdown-content .expressive-code { max-width: 100%; overflow-x: auto; }
+      .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
 Run `xcsh` without `--print` to open the terminal user interface (TUI). Type `/` to discover commands available in the installed build.
@@ -23,3 +28,9 @@ Attach an image when the chosen model supports vision. Treat every attached file
 ## How do I discover controls?
 
 Type `/` to list the commands the running build registered, and `/hotkeys` to read the active key map. Those runtime views outrank a copied key list, because extensions and releases change the available controls.
+
+Start `xcsh` in the intended working directory, confirm the model indicator, and use `/help` before
+relying on a remembered shortcut. Prefix a local path only when you intend its contents to enter
+model context. Review every proposed tool call; pressing Enter sends the prompt, while an approved
+tool can write files, start processes, or call a service. Use `/exit` after the final response and
+inspect `git diff` or the relevant external system for actual changes.

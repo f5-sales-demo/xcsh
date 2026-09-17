@@ -3,104 +3,11 @@
   "generatedFrom": "issue-3690-legacy-concept-audit",
   "pages": [
     {
-      "path": "docs/en/architecture-contribution/herdr-gap-closing-plan.mdx",
-      "classification": "explanation",
-      "audience": "XCSH, Herdr, and Control Manager developers",
-      "readerNeed": "Implement and prove native semantic-turn signaling without conflating process lifecycle with feature completion.",
-      "purpose": "Define evidence-backed gaps, ownership, invariants, work packages, end-to-end tests, activation gates, and completion semantics for native Herdr signaling.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/herdr/client.ts",
-        "packages/coding-agent/src/extensibility/extensions/bundled/herdr-reporter.ts",
-        "packages/coding-agent/test/herdr-reporter.test.ts",
-        "docs/en/integrations-deployment/herdr.mdx"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "Current delivery checklist",
-          "readerQuestion": "Which delivery stages are proven and which remain open?",
-          "purpose": "Prevent partial implementation or deferred required work from appearing complete.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What is proven now?",
-          "readerQuestion": "Which parity claims have evidence today?",
-          "purpose": "Separate source, unit, installed-interface, and missing evidence.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "Which invariants define parity?",
-          "readerQuestion": "Which identities and lifecycle boundaries must implementations preserve?",
-          "purpose": "Define the three-plane contract and durable ordering rules.",
-          "evidence": [
-            "source-authority"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What do statuses mean?",
-          "readerQuestion": "How must native states appear in UI and Manager behavior?",
-          "purpose": "Prevent false completion and preserve waiting, failure, cancellation, and loss distinctions.",
-          "evidence": [
-            "source-authority"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "Which ordered work packages close the gaps?",
-          "readerQuestion": "Who must implement each gap and in what dependency order?",
-          "purpose": "Provide actionable owner-specific work packages and gates.",
-          "evidence": [
-            "source-authority"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What end-to-end tests are required?",
-          "readerQuestion": "Which scenarios prove the complete durable path?",
-          "purpose": "Specify unit, integration, staged, and live acceptance coverage.",
-          "evidence": [
-            "source-authority"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "How is completion gated?",
-          "readerQuestion": "When may the feature be shown as accepted?",
-          "purpose": "Keep plan, implementation, testing, installation, live verification, and acceptance distinct.",
-          "evidence": [
-            "source-authority"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What decisions and risks need review?",
-          "readerQuestion": "Which contract decisions and operational risks require explicit review?",
-          "purpose": "Record recommended decisions and fail-closed risks.",
-          "evidence": [
-            "source-authority"
-          ],
-          "legacyConceptIds": []
-        }
-      ]
-    },
-    {
       "path": "docs/en/architecture-contribution/agent-session-runtime.mdx",
       "classification": "concept",
       "audience": "xcsh contributors",
       "readerNeed": "Agent loop and sessions: Trace a user message through model selection, tool calls, append-only session state, compaction, and rendering.",
-      "purpose": "Answer the distinct task or decision described by Agent loop and sessions.",
+      "purpose": "Explain session construction, event persistence, and compaction so contributors can trace runtime behavior.",
       "sourceAuthority": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -153,7 +60,7 @@
       "classification": "how-to",
       "audience": "xcsh contributors",
       "readerNeed": "Build and release xcsh: Set up the monorepo, run TypeScript and Rust checks, and understand signed multi-channel releases.",
-      "purpose": "Answer the distinct task or decision described by Build and release xcsh.",
+      "purpose": "Guide contributors from a clean worktree through local gates to the protected release boundary.",
       "sourceAuthority": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -205,7 +112,7 @@
       "classification": "concept",
       "audience": "xcsh contributors",
       "readerNeed": "Extensibility boundaries: Choose between skills, commands, tools, hooks, extensions, plugins, MCP, and SDK embedding.",
-      "purpose": "Answer the distinct task or decision described by Extensibility boundaries.",
+      "purpose": "Explain discovery precedence and help contributors place and validate optional capabilities.",
       "sourceAuthority": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -271,7 +178,7 @@
       "classification": "landing",
       "audience": "xcsh contributors",
       "readerNeed": "Architecture and contribution: Understand xcsh internals, its pi lineage, native layer, extension boundaries, and contribution/release process.",
-      "purpose": "Answer the distinct task or decision described by Architecture and contribution.",
+      "purpose": "Route contributors to the runtime boundary or delivery procedure they need to inspect.",
       "sourceAuthority": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -445,7 +352,7 @@
     },
     {
       "path": "docs/en/architecture-contribution/prompt-authoring.mdx",
-      "classification": "concept",
+      "classification": "how-to",
       "audience": "xcsh contributors",
       "readerNeed": "Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.",
       "purpose": "Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.",
@@ -682,7 +589,7 @@
     },
     {
       "path": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "classification": "concept",
+      "classification": "how-to",
       "audience": "xcsh contributors",
       "readerNeed": "Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers.",
       "purpose": "Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers.",
@@ -807,18 +714,18 @@
           "legacyConceptIds": []
         },
         {
-          "text": "What did the slash-command library review identify?",
-          "readerQuestion": "Which command surfaces need usability improvements and what is their adoption status?",
-          "purpose": "Track every built-in command and the extensible discovery contract with prioritized, explicitly incomplete adoption work.",
+          "text": "Where should the guide be adopted next?",
+          "readerQuestion": "Which interactive surfaces should adopt the contract first?",
+          "purpose": "Prioritize focused follow-up passes without authorizing a repository-wide redesign.",
           "evidence": [
             "source-authority"
           ],
           "legacyConceptIds": []
         },
         {
-          "text": "Where should the guide be adopted next?",
-          "readerQuestion": "Which interactive surfaces should adopt the contract first?",
-          "purpose": "Prioritize focused follow-up passes without authorizing a repository-wide redesign.",
+          "text": "What did the slash-command library review identify?",
+          "readerQuestion": "Which command surfaces need usability improvements and what is their adoption status?",
+          "purpose": "Track every built-in command and the extensible discovery contract with prioritized, explicitly incomplete adoption work.",
           "evidence": [
             "source-authority"
           ],
@@ -828,10 +735,10 @@
     },
     {
       "path": "docs/en/architecture-contribution/upstream-pi.mdx",
-      "classification": "concept",
+      "classification": "how-to",
       "audience": "xcsh contributors",
       "readerNeed": "Relationship to pi: Understand what xcsh inherits from pi and where the project deliberately specializes.",
-      "purpose": "Answer the distinct task or decision described by Relationship to pi.",
+      "purpose": "Record the reviewed upstream lineage, accepted semantic ports, deliberate differences, and future audit boundary.",
       "sourceAuthority": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -934,7 +841,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Build extensions and custom tools: Add TypeScript behavior, slash commands, providers, or schema-validated tools.",
-      "purpose": "Answer the distinct task or decision described by Build extensions and custom tools.",
+      "purpose": "Show how to load, exercise, isolate, and remove one custom extension safely.",
       "sourceAuthority": [
         "packages/coding-agent/src/extensibility/extensions",
         "packages/coding-agent/src/mcp",
@@ -992,7 +899,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Headless modes: Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.",
-      "purpose": "Answer the distinct task or decision described by Headless modes.",
+      "purpose": "Help automation authors choose a protocol and manage framing, persistence, shutdown, and cleanup.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -1134,7 +1041,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Extend and automate: Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.",
-      "purpose": "Answer the distinct task or decision described by Extend and automate.",
+      "purpose": "Route extension authors to the smallest mechanism that fits their integration.",
       "sourceAuthority": [
         "packages/coding-agent/src/extensibility/extensions",
         "packages/coding-agent/src/mcp",
@@ -1229,49 +1136,8 @@
       ]
     },
     {
-      "path": "docs/en/automate-extend/mcp-quickstart.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Connect an MCP server: Add a local stdio or remote HTTP/SSE Model Context Protocol server.",
-      "purpose": "Answer the distinct task or decision described by Connect an MCP server.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli",
-        "legacy-enrichment"
-      ],
-      "headings": [
-        {
-          "text": "Where is MCP configured?",
-          "readerQuestion": "Where is MCP configured?",
-          "purpose": "Answer this question within Connect an MCP server: Where is MCP configured?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "How do I isolate MCP behavior?",
-          "readerQuestion": "How do I isolate MCP behavior?",
-          "purpose": "Answer this question within Connect an MCP server: How do I isolate MCP behavior?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        }
-      ]
-    },
-    {
       "path": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "classification": "how-to",
+      "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.",
       "purpose": "Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.",
@@ -1358,7 +1224,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Install plugins and marketplaces: Discover, install, configure, update, and diagnose xcsh plugins.",
-      "purpose": "Answer the distinct task or decision described by Install plugins and marketplaces.",
+      "purpose": "Guide users through reviewing, installing, testing, diagnosing, and removing executable plugin code.",
       "sourceAuthority": [
         "packages/coding-agent/src/extensibility/extensions",
         "packages/coding-agent/src/mcp",
@@ -1417,7 +1283,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Embed xcsh with the SDK: Create sessions and tools programmatically through the coding-agent package.",
-      "purpose": "Answer the distinct task or decision described by Embed xcsh with the SDK.",
+      "purpose": "Show application authors how to embed and test one SDK-owned session lifecycle.",
       "sourceAuthority": [
         "packages/coding-agent/src/extensibility/extensions",
         "packages/coding-agent/src/mcp",
@@ -1472,7 +1338,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Create and load skills: Package task-specific instructions in `SKILL.md` files at user or project scope.",
-      "purpose": "Answer the distinct task or decision described by Create and load skills.",
+      "purpose": "Show authors how to scope, install, test, and remove task-specific skill instructions.",
       "sourceAuthority": [
         "packages/coding-agent/src/extensibility/extensions",
         "packages/coding-agent/src/mcp",
@@ -1603,7 +1469,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Configure and secure: Control settings, providers, credentials, networking, secrets, sandboxing, and enterprise deployment.",
-      "purpose": "Answer the distinct task or decision described by Configure and secure.",
+      "purpose": "Route operators from identity and routing choices to narrower settings and sandbox controls.",
       "sourceAuthority": [
         "packages/coding-agent/src/config/settings-schema.ts",
         "packages/coding-agent/src/services/xcsh-context.ts"
@@ -1632,7 +1498,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Configure providers and model routing: Select models directly or map default, smol, slow, and plan roles.",
-      "purpose": "Answer the distinct task or decision described by Configure providers and model routing.",
+      "purpose": "Guide operators through explicit provider, account, and model selection with a bounded verification.",
       "sourceAuthority": [
         "packages/coding-agent/src/config/settings-schema.ts",
         "packages/coding-agent/src/services/xcsh-context.ts",
@@ -1712,7 +1578,7 @@
     },
     {
       "path": "docs/en/configure-secure/sandbox-boundaries.mdx",
-      "classification": "how-to",
+      "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.",
       "purpose": "Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.",
@@ -1771,7 +1637,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Resolve secrets safely: Reference sensitive values without placing plaintext credentials in prompts, manifests, logs, or commits.",
-      "purpose": "Answer the distinct task or decision described by Resolve secrets safely.",
+      "purpose": "Explain redaction limits and provide a synthetic test that checks every disclosure surface.",
       "sourceAuthority": [
         "packages/coding-agent/src/config/settings-schema.ts",
         "packages/coding-agent/src/services/xcsh-context.ts"
@@ -1829,10 +1695,10 @@
     },
     {
       "path": "docs/en/configure-secure/settings-files.mdx",
-      "classification": "how-to",
+      "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Understand settings precedence: Predict which user, project, environment, and command-line value xcsh resolves.",
-      "purpose": "Answer the distinct task or decision described by Understand settings precedence.",
+      "purpose": "Explain settings precedence, process lifetime, scope, and effective-value inspection.",
       "sourceAuthority": [
         "packages/coding-agent/src/config/settings-schema.ts",
         "packages/coding-agent/src/services/xcsh-context.ts"
@@ -1864,8 +1730,7 @@
             "lc-ec4b1c79b91baaf1",
             "lc-33ec88ff30f6649f",
             "lc-873cb563f339cc59",
-            "lc-63c5a3bf985de960",
-            "lc-13c3b3135193667d"
+            "lc-63c5a3bf985de960"
           ]
         },
         {
@@ -1896,10 +1761,10 @@
     },
     {
       "path": "docs/en/f5-distributed-cloud/api-catalog.mdx",
-      "classification": "how-to",
+      "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Understand the API catalog: See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog.",
-      "purpose": "Answer the distinct task or decision described by Understand the API catalog.",
+      "purpose": "Explain how catalog metadata selects a supported kind without implying tenant authorization.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -1939,55 +1804,11 @@
       ]
     },
     {
-      "path": "docs/en/f5-distributed-cloud/console-automation.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Automate the F5 console in Chrome: Connect xcsh to its isolated Chrome profile for browser-assisted console workflows.",
-      "purpose": "Answer the distinct task or decision described by Automate the F5 console in Chrome.",
-      "sourceAuthority": [
-        "packages/resource-management/src/resource-client.ts",
-        "packages/coding-agent/src/commands",
-        "packages/coding-agent/test/resource-management/integration"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli",
-        "live-resource-lifecycle",
-        "legacy-enrichment"
-      ],
-      "headings": [
-        {
-          "text": "How do I inspect the Chrome session?",
-          "readerQuestion": "How do I inspect the Chrome session?",
-          "purpose": "Answer this question within Automate the F5 console in Chrome: How do I inspect the Chrome session?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "live-resource-lifecycle",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What counts as evidence?",
-          "readerQuestion": "What counts as evidence?",
-          "purpose": "Answer this question within Automate the F5 console in Chrome: What counts as evidence?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "live-resource-lifecycle",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        }
-      ]
-    },
-    {
       "path": "docs/en/f5-distributed-cloud/contexts-namespaces.mdx",
-      "classification": "how-to",
+      "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Manage contexts and namespaces: Store named tenant connections, activate the intended context, and scope operations to a namespace.",
-      "purpose": "Answer the distinct task or decision described by Manage contexts and namespaces.",
+      "purpose": "Explain context and namespace state transitions and how to prove the active tenant scope safely.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -2037,7 +1858,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Create, apply, and update resources: Choose strict creation, convergent apply, or explicit update for a reviewed manifest.",
-      "purpose": "Answer the distinct task or decision described by Create, apply, and update resources.",
+      "purpose": "Provide the bounded mutation choices and their post-change verification path.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -2081,7 +1902,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Get, export, and delete resources: Inspect live resources, produce portable manifests, and perform deliberate deletion.",
-      "purpose": "Answer the distinct task or decision described by Get, export, and delete resources.",
+      "purpose": "Provide retrieval, export, deletion, and absence checks for one resource.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -2128,7 +1949,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "F5 Distributed Cloud: Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations.",
-      "purpose": "Answer the distinct task or decision described by F5 Distributed Cloud.",
+      "purpose": "Route operators to catalog, scope, manifest, validation, lifecycle, or browser guidance.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -2158,7 +1979,7 @@
       "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Write resource manifests: Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification.",
-      "purpose": "Answer the distinct task or decision described by Write resource manifests.",
+      "purpose": "Explain schema-led manifest construction and the boundary between local validity and live safety.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -2202,7 +2023,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Validate and diff manifests: Catch local schema errors first, then compare desired state with live state.",
-      "purpose": "Answer the distinct task or decision described by Validate and diff manifests.",
+      "purpose": "Separate offline validation from authenticated diff and define the blockers before mutation.",
       "sourceAuthority": [
         "packages/resource-management/src/resource-client.ts",
         "packages/coding-agent/src/commands",
@@ -2242,55 +2063,11 @@
       ]
     },
     {
-      "path": "docs/en/getting-started/f5-xc-connection.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Connect to F5 Distributed Cloud: Create and activate a named F5 Distributed Cloud context, then select a namespace.",
-      "purpose": "Answer the distinct task or decision described by Connect to F5 Distributed Cloud.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "scripts/install.sh",
-        ".github/workflows/release-reconcile.yml"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli",
-        "live-resource-lifecycle",
-        "legacy-enrichment"
-      ],
-      "headings": [
-        {
-          "text": "How do I select the intended context?",
-          "readerQuestion": "How do I select the intended context?",
-          "purpose": "Answer this question within Connect to F5 Distributed Cloud: How do I select the intended context?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "live-resource-lifecycle",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What is safe to test first?",
-          "readerQuestion": "What is safe to test first?",
-          "purpose": "Answer this question within Connect to F5 Distributed Cloud: What is safe to test first?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "live-resource-lifecycle",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        }
-      ]
-    },
-    {
       "path": "docs/en/getting-started/first-manifest.mdx",
-      "classification": "how-to",
+      "classification": "tutorial",
       "audience": "xcsh users",
       "readerNeed": "Complete your first manifest lifecycle: Validate, compare, apply, inspect, export, and delete a resource manifest.",
-      "purpose": "Answer the distinct task or decision described by Complete your first manifest lifecycle.",
+      "purpose": "Teach a complete validate, preview, apply, inspect, export, and cleanup lifecycle.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "scripts/install.sh",
@@ -2358,7 +2135,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Getting started: Install xcsh, connect a model and an F5 Distributed Cloud tenant, and complete a safe first workflow.",
-      "purpose": "Answer the distinct task or decision described by Getting started.",
+      "purpose": "Route new users through installation, authentication, a bounded prompt, or an F5 workflow.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "scripts/install.sh",
@@ -2399,7 +2176,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Authenticate a model provider: Configure an API key or supported subscription login without placing credentials in project files.",
-      "purpose": "Answer the distinct task or decision described by Authenticate a model provider.",
+      "purpose": "Guide users through provider-owned sign-in, explicit model selection, verification, and logout.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "scripts/install.sh",
@@ -2441,54 +2218,11 @@
       ]
     },
     {
-      "path": "docs/en/getting-started/quickstart.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Quickstart: Start an interactive session, inspect the available model, and validate a manifest without tenant credentials.",
-      "purpose": "Answer the distinct task or decision described by Quickstart.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "scripts/install.sh",
-        ".github/workflows/release-reconcile.yml"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli",
-        "legacy-enrichment",
-        "legacy-build-browser"
-      ],
-      "headings": [
-        {
-          "text": "How do I run a bounded first prompt?",
-          "readerQuestion": "How do I run a bounded first prompt?",
-          "purpose": "Answer this question within Quickstart: How do I run a bounded first prompt?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "legacy-enrichment",
-            "legacy-build-browser"
-          ],
-          "legacyConceptIds": []
-        },
-        {
-          "text": "What should I inspect if the prompt fails?",
-          "readerQuestion": "What should I inspect if the prompt fails?",
-          "purpose": "Answer this question within Quickstart: What should I inspect if the prompt fails?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "legacy-enrichment"
-          ],
-          "legacyConceptIds": []
-        }
-      ]
-    },
-    {
       "path": "docs/en/index.mdx",
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "xcsh: Independent open-source agentic shell for terminal work and F5 Distributed Cloud workflows.",
-      "purpose": "Answer the distinct task or decision described by xcsh.",
+      "purpose": "Introduce xcsh, provide the canonical installation and quickstart, and route readers by goal.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "scripts/install.sh",
@@ -2586,9 +2320,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Send your first prompt",
-          "readerQuestion": "How do I confirm the selected model responds in the TUI?",
-          "purpose": "Prove the interactive installation and provider route with a bounded prompt.",
+          "text": "Quickstart",
+          "readerQuestion": "How do I run a bounded first prompt?",
+          "purpose": "Prove the executable and model route without granting tool side effects.",
           "evidence": [
             "browser-build",
             "candidate-cli",
@@ -2616,7 +2350,6 @@
             "source-authority"
           ],
           "legacyConceptIds": [
-            "lc-c7aaa3df3c68b247",
             "lc-bd4c386fa2a16e57"
           ]
         }
@@ -2624,10 +2357,10 @@
     },
     {
       "path": "docs/en/integrations-deployment/chrome.mdx",
-      "classification": "how-to",
+      "classification": "overview",
       "audience": "xcsh users",
       "readerNeed": "Chrome: Use the xcsh Chrome extension and native host with an isolated automation profile.",
-      "purpose": "Answer the distinct task or decision described by Chrome.",
+      "purpose": "Help operators decide when browser automation is appropriate and identify its external side-effect boundary.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -2668,7 +2401,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Containers: Run the published multi-architecture Alpine image with explicit mounts and credentials.",
-      "purpose": "Answer the distinct task or decision described by Containers.",
+      "purpose": "Guide operators through digest-pinned image verification, least-privilege mounts, and cleanup.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -2807,7 +2540,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Interfaces: Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container.",
-      "purpose": "Answer the distinct task or decision described by Interfaces.",
+      "purpose": "Route users to deployment and host integrations without duplicating their procedures.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -2836,10 +2569,10 @@
     },
     {
       "path": "docs/en/integrations-deployment/office.mdx",
-      "classification": "how-to",
+      "classification": "overview",
       "audience": "xcsh users",
       "readerNeed": "Microsoft Office task pane: Serve or sideload the embedded task pane for Excel, Word, and PowerPoint.",
-      "purpose": "Answer the distinct task or decision described by Microsoft Office task pane.",
+      "purpose": "Help users choose the Office task pane and verify writes against the intended document and account.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -2891,10 +2624,10 @@
     },
     {
       "path": "docs/en/integrations-deployment/vscode.mdx",
-      "classification": "how-to",
+      "classification": "overview",
       "audience": "xcsh users",
       "readerNeed": "VS Code: Use the companion VS Code integration with the same xcsh model and session foundation.",
-      "purpose": "Answer the distinct task or decision described by VS Code.",
+      "purpose": "Help users separate editor-host behavior from xcsh runtime behavior and choose the right surface.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -2935,7 +2668,7 @@
       "classification": "reference",
       "audience": "xcsh users",
       "readerNeed": "CLI command and flag reference: Review the current top-level commands, global flags, and resource command patterns.",
-      "purpose": "Answer the distinct task or decision described by CLI command and flag reference.",
+      "purpose": "Provide the version-matched command, global-flag, exit-status, and scripting lookup surface.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/cli/flag-spec.ts",
@@ -2987,7 +2720,7 @@
       "classification": "reference",
       "audience": "xcsh users",
       "readerNeed": "Configuration schema: Navigate the schema-backed settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing.",
-      "purpose": "Answer the distinct task or decision described by Configuration schema.",
+      "purpose": "Provide schema namespaces, setting ownership, value constraints, and effective-value lookup guidance.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/config/settings-schema.ts"
@@ -3058,7 +2791,7 @@
       "classification": "troubleshooting",
       "audience": "xcsh users",
       "readerNeed": "Run diagnostics: Collect version, configuration, provider, context, and sandbox evidence without exposing secrets.",
-      "purpose": "Answer the distinct task or decision described by Run diagnostics.",
+      "purpose": "Map common symptoms to isolating checks, likely causes, remedies, and confirmation steps.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/config/settings-schema.ts"
@@ -3120,7 +2853,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Troubleshooting and reference: Diagnose installations, providers, contexts, and tools, then consult current command and configuration references.",
-      "purpose": "Answer the distinct task or decision described by Troubleshooting and reference.",
+      "purpose": "Route readers to command, configuration, keybinding, or symptom-based lookup material.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/config/settings-schema.ts"
@@ -3146,10 +2879,10 @@
     },
     {
       "path": "docs/en/reference-troubleshooting/slash-keybindings.mdx",
-      "classification": "how-to",
+      "classification": "reference",
       "audience": "xcsh users",
       "readerNeed": "Slash command reference: Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state.",
-      "purpose": "Answer the distinct task or decision described by Slash command reference.",
+      "purpose": "Provide the runtime command and focus-sensitive keybinding lookup surface.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/config/settings-schema.ts"
@@ -3186,7 +2919,7 @@
     },
     {
       "path": "docs/en/use-xcsh/agent-loop.mdx",
-      "classification": "how-to",
+      "classification": "concept",
       "audience": "xcsh users",
       "readerNeed": "Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.",
       "purpose": "Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.",
@@ -3201,6 +2934,39 @@
         "legacy-enrichment"
       ],
       "headings": [
+        {
+          "text": "What happens after I send a prompt?",
+          "readerQuestion": "What sequence turns a prompt into a final response?",
+          "purpose": "Explain model input, streamed events, tool dispatch, results, repeated turns, and no-tool completion.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do steering and follow-up differ?",
+          "readerQuestion": "When does steering enter the active loop instead of a later turn?",
+          "purpose": "Distinguish safe-boundary steering from a follow-up after completion.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Where do errors and aborts stop the loop?",
+          "readerQuestion": "How do errors, cancellation, and late events terminate work?",
+          "purpose": "Explain terminal states, recovery, cleanup, and the lack of automatic side-effect rollback.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
         {
           "text": "Where is the durable record?",
           "readerQuestion": "Where is the durable record?",
@@ -3230,7 +2996,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Use built-in tools: Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.",
-      "purpose": "Answer the distinct task or decision described by Use built-in tools.",
+      "purpose": "Guide users in narrowing tool access, reviewing execution, verifying side effects, and cleaning up.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/session"
@@ -3285,10 +3051,10 @@
     },
     {
       "path": "docs/en/use-xcsh/execution-modes.mdx",
-      "classification": "how-to",
+      "classification": "overview",
       "audience": "xcsh users",
       "readerNeed": "Terminal CLI: Choose interactive, print, resume, and deterministic subcommand modes from a shell.",
-      "purpose": "Answer the distinct task or decision described by Terminal CLI.",
+      "purpose": "Compare interactive, print, JSON, RPC, and ACP modes by consumer, output, and persistence.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -3318,7 +3084,7 @@
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Agentic shell: Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.",
-      "purpose": "Answer the distinct task or decision described by Agentic shell.",
+      "purpose": "Route users to the interaction, tool, planning, session, and navigation concept they need.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/session"
@@ -3347,7 +3113,7 @@
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Use the interactive TUI: Navigate the prompt editor, status line, model selector, tool output, and command palette.",
-      "purpose": "Answer the distinct task or decision described by Use the interactive TUI.",
+      "purpose": "Guide users through one interactive prompt, explicit context, tool review, verification, and exit.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/coding-agent/src/session"
