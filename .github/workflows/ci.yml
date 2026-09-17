@@ -442,6 +442,8 @@ jobs:
           path: ~/.bun/install/cache
           key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
+      - name: Verify spoofed client versions before release
+        run: bun run check-spoofed-versions
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"

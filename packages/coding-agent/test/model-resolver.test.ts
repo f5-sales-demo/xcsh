@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createThinkingConfig, Effort, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import {
+	expandFableAlias,
 	expandRoleAlias,
 	parseModelPattern,
 	parseModelString,
@@ -42,6 +43,8 @@ const mockModels: Model<"anthropic-messages">[] = [
 		maxTokens: 4096,
 	},
 ];
+
+const fableModel = getBundledModel("anthropic", "claude-fable-5-1") as Model<"anthropic-messages">;
 
 // Mock OpenRouter models with colons in IDs
 const mockOpenRouterModels: Model<"anthropic-messages">[] = [
@@ -131,6 +134,13 @@ const mockCodexOverlapModels: Model<"anthropic-messages">[] = [
 const allModels = [...mockModels, ...mockOpenRouterModels, ...mockProviderOverlapModels, ...mockCodexOverlapModels];
 
 describe("parseModelPattern", () => {
+	test("expands only the documented Fable aliases to Fable 5.1", () => {
+		expect(expandFableAlias("fable")).toBe("anthropic/claude-fable-5-1");
+		expect(expandFableAlias("anthropic/fable:max")).toBe("anthropic/claude-fable-5-1:max");
+		expect(expandFableAlias("fable-5")).toBe("fable-5");
+		expect(parseModelPattern("fable", [fableModel]).model?.id).toBe("claude-fable-5-1");
+		expect(parseModelPattern("anthropic/fable", [fableModel]).model?.id).toBe("claude-fable-5-1");
+	});
 	describe("simple patterns without colons", () => {
 		test("exact match returns model with undefined thinking level", () => {
 			const result = parseModelPattern("claude-sonnet-4-5", allModels);
@@ -308,6 +318,13 @@ describe("parseModelPattern", () => {
 });
 
 describe("resolveModelRoleValue", () => {
+	test("rejects disabling always-on Fable thinking clearly", () => {
+		const result = resolveModelRoleValue("anthropic/fable:off", [fableModel]);
+		expect(result.model?.id).toBe("claude-fable-5-1");
+		expect(result.explicitThinkingLevel).toBe(true);
+		expect(result.warning).toBe("Cannot disable thinking for anthropic/claude-fable-5-1");
+	});
+
 	test("resolves pi/<role>:<thinking> by expanding role alias before parsing thinking", () => {
 		const settings = {
 			getModelRole: (role: string) => (role === "smol" ? "openrouter/qwen/qwen3-coder:exacto" : undefined),
@@ -454,6 +471,34 @@ describe("resolveModelOverride", () => {
 	});
 });
 describe("resolveCliModel", () => {
+	test.each(["fable", "anthropic/fable"])("resolves %s deterministically to Anthropic Fable 5.1", selector => {
+		const fable5 = getBundledModel("anthropic", "claude-fable-5");
+		const proxyFable = { ...fableModel, provider: "proxy" };
+		const registry = {
+			getAll: () => [fable5, fableModel, proxyFable],
+			getAvailable: () => [fable5, fableModel, proxyFable],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: selector, modelRegistry: registry });
+
+		expect(result.error).toBeUndefined();
+		expect(result.model?.provider).toBe("anthropic");
+		expect(result.model?.id).toBe("claude-fable-5-1");
+		expect(result.selector).toBe("anthropic/claude-fable-5-1");
+	});
+
+	test("keeps explicit Fable 5 selection", () => {
+		const fable5 = getBundledModel("anthropic", "claude-fable-5");
+		const registry = {
+			getAll: () => [fable5, fableModel],
+			getAvailable: () => [fable5, fableModel],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		expect(resolveCliModel({ cliModel: "anthropic/claude-fable-5", modelRegistry: registry }).model?.id).toBe(
+			"claude-fable-5",
+		);
+	});
+
 	test("resolves --model provider/id without --provider", () => {
 		const registry = {
 			getAll: () => allModels,

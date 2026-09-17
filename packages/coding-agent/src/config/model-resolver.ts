@@ -62,6 +62,16 @@ export function formatModelSelectorValue(selector: string, thinkingLevel: Thinki
 	return thinkingLevel && thinkingLevel !== ThinkingLevel.Inherit ? `${selector}:${thinkingLevel}` : selector;
 }
 
+const FABLE_ALIAS_MODEL_ID = "claude-fable-5-1";
+
+/** Expand only the two documented Fable aliases; general fuzzy matching remains unchanged. */
+export function expandFableAlias(value: string): string {
+	const trimmed = value.trim();
+	const match = /^(anthropic\/)?fable(?::(inherit|off|minimal|low|medium|high|xhigh|max))?$/i.exec(trimmed);
+	if (!match) return trimmed;
+	return `anthropic/${FABLE_ALIAS_MODEL_ID}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
+}
+
 function getOpenRouterRouteSuffix(modelId: string): { baseId: string; suffix: string } | undefined {
 	const colonIdx = modelId.lastIndexOf(":");
 	if (colonIdx === -1) {
@@ -469,7 +479,7 @@ export function parseModelPattern(
 	options?: { allowInvalidThinkingSelectorFallback?: boolean; modelRegistry?: CanonicalModelRegistry },
 ): ParsedModelResult {
 	const context = buildPreferenceContext(availableModels, preferences);
-	return parseModelPatternWithContext(pattern, availableModels, context, options);
+	return parseModelPatternWithContext(expandFableAlias(pattern), availableModels, context, options);
 }
 
 const PREFIX_MODEL_ROLE = "pi/";
@@ -918,7 +928,12 @@ export function resolveCliModel(options: {
 	modelRegistry: CliModelRegistry;
 	preferences?: ModelMatchPreferences;
 }): ResolveCliModelResult {
-	const { cliProvider, cliModel, modelRegistry, preferences } = options;
+	const { cliProvider, cliModel: requestedCliModel, modelRegistry, preferences } = options;
+	const cliModel = requestedCliModel
+		? cliProvider?.toLowerCase() === "anthropic"
+			? expandFableAlias(`anthropic/${requestedCliModel}`).slice("anthropic/".length)
+			: expandFableAlias(requestedCliModel)
+		: undefined;
 
 	if (!cliModel) {
 		return { model: undefined, selector: undefined, warning: undefined, error: undefined };

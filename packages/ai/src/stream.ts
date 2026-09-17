@@ -1,11 +1,13 @@
 import { $env, $pickenv } from "@f5-sales-demo/pi-utils";
 import { getCustomApi } from "./api-registry";
-import type { Effort, ReasoningEffort } from "./model-thinking";
 import {
 	clampEffortThroughXHigh,
+	Effort,
 	type EffortThroughXHigh,
+	isAnthropicAlwaysThinkingModel,
 	mapEffortToAnthropicAdaptiveEffort,
 	mapEffortToGoogleThinkingLevel,
+	type ReasoningEffort,
 	requireSupportedEffort,
 	requireSupportedReasoningEffort,
 } from "./model-thinking";
@@ -428,8 +430,9 @@ export function mapOptionsForApi<TApi extends Api>(
 
 	switch (model.api) {
 		case "anthropic-messages": {
-			// Explicitly disable thinking when reasoning is not specified or model doesn't support it
-			const reasoning = options?.reasoning;
+			// Fable requires adaptive thinking on every request. Other Anthropic models
+			// retain the caller-controlled behavior.
+			const reasoning = options?.reasoning ?? (isAnthropicAlwaysThinkingModel(model) ? Effort.High : undefined);
 			if (!reasoning || !model.reasoning) {
 				return castApi<"anthropic-messages">({
 					...base,
@@ -438,7 +441,7 @@ export function mapOptionsForApi<TApi extends Api>(
 				});
 			}
 
-			let thinkingBudget = options.thinkingBudgets?.[reasoning] ?? ANTHROPIC_THINKING[reasoning];
+			let thinkingBudget = options?.thinkingBudgets?.[reasoning] ?? ANTHROPIC_THINKING[reasoning];
 			if (thinkingBudget <= 0) {
 				return castApi<"anthropic-messages">({
 					...base,

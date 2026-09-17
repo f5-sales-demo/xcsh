@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "kind": "anthropic-fable-live-uat",
+  "capturedAt": "2026-09-16T22:12:46Z",
+  "host": {
+    "os": "Ubuntu",
+    "architecture": "x86_64",
+    "worktree": "/data/robin-GIT/xcsh-fable-3913"
+  },
+  "source": {
+    "testedHead": "73c7fa1468c7c53442f9facab4bf8c3d275a1818",
+    "implementationCommit": "a31dd11f596003b1e16ed51284962e9a029d6324"
+  },
+  "packagedArtifact": {
+    "version": "21.29.3",
+    "sha256": "ac2a70eb54a2f08f5909e64b6a6e02dfa5277accfdcfa3210f01cd8593321c88"
+  },
+  "authentication": {
+    "kind": "anthropic-oauth",
+    "accountClass": "Claude Pro subscription with usage credits",
+    "credentialsRecorded": false
+  },
+  "entitlementFailureControl": {
+    "capturedAt": "2026-09-16T18:53:29Z",
+    "accountState": "before usage credits were added",
+    "targets": ["source", "packaged"],
+    "models": ["anthropic/claude-fable-5-1", "anthropic/claude-fable-5"],
+    "requestCountPerInvocation": 1,
+    "retryEvents": 0,
+    "status": "passed"
+  },
+  "fableSuccess": [
+    {
+      "target": "source",
+      "selector": "fable",
+      "selectedModel": "anthropic/claude-fable-5-1",
+      "returnedModel": "claude-fable-5-1",
+      "requestCount": 2,
+      "retryEvents": 0,
+      "tools": ["read", "bash"],
+      "status": "passed"
+    },
+    {
+      "target": "packaged",
+      "selector": "fable",
+      "selectedModel": "anthropic/claude-fable-5-1",
+      "returnedModel": "claude-fable-5-1",
+      "requestCount": 2,
+      "retryEvents": 0,
+      "tools": ["read", "bash"],
+      "status": "passed"
+    },
+    {
+      "target": "source",
+      "selector": "anthropic/claude-fable-5",
+      "selectedModel": "anthropic/claude-fable-5",
+      "returnedModel": "claude-fable-5",
+      "requestCount": 3,
+      "retryEvents": 0,
+      "tools": ["read", "bash"],
+      "status": "passed"
+    },
+    {
+      "target": "packaged",
+      "selector": "anthropic/claude-fable-5",
+      "selectedModel": "anthropic/claude-fable-5",
+      "returnedModel": "claude-fable-5",
+      "requestCount": 3,
+      "retryEvents": 0,
+      "tools": ["read", "bash"],
+      "status": "passed"
+    }
+  ],
+  "postMergeRevalidation": {
+    "capturedAt": "2026-09-16T22:12:46Z",
+    "head": "73c7fa1468c7c53442f9facab4bf8c3d275a1818",
+    "selector": "fable",
+    "selectedModel": "anthropic/claude-fable-5-1",
+    "returnedModel": "claude-fable-5-1",
+    "thinking": "high",
+    "targets": [
+      {
+        "target": "source",
+        "requestCount": 2,
+        "tools": ["read", "bash"],
+        "assertion": "FABLE_LATEST_SOURCE_READY",
+        "status": "passed"
+      },
+      {
+        "target": "packaged",
+        "requestCount": 2,
+        "tools": ["read", "bash"],
+        "assertion": "FABLE_LATEST_PACKAGE_READY",
+        "status": "passed"
+      }
+    ],
+    "retryEvents": 0,
+    "status": "passed"
+  },
+  "fableScenarios": [
+    {
+      "name": "streaming-and-model-attribution",
+      "returnedModel": "claude-fable-5-1",
+      "status": "passed"
+    },
+    {
+      "name": "multi-turn-continuity",
+      "requestCount": 2,
+      "assertion": "MAPLE-731 was recalled from the resumed session",
+      "status": "passed"
+    },
+    {
+      "name": "structured-todo-write",
+      "requestCount": 2,
+      "tools": ["todo_write"],
+      "status": "passed"
+    },
+    {
+      "name": "image-input",
+      "requestCount": 1,
+      "assertion": "red circle identified",
+      "status": "passed"
+    },
+    {
+      "name": "project-skill",
+      "requestCount": 2,
+      "tools": ["read"],
+      "assertion": "greet skill loaded and followed",
+      "status": "passed"
+    }
+  ],
+  "opusControls": [
+    {
+      "target": "source",
+      "selectedModel": "anthropic/claude-opus-5",
+      "returnedModel": "claude-opus-5",
+      "requestCount": 1,
+      "tools": ["read", "bash"],
+      "status": "passed"
+    },
+    {
+      "target": "packaged",
+      "selectedModel": "anthropic/claude-opus-5",
+      "returnedModel": "claude-opus-5",
+      "requestCount": 1,
+      "tools": ["read", "bash"],
+      "status": "passed"
+    }
+  ],
+  "sanitization": {
+    "rawTranscriptsCommitted": false,
+    "credentialsCommitted": false,
+    "temporaryRawTranscriptsRemoved": true
+  },
+  "acceptanceStatus": "Ubuntu OAuth Fable success and entitlement-failure controls passed; API-key, fixture plugin/MCP, xcsh context, and local integration routing gates remain"
+}

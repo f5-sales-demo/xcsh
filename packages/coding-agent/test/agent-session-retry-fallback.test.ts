@@ -684,6 +684,43 @@ describe("AgentSession retry fallback", () => {
 		expect(lastAssistant.errorMessage).toBe("Request was aborted.");
 	});
 
+	it.each(["provider returned error 429: credits_required", "provider returned error 403: obsolete_client"])(
+		"does not auto-retry permanent Anthropic failure: %s",
+		async errorMessage => {
+			const model = getBundledModel("anthropic", "claude-fable-5-1");
+			if (!model) throw new Error("Expected bundled Fable model to exist");
+			let requestCount = 0;
+			const agent = new Agent({
+				getApiKey: () => "anthropic-test-key",
+				initialState: { model, systemPrompt: "Test", tools: [], messages: [] },
+				streamFn: requestedModel => {
+					requestCount++;
+					const stream = new MockAssistantStream();
+					queueMicrotask(() => {
+						const message = createAssistantMessage(requestedModel, { stopReason: "error", errorMessage });
+						stream.push({ type: "start", partial: message });
+						stream.push({ type: "error", reason: "error", error: message });
+					});
+					return stream;
+				},
+			});
+			const settings = Settings.isolated({
+				"compaction.enabled": false,
+				"retry.baseDelayMs": 5,
+				"retry.maxRetries": 2,
+			});
+			settings.setModelRole("default", `${model.provider}/${model.id}`);
+			session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+			const { retryStartEvents } = trackRetryEvents(session);
+
+			await session.prompt("Do not retry permanent Anthropic errors");
+			await session.waitForIdle();
+
+			expect(requestCount).toBe(1);
+			expect(retryStartEvents).toHaveLength(0);
+		},
+	);
+
 	it("suppresses cooled selectors and lazily reverts to the role primary after cooldown expiry", async () => {
 		const primaryModel = getBundledModel("anthropic", "claude-sonnet-5");
 		const fallbackModel = getBundledModel("openai", "gpt-4o-mini");

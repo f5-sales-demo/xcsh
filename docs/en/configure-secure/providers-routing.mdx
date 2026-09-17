@@ -62,6 +62,12 @@ Choose a model with Enter, then choose its scope:
 
 Choose a reasoning level supported by that exact model and press Enter to confirm. Inherit displays the provider default; an existing supported reasoning selection is preselected. Escape backs out without applying an unfinished choice. Failed writes are reported before badges show success.
 
+Claude Fable 5 and 5.1 use adaptive thinking on every request. Their default is `high`; supported
+choices are `low`, `medium`, `high`, `xhigh`, and `max`, with xcsh's `minimal` choice mapped to
+Anthropic `low`. `off` is rejected because the Fable API does not support disabling thinking.
+Fable also does not accept temperature or forced tool selection, so xcsh omits temperature and
+normalizes `any` or a named forced tool to `auto` while retaining strict tool schemas.
+
 When the authenticated ChatGPT subscription catalog includes GPT-6 Astra, `/model` presents it as an additional premium option under **ChatGPT Subscription**. Astra does not replace the existing Luna, Terra, Sol, or role assignments unless you explicitly assign it.
 
 A manual conversation choice remains in effect under automatic routing. Entering planning mode uses the Plan assignment; exiting restores the prior conversation model and reasoning. Explicit `--models` scopes still limit the picker.
@@ -89,6 +95,8 @@ providers:
       groupLabel: LiteLLM
       sectionLabel: Anthropic
     modelAllowlist:
+      - claude-fable-5-1
+      - claude-fable-5
       - claude-opus-5
       - claude-sonnet-5
       - claude-haiku-4-5
@@ -102,6 +110,15 @@ xcsh config set modelProviderOrder '["litellm", "anthropic", "google-vertex"]'
 ```
 
 For command-line selection, qualify the provider whenever several usable providers expose the same model ID. A bare `--model` value succeeds only when one usable provider matches; otherwise xcsh prints the qualified choices and exits nonzero in noninteractive mode.
+
+The two explicit Fable aliases are an exception to general fuzzy selection:
+
+```bash
+xcsh --model fable
+xcsh --model anthropic/fable
+```
+
+Both select `anthropic/claude-fable-5-1` deterministically.
 
 ## Where does LiteLLM fit?
 

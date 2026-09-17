@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "02d0ede9109fb6b9eca6e0ed61ee983e36b875df",
+  "revision": "2d712f1a4b8fa3f186a2cf85a287b8bdd518d585",
   "fingerprint": "733c109f738c5b2e5dc7718bce0236912ea9682b0cae4ad33fb61b9f3e1898a0",
   "counts": {
     "total": 241,
@@ -572,12 +572,12 @@
         "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts",
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
         "packages/coding-agent/test/extensions-runner.test.ts",
+        "packages/coding-agent/test/fable-uat.test.ts",
         "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
         "packages/coding-agent/test/manager.int.test.ts",
         "packages/coding-agent/test/mermaid-renderer.test.ts",
         "packages/coding-agent/test/registered-tool-renderer.test.ts",
-        "packages/coding-agent/test/regression-guard.test.ts",
-        "packages/coding-agent/test/remote-control/interactions.test.ts"
+        "packages/coding-agent/test/regression-guard.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/runner.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

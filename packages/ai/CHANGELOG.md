@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Added
+
+- Added native Anthropic Claude Fable 5 and 5.1 catalog and transport support, including always-on
+  adaptive thinking, accurate limits and pricing, strict-tool compatibility, and permanent
+  entitlement/client-version error handling.
+
 ### Changed
 
 - Replaced the bundled Vertex Gemini 3.7 Flash model and provider default with GA Gemini 3.8 Flash,

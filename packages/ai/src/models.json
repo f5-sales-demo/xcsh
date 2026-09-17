@@ -3158,6 +3158,106 @@
 		}
 	},
 	"anthropic": {
+		"claude-fable-5": {
+			"id": "claude-fable-5",
+			"name": "Claude Fable 5",
+			"api": "anthropic-messages",
+			"provider": "anthropic",
+			"baseUrl": "https://api.anthropic.com",
+			"reasoning": true,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 10,
+				"output": 50,
+				"cacheRead": 1,
+				"cacheWrite": 12.5
+			},
+			"contextWindow": 1000000,
+			"maxTokens": 128000,
+			"thinking": {
+				"mode": "anthropic-adaptive",
+				"supportedLevels": [
+					{
+						"effort": "minimal",
+						"description": "Very brief reasoning"
+					},
+					{
+						"effort": "low",
+						"description": "Light reasoning"
+					},
+					{
+						"effort": "medium",
+						"description": "Balanced reasoning"
+					},
+					{
+						"effort": "high",
+						"description": "Deep reasoning"
+					},
+					{
+						"effort": "xhigh",
+						"description": "Very deep reasoning"
+					},
+					{
+						"effort": "max",
+						"description": "Maximum reasoning"
+					}
+				],
+				"defaultLevel": "high"
+			}
+		},
+		"claude-fable-5-1": {
+			"id": "claude-fable-5-1",
+			"name": "Claude Fable 5.1",
+			"api": "anthropic-messages",
+			"provider": "anthropic",
+			"baseUrl": "https://api.anthropic.com",
+			"reasoning": true,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 10,
+				"output": 50,
+				"cacheRead": 0.25,
+				"cacheWrite": 12.5
+			},
+			"contextWindow": 1000000,
+			"maxTokens": 128000,
+			"thinking": {
+				"mode": "anthropic-adaptive",
+				"supportedLevels": [
+					{
+						"effort": "minimal",
+						"description": "Very brief reasoning"
+					},
+					{
+						"effort": "low",
+						"description": "Light reasoning"
+					},
+					{
+						"effort": "medium",
+						"description": "Balanced reasoning"
+					},
+					{
+						"effort": "high",
+						"description": "Deep reasoning"
+					},
+					{
+						"effort": "xhigh",
+						"description": "Very deep reasoning"
+					},
+					{
+						"effort": "max",
+						"description": "Maximum reasoning"
+					}
+				],
+				"defaultLevel": "high"
+			}
+		},
 		"claude-3-5-sonnet-20240620": {
 			"id": "claude-3-5-sonnet-20240620",
 			"name": "Claude Sonnet 3.5",

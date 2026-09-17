@@ -6,6 +6,8 @@
 
 ### Added
 
+- Added deterministic `fable` and `anthropic/fable` model aliases, Fable 5/5.1 model-picker
+  support, and a source/installed OAuth/API-key UAT runner.
 - Added capability-aware terminal hyperlinks, automatic local Vertex sign-in launch with durable
   manual recovery, HTTP(S)-only `/open`, `/copy link`, and a bounded fullscreen transcript copy
   picker. Semantically ported from [can1357/oh-my-pi#10196](https://github.com/can1357/oh-my-pi/pull/10196),

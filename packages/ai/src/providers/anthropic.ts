@@ -9,7 +9,12 @@ import type {
 	MessageParam,
 } from "@anthropic-ai/sdk/resources/messages";
 import { $env, abortableSleep, isEnoent } from "@f5-sales-demo/pi-utils";
-import { type AnthropicAdaptiveEffort, mapEffortToAnthropicAdaptiveEffort } from "../model-thinking";
+import {
+	type AnthropicAdaptiveEffort,
+	Effort,
+	isAnthropicAlwaysThinkingModel,
+	mapEffortToAnthropicAdaptiveEffort,
+} from "../model-thinking";
 import { calculateCost } from "../models";
 import { getEnvApiKey, OUTPUT_FALLBACK_BUFFER } from "../stream";
 import type {
@@ -186,7 +191,7 @@ function getCacheControl(
 }
 
 // Stealth mode: Mimic Claude Code headers and tool prefixing.
-export const claudeCodeVersion = "2.1.63";
+export const claudeCodeVersion = "2.1.274";
 export const claudeToolPrefix: string = "proxy_";
 export const claudeCodeSystemInstruction = "You are a Claude agent, built on Anthropic's Claude Agent SDK.";
 
@@ -624,6 +629,7 @@ function isProviderRetryableStreamEnvelopeError(error: unknown): boolean {
 export function isProviderRetryableError(error: unknown): boolean {
 	if (!(error instanceof Error)) return false;
 	const msg = error.message.toLowerCase();
+	if (isAnthropicPermanentErrorMessage(msg)) return false;
 	return (
 		/rate.?limit|too many requests|overloaded|service.?unavailable|internal_error|stream error.*received from peer|1302|timed?\s*out while waiting for the first event|timeout waiting for first/i.test(
 			msg,
@@ -631,6 +637,26 @@ export function isProviderRetryableError(error: unknown): boolean {
 		isTransientStreamParseError(error) ||
 		isProviderRetryableStreamEnvelopeError(error)
 	);
+}
+
+export function isAnthropicPermanentErrorMessage(message: string): boolean {
+	return /credits_required|obsolete[_ -]?client|client[_ -]?(?:is[_ -]?)?too[_ -]?old|version of (?:claude code|the client) is no longer supported/i.test(
+		message,
+	);
+}
+
+export function rewriteAnthropicPermanentError(errorMessage: string): string {
+	if (/credits_required/i.test(errorMessage)) {
+		return "Anthropic access requires credits for this model. Check the account's Claude subscription or API billing entitlement, then retry.";
+	}
+	if (
+		/obsolete[_ -]?client|client[_ -]?(?:is[_ -]?)?too[_ -]?old|version of (?:claude code|the client) is no longer supported/i.test(
+			errorMessage,
+		)
+	) {
+		return "Anthropic rejected this xcsh client version. Upgrade xcsh to the latest release, then retry.";
+	}
+	return errorMessage;
 }
 
 /**
@@ -1114,6 +1140,9 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 			output.stopReason = activeAbortTracker.wasCallerAbort() ? "aborted" : "error";
 			output.errorMessage = firstEventTimeoutError?.message ?? (await finalizeErrorMessage(error, rawRequestDump));
 			output.errorMessage = rewriteCopilotAuthError(output.errorMessage, error, model.provider);
+			if (model.provider === "anthropic") {
+				output.errorMessage = rewriteAnthropicPermanentError(output.errorMessage);
+			}
 			output.duration = Date.now() - startTime;
 			if (firstTokenTime) output.ttft = firstTokenTime - startTime;
 			stream.push({ type: "error", reason: output.stopReason, error: output });
@@ -1250,7 +1279,7 @@ export function buildAnthropicClientOptions(args: AnthropicClientOptionsArgs): A
 		apiKey: oauthToken ? null : apiKey,
 		authToken: oauthToken ? apiKey : undefined,
 		baseURL: baseUrl,
-		maxRetries: 5,
+		maxRetries: 0,
 		dangerouslyAllowBrowser: true,
 		defaultHeaders,
 		logLevel: ANTHROPIC_SDK_LOG_LEVEL,
@@ -1529,6 +1558,12 @@ function buildParams(
 	options?: AnthropicOptions,
 ): MessageCreateParamsStreaming {
 	const { cacheControl } = getCacheControl(baseUrl, options?.cacheRetention);
+	const alwaysThinking = isAnthropicAlwaysThinkingModel(model);
+	const toolChoice =
+		alwaysThinking &&
+		(options?.toolChoice === "any" || (typeof options?.toolChoice === "object" && options.toolChoice.type === "tool"))
+			? "auto"
+			: options?.toolChoice;
 	const params: AnthropicSamplingParams = {
 		model: model.id,
 		messages: convertAnthropicMessages(context.messages, model, isOAuthToken),
@@ -1536,7 +1571,7 @@ function buildParams(
 		stream: true,
 	};
 
-	if (options?.temperature !== undefined) {
+	if (!alwaysThinking && options?.temperature !== undefined) {
 		params.temperature = options.temperature;
 	}
 	if (options?.topP !== undefined) {
@@ -1547,22 +1582,26 @@ function buildParams(
 	}
 
 	if (context.tools) {
-		const toolChoice = options?.toolChoice;
 		const forcedToolName =
 			model.provider === "anthropic" &&
 			supportsAnthropicStrictToolUse(model.id) &&
-			typeof toolChoice === "object" &&
-			toolChoice.type === "tool"
-				? toolChoice.name
+			typeof options?.toolChoice === "object" &&
+			options.toolChoice.type === "tool"
+				? options.toolChoice.name
 				: undefined;
 		params.tools = convertTools(context.tools, isOAuthToken, forcedToolName);
 	}
 
-	if (options?.thinkingEnabled && model.reasoning) {
+	if ((options?.thinkingEnabled || alwaysThinking) && model.reasoning) {
 		const mode = model.thinking?.mode;
-		const requestedEffort = options.reasoning;
+		const requestedEffort = options?.reasoning;
 		const effort =
-			options.effort ?? (requestedEffort ? mapEffortToAnthropicAdaptiveEffort(model, requestedEffort) : undefined);
+			options?.effort ??
+			(requestedEffort
+				? mapEffortToAnthropicAdaptiveEffort(model, requestedEffort)
+				: alwaysThinking
+					? mapEffortToAnthropicAdaptiveEffort(model, Effort.High)
+					: undefined);
 
 		if (mode === "anthropic-adaptive") {
 			params.thinking = { type: "adaptive" };
@@ -1572,7 +1611,7 @@ function buildParams(
 		} else {
 			params.thinking = {
 				type: "enabled",
-				budget_tokens: options.thinkingBudgetTokens || 1024,
+				budget_tokens: options?.thinkingBudgetTokens || 1024,
 			};
 			if (mode === "anthropic-budget-effort" && effort) {
 				params.output_config = { effort };
@@ -1580,7 +1619,7 @@ function buildParams(
 		}
 		// Anthropic requires temperature=1 when thinking is enabled; override any
 		// caller-supplied value (e.g. temperature=0 set for deterministic non-interactive mode).
-		params.temperature = 1;
+		if (!alwaysThinking) params.temperature = 1;
 	}
 
 	const metadataUserId = resolveAnthropicMetadataUserId(options?.metadata?.user_id, isOAuthToken);
@@ -1588,16 +1627,16 @@ function buildParams(
 		params.metadata = { user_id: metadataUserId };
 	}
 
-	if (options?.toolChoice) {
-		if (typeof options.toolChoice === "string") {
-			params.tool_choice = { type: options.toolChoice };
-		} else if (isOAuthToken && options.toolChoice.name) {
+	if (toolChoice) {
+		if (typeof toolChoice === "string") {
+			params.tool_choice = { type: toolChoice };
+		} else if (isOAuthToken && toolChoice.name) {
 			params.tool_choice = {
-				...options.toolChoice,
-				name: applyClaudeToolPrefix(options.toolChoice.name),
+				...toolChoice,
+				name: applyClaudeToolPrefix(toolChoice.name),
 			};
 		} else {
-			params.tool_choice = options.toolChoice;
+			params.tool_choice = toolChoice;
 		}
 	}
 

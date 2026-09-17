@@ -62,6 +62,7 @@ describe("Anthropic Copilot auth config", () => {
 
 		expect(options.apiKey).toBeNull();
 		expect(options.defaultHeaders.Authorization).toBe(`Bearer ${token}`);
+		expect(options.maxRetries).toBe(5);
 	});
 
 	it("unwraps structured Copilot credentials before setting Authorization", () => {
