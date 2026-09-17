@@ -104,8 +104,8 @@ jobs:
         working-directory: .release-source
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          GITHUB_REF_NAME: ${{ inputs.tag }}
-        run: bun scripts/ci-release-homebrew.ts --update-tap
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: GITHUB_REF_NAME="$RELEASE_TAG" bun scripts/ci-release-homebrew.ts --update-tap
 
   verify-homebrew-install:
     name: Verify no-sudo Homebrew cask backfill (${{ matrix.arch }})
