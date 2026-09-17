@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "11cb1e3b09414a2e40d2d4b7b8b8087d39bbfdad",
-  "fingerprint": "6d65cb737b24e23b1b1cb7e1b2941073b62f25ef353f803ff099d9363339f2c5",
+  "revision": "6cfa8e390725df592a5170cb1a79c1d745bb377b",
+  "fingerprint": "733c109f738c5b2e5dc7718bce0236912ea9682b0cae4ad33fb61b9f3e1898a0",
   "counts": {
     "total": 241,
     "components": 95,
@@ -3072,7 +3072,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "e2399b88bd2054f30cdf8647091f7adfb1e481e942e515d221c629b7bd4ef99e",
+      "sha256": "8898a838c3f3da0914e16019c0ea07b1f57126790163b11d57f7908121dddf4b",
       "exports": [
         "F5_LOGO_ROWS",
         "WelcomeComponent"
@@ -6288,7 +6288,8 @@
         "packages/coding-agent/test/interactive-mode-status.test.ts",
         "packages/coding-agent/test/modes/utils/ui-helpers-rebuild-spacing.test.ts",
         "packages/coding-agent/test/user-message-hotswap.test.ts",
-        "packages/coding-agent/test/user-message.test.ts"
+        "packages/coding-agent/test/user-message.test.ts",
+        "packages/coding-agent/test/welcome-logo.test.ts"
       ],
       "classification": "packages/tui/src/components/spacer.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6920,7 +6921,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "3c602984a9ba414652f737e3003f47acbb0057fe1c55fcc0eb075a566a629be7",
+      "sha256": "a63f717c9008d43ad8e3121aa0355a69bbce88261dde741310ecd125d8f7aea9",
       "exports": [
         "CURSOR_MARKER",
         "Component",
