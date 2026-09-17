@@ -589,6 +589,7 @@ test("thread wire views gate experimental fields and never expose internal model
 test("phone-created thread lifecycle uses cwd precedence and remains visible beside one primary terminal", async () => {
 	const notifications: Array<{ client: string; method: string; params: Record<string, unknown> }> = [];
 	const calls: Array<{ method: string; params: Record<string, unknown> }> = [];
+	let startedWith: Record<string, unknown> | undefined;
 	const managed = new Map<string, any>();
 	const endpoint = (id: string, cwd: string, forkedFromId: string | null = null) => ({
 		thread: {
@@ -604,6 +605,17 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 			createdAt: 1,
 			updatedAt: 1,
 		},
+		models: [
+			{
+				id: "gpt-5.6-luna",
+				provider: "openai-codex",
+				displayName: "Luna",
+				description: "Fixture model",
+				supportedReasoningEfforts: [],
+				defaultReasoningEffort: "medium",
+				inputModalities: ["text" as const],
+			},
+		],
 		call: async (_identity: string, method: string, params: Record<string, unknown>) => {
 			calls.push({ method, params });
 			return {
@@ -627,6 +639,7 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 		defaultCwd: "/tmp",
 		list: () => [...managed.values()].map(value => value.thread),
 		start: async (params: Record<string, unknown>) => {
+			startedWith = structuredClone(params);
 			const value = endpoint("managed-start", String(params.cwd));
 			managed.set(value.thread.id, value);
 			return value;
@@ -671,6 +684,7 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 		params: { cwd: "/tmp", model: "gpt-5.6-luna", effort: "medium" },
 	})) as any;
 	expect(started.result).toMatchObject({ thread: { id: "managed-start", cwd: "/tmp" } });
+	expect(startedWith).toMatchObject({ model: "gpt-5.6-luna", modelProvider: "openai-codex" });
 	expect(notifications).toEqual([]);
 	await Bun.sleep(1);
 	expect(notifications[0]).toMatchObject({ client: "phone", method: "thread/started" });
@@ -710,6 +724,25 @@ test("phone-created thread lifecycle uses cwd precedence and remains visible bes
 	).toEqual({ id: 7, result: {} });
 	await Bun.sleep(1);
 	expect(notifications.at(-1)).toMatchObject({ method: "thread/deleted", params: { threadId: "managed-fork" } });
+	router.removeSession("primary");
+	router.removeSession("secondary");
+	router.removeSession("managed-start");
+	const persistedModel = (await router.handle("phone", {
+		id: "persisted-model",
+		method: "thread/start",
+		params: { cwd: "/tmp", model: "gpt-5.6-luna" },
+	})) as any;
+	expect(persistedModel.result).toMatchObject({ thread: { id: "managed-start", cwd: "/tmp" } });
+	expect(startedWith).toMatchObject({ model: "gpt-5.6-luna", modelProvider: "openai-codex" });
+	router.removeSession("managed-start");
+	const staleModel = (await router.handle("phone", {
+		id: "stale-model",
+		method: "thread/start",
+		params: { cwd: "/tmp", model: "cached-phone-model" },
+	})) as any;
+	expect(staleModel.result).toMatchObject({ thread: { id: "managed-start", cwd: "/tmp" } });
+	expect(startedWith).toMatchObject({ cwd: "/tmp" });
+	expect(startedWith).not.toHaveProperty("model");
 	router.dispose();
 });
 
@@ -926,11 +959,18 @@ test("phone workspace bootstrap works with zero loaded sessions", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-workspace-empty-"));
 	const workspaceRoot = join(root, "Documents", "xcsh");
 	await mkdir(workspaceRoot, { recursive: true });
+	const persistedThread = {
+		id: "persisted-managed-thread",
+		cwd: workspaceRoot,
+		model: "gpt-6-astra",
+		modelProvider: "openai-codex",
+		reasoningEffort: "high",
+	};
 	const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
 	let startedCwd: string | undefined;
 	const lifecycle = {
 		defaultCwd: workspaceRoot,
-		list: () => [],
+		list: () => [persistedThread],
 		start: async (params: Record<string, unknown>) => {
 			startedCwd = String(params.cwd);
 			const thread = {
@@ -967,13 +1007,23 @@ test("phone workspace bootstrap works with zero loaded sessions", async () => {
 	try {
 		const bootstrapScript =
 			'target="$PWD/Documents/""Codex""/2026-09-16/new-realtime-voice-chat-1"; mkdir -p "$target"; printf %s "$target"; #'.padEnd(
-				737,
+				911,
 				"x",
 			);
 		await router.handle("phone", {
 			id: 1,
 			method: "initialize",
 			params: { clientInfo: { name: "fixture", version: "1" } },
+		});
+		expect(await router.handle("phone", { id: "bootstrap-config", method: "config/read", params: {} })).toMatchObject(
+			{
+				result: {
+					config: { model: "gpt-6-astra", model_provider: "openai-codex", model_reasoning_effort: "high" },
+				},
+			},
+		);
+		expect(await router.handle("phone", { id: "bootstrap-models", method: "model/list", params: {} })).toMatchObject({
+			result: { data: [{ id: "gpt-6-astra", inputModalities: ["text", "audio"], isDefault: true }] },
 		});
 		expect(
 			await router.handle("phone", {
