@@ -466,6 +466,9 @@ test("phone turn metadata preserves the work model and deduplicates client messa
 		effort: "high",
 		summary: "auto",
 		turnTrigger: "user",
+		approvalPolicy: "never",
+		approvalsReviewer: "user",
+		sandboxPolicy: { type: "dangerFullAccess" },
 		input: [{ type: "text", text: "fixture prompt" }],
 	};
 	const result = await a.remote.call("phone-1", "turn/start", p);
@@ -473,6 +476,7 @@ test("phone turn metadata preserves the work model and deduplicates client messa
 	expect(a.prompts).toEqual(["fixture prompt"]);
 	expect(efforts).toEqual(["high"]);
 	expect(a.remote.target.model?.id).toBe("gpt-6-astra");
+	expect(a.settings.get("sandbox.enabled")).toBe(false);
 	await expect(
 		a.remote.call("phone-3", "turn/start", { ...p, input: [{ type: "text", text: "different" }] }),
 	).rejects.toThrow("identity");
