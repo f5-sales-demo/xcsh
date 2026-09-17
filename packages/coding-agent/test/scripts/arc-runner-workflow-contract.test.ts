@@ -127,7 +127,7 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 	expect(observedArcRoutes).toEqual(new Set(["xcsh-compute", "xcsh-container-build", "xcsh-socketless"]));
 });
 
-test("compute qualification is manual, frozen-source, and derives bounded workers from the experiment", async () => {
+test("compute qualification is manual, frozen-source, and derives bounded numeric file workers", async () => {
 	const source = await Bun.file(path.join(WORKFLOW_ROOT, "compute-benchmark.yml")).text();
 	const actionSource = await Bun.file(
 		path.join(REPOSITORY_ROOT, ".github/actions/runner-optimization-profile/action.yml"),
@@ -135,7 +135,7 @@ test("compute qualification is manual, frozen-source, and derives bounded worker
 	const runnerSource = await Bun.file(path.join(REPOSITORY_ROOT, "scripts/run-ts-tests.ts")).text();
 
 	expect(source).toContain("workflow_dispatch:");
-	for (const input of ["source_sha:", "experiment:", "cache_state:", "pair_id:"]) {
+	for (const input of ["source_sha:", "experiment:", "cache_state:", "file_workers:", "pair_id:"]) {
 		expect(source).toContain(input);
 	}
 	expect(source).toContain("d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a");
@@ -145,7 +145,11 @@ test("compute qualification is manual, frozen-source, and derives bounded worker
 	expect(source).not.toContain("xcsh-compute-bun-candidate");
 	expect(source).not.toContain("pull_request:");
 	expect(source).not.toContain("types: [labeled]");
-	expect(`${source}\n${runnerSource}`).not.toContain("--concurrent");
+	expect(source).toContain("d16-parallel)");
+	expect(source).toContain('[[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-2])$ ]]');
+	expect(source).not.toContain("d16-parallel-2");
+	expect(runnerSource).toContain('throw new Error("--concurrent is not supported');
+	expect(runnerSource).not.toContain('flags.push("--concurrent")');
 	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal TypeScript source
 	expect(runnerSource).toContain("flags.push(`--parallel=${fileWorkers}`)");
 	expect(actionSource).toContain("EXPECTED_IMAGE_DIGEST");
@@ -158,9 +162,7 @@ test("DAG qualification holds image and hardware constant while measuring the re
 	const source = await Bun.file(path.join(WORKFLOW_ROOT, "compute-benchmark.yml")).text();
 	const workflow = parse(source) as WorkflowDocument;
 
-	expect(source).toContain(
-		"image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-hardware|dag-control|dag-candidate",
-	);
+	expect(source).toContain("image-candidate|d16-serial|d16-parallel|d16-hardware|dag-control|dag-candidate");
 	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 	expect(workflow.jobs?.["dag-control"]?.["runs-on"]).toBe("${{ needs.prepare.outputs.runner_label }}");
 	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
