@@ -75,12 +75,7 @@ jobs:
           }
 
           jobs=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/attempts/1/jobs?per_page=100")
-          jq -e '
-            ([.jobs[] | select(.name == "check" or .name == "test" or .name == "Test installation methods")] | length == 3) and
-            (all(.jobs[] | select(.name == "check" or .name == "test" or .name == "Test installation methods"); .conclusion == "success")) and
-            ([.jobs[] | select(.name | startswith("Native build ("))] | length >= 8) and
-            (all(.jobs[] | select(.name | startswith("Native build (")); .conclusion == "success"))
-          ' <<<"$jobs" >/dev/null || {
+          jq -e -f scripts/ci-release-source-jobs.jq <<<"$jobs" >/dev/null || {
             echo "::error::Source run attempt 1 lacks green check, test, installation, or native-build prerequisites"
             exit 1
           }
