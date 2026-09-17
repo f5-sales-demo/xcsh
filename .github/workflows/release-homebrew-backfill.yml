@@ -156,6 +156,7 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
           set -euo pipefail
+          cd "$UAT_HOME"
           sudo -H -u "$UAT_USER" env \
             EXPECTED_VERSION="$EXPECTED_VERSION" \
             RELEASE_ARCH="$RELEASE_ARCH" \
