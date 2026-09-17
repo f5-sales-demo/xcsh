@@ -19,11 +19,13 @@ image-control | image-candidate | d16-serial | d16-parallel | d16-hardware | f32
 *) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
-[[ "$file_workers" =~ ^(0|[1-9][0-9]*)$ ]] && (( file_workers <= 32 )) || usage
+if [[ ! "$file_workers" =~ ^(0|[1-9][0-9]*)$ ]] || ((file_workers > 32)); then
+  usage
+fi
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
 case "$experiment:$file_workers" in
-d16-parallel:*) (( file_workers > 0 )) || usage ;;
+d16-parallel:*) ((file_workers > 0)) || usage ;;
 *:0)
   [[ "$experiment" != d16-parallel ]]
   ;;
