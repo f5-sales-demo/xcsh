@@ -559,9 +559,7 @@ jobs:
                   "xcsh-darwin-x64",
                   "xcsh-darwin-x64.zip",
                   "xcsh-linux-arm64",
-                  "xcsh-linux-arm64.tar.gz",
                   "xcsh-linux-x64",
-                  "xcsh-linux-x64.tar.gz",
                   "xcsh-windows-x64.exe"
                 ] and
                 ([.assets[] | .digest | test("^sha256:[0-9a-f]{64}$")] | all)

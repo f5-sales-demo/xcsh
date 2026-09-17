@@ -19,19 +19,25 @@ import { describeDivergence, reconcileReleases } from "../../../../scripts/ci-re
 
 const SHA = "a".repeat(64);
 
-/** A tap formula as ci-release-homebrew.ts generates it. */
-const formula = (version: string, sha: string = SHA) => `class Xcsh < Formula
+/** A tap cask as ci-release-homebrew.ts generates it. */
+const cask = (version: string, armSha: string = SHA, intelSha: string = SHA) => `cask "xcsh" do
   version "${version}"
-  url "https://example.invalid/v${version}/xcsh-darwin-arm64.zip"
-  sha256 "${sha}"
+  arch arm: "arm64", intel: "x64"
+  sha256 arm: "${armSha}", intel: "${intelSha}"
+  url "https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-#{arch}.zip"
+end
 `;
 
 const deps = (over: Partial<Parameters<typeof reconcileReleases>[0]> = {}) => ({
 	listTags: async () => ["v1.0.0"],
 	listReleases: async () => ["v1.0.0"],
 	listNpmVersions: async () => ["1.0.0"],
-	readHomebrewFormula: async () => formula("1.0.0"),
-	listAssetDigests: async () => new Map([["xcsh-darwin-arm64.zip", SHA]]),
+	readHomebrewCask: async () => cask("1.0.0"),
+	listAssetDigests: async () =>
+		new Map([
+			["xcsh-darwin-arm64.zip", SHA],
+			["xcsh-darwin-x64.zip", SHA],
+		]),
 	log: () => {},
 	...over,
 });
@@ -113,7 +119,7 @@ describe("reconcileReleases", () => {
 				listNpmVersions: async () => ["1.0.0", "1.1.0", "1.2.0"],
 				// v1.1.0 is the newest tag with a release, so it is what the tap is
 				// held against; keep them equal so this test stays about "reports all".
-				readHomebrewFormula: async () => formula("1.1.0"),
+				readHomebrewCask: async () => cask("1.1.0"),
 			}),
 		);
 		expect(r.divergences.map(d => d.tag)).toEqual(["v1.0.0", "v1.2.0"]);
@@ -126,7 +132,7 @@ describe("reconcileReleases", () => {
 	// and the first version of it could not see that case at all.
 
 	it("reports a release that reached npm but not the Homebrew tap", async () => {
-		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("0.9.0") }));
+		const r = await reconcileReleases(deps({ readHomebrewCask: async () => cask("0.9.0") }));
 		expect(r.status).toBe("diverged");
 		expect(r.divergences).toEqual([
 			{ tag: "v1.0.0", missingRelease: false, missingNpm: false, missingHomebrew: true, brokenHomebrew: false },
@@ -136,7 +142,7 @@ describe("reconcileReleases", () => {
 	it("fails closed when the Homebrew lookup throws, rather than assuming current", async () => {
 		const r = await reconcileReleases(
 			deps({
-				readHomebrewFormula: async () => {
+				readHomebrewCask: async () => {
 					throw new Error("tap unreachable");
 				},
 			}),
@@ -152,14 +158,14 @@ describe("reconcileReleases", () => {
 				listTags: async () => ["v1.2.0", "v1.1.0", "v1.0.0"],
 				listReleases: async () => ["v1.2.0", "v1.1.0", "v1.0.0"],
 				listNpmVersions: async () => ["1.2.0", "1.1.0", "1.0.0"],
-				readHomebrewFormula: async () => formula("1.2.0"),
+				readHomebrewCask: async () => cask("1.2.0"),
 			}),
 		);
 		expect(r.status).toBe("clean");
 	});
 
 	it("tolerates a v-prefix on the tap version", async () => {
-		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("v1.0.0") }));
+		const r = await reconcileReleases(deps({ readHomebrewCask: async () => cask("v1.0.0") }));
 		expect(r.status).toBe("clean");
 	});
 
@@ -167,7 +173,7 @@ describe("reconcileReleases", () => {
 		// A tag mid-publish is already reported for the missing release; adding a
 		// Homebrew complaint to it is noise, not information.
 		const r = await reconcileReleases(
-			deps({ listReleases: async () => [], readHomebrewFormula: async () => formula("0.9.0") }),
+			deps({ listReleases: async () => [], readHomebrewCask: async () => cask("0.9.0") }),
 		);
 		expect(r.divergences).toEqual([
 			{ tag: "v1.0.0", missingRelease: true, missingNpm: false, missingHomebrew: false, brokenHomebrew: false },
@@ -182,35 +188,34 @@ describe("reconcileReleases", () => {
 				listTags: async () => ["v2.3.4"],
 				listReleases: async () => ["v2.3.4"],
 				listNpmVersions: async () => ["2.3.4"],
-				readHomebrewFormula: async () => formula("2.3.4"),
+				readHomebrewCask: async () => cask("2.3.4"),
 			}),
 		);
 		expect(r.status).toBe("clean");
 	});
 
-	// --- formula health (#73, second Codex finding) -----------------------------
-	// ci-release-homebrew.ts:113 does `checksums.get(archive) || "MISSING_SHA256"`,
-	// so a formula can carry the correct version with a placeholder checksum. A
-	// version-only comparison calls that clean while `brew install` fails.
+	// --- cask health (#73, second Codex finding) -----------------------------
+	// A corrupted tap can carry the correct version with a placeholder checksum.
+	// A version-only comparison calls that clean while `brew install` fails.
 
-	it("reports a formula whose checksum is the MISSING_SHA256 placeholder", async () => {
-		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("1.0.0", "MISSING_SHA256") }));
+	it("reports a cask whose checksum is the MISSING_SHA256 placeholder", async () => {
+		const r = await reconcileReleases(deps({ readHomebrewCask: async () => cask("1.0.0", "MISSING_SHA256") }));
 		expect(r.status).toBe("diverged");
 		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
 		expect(r.divergences[0]?.missingHomebrew).toBe(false);
 	});
 
-	it("reports a formula whose checksum is not a real digest", async () => {
-		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => formula("1.0.0", "deadbeef") }));
+	it("reports a cask whose checksum is not a real digest", async () => {
+		const r = await reconcileReleases(deps({ readHomebrewCask: async () => cask("1.0.0", "deadbeef") }));
 		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
 	});
 
-	it("treats a formula with no version line as unknown, not clean", async () => {
-		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => "class Xcsh < Formula\nend\n" }));
+	it("treats a cask with no version line as unknown, not clean", async () => {
+		const r = await reconcileReleases(deps({ readHomebrewCask: async () => 'cask "xcsh" do\nend\n' }));
 		expect(r.status).toBe("unknown");
 	});
 
-	it("names a broken formula distinctly from a stale one", () => {
+	it("names a broken cask distinctly from a stale one", () => {
 		expect(
 			describeDivergence({
 				tag: "v1.0.0",
@@ -219,26 +224,27 @@ describe("reconcileReleases", () => {
 				missingHomebrew: false,
 				brokenHomebrew: true,
 			}),
-		).toBe("Homebrew formula is broken");
+		).toBe("Homebrew cask is broken");
 	});
 
-	it("treats a formula with no checksums at all as broken", async () => {
+	it("treats a cask with no checksums at all as broken", async () => {
 		// [].some() is false, so an empty digest list read as healthy.
 		const r = await reconcileReleases(
-			deps({ readHomebrewFormula: async () => 'class Xcsh < Formula\n  version "1.0.0"\nend\n' }),
+			deps({ readHomebrewCask: async () => 'cask "xcsh" do\n  version "1.0.0"\nend\n' }),
 		);
 		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
 	});
 
-	it("reports a formula whose download URLs point at a different version", async () => {
+	it("reports a cask whose download URLs point at a different version", async () => {
 		// version says 1.0.0, the archive it fetches is 0.9.0: installs the wrong
 		// binary while every checksum is syntactically valid.
-		const mismatched = `class Xcsh < Formula
+		const mismatched = `cask "xcsh" do
   version "1.0.0"
-  url "https://example.invalid/v0.9.0/xcsh-darwin-arm64.zip"
-  sha256 "${SHA}"
+  sha256 arm: "${SHA}", intel: "${SHA}"
+  url "https://example.invalid/v0.9.0/xcsh-darwin-#{arch}.zip"
+end
 `;
-		const r = await reconcileReleases(deps({ readHomebrewFormula: async () => mismatched }));
+		const r = await reconcileReleases(deps({ readHomebrewCask: async () => mismatched }));
 		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
 	});
 
@@ -248,7 +254,7 @@ describe("reconcileReleases", () => {
 		// v1.0.0 is released (so the tap is measurable against it) but deliberately
 		// absent from npm. The tap is then stale on top of that.
 		const r = await reconcileReleases(
-			deps({ listNpmVersions: async () => [], readHomebrewFormula: async () => formula("0.9.0") }),
+			deps({ listNpmVersions: async () => [], readHomebrewCask: async () => cask("0.9.0") }),
 			{ allowlist: { "v1.0.0": "deliberately unpublished to npm" } },
 		);
 		expect(r.status).toBe("diverged");
@@ -258,23 +264,29 @@ describe("reconcileReleases", () => {
 
 	// --- artifact verification --------------------------------------------------
 	// ci.yml:1043 uploads with `--clobber`, so an archive can be replaced after the
-	// tap was written. The formula then keeps a valid-looking checksum and a
+	// tap was written. The cask then keeps a valid-looking checksum and a
 	// correctly versioned URL while every `brew install` fails on a hash mismatch.
 	// GitHub exposes each asset's digest, so this costs one API call, not a download.
 
-	it("reports a formula whose checksum disagrees with the published asset", async () => {
+	it("reports a cask whose checksum disagrees with the published asset", async () => {
 		const r = await reconcileReleases(
-			deps({ listAssetDigests: async () => new Map([["xcsh-darwin-arm64.zip", "b".repeat(64)]]) }),
+			deps({
+				listAssetDigests: async () =>
+					new Map([
+						["xcsh-darwin-arm64.zip", "b".repeat(64)],
+						["xcsh-darwin-x64.zip", SHA],
+					]),
+			}),
 		);
 		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
 	});
 
-	it("reports a formula referencing an asset the release does not have", async () => {
+	it("reports a cask referencing an asset the release does not have", async () => {
 		const r = await reconcileReleases(deps({ listAssetDigests: async () => new Map() }));
 		expect(r.divergences[0]?.brokenHomebrew).toBe(true);
 	});
 
-	it("is clean when every formula checksum matches its published asset", async () => {
+	it("is clean when every cask checksum matches its published asset", async () => {
 		const r = await reconcileReleases(deps());
 		expect(r.status).toBe("clean");
 	});

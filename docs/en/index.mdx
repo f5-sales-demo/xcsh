@@ -31,7 +31,7 @@ head:
       @media (max-width: 50rem) { .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-block: .5rem 2rem; } .landing-installer { margin-block-end: 3rem; padding: 1rem; } .landing-grid { grid-template-columns: minmax(0, 1fr); } }
 ---
 
-import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
+import { Aside, Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
 
 <section class="landing-hero" aria-labelledby="_top">
   <div class="landing-hero__content">
@@ -78,19 +78,21 @@ Use one channel for install and upgrades. Mixing package-manager and standalone 
 
 <Tabs syncKey="install-platform">
 <TabItem label="macOS" icon="seti:apple">
-Choose the Homebrew formula for the signed release archive, or the managed cask for the signed macOS package. Install one, not both:
+Install the signed and notarized macOS archive through the Homebrew cask. The cask preserves the released executable and native addon byte for byte and does not require `sudo`:
 
 ```bash
-brew install f5-sales-demo/tap/xcsh
-# or
 brew install --cask f5-sales-demo/tap/xcsh
 ```
 
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
 
-Upgrade with `brew upgrade xcsh` or `brew upgrade --cask xcsh`. Remove the selected channel with `brew uninstall xcsh` or `brew uninstall --cask xcsh`.
+Upgrade with `brew upgrade --cask xcsh`. Remove the cask with `brew uninstall --cask xcsh`. These commands preserve configuration, credentials, and sessions under `~/.xcsh`.
 </details>
+
+<Aside type="caution" title="Clean break from the historical package cask">
+Before installing this cask on a Mac that received an earlier xcsh package, uninstall both old Homebrew entries (`brew uninstall --formula xcsh` and `brew uninstall --cask xcsh`). Then have MDM forget the `com.f5.xcsh` receipt and remove only the package-owned `/usr/local/bin/xcsh` and `/Library/Application Support/xcsh` payload. Do not remove `~/.xcsh`. The signed and stapled `.pkg` release assets remain available only for direct MDM deployment.
+</Aside>
 </TabItem>
 
 <TabItem label="Ubuntu or Debian" icon="seti:ubuntu">

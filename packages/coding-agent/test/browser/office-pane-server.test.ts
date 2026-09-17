@@ -309,7 +309,7 @@ describe("refusing when no pane bundle is available", () => {
 	// have.
 	it("tells a packaged install the pane ships in the compiled binary", () => {
 		const said = paneUnavailableMessage("/somewhere/office-pane/dist", "packaged");
-		expect(said).toMatch(/brew install f5-sales-demo\/tap\/xcsh/);
+		expect(said).toMatch(/brew install --cask f5-sales-demo\/tap\/xcsh/);
 		expect(said).not.toMatch(/bun run build/);
 	});
 

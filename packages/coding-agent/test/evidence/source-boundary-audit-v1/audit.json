@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "92ff63c4b102b6c2f330a37db1ddb5f36eb50873",
+  "revision": "e606d58ea45deae40b61f053d92e3e9c0fe9b80e",
   "fingerprint": "c41fdec03fb58380f042f34569d2e6d32588678e175e5f48d3227d254a28d9a9",
   "counts": {
     "total": 241,
@@ -5126,8 +5126,8 @@
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts",
-        "packages/coding-agent/test/session/messages-repair.test.ts",
-        "packages/coding-agent/test/system-prompt-templates.test.ts"
+        "packages/coding-agent/test/scripts/homebrew-formula.test.ts",
+        "packages/coding-agent/test/session/messages-repair.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/grep.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

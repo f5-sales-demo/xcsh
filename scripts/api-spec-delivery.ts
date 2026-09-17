@@ -44,9 +44,7 @@ const XCSH_RELEASE_ASSETS = [
 	"xcsh-darwin-x64",
 	"xcsh-darwin-x64.zip",
 	"xcsh-linux-arm64",
-	"xcsh-linux-arm64.tar.gz",
 	"xcsh-linux-x64",
-	"xcsh-linux-x64.tar.gz",
 	"xcsh-windows-x64.exe",
 ] as const;
 

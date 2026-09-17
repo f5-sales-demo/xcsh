@@ -9,40 +9,32 @@ const {
 } = require("../native/installed-paths.js");
 
 describe("installed native addon paths", () => {
-	it("prefers the pkg system path and Homebrew libexec path on macOS", () => {
+	it("prefers the Caskroom libexec path on macOS", () => {
 		const candidates = getInstalledNativeCandidates({
 			platform: "darwin",
-			packageVersion: "21.11.9",
 			addonFilenames: ["pi_natives.darwin-arm64.node"],
-			execDir: "/opt/homebrew/Cellar/xcsh/21.11.9/bin",
-			resolvedExecDir: "/opt/homebrew/Cellar/xcsh/21.11.9/bin",
+			resolvedExecDir: "/opt/homebrew/Caskroom/xcsh/21.31.0/bin",
 		});
 
-		expect(candidates).toEqual([
-			"/Library/Application Support/xcsh/natives/21.11.9/pi_natives.darwin-arm64.node",
-			"/opt/homebrew/Cellar/xcsh/21.11.9/libexec/pi_natives.darwin-arm64.node",
-		]);
+		expect(candidates).toEqual(["/opt/homebrew/Caskroom/xcsh/21.31.0/libexec/pi_natives.darwin-arm64.node"]);
 	});
 
 	it("resolves Homebrew libexec through the stable bin symlink", () => {
 		const candidates = getInstalledNativeCandidates({
 			platform: "darwin",
-			packageVersion: "21.11.9",
 			addonFilenames: ["pi_natives.darwin-arm64.node"],
-			execDir: "/opt/homebrew/bin",
-			resolvedExecDir: "/opt/homebrew/Cellar/xcsh/21.11.9/bin",
+			resolvedExecDir: "/opt/homebrew/Caskroom/xcsh/21.31.0/bin",
 		});
 
-		expect(candidates).toContain("/opt/homebrew/Cellar/xcsh/21.11.9/libexec/pi_natives.darwin-arm64.node");
+		expect(candidates).toEqual(["/opt/homebrew/Caskroom/xcsh/21.31.0/libexec/pi_natives.darwin-arm64.node"]);
 	});
 
 	it("does not advertise macOS installation paths on other platforms", () => {
 		expect(
 			getInstalledNativeCandidates({
 				platform: "linux",
-				packageVersion: "21.11.9",
 				addonFilenames: ["pi_natives.linux-x64.node"],
-				execDir: "/home/username/.linuxbrew/Cellar/xcsh/21.11.9/bin",
+				resolvedExecDir: "/home/username/.linuxbrew/bin",
 			}),
 		).toEqual([]);
 	});
@@ -68,7 +60,7 @@ describe("installed native addon paths", () => {
 	it("does not extract the embedded fallback when an installed addon loads", () => {
 		let preparedFallback = false;
 		const loaded = loadInstalledBeforeFallback(
-			["/Library/Application Support/xcsh/natives/21.11.9/addon.node"],
+			["/opt/homebrew/Caskroom/xcsh/21.31.0/libexec/addon.node"],
 			(candidate: string) => ({ source: candidate }),
 			[],
 			() => {
@@ -77,7 +69,7 @@ describe("installed native addon paths", () => {
 			},
 		);
 
-		expect(loaded.source).toStartWith("/Library/Application Support/xcsh/natives/");
+		expect(loaded.source).toStartWith("/opt/homebrew/Caskroom/xcsh/");
 		expect(preparedFallback).toBeFalse();
 	});
 });

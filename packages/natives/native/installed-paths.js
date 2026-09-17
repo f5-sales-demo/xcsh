@@ -1,15 +1,9 @@
 const path = require("node:path");
 
-const MACOS_SYSTEM_NATIVE_ROOT = "/Library/Application Support/xcsh/natives";
-
-function getInstalledNativeCandidates({ platform, packageVersion, addonFilenames, execDir, resolvedExecDir = execDir }) {
+function getInstalledNativeCandidates({ platform, addonFilenames, resolvedExecDir }) {
 	if (platform !== "darwin") return [];
 
-	return [...new Set([
-		...addonFilenames.map(filename => path.join(MACOS_SYSTEM_NATIVE_ROOT, packageVersion, filename)),
-		...addonFilenames.map(filename => path.resolve(execDir, "..", "libexec", filename)),
-		...addonFilenames.map(filename => path.resolve(resolvedExecDir, "..", "libexec", filename)),
-	])];
+	return addonFilenames.map(filename => path.resolve(resolvedExecDir, "..", "libexec", filename));
 }
 
 function tryLoadCandidates(candidates, load, errors, onLoaded, onError) {
