@@ -2555,8 +2555,8 @@
         },
         {
           "text": "Verify installation",
-          "readerQuestion": "How do I prove which xcsh installation is active?",
-          "purpose": "Detect PATH and channel conflicts before configuration.",
+          "readerQuestion": "How do I start xcsh and confirm the TUI opens?",
+          "purpose": "Open the interactive terminal UI before provider setup.",
           "evidence": [
             "browser-build",
             "candidate-cli",
@@ -2571,8 +2571,8 @@
         },
         {
           "text": "Authenticate a provider",
-          "readerQuestion": "How do I authenticate a model provider safely?",
-          "purpose": "Route readers to provider authentication before their first prompt.",
+          "readerQuestion": "How do I connect a model provider from the xcsh TUI?",
+          "purpose": "Introduce the /login flow and credential boundary before the first prompt.",
           "evidence": [
             "browser-build",
             "candidate-cli",
@@ -2586,9 +2586,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Quickstart",
-          "readerQuestion": "How do I run a bounded first prompt?",
-          "purpose": "Prove the executable and model route without tools or persistence.",
+          "text": "Send your first prompt",
+          "readerQuestion": "How do I confirm the selected model responds in the TUI?",
+          "purpose": "Prove the interactive installation and provider route with a bounded prompt.",
           "evidence": [
             "browser-build",
             "candidate-cli",
