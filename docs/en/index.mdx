@@ -91,7 +91,13 @@ Upgrade with `brew upgrade --cask xcsh`. Remove the cask with `brew uninstall --
 </details>
 
 <Aside type="caution" title="Clean break from the historical package cask">
-Before installing this cask on a Mac that received an earlier xcsh package, uninstall both old Homebrew entries (`brew uninstall --formula xcsh` and `brew uninstall --cask xcsh`). Then have MDM forget the `com.f5.xcsh` receipt and remove only the package-owned `/usr/local/bin/xcsh` and `/Library/Application Support/xcsh` payload. Do not remove `~/.xcsh`. The signed and stapled `.pkg` release assets remain available only for direct MDM deployment.
+Before installing this cask on a Mac that received an earlier xcsh package,
+uninstall both old Homebrew entries (`brew uninstall --formula xcsh` and
+`brew uninstall --cask xcsh`). Then have MDM forget the `com.f5.xcsh` receipt
+and remove only the package-owned `/usr/local/bin/xcsh` and
+`/Library/Application Support/xcsh` payload. Do not remove `~/.xcsh`. The signed
+and stapled `.pkg` release assets remain available only for direct MDM
+deployment.
 </Aside>
 </TabItem>
 
