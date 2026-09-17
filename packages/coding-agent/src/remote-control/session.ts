@@ -1279,6 +1279,9 @@ export class RemoteSession {
 					"effort",
 					"summary",
 					"collaborationMode",
+					"approvalPolicy",
+					"approvalsReviewer",
+					"sandboxPolicy",
 				].includes(key) &&
 				params[key] != null
 			)
@@ -1311,6 +1314,7 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "Unsupported reasoning summary");
 		if (method === "turn/steer" && params.collaborationMode != null)
 			throw new ProtocolError(-32602, "Collaboration mode can only be selected when starting a turn");
+		const permissionProfile = this.#parsePermissionProfile(params);
 		const collaborationMode = this.#parseCollaborationMode(params.collaborationMode);
 		this.#validateEffort(params.effort);
 		const text = params.input.map(item => item.text).join("\n");
@@ -1341,6 +1345,8 @@ export class RemoteSession {
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
 		if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
 		else this.#applyEffort(params.effort);
+		if (params.approvalPolicy != null || params.approvalsReviewer != null || params.sandboxPolicy != null)
+			applyRemotePermissionProfile(this.target.settings, permissionProfile);
 		const hadUserMessages = this.target.messages.some(message => message.role === "user");
 		if (!hadUserMessages && !this.target.sessionManager.getSessionName?.())
 			void coordinateSessionTitle(this.target, text);

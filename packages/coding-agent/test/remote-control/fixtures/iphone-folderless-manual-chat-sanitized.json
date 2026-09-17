@@ -1,0 +1,136 @@
+{
+  "source": "Sanitized physical iPhone manual-chat trace",
+  "scope": "Folderless manual chat asking why is the sky blue",
+  "redaction": "Opaque identities and absolute user paths are replaced. Method order, parameter names, policy values, model selection, effort, UTF-8 script length, prompt, response classes, and notification classes are retained.",
+  "schemaCompatibility": {
+    "0.153.4": {
+      "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+      "turnStartFields": [
+        "approvalPolicy",
+        "approvalsReviewer",
+        "clientUserMessageId",
+        "cwd",
+        "effort",
+        "input",
+        "model",
+        "outputSchema",
+        "personality",
+        "sandboxPolicy",
+        "serviceTier",
+        "serviceTierForTurn",
+        "summary",
+        "threadId",
+        "toolOutput",
+        "turnTrigger"
+      ],
+      "processSpawnRequiredFields": ["command", "cwd", "processHandle"]
+    },
+    "0.154.0": {
+      "sourceCommit": "6b9826e3aa83b1a5947db50f4332cb9c65f1b340",
+      "relevantShapesIdentical": true
+    }
+  },
+  "events": [
+    {
+      "direction": "in",
+      "id": "initialize",
+      "method": "initialize",
+      "params": {
+        "clientInfo": { "name": "fixture-iphone", "version": "1" },
+        "capabilities": { "experimentalApi": true }
+      },
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "id": "config",
+      "method": "config/read",
+      "params": {},
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "id": "models",
+      "method": "model/list",
+      "params": {},
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "id": "modes",
+      "method": "collaborationMode/list",
+      "params": {},
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "id": "workspace",
+      "method": "process/spawn",
+      "params": {
+        "processHandle": "folderless-manual-chat-workspace",
+        "cwd": "/",
+        "command": ["/bin/sh", "-lc", "SANITIZED_911_BYTE_BOOTSTRAP"],
+        "tty": false,
+        "streamStdin": false,
+        "streamStdoutStderr": false,
+        "timeoutMs": 20000,
+        "outputBytesCap": 4096
+      },
+      "scriptBytes": 911,
+      "responseClass": "result"
+    },
+    {
+      "direction": "in",
+      "id": "thread",
+      "method": "thread/start",
+      "params": {
+        "cwd": "$WORKSPACE",
+        "model": "gpt-6-astra"
+      },
+      "responseClass": "result"
+    },
+    {
+      "direction": "out",
+      "method": "thread/started",
+      "responseClass": "notification"
+    },
+    {
+      "direction": "in",
+      "id": "turn",
+      "method": "turn/start",
+      "params": {
+        "clientUserMessageId": "fixture-user-message",
+        "threadId": "$THREAD",
+        "turnTrigger": "user",
+        "approvalsReviewer": "user",
+        "sandboxPolicy": { "type": "dangerFullAccess" },
+        "cwd": "$WORKSPACE",
+        "model": "gpt-6-astra",
+        "summary": "auto",
+        "approvalPolicy": "never",
+        "collaborationMode": {
+          "mode": "default",
+          "settings": {
+            "model": "gpt-6-astra",
+            "reasoning_effort": "high",
+            "developer_instructions": null
+          }
+        },
+        "input": [{ "type": "text", "text": "why is the sky blue" }],
+        "effort": "high"
+      },
+      "responseClass": "result"
+    },
+    { "direction": "out", "method": "turn/started", "responseClass": "notification" },
+    { "direction": "out", "method": "item/completed", "responseClass": "notification" },
+    { "direction": "out", "method": "thread/name/updated", "responseClass": "notification" },
+    { "direction": "out", "method": "turn/completed", "responseClass": "notification" },
+    {
+      "direction": "in",
+      "id": "turn-retry",
+      "method": "turn/start",
+      "sameClientUserMessageIdAs": "turn",
+      "responseClass": "same-result"
+    }
+  ]
+}
