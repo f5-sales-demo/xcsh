@@ -3,65 +3,95 @@ title: xcsh
 description: Install xcsh, authenticate a model provider, and begin a reviewable terminal or F5 Distributed Cloud workflow.
 template: splash
 editUrl: false
-hero:
-  tagline: An agentic shell for terminal work, extensible automation, and reviewable F5 Distributed Cloud resource workflows.
-  image:
-    html: '<img src="/xcsh/images/xcsh-ghostty-terminal.png" alt="Ghostty terminal showing xcsh v21.29.5 in an interactive session." />'
-  actions:
-    - text: Install xcsh
-      link: "#install-xcsh"
-      icon: right-arrow
-      variant: primary
-    - text: Run the quickstart
-      link: /xcsh/en/getting-started/quickstart/
-      icon: rocket
 sidebar:
   hidden: true
   order: 0
 head:
   - tag: style
-    content: >-
-      .hero img { width: min(100%, 35rem); height: auto; filter: drop-shadow(0 1rem 2.5rem color-mix(in srgb, var(--sl-color-accent) 28%, transparent)); }
-      .hero h1 { text-wrap: balance; }
+    content: |
+      .landing-hero { display: grid; gap: clamp(2rem, 5vw, 5rem); grid-template-columns: minmax(0, 1fr) minmax(18rem, 35rem); align-items: center; margin-block: 2rem 4rem; }
+      .landing-hero__content, .landing-hero__image, .landing-hero .expressive-code, .landing-command { min-width: 0; }
+      h1#_top { max-width: 13ch; text-wrap: balance; }
+      .landing-hero__lede { max-width: 42rem; color: var(--sl-color-gray-2); font-size: var(--sl-text-lg); }
+      .landing-hero__install { max-width: 46rem; margin-top: 2rem; padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: .75rem; background: var(--sl-color-bg-nav); }
+      .landing-hero__install h2 { margin: 0; font-size: var(--sl-text-lg); }
+      .landing-hero__install p { margin-block: .5rem 0; }
+      .landing-hero__install pre { max-width: 100%; overflow-x: auto; }
+      .landing-hero__image { margin: 0; }
+      .landing-hero__image img { display: block; width: 100%; height: auto; aspect-ratio: 1442 / 1268; object-fit: contain; filter: drop-shadow(0 1rem 2.5rem color-mix(in srgb, var(--sl-color-accent) 28%, transparent)); }
+      .landing-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-block: 1.5rem; }
+      .landing-explore { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      details.landing-disclosure { margin-block: 1rem 0; padding: .75rem 1rem; border: 1px solid var(--sl-color-gray-5); border-radius: .5rem; background: var(--sl-color-bg-nav); }
+      details.landing-disclosure summary { cursor: pointer; font-weight: 600; }
+      :is(.landing-hero, .landing-grid, .landing-disclosure) :is(a, button, summary):focus-visible { outline: 2px solid var(--sl-color-accent-high); outline-offset: 3px; }
+      @media (max-width: 50rem) { .landing-hero { grid-template-columns: minmax(0, 1fr); margin-block: 1rem 3rem; } .landing-hero__install { padding: 1rem; } .landing-grid { grid-template-columns: minmax(0, 1fr); } }
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
 
-xcsh combines an interactive coding agent with deterministic F5 Distributed Cloud resource commands. It is an independent open-source project, not an F5 product.
+<section class="landing-hero" aria-labelledby="_top">
+  <div class="landing-hero__content">
+    <p class="landing-hero__lede">An AI-native terminal assistant for engineering, automation, and reviewable F5 Distributed Cloud workflows.</p>
+    <p>xcsh is an independent open-source project derived from pi/pi-mono, specialized for F5 Distributed Cloud workflows; it is not an F5 product.</p>
+
+    <section class="landing-hero__install" aria-labelledby="install-xcsh">
 
 ## Install xcsh
 
-Choose one channel and use the same channel for upgrades. Mixing package-manager and standalone installations can leave more than one `xcsh` on `PATH`.
+      <p>Universal installer for macOS and Linux.</p>
+
+      ```bash
+      curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
+      ```
+
+      <p>It installs the latest prebuilt release into <code>~/.local/bin</code>. Need a managed or platform-specific channel? See <a href="#installation-options">installation options</a>, then <a href="#verification">verify the executable</a>.</p>
+    </section>
+  </div>
+
+  <figure class="landing-hero__image">
+    <img src="/xcsh/images/xcsh-ghostty-terminal.png" width="1442" height="1268" alt="xcsh running in a Ghostty terminal with the model selector, prompt, and session status visible." />
+  </figure>
+</section>
+
+## What xcsh helps you do
+
+<div class="landing-grid landing-capabilities">
+  <Card title="Agentic terminal work" icon="terminal">
+    Run interactive or print-mode prompts, inspect files, use tools, and keep durable session history when the task needs it. [Learn the agent loop](./use-xcsh/agent-loop/).
+  </Card>
+  <Card title="Reviewable F5 Distributed Cloud workflows" icon="document">
+    Discover schemas, validate manifests, and inspect proposed differences before an authorized resource change. [Use resource workflows](./f5-distributed-cloud/).
+  </Card>
+  <Card title="Extensible automation" icon="puzzle">
+    Add headless workflows, custom tools, skills, plugins, or MCP servers when built-in commands are not enough. [Automate and extend](./automate-extend/).
+  </Card>
+</div>
+
+These workflows start with a working executable; choose another channel only when the universal installer is not the right fit.
+
+## Installation options
+
+Use one channel for install and upgrades. Mixing package-manager and standalone installations can leave more than one `xcsh` on `PATH`; the universal installer above is not repeated here.
 
 <Tabs syncKey="install-platform">
   <TabItem label="macOS" icon="seti:apple">
-    The Homebrew formula installs the signed release archive and supports Apple silicon and Intel Macs:
+    Choose the Homebrew formula for the signed release archive, or the managed cask for the signed macOS package. Install one, not both:
 
     ```bash
     brew install f5-sales-demo/tap/xcsh
-    ```
-
-    The managed cask installs the signed macOS package instead:
-
-    ```bash
+    # or
     brew install --cask f5-sales-demo/tap/xcsh
     ```
 
-    Use one of these Homebrew packages, not both. Confirm the architecture and executable after installation:
+    <details class="landing-disclosure">
+      <summary>Upgrade or remove</summary>
 
-    ```bash
-    uname -m
-    command -v xcsh
-    xcsh --version
-    ```
+      Upgrade with `brew upgrade xcsh` or `brew upgrade --cask xcsh`. Remove the selected channel with `brew uninstall xcsh` or `brew uninstall --cask xcsh`.
+    </details>
   </TabItem>
 
   <TabItem label="Ubuntu or Debian" icon="seti:ubuntu">
-    The apt repository supports amd64 and arm64 and keeps xcsh on the normal system upgrade path:
-
-    <Aside type="caution" title="Verify repository availability">
-      Require `curl -fI https://f5-sales-demo.github.io/apt-repo/dists/stable/InRelease` to succeed before adding the source. If the signed index is unavailable, use the standalone installer below; do not configure a broken apt source.
-    </Aside>
+    The signed apt repository supports amd64 and arm64 and follows normal system upgrades:
 
     ```bash
     sudo install -d -m 0755 /etc/apt/keyrings
@@ -69,49 +99,34 @@ Choose one channel and use the same channel for upgrades. Mixing package-manager
       | sudo tee /etc/apt/keyrings/f5xc-archive-keyring.gpg >/dev/null
     echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/f5xc-archive-keyring.gpg] https://f5-sales-demo.github.io/apt-repo stable main" \
       | sudo tee /etc/apt/sources.list.d/f5xc.list
-    sudo apt-get update
-    sudo apt-get install xcsh
+    sudo apt-get update && sudo apt-get install xcsh
     ```
 
-    For a user-local standalone release, run the installer. It selects the current Linux architecture and installs the executable and matching native add-ons in `${PI_INSTALL_DIR:-$HOME/.local/bin}`:
+    <details class="landing-disclosure">
+      <summary>Upgrade or remove</summary>
 
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
-    ```
-
-    Add `$HOME/.local/bin` to `PATH` if `command -v xcsh` does not find it. You may also download `xcsh-linux-x64` or `xcsh-linux-arm64` and its matching `pi_natives` assets from [GitHub Releases](https://github.com/f5-sales-demo/xcsh/releases).
+      Upgrade with `sudo apt-get update && sudo apt-get install --only-upgrade xcsh`. Remove the package with `sudo apt-get remove xcsh`.
+    </details>
   </TabItem>
 
   <TabItem label="Windows" icon="seti:windows">
-    xcsh publishes a Windows x64 executable. Run the installer from PowerShell:
+    Run the PowerShell installer, then restart the terminal so its user `PATH` refreshes:
 
     ```powershell
     irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1 | iex
     ```
 
-    The installer writes `xcsh.exe` and its native add-ons to `%LOCALAPPDATA%\\xcsh`, adds that directory to the user `PATH`, and configures Git Bash when it can find it. Restart the terminal after a new `PATH` entry.
+    It installs `xcsh.exe` and native add-ons to `%LOCALAPPDATA%\\xcsh`. **Bash is required for tool-backed sessions.** Install Git for Windows, WSL, Cygwin, or MSYS2; set `shellPath` in `%USERPROFILE%\\.xcsh\\agent\\settings.json` when Bash is elsewhere.
 
-    <Aside type="caution" title="Bash is required">
-      Install Git for Windows, WSL, Cygwin, or MSYS2 before using tool-backed sessions. Set `shellPath` in `%USERPROFILE%\\.xcsh\\agent\\settings.json` when Bash is not in a standard location.
-    </Aside>
+    <details class="landing-disclosure">
+      <summary>Upgrade or remove</summary>
 
-    ```powershell
-    Get-Command xcsh
-    xcsh --version
-    xcsh --help
-    ```
+      Re-run the installer to upgrade. To uninstall, remove `%LOCALAPPDATA%\\xcsh` and its entry from the user `PATH`.
+    </details>
   </TabItem>
 
   <TabItem label="Container" icon="seti:docker">
-    Docker and Podman can run the same multi-architecture image for linux/amd64 and linux/arm64:
-
-    ```bash
-    docker pull ghcr.io/f5-sales-demo/xcsh:latest
-    docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
-    # Podman accepts the same pull and run arguments.
-    ```
-
-    Pin a release tag for repeatable upgrades and an immutable digest for deployment:
+    Docker and Podman use the same multi-architecture image. Pin a release tag, resolve its digest for deployment, and mount only the workspace and state required by the task:
 
     ```bash
     docker pull ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
@@ -119,73 +134,116 @@ Choose one channel and use the same channel for upgrades. Mixing package-manager
     docker run --rm ghcr.io/f5-sales-demo/xcsh@sha256:<digest> --version
     ```
 
-    Mount only the working tree and state required by the task. Pass provider credentials at runtime through a secret manager or environment file; never bake them into an image layer.
+    Podman accepts the same pull, inspect, and run arguments. Pass provider credentials at runtime through a secret manager or environment file; never bake them into an image layer.
 
-    ```bash
-    docker run --rm -it \
-      --mount type=bind,src="$PWD",dst=/workspace \
-      --mount type=bind,src="$HOME/.xcsh",dst=/home/xcsh/.xcsh \
-      --env-file ./xcsh.env \
-      ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
-    ```
+    <details class="landing-disclosure">
+      <summary>Upgrade or remove</summary>
+
+      Pull a newer pinned tag to upgrade. Remove an unused image with `docker image rm IMAGE` or `podman image rm IMAGE`.
+    </details>
   </TabItem>
 
-  <TabItem label="Advanced" icon="seti:config">
-    Use the package or source channels when you need a JavaScript toolchain or an unreleased ref:
+  <TabItem label="Packages and source" icon="seti:config">
+    Use a JavaScript package or a source/ref install when you need a toolchain or an unreleased ref. Source installs require Git and Bun 1.4.2 or newer:
 
     ```bash
     bun install --global @f5-sales-demo/xcsh
     npm install --global @f5-sales-demo/xcsh
     curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh \
-      | sh -s -- --source --ref main
+      | sh -s -- --source --ref vX.Y.Z
     ```
 
-    Source installs require Git and Bun 1.4.2 or newer. A `--ref` without `--source` also selects the source path; use a tag for reproducibility.
+    The explicit `--source` and `--ref` arguments select a reproducible source install.
+
+    <details class="landing-disclosure">
+      <summary>Upgrade or remove</summary>
+
+      Upgrade with `bun update --global @f5-sales-demo/xcsh` or `npm update --global @f5-sales-demo/xcsh`. Remove the package with `bun remove --global @f5-sales-demo/xcsh` or `npm uninstall --global @f5-sales-demo/xcsh`; re-run the source command at a new ref to replace that channel.
+    </details>
   </TabItem>
 </Tabs>
 
-### Verify the active installation
+Every installation channel converges on the same check: confirm which executable your shell will run.
 
-<Steps>
-1. Resolve the executable before diagnosing a version mismatch.
+<span id="verification" aria-hidden="true"></span>
 
-       command -v xcsh
-       type -a xcsh
-       xcsh --version
+## Verify installation
 
-1. Upgrade through the channel that installed it.
+<span id="verify-the-active-installation" aria-hidden="true"></span>
 
-       brew upgrade xcsh                         # Homebrew formula
-       brew upgrade --cask xcsh                  # managed macOS package
-       sudo apt-get update && sudo apt-get install --only-upgrade xcsh
-       bun update --global @f5-sales-demo/xcsh   # Bun package
-       npm update --global @f5-sales-demo/xcsh   # npm package
+For a POSIX shell, resolve the path, expose duplicates, and print the active version:
 
-   Re-run the shell or PowerShell installer to replace a standalone release. Resolve and remove an older executable before switching channels.
+<div class="landing-command">
 
-1. Remove only the selected channel. Settings, contexts, and sessions remain available unless you deliberately remove the path reported by `xcsh config path`.
+    ```bash
+    command -v xcsh
+    type -a xcsh
+    xcsh --version
+    ```
 
-       brew uninstall xcsh
-       brew uninstall --cask xcsh
-       sudo apt-get remove xcsh
-       bun remove --global @f5-sales-demo/xcsh
-       npm uninstall --global @f5-sales-demo/xcsh
+</div>
 
-</Steps>
+In PowerShell, inspect the resolved command and version:
+
+<div class="landing-command">
+
+    ```powershell
+    Get-Command xcsh
+    xcsh --version
+    ```
+
+</div>
+
+Remove or reorder an older executable before switching channels. Once the executable is unambiguous, a provider credential is the next dependency.
+
+<span id="authentication" aria-hidden="true"></span>
 
 ## Authenticate a provider
 
-Keep model credentials in the provider-supported environment or subscription login, never in a prompt or committed settings file. Follow [model authentication](./getting-started/model-authentication/) and confirm the selected provider can enumerate models:
+Keep model credentials in the provider-supported environment or subscription login, never in a prompt or committed settings file. Follow [model authentication](./getting-started/model-authentication/) and confirm that the selected provider can enumerate models:
 
+<div class="landing-command">
+
+    ```bash
     xcsh --list-models PROVIDER
+    ```
 
-## Run the quickstart
+</div>
 
-Start with a bounded prompt that disables tools and session persistence, then add integrations only when the executable and model route are working:
+Model discovery proves the route before a task uses it. With that result, run one bounded prompt.
 
+## Quickstart
+
+<span id="run-the-quickstart" aria-hidden="true"></span>
+
+Start with a prompt that disables tools and session persistence:
+
+<div class="landing-command">
+
+    ```bash
     xcsh --no-session --no-tools -p "Reply with only: xcsh is ready"
+    ```
 
-Continue with the [quickstart](./getting-started/quickstart/), or select a [context and namespace](./f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud change.
+</div>
+
+Continue with the [quickstart](./getting-started/quickstart/), or choose a [context and namespace](./f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud change.
+
+The working installation can now take you to the documentation organized around the task at hand.
+
+<span id="exploration" aria-hidden="true"></span>
+
+## Explore by goal
+
+Choose the goal closest to your next task; each path starts from the verified installation above.
+
+<div class="landing-grid landing-explore">
+  <LinkCard title="Use xcsh" icon="terminal" href="./use-xcsh/">Daily terminal use, tools, sessions, plans, and agents.</LinkCard>
+  <LinkCard title="F5 Distributed Cloud" icon="cloud" href="./f5-distributed-cloud/">Contexts, manifests, validation, and reviewable resource changes.</LinkCard>
+  <LinkCard title="Configure and secure" icon="setting" href="./configure-secure/">Providers, settings, secrets, and sandbox boundaries.</LinkCard>
+  <LinkCard title="Automate and extend" icon="puzzle" href="./automate-extend/">Headless modes, extensions, MCP, skills, plugins, and SDKs.</LinkCard>
+  <LinkCard title="Integrations and deployment" icon="rocket" href="./integrations-deployment/">Containers plus VS Code, Chrome, Office, and Herdr.</LinkCard>
+  <LinkCard title="Reference and troubleshooting" icon="information" href="./reference-troubleshooting/">Diagnostics, command reference, hotkeys, and configuration schema.</LinkCard>
+</div>
 
 <span data-fidelity-generated="start"></span>
 
@@ -195,3 +253,5 @@ Continue with the [quickstart](./getting-started/quickstart/), or select a [cont
 areas.</p>
 
 <span data-fidelity-generated="end"></span>
+
+<span data-fidelity-insertion="Explore by goal"></span>

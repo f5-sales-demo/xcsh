@@ -2507,8 +2507,8 @@
       "headings": [
         {
           "text": "Install xcsh",
-          "readerQuestion": "How do I install, verify, upgrade, switch, or remove xcsh?",
-          "purpose": "Provide the canonical installation procedure for every supported channel.",
+          "readerQuestion": "How do I install xcsh on macOS or Linux?",
+          "purpose": "Provide the default copyable installation path beside the product introduction.",
           "evidence": [
             "browser-build",
             "candidate-cli",
@@ -2522,7 +2522,39 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Verify the active installation",
+          "text": "What xcsh helps you do",
+          "readerQuestion": "What can xcsh help me accomplish?",
+          "purpose": "Explain terminal work, reviewable F5 workflows, and extensible automation before setup choices.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Installation options",
+          "readerQuestion": "Which installation channel fits my platform and lifecycle?",
+          "purpose": "Present platform and package alternatives, including channel-specific upgrades and removal.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Verify installation",
           "readerQuestion": "How do I prove which xcsh installation is active?",
           "purpose": "Detect PATH and channel conflicts before configuration.",
           "evidence": [
@@ -2554,9 +2586,25 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Run the quickstart",
+          "text": "Quickstart",
           "readerQuestion": "How do I run a bounded first prompt?",
           "purpose": "Prove the executable and model route without tools or persistence.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Explore by goal",
+          "readerQuestion": "Where should I go after xcsh is working?",
+          "purpose": "Route readers to task-oriented documentation and catalog context.",
           "evidence": [
             "browser-build",
             "candidate-cli",

@@ -13,7 +13,7 @@
       "cleanupResult": "temporary-download-removed",
       "sections": [
         "docs/en/index.mdx",
-        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Verify installation",
         "docs/en/index.mdx#Install xcsh"
       ]
     },
@@ -100,7 +100,7 @@
         "docs/en/getting-started/index.mdx#What do I need before I begin?",
         "docs/en/getting-started/index.mdx#Which path matches my goal?",
         "docs/en/index.mdx",
-        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Verify installation",
         "docs/en/index.mdx#Install xcsh",
         "docs/en/getting-started/model-authentication.mdx",
         "docs/en/getting-started/model-authentication.mdx#How do I select a model explicitly?",
@@ -108,7 +108,7 @@
         "docs/en/getting-started/quickstart.mdx",
         "docs/en/getting-started/quickstart.mdx#How do I run a bounded first prompt?",
         "docs/en/getting-started/quickstart.mdx#What should I inspect if the prompt fails?",
-        "docs/en/index.mdx#Run the quickstart",
+        "docs/en/index.mdx#Explore by goal",
         "docs/en/integrations-deployment/chrome.mdx",
         "docs/en/integrations-deployment/chrome.mdx#What is the safe operating boundary?",
         "docs/en/integrations-deployment/chrome.mdx#Which Chrome capabilities does xcsh expose?",
@@ -332,7 +332,7 @@
         "docs/en/getting-started/index.mdx#What do I need before I begin?",
         "docs/en/getting-started/index.mdx#Which path matches my goal?",
         "docs/en/index.mdx",
-        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Verify installation",
         "docs/en/index.mdx#Install xcsh",
         "docs/en/getting-started/model-authentication.mdx",
         "docs/en/getting-started/model-authentication.mdx#How do I select a model explicitly?",
@@ -340,7 +340,7 @@
         "docs/en/getting-started/quickstart.mdx",
         "docs/en/getting-started/quickstart.mdx#How do I run a bounded first prompt?",
         "docs/en/getting-started/quickstart.mdx#What should I inspect if the prompt fails?",
-        "docs/en/index.mdx#Run the quickstart",
+        "docs/en/index.mdx#Explore by goal",
         "docs/en/integrations-deployment/chrome.mdx",
         "docs/en/integrations-deployment/chrome.mdx#What is the safe operating boundary?",
         "docs/en/integrations-deployment/chrome.mdx#Which Chrome capabilities does xcsh expose?",
@@ -410,9 +410,9 @@
         "docs/en/f5-distributed-cloud/get-export-delete.mdx#How do I delete and prove absence?",
         "docs/en/f5-distributed-cloud/get-export-delete.mdx#How do I retrieve or export one resource?",
         "docs/en/index.mdx",
-        "docs/en/index.mdx#Verify the active installation",
+        "docs/en/index.mdx#Verify installation",
         "docs/en/index.mdx#Install xcsh",
-        "docs/en/index.mdx#Run the quickstart",
+        "docs/en/index.mdx#Explore by goal",
         "docs/en/integrations-deployment/index.mdx",
         "docs/en/integrations-deployment/index.mdx#Which integration fits?"
       ]
@@ -458,7 +458,7 @@
       "sections": [
         "docs/en/architecture-contribution/storage-artifacts.mdx#How is filesystem discovery cached?",
         "docs/en/getting-started/quickstart.mdx#How do I run a bounded first prompt?",
-        "docs/en/index.mdx#Run the quickstart",
+        "docs/en/index.mdx#Explore by goal",
         "docs/en/reference-troubleshooting/configuration-schema.mdx#How do I inspect the effective schema-backed values?",
         "docs/en/reference-troubleshooting/configuration-schema.mdx#Which key namespaces exist?",
         "docs/en/use-xcsh/tui-navigation.mdx#How do I move through the session tree?"
@@ -476,7 +476,7 @@
       "cleanupResult": "completed",
       "sections": [
         "docs/en/index.mdx#Install xcsh",
-        "docs/en/index.mdx#Verify the active installation"
+        "docs/en/index.mdx#Verify installation"
       ]
     },
     {

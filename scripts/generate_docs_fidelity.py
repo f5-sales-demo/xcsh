@@ -135,11 +135,14 @@ def inject_blocks(path: Path, grouped: dict[str, list[dict]]) -> dict[str, str]:
         if heading_match is None:
             raise ValueError(f"missing destination heading: {path}#{heading}")
         next_heading = re.search(r"^## ", text[heading_match.end() :], re.MULTILINE)
-        insert_at = (
+        section_end = (
             heading_match.end() + next_heading.start()
             if next_heading is not None
             else len(text)
         )
+        insertion_marker = f'<span data-fidelity-insertion="{heading}"></span>'
+        marker_at = text.find(insertion_marker, heading_match.end(), section_end)
+        insert_at = marker_at if marker_at >= 0 else section_end
         rendered = []
         for concept in concepts:
             block = concept_block(concept)
@@ -233,11 +236,10 @@ def legacy_unit_digest(concept: dict) -> str:
 
 def sync_navigation_metadata(legacy: dict) -> None:
     for concept in legacy["concepts"]:
-        if (
-            concept["destinationPage"] == "docs/en/index.mdx"
-            and concept["destinationHeading"] == "Where should I start?"
-        ):
-            concept["destinationHeading"] = "Run the quickstart"
+        if concept["destinationPage"] == "docs/en/index.mdx" and concept[
+            "destinationHeading"
+        ] in {"Where should I start?", "Run the quickstart"}:
+            concept["destinationHeading"] = "Explore by goal"
     LEGACY_PATH.write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
     inventory = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
@@ -260,13 +262,27 @@ def sync_navigation_metadata(legacy: dict) -> None:
     homepage["headings"] = [
         {
             "text": "Install xcsh",
-            "readerQuestion": "How do I install, verify, upgrade, switch, or remove xcsh?",
-            "purpose": "Provide the canonical installation procedure for every supported channel.",
+            "readerQuestion": "How do I install xcsh on macOS or Linux?",
+            "purpose": "Provide the default copyable installation path beside the product introduction.",
             "evidence": evidence,
             "legacyConceptIds": [],
         },
         {
-            "text": "Verify the active installation",
+            "text": "What xcsh helps you do",
+            "readerQuestion": "What can xcsh help me accomplish?",
+            "purpose": "Explain terminal work, reviewable F5 workflows, and extensible automation before setup choices.",
+            "evidence": evidence,
+            "legacyConceptIds": [],
+        },
+        {
+            "text": "Installation options",
+            "readerQuestion": "Which installation channel fits my platform and lifecycle?",
+            "purpose": "Present platform and package alternatives, including channel-specific upgrades and removal.",
+            "evidence": evidence,
+            "legacyConceptIds": [],
+        },
+        {
+            "text": "Verify installation",
             "readerQuestion": "How do I prove which xcsh installation is active?",
             "purpose": "Detect PATH and channel conflicts before configuration.",
             "evidence": evidence,
@@ -280,9 +296,16 @@ def sync_navigation_metadata(legacy: dict) -> None:
             "legacyConceptIds": [],
         },
         {
-            "text": "Run the quickstart",
+            "text": "Quickstart",
             "readerQuestion": "How do I run a bounded first prompt?",
             "purpose": "Prove the executable and model route without tools or persistence.",
+            "evidence": evidence,
+            "legacyConceptIds": [],
+        },
+        {
+            "text": "Explore by goal",
+            "readerQuestion": "Where should I go after xcsh is working?",
+            "purpose": "Route readers to task-oriented documentation and catalog context.",
             "evidence": evidence,
             "legacyConceptIds": legacy_ids,
         },
@@ -292,10 +315,12 @@ def sync_navigation_metadata(legacy: dict) -> None:
     manifest = json.loads(EVIDENCE_MANIFEST_PATH.read_text(encoding="utf-8"))
     section_replacements = {
         "docs/en/getting-started/installation.mdx": "docs/en/index.mdx",
-        "docs/en/getting-started/installation.mdx#How do I install on Ubuntu or Debian?": "docs/en/index.mdx#Install xcsh",
-        "docs/en/getting-started/installation.mdx#How do I confirm the selected executable?": "docs/en/index.mdx#Verify the active installation",
-        "docs/en/getting-started/installation.mdx#How do I remove it?": "docs/en/index.mdx#Verify the active installation",
-        "docs/en/index.mdx#Where should I start?": "docs/en/index.mdx#Run the quickstart",
+        "docs/en/getting-started/installation.mdx#How do I install on Ubuntu or Debian?": "docs/en/index.mdx#Installation options",
+        "docs/en/getting-started/installation.mdx#How do I confirm the selected executable?": "docs/en/index.mdx#Verify installation",
+        "docs/en/getting-started/installation.mdx#How do I remove it?": "docs/en/index.mdx#Installation options",
+        "docs/en/index.mdx#Verify the active installation": "docs/en/index.mdx#Verify installation",
+        "docs/en/index.mdx#Where should I start?": "docs/en/index.mdx#Explore by goal",
+        "docs/en/index.mdx#Run the quickstart": "docs/en/index.mdx#Explore by goal",
     }
     for evidence in manifest["evidence"]:
         evidence["sections"] = list(
