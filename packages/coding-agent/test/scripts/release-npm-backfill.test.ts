@@ -12,6 +12,7 @@ import {
 
 const root = path.resolve(import.meta.dir, "../../../..");
 const workflowPath = path.join(root, ".github/workflows/release-npm-backfill.yml");
+const sourceJobsPath = path.join(root, "scripts/ci-release-source-jobs.jq");
 
 describe("release npm backfill publish semantics", () => {
 	it("does not misclassify a lower-than-latest dist-tag rejection as already published", () => {
@@ -168,8 +169,14 @@ describe("release npm backfill workflow contract", () => {
 		expect(workflow).toContain("head_branch == $tag");
 		expect(workflow).toContain("head_sha == $tag_sha");
 		expect(workflow).toContain(".immutable == true");
-		expect(workflow).toContain('select(.name == "check" or .name == "test" or .name == "Test installation methods")');
-		expect(workflow).toContain('select(.name | startswith("Native build ("))');
+		expect(workflow).toContain('jq -e -f scripts/ci-release-source-jobs.jq <<<"$jobs"');
+
+		const sourceJobs = await fs.readFile(sourceJobsPath, "utf8");
+		expect(sourceJobs).toContain('"check"');
+		expect(sourceJobs).toContain('"test"');
+		expect(sourceJobs).toContain('"Test installation methods"');
+		expect(sourceJobs).toContain('startswith("Native build (")');
+		expect(sourceJobs).toContain('.conclusion == "success"');
 	});
 
 	it("publishes from the isolated tag checkout without moving latest", async () => {
