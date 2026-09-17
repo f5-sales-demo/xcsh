@@ -1,0 +1,165 @@
+---
+name: Release Homebrew backfill
+run-name: Backfill Homebrew ${{ inputs.tag }} from run ${{ inputs.source_run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing immutable release tag (vX.Y.Z)"
+        required: true
+        type: string
+      source_run_id:
+        description: "Original CI tag run containing successful release artifacts"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: release-homebrew-backfill-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    name: Backfill Homebrew cask
+    environment: release
+    runs-on: xcsh-socketless
+    timeout-minutes: 20
+    steps:
+      - name: Checkout trusted backfill controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+          path: .release-source
+
+      - name: Setup Bun 1.4.2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+
+      - name: Validate immutable tag, source run, and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::TAG must be an exact stable vX.Y.Z tag"
+            exit 1
+          }
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || {
+            echo "::error::SOURCE_RUN_ID must be numeric"
+            exit 1
+          }
+
+          tag_sha=$(git -C .release-source rev-parse 'HEAD^{commit}')
+          run=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")
+          jq -e --arg tag "$TAG" --arg tag_sha "$tag_sha" '
+            .event == "push" and .head_branch == $tag and .head_sha == $tag_sha
+          ' <<<"$run" >/dev/null || {
+            echo "::error::Source run is not the original push run for ${TAG}@${tag_sha}"
+            exit 1
+          }
+
+          jobs=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/attempts/1/jobs?per_page=100")
+          jq -e -f scripts/ci-release-source-jobs.jq <<<"$jobs" >/dev/null || {
+            echo "::error::Source run attempt 1 lacks green check, test, installation, or native-build prerequisites"
+            exit 1
+          }
+
+          gh api "repos/${REPOSITORY}/releases/tags/${TAG}" \
+            | jq -e --arg tag "$TAG" \
+              '.tag_name == $tag and .draft == false and .prerelease == false and .immutable == true' \
+              >/dev/null || {
+                echo "::error::GitHub release for ${TAG} is absent, mutable, draft, or prerelease"
+                exit 1
+              }
+
+          version=${TAG#v}
+          test "$(jq -r .version .release-source/packages/coding-agent/package.json)" = "$version"
+
+      - name: Download immutable macOS Homebrew archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern 'xcsh-*.zip' \
+            --dir .release-source/packages/coding-agent/binaries
+
+      - name: Reconcile Homebrew tap
+        working-directory: .release-source
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_REF_NAME: ${{ inputs.tag }}
+        run: bun scripts/ci-release-homebrew.ts --update-tap
+
+  verify-homebrew-install:
+    name: Verify no-sudo Homebrew cask backfill (${{ matrix.arch }})
+    needs: [backfill]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x64
+          - os: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+
+      - name: Prepare writable Homebrew for a standard account
+        env:
+          UAT_USER: xcsh-uat
+        run: |
+          set -euo pipefail
+          uat_home="/Users/${UAT_USER}"
+          uat_password=$(uuidgen)
+          sudo sysadminctl -addUser "$UAT_USER" -fullName "xcsh Homebrew UAT" \
+            -home "$uat_home" -password "$uat_password"
+          if id -Gn "$UAT_USER" | tr ' ' '\n' | grep -qx admin; then
+            echo "::error::UAT account is an administrator"
+            exit 1
+          fi
+          brew_prefix=$(brew --prefix)
+          sudo mkdir -p "$uat_home/tmp"
+          sudo cp scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
+          sudo chown -R "$UAT_USER":staff "$uat_home" "$brew_prefix"
+          {
+            echo "UAT_USER=$UAT_USER"
+            echo "UAT_HOME=$uat_home"
+            echo "UAT_BREW_PREFIX=$brew_prefix"
+          } >> "$GITHUB_ENV"
+
+      - name: Install, upgrade, and uninstall the published cask without sudo
+        env:
+          EXPECTED_VERSION: ${{ inputs.tag }}
+          RELEASE_ARCH: ${{ matrix.arch }}
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          set -euo pipefail
+          sudo -H -u "$UAT_USER" env \
+            EXPECTED_VERSION="$EXPECTED_VERSION" \
+            RELEASE_ARCH="$RELEASE_ARCH" \
+            HOMEBREW_NO_AUTO_UPDATE="$HOMEBREW_NO_AUTO_UPDATE" \
+            TMPDIR="$UAT_HOME/tmp" \
+            PATH="$UAT_BREW_PREFIX/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+            /bin/bash "$UAT_HOME/ci-verify-homebrew-cask.sh"
