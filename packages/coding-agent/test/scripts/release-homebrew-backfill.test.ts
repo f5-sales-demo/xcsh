@@ -21,7 +21,9 @@ describe("release Homebrew backfill workflow contract", () => {
 		const workflow = await fs.readFile(workflowPath, "utf8");
 		expect(workflow).toContain("path: .release-source");
 		expect(workflow).toContain("--pattern 'xcsh-*.zip'");
-		expect(workflow).toContain("bun scripts/ci-release-homebrew.ts --update-tap");
+		expect(workflow).toMatch(/RELEASE_TAG: \$\{\{ inputs\.tag \}\}/);
+		expect(workflow).toContain('GITHUB_REF_NAME="$RELEASE_TAG" bun scripts/ci-release-homebrew.ts --update-tap');
+		expect(workflow).not.toMatch(/GITHUB_REF_NAME: \$\{\{ inputs\.tag \}\}/);
 		expect(workflow).toContain("RELEASE_TOKEN");
 		expect(workflow).not.toContain("NPM_TOKEN");
 		expect(workflow).not.toContain("ci-release-publish.ts");
