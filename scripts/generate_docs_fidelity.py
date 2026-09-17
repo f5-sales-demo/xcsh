@@ -236,11 +236,9 @@ def legacy_unit_digest(concept: dict) -> str:
 
 def sync_navigation_metadata(legacy: dict) -> None:
     for concept in legacy["concepts"]:
-        if (
-            concept["destinationPage"] == "docs/en/index.mdx"
-            and concept["destinationHeading"]
-            in {"Where should I start?", "Run the quickstart"}
-        ):
+        if concept["destinationPage"] == "docs/en/index.mdx" and concept[
+            "destinationHeading"
+        ] in {"Where should I start?", "Run the quickstart"}:
             concept["destinationHeading"] = "Explore by goal"
     LEGACY_PATH.write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
