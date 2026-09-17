@@ -499,7 +499,6 @@ export class RemoteRouter {
 			command[0] === "/bin/sh" &&
 			command[1] === "-lc" &&
 			typeof command[2] === "string" &&
-			Buffer.byteLength(command[2]) === 737 &&
 			params.timeoutMs === 20_000 &&
 			params.outputBytesCap === 4096 &&
 			params.tty === false &&
@@ -653,7 +652,29 @@ export class RemoteRouter {
 					case "thread/start": {
 						if (!this.lifecycle) throw new ProtocolError(-32000, "Managed remote sessions are unavailable");
 						const cwd = await this.#startCwd(params);
-						const endpoint = await this.lifecycle.start({ ...params, cwd });
+						const requestedModel = typeof params.model === "string" ? params.model : undefined;
+						const inferredProvider =
+							typeof params.modelProvider === "string"
+								? undefined
+								: (this.#visibleSessions()
+										.flatMap(session => session.models ?? [])
+										.find(model => model.id === requestedModel)?.provider ??
+									this.lifecycle
+										?.list()
+										.find(
+											thread => thread.model === requestedModel && typeof thread.modelProvider === "string",
+										)?.modelProvider);
+						const startParams: Record<string, unknown> = {
+							...params,
+							cwd,
+							...(inferredProvider ? { modelProvider: inferredProvider } : {}),
+						};
+						// Phone clients retain a selected model across host restarts, but the wire
+						// protocol carries no provider. A model outside the current live catalog
+						// cannot be resolved safely, so use the host's configured default.
+						if (requestedModel && typeof params.modelProvider !== "string" && !inferredProvider)
+							delete startParams.model;
+						const endpoint = await this.lifecycle.start(startParams);
 						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, false);
 						result = lifecycle.result;
 						this.#deferThreadStarted(lifecycle.thread);
@@ -718,17 +739,17 @@ export class RemoteRouter {
 						break;
 					}
 					case "config/read": {
-						const matching =
+						const thread =
 							params.cwd == null
 								? // Global bootstrap config inherits model defaults from the exposed primary.
-									[this.#currentSession()].filter(
-										(session): session is SessionEndpoint => session !== undefined,
-									)
-								: this.#visibleSessions().filter(session => session.thread.cwd === params.cwd);
-						result = configResponse(
-							matching.length === 1 ? matching[0].thread : undefined,
-							params.includeLayers === true,
-						);
+									(this.#currentSession()?.thread ?? this.lifecycle?.list()[0])
+								: (() => {
+										const matching = this.#visibleSessions().filter(
+											session => session.thread.cwd === params.cwd,
+										);
+										return matching.length === 1 ? matching[0].thread : undefined;
+									})();
+						result = configResponse(thread, params.includeLayers === true);
 						break;
 					}
 					case "thread/realtime/listVoices":
@@ -736,10 +757,16 @@ export class RemoteRouter {
 						break;
 					case "model/list":
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
-						result = modelResponse(
-							this.#visibleSessions().map(session => session.thread),
-							this.#visibleSessions().flatMap(session => session.models ?? []),
-						);
+						{
+							const sessions = this.#visibleSessions();
+							const catalog = sessions.flatMap(session => session.models ?? []);
+							// Task settings opens before a phone-created worker attaches. Preserve a
+							// managed thread's configured model in that zero-worker window so the
+							// client receives a non-empty, selectable catalog.
+							const threads =
+								sessions.length > 0 ? sessions.map(session => session.thread) : (this.lifecycle?.list() ?? []);
+							result = modelResponse(threads, catalog);
+						}
 						break;
 					case "permissionProfile/list": {
 						if (

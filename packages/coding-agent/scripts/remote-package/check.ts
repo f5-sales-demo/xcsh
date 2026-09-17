@@ -401,6 +401,104 @@ try {
 	assert.equal(retriedAfterTerminalRestart.turn.id, accepted[0].turnId);
 	assert.equal((await history(currentId)).length, 2);
 	passed("compiled --resume preserves identity, model and durable exactly-once request replay");
+
+	const manualConfig = await rpc("config/read");
+	assert.equal(manualConfig.config.model, "model");
+	assert.equal(manualConfig.config.model_provider, "package-fixture");
+	assert((await rpc("model/list")).data.some((item: any) => item.id === "model" && item.isDefault === true));
+	assert.deepEqual(
+		(await rpc("collaborationMode/list")).data.map((item: any) => item.mode),
+		["plan", "default"],
+	);
+	const manualProcessHandle = "folderless-manual-chat-workspace";
+	const manualBootstrap = "sanitized bootstrap ".padEnd(911, "x");
+	assert.equal(Buffer.byteLength(manualBootstrap), 911);
+	await rpc("process/spawn", {
+		processHandle: manualProcessHandle,
+		cwd: "/",
+		command: ["/bin/sh", "-lc", manualBootstrap],
+		tty: false,
+		streamStdin: false,
+		streamStdoutStderr: false,
+		timeoutMs: 20_000,
+		outputBytesCap: 4096,
+	});
+	const manualProcessExit = await waitFor(
+		async () =>
+			events.find(
+				(event: any) => event.method === "process/exited" && event.params?.processHandle === manualProcessHandle,
+			),
+		"folderless manual-chat workspace bootstrap",
+	);
+	assert.equal((manualProcessExit as any).params.exitCode, 0);
+	assert.equal((manualProcessExit as any).params.stderr, "");
+	const manualCwd = String((manualProcessExit as any).params.stdout);
+	assert(manualCwd.startsWith("/fixture/"));
+	const manualStarted = await rpc("thread/start", { cwd: manualCwd, model: "model" });
+	const manualThreadId = manualStarted.thread.id;
+	assert.equal(manualStarted.thread.cwd, manualCwd);
+	assert.equal(manualStarted.model, "model");
+	assert.equal(manualStarted.modelProvider, "package-fixture");
+	const manualParams = {
+		threadId: manualThreadId,
+		clientUserMessageId: "folderless-manual-chat-message",
+		turnTrigger: "user",
+		approvalsReviewer: "user",
+		sandboxPolicy: { type: "dangerFullAccess" },
+		cwd: manualCwd,
+		model: "model",
+		summary: "auto",
+		approvalPolicy: "never",
+		collaborationMode: {
+			mode: "default",
+			settings: { model: "model", reasoning_effort: "high", developer_instructions: null },
+		},
+		input: [{ type: "text", text: "why is the sky blue" }],
+		effort: "high",
+	};
+	const manualTurn = (await rpc("turn/start", manualParams)).turn;
+	const manualHistory = await waitFor(async () => {
+		const turns = await history(manualThreadId);
+		return turns.at(-1)?.status === "completed" ? turns : undefined;
+	}, "folderless manual-chat completion");
+	assert.equal(manualHistory.length, 1);
+	assert.equal(manualHistory[0].id, manualTurn.id);
+	assert(JSON.stringify(manualHistory[0].items).includes("Blue light is scattered"));
+	await waitFor(
+		async () =>
+			events.find(
+				(event: any) =>
+					event.method === "thread/name/updated" &&
+					event.params?.threadId === manualThreadId &&
+					event.params?.threadName === "Why the Sky Is Blue",
+			) as any,
+		"folderless manual-chat dynamic title",
+	);
+	assert.equal((await rpc("turn/start", manualParams)).turn.id, manualTurn.id);
+	assert.equal((await history(manualThreadId)).length, 1);
+	assert(
+		events.some(
+			(event: any) =>
+				event.method === "turn/started" &&
+				event.params?.threadId === manualThreadId &&
+				event.params?.turn?.id === manualTurn.id,
+		),
+	);
+	assert(
+		events.some(
+			(event: any) =>
+				event.method === "turn/completed" &&
+				event.params?.threadId === manualThreadId &&
+				event.params?.turn?.status === "completed",
+		),
+	);
+	await rpc("thread/delete", { threadId: manualThreadId });
+	await waitFor(
+		async () => ((await threads()).every(item => item.id !== manualThreadId) ? true : undefined),
+		"manual replay cleanup",
+	);
+	passed("network-isolated package replays folderless manual Chat with title, completion and deduplication");
+
 	for (const terminal of terminals) await terminal.close();
 	await waitFor(async () => (await threads()).length === 0, "all terminal exits removed");
 	passed("terminal exit unregisters all owners");
