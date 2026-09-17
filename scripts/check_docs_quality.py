@@ -36,6 +36,7 @@ LEGACY_COMMIT = "95c019fa60c8a8242482b18c45844ec73784ee11"
 LEGACY_TREE = "89566cca8d13cd69fb8af9ee017e9860d303b2f2"
 LEGACY_PAGE_COUNT = 59
 LEGACY_CONCEPT_COUNT = 374
+ACTIVE_CONCEPT_COUNT = 372
 LEGACY_UNIT_DIGEST = "7378b8bd45b3b0ad48864a094d97af76b212ff4ab892d8f28b80f7dd43fd012e"
 INVENTORY_SCHEMA_VERSION = 2
 FIDELITY_SCHEMA_VERSION = 2
@@ -308,7 +309,10 @@ def _check_fidelity(
         for row in rows
         if legacy_by_id.get(row.get("id"), {}).get("disposition") != "superseded"
     ]
-    if fidelity.get("activeConceptCount") != 372 or len(active_rows) != 372:
+    if (
+        fidelity.get("activeConceptCount") != ACTIVE_CONCEPT_COUNT
+        or len(active_rows) != ACTIVE_CONCEPT_COUNT
+    ):
         errors.append("fidelity ledger must contain exactly 372 active concepts")
 
     file_digest_cache: dict[Path, str] = {}
@@ -322,7 +326,7 @@ def _check_fidelity(
     )
     allowed_authority_roots = ("packages/", "crates/", "scripts/", ".github/workflows/")
     for row in rows:
-        concept_id = row.get("id", "<missing>")
+        concept_id = str(row.get("id") or "<missing>")
         errors.extend(
             f"fidelity field missing: {concept_id} {field}"
             for field in required
@@ -373,7 +377,9 @@ def _check_fidelity(
                 "contentBlockLocator",
             )
             if any(row.get(field) not in (None, "") for field in forbidden):
-                errors.append(f"superseded fidelity concept has a reader locator: {concept_id}")
+                errors.append(
+                    f"superseded fidelity concept has a reader locator: {concept_id}"
+                )
         else:
             destination_fields = (
                 "destinationPage",
@@ -392,11 +398,15 @@ def _check_fidelity(
             locator_owners[(page_value, anchor)].append(row)
             page = root / page_value
             if not page.is_file():
-                errors.append(f"missing fidelity destination: {concept_id} {page_value}")
+                errors.append(
+                    f"missing fidelity destination: {concept_id} {page_value}"
+                )
             else:
                 text = page.read_text(encoding="utf-8")
                 matches = list(
-                    re.finditer(rf"^## {re.escape(str(heading))}\s*$", text, re.MULTILINE)
+                    re.finditer(
+                        rf"^## {re.escape(str(heading))}\s*$", text, re.MULTILINE
+                    )
                 )
                 if len(matches) != 1 or anchor != _slug(str(heading)):
                     errors.append(f"unresolved fidelity section: {concept_id}")
@@ -644,7 +654,9 @@ def _check_legacy_coverage(
                 concept.get(field) not in (None, "")
                 for field in ("destinationPage", "destinationHeading")
             ):
-                errors.append(f"superseded legacy concept has a reader destination: {concept_id}")
+                errors.append(
+                    f"superseded legacy concept has a reader destination: {concept_id}"
+                )
         else:
             section = (
                 f"{concept.get('destinationPage')}#{concept.get('destinationHeading')}"

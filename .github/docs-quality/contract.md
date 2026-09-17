@@ -81,8 +81,8 @@ of the 374 immutable units. The 372 active units identify a canonical authored s
 heading, generated anchor, and normalized section digest; related units may share one coherent
 section when each row records why. The two superseded units retain their claim, authority, evidence,
 and rationale but have no reader-facing locator. The generator reads authored MDX, inventory,
-legacy mappings, and evidence without rewriting them; it writes only this ledger. The frozen PR
-#3693 audit remains immutable.
+legacy mappings, and evidence without rewriting them; it writes only this ledger. The frozen audit
+from PR #3693 remains immutable.
 
 The checker fails closed when Git metadata or the immutable legacy commit is unavailable. It rejects
 baseline drift, missing or duplicate IDs, stale or unresolved content blocks, stale destination or

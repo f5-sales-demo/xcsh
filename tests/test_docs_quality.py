@@ -143,9 +143,12 @@ class DocsQualityCheckerTests(unittest.TestCase):
         text = page.read_text(encoding="utf-8")
         match = re.search(r"^## Do the task\s*$", text, re.MULTILINE)
         assert match is not None
-        section = "\n".join(
-            line.rstrip() for line in text[match.start() :].splitlines()
-        ).strip() + "\n"
+        section = (
+            "\n".join(
+                line.rstrip() for line in text[match.start() :].splitlines()
+            ).strip()
+            + "\n"
+        )
         source = root / "packages" / "coding-agent" / "src" / "cli.ts"
         source.parent.mkdir(parents=True)
         source.write_text("export const task = 'configuration';\n", encoding="utf-8")
@@ -411,7 +414,9 @@ class DocsQualityCheckerTests(unittest.TestCase):
             "corrected": [],
             "superseded": ["The old behavior is no longer supported."],
         }
-        fidelity["concepts"][0]["rationale"] = "The old behavior is no longer supported."
+        fidelity["concepts"][0]["rationale"] = (
+            "The old behavior is no longer supported."
+        )
         path = root / ".github" / "docs-quality" / "legacy-fidelity.json"
         path.write_text(json.dumps(fidelity), encoding="utf-8")
         self.assert_rejected(root, "superseded fidelity concept has a reader locator")
@@ -424,12 +429,22 @@ class DocsQualityCheckerTests(unittest.TestCase):
             ROOT / ".github" / "docs-quality" / "evidence" / "manifest.json",
         ]
         before = {path: path.read_bytes() for path in protected}
-        subprocess.run([sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")], check=True)
-        first = (ROOT / ".github" / "docs-quality" / "legacy-fidelity.json").read_bytes()
-        subprocess.run([sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")], check=True)
-        second = (ROOT / ".github" / "docs-quality" / "legacy-fidelity.json").read_bytes()
-        self.assertEqual(first, second)
-        self.assertEqual(before, {path: path.read_bytes() for path in protected})
+        subprocess.run(  # noqa: S603
+            [sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")],
+            check=True,
+        )
+        first = (
+            ROOT / ".github" / "docs-quality" / "legacy-fidelity.json"
+        ).read_bytes()
+        subprocess.run(  # noqa: S603
+            [sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")],
+            check=True,
+        )
+        second = (
+            ROOT / ".github" / "docs-quality" / "legacy-fidelity.json"
+        ).read_bytes()
+        assert first == second
+        assert before == {path: path.read_bytes() for path in protected}
 
     def test_rejects_long_sidebar_label(self) -> None:
         root = self.fixture(
