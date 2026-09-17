@@ -8,7 +8,9 @@ it("welcome keeps the full logo independent of terminal height and switches only
 	const welcome = new WelcomeComponent("fixture");
 	for (const width of [50, 51, 52, 60, 80, 100, 140]) {
 		const lines = welcome.render(width);
-		expect(lines.length).toBe(F5_LOGO_ROWS.length + 6);
+		// Frame, heading, divider, one bottom spacer, and frame bottom. The crown
+		// itself provides the visual top spacing, so there is no extra top row.
+		expect(lines.length).toBe(F5_LOGO_ROWS.length + 5);
 		expect(lines.every(line => visibleWidth(line) <= Math.min(width, 100))).toBe(true);
 		expect(Bun.stripANSI(lines.join("\n"))).toContain("xcsh vfixture");
 		expect(Bun.stripANSI(lines.join("\n"))).toContain("█");

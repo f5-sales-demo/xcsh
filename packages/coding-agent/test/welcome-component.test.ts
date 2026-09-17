@@ -52,24 +52,29 @@ describe("WelcomeComponent", () => {
 		}
 	});
 
-	it("adds exactly one blank framed row above and below either logo", () => {
+	it("uses the crown as the top spacing and retains one blank row below either logo", () => {
 		for (const width of [52, 49]) {
 			const lines = renderPlain(new WelcomeComponent("15.15.0"), width);
 			const divider = lines.findIndex(line => line.startsWith("├"));
-			expect(interior(lines[divider + 1]).trim(), `width ${width} top padding`).toBe("");
+			expect(interior(lines[divider + 1]).trim(), `width ${width} first logo row`).not.toBe("");
 			expect(interior(lines.at(-2)!).trim(), `width ${width} bottom padding`).toBe("");
 			const blankBodyRows = lines.slice(divider + 1, -1).filter(line => interior(line).trim() === "");
-			expect(blankBodyRows, `width ${width}`).toHaveLength(2);
+			expect(blankBodyRows, `width ${width}`).toHaveLength(1);
 		}
 	});
 
-	it("centers the full logo canvas and compact fallback", () => {
-		const fullEven = renderPlain(new WelcomeComponent("15.15.0"), 52)[12];
-		expect(horizontalMargins(fullEven)).toEqual([2, 2]);
-
-		for (const width of [51, 49, 41]) {
+	it("keeps exactly one framed gutter column beside the full logo", () => {
+		for (const width of [50, 51, 52, 80, 145]) {
 			const lines = renderPlain(new WelcomeComponent("15.15.0"), width);
-			const mark = width >= 50 ? lines[12] : lines.find(line => line.includes("F5"))!;
+			const widestLogoRow = lines.find(line => interior(line).trimStart().startsWith("|"))!;
+			expect(horizontalMargins(widestLogoRow), `width ${width}`).toEqual([1, 1]);
+		}
+	});
+
+	it("centers the compact fallback", () => {
+		for (const width of [49, 41]) {
+			const lines = renderPlain(new WelcomeComponent("15.15.0"), width);
+			const mark = lines.find(line => line.includes("F5"))!;
 			const [left, right] = horizontalMargins(mark);
 			expect(Math.abs(left - right), `width ${width}`).toBeLessThanOrEqual(1);
 		}
