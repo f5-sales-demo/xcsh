@@ -2,18 +2,28 @@
 
 import { spawn } from "bun";
 
-export type FileWorkers = 0 | 2 | 4 | 6 | 8;
+/** Number of Bun file workers. Zero preserves the serial production path. */
+export type FileWorkers = number;
+
+export const MAX_FILE_WORKERS = 32;
 
 export function parseFileWorkers(
 	args: readonly string[],
 	environment: Record<string, string | undefined> = Bun.env,
 ): FileWorkers {
+	if (args.some(argument => argument === "--concurrent" || argument.startsWith("--concurrent="))) {
+		throw new Error("--concurrent is not supported; use --file-workers=<0..32> for file-level parallelism");
+	}
 	const option = args.find(argument => argument.startsWith("--file-workers="));
 	const raw = option?.slice("--file-workers=".length) ?? environment.XCSH_TEST_FILE_WORKERS ?? "0";
-	if (!(["0", "2", "4", "6", "8"] as const).includes(raw as "0" | "2" | "4" | "6" | "8")) {
-		throw new Error(`XCSH test file workers must be 0, 2, 4, 6, or 8, received ${JSON.stringify(raw)}`);
+	if (!/^(?:0|[1-9][0-9]*)$/.test(raw)) {
+		throw new Error(`XCSH test file workers must be an integer from 0 through ${MAX_FILE_WORKERS}, received ${JSON.stringify(raw)}`);
 	}
-	return Number(raw) as FileWorkers;
+	const workers = Number(raw);
+	if (workers > MAX_FILE_WORKERS) {
+		throw new Error(`XCSH test file workers must be an integer from 0 through ${MAX_FILE_WORKERS}, received ${JSON.stringify(raw)}`);
+	}
+	return workers;
 }
 
 export function testCommand(fileWorkers: FileWorkers): string[] {

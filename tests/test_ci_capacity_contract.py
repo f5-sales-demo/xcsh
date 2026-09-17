@@ -79,7 +79,9 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("  workflow_dispatch:\n", benchmark)
         for input_name in ("source_sha", "experiment", "cache_state", "pair_id"):
             self.assertIn(f"      {input_name}:\n", benchmark)
-        self.assertIn("d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a", benchmark)
+        self.assertIn("file_workers:", benchmark)
+        self.assertIn("integer 1 through 32", benchmark)
+        self.assertIn("ref: ${{ inputs.source_sha }}", benchmark)
         self.assertNotIn("  pull_request:\n", benchmark)
         self.assertIn("runner_label=xcsh-compute-16-vcpu-candidate", benchmark)
         self.assertIn("runner_label=xcsh-compute-f32-candidate", benchmark)
@@ -115,7 +117,8 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("dpkg-deb --extract", legacy_setup)
         self.assertIn("flags.push(`--parallel=${fileWorkers}`)", runner)
         self.assertIn('"--max-concurrency=2"', runner)
-        self.assertNotIn("--concurrent", benchmark + action + runner)
+        self.assertIn("--concurrent is not supported", runner)
+        self.assertIn("workers-${{ inputs.file-workers }}", action)
 
     def test_runner_qualification_records_real_output_and_resource_evidence(
         self,
@@ -146,7 +149,7 @@ class CiCapacityContractTests(unittest.TestCase):
     def test_dag_qualification_uses_one_image_and_real_job_dependencies(self) -> None:
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
         self.assertIn(
-            "image-candidate|d16-serial|d16-parallel-2|d16-parallel-4|d16-parallel-6|d16-parallel-8|d16-hardware|dag-control|dag-candidate)",
+            "image-candidate|d16-serial|d16-parallel|d16-hardware|dag-control|dag-candidate)",
             benchmark,
         )
         self.assertIn("  dag-candidate-native:\n", benchmark)
