@@ -29,6 +29,8 @@ const WORKFLOW_DIR = path.join(import.meta.dir, "../../../.github/workflows");
 /** Workflows that reference a publishing or write credential — the ones that matter. */
 const CREDENTIAL_BEARING = [
 	"ci.yml",
+	"release-github-backfill.yml",
+	"release-homebrew-backfill.yml",
 	"release-npm-backfill.yml",
 	"api-spec-update.yml",
 	"console-catalog-drift.yml",
