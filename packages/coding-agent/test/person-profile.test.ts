@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { MachineProfileService } from "../src/person-profile/machine-profile";
+import { resetProfileTargets } from "../src/person-profile/private-store";
 import { PersonProfileService } from "../src/person-profile/service";
 
 const dirs: string[] = [];
@@ -61,9 +63,74 @@ test("invalid stores remain intact and errors exclude content", async () => {
 	await service.update({ givenName: "Person-A" });
 	const bad = '{"private":"sentinel-invalid"';
 	await writeFile(path, bad);
-	await expect(service.get()).rejects.toThrow("Invalid person profile");
-	await expect(service.update({ givenName: "Person-B" })).rejects.toThrow("Invalid person profile");
+	await expect(service.get()).rejects.toThrow("invalid_shape");
+	await expect(service.update({ givenName: "Person-B" })).rejects.toThrow("invalid_shape");
 	expect(await readFile(path, "utf8")).toBe(bad);
+	expect(await service.status()).toMatchObject({ status: "invalid", reason: "invalid_shape" });
+	expect(await service.reset()).toBe(true);
+
+	await writeFile(path, "x".repeat(1024 * 1024 + 1), { mode: 0o600 });
+	expect(await service.status()).toMatchObject({ status: "invalid", reason: "invalid_shape" });
+	expect(await service.reset()).toBe(true);
+	const remaining = await import("node:fs/promises").then(fs => fs.readdir(join(path, "..")));
+	expect(remaining.some(name => name.startsWith("user-profile.json"))).toBe(false);
+	expect(remaining.some(name => /backup|quarantine|migrat/i.test(name))).toBe(false);
+});
+test("legacy and insecure stores report value-free status and require explicit reset", async () => {
+	const { path, service } = await setup();
+	await service.update({ givenName: "Synthetic" });
+	await writeFile(path, JSON.stringify({ givenName: "Synthetic" }), { mode: 0o600 });
+	expect(await service.status()).toMatchObject({
+		status: "invalid",
+		reason: "unsupported_format",
+		remedy: "xcsh profile reset person --yes",
+	});
+	await import("node:fs/promises").then(fs => fs.chmod(path, 0o644));
+	expect(await service.status()).toMatchObject({ status: "invalid", reason: "insecure_permissions" });
+	expect(await service.reset()).toBe(true);
+	expect(await service.reset()).toBe(false);
+	expect(await service.status()).toMatchObject({ status: "missing" });
+	expect(await Bun.file(path).exists()).toBe(false);
+	expect((await stat(join(path, ".."))).isDirectory()).toBe(true);
+	await import("node:fs/promises").then(fs => fs.chmod(join(path, ".."), 0o755));
+	expect(await service.status()).toMatchObject({ status: "invalid", reason: "insecure_permissions" });
+	expect(await service.reset()).toBe(false);
+	expect((await stat(join(path, ".."))).mode & 0o777).toBe(0o700);
+});
+test("reset refuses symlinks and reports a busy active lock", async () => {
+	const first = await setup();
+	await mkdir(join(first.path, ".."), { recursive: true });
+	await symlink(join(first.path, "missing-target"), first.path);
+	await expect(first.service.reset()).rejects.toThrow("invalid_shape");
+	expect((await lstat(first.path)).isSymbolicLink()).toBe(true);
+
+	const second = await setup();
+	await mkdir(join(second.path, ".."), { recursive: true });
+	await mkdir(`${second.path}.lock`);
+	await expect(new PersonProfileService(second.path, 25).reset()).rejects.toThrow("lock_busy");
+});
+test("multi-profile reset acquires every lock before deleting either target", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "profile-reset-all-"));
+	dirs.push(dir);
+	const personPath = join(dir, "a-person.json");
+	const computerPath = join(dir, "z-computer.json");
+	const person = new PersonProfileService(personPath, 25);
+	const computer = new MachineProfileService(computerPath, async () => ({ name: "Synthetic computer" }), 25);
+	await person.update({ givenName: "Person-A" });
+	await computer.refresh();
+	await mkdir(`${computerPath}.lock`);
+
+	await expect(resetProfileTargets([person, computer])).rejects.toThrow("lock_busy");
+	expect(await Bun.file(personPath).exists()).toBe(true);
+	expect(await Bun.file(computerPath).exists()).toBe(true);
+	expect(await Bun.file(`${personPath}.lock`).exists()).toBe(false);
+
+	await rm(`${computerPath}.lock`, { recursive: true });
+	await rm(computerPath);
+	await symlink(join(dir, "missing-computer"), computerPath);
+	await expect(resetProfileTargets([person, computer])).rejects.toThrow("invalid_shape");
+	expect(await Bun.file(personPath).exists()).toBe(true);
+	expect((await lstat(computerPath)).isSymbolicLink()).toBe(true);
 });
 test("invalid input, cancelled writes and separate stores never mutate another person", async () => {
 	const { service } = await setup();
@@ -153,7 +220,7 @@ test("collector failure is sanitized and inferred observations never become fact
 		},
 	});
 	const refreshed = await service.refresh(["broken"]);
-	expect(refreshed.collectors).toEqual([{ id: "broken", status: "error" }]);
+	expect(refreshed.collectors).toEqual([expect.objectContaining({ id: "broken", status: "error" })]);
 	expect(JSON.stringify(refreshed)).not.toContain("private-sentinel");
 	await service.observe([
 		{
@@ -215,6 +282,40 @@ test("fresh profiles discover available sources automatically and configuration 
 	await service.update({ jobTitle: "Corrected engineer" }, profile.revision);
 	await service.reconcileFromCollectors();
 	expect((await service.get()).facts.jobTitle).toBe("Corrected engineer");
+});
+
+test("independent collectors run concurrently before declared dependents", async () => {
+	const { service } = await setup();
+	const events: string[] = [];
+	for (const [id, field] of [
+		["first", "givenName"],
+		["second", "jobTitle"],
+	] as const)
+		service.registerProfileCollector({
+			id,
+			name: id,
+			available: async () => true,
+			collect: async () => {
+				events.push(`${id}:start`);
+				await Bun.sleep(20);
+				events.push(`${id}:end`);
+				return { [field]: `Synthetic ${id}` };
+			},
+		});
+	service.registerProfileCollector({
+		id: "dependent",
+		name: "dependent",
+		dependsOn: ["first"],
+		available: async () => true,
+		collect: async () => {
+			events.push("dependent");
+			expect((await service.get()).facts.givenName).toBe("Synthetic first");
+			return {};
+		},
+	});
+	await service.reconcileFromCollectors();
+	expect(events.indexOf("second:start")).toBeLessThan(events.indexOf("first:end"));
+	expect(events.at(-1)).toBe("dependent");
 });
 
 test("conflicting collected evidence is retained as observation without replacing the person", async () => {
@@ -348,7 +449,10 @@ test("repeated normalized updates are idempotent and collectors cannot steal own
 		id: "first",
 		name: "First",
 		available: async () => true,
-		collect: async () => ({ jobTitle: "First title" }),
+		collect: async () => {
+			await Bun.sleep(10);
+			return { jobTitle: "First title" };
+		},
 	});
 	service.registerProfileCollector({
 		id: "second",
@@ -360,6 +464,28 @@ test("repeated normalized updates are idempotent and collectors cannot steal own
 	expect((await service.get()).facts.jobTitle).toBe("First title");
 	expect((await service.get()).provenance.jobTitle?.source).toBe("first");
 });
+test("unchanged collector facts and health do not churn the profile revision", async () => {
+	const { service } = await setup();
+	let available = true;
+	service.registerProfileCollector({
+		id: "stable",
+		name: "Stable",
+		available: async () => available,
+		collect: async () => ({ givenName: "Synthetic" }),
+	});
+	const first = await service.refresh(["stable"]);
+	const firstAttempt = first.collectionState?.stable?.attemptedAt;
+	await Bun.sleep(2);
+	const second = await service.refresh(["stable"]);
+	expect(second.revision).toBe(first.revision);
+	expect(Date.parse(second.collectionState?.stable?.attemptedAt ?? "")).toBeGreaterThanOrEqual(
+		Date.parse(firstAttempt ?? ""),
+	);
+	available = false;
+	const unavailable = await service.refresh(["stable"]);
+	expect(unavailable.revision).toBe(first.revision + 1);
+	expect(unavailable.collectionState?.stable?.status).toBe("unavailable");
+});
 test("Linux GECOS uses the fifth field, not shell or home", async () => {
 	const { parseGecos } = await import("../src/person-profile/collectors");
 	expect(parseGecos("synthetic:x:1000:1000:Person Example,Room:/tmp/synthetic-home:/bin/sh")).toBe("Person Example");
@@ -370,7 +496,7 @@ test("suppression storage cannot retain unknown fields or hidden values", async 
 	const { path, service } = await setup();
 	const profile = await service.update({ givenName: "Synthetic" });
 	await writeFile(path, JSON.stringify({ ...profile, suppressed: { unknown: { value: "synthetic-hidden" } } }));
-	await expect(service.get()).rejects.toThrow("Invalid person profile storage");
+	await expect(service.get()).rejects.toThrow("invalid_shape");
 });
 
 test("extension collectors can reload across sessions without another extension taking ownership", async () => {

@@ -78,6 +78,7 @@ const commands: CommandEntry[] = [
 	{ name: "manager", load: () => import("./commands/manager").then(m => m.default) },
 	{ name: "office", load: () => import("./commands/office").then(m => m.default) },
 	{ name: "plugin", load: () => import("./commands/plugin").then(m => m.default) },
+	{ name: "profile", load: () => import("./commands/profile").then(m => m.default) },
 	{ name: "setup", load: () => import("./commands/setup").then(m => m.default) },
 	{ name: "shell", load: () => import("./commands/shell").then(m => m.default) },
 	{ name: "ssh", load: () => import("./commands/ssh").then(m => m.default) },

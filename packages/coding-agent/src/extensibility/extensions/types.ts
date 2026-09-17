@@ -1013,6 +1013,13 @@ export interface ExtensionAPI {
 	/** Injected pi-coding-agent exports for accessing SDK utilities */
 	pi: typeof piCodingAgent;
 
+	/** Canonical, provenance-aware person profile integration. */
+	readonly personProfile: {
+		get(): Promise<import("../../person-profile/schema").PersonProfile>;
+		registerCollector(collector: import("../../person-profile/service").ExtensionProfileCollector): void;
+		unregisterCollector(id: string): boolean;
+	};
+
 	// =========================================================================
 	// Event Subscription
 	// =========================================================================
@@ -1222,9 +1229,6 @@ export interface ExtensionAPI {
 	 * });
 	 */
 	registerProvider(name: string, config: ProviderConfig): void;
-	registerProfileCollector(collector: import("../../person-profile/service").ProfileCollector): void;
-	unregisterProfileCollector(id: string): boolean;
-
 	/** Shared event bus for extension communication. */
 	events: EventBus;
 }

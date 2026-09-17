@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
 import { createAccountCollectors } from "./account-collectors";
 import { PROFILE_COLLECTORS } from "./collectors";
-import { PrivateProfileStore } from "./private-store";
+import { PrivateProfileStore, type ProfileResetLease, type ProfileStoreStatus } from "./private-store";
 import {
 	expandObservations,
 	forgetPersonalProperties,
@@ -31,10 +31,14 @@ export interface ProfileCollection {
 export interface ProfileCollector {
 	readonly id: string;
 	readonly name: string;
+	readonly dependsOn?: readonly string[];
 	readonly timeoutMs?: number;
 	readonly authoritativeFields?: readonly string[];
 	available(signal?: AbortSignal): Promise<boolean>;
 	collect(signal?: AbortSignal): Promise<Partial<UserProfile> | ProfileCollection>;
+}
+export interface ExtensionProfileCollector extends Omit<ProfileCollector, "collect"> {
+	collect(signal?: AbortSignal): Promise<ProfileCollection>;
 }
 const defaultPath = () => join(homedir(), ".xcsh", "user-profile.json");
 function cancelled(signal?: AbortSignal) {
@@ -46,6 +50,15 @@ function normalize(value: unknown): unknown {
 	if (value && typeof value === "object")
 		return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, normalize(v)]));
 	return value;
+}
+function revisionState(profile: PersonProfile): string {
+	const { collectionState, updatedAt: _, ...stable } = profile;
+	return JSON.stringify({
+		...stable,
+		collectionState: Object.fromEntries(
+			Object.entries(collectionState ?? {}).map(([id, state]) => [id, { status: state.status }]),
+		),
+	});
 }
 function applySuppression(
 	facts: UserProfile,
@@ -90,10 +103,20 @@ export class PersonProfileService {
 	readonly #collectors = new Map<string, ProfileCollector>();
 	readonly #registrants = new Map<string, string>();
 	readonly #store: PrivateProfileStore<PersonProfile>;
-	constructor(readonly path = defaultPath()) {
-		this.#store = new PrivateProfileStore(path, emptyProfile, validateProfile, profile => {
-			profile.state = Object.keys(profile.facts).length || profile.observations.length ? "ready" : "empty";
-		});
+	constructor(
+		readonly path = defaultPath(),
+		lockTimeoutMs = 10000,
+	) {
+		this.#store = new PrivateProfileStore(
+			path,
+			emptyProfile,
+			validateProfile,
+			profile => {
+				profile.state = Object.keys(profile.facts).length || profile.observations.length ? "ready" : "empty";
+			},
+			"person",
+			lockTimeoutMs,
+		);
 	}
 	registerProfileCollector(collector: ProfileCollector, registrant?: string): void {
 		// Preserve the built-in bootstrap adapter and separately register richer plugin evidence.
@@ -116,7 +139,10 @@ export class PersonProfileService {
 				(!Number.isInteger(collector.timeoutMs) || collector.timeoutMs < 1000 || collector.timeoutMs > 60000)) ||
 			(collector.authoritativeFields !== undefined &&
 				(!Array.isArray(collector.authoritativeFields) ||
-					collector.authoritativeFields.some(f => !Value.Check(FieldSchema, f))))
+					collector.authoritativeFields.some(f => !Value.Check(FieldSchema, f)))) ||
+			(collector.dependsOn !== undefined &&
+				(!Array.isArray(collector.dependsOn) ||
+					collector.dependsOn.some(id => !/^[a-z][a-z0-9_-]{0,63}$/.test(id) || id === collector.id)))
 		)
 			throw new Error("Invalid person profile collector");
 		if (registrant) this.#registrants.set(collector.id, registrant);
@@ -146,11 +172,21 @@ export class PersonProfileService {
 	async get(): Promise<PersonProfile> {
 		return this.#store.get();
 	}
+	status(): Promise<ProfileStoreStatus> {
+		return this.#store.status();
+	}
+	reset(signal?: AbortSignal): Promise<boolean> {
+		return this.#store.reset(signal);
+	}
+	acquireResetLease(signal?: AbortSignal): Promise<ProfileResetLease> {
+		return this.#store.acquireResetLease(signal);
+	}
 	async #mutate(
 		change: (profile: PersonProfile) => void,
 		revision?: number,
 		signal?: AbortSignal,
 		canCommit?: () => boolean,
+		isRevisionRelevant?: (before: PersonProfile, after: PersonProfile) => boolean,
 	): Promise<PersonProfile> {
 		return this.#store.mutate(
 			profile => {
@@ -174,6 +210,7 @@ export class PersonProfileService {
 			revision,
 			signal,
 			canCommit,
+			isRevisionRelevant,
 		);
 	}
 	async update(
@@ -292,8 +329,15 @@ export class PersonProfileService {
 				Date.now() - Date.parse(profile.collectionState?.[id]?.attemptedAt ?? "1970-01-01") >= freshForMs,
 		);
 		let current = profile;
-		// Dependencies such as the Salesforce plugin can read IDs saved by the bootstrap adapter.
-		for (const source of sources) current = await this.refresh([source], undefined, signal, false, canCommit);
+		const pending = new Set(sources);
+		while (pending.size) {
+			const ready = [...pending].filter(id =>
+				(this.#collectors.get(id)?.dependsOn ?? []).every(dependency => !pending.has(dependency)),
+			);
+			if (!ready.length) throw new Error("Invalid person profile collector dependency cycle");
+			current = await this.refresh(ready, undefined, signal, false, canCommit);
+			for (const id of ready) pending.delete(id);
+		}
 		return current;
 	}
 	async refresh(
@@ -302,12 +346,17 @@ export class PersonProfileService {
 		signal?: AbortSignal,
 		configure = false,
 		canCommit?: () => boolean,
-	): Promise<PersonProfile & { collectors: { id: string; status: "collected" | "unavailable" | "error" }[] }> {
+	): Promise<
+		PersonProfile & {
+			collectors: { id: string; status: "collected" | "unavailable" | "error"; durationMs: number }[];
+		}
+	> {
 		if ((!sources.length && !configure) || sources.some(s => !this.#collectors.has(s)))
 			throw new Error("Invalid person profile sources");
 		const outputs: { id: string; facts: UserProfile; observations: UserProfileObservation[] }[] = [];
-		const collectors: { id: string; status: "collected" | "unavailable" | "error" }[] = [];
-		for (const id of new Set(sources)) {
+		const collectors: { id: string; status: "collected" | "unavailable" | "error"; durationMs: number }[] = [];
+		const collectOne = async (id: string) => {
+			const startedAt = performance.now();
 			cancelled(signal);
 			const collector = this.#collectors.get(id)!;
 			const timeout = AbortSignal.timeout(collector.timeoutMs ?? 15000);
@@ -335,13 +384,29 @@ export class PersonProfileService {
 						combined.addEventListener("abort", onAbort, { once: true });
 					}),
 				]);
-				if (facts) outputs.push({ id, ...facts });
-				collectors.push({ id, status: facts ? "collected" : "unavailable" });
+				return {
+					output: facts ? { id, ...facts } : undefined,
+					collector: {
+						id,
+						status: facts ? ("collected" as const) : ("unavailable" as const),
+						durationMs: Math.round(performance.now() - startedAt),
+					},
+				};
 			} catch {
 				cancelled(signal);
-				collectors.push({ id, status: "error" });
+				return {
+					collector: { id, status: "error" as const, durationMs: Math.round(performance.now() - startedAt) },
+				};
 			} finally {
 				combined.removeEventListener("abort", onAbort);
+			}
+		};
+		const uniqueSources = [...new Set(sources)];
+		for (let index = 0; index < uniqueSources.length; index += 4) {
+			const batch = await Promise.all(uniqueSources.slice(index, index + 4).map(collectOne));
+			for (const result of batch) {
+				collectors.push(result.collector);
+				if (result.output) outputs.push(result.output);
 			}
 		}
 		const profile = await this.#mutate(
@@ -352,10 +417,11 @@ export class PersonProfileService {
 				}
 				profile.collectionState ??= {};
 				const now = new Date().toISOString();
-				for (const { id, status } of collectors) {
+				for (const { id, status, durationMs } of collectors) {
 					profile.collectionState[id] = {
 						...profile.collectionState[id],
 						attemptedAt: now,
+						durationMs,
 						status,
 						...(status === "collected" ? { succeededAt: now } : {}),
 					};
@@ -386,6 +452,12 @@ export class PersonProfileService {
 					}
 					for (const [field, value] of Object.entries(facts)) {
 						const key = field as keyof UserProfile;
+						if (
+							key !== "additionalProperty" &&
+							profile.provenance[key]?.owner === id &&
+							JSON.stringify(profile.facts[key]) === JSON.stringify(value)
+						)
+							continue;
 						if (key === "additionalProperty") {
 							if (!subjectChanged) putPersonalProperties(profile, facts.additionalProperty!, id, id, now);
 							else
@@ -418,6 +490,7 @@ export class PersonProfileService {
 			revision,
 			signal,
 			canCommit,
+			(before, after) => revisionState(before) !== revisionState(after),
 		);
 		return { ...profile, collectors };
 	}
@@ -428,8 +501,3 @@ for (const collector of createAccountCollectors()) personProfileService.register
 personProfileService.registerProfileCollector(
 	createSalesforceRelationshipCollector(async () => (await personProfileService.get()).facts),
 );
-
-/** Read-only compatibility for marketplace collectors expecting the historical flat facts shape. */
-export async function loadProfile(): Promise<UserProfile> {
-	return (await personProfileService.get()).facts;
-}

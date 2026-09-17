@@ -1,88 +1,65 @@
-# Local person profile
+# Private person and computer profiles
 
-`PersonProfileService` owns one OS user's `~/.xcsh/user-profile.json`, shared across
-projects, models, provider accounts and paired transports. Agent-session construction
-attaches the same service to the built-in `person_profile` tool and read-only
-`xcsh://user` resource. `xcsh://user/schema` exposes the runtime schema. Trusted
-embedders can inject an isolated service for testing; model arguments cannot select
-a store or another user.
+`PersonProfileService` and `MachineProfileService` own one OS user's private
+runtime profiles. They are shared across projects, models, accounts and transports;
+callers cannot select another user's store. `xcsh://user` and
+`xcsh://computer` are side-effect-free resources with `/schema` routes, while
+`xcsh://about` remains xcsh build identity.
 
-`schema.ts` defines the runtime validation, inferred TypeScript types and tool field
-schema. Facts use [Schema.org Person](https://schema.org/Person) vocabulary where
-applicable. Department, division, manager, source identifiers, sales role, partner,
-territories and quota are xcsh-specific business fields. This is a bounded local
-representation, not a complete JSON-LD implementation.
+## Storage and recovery
 
-Reads never seed or write. Missing storage returns `state: empty` at revision zero.
-Malformed, unsupported, oversized or insecure profile files return sanitized errors
-and remain intact. Writes create owner-only storage, tighten the containing directory
-to mode `0700`, serialize processes with an exclusive lock directory, check revisions,
-sync a new `0600` file, and atomically rename it. An abandoned lock fails closed;
-remove that exact lock only after verifying its owning operation has ended.
+The only supported persisted format is the versioned typed envelope defined by
+`schema.ts` and `machine-profile.ts`. Unversioned, malformed, unsupported,
+oversized or insecure files fail closed with domain-specific, value-free error
+codes. xcsh never migrates, salvages, quarantines, backs up or silently deletes
+an invalid profile.
 
-The tool provides get, sources, update, observe, refresh and forget. Mutations require the revision
-from a current get. Ask uses the session's existing UI interaction owner; Plan denies
-profile mutations. Abort signals propagate through approval, collection and commit.
-Only explicit user statements and corrections belong in update. Prompts instruct
-agents to exclude repository documents, retrieved content and inference from user
-assertions, and to store normalized facts without quotations. This semantic distinction
-requires agent judgment; a tool argument alone cannot prove who asserted a fact.
+`xcsh profile status [--json]` reports only missing, ready or invalid state,
+schema version, permissions and a sanitized reason. `xcsh profile reset
+person|computer|all` is the human recovery boundary: it locks and revalidates
+exact owned regular-file targets, refuses symlinks and ownership mismatches, and
+deletes no unrelated path. Interactive use requires confirmation;
+non-interactive use requires `--yes`. Missing targets succeed idempotently. The
+next normal startup reconstructs selected profiles through discovery.
 
-Every established field has source, owner and observation time. User corrections
-own their fields; collectors can refresh only unowned fields or fields they already
-own. Ownership is at the top-level field boundary, including compound fields such
-as address. The xcsh additionalProperty extension uses Schema.org PropertyValue-shaped
-entries for attributes without a standard Person field. Each stable propertyID has its
-own ownership, provenance and value-free forgetting suppression; updating one entry
-preserves the others. Tool forget accepts propertyIds for selective removal. Observed account evidence and inferred observations never establish facts. Forget
-removes values, provenance and observations for the selected field, leaving only a
-suppression timestamp. Forgetting email also removes email-bearing account evidence;
-future evidence passes through the same suppression filter. An explicit user update
-can reestablish that field. A changed collector identity produces observations instead
-of silently replacing the human's established identity.
+Writes create a `0700` directory and atomic `0600` file, reject non-owned paths,
+use no-follow reads, bound document size, serialize processes through locks,
+check revisions and fsync before rename. Person and computer failures are
+independent.
 
-CLI sessions automatically start the PII builder, including launches with extensions
-disabled. Trusted process configuration `XCSH_PROFILE_DISCOVERY=0` disables automatic
-discovery for isolated CLI tests or embedding; tool reads and explicit refresh remain
-available. SDK embedders enable the same lifecycle with `profileDiscovery: true` and
-can inject isolated person and machine services. Background discovery checks once a
-minute, with five-minute person-source freshness and daily machine freshness. The
-first normal input and queued input join pending preparation. Disposal cancels the
-builder, and both restored and newly entered Plan mode prevent commits.
+## Ownership, learning and discovery
 
-Salesforce, GitHub, associated GitHub email addresses, global Git, system, Azure,
-AWS, Google Cloud and GitLab adapters provide initial sources. Extensions add validated
-collectors; source discovery is programmatic and does not hardcode these names into
-the tool schema. Observe also records structured evidence learned during interaction
-from other identified sources, preserving observed versus inferred status. Neither
-credentials nor source quotations belong in the profile. Directory and account
-principals remain evidence until associated with the human; service accounts and role
-sessions never establish human identity by themselves.
+Facts use Schema.org Person vocabulary where applicable. Every established field
+has owner, source and observation time. Explicit user statements and corrections
+use `update`; collected or inferred information uses `observe`. User corrections
+retain ownership. `additionalProperty` entries have independent provenance and
+suppression. Forget removes selected values and evidence while retaining only a
+value-free suppression timestamp, preventing automatic rediscovery until an
+explicit user update.
 
-Collector output is validated and bounded; raw output and errors are not logged.
-The Linux adapter reads GECOS column five by UID. OS locale supplies UI preference
-and an inferred language observation. Per-source attempt/success timestamps and
-sanitized status persist even when a source is unavailable. Refresh selects named
-collectors or all registered collectors when sources are omitted. Configure selects
-future background sources; an empty configured list disables person collection.
+CLI sessions attach to one process-wide coordinator keyed by person and computer
+paths. Startup, before-input and periodic requests join one in-flight refresh.
+Independent collectors run with bounded concurrency, source failures remain
+isolated, and five-minute person plus daily computer freshness avoid needless
+work. Plan mode and cancellation prevent commits. Salesforce, GitHub, GitHub
+email, Git, system, Azure, AWS, Google Cloud, GitLab, machine and extension
+collectors remain supported. Per-source diagnostics contain status,
+attempt/success time and duration, never values or raw output.
 
-`MachineProfileService` maintains a separate private `computer-profile.json`, using
-Schema.org IndividualProduct identity with explicitly described xcsh environment
-fields. Historical hardware, OS, CPU, memory, disk, terminal, tool, management and
-security probes are restored with bounded subprocesses. These are environment
-observations, not authorization decisions. `interactionDevices` links the human to
-the device used for interaction without claiming ownership. `machine_profile` and
-read-only `xcsh://computer` share this service; `xcsh://computer/schema` exposes its
-runtime schema. Person and machine files share secure persistence mechanics.
+Extensions use one required API: `personProfile.get()`,
+`personProfile.registerCollector()` and `personProfile.unregisterCollector()`.
+There is no flat loader, direct JSON fallback or top-level compatibility
+registration. Collector IDs and unregister ownership remain scoped to the
+registering extension.
 
-The read-only `loadProfile` compatibility export returns flat facts to legacy
-marketplace collectors. Built-in IDs are retained when a richer plugin registers
-the same ID; the plugin receives an `_extension` collector ID, with its own ownership.
-Another extension cannot take over that registration. Unregister is scoped to the
-registrant. Reconciliation saves bootstrap results before dependent collectors run.
+## PII durability contract
 
-Voice delegates to the attached agent and retrieves person values on demand. It does
-not label project memory as person data or preload a person profile. The executing-agent
-parity harness uses isolated synthetic people and validates canonical tool results;
-it does not replace physical iPhone acceptance. Diagnostic receipts contain outcomes
-and counts, never profile values, prompts, transcripts, audio or credentials.
+Personal values are permitted only in these private local runtime stores. Real
+PII is forbidden in source, fixtures, logs, telemetry, traces, prompts, issues and
+generated evidence; tests use synthetic identities and evidence records only
+counts, hashes, statuses and pass/fail outcomes. Profile routes, startup
+registration, collector APIs and schemas are intentional product functionality,
+not generic cleanup targets. Removing one requires updating the focused contract
+tests and person-awareness owner review. Provenance, selective forgetting, source
+opt-out, inspection and exact-target reset are part of the access and deletion
+boundary.

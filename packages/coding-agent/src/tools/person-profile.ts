@@ -18,6 +18,7 @@ const schema = Type.Object(
 	{
 		action: Type.Union([
 			Type.Literal("get"),
+			Type.Literal("status"),
 			Type.Literal("update"),
 			Type.Literal("refresh"),
 			Type.Literal("forget"),
@@ -62,6 +63,10 @@ export class PersonProfileTool implements AgentTool<typeof schema> {
 	): Promise<AgentToolResult<unknown>> {
 		if (!Value.Check(schema, args)) throw new Error("Invalid person profile operation");
 		const service = this.session.personProfileService ?? personProfileService;
+		if (args.action === "status") {
+			const status = await service.status();
+			return { content: [{ type: "text", text: JSON.stringify(status) }], details: status };
+		}
 		if (args.action === "sources") {
 			const sources = service.listCollectors();
 			return {

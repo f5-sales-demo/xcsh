@@ -188,6 +188,7 @@ export const PersonProfileSchema = Type.Object(
 					{
 						attemptedAt: timestamp,
 						succeededAt: Type.Optional(timestamp),
+						durationMs: Type.Optional(Type.Integer({ minimum: 0 })),
 						status: Type.Union([Type.Literal("collected"), Type.Literal("unavailable"), Type.Literal("error")]),
 					},
 					{ additionalProperties: false },

@@ -42,6 +42,20 @@ test("malformed machine files remain intact and cancellation does not save", asy
 	await expect(service.get()).rejects.toThrow();
 	expect(await readFile(path, "utf8")).toBe("synthetic-invalid");
 });
+
+test("obsolete machine storage is rejected and can be reset without a backup", async () => {
+	const { path, service } = await setup();
+	await service.refresh();
+	await writeFile(path, JSON.stringify({ hostname: "synthetic-machine" }), { mode: 0o600 });
+	expect(await service.status()).toMatchObject({
+		status: "invalid",
+		reason: "unsupported_format",
+		remedy: "xcsh profile reset computer --yes",
+	});
+	expect(await service.reset()).toBe(true);
+	expect(await service.status()).toMatchObject({ status: "missing" });
+	expect((await import("node:fs/promises")).readdir(join(path, ".."))).resolves.toEqual([]);
+});
 test("machine tool reads in Plan and blocks refresh through the same permission guard", async () => {
 	const { service, calls } = await setup();
 	const { MachineProfileTool } = await import("../src/tools/machine-profile");
