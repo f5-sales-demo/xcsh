@@ -27,7 +27,7 @@ jobs:
     name: Backfill npm release
     environment: release
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     permissions:
       actions: read # Required to inspect the source run and download its artifacts.
       contents: read # Required to check out the controller and immutable tag.
