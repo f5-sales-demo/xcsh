@@ -9,14 +9,18 @@ sidebar:
 head:
   - tag: style
     content: |
-      .landing-hero { display: grid; gap: clamp(2rem, 5vw, 5rem); grid-template-columns: minmax(0, 1fr) minmax(18rem, 35rem); align-items: center; margin-block: 2rem 4rem; }
+      main:has(.landing-hero) > .content-panel:first-of-type { padding-block-end: .5rem; }
+      main:has(.landing-hero) > .content-panel:first-of-type + .content-panel { border-top: 0; padding-block-start: 0; }
+      .landing-hero { display: grid; gap: clamp(2rem, 4vw, 4rem); grid-template-columns: minmax(0, 1fr) minmax(18rem, 35rem); align-items: start; margin-block: .75rem 4rem; }
       .landing-hero__content, .landing-hero__image, .landing-hero .expressive-code, .landing-command { min-width: 0; }
-      h1#_top { max-width: 13ch; text-wrap: balance; }
+      h1#_top { max-width: 13ch; margin-block-end: 0; text-wrap: balance; }
       .landing-hero__lede { max-width: 42rem; color: var(--sl-color-gray-2); font-size: var(--sl-text-lg); }
-      .landing-hero__install { max-width: 46rem; margin-top: 2rem; padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: .75rem; background: var(--sl-color-bg-nav); }
+      .landing-hero__install { max-width: 46rem; margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--sl-color-gray-5); border-radius: .75rem; background: var(--sl-color-bg-nav); }
       .landing-hero__install h2 { margin: 0; font-size: var(--sl-text-lg); }
       .landing-hero__install p { margin-block: .5rem 0; }
-      .landing-hero__install pre { max-width: 100%; overflow-x: auto; }
+      .landing-hero__install pre { max-width: 100%; overflow-x: hidden; }
+      .landing-hero__install .expressive-code .ec-line .code { padding-inline-end: 3.5rem; overflow-wrap: anywhere; }
+      .landing-hero__install .expressive-code .copy button { opacity: 1; }
       .landing-hero__image { margin: 0; }
       .landing-hero__image img { display: block; width: 100%; height: auto; aspect-ratio: 1442 / 1268; object-fit: contain; filter: drop-shadow(0 1rem 2.5rem color-mix(in srgb, var(--sl-color-accent) 28%, transparent)); }
       .landing-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-block: 1.5rem; }
@@ -24,7 +28,7 @@ head:
       details.landing-disclosure { margin-block: 1rem 0; padding: .75rem 1rem; border: 1px solid var(--sl-color-gray-5); border-radius: .5rem; background: var(--sl-color-bg-nav); }
       details.landing-disclosure summary { cursor: pointer; font-weight: 600; }
       :is(.landing-hero, .landing-grid, .landing-disclosure) :is(a, button, summary):focus-visible { outline: 2px solid var(--sl-color-accent-high); outline-offset: 3px; }
-      @media (max-width: 50rem) { .landing-hero { grid-template-columns: minmax(0, 1fr); margin-block: 1rem 3rem; } .landing-hero__install { padding: 1rem; } .landing-grid { grid-template-columns: minmax(0, 1fr); } }
+      @media (max-width: 50rem) { .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-block: .5rem 3rem; } .landing-hero__install { padding: 1rem; } .landing-grid { grid-template-columns: minmax(0, 1fr); } }
 ---
 
 import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
@@ -40,11 +44,11 @@ import { Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
 
       <p>Universal installer for macOS and Linux.</p>
 
-      ```bash
+      ```bash wrap
       curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
       ```
 
-      <p>It installs the latest prebuilt release into <code>~/.local/bin</code>. Need a managed or platform-specific channel? See <a href="#installation-options">installation options</a>, then <a href="#verification">verify the executable</a>.</p>
+      <p>It installs the latest prebuilt release into <code>~/.local/bin</code>. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
     </section>
   </div>
 
@@ -163,7 +167,7 @@ Use one channel for install and upgrades. Mixing package-manager and standalone 
   </TabItem>
 </Tabs>
 
-Every installation channel converges on the same check: confirm which executable your shell will run.
+Whichever installation channel you choose, open xcsh next.
 
 <span id="verification" aria-hidden="true"></span>
 
@@ -171,64 +175,53 @@ Every installation channel converges on the same check: confirm which executable
 
 <span id="verify-the-active-installation" aria-hidden="true"></span>
 
-For a POSIX shell, resolve the path, expose duplicates, and print the active version:
+Start the interactive terminal UI:
 
 <div class="landing-command">
 
     ```bash
-    command -v xcsh
-    type -a xcsh
-    xcsh --version
+    xcsh
     ```
 
 </div>
 
-In PowerShell, inspect the resolved command and version:
-
-<div class="landing-command">
-
-    ```powershell
-    Get-Command xcsh
-    xcsh --version
-    ```
-
-</div>
-
-Remove or reorder an older executable before switching channels. Once the executable is unambiguous, a provider credential is the next dependency.
+When the xcsh prompt appears, connect a model provider from inside the TUI.
 
 <span id="authentication" aria-hidden="true"></span>
 
 ## Authenticate a provider
 
-Keep model credentials in the provider-supported environment or subscription login, never in a prompt or committed settings file. Follow [model authentication](./getting-started/model-authentication/) and confirm that the selected provider can enumerate models:
+At the xcsh prompt, open the provider picker:
 
 <div class="landing-command">
 
-    ```bash
-    xcsh --list-models PROVIDER
+    ```text
+    /login
     ```
 
 </div>
 
-Model discovery proves the route before a task uses it. With that result, run one bounded prompt.
+Choose a provider and follow its sign-in flow. You can also enter `/login PROVIDER` to open a known provider directly. Keep credentials in the provider-supported environment or subscription login—never in a prompt or committed settings file. See [model authentication](./getting-started/model-authentication/) for provider-specific options.
 
-## Quickstart
+After sign-in selects a model, stay in the TUI and send a small first prompt.
 
-<span id="run-the-quickstart" aria-hidden="true"></span>
+## Send your first prompt
 
-Start with a prompt that disables tools and session persistence:
+<span id="quickstart" aria-hidden="true"></span>
+
+At the xcsh prompt, enter:
 
 <div class="landing-command">
 
-    ```bash
-    xcsh --no-session --no-tools -p "Reply with only: xcsh is ready"
+    ```text
+    Reply with only: xcsh is ready
     ```
 
 </div>
 
-Continue with the [quickstart](./getting-started/quickstart/), or choose a [context and namespace](./f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud change.
+A matching response confirms the installation, provider, and selected model are working together. Next, learn the [agent loop](./use-xcsh/agent-loop/) or choose a [context and namespace](./f5-distributed-cloud/contexts-namespaces/) before an authorized F5 Distributed Cloud change.
 
-The working installation can now take you to the documentation organized around the task at hand.
+From here, continue with the documentation path that matches your goal.
 
 <span id="exploration" aria-hidden="true"></span>
 
