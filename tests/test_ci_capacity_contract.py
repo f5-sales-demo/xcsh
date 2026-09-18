@@ -133,6 +133,11 @@ class CiCapacityContractTests(unittest.TestCase):
                 "d16-parallel | f32-parallel | d16-hardware",
                 experiment_consumer,
             )
+        self.assertIn("d16-parallel:* | f32-parallel:*)", profiler)
+        self.assertIn(
+            '[[ "$experiment" != d16-parallel && "$experiment" != f32-parallel ]]',
+            profiler,
+        )
         self.assertIn("profile_phase=setup", legacy_setup)
         self.assertIn('profile_phase="setup-$phase_set"', legacy_setup)
         self.assertIn(
