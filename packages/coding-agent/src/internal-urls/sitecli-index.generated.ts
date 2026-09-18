@@ -1,19 +1,25 @@
 // AUTO-GENERATED — do not edit. Run `bun generate-sitecli-index` to regenerate.
 //
-// Source: f5-sales-demo/mcn sitecli/catalog.json, captured from a live Customer Edge.
+// Source: f5-sales-demo/multi-cloud-networking sitecli/catalog.json, captured from a live Customer Edge.
 // The command surface depends on the node software build, so SITECLI_BUILD records
 // which build this describes.
 
-export const SITECLI_BUILD = "crt-20250613-3382";
+export const SITECLI_BUILD = "crt-20260201-0179";
 
 export const SITECLI_SOURCE = {
 	node: "f5-xc-ce-vm-01",
-	site: "ar-bgp-eastus01",
+	site: "mcn-ce-ha-eastus01",
 } as const;
 
 export const SITECLI_COMMANDS = {
 	"chronyc-sources": {
 		category: "Network Troubleshooting",
+		tier: "ExecUser",
+		transport: "exec-user",
+		mutating: false,
+	},
+	"collect-database-stats": {
+		category: "System Troubleshooting",
 		tier: "ExecUser",
 		transport: "exec-user",
 		mutating: false,
@@ -176,12 +182,36 @@ export const SITECLI_COMMANDS = {
 		transport: "exec-user",
 		mutating: false,
 	},
+	"iptables-lv": {
+		category: "Network Troubleshooting",
+		tier: "ExecUser",
+		transport: "exec-user",
+		mutating: false,
+	},
 	journalctl: {
 		category: "System Troubleshooting",
 		tier: "ExecUser",
 		transport: "exec-user",
 		mutating: false,
 		example: "-u vpm -n 200",
+	},
+	"marker-exists-crio": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
+	},
+	"marker-exists-kubelet": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
+	},
+	"marker-exists-NetworkManager": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
 	},
 	netstat: {
 		category: "Network Troubleshooting",
@@ -226,6 +256,30 @@ export const SITECLI_COMMANDS = {
 		tier: "ExecUser",
 		transport: "exec-user",
 		mutating: false,
+	},
+	"systemctl-restart-crio": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
+	},
+	"systemctl-restart-kubelet": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
+	},
+	"systemctl-restart-NetworkManager": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
+	},
+	"systemctl-start-crio-prune": {
+		category: "System Troubleshooting",
+		tier: "Exec",
+		transport: "exec",
+		mutating: true,
 	},
 	vif: {
 		category: "Network Troubleshooting",

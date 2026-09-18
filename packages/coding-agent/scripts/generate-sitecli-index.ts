@@ -1,7 +1,7 @@
 // Embeds the Customer Edge Site CLI command surface, so the agent knows it without a
 // network round trip.
 //
-// The source of truth is sitecli/catalog.json in f5-sales-demo/mcn, which is produced
+// The source of truth is sitecli/catalog.json in f5-sales-demo/multi-cloud-networking, which is produced
 // by capturing the node's own self-describing catalog rather than transcribed from any
 // document. Resolution order matches generate-terraform-index.ts and
 // generate-branding-index.ts: a sibling checkout first, then raw.githubusercontent.
@@ -10,11 +10,21 @@ import * as path from "node:path";
 
 const OUTPUT_FILE = path.join(import.meta.dir, "..", "src", "internal-urls", "sitecli-index.generated.ts");
 
-const LOCAL_CATALOG_PATH = path.resolve(import.meta.dir, "..", "..", "..", "..", "mcn", "sitecli", "catalog.json");
+const LOCAL_CATALOG_PATH = path.resolve(
+	import.meta.dir,
+	"..",
+	"..",
+	"..",
+	"..",
+	"multi-cloud-networking",
+	"sitecli",
+	"catalog.json",
+);
 
-const GITHUB_RAW_URL = "https://raw.githubusercontent.com/f5-sales-demo/mcn/main/sitecli/catalog.json";
+const GITHUB_RAW_URL =
+	"https://raw.githubusercontent.com/f5-sales-demo/multi-cloud-networking/main/sitecli/catalog.json";
 
-/** Shape of sitecli/catalog.json as committed by mcn. */
+/** Shape of sitecli/catalog.json as committed by multi-cloud-networking. */
 interface SiteCliCatalog {
 	build: string;
 	source?: { site?: string; node?: string };
@@ -84,7 +94,7 @@ function generateTypeScript(catalog: SiteCliCatalog): string {
 	return `${[
 		"// AUTO-GENERATED — do not edit. Run `bun generate-sitecli-index` to regenerate.",
 		"//",
-		"// Source: f5-sales-demo/mcn sitecli/catalog.json, captured from a live Customer Edge.",
+		"// Source: f5-sales-demo/multi-cloud-networking sitecli/catalog.json, captured from a live Customer Edge.",
 		"// The command surface depends on the node software build, so SITECLI_BUILD records",
 		"// which build this describes.",
 		"",

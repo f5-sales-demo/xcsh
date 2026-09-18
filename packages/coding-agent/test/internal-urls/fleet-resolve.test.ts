@@ -33,7 +33,7 @@ const GOVERNANCE = JSON.stringify({
 			scaffolding: { authority: "governed" },
 		},
 		repos: {
-			mcn: "content",
+			"multi-cloud-networking": "content",
 			waf: "content",
 			xcsh: "developer",
 			"api-specs": "developer",
@@ -62,7 +62,7 @@ describe("parseRepoClasses", () => {
 		const parsed = parseRepoClasses(GOVERNANCE);
 		expect(parsed).not.toBeNull();
 		expect(parsed?.defaultClass).toBe("developer");
-		expect(parsed?.repos.mcn).toBe("content");
+		expect(parsed?.repos["multi-cloud-networking"]).toBe("content");
 		expect(parsed?.classes.content?.authority).toBe("author");
 	});
 
@@ -78,20 +78,20 @@ describe("parseRepoClasses", () => {
 
 describe("repoNameFromOrigin", () => {
 	it("extracts the bare repo name from https and ssh remotes", () => {
-		expect(repoNameFromOrigin("https://github.com/f5-sales-demo/mcn.git")).toEqual({
+		expect(repoNameFromOrigin("https://github.com/f5-sales-demo/multi-cloud-networking.git")).toEqual({
 			org: "f5-sales-demo",
-			name: "mcn",
+			name: "multi-cloud-networking",
 		});
-		expect(repoNameFromOrigin("git@github.com:f5-sales-demo/mcn.git")).toEqual({
+		expect(repoNameFromOrigin("git@github.com:f5-sales-demo/multi-cloud-networking.git")).toEqual({
 			org: "f5-sales-demo",
-			name: "mcn",
+			name: "multi-cloud-networking",
 		});
 	});
 
 	it("parses org and name for any owner, trusted or not", () => {
 		// Parsing is deliberately owner-agnostic; trust is decided later by classifyRepo.
-		const other = repoNameFromOrigin("https://github.com/another-org/mcn.git");
-		expect(other?.name).toBe("mcn");
+		const other = repoNameFromOrigin("https://github.com/another-org/multi-cloud-networking.git");
+		expect(other?.name).toBe("multi-cloud-networking");
 		expect(other?.org).toBe("another-org");
 	});
 
@@ -104,7 +104,7 @@ describe("classifyRepo", () => {
 	const parsed = parseRepoClasses(GOVERNANCE);
 
 	it("returns the declared class for a governed repo", () => {
-		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "mcn" }).className).toBe("content");
+		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "multi-cloud-networking" }).className).toBe("content");
 		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "xcsh" }).className).toBe("developer");
 		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "docs-control" }).className).toBe("scaffolding");
 	});
@@ -117,7 +117,9 @@ describe("classifyRepo", () => {
 	});
 
 	it("reports UNCLASSIFIED when there is no manifest at all", () => {
-		expect(classifyRepo(null, { org: CURRENT_ORG, name: "mcn" }).className).toBe(CLASS_UNCLASSIFIED);
+		expect(classifyRepo(null, { org: CURRENT_ORG, name: "multi-cloud-networking" }).className).toBe(
+			CLASS_UNCLASSIFIED,
+		);
 	});
 });
 
@@ -132,8 +134,8 @@ describe("live session root (#2429 review)", () => {
 				return () => {};
 			},
 		};
-		const getCwd = createLiveCwdGetter("/work/mcn", events);
-		expect(getCwd()).toBe("/work/mcn");
+		const getCwd = createLiveCwdGetter("/work/multi-cloud-networking", events);
+		expect(getCwd()).toBe("/work/multi-cloud-networking");
 		for (const h of handlers) h("/work/xcsh");
 		expect(getCwd()).toBe("/work/xcsh");
 	});
@@ -146,33 +148,33 @@ describe("live session root (#2429 review)", () => {
 				return () => {};
 			},
 		};
-		const getCwd = createLiveCwdGetter("/work/mcn", events);
+		const getCwd = createLiveCwdGetter("/work/multi-cloud-networking", events);
 		for (const h of handlers) {
 			h(undefined);
 			h("");
 			h(42);
 		}
-		expect(getCwd()).toBe("/work/mcn");
+		expect(getCwd()).toBe("/work/multi-cloud-networking");
 	});
 
 	it("works with no event source at all", () => {
-		expect(createLiveCwdGetter("/work/mcn")()).toBe("/work/mcn");
+		expect(createLiveCwdGetter("/work/multi-cloud-networking")()).toBe("/work/multi-cloud-networking");
 	});
 });
 
 describe("organization trust boundary (#2429 review)", () => {
 	it("does not grant a foreign org's same-named repo the declared class", async () => {
-		// github.com/attacker/mcn must not inherit f5-sales-demo/mcn's authoring rights.
-		const doc = await render("https://github.com/some-other-org/mcn.git", GOVERNANCE);
+		// github.com/attacker/multi-cloud-networking must not inherit f5-sales-demo/multi-cloud-networking's authoring rights.
+		const doc = await render("https://github.com/some-other-org/multi-cloud-networking.git", GOVERNANCE);
 		expect(doc).not.toMatch(/class: \*\*content\*\*/);
 		expect(doc).toMatch(/outside|not part of|foreign|unrecognized/i);
 	});
 
 	it("classifies the current org, and only the current org", async () => {
-		const mine = await render(`https://github.com/${CURRENT_ORG}/mcn.git`, GOVERNANCE);
+		const mine = await render(`https://github.com/${CURRENT_ORG}/multi-cloud-networking.git`, GOVERNANCE);
 		expect(mine).toContain("class: **content**");
 
-		const foreign = await render("https://github.com/another-org/mcn.git", GOVERNANCE);
+		const foreign = await render("https://github.com/another-org/multi-cloud-networking.git", GOVERNANCE);
 		expect(foreign).not.toContain("class: **content**");
 	});
 
@@ -184,9 +186,11 @@ describe("organization trust boundary (#2429 review)", () => {
 
 	it("classifyRepo requires a trusted org", () => {
 		const parsed = parseRepoClasses(GOVERNANCE);
-		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "mcn" }).className).toBe("content");
-		expect(classifyRepo(parsed, { org: "some-other-org", name: "mcn" }).trustedOrg).toBe(false);
-		expect(classifyRepo(parsed, { org: "some-other-org", name: "mcn" }).className).not.toBe("content");
+		expect(classifyRepo(parsed, { org: CURRENT_ORG, name: "multi-cloud-networking" }).className).toBe("content");
+		expect(classifyRepo(parsed, { org: "some-other-org", name: "multi-cloud-networking" }).trustedOrg).toBe(false);
+		expect(classifyRepo(parsed, { org: "some-other-org", name: "multi-cloud-networking" }).className).not.toBe(
+			"content",
+		);
 	});
 });
 
@@ -202,7 +206,7 @@ describe("fail-closed guarantee for undeclared repos (#2429 review 2)", () => {
 				content: { authority: "author" },
 				developer: { authority: "delegate" },
 			},
-			repos: { mcn: "content" },
+			repos: { "multi-cloud-networking": "content" },
 		},
 	});
 
@@ -213,7 +217,7 @@ describe("fail-closed guarantee for undeclared repos (#2429 review 2)", () => {
 	});
 
 	it("still grants author to a repo that IS named content", async () => {
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", FAIL_OPEN);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", FAIL_OPEN);
 		expect(doc).toMatch(/Authority: author/);
 	});
 
@@ -229,22 +233,22 @@ describe("manifest provenance (#2429 review)", () => {
 	it("rejects a local manifest that is not published by docs-control", async () => {
 		const foreign = JSON.parse(GOVERNANCE);
 		foreign.source_repo = "attacker/docs-control";
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", JSON.stringify(foreign));
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", JSON.stringify(foreign));
 		// Untrusted provenance must not produce an authoring grant.
 		expect(doc).not.toMatch(/class: \*\*content\*\*/);
 	});
 
 	it("accepts a manifest published by docs-control", async () => {
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE);
 		expect(doc).toContain("class: **content**");
 	});
 });
 
 describe("xcsh://fleet document", () => {
 	it("leads with the current repo's verdict and its authority", async () => {
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE);
 		const head = doc.slice(0, doc.indexOf("## Fleet"));
-		expect(head).toContain("f5-sales-demo/mcn");
+		expect(head).toContain("f5-sales-demo/multi-cloud-networking");
 		expect(head).toContain("content");
 		expect(head).toMatch(/author/i);
 		// The authoring path must be stated, not implied.
@@ -270,23 +274,23 @@ describe("xcsh://fleet document", () => {
 	it("grants an untrusted org no authority and offers it no remedy", async () => {
 		// The old compatibility path classified a second org and printed a fix-your-remote
 		// hint. Both are gone: an untrusted owner now takes the ordinary foreign-org path.
-		const doc = await render("https://github.com/another-org/mcn.git", GOVERNANCE);
+		const doc = await render("https://github.com/another-org/multi-cloud-networking.git", GOVERNANCE);
 		expect(doc).not.toContain("class: **content**");
 		expect(doc).toMatch(/outside|not part of|foreign|unrecognized/i);
 		expect(doc).not.toContain("git remote set-url");
 	});
 
 	it("lists every class with its repos so the whole fleet is visible", async () => {
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE);
 		expect(doc).toContain("## Fleet");
-		for (const name of ["mcn", "waf", "xcsh", "api-specs", "docs-control"]) {
+		for (const name of ["multi-cloud-networking", "waf", "xcsh", "api-specs", "docs-control"]) {
 			expect(doc).toContain(name);
 		}
 	});
 
 	it("degrades with an actionable message when the manifest predates repo_classes", async () => {
 		const old = JSON.stringify({ source_repo: "x", skip_files: {}, protected_files: [] });
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", old);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", old);
 		expect(doc).toMatch(/not (yet )?published|unavailable/i);
 		expect(doc).toContain("governance.json");
 		// It must not invent a class.
@@ -294,7 +298,7 @@ describe("xcsh://fleet document", () => {
 	});
 
 	it("degrades when there is no governance file and gh is unavailable", async () => {
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", null);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", null);
 		expect(doc).toMatch(/unavailable|could not/i);
 		expect(doc).toContain("docs-control");
 	});
@@ -321,7 +325,7 @@ describe("xcsh://fleet document", () => {
 		const res = await resolver.resolve(parseUrl("xcsh://fleet"));
 		expect(received.join(" ")).toContain("docs-control");
 		expect(res.content).toContain("## Fleet");
-		expect(res.content).toContain("mcn");
+		expect(res.content).toContain("multi-cloud-networking");
 	});
 });
 
@@ -339,7 +343,7 @@ describe("partitionByAuthority", () => {
 		const parsed = parseRepoClasses(GOVERNANCE);
 		if (!parsed) throw new Error("fixture did not parse");
 		const part = partitionByAuthority(parsed);
-		expect(part.authored).toEqual(["mcn", "waf"]);
+		expect(part.authored).toEqual(["multi-cloud-networking", "waf"]);
 		expect(part.delegated).toEqual(["api-specs", "xcsh"]);
 		expect(part.governed).toEqual(["docs-control"]);
 		expect(part.unknown).toEqual([]);
@@ -364,11 +368,11 @@ describe("partitionByAuthority", () => {
 			classesOf({
 				_default: "developer",
 				classes: { odd: { authority: "curator" }, content: { authority: "author" } },
-				repos: { weird: "odd", mcn: "content" },
+				repos: { weird: "odd", "multi-cloud-networking": "content" },
 			}),
 		);
 		expect(part.unknown).toEqual(["weird"]);
-		expect(part.authored).toEqual(["mcn"]);
+		expect(part.authored).toEqual(["multi-cloud-networking"]);
 	});
 
 	it("never lists a repo assigned to an undefined class as authored", () => {
@@ -377,10 +381,10 @@ describe("partitionByAuthority", () => {
 			classesOf({
 				_default: "developer",
 				classes: { content: { authority: "author" } },
-				repos: { mcn: "content", oops: "undefined-class" },
+				repos: { "multi-cloud-networking": "content", oops: "undefined-class" },
 			}),
 		);
-		expect(part.authored).toEqual(["mcn"]);
+		expect(part.authored).toEqual(["multi-cloud-networking"]);
 		expect(part.unknown).toEqual(["oops"]);
 	});
 
@@ -416,14 +420,18 @@ describe("xcsh://fleet territory roster", () => {
 	}
 
 	it("names the repositories xcsh authors in, so the answer is read not inferred", async () => {
-		const territory = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
-		expect(territory).toContain("`mcn`");
+		const territory = territoryOf(
+			await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE),
+		);
+		expect(territory).toContain("`multi-cloud-networking`");
 		expect(territory).toContain("`waf`");
 		expect(territory).toMatch(/2 repositories/);
 	});
 
 	it("separates the delegated repos and names who they go to", async () => {
-		const territory = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		const territory = territoryOf(
+			await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE),
+		);
 		expect(territory).toContain("`xcsh`");
 		expect(territory).toContain("`api-specs`");
 		expect(territory).toContain("claude-code|codex");
@@ -431,19 +439,23 @@ describe("xcsh://fleet territory roster", () => {
 	});
 
 	it("states the roster is manifest-declared, not inferred from repo contents", async () => {
-		const territory = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		const territory = territoryOf(
+			await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE),
+		);
 		expect(territory).toMatch(/read from the manifest/i);
 		expect(territory).toContain("UNCLASSIFIED");
 	});
 
 	it("shows the same roster from a developer repo — it describes the fleet, not the cwd", async () => {
-		const fromContent = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		const fromContent = territoryOf(
+			await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE),
+		);
 		const fromDeveloper = territoryOf(await render("https://github.com/f5-sales-demo/xcsh.git", GOVERNANCE));
 		expect(fromDeveloper).toBe(fromContent);
 	});
 
 	it("appears after the current-repo verdict and before the class listing", async () => {
-		const doc = await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE);
+		const doc = await render("https://github.com/f5-sales-demo/multi-cloud-networking.git", GOVERNANCE);
 		expect(doc.indexOf("## This repository")).toBeLessThan(doc.indexOf("## Your territory"));
 		expect(doc.indexOf("## Your territory")).toBeLessThan(doc.indexOf("## Fleet"));
 	});

@@ -25,9 +25,9 @@ describe("classifyStartFolder", () => {
 	});
 
 	it("is github for an https remote, with the slug", () => {
-		expect(classifyStartFolder("/w", "https://github.com/f5-sales-demo/mcn.git")).toEqual({
+		expect(classifyStartFolder("/w", "https://github.com/f5-sales-demo/multi-cloud-networking.git")).toEqual({
 			kind: "github",
-			slug: "f5-sales-demo/mcn",
+			slug: "f5-sales-demo/multi-cloud-networking",
 		});
 	});
 
