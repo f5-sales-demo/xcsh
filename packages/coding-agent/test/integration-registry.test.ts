@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { IntegrationRegistry } from "../src/integrations/registry";
+import { describeSetupPlan, executeReviewedSetup } from "../src/integrations/setup";
 
 const ready = <T>(value: T) => ({ state: "ready" as const, value });
 
@@ -151,5 +152,35 @@ describe("IntegrationRegistry", () => {
 		registry.register("plugin:a", { id: "two", name: "Two", kind: "local", probe: async () => ready(2) });
 		expect(registry.unregisterOwner("plugin:a")).toBe(2);
 		expect(registry.list()).toEqual([]);
+	});
+
+	test("executes only the immutable reviewed argv and verifies once", async () => {
+		let probes = 0;
+		registry = new IntegrationRegistry();
+		const handle = registry.register("plugin:a", {
+			id: "github",
+			name: "GitHub",
+			plugin: "github@f5-sales-demo",
+			kind: "network",
+			setup: {
+				pluginDependencies: [],
+				requiredEnvironment: ["GH_HOST"],
+				profileFields: ["accounts"],
+				steps: [{ kind: "login", argv: ["gh", "auth", "login"], timeoutMs: 10_000 }],
+				verification: [{ argv: ["gh", "auth", "status"], timeoutMs: 5_000 }],
+			},
+			probe: async () => ready(++probes),
+		});
+		const reviewed = handle.setupPlan!;
+		const seen: string[][] = [];
+		const result = await executeReviewedSetup(handle, reviewed, async step => {
+			seen.push([...step.argv]);
+			return 0;
+		});
+		expect(seen).toEqual([["gh", "auth", "login"]]);
+		expect(result.value).toBe(1);
+		expect(probes).toBe(1);
+		expect(describeSetupPlan(handle)).toContain('["gh","auth","login"]');
+		expect(describeSetupPlan(handle)).toContain("GH_HOST");
 	});
 });

@@ -18,6 +18,8 @@ const ACTIONS: PluginAction[] = [
 	"marketplace",
 	"discover",
 	"upgrade",
+	"status",
+	"setup",
 ];
 
 export default class Plugin extends Command {

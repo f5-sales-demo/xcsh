@@ -4,9 +4,11 @@
  * Handles `xcsh plugin <command>` subcommands for plugin lifecycle management.
  */
 
+import { createInterface } from "node:readline/promises";
 import { APP_NAME, getProjectDir } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { resolveOrDefaultProjectRegistryPath } from "../discovery/helpers";
+import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import { PluginManager, parseSettingValue, validateSetting } from "../extensibility/plugins";
 import {
 	formatMarketplaceRefreshWarning,
@@ -16,7 +18,10 @@ import {
 	getPluginsCacheDir,
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace/index.js";
+import { describeSetupPlan, executeReviewedSetup } from "../integrations/setup";
+import type { IntegrationHandle } from "../integrations/types";
 import { theme } from "../modes/theme/theme";
+import { personProfileService } from "../person-profile/service";
 
 // =============================================================================
 // Types
@@ -34,7 +39,9 @@ export type PluginAction =
 	| "disable"
 	| "marketplace"
 	| "discover"
-	| "upgrade";
+	| "upgrade"
+	| "status"
+	| "setup";
 
 export interface PluginCommandArgs {
 	action: PluginAction;
@@ -69,6 +76,8 @@ const VALID_ACTIONS: PluginAction[] = [
 	"marketplace",
 	"discover",
 	"upgrade",
+	"status",
+	"setup",
 ];
 
 /**
@@ -187,7 +196,79 @@ export async function runPluginCommand(cmd: PluginCommandArgs): Promise<void> {
 		case "upgrade":
 			await handleUpgrade(cmd.args, cmd.flags);
 			break;
+		case "status":
+			await handleIntegrationStatus(cmd.args, cmd.flags);
+			break;
+		case "setup":
+			await handleIntegrationSetup(cmd.args, cmd.flags);
+			break;
 	}
+}
+
+async function loadIntegrationHandles(): Promise<IntegrationHandle<unknown>[]> {
+	const loaded = await discoverAndLoadExtensions([], process.cwd());
+	if (loaded.errors.length) throw new Error(`Unable to load ${loaded.errors.length} plugin extension(s)`);
+	return loaded.extensions.flatMap(extension => [...extension.integrations.values()]);
+}
+
+function matchesIntegration(handle: IntegrationHandle<unknown>, target: string): boolean {
+	return handle.id === target || handle.plugin === target || handle.plugin?.split("@")[0] === target;
+}
+
+async function handleIntegrationStatus(args: string[], flags: { json?: boolean }): Promise<void> {
+	if (args.length > 1) throw new Error(`Usage: ${APP_NAME} plugin status [plugin] [--json]`);
+	const handles = await loadIntegrationHandles();
+	const selected = args[0] ? handles.filter(handle => matchesIntegration(handle, args[0])) : handles;
+	if (args[0] && !selected.length) throw new Error(`No enabled integration is registered for ${args[0]}`);
+	const statuses = await Promise.all(
+		selected.map(async handle => {
+			const { value: _, ...status } = await handle.get();
+			return {
+				...status,
+				nextAction:
+					status.state === "setup_required" ? `${APP_NAME} plugin setup ${handle.plugin ?? handle.id}` : undefined,
+			};
+		}),
+	);
+	if (flags.json) {
+		process.stdout.write(`${JSON.stringify({ integrations: statuses })}\n`);
+		return;
+	}
+	if (!statuses.length) {
+		process.stdout.write("No enabled plugin integrations are registered.\n");
+		return;
+	}
+	for (const status of statuses) {
+		process.stdout.write(
+			`${status.plugin ?? status.id}: ${status.state}${status.reason ? ` (${status.reason})` : ""}\n`,
+		);
+		if (status.nextAction) process.stdout.write(`  next: ${status.nextAction}\n`);
+	}
+}
+
+async function handleIntegrationSetup(args: string[], flags: { json?: boolean }): Promise<void> {
+	if (flags.json) throw new Error("plugin setup is human-only and does not accept --json");
+	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin>`);
+	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
+	const matches = (await loadIntegrationHandles()).filter(handle => matchesIntegration(handle, args[0]));
+	if (!matches.length) throw new Error(`No enabled integration is registered for ${args[0]}`);
+	if (matches.length > 1) throw new Error(`Plugin ${args[0]} registers multiple integrations; use an integration id`);
+	const handle = matches[0];
+	const plan = handle.setupPlan;
+	if (!plan) throw new Error(`Integration ${handle.id} does not declare setup`);
+	process.stdout.write(`${describeSetupPlan(handle)}\n`);
+	const prompt = createInterface({ input: process.stdin, output: process.stdout });
+	try {
+		const answer = await prompt.question('Type "setup" to run this exact plan: ');
+		if (answer !== "setup") throw new Error("Plugin setup cancelled");
+	} finally {
+		prompt.close();
+	}
+	const result = await executeReviewedSetup(handle, plan);
+	await personProfileService.reconcileFromCollectors(undefined, 0);
+	process.stdout.write(
+		`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
+	);
 }
 
 // =============================================================================
