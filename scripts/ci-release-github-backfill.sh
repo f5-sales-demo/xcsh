@@ -54,12 +54,18 @@ find "$assets_dir" -maxdepth 1 -type f -exec basename {} \; | LC_ALL=C sort >"$w
 diff -u "$work/expected-names" "$work/local-names"
 
 gh api "repos/${repository}/immutable-releases" | jq -e '.enabled == true' >/dev/null
-releases=$(gh api "repos/${repository}/releases?per_page=100")
+# Draft releases are intentionally unavailable from the tag endpoint. Use a
+# cache-busted listing for resume discovery, then retain the create response
+# directly rather than re-listing and risking a stale CDN response.
+release_list_url="repos/${repository}/releases?per_page=100&cache_bust=$(date +%s)"
+releases=$(gh api "$release_list_url")
 release=$(jq -c --arg tag "$tag" '[.[] | select(.tag_name == $tag)] | if length == 0 then null elif length == 1 then .[0] else error("duplicate release tag") end' <<<"$releases")
 if [ "$release" = "null" ]; then
-  gh release create "$tag" --repo "$repository" --draft --generate-notes
-  releases=$(gh api "repos/${repository}/releases?per_page=100")
-  release=$(jq -c --arg tag "$tag" '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else error("draft release was not created") end' <<<"$releases")
+  release=$(gh api --method POST "repos/${repository}/releases" \
+    -f tag_name="$tag" \
+    -F draft=true \
+    -F prerelease=false \
+    -F generate_release_notes=true)
 fi
 jq -e --arg tag "$tag" '.tag_name == $tag and .draft == true and .prerelease == false and .immutable == false' <<<"$release" >/dev/null
 release_id=$(jq -r '.id' <<<"$release")

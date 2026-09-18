@@ -61,9 +61,15 @@ grep -Fq 'file_size()' "$script" || fail "uploader needs portable file-size look
 grep -Fq 'stat -f %z' "$script" || fail "uploader must support macOS file-size lookup"
 grep -Fq 'file_sha256()' "$script" || fail "uploader needs portable SHA-256 lookup"
 grep -Fq 'shasum -a 256' "$script" || fail "uploader must support macOS SHA-256 lookup"
+grep -Fq 'cache_bust=$(date +%s)' "$script" || fail "draft resume lookup must bypass stale release-list responses"
+grep -Fq 'release=$(gh api --method POST "repos/${repository}/releases"' "$script" || fail "draft creation must retain the API response"
+grep -Fq -- '-F draft=true' "$script" || fail "draft creation must remain draft-only before asset upload"
 
 if grep -Fq 'gh release create "$tag" "$assets_dir"/*' "$script"; then
   fail "bulk all-or-nothing release upload returned"
+fi
+if grep -Fq 'gh release create "$tag"' "$script"; then
+  fail "draft creation must not depend on a follow-up release-list read"
 fi
 
 valid_jobs=$(mktemp)
