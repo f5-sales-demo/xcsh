@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
 	CrashLoopBreaker,
@@ -9,7 +9,11 @@ import {
 	type ProcessIdentity,
 	withLifecycleLock,
 } from "../../src/remote-control/lifecycle-state";
-import { renderSystemdUserService, SystemdUserManager } from "../../src/remote-control/startup-manager";
+import {
+	renderSystemdUserService,
+	runSystemctlUser,
+	SystemdUserManager,
+} from "../../src/remote-control/startup-manager";
 
 const cleanup: string[] = [];
 afterEach(async () => {
@@ -163,6 +167,17 @@ test("the systemd user service contains no credentials and restarts only the sup
 	expect(unit).toContain("WantedBy=default.target");
 	expect(unit).not.toContain("token");
 	expect(unit).not.toContain("credential");
+});
+
+test("an unresponsive systemctl user command is bounded", async () => {
+	const bin = await mkdtemp("/tmp/xcsh-systemctl-timeout-");
+	cleanup.push(bin);
+	const command = join(bin, "systemctl");
+	await writeFile(command, "#!/bin/sh\nexec sleep 30\n");
+	await chmod(command, 0o700);
+	const started = Date.now();
+	expect(await runSystemctlUser(["show-environment"], command)).toEqual({ code: 124, stdout: "" });
+	expect(Date.now() - started).toBeLessThan(2_000);
 });
 
 test("systemd reconciliation enables reboot startup and intentional disable persists", async () => {
