@@ -215,7 +215,7 @@ describe("macOS release provenance", () => {
 		}
 	});
 
-	it("checks only package-owned paths when validating an installed package", async () => {
+	it("keeps expanded packages closed while allowing unrelated live-system tools", async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provenance-pkg-inventory-"));
 		try {
 			const binaryPath = path.join(root, "xcsh-darwin-arm64");
@@ -239,14 +239,24 @@ describe("macOS release provenance", () => {
 			await fs.copyFile(binaryPath, installedBinary);
 			await fs.copyFile(path.join(nativeDir, addonName), path.join(installedNatives, addonName));
 			await Bun.write(path.join(installedNatives, "provenance.json"), JSON.stringify(manifest));
-			await Bun.write(path.join(root, "unrelated-system-file"), "not package payload");
+			await Bun.write(path.join(root, "usr/local/bin/python3"), "not package payload");
+
+			await expect(
+				verifyMacOsProvenance({
+					manifest,
+					rootDir: root,
+					layout: "pkg",
+					inspectSignature: inspect,
+					rejectUnexpected: true,
+				}),
+			).rejects.toThrow("usr/local/bin/python3: unexpected file");
 
 			await verifyMacOsProvenance({
 				manifest,
 				rootDir: root,
 				layout: "pkg",
 				inspectSignature: inspect,
-				rejectUnexpected: true,
+				rejectUnexpected: false,
 			});
 
 			await Bun.write(path.join(installedNatives, "unexpected"), "extra");

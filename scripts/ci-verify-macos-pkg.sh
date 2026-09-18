@@ -30,7 +30,7 @@ native_root="/Library/Application Support/xcsh/natives/${version}"
 test -x "$binary"
 test -f "$native_root/provenance.json"
 bun scripts/macos-release-provenance.ts verify \
-  --manifest "$native_root/provenance.json" --root / --layout pkg
+  --manifest "$native_root/provenance.json" --root / --layout pkg --installed-system-root
 
 before=$(find "$binary" "$native_root" -type f -exec shasum -a 256 {} + | LC_ALL=C sort)
 sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" --version
