@@ -167,6 +167,11 @@ function inventoryRoots(manifest: MacOsProvenanceManifest, layout: "release" | "
 }
 
 function auxiliaryInventoryPaths(manifest: MacOsProvenanceManifest, layout: "release" | "homebrew" | "pkg"): string[] {
+	// The signed release staging directory retains the per-architecture manifest
+	// that is being verified. It is subsequently copied into the ZIP and PKG
+	// layouts under their respective canonical names. Permit only that exact
+	// architecture-bound staging file; every other root file remains unexpected.
+	if (layout === "release") return [`xcsh-darwin-${manifest.arch}.provenance.json`];
 	if (layout === "homebrew") return ["provenance/manifest.json"];
 	if (layout === "pkg") {
 		return [`Library/Application Support/xcsh/natives/${manifest.version}/provenance.json`];

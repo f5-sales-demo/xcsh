@@ -84,6 +84,46 @@ describe("macOS release provenance", () => {
 		}
 	});
 
+	it("permits only its exact architecture-bound manifest in release staging", async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provenance-release-staging-"));
+		try {
+			const binaryPath = path.join(root, "xcsh-darwin-arm64");
+			const addonPath = path.join(root, "pi_natives.darwin-arm64.node");
+			const inspect = async (file: string) => (file.endsWith(".node") ? validAddonSignature : validBinarySignature);
+			await Bun.write(binaryPath, "signed cli");
+			await Bun.write(addonPath, "signed addon");
+			const manifest = await createMacOsProvenanceManifest({
+				arch: "arm64",
+				version: "21.33.1",
+				binaryPath,
+				nativeDir: root,
+				inspectSignature: inspect,
+			});
+
+			await Bun.write(path.join(root, "xcsh-darwin-arm64.provenance.json"), JSON.stringify(manifest));
+			await verifyMacOsProvenance({
+				manifest,
+				rootDir: root,
+				layout: "release",
+				inspectSignature: inspect,
+				rejectUnexpected: true,
+			});
+
+			await Bun.write(path.join(root, "xcsh-darwin-x64.provenance.json"), "lookalike manifest");
+			await expect(
+				verifyMacOsProvenance({
+					manifest,
+					rootDir: root,
+					layout: "release",
+					inspectSignature: inspect,
+					rejectUnexpected: true,
+				}),
+			).rejects.toThrow("xcsh-darwin-x64.provenance.json: unexpected file");
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("rejects the wrong team, architecture, entitlement, and unexpected files", async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provenance-policy-"));
 		try {
