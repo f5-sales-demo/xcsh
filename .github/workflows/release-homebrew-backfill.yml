@@ -100,6 +100,9 @@ jobs:
             --pattern 'xcsh-*.zip' \
             --dir .release-source/packages/coding-agent/binaries
 
+      - name: Overlay trusted Homebrew publisher
+        run: cp scripts/ci-release-homebrew.ts .release-source/scripts/ci-release-homebrew.ts
+
       - name: Reconcile Homebrew tap
         working-directory: .release-source
         env:
