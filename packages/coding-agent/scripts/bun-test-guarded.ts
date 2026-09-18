@@ -18,7 +18,12 @@
  * identical; we only tee it to scan for the summary line.
  */
 const args = process.argv.slice(2);
-const SERIAL_TEST_FILES = ["test/remote-control/command.test.ts"];
+export const SERIAL_TEST_FILES = [
+	"test/remote-control/command.test.ts",
+	"test/update-cli.test.ts",
+	"test/remote-control/supervisor-process.test.ts",
+	"test/model-selector-registry-integration.test.ts",
+];
 const parallelWorkers = Number(
 	args.find(argument => argument.startsWith("--parallel="))?.slice("--parallel=".length) ?? "0",
 );

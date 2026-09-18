@@ -10,8 +10,8 @@ describe("file-worker contract", () => {
 	});
 
 	test("rejects invalid values and within-file concurrency", () => {
-		for (const value of ["-1", "1.5", "33", "two", "01"]) {
-			expect(() => parseFileWorkers([`--file-workers=${value}`], {})).toThrow("integer from 0 through 32");
+		for (const value of ["-1", "1.5", "41", "two", "01"]) {
+			expect(() => parseFileWorkers([`--file-workers=${value}`], {})).toThrow("integer from 0 through 40");
 		}
 		expect(() => parseFileWorkers(["--concurrent"], {})).toThrow("--concurrent is not supported");
 	});

@@ -23,6 +23,9 @@ installed_root="${caskroom}/xcsh/${expected}"
 archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}.zip"
 source_root="${TMPDIR:-/tmp}/xcsh-homebrew-source-${RELEASE_ARCH}"
 data_marker="${HOME}/.xcsh/no-sudo-homebrew-uat"
+baseline_version=21.32.0
+baseline_archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}-${baseline_version}.zip"
+baseline_cask_dir="${TMPDIR:-/tmp}/xcsh-baseline-cask"
 
 sha256() {
   shasum -a 256 "$1" | awk '{print $1}'
@@ -39,6 +42,57 @@ verify_developer_id() {
 
   assessment=$(spctl --assess --verbose=4 --type install "$file" 2>&1)
   grep -F "source=Notarized Developer ID" <<<"$assessment"
+}
+
+snapshot_installed() {
+  find "$installed_root/bin" "$installed_root/libexec" -type f -exec shasum -a 256 {} + | LC_ALL=C sort
+}
+
+verify_manifest() {
+  local root=$1 layout=$2 manifest=$3
+  /usr/bin/python3 - "$root" "$layout" "$manifest" <<'PY'
+import hashlib, json, pathlib, sys
+root, layout, manifest_path = pathlib.Path(sys.argv[1]), sys.argv[2], pathlib.Path(sys.argv[3])
+manifest = json.loads(manifest_path.read_text())
+assert manifest["schemaVersion"] == 1
+assert manifest["teamIdentifier"] == "97ZYL78T5F"
+expected = set()
+for item in manifest["files"]:
+    relative = pathlib.Path("bin/xcsh" if item["role"] == "cli" else f"libexec/{item['name']}")
+    expected.add(relative.as_posix())
+    target = root / relative
+    assert target.is_file(), target
+    assert target.stat().st_size == item["size"], target
+    assert hashlib.sha256(target.read_bytes()).hexdigest() == item["sha256"], target
+actual = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+assert actual == expected | {"provenance/manifest.json"}, (actual, expected)
+PY
+}
+
+verify_current_install() {
+  test -L "$installed_link"
+  resolved_binary=$(realpath "$installed_link")
+  test "$resolved_binary" = "$installed_root/bin/xcsh"
+  verify_manifest "$installed_root" homebrew "$installed_root/provenance/manifest.json"
+  test "$(sha256 "$source_root/bin/xcsh")" = "$(sha256 "$resolved_binary")"
+  verify_developer_id "$resolved_binary"
+
+  for source_native in "${source_natives[@]}"; do
+    installed_native="$installed_root/libexec/$(basename "$source_native")"
+    test -f "$installed_native"
+    test "$(sha256 "$source_native")" = "$(sha256 "$installed_native")"
+    verify_developer_id "$installed_native"
+  done
+
+  before=$(snapshot_installed)
+  "$installed_link" --version
+  "$installed_link" --help >/dev/null
+  PI_DEV=1 "$installed_link" sandbox check 2>&1 | tee "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
+  grep -F "Loaded native addon from ${installed_root}/libexec/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
+  "$installed_link" chrome recycle
+  "$installed_link" office recycle
+  after=$(snapshot_installed)
+  test "$before" = "$after"
 }
 
 assert_no_legacy_package() {
@@ -67,6 +121,8 @@ rm -rf "$source_root"
 mkdir -p "$source_root"
 unzip -q "$archive" -d "$source_root"
 test -x "$source_root/bin/xcsh"
+test -f "$source_root/provenance/manifest.json"
+verify_manifest "$source_root" homebrew "$source_root/provenance/manifest.json"
 shopt -s nullglob
 source_natives=("$source_root"/libexec/pi_natives.darwin-"${RELEASE_ARCH}"*.node)
 if [[ ${#source_natives[@]} -eq 0 ]]; then
@@ -96,24 +152,31 @@ for attempt in $(seq 1 "$max_attempts"); do
   if [[ "$delay" -lt 60 ]]; then delay=$((delay * 2)); fi
 done
 
-test -L "$installed_link"
-resolved_binary=$(realpath "$installed_link")
-test "$resolved_binary" = "$installed_root/bin/xcsh"
-test "$(sha256 "$source_root/bin/xcsh")" = "$(sha256 "$resolved_binary")"
-verify_developer_id "$resolved_binary"
+verify_current_install
 
-for source_native in "${source_natives[@]}"; do
-  installed_native="$installed_root/libexec/$(basename "$source_native")"
-  test -f "$installed_native"
-  test "$(sha256 "$source_native")" = "$(sha256 "$installed_native")"
-  verify_developer_id "$installed_native"
-done
-
-"$installed_link" --version
-"$installed_link" --help >/dev/null
-PI_DEV=1 "$installed_link" sandbox check 2>&1 | tee "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
-grep -F "Loaded native addon from ${installed_root}/libexec/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
+# Exercise a real immutable-baseline upgrade after the independent fresh-install gate.
+brew uninstall --cask xcsh
+curl --proto '=https' --tlsv1.2 -fsSLo "$baseline_archive" \
+  "https://github.com/f5-sales-demo/xcsh/releases/download/v${baseline_version}/xcsh-darwin-${RELEASE_ARCH}.zip"
+baseline_sha=$(sha256 "$baseline_archive")
+rm -rf "$baseline_cask_dir"
+mkdir -p "$baseline_cask_dir"
+baseline_cask="$baseline_cask_dir/xcsh.rb"
+cat >"$baseline_cask" <<RUBY
+cask "xcsh" do
+  version "${baseline_version}"
+  sha256 "${baseline_sha}"
+  url "https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-${RELEASE_ARCH}.zip"
+  name "xcsh"
+  homepage "https://github.com/f5-sales-demo/xcsh"
+  binary "bin/xcsh"
+end
+RUBY
+brew install --cask "$baseline_cask"
+"$installed_link" --version | grep -F "$baseline_version"
+brew tap "$tap"
 brew upgrade --cask xcsh
+verify_current_install
 
 assert_no_legacy_package
 brew uninstall --cask xcsh

@@ -572,6 +572,10 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(script).toContain("pkgutil --pkg-info com.f5.xcsh");
 		expect(script).toContain("/Library/Application Support/xcsh");
 		expect(script).toContain('test -f "$data_marker"');
+		expect(script).toContain("baseline_version=21.32.0");
+		expect(script).toContain("provenance/manifest.json");
+		expect(script).toContain('"$installed_link" chrome recycle');
+		expect(script).toContain('"$installed_link" office recycle');
 	});
 });
 
@@ -625,6 +629,34 @@ describe("macOS pkg release contract", () => {
 		expect(job).toContain('xcrun stapler staple "$pkg"');
 		expect(job).toContain('xcrun stapler validate "$pkg"');
 		expect(job).toContain('spctl --assess --verbose=4 --type install "$pkg"');
+	});
+
+	it("forbids release signature repair and soft verification", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const entitlements = await fs.readFile(path.join(import.meta.dir, "../../../scripts/entitlements.plist"), "utf8");
+		expect(workflow).not.toContain("codesign --remove-signature");
+		expect(workflow).not.toMatch(/codesign[^\n]*\|\| true/);
+		expect(workflow).not.toMatch(/codesign[^\n]*--sign\s+-/);
+		expect(workflow).not.toMatch(/stapler staple "$BINARY_PATH"/);
+		expect(workflow).toContain("macos-release-provenance.ts create");
+		expect(workflow).toContain("macos-release-provenance.ts verify");
+		expect(entitlements).not.toContain("disable-library-validation");
+		expect(entitlements.match(/<key>/g)?.length).toBe(2);
+	});
+
+	it("runs direct MDM package UAT on Intel and Apple silicon", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const job = workflow.match(/\n {2}verify-macos-pkg:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
+		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
+		expect(job).toContain("macos-14");
+		expect(job).toContain("macos-15-intel");
+		expect(job).toContain("scripts/ci-verify-macos-pkg.sh");
+		expect(script).toContain("pkgutil --check-signature");
+		expect(script).toContain("xcrun stapler validate");
+		expect(script).toContain("sudo installer -pkg");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
+		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
+		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');
 	});
 });
 

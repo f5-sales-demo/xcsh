@@ -29,7 +29,7 @@ on:
         type: choice
         options: [cold, warm]
       file_workers:
-        description: File-level worker count for d16-parallel (integer 1 through 32)
+        description: File-level worker count for d16-parallel (integer 1 through 40)
         required: true
         default: "1"
       pair_id:
@@ -93,7 +93,7 @@ jobs:
           esac
           case "$EXPERIMENT" in
             d16-parallel)
-              [[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-2])$ ]]
+              [[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-9]|40)$ ]]
               file_workers=$FILE_WORKERS
               ;;
             d16-burst)

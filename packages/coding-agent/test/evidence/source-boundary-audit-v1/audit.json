@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "e606d58ea45deae40b61f053d92e3e9c0fe9b80e",
+  "revision": "93a20509fed804184201523b9e32ee295302a06c",
   "fingerprint": "c41fdec03fb58380f042f34569d2e6d32588678e175e5f48d3227d254a28d9a9",
   "counts": {
     "total": 241,
@@ -1945,7 +1945,8 @@
         "packages/coding-agent/test/model-selector-registry-integration.test.ts",
         "packages/coding-agent/test/model-selector-role-badge-thinking.test.ts",
         "packages/coding-agent/test/provider-selector-layout.test.ts",
-        "packages/coding-agent/test/remote-control/model-lifecycle.test.ts"
+        "packages/coding-agent/test/remote-control/model-lifecycle.test.ts",
+        "packages/coding-agent/test/scripts/bun-test-guarded.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/model-selector.ts is individually classified as caller-owned-draft in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

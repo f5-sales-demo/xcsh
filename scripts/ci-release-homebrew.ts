@@ -3,6 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { $ } from "bun";
+import { type MacOsProvenanceManifest, verifyMacOsProvenance } from "./macos-release-provenance";
 
 const repoRoot = path.join(import.meta.dir, "..");
 const binariesDir = path.join(repoRoot, "packages", "coding-agent", "binaries");
@@ -80,6 +81,10 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 		}
 
 		const nativePrefix = `pi_natives.darwin-${target.arch}`;
+		const manifestPath = path.join(outputDir, `xcsh-darwin-${target.arch}.provenance.json`);
+		const manifest = (await Bun.file(manifestPath).json()) as MacOsProvenanceManifest;
+		if (manifest.arch !== target.arch) throw new Error(`Provenance architecture mismatch for ${target.archive}`);
+		await verifyMacOsProvenance({ manifest, rootDir: outputDir, layout: "release", inspectSignature: false });
 		const nativeNames = (await fs.readdir(outputDir))
 			.filter(name => name.startsWith(nativePrefix) && name.endsWith(".node"))
 			.sort();
@@ -98,9 +103,13 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 				await fs.copyFile(path.join(outputDir, name), stagedAddon);
 				stagedFiles.push(stagedAddon);
 			}
+			const stagedManifest = path.join(tmpDir, "provenance", "manifest.json");
+			await fs.mkdir(path.dirname(stagedManifest), { recursive: true });
+			await fs.copyFile(manifestPath, stagedManifest);
+			stagedFiles.push(stagedManifest);
 			await fs.rm(archivePath, { force: true });
 
-			const archiveEntries = ["bin/xcsh", ...nativeNames.map(name => `libexec/${name}`)];
+			const archiveEntries = ["bin/xcsh", ...nativeNames.map(name => `libexec/${name}`), "provenance/manifest.json"];
 			if (dryRun) {
 				console.log(`  DRY RUN: zip -X ${archivePath} ${archiveEntries.join(" ")}`);
 				continue;
@@ -108,6 +117,13 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 
 			if (epochSeconds === undefined) throw new Error("SOURCE_DATE_EPOCH was not resolved");
 			for (const stagedFile of stagedFiles) await fs.utimes(stagedFile, epochSeconds, epochSeconds);
+			await verifyMacOsProvenance({
+				manifest,
+				rootDir: tmpDir,
+				layout: "homebrew",
+				inspectSignature: false,
+				rejectUnexpected: true,
+			});
 			await $`zip -X ${archivePath} ${archiveEntries}`.cwd(tmpDir).quiet();
 			console.log(`  Created ${target.archive}`);
 		} finally {
