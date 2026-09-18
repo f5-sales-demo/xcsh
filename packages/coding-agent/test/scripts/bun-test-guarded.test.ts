@@ -9,6 +9,7 @@ describe("guarded TypeScript test runner", () => {
 			"test/update-cli.test.ts",
 			"test/remote-control/supervisor-process.test.ts",
 			"test/model-selector-registry-integration.test.ts",
+			"test/interactive-mode-plan-review.test.ts",
 		])
 			expect(source).toContain(file);
 	});

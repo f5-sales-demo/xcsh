@@ -23,6 +23,7 @@ export const SERIAL_TEST_FILES = [
 	"test/update-cli.test.ts",
 	"test/remote-control/supervisor-process.test.ts",
 	"test/model-selector-registry-integration.test.ts",
+	"test/interactive-mode-plan-review.test.ts",
 ];
 const parallelWorkers = Number(
 	args.find(argument => argument.startsWith("--parallel="))?.slice("--parallel=".length) ?? "0",
