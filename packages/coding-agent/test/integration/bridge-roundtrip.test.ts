@@ -6,7 +6,7 @@
  * and PendingRequests id-correlation end-to-end.
  */
 import { afterEach, describe, expect, it } from "bun:test";
-import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
+import { BridgeServer } from "../../src/browser/extension-bridge";
 import { authenticateBrowserSocket, browserBridgeOptions } from "../helpers/extension-bridge-fixture";
 
 describe("BridgeServer round-trip", () => {
@@ -21,7 +21,8 @@ describe("BridgeServer round-trip", () => {
 	});
 
 	it("sends a tool_request and receives a tool_result via WebSocket", async () => {
-		server = await startBridgeServer(0, browserBridgeOptions({ skipOriginCheck: true }));
+		server = new BridgeServer(browserBridgeOptions());
+		expect(server.listen(0, { skipOriginCheck: true })).toBe(true);
 		const port = server.port;
 
 		mockClient = new WebSocket(`ws://127.0.0.1:${port}`);
@@ -52,7 +53,8 @@ describe("BridgeServer round-trip", () => {
 	});
 
 	it("rejects with timeout when no response arrives", async () => {
-		server = await startBridgeServer(0, browserBridgeOptions({ skipOriginCheck: true }));
+		server = new BridgeServer(browserBridgeOptions());
+		expect(server.listen(0, { skipOriginCheck: true })).toBe(true);
 		const port = server.port;
 
 		// Connect but never reply.
