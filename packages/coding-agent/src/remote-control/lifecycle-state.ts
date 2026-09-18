@@ -6,6 +6,11 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const PROCESS_KINDS = ["supervisor", "host"] as const;
+const executableDigestCache = new Map<
+	string,
+	{ dev: number; ino: number; size: number; mtimeMs: number; ctimeMs: number; digest: string }
+>();
+const executableDigestInFlight = new Map<string, Promise<string>>();
 export type ProcessKind = (typeof PROCESS_KINDS)[number];
 
 export interface ProcessIdentity {
@@ -186,9 +191,40 @@ async function processStartTime(pid: number): Promise<string> {
 }
 
 async function sha256File(path: string): Promise<string> {
-	return createHash("sha256")
-		.update(await readFile(path))
-		.digest("hex");
+	const metadata = await stat(path);
+	const cached = executableDigestCache.get(path);
+	if (
+		cached &&
+		cached.dev === metadata.dev &&
+		cached.ino === metadata.ino &&
+		cached.size === metadata.size &&
+		cached.mtimeMs === metadata.mtimeMs &&
+		cached.ctimeMs === metadata.ctimeMs
+	)
+		return cached.digest;
+	const key = `${path}:${metadata.dev}:${metadata.ino}:${metadata.size}:${metadata.mtimeMs}:${metadata.ctimeMs}`;
+	const pending = executableDigestInFlight.get(key);
+	if (pending) return pending;
+	const digest = (async () => {
+		const value = createHash("sha256")
+			.update(await readFile(path))
+			.digest("hex");
+		executableDigestCache.set(path, {
+			dev: metadata.dev,
+			ino: metadata.ino,
+			size: metadata.size,
+			mtimeMs: metadata.mtimeMs,
+			ctimeMs: metadata.ctimeMs,
+			digest: value,
+		});
+		return value;
+	})();
+	executableDigestInFlight.set(key, digest);
+	try {
+		return await digest;
+	} finally {
+		executableDigestInFlight.delete(key);
+	}
 }
 
 export async function inspectProcess(pid: number, generation: number): Promise<ProcessIdentity | undefined> {

@@ -29,13 +29,29 @@ async function atomicText(path: string, content: string): Promise<void> {
 	await chmod(path, 0o600);
 }
 
-async function systemctl(args: string[]): Promise<{ code: number; stdout: string }> {
+const SYSTEMCTL_TIMEOUT_MS = 1_000;
+
+export async function runSystemctlUser(
+	args: string[],
+	command = "systemctl",
+): Promise<{ code: number; stdout: string }> {
 	return new Promise(resolve => {
-		const child = spawn("systemctl", ["--user", ...args], { stdio: ["ignore", "pipe", "ignore"] });
+		const child = spawn(command, ["--user", ...args], { stdio: ["ignore", "pipe", "ignore"] });
 		let stdout = "";
+		let settled = false;
+		const finish = (result: { code: number; stdout: string }) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timeout);
+			resolve(result);
+		};
 		child.stdout.on("data", chunk => (stdout += String(chunk)));
-		child.once("error", () => resolve({ code: 127, stdout: "" }));
-		child.once("close", code => resolve({ code: code ?? 1, stdout: stdout.trim() }));
+		child.once("error", () => finish({ code: 127, stdout: "" }));
+		child.once("close", code => finish({ code: code ?? 1, stdout: stdout.trim() }));
+		const timeout = setTimeout(() => {
+			child.kill("SIGTERM");
+			finish({ code: 124, stdout: stdout.trim() });
+		}, SYSTEMCTL_TIMEOUT_MS);
 	});
 }
 
@@ -45,7 +61,7 @@ export class SystemdUserManager {
 		configHome: string,
 		private readonly executablePath: string,
 		private readonly sourceArguments: string[] = [],
-		private readonly run: (args: string[]) => Promise<{ code: number; stdout: string }> = systemctl,
+		private readonly run: (args: string[]) => Promise<{ code: number; stdout: string }> = runSystemctlUser,
 	) {
 		this.unitPath = join(configHome, "systemd", "user", REMOTE_CONTROL_SERVICE);
 	}
