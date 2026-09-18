@@ -40,7 +40,11 @@ verify_developer_id() {
   grep -F "Authority=Developer ID Application" <<<"$details"
   grep -F "TeamIdentifier=97ZYL78T5F" <<<"$details"
 
-  assessment=$(spctl --assess --verbose=4 --type install "$file" 2>&1)
+  if ! assessment=$(spctl --assess --verbose=4 --type execute "$file" 2>&1); then
+    echo "::error::Gatekeeper executable assessment failed for $file" >&2
+    echo "$assessment" >&2
+    return 1
+  fi
   grep -F "source=Notarized Developer ID" <<<"$assessment"
 }
 

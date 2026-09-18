@@ -38,6 +38,8 @@ describe("release Homebrew backfill workflow contract", () => {
 		expect(workflow).toContain("arch: arm64");
 		expect(workflow).toContain('cd "$UAT_HOME"');
 		expect(workflow).toContain('sudo -H -u "$UAT_USER" env');
+		expect(workflow).toContain("path: .controller");
+		expect(workflow).toContain(".controller/scripts/ci-verify-homebrew-cask.sh");
 		expect(workflow).toContain('RELEASE_ARCH="$RELEASE_ARCH"');
 		expect(workflow).toContain('PATH="$UAT_BREW_PREFIX/bin:/usr/bin:/bin:/usr/sbin:/sbin"');
 		expect(workflow).toContain('/bin/bash "$UAT_HOME/ci-verify-homebrew-cask.sh"');

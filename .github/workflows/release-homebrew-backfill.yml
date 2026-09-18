@@ -127,6 +127,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          path: .controller
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
           ref: ${{ inputs.tag }}
 
       - name: Prepare writable Homebrew for a standard account
@@ -144,7 +149,7 @@ jobs:
           fi
           brew_prefix=$(brew --prefix)
           sudo mkdir -p "$uat_home/tmp"
-          sudo cp scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
+          sudo cp .controller/scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
           sudo chown -R "$UAT_USER":staff "$uat_home" "$brew_prefix"
           {
             echo "UAT_USER=$UAT_USER"
