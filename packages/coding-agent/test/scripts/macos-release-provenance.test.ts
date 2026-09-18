@@ -175,6 +175,55 @@ describe("macOS release provenance", () => {
 		}
 	});
 
+	it("checks only package-owned paths when validating an installed package", async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provenance-pkg-inventory-"));
+		try {
+			const binaryPath = path.join(root, "xcsh-darwin-arm64");
+			const nativeDir = path.join(root, "native");
+			const addonName = "pi_natives.darwin-arm64.node";
+			const inspect = async (file: string) => (file.endsWith(".node") ? validAddonSignature : validBinarySignature);
+			await fs.mkdir(nativeDir);
+			await Bun.write(binaryPath, "signed cli");
+			await Bun.write(path.join(nativeDir, addonName), "signed addon");
+			const manifest = await createMacOsProvenanceManifest({
+				arch: "arm64",
+				version: "21.33.1",
+				binaryPath,
+				nativeDir,
+				inspectSignature: inspect,
+			});
+			const installedBinary = path.join(root, "usr/local/bin/xcsh");
+			const installedNatives = path.join(root, "Library/Application Support/xcsh/natives/21.33.1");
+			await fs.mkdir(path.dirname(installedBinary), { recursive: true });
+			await fs.mkdir(installedNatives, { recursive: true });
+			await fs.copyFile(binaryPath, installedBinary);
+			await fs.copyFile(path.join(nativeDir, addonName), path.join(installedNatives, addonName));
+			await Bun.write(path.join(installedNatives, "provenance.json"), JSON.stringify(manifest));
+			await Bun.write(path.join(root, "unrelated-system-file"), "not package payload");
+
+			await verifyMacOsProvenance({
+				manifest,
+				rootDir: root,
+				layout: "pkg",
+				inspectSignature: inspect,
+				rejectUnexpected: true,
+			});
+
+			await Bun.write(path.join(installedNatives, "unexpected"), "extra");
+			await expect(
+				verifyMacOsProvenance({
+					manifest,
+					rootDir: root,
+					layout: "pkg",
+					inspectSignature: inspect,
+					rejectUnexpected: true,
+				}),
+			).rejects.toThrow("unexpected file");
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("rejects a correctly named payload with the wrong Mach-O architecture", async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provenance-architecture-"));
 		try {
