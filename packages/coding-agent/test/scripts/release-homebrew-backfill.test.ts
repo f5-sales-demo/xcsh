@@ -41,7 +41,7 @@ describe("release Homebrew backfill workflow contract", () => {
 		expect(workflow).toContain("path: .controller");
 		expect(workflow).toContain(".controller/scripts/ci-verify-homebrew-cask.sh");
 		const uatStart = workflow.indexOf("verify-homebrew-install:");
-		const tagCheckout = workflow.indexOf("ref: ${{ inputs.tag }}", uatStart);
+		const tagCheckout = workflow.indexOf("ref: $" + "{{ inputs.tag }}", uatStart);
 		const controllerCheckout = workflow.indexOf("path: .controller", uatStart);
 		const verifierCopy = workflow.indexOf(".controller/scripts/ci-verify-homebrew-cask.sh", uatStart);
 		expect(tagCheckout).toBeGreaterThan(uatStart);
