@@ -35,8 +35,8 @@ bun scripts/macos-release-provenance.ts verify \
 before=$(find "$binary" "$native_root" -type f -exec shasum -a 256 {} + | LC_ALL=C sort)
 sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" --version
 sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" --help >/dev/null
-sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" sandbox check 2>&1 \
-  | tee "$RUNNER_TEMP/xcsh-mdm-native-load.log"
+sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" sandbox check 2>&1 |
+  tee "$RUNNER_TEMP/xcsh-mdm-native-load.log"
 grep -F "Loaded native addon from ${native_root}/" "$RUNNER_TEMP/xcsh-mdm-native-load.log"
 sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" chrome recycle
 sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" office recycle
