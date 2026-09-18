@@ -18,9 +18,8 @@ on:
           - d16-serial
           - d16-parallel
           - d16-hardware
-          - f32-hardware
+          - f32-parallel
           - d16-burst
-          - f32-burst
           - dag-control
           - dag-candidate
       cache_state:
@@ -29,7 +28,7 @@ on:
         type: choice
         options: [cold, warm]
       file_workers:
-        description: File-level worker count for d16-parallel (integer 1 through 40)
+        description: File-level worker count for d16-parallel or f32-parallel (integer 1 through 40)
         required: true
         default: "1"
       pair_id:
@@ -85,24 +84,20 @@ jobs:
               runner_label=xcsh-compute-16-vcpu-candidate
               expected_image_digest=$CANDIDATE_IMAGE_DIGEST
               ;;
-            f32-hardware|f32-burst)
-              runner_label=xcsh-compute-f32-candidate
+            f32-parallel)
+              runner_label=xcsh-compute-32-vcpu-density-candidate
               expected_image_digest=$CANDIDATE_IMAGE_DIGEST
               ;;
             *) exit 2 ;;
           esac
           case "$EXPERIMENT" in
-            d16-parallel)
+            d16-parallel|f32-parallel)
               [[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-9]|40)$ ]]
               file_workers=$FILE_WORKERS
               ;;
             d16-burst)
               max_parallel=4
               matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[range(1;5) | {sample:($pair + "-slot-" + tostring)}]}')
-              ;;
-            f32-burst)
-              max_parallel=2
-              matrix=$(jq -cn --arg pair "$PAIR_ID" '{include:[range(1;3) | {sample:($pair + "-slot-" + tostring)}]}')
               ;;
           esac
           [[ "$expected_image_digest" =~ ^(ghcr\.io/f5-sales-demo|f5salesdemoarcca\.azurecr\.io|[0-9]{12}\.dkr\.ecr\.us-east-1\.amazonaws\.com)/self-hosted-runner@sha256:[0-9a-f]{64}$ ]]
