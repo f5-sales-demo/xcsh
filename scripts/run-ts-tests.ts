@@ -5,14 +5,14 @@ import { spawn } from "bun";
 /** Number of Bun file workers. Zero preserves the serial production path. */
 export type FileWorkers = number;
 
-export const MAX_FILE_WORKERS = 32;
+export const MAX_FILE_WORKERS = 40;
 
 export function parseFileWorkers(
 	args: readonly string[],
 	environment: Record<string, string | undefined> = Bun.env,
 ): FileWorkers {
 	if (args.some(argument => argument === "--concurrent" || argument.startsWith("--concurrent="))) {
-		throw new Error("--concurrent is not supported; use --file-workers=<0..32> for file-level parallelism");
+		throw new Error("--concurrent is not supported; use --file-workers=<0..40> for file-level parallelism");
 	}
 	const option = args.find(argument => argument.startsWith("--file-workers="));
 	const raw = option?.slice("--file-workers=".length) ?? environment.XCSH_TEST_FILE_WORKERS ?? "0";
