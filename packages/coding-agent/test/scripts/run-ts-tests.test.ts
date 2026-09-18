@@ -17,21 +17,21 @@ describe("guarded TypeScript test runner", () => {
 	});
 
 	it("allows explicitly qualified AWS file-worker counts", () => {
-		for (const workers of [1, 10, 20, 32] as const) {
+		for (const workers of [1, 10, 20, 32, 40] as const) {
 			expect(parseFileWorkers([`--file-workers=${workers}`], {})).toBe(workers);
 			expect(testCommand(workers)).toContain(`--parallel=${workers}`);
 		}
 	});
 
 	it("rejects values outside the bounded integer range", () => {
-		for (const value of ["-1", "33", "1.5", "unbounded"]) {
-			expect(() => parseFileWorkers([], { XCSH_TEST_FILE_WORKERS: value })).toThrow("integer from 0 through 32");
+		for (const value of ["-1", "41", "1.5", "unbounded"]) {
+			expect(() => parseFileWorkers([], { XCSH_TEST_FILE_WORKERS: value })).toThrow("integer from 0 through 40");
 		}
 	});
 
 	it("never requests Bun's unbounded file scheduling mode", () => {
 		expect(testCommand(0).join(" ")).not.toContain("--concurrent");
-		for (const workers of [1, 10, 20, 32] as const) {
+		for (const workers of [1, 10, 20, 32, 40] as const) {
 			expect(testCommand(workers).join(" ")).not.toContain("--concurrent");
 		}
 	});
