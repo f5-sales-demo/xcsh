@@ -46,6 +46,11 @@ grep -Fq 'ci-release-github-backfill.sh' "$workflow" || fail "backfill script is
 
 expected_count=$(sed -n '/^expected_assets=(/,/^)/p' "$script" | grep -Ec '^  [A-Za-z0-9_.-]+$')
 test "$expected_count" -eq 19 || fail "expected release asset set must contain 19 names"
+grep -Fq 'xcsh-darwin-arm64.provenance.json' "$script" || fail "arm64 provenance sidecar is required"
+grep -Fq 'xcsh-darwin-x64.provenance.json' "$script" || fail "x64 provenance sidecar is required"
+if grep -Fq 'xcsh-linux-arm64.tar.gz' "$script" || grep -Fq 'xcsh-linux-x64.tar.gz' "$script"; then
+  fail "backfill must not require Linux tarballs that source artifacts do not contain"
+fi
 grep -Fq '.state == "uploaded" and .size == $size and .digest == $digest' "$script" || fail "resumed assets are not hash verified"
 grep -Fq 'for attempt in 1 2 3 4 5' "$script" || fail "upload retries are not bounded"
 grep -Fq 'release upload "$tag" "$asset" --repo "$repository" --clobber' "$script" || fail "resumable upload command is missing"
