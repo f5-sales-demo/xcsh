@@ -36,14 +36,14 @@ expected_assets=(
   pi_natives.win32-x64-modern.node
   xcsh-darwin-arm64
   xcsh-darwin-arm64.pkg
+  xcsh-darwin-arm64.provenance.json
   xcsh-darwin-arm64.zip
   xcsh-darwin-x64
   xcsh-darwin-x64.pkg
+  xcsh-darwin-x64.provenance.json
   xcsh-darwin-x64.zip
   xcsh-linux-arm64
-  xcsh-linux-arm64.tar.gz
   xcsh-linux-x64
-  xcsh-linux-x64.tar.gz
   xcsh-windows-x64.exe
 )
 
