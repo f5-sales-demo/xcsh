@@ -39,6 +39,9 @@ grep -Fq 'release-binaries-macos-*-signed' "$workflow" || fail "signed macOS art
 grep -Fq 'archives-first.sha256' "$workflow" || fail "first deterministic archive pass is missing"
 grep -Fq 'archives-second.sha256' "$workflow" || fail "second deterministic archive pass is missing"
 grep -Fq 'shasum -a 256' "$workflow" || fail "backfill must use macOS-compatible SHA-256 tooling"
+if grep -Fq 'packages/coding-agent/binaries/*.tar.gz' "$workflow"; then
+  fail "deterministic macOS archive check must not reference non-produced tarballs"
+fi
 grep -Fq 'ci-release-github-backfill.sh' "$workflow" || fail "backfill script is not invoked"
 
 expected_count=$(sed -n '/^expected_assets=(/,/^)/p' "$script" | grep -Ec '^  [A-Za-z0-9_.-]+$')

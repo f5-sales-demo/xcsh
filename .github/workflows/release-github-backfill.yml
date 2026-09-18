@@ -106,9 +106,9 @@ jobs:
           [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]
           export SOURCE_DATE_EPOCH
           bun scripts/ci-release-homebrew.ts --package-only
-          shasum -a 256 packages/coding-agent/binaries/*.zip packages/coding-agent/binaries/*.tar.gz | LC_ALL=C sort > "$RUNNER_TEMP/archives-first.sha256"
+          shasum -a 256 packages/coding-agent/binaries/*.zip | LC_ALL=C sort > "$RUNNER_TEMP/archives-first.sha256"
           bun scripts/ci-release-homebrew.ts --package-only
-          shasum -a 256 packages/coding-agent/binaries/*.zip packages/coding-agent/binaries/*.tar.gz | LC_ALL=C sort > "$RUNNER_TEMP/archives-second.sha256"
+          shasum -a 256 packages/coding-agent/binaries/*.zip | LC_ALL=C sort > "$RUNNER_TEMP/archives-second.sha256"
           diff -u "$RUNNER_TEMP/archives-first.sha256" "$RUNNER_TEMP/archives-second.sha256"
 
       - name: Create or resume immutable GitHub release
