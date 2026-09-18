@@ -87,7 +87,7 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			expect(getBuiltinMarketplaceSnapshot().catalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"9e0ca8d299c7da4d45585dc391d1f2f4102e1e9b45b549a82da0b68200db344d",
+				"97f582dcb351fa23830e8e89e405d220be605aafe553941276424155a3c1f4a2",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
