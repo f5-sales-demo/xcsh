@@ -128,6 +128,11 @@ class CiCapacityContractTests(unittest.TestCase):
             "checked-out source SHA $source_commit does not match expected source SHA $expected_source_sha",
             profiler,
         )
+        for experiment_consumer in (legacy_setup, profiler):
+            self.assertIn(
+                "d16-parallel | f32-parallel | d16-hardware",
+                experiment_consumer,
+            )
         self.assertIn("profile_phase=setup", legacy_setup)
         self.assertIn('profile_phase="setup-$phase_set"', legacy_setup)
         self.assertIn(
