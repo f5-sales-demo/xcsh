@@ -61,7 +61,7 @@ function catalogToDashboard(entry: MarketplacePluginEntry, marketplace: string):
 		enabled: false,
 		hasUpdate: false,
 		recommended: entry.recommended,
-		prerequisites: entry.prerequisites,
+		lifecycle: entry.lifecycle,
 	};
 }
 
@@ -98,7 +98,7 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 				for (const existing of plugins.filter(p => p.source === "marketplace" && p.id === pluginId)) {
 					existing.displayName = existing.displayName || entry.displayName;
 					existing.recommended = existing.recommended || entry.recommended;
-					existing.prerequisites = existing.prerequisites || entry.prerequisites;
+					existing.lifecycle = existing.lifecycle || entry.lifecycle;
 					existing.description = existing.description || entry.description;
 					existing.category = existing.category || entry.category;
 					existing.tags = existing.tags || entry.tags;

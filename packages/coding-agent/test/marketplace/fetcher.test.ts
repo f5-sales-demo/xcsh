@@ -69,11 +69,26 @@ describe("classifySource", () => {
 // ── parseMarketplaceCatalog ───────────────────────────────────────────
 
 describe("parseMarketplaceCatalog", () => {
+	const CONTENT_LIFECYCLE = {
+		mode: "content",
+		integrations: [],
+		requirements: [],
+		setupRequired: false,
+		collectedData: [],
+		pluginDependencies: [],
+	};
 	const VALID = JSON.stringify({
 		name: "test-marketplace",
 		owner: { name: "Test Author", email: "test@example.com" },
 		metadata: { description: "A test marketplace" },
-		plugins: [{ name: "hello-plugin", source: "./plugins/hello-plugin", description: "Greets" }],
+		plugins: [
+			{
+				name: "hello-plugin",
+				source: "./plugins/hello-plugin",
+				description: "Greets",
+				lifecycle: CONTENT_LIFECYCLE,
+			},
+		],
 	});
 
 	it("parses a valid catalog", () => {
@@ -129,10 +144,19 @@ describe("parseMarketplaceCatalog", () => {
 		const content = JSON.stringify({
 			name: "my-market",
 			owner: { name: "x" },
-			plugins: [{ name: "p1", source: { source: "github", repo: "owner/repo" } }],
+			plugins: [{ name: "p1", source: { source: "github", repo: "owner/repo" }, lifecycle: CONTENT_LIFECYCLE }],
 		});
 		const catalog = parseMarketplaceCatalog(content, "/f.json");
 		expect(catalog.plugins[0].name).toBe("p1");
+	});
+
+	it("rejects plugins without lifecycle metadata", () => {
+		const content = JSON.stringify({
+			name: "my-market",
+			owner: { name: "x" },
+			plugins: [{ name: "p1", source: "./p1" }],
+		});
+		expect(() => parseMarketplaceCatalog(content, "/f.json")).toThrow("plugins[0].lifecycle");
 	});
 
 	it("throws on invalid JSON", () => {

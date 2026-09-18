@@ -1708,13 +1708,15 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							break;
 						}
 						const matches = (runtime.ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? []).filter(
-							handle => handle.id === rest || handle.plugin === rest || handle.plugin?.split("@")[0] === rest,
+							handle =>
+								(handle.id === rest || handle.plugin === rest || handle.plugin?.split("@")[0] === rest) &&
+								handle.setupPlan !== undefined,
 						);
 						if (matches.length !== 1) {
 							runtime.ctx.showError(
 								matches.length
-									? `Plugin ${rest} registers multiple integrations; use an integration id.`
-									: `No enabled integration is registered for ${rest}.`,
+									? `Plugin ${rest} registers multiple setup plans; use an integration id.`
+									: `No setup plan is registered for ${rest}.`,
 							);
 							break;
 						}
@@ -1722,6 +1724,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const plan = handle.setupPlan;
 						if (!plan) {
 							runtime.ctx.showError(`Integration ${handle.id} does not declare setup.`);
+							break;
+						}
+						const current = await handle.get();
+						if (current.state === "ready") {
+							showPluginStatus(`${handle.plugin ?? handle.id}: ready (setup is not required)`);
 							break;
 						}
 						let result: Awaited<ReturnType<typeof executeReviewedSetup>> | undefined;

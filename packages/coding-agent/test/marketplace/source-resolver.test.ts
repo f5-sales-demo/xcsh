@@ -11,7 +11,18 @@ const FIXTURE_DIR = path.resolve(import.meta.dir, "fixtures/valid-marketplace");
 
 // Helper — build a minimal MarketplacePluginEntry with the given source
 function makeEntry(source: MarketplacePluginEntry["source"]): MarketplacePluginEntry {
-	return { name: "hello-plugin", source };
+	return {
+		name: "hello-plugin",
+		source,
+		lifecycle: {
+			mode: "content",
+			integrations: [],
+			requirements: [],
+			setupRequired: false,
+			collectedData: [],
+			pluginDependencies: [],
+		},
+	};
 }
 
 describe("resolvePluginSource", () => {

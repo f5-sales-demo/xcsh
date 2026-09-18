@@ -1,3 +1,5 @@
+import type { MarketplacePluginLifecycle } from "../../../extensibility/plugins/marketplace/types";
+
 export interface DashboardPlugin {
 	id: string;
 	name: string;
@@ -19,13 +21,7 @@ export interface DashboardPlugin {
 	hasUpdate: boolean;
 	updateVersion?: string;
 	recommended?: boolean;
-	prerequisites?: Array<{
-		tool: string;
-		installCmd: string;
-		detectCmd: string;
-		authDetectCmd?: string;
-		authLoginCmd?: string;
-	}>;
+	lifecycle?: MarketplacePluginLifecycle;
 }
 
 export type PluginTabId = "installed" | "recommended" | "discover" | "updates";
@@ -55,7 +51,7 @@ export interface PluginBulkResult {
 	installed: number;
 	failed: number;
 	total: number;
-	authenticationNeeded: string[];
+	setupRequired: string[];
 }
 
 /** Persistent operations exposed by the plugin backends to the interactive manager. */

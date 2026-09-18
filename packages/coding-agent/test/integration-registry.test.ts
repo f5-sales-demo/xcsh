@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { reviewAndExecuteIntegrationSetup, selectSetupIntegration } from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
 import { describeSetupPlan, executeReviewedSetup } from "../src/integrations/setup";
 
@@ -182,5 +183,59 @@ describe("IntegrationRegistry", () => {
 		expect(probes).toBe(1);
 		expect(describeSetupPlan(handle)).toContain('["gh","auth","login"]');
 		expect(describeSetupPlan(handle)).toContain("GH_HOST");
+	});
+
+	test("selects the sole setup-bearing integration for a multi-integration plugin", () => {
+		registry = new IntegrationRegistry();
+		const account = registry.register("plugin:github", {
+			id: "github",
+			name: "GitHub",
+			plugin: "github",
+			kind: "network",
+			setup: {
+				pluginDependencies: [],
+				requiredEnvironment: [],
+				profileFields: ["accounts"],
+				steps: [{ kind: "login", argv: ["gh", "auth", "login"], timeoutMs: 10_000 }],
+				verification: [{ argv: ["gh", "api", "user"], timeoutMs: 5_000 }],
+			},
+			probe: async () => ready(undefined),
+		});
+		registry.register("plugin:github", {
+			id: "github_email",
+			name: "GitHub email",
+			plugin: "github",
+			kind: "network",
+			probe: async () => ready(undefined),
+		});
+		expect(selectSetupIntegration(registry.list(), "github")).toBe(account);
+	});
+
+	test("does not execute setup or verification when the integration is already ready", async () => {
+		const get = async () => ({
+			id: "github",
+			name: "GitHub",
+			state: "ready" as const,
+			checkedAt: 1,
+			durationMs: 0,
+		});
+		const verifyAfterSetup = () => {
+			throw new Error("setup must not run");
+		};
+		const result = await reviewAndExecuteIntegrationSetup({
+			id: "github",
+			name: "GitHub",
+			setupPlan: {
+				pluginDependencies: [],
+				requiredEnvironment: [],
+				profileFields: [],
+				steps: [{ kind: "login", argv: ["never"], timeoutMs: 1_000 }],
+				verification: [],
+			},
+			get,
+			invalidate() {},
+			verifyAfterSetup,
+		});
+		expect(result.state).toBe("ready");
 	});
 });

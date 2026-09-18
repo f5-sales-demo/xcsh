@@ -9,7 +9,6 @@ import type {
 	PluginUpdate,
 } from "../extensibility/plugins/marketplace";
 import { fetchMarketplace } from "../extensibility/plugins/marketplace";
-import { setupTool } from "../extensibility/plugins/marketplace/prerequisites";
 import type { ActionReview } from "../modes/components/reviewed-action";
 import { StaleActionReviewError } from "../modes/components/reviewed-action";
 
@@ -83,7 +82,7 @@ export interface PreparedPluginSetup {
 export interface PluginSetupResult {
 	installed: string[];
 	failed: Array<{ pluginId: string; error: string }>;
-	authenticationNeeded: string[];
+	setupRequired: string[];
 }
 
 function pluginCatalogRevision(plugin: MarketplacePluginEntry): string {
@@ -195,11 +194,7 @@ export async function preparePluginInstall(
 				},
 				{ field: "Destination", before: oldEntry ? `${scope} scope` : "Absent", after: `${scope} scope` },
 			],
-			consequence: `${force ? "Reinstalls" : "Installs"} this exact catalog entry and writes the ${scope} registry. ${
-				catalog.prerequisites?.length
-					? `Declared prerequisites: ${catalog.prerequisites.map(item => `${item.tool} (${item.installCmd})`).join(", ")}.`
-					: "No prerequisites are declared."
-			} ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "The catalog preview is current."} --force controls replacement only; this review is still required.`,
+			consequence: `${force ? "Reinstalls" : "Installs"} this exact catalog entry and writes the ${scope} registry. Lifecycle: ${catalog.lifecycle.mode}; setup ${catalog.lifecycle.setupRequired ? "required" : "not required"}. ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "The catalog preview is current."} --force controls replacement only; this review is still required.`,
 		},
 		target: { name, marketplace, scope, force, catalogRevision },
 		warnings: preview.failed.map(source => `Using last-known catalog data for ${source}.`),
@@ -408,7 +403,7 @@ export async function preparePluginSetup(manager: MarketplaceManager): Promise<P
 	return {
 		review: {
 			identity: `plugins:recommended:${items.map(item => `${item.name}@${item.marketplace}`).join(",")}`,
-			scope: "User plugin registry, versioned cache, and declared prerequisite tools",
+			scope: "User plugin registry and versioned cache",
 			revision: JSON.stringify(
 				items.map(item => ({ id: `${item.name}@${item.marketplace}`, catalog: item.catalogRevision })),
 			),
@@ -417,15 +412,7 @@ export async function preparePluginSetup(manager: MarketplaceManager): Promise<P
 				before: "Not installed",
 				after: `${item.plugin.version ?? "resolved manifest version"} (user scope)`,
 			})),
-			consequence: `Installs ${items.length} recommended plugin(s). ${
-				items
-					.flatMap(item => item.plugin.prerequisites ?? [])
-					.map(
-						prerequisite =>
-							`${prerequisite.tool}: ${prerequisite.installCmd}${prerequisite.authLoginCmd ? `; sign in: ${prerequisite.authLoginCmd}` : ""}`,
-					)
-					.join(" · ") || "No prerequisites are declared."
-			} ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "All catalog previews are current."} Failures are isolated; re-run setup to review only unresolved plugins.`,
+			consequence: `Installs ${items.length} recommended plugin(s). Authentication is never launched by this bulk install. Plugins whose lifecycle requires setup remain enabled and report xcsh plugin setup <plugin>. ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "All catalog previews are current."} Failures are isolated; re-run setup to review only unresolved plugins.`,
 		},
 		target: { items },
 		warnings: preview.failed.map(source => `Using last-known catalog data for ${source}.`),
@@ -446,30 +433,19 @@ export async function executePluginSetup(
 	const failed: Array<{ pluginId: string; error: string }> = target.items
 		.filter(item => refresh.failed.includes(item.marketplace))
 		.map(item => ({ pluginId: `${item.name}@${item.marketplace}`, error: "marketplace refresh failed" }));
-	const authenticationNeeded: string[] = [];
+	const setupRequired: string[] = [];
 	for (const item of target.items) {
 		const pluginId = `${item.name}@${item.marketplace}`;
 		if (refresh.failed.includes(item.marketplace)) continue;
-		let ready = true;
-		for (const prerequisite of item.plugin.prerequisites ?? []) {
-			const result = await setupTool(prerequisite);
-			if (result.installAttempted && !result.installSuccess) {
-				ready = false;
-				failed.push({ pluginId, error: `${prerequisite.tool}: ${result.error ?? "installation failed"}` });
-				break;
-			}
-			if (!result.authenticated && prerequisite.authLoginCmd)
-				authenticationNeeded.push(`${prerequisite.tool}: ${prerequisite.authLoginCmd}`);
-		}
-		if (!ready) continue;
 		try {
 			await manager.installPlugin(item.name, item.marketplace, { scope: "user" });
 			installed.push(pluginId);
+			if (item.plugin.lifecycle.setupRequired) setupRequired.push(`xcsh plugin setup ${item.name}`);
 		} catch (error) {
 			failed.push({ pluginId, error: error instanceof Error ? error.message : String(error) });
 		}
 	}
-	return { installed, failed, authenticationNeeded };
+	return { installed, failed, setupRequired };
 }
 
 export async function executePluginUpgradeAll(

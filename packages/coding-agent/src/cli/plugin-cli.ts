@@ -215,6 +215,19 @@ function matchesIntegration(handle: IntegrationHandle<unknown>, target: string):
 	return handle.id === target || handle.plugin === target || handle.plugin?.split("@")[0] === target;
 }
 
+export function selectSetupIntegration(
+	handles: readonly IntegrationHandle<unknown>[],
+	target: string,
+): IntegrationHandle<unknown> {
+	const matches = handles.filter(handle => matchesIntegration(handle, target));
+	if (!matches.length) throw new Error(`No enabled integration is registered for ${target}`);
+	const setupMatches = matches.filter(handle => handle.setupPlan !== undefined);
+	if (!setupMatches.length) throw new Error(`No setup plan is registered for ${target}`);
+	if (setupMatches.length > 1)
+		throw new Error(`Plugin ${target} registers multiple setup plans; use an integration id`);
+	return setupMatches[0];
+}
+
 async function handleIntegrationStatus(args: string[], flags: { json?: boolean }): Promise<void> {
 	if (args.length > 1) throw new Error(`Usage: ${APP_NAME} plugin status [plugin] [--json]`);
 	const handles = await loadIntegrationHandles();
@@ -246,29 +259,87 @@ async function handleIntegrationStatus(args: string[], flags: { json?: boolean }
 	}
 }
 
-async function handleIntegrationSetup(args: string[], flags: { json?: boolean }): Promise<void> {
-	if (flags.json) throw new Error("plugin setup is human-only and does not accept --json");
-	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin>`);
-	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
-	const matches = (await loadIntegrationHandles()).filter(handle => matchesIntegration(handle, args[0]));
-	if (!matches.length) throw new Error(`No enabled integration is registered for ${args[0]}`);
-	if (matches.length > 1) throw new Error(`Plugin ${args[0]} registers multiple integrations; use an integration id`);
-	const handle = matches[0];
+export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle<unknown>) {
 	const plan = handle.setupPlan;
 	if (!plan) throw new Error(`Integration ${handle.id} does not declare setup`);
+	const current = await handle.get();
+	if (current.state === "ready") return current;
 	process.stdout.write(`${describeSetupPlan(handle)}\n`);
 	const prompt = createInterface({ input: process.stdin, output: process.stdout });
 	try {
 		const answer = await prompt.question('Type "setup" to run this exact plan: ');
-		if (answer !== "setup") throw new Error("Plugin setup cancelled");
+		if (answer !== "setup") throw new Error("Plugin setup cancelled; the installed plugin remains setup_required");
 	} finally {
 		prompt.close();
 	}
 	const result = await executeReviewedSetup(handle, plan);
 	await personProfileService.reconcileFromCollectors(undefined, 0);
+	return result;
+}
+
+async function handleIntegrationSetup(args: string[], flags: { json?: boolean }): Promise<void> {
+	if (flags.json) throw new Error("plugin setup is human-only and does not accept --json");
+	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin>`);
+	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
+	const handle = selectSetupIntegration(await loadIntegrationHandles(), args[0]);
+	const current = await handle.get();
+	if (current.state === "ready") {
+		process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
+		return;
+	}
+	const result = await reviewAndExecuteIntegrationSetup(handle);
 	process.stdout.write(
 		`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
 	);
+}
+
+async function reportMarketplaceInstallation(
+	plugin: string,
+	marketplace: string,
+	entry: { version: string; scope: string; setupRequired: boolean },
+	flags: { json?: boolean },
+): Promise<void> {
+	let handles: IntegrationHandle<unknown>[] = [];
+	try {
+		handles = (await loadIntegrationHandles()).filter(handle => matchesIntegration(handle, plugin));
+	} catch {
+		// Installation remains successful even when extension loading cannot establish readiness.
+	}
+	const statuses = await Promise.all(
+		handles.map(async handle => {
+			const { value: _, ...status } = await handle.get();
+			return status;
+		}),
+	);
+	const setupHandles = handles.filter(handle => handle.setupPlan !== undefined);
+	const setupHandle = setupHandles.length === 1 ? setupHandles[0] : undefined;
+	const setupStatus = setupHandle ? statuses.find(status => status.id === setupHandle.id) : undefined;
+	const nextAction =
+		entry.setupRequired && setupStatus?.state !== "ready" ? `${APP_NAME} plugin setup ${plugin}` : undefined;
+	if (flags.json || !process.stdin.isTTY || !process.stdout.isTTY) {
+		const result = {
+			installation: { state: "installed", plugin, marketplace, version: entry.version, scope: entry.scope },
+			readiness: { integrations: statuses },
+			...(nextAction ? { nextAction } : {}),
+		};
+		if (flags.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+		else {
+			process.stdout.write(`${theme.status.success} Installed ${plugin} from ${marketplace} (${entry.version})\n`);
+			for (const status of statuses)
+				process.stdout.write(`  ${status.id}: ${status.state}${status.reason ? ` (${status.reason})` : ""}\n`);
+			if (nextAction) process.stdout.write(`  next: ${nextAction}\n`);
+		}
+		return;
+	}
+	process.stdout.write(`${theme.status.success} Installed ${plugin} from ${marketplace} (${entry.version})\n`);
+	if (!setupHandle || setupStatus?.state === "ready") return;
+	try {
+		const result = await reviewAndExecuteIntegrationSetup(setupHandle);
+		process.stdout.write(`${plugin}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`);
+	} catch (error) {
+		process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+		process.stderr.write(`Next: ${APP_NAME} plugin setup ${plugin}\n`);
+	}
 }
 
 // =============================================================================
@@ -542,6 +613,9 @@ async function handleInstall(
 		}
 
 		if (target.type === "marketplace") {
+			const catalogEntry = listings.find(
+				item => item.marketplace === target.marketplace && item.plugin.name === target.name,
+			)?.plugin;
 			if (flags.dryRun) {
 				const preview = {
 					action: "install",
@@ -558,10 +632,11 @@ async function handleInstall(
 					force: flags.force,
 					scope: flags.scope,
 				});
-				console.log(
-					chalk.green(
-						`${theme.status.success} Installed ${target.name} from ${target.marketplace} (${entry.version})`,
-					),
+				await reportMarketplaceInstallation(
+					target.name,
+					target.marketplace,
+					{ ...entry, setupRequired: catalogEntry?.lifecycle.setupRequired ?? false },
+					flags,
 				);
 			} catch (err) {
 				console.error(chalk.red(`${theme.status.error} Failed to install ${spec}: ${err}`));

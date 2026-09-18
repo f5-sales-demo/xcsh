@@ -242,7 +242,7 @@ describe("PluginDashboard interaction contract", () => {
 			installed: 1,
 			failed: 0,
 			total: 1,
-			authenticationNeeded: [],
+			setupRequired: [],
 		}));
 		const dashboard = PluginDashboard.createForTest(state([recommended], "recommended"), {
 			projectScopeAvailable: false,
@@ -389,16 +389,21 @@ describe("PluginDashboard interaction contract", () => {
 		expect(text(dashboard)).not.toContain("Upgrade plugin");
 	});
 
-	it("reports prerequisite and partial bulk-operation outcomes", async () => {
+	it("reports lifecycle setup actions and partial bulk-operation outcomes", async () => {
 		const dashboard = create(
 			[
 				plugin({
 					id: "alpha@catalog",
 					name: "alpha",
 					recommended: true,
-					prerequisites: [
-						{ tool: "examplectl", installCmd: "install examplectl", detectCmd: "examplectl version" },
-					],
+					lifecycle: {
+						mode: "integrated",
+						integrations: ["example"],
+						requirements: ["Example CLI"],
+						setupRequired: true,
+						collectedData: ["accounts"],
+						pluginDependencies: [],
+					},
 				}),
 				plugin({ id: "beta@catalog", name: "beta", recommended: true }),
 			],
@@ -408,21 +413,21 @@ describe("PluginDashboard interaction contract", () => {
 					installed: 1,
 					failed: 1,
 					total: 2,
-					authenticationNeeded: ["examplectl: examplectl login"],
+					setupRequired: ["xcsh plugin setup alpha"],
 				}),
 			},
 		);
 		dashboard.handleInput("\x1b[B");
 		dashboard.handleInput("\x1b[B");
 		dashboard.handleInput("\r");
-		expect(text(dashboard)).toContain("examplectl (install examplectl)");
+		expect(text(dashboard)).toContain("without launching authentication");
 		dashboard.handleInput("\x1b[B");
 		dashboard.handleInput("\r");
 		await Bun.sleep(0);
 		const rendered = text(dashboard);
 		expect(rendered).toContain("Installed 1 of 2 recommended plugins");
 		expect(rendered).toContain("1 failed");
-		expect(rendered).toContain("Authentication still needed");
+		expect(rendered).toContain("Setup required: xcsh plugin setup alpha");
 	});
 
 	it("keeps long detail metadata reachable at narrow widths", () => {
