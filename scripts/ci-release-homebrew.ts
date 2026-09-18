@@ -233,7 +233,9 @@ async function updateTap(version: string, tag: string, checksums: Map<string, st
 
 	await $`git -C ${tmpDir} config user.name "github-actions[bot]"`;
 	await $`git -C ${tmpDir} config user.email "41898282+github-actions[bot]@users.noreply.github.com"`;
-	await $`git -C ${tmpDir} add --all -- xcsh.rb Casks/xcsh.rb`;
+	// `xcsh.rb` is deliberately absent after the clean-break cask migration.
+	// Stage its tracked deletion and the cask without passing an absent pathspec.
+	await $`git -C ${tmpDir} add --all`;
 	await $`git -C ${tmpDir} commit -m ${"Update xcsh cask to " + tag}`;
 	await $`git -C ${tmpDir} push`;
 	console.log(`Pushed updated cask to ${tapRepo}`);

@@ -186,6 +186,12 @@ describe("Homebrew release archives", () => {
 });
 
 describe("Homebrew tap replacement", () => {
+	it("stages cask-only updates without requiring the removed formula path", async () => {
+		const source = await Bun.file(path.join(import.meta.dir, "../../../../scripts/ci-release-homebrew.ts")).text();
+		expect(source).toContain("git -C ${tmpDir} add --all`");
+		expect(source).not.toContain("git -C ${tmpDir} add --all -- xcsh.rb Casks/xcsh.rb`");
+	});
+
 	it("deletes the obsolete formula while replacing the cask", async () => {
 		const tapDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-homebrew-tap-test-"));
 		const replacementCask = generateCask(
