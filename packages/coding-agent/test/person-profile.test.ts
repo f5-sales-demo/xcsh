@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PROFILE_COLLECTORS } from "../src/person-profile/collectors";
 import { MachineProfileService } from "../src/person-profile/machine-profile";
 import { resetProfileTargets } from "../src/person-profile/private-store";
 import { PersonProfileService } from "../src/person-profile/service";
@@ -85,6 +86,21 @@ test("legacy and insecure stores report value-free status and require explicit r
 		reason: "unsupported_format",
 		remedy: "xcsh profile reset person --yes",
 	});
+	await writeFile(
+		path,
+		JSON.stringify({
+			schemaVersion: 1,
+			revision: 0,
+			state: "empty",
+			facts: {},
+			provenance: {},
+			observations: [],
+			suppressed: {},
+			configuredSources: [],
+		}),
+		{ mode: 0o600 },
+	);
+	expect(await service.status()).toMatchObject({ status: "invalid", reason: "unsupported_format" });
 	await import("node:fs/promises").then(fs => fs.chmod(path, 0o644));
 	expect(await service.status()).toMatchObject({ status: "invalid", reason: "insecure_permissions" });
 	expect(await service.reset()).toBe(true);
@@ -205,7 +221,7 @@ test("canonical resources share the tool store and reject mutating reads", async
 	expect(JSON.parse((await router.resolve("xcsh://user")).content).state).toBe("empty");
 	await service.update({ jobTitle: "Synthetic engineer" });
 	expect(JSON.parse((await router.resolve("xcsh://user")).content).facts.jobTitle).toBe("Synthetic engineer");
-	expect(JSON.parse((await router.resolve("xcsh://user/schema")).content).properties.schemaVersion.const).toBe(1);
+	expect(JSON.parse((await router.resolve("xcsh://user/schema")).content).properties.schemaVersion.const).toBe(2);
 	await expect(router.resolve("xcsh://user?seed=true")).rejects.toThrow("Unsupported person profile route");
 });
 
@@ -220,7 +236,7 @@ test("collector failure is sanitized and inferred observations never become fact
 		},
 	});
 	const refreshed = await service.refresh(["broken"]);
-	expect(refreshed.collectors).toEqual([expect.objectContaining({ id: "broken", status: "error" })]);
+	expect(refreshed.collectors).toEqual([expect.objectContaining({ id: "broken", state: "error" })]);
 	expect(JSON.stringify(refreshed)).not.toContain("private-sentinel");
 	await service.observe([
 		{
@@ -484,7 +500,7 @@ test("unchanged collector facts and health do not churn the profile revision", a
 	available = false;
 	const unavailable = await service.refresh(["stable"]);
 	expect(unavailable.revision).toBe(first.revision + 1);
-	expect(unavailable.collectionState?.stable?.status).toBe("unavailable");
+	expect(unavailable.collectionState?.stable?.state).toBe("unavailable");
 });
 test("Linux GECOS uses the fifth field, not shell or home", async () => {
 	const { parseGecos } = await import("../src/person-profile/collectors");
@@ -516,9 +532,36 @@ test("extension collectors can reload across sessions without another extension 
 	expect((await service.get()).provenance.givenName?.owner).toBe(collector.id);
 });
 
-test("Salesforce does not invent an employer when its record omits the company", async () => {
-	const { parseSalesforceUserRecord } = await import("../src/person-profile/collectors");
-	expect(parseSalesforceUserRecord({ FirstName: "Synthetic" }).worksFor).toBeUndefined();
+test("core registers only local Git and operating-system collectors", () => {
+	expect(PROFILE_COLLECTORS.map(collector => collector.id)).toEqual(["git", "system"]);
+});
+
+test("provider accounts merge item-wise with provenance and remain suppressed after forgetting", async () => {
+	const { service } = await setup();
+	service.registerProfileCollector({
+		id: "azure",
+		name: "Azure",
+		available: async () => true,
+		collect: async () => ({ accounts: [{ provider: "azure", identifier: "synthetic-a", principalType: "user" }] }),
+	});
+	service.registerProfileCollector({
+		id: "aws",
+		name: "AWS",
+		available: async () => true,
+		collect: async () => ({ accounts: [{ provider: "aws", identifier: "synthetic-b", principalType: "role" }] }),
+	});
+	const merged = await service.refresh(["azure", "aws"]);
+	expect(merged.facts.accounts?.map(account => account.provider).sort()).toEqual(["aws", "azure"]);
+	expect(
+		Object.values(merged.accountProvenance ?? {})
+			.map(item => item.owner)
+			.sort(),
+	).toEqual(["aws", "azure"]);
+	await service.forget(["accounts"]);
+	await service.refresh(["azure", "aws"]);
+	const forgotten = await service.get();
+	expect(forgotten.facts.accounts).toBeUndefined();
+	expect(Object.keys(forgotten.suppressedAccounts ?? {})).toHaveLength(2);
 });
 
 test("Ask reviews proposed facts, declines safely and checks revision after approval; Full writes directly", async () => {

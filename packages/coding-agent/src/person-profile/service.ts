@@ -1,7 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
-import { createAccountCollectors } from "./account-collectors";
 import { PROFILE_COLLECTORS } from "./collectors";
 import { PrivateProfileStore, type ProfileResetLease, type ProfileStoreStatus } from "./private-store";
 import {
@@ -12,8 +11,8 @@ import {
 	recordObservation,
 	syncPropertyProvenance,
 } from "./properties";
-import { createSalesforceRelationshipCollector } from "./salesforce-discovery";
 import {
+	accountKey,
 	emptyProfile,
 	FieldSchema,
 	PersonFactsSchema,
@@ -27,6 +26,19 @@ import {
 export interface ProfileCollection {
 	facts: UserProfile;
 	observations: UserProfileObservation[];
+	sourceState?: {
+		state: "ready" | "setup_required" | "unavailable" | "degraded" | "rate_limited" | "error";
+		reason?:
+			| "cli_missing"
+			| "not_authenticated"
+			| "expired"
+			| "permission_denied"
+			| "dependency_missing"
+			| "network"
+			| "rate_limited"
+			| "invalid_response";
+		retryAt?: string;
+	};
 }
 export interface ProfileCollector {
 	readonly id: string;
@@ -56,7 +68,7 @@ function revisionState(profile: PersonProfile): string {
 	return JSON.stringify({
 		...stable,
 		collectionState: Object.fromEntries(
-			Object.entries(collectionState ?? {}).map(([id, state]) => [id, { status: state.status }]),
+			Object.entries(collectionState ?? {}).map(([id, state]) => [id, { state: state.state, reason: state.reason }]),
 		),
 	});
 }
@@ -64,6 +76,7 @@ function applySuppression(
 	facts: UserProfile,
 	suppressed: PersonProfile["suppressed"],
 	properties: PersonProfile["suppressedProperties"] = {},
+	accounts: PersonProfile["suppressedAccounts"] = {},
 ): UserProfile {
 	const pruneEmail = (value: unknown): unknown => {
 		if (typeof value === "string") return /[^\s/@]+@[^\s/@]+/.test(value) ? undefined : value;
@@ -90,7 +103,11 @@ function applySuppression(
 					Value.Check(PersonFactsSchema.properties.additionalProperty.items, property),
 			);
 		if (key === "accounts" && Array.isArray(value))
-			value = value.filter(account => Value.Check(PersonFactsSchema.properties.accounts.items, account));
+			value = value.filter(
+				account =>
+					Value.Check(PersonFactsSchema.properties.accounts.items, account) &&
+					!Object.hasOwn(accounts, accountKey(account)),
+			);
 		if (suppressed.email && Array.isArray(original) && original.length && Array.isArray(value) && !value.length)
 			continue;
 		if (value !== undefined && Value.Check(PersonFactsSchema.properties[key], value))
@@ -116,6 +133,7 @@ export class PersonProfileService {
 			},
 			"person",
 			lockTimeoutMs,
+			2,
 		);
 	}
 	registerProfileCollector(collector: ProfileCollector, registrant?: string): void {
@@ -169,6 +187,15 @@ export class PersonProfileService {
 		this.#registrants.delete(id);
 		return this.#collectors.delete(id);
 	}
+	unregisterProfileCollectorsByRegistrant(registrant: string): number {
+		let removed = 0;
+		for (const [id, owner] of this.#registrants) {
+			if (owner !== registrant) continue;
+			this.#registrants.delete(id);
+			if (this.#collectors.delete(id)) removed++;
+		}
+		return removed;
+	}
 	async get(): Promise<PersonProfile> {
 		return this.#store.get();
 	}
@@ -192,7 +219,15 @@ export class PersonProfileService {
 			profile => {
 				change(profile);
 				const beforeProperties = JSON.stringify(profile.facts.additionalProperty);
-				profile.facts = applySuppression(profile.facts, profile.suppressed, profile.suppressedProperties);
+				profile.facts = applySuppression(
+					profile.facts,
+					profile.suppressed,
+					profile.suppressedProperties,
+					profile.suppressedAccounts,
+				);
+				const accountKeys = new Set((profile.facts.accounts ?? []).map(accountKey));
+				for (const key of Object.keys(profile.accountProvenance ?? {}))
+					if (!accountKeys.has(key)) delete profile.accountProvenance?.[key];
 				if (beforeProperties !== JSON.stringify(profile.facts.additionalProperty))
 					syncPropertyProvenance(profile, new Date().toISOString());
 				for (const field of Object.keys(profile.provenance) as (keyof UserProfile)[])
@@ -202,6 +237,7 @@ export class PersonProfileService {
 						{ [observation.field]: observation.value },
 						profile.suppressed,
 						profile.suppressedProperties,
+						profile.suppressedAccounts,
 					);
 					const value = facts[observation.field];
 					return value === undefined ? [] : [{ ...observation, value }];
@@ -234,6 +270,26 @@ export class PersonProfileService {
 							"conversation",
 							new Date().toISOString(),
 						);
+						continue;
+					}
+					if (key === "accounts") {
+						const now = new Date().toISOString();
+						profile.accountProvenance ??= {};
+						profile.suppressedAccounts ??= {};
+						const merged = new Map((profile.facts.accounts ?? []).map(account => [accountKey(account), account]));
+						for (const account of facts.accounts ?? []) {
+							const identity = accountKey(account);
+							merged.set(identity, account);
+							profile.accountProvenance[identity] = {
+								owner: "user",
+								source: "conversation",
+								observedAt: now,
+							};
+							delete profile.suppressedAccounts[identity];
+						}
+						profile.facts.accounts = [...merged.values()];
+						delete profile.suppressed.accounts;
+						profile.observations = profile.observations.filter(o => o.field !== key);
 						continue;
 					}
 					if (
@@ -283,6 +339,15 @@ export class PersonProfileService {
 							]),
 						];
 						forgetPersonalProperties(profile, ids, new Date().toISOString());
+					}
+					if (key === "accounts") {
+						profile.suppressedAccounts ??= {};
+						const now = new Date().toISOString();
+						for (const account of profile.facts.accounts ?? []) {
+							const identity = accountKey(account);
+							profile.suppressedAccounts[identity] = { forgottenAt: now };
+							delete profile.accountProvenance?.[identity];
+						}
 					}
 					delete profile.facts[key];
 					delete profile.provenance[key];
@@ -348,13 +413,41 @@ export class PersonProfileService {
 		canCommit?: () => boolean,
 	): Promise<
 		PersonProfile & {
-			collectors: { id: string; status: "collected" | "unavailable" | "error"; durationMs: number }[];
+			collectors: {
+				id: string;
+				state: "ready" | "setup_required" | "unavailable" | "degraded" | "rate_limited" | "error";
+				reason?:
+					| "cli_missing"
+					| "not_authenticated"
+					| "expired"
+					| "permission_denied"
+					| "dependency_missing"
+					| "network"
+					| "rate_limited"
+					| "invalid_response";
+				retryAt?: string;
+				durationMs: number;
+			}[];
 		}
 	> {
 		if ((!sources.length && !configure) || sources.some(s => !this.#collectors.has(s)))
 			throw new Error("Invalid person profile sources");
 		const outputs: { id: string; facts: UserProfile; observations: UserProfileObservation[] }[] = [];
-		const collectors: { id: string; status: "collected" | "unavailable" | "error"; durationMs: number }[] = [];
+		const collectors: {
+			id: string;
+			state: "ready" | "setup_required" | "unavailable" | "degraded" | "rate_limited" | "error";
+			reason?:
+				| "cli_missing"
+				| "not_authenticated"
+				| "expired"
+				| "permission_denied"
+				| "dependency_missing"
+				| "network"
+				| "rate_limited"
+				| "invalid_response";
+			retryAt?: string;
+			durationMs: number;
+		}[] = [];
 		const collectOne = async (id: string) => {
 			const startedAt = performance.now();
 			cancelled(signal);
@@ -375,7 +468,11 @@ export class PersonProfileService {
 						throw new Error("Invalid person profile observations");
 					const observations = expandObservations(rawObservations);
 					cancelled(combined);
-					return { facts, observations };
+					return {
+						facts,
+						observations,
+						sourceState: envelope ? (result as ProfileCollection).sourceState : undefined,
+					};
 				};
 				const facts = await Promise.race([
 					work(),
@@ -388,14 +485,21 @@ export class PersonProfileService {
 					output: facts ? { id, ...facts } : undefined,
 					collector: {
 						id,
-						status: facts ? ("collected" as const) : ("unavailable" as const),
+						state: facts?.sourceState?.state ?? (facts ? ("ready" as const) : ("unavailable" as const)),
+						...(facts?.sourceState?.reason ? { reason: facts.sourceState.reason } : {}),
+						...(facts?.sourceState?.retryAt ? { retryAt: facts.sourceState.retryAt } : {}),
 						durationMs: Math.round(performance.now() - startedAt),
 					},
 				};
 			} catch {
 				cancelled(signal);
 				return {
-					collector: { id, status: "error" as const, durationMs: Math.round(performance.now() - startedAt) },
+					collector: {
+						id,
+						state: "error" as const,
+						reason: "invalid_response" as const,
+						durationMs: Math.round(performance.now() - startedAt),
+					},
 				};
 			} finally {
 				combined.removeEventListener("abort", onAbort);
@@ -417,13 +521,18 @@ export class PersonProfileService {
 				}
 				profile.collectionState ??= {};
 				const now = new Date().toISOString();
-				for (const { id, status, durationMs } of collectors) {
+				for (const { id, state, reason, retryAt, durationMs } of collectors) {
 					profile.collectionState[id] = {
-						...profile.collectionState[id],
 						attemptedAt: now,
 						durationMs,
-						status,
-						...(status === "collected" ? { succeededAt: now } : {}),
+						state,
+						...(reason ? { reason } : {}),
+						...(retryAt ? { retryAt } : {}),
+						...(state === "ready"
+							? { succeededAt: now }
+							: profile.collectionState[id]?.succeededAt
+								? { succeededAt: profile.collectionState[id]?.succeededAt }
+								: {}),
 					};
 				}
 				for (const { id, facts, observations } of outputs) {
@@ -452,6 +561,20 @@ export class PersonProfileService {
 					}
 					for (const [field, value] of Object.entries(facts)) {
 						const key = field as keyof UserProfile;
+						if (key === "accounts") {
+							profile.accountProvenance ??= {};
+							const merged = new Map(
+								(profile.facts.accounts ?? []).map(account => [accountKey(account), account]),
+							);
+							for (const account of facts.accounts ?? []) {
+								const identity = accountKey(account);
+								if (Object.hasOwn(profile.suppressedAccounts ?? {}, identity)) continue;
+								merged.set(identity, account);
+								profile.accountProvenance[identity] = { owner: id, source: id, observedAt: now };
+							}
+							profile.facts.accounts = [...merged.values()];
+							continue;
+						}
 						if (
 							key !== "additionalProperty" &&
 							profile.provenance[key]?.owner === id &&
@@ -497,7 +620,3 @@ export class PersonProfileService {
 }
 export const personProfileService = new PersonProfileService();
 for (const collector of PROFILE_COLLECTORS) personProfileService.registerProfileCollector(collector);
-for (const collector of createAccountCollectors()) personProfileService.registerProfileCollector(collector);
-personProfileService.registerProfileCollector(
-	createSalesforceRelationshipCollector(async () => (await personProfileService.get()).facts),
-);

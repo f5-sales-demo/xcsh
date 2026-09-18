@@ -6,6 +6,7 @@ import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import type { KeyId } from "@f5-sales-demo/pi-tui";
 import { logger } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../../config/model-registry";
+import type { IntegrationHandle } from "../../integrations/types";
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { SessionManager } from "../../session/session-manager";
 import type {
@@ -36,7 +37,6 @@ import type {
 	RegisteredTool,
 	ResourcesDiscoverEvent,
 	ResourcesDiscoverResult,
-	ServiceStatusContribution,
 	SessionBeforeBranchResult,
 	SessionBeforeCompactResult,
 	SessionBeforeSwitchResult,
@@ -263,15 +263,15 @@ export class ExtensionRunner {
 		return tools;
 	}
 
-	/** Get all registered service status contributions from all extensions. */
-	getAllRegisteredServiceStatuses(): ServiceStatusContribution[] {
-		const statuses: ServiceStatusContribution[] = [];
+	/** Get all integration handles registered by the loaded extensions. */
+	getAllRegisteredIntegrations(): IntegrationHandle<unknown>[] {
+		const integrations: IntegrationHandle<unknown>[] = [];
 		for (const ext of this.extensions) {
-			for (const contribution of ext.serviceStatuses.values()) {
-				statuses.push(contribution);
+			for (const handle of ext.integrations.values()) {
+				integrations.push(handle);
 			}
 		}
-		return statuses;
+		return integrations;
 	}
 
 	getFlags(): Map<string, ExtensionFlag> {

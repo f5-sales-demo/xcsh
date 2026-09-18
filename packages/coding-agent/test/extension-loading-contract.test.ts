@@ -68,12 +68,12 @@ describe("extension loading contract", () => {
 		expect([...extensions[0].commands.keys()]).toContain("cmd_foo");
 	});
 
-	it("surfaces service-status and flag registrations on the loaded extension", async () => {
+	it("surfaces integration and flag registrations on the loaded extension", async () => {
 		writeExt(
 			"svc.ts",
 			`
 			export default function (pi) {
-				pi.registerServiceStatus({ name: "MySvc", check: async () => ({ state: "connected" }) });
+				pi.integrations.register({ id: "my_service", name: "MySvc", kind: "local", probe: async () => ({ state: "ready" }) });
 				pi.registerFlag("myflag", { type: "boolean", default: true });
 			}
 		`,
@@ -83,7 +83,7 @@ describe("extension loading contract", () => {
 		const ext = filterUserExtensions(result.extensions)[0];
 
 		expect(ext).toBeDefined();
-		expect([...ext.serviceStatuses.keys()]).toContain("MySvc");
+		expect([...ext.integrations.keys()]).toContain("my_service");
 		expect([...ext.flags.keys()]).toContain("myflag");
 	});
 

@@ -54,6 +54,7 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 		private readonly prepare: (value: T) => void,
 		readonly domain: ProfileDomain = "person",
 		private readonly lockTimeoutMs = 10000,
+		private readonly schemaVersion = 1,
 	) {}
 	#failure(code: ProfileStoreErrorCode): ProfileStoreError {
 		return new ProfileStoreError(code, this.domain);
@@ -84,7 +85,8 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			}
 			if (!parsed || typeof parsed !== "object" || !("schemaVersion" in parsed))
 				throw this.#failure("unsupported_format");
-			if ((parsed as { schemaVersion?: unknown }).schemaVersion !== 1) throw this.#failure("unsupported_format");
+			if ((parsed as { schemaVersion?: unknown }).schemaVersion !== this.schemaVersion)
+				throw this.#failure("unsupported_format");
 			try {
 				this.validate(parsed);
 			} catch {

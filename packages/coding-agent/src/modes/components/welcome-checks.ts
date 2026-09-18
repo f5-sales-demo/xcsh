@@ -205,12 +205,22 @@ async function checkContextStatus(): Promise<WelcomeContextStatus> {
 	}
 }
 
-export type ServiceState = "connected" | "unauthenticated" | "unavailable";
+export type ServiceState =
+	| "connected"
+	| "unauthenticated"
+	| "unavailable"
+	| "ready"
+	| "setup_required"
+	| "degraded"
+	| "rate_limited"
+	| "error";
 
 export interface ServiceStatus {
 	name: string;
 	state: ServiceState;
 	hint?: string;
+	reason?: string;
+	retryAt?: number;
 	_isPlugin?: boolean;
 	_group?: string;
 }
