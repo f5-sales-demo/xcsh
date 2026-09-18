@@ -27,8 +27,10 @@ const packageVersion = packageJson.version;
 const nativeDir = path.join(__dirname, "..", "native");
 const execDir = path.dirname(process.execPath);
 let resolvedExecDir = execDir;
+let resolvedExecPath = process.execPath;
 try {
-	resolvedExecDir = path.dirname(fs.realpathSync(process.execPath));
+	resolvedExecPath = fs.realpathSync(process.execPath);
+	resolvedExecDir = path.dirname(resolvedExecPath);
 } catch {
 	// Keep process.execPath as the fallback when the executable cannot be resolved.
 }
@@ -130,7 +132,9 @@ const addonLabel = selectedVariant ? `${platformTag} (${selectedVariant})` : pla
 const installedCandidates = getInstalledNativeCandidates({
 	platform: process.platform,
 	addonFilenames,
+	resolvedExecPath,
 	resolvedExecDir,
+	packageVersion,
 });
 
 // Map platform tags to platform package names (optionalDependencies)

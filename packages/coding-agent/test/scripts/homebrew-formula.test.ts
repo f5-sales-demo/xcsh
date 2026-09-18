@@ -9,6 +9,17 @@ import {
 	generateCask,
 	replaceTapDefinitions,
 } from "../../../../scripts/ci-release-homebrew";
+import { createMacOsProvenanceManifest } from "../../../../scripts/macos-release-provenance";
+
+const testSignature = {
+	authority: "Developer ID Application",
+	teamIdentifier: "97ZYL78T5F",
+	hardenedRuntime: true,
+	trustedTimestamp: true,
+	notarized: true,
+	entitlements: [] as string[],
+	architectures: ["arm64"],
+};
 
 describe("macOS Homebrew binary cask", () => {
 	const armSha = "a".repeat(64);
@@ -88,6 +99,32 @@ describe("Homebrew release archives", () => {
 			await fs.chmod(path.join(fixtureDir, "xcsh-darwin-x64"), 0o755);
 			await Bun.write(path.join(fixtureDir, "pi_natives.darwin-x64-baseline.node"), "Intel baseline addon\n");
 			await Bun.write(path.join(fixtureDir, "pi_natives.darwin-x64-modern.node"), "Intel modern addon\n");
+			for (const arch of ["arm64", "x64"] as const) {
+				const manifestNativeDir = path.join(fixtureDir, `manifest-${arch}`);
+				await fs.mkdir(manifestNativeDir);
+				for (const name of (await fs.readdir(fixtureDir)).filter(name =>
+					name.startsWith(`pi_natives.darwin-${arch}`),
+				)) {
+					await fs.copyFile(path.join(fixtureDir, name), path.join(manifestNativeDir, name));
+				}
+				const manifest = await createMacOsProvenanceManifest({
+					arch,
+					version: "21.32.1",
+					binaryPath: path.join(fixtureDir, `xcsh-darwin-${arch}`),
+					nativeDir: manifestNativeDir,
+					inspectSignature: async file => ({
+						...testSignature,
+						architectures: [arch === "arm64" ? "arm64" : "x86_64"],
+						entitlements: file.endsWith(".node")
+							? []
+							: ["com.apple.security.cs.allow-jit", "com.apple.security.cs.allow-unsigned-executable-memory"],
+					}),
+				});
+				await Bun.write(
+					path.join(fixtureDir, `xcsh-darwin-${arch}.provenance.json`),
+					`${JSON.stringify(manifest)}\n`,
+				);
+			}
 			const options = {
 				binariesDir: fixtureDir,
 				dryRun: false,
@@ -102,12 +139,13 @@ describe("Homebrew release archives", () => {
 			expect(await fs.readFile(intelArchivePath)).toEqual(firstIntelArchive);
 
 			const armEntries = (await $`unzip -Z1 ${armArchivePath}`.text()).trim().split("\n");
-			expect(armEntries).toEqual(["bin/xcsh", "libexec/pi_natives.darwin-arm64.node"]);
+			expect(armEntries).toEqual(["bin/xcsh", "libexec/pi_natives.darwin-arm64.node", "provenance/manifest.json"]);
 			const intelEntries = (await $`unzip -Z1 ${intelArchivePath}`.text()).trim().split("\n");
 			expect(intelEntries).toEqual([
 				"bin/xcsh",
 				"libexec/pi_natives.darwin-x64-baseline.node",
 				"libexec/pi_natives.darwin-x64-modern.node",
+				"provenance/manifest.json",
 			]);
 
 			const extractDir = path.join(fixtureDir, "extracted");

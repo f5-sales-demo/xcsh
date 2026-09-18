@@ -1,8 +1,17 @@
 const path = require("node:path");
 
-function getInstalledNativeCandidates({ platform, addonFilenames, resolvedExecDir }) {
+function getInstalledNativeCandidates({ platform, addonFilenames, resolvedExecPath, resolvedExecDir, packageVersion }) {
 	if (platform !== "darwin") return [];
 
+	if (resolvedExecPath === "/usr/local/bin/xcsh") {
+		return addonFilenames.map(filename =>
+			path.join("/Library/Application Support/xcsh/natives", packageVersion, filename),
+		);
+	}
+
+	const normalized = path.resolve(resolvedExecPath);
+	const caskroomExecutable = /\/Caskroom\/xcsh\/[^/]+\/bin\/xcsh$/u.test(normalized);
+	if (!caskroomExecutable) return [];
 	return addonFilenames.map(filename => path.resolve(resolvedExecDir, "..", "libexec", filename));
 }
 
