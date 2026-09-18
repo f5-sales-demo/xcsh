@@ -23,7 +23,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("    needs: native-linux-x64\n", workflow)
         self.assertIn("    needs: [test-typescript, test-rust]\n", workflow)
         self.assertIn("bun scripts/ci-native-manifest.ts verify", workflow)
-        self.assertIn('XCSH_TEST_FILE_WORKERS: "0"', workflow)
+        self.assertIn('XCSH_TEST_FILE_WORKERS: "10"', workflow)
         for platform in (
             '"platform":"linux","arch":"arm64"',
             '"platform":"win32"',
@@ -88,10 +88,12 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("ref: ${{ inputs.source_sha }}", benchmark)
         self.assertNotIn("  pull_request:\n", benchmark)
         self.assertIn("runner_label=xcsh-compute-16-vcpu-candidate", benchmark)
-        self.assertIn("runner_label=xcsh-compute-f32-candidate", benchmark)
+        self.assertIn("runner_label=xcsh-compute-32-vcpu-density-candidate", benchmark)
+        self.assertIn("d16-parallel|f32-parallel)", benchmark)
+        self.assertNotIn("xcsh-compute-f32-candidate", benchmark)
+        self.assertNotIn("f32-burst", benchmark)
         self.assertIn(r"dkr\.ecr\.us-east-1\.amazonaws\.com", benchmark)
         self.assertIn("max_parallel=4", benchmark)
-        self.assertIn("max_parallel=2", benchmark)
         self.assertIn('test "${RUNNER_IMAGE_DIGEST:', action)
         self.assertIn("source-sha:", action)
         self.assertIn("PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}", action)

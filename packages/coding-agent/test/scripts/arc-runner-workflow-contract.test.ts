@@ -99,7 +99,7 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 		["self-hosted", "Linux", "X64", "xcsh", "ubuntu-24.04"],
 		["self-hosted", "Linux", "X64", "xcsh", "container-build"],
 	];
-	const candidateRoutes = new Set(["xcsh-compute-16-vcpu-candidate", "xcsh-compute-f32-candidate"]);
+	const candidateRoutes = new Set(["xcsh-compute-16-vcpu-candidate", "xcsh-compute-32-vcpu-density-candidate"]);
 	const observedArcRoutes = new Set<string>();
 
 	expect(workflows.length).toBeGreaterThan(0);
@@ -141,12 +141,14 @@ test("compute qualification is manual, frozen-source, and derives bounded numeri
 	}
 	expect(source).toContain("d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a");
 	expect(source).toContain("xcsh-compute-16-vcpu-candidate");
-	expect(source).toContain("xcsh-compute-f32-candidate");
+	expect(source).toContain("xcsh-compute-32-vcpu-density-candidate");
+	expect(source).not.toContain("xcsh-compute-f32-candidate");
 	expect(source).toContain("dkr\\.ecr\\.us-east-1\\.amazonaws\\.com");
 	expect(source).not.toContain("xcsh-compute-bun-candidate");
 	expect(source).not.toContain("pull_request:");
 	expect(source).not.toContain("types: [labeled]");
-	expect(source).toContain("d16-parallel)");
+	expect(source).toContain("d16-parallel|f32-parallel)");
+	expect(source).not.toContain("f32-burst)");
 	expect(source).toContain('[[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-9]|40)$ ]]');
 	expect(profilerSource).toContain("((file_workers > 40))");
 	expect(source).not.toContain("d16-parallel-2");
@@ -157,7 +159,7 @@ test("compute qualification is manual, frozen-source, and derives bounded numeri
 	expect(actionSource).toContain("EXPECTED_IMAGE_DIGEST");
 	expect(source).toContain("'{include:[{\"sample\":$pair}]}'");
 	expect(source).toContain("'{include:[range(1;5) | {sample:($pair + \"-slot-\" + tostring)}]}'");
-	expect(source).toContain("'{include:[range(1;3) | {sample:($pair + \"-slot-\" + tostring)}]}'");
+	expect(source).not.toContain("'{include:[range(1;3) | {sample:($pair + \"-slot-\" + tostring)}]}'");
 });
 
 test("DAG qualification holds image and hardware constant while measuring the real dependency graph", async () => {
