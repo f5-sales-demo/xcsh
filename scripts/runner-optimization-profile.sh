@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0..32-file-workers> <output-dir> <all|native|rust|typescript> <source-sha>" >&2
+  echo "usage: $0 <experiment> <cold|warm> <pair-id> <0..40-file-workers> <output-dir> <all|native|rust|typescript> <source-sha>" >&2
   exit 2
 }
 
@@ -20,7 +20,7 @@ image-control | image-candidate | d16-serial | d16-parallel | d16-hardware | f32
 *) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
-if [[ ! "$file_workers" =~ ^(0|[1-9][0-9]*)$ ]] || ((file_workers > 32)); then
+if [[ ! "$file_workers" =~ ^(0|[1-9][0-9]*)$ ]] || ((file_workers > 40)); then
   usage
 fi
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac

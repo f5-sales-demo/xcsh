@@ -83,7 +83,8 @@ class CiCapacityContractTests(unittest.TestCase):
         for input_name in ("source_sha", "experiment", "cache_state", "pair_id"):
             self.assertIn(f"      {input_name}:\n", benchmark)
         self.assertIn("file_workers:", benchmark)
-        self.assertIn("integer 1 through 32", benchmark)
+        self.assertIn("integer 1 through 40", benchmark)
+        self.assertIn("((file_workers > 40))", profiler)
         self.assertIn("ref: ${{ inputs.source_sha }}", benchmark)
         self.assertNotIn("  pull_request:\n", benchmark)
         self.assertIn("runner_label=xcsh-compute-16-vcpu-candidate", benchmark)

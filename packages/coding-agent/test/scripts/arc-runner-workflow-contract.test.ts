@@ -132,6 +132,7 @@ test("compute qualification is manual, frozen-source, and derives bounded numeri
 	const actionSource = await Bun.file(
 		path.join(REPOSITORY_ROOT, ".github/actions/runner-optimization-profile/action.yml"),
 	).text();
+	const profilerSource = await Bun.file(path.join(REPOSITORY_ROOT, "scripts/runner-optimization-profile.sh")).text();
 	const runnerSource = await Bun.file(path.join(REPOSITORY_ROOT, "scripts/run-ts-tests.ts")).text();
 
 	expect(source).toContain("workflow_dispatch:");
@@ -147,6 +148,7 @@ test("compute qualification is manual, frozen-source, and derives bounded numeri
 	expect(source).not.toContain("types: [labeled]");
 	expect(source).toContain("d16-parallel)");
 	expect(source).toContain('[[ "$FILE_WORKERS" =~ ^([1-9]|[12][0-9]|3[0-9]|40)$ ]]');
+	expect(profilerSource).toContain("((file_workers > 40))");
 	expect(source).not.toContain("d16-parallel-2");
 	expect(runnerSource).toContain('throw new Error("--concurrent is not supported');
 	expect(runnerSource).not.toContain('flags.push("--concurrent")');
