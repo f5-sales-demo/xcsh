@@ -95,6 +95,7 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 			const stagedBinary = path.join(tmpDir, "bin", "xcsh");
 			await fs.mkdir(path.dirname(stagedBinary), { recursive: true });
 			await fs.copyFile(binaryPath, stagedBinary);
+			await fs.chmod(stagedBinary, 0o755);
 
 			const stagedFiles = [stagedBinary];
 			for (const name of nativeNames) {
