@@ -27,9 +27,9 @@ case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
 [[ "$expected_source_sha" =~ ^[0-9a-f]{40}$ ]] || usage
 case "$experiment:$file_workers" in
-d16-parallel:*) ((file_workers > 0)) || usage ;;
+d16-parallel:* | f32-parallel:*) ((file_workers > 0)) || usage ;;
 *:0)
-  [[ "$experiment" != d16-parallel ]]
+  [[ "$experiment" != d16-parallel && "$experiment" != f32-parallel ]]
   ;;
 *) usage ;;
 esac
