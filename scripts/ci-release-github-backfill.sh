@@ -13,6 +13,18 @@ assets_dir=$3
 [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 2
 test -d "$assets_dir"
 
+file_size() {
+  if stat -f %z "$1" >/dev/null 2>&1; then
+    stat -f %z "$1"
+  else
+    stat -c %s "$1"
+  fi
+}
+
+file_sha256() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
 expected_assets=(
   pi_natives.darwin-arm64.node
   pi_natives.darwin-x64-baseline.node
@@ -38,7 +50,7 @@ expected_assets=(
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 printf '%s\n' "${expected_assets[@]}" | LC_ALL=C sort >"$work/expected-names"
-find "$assets_dir" -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort >"$work/local-names"
+find "$assets_dir" -maxdepth 1 -type f -exec basename {} \; | LC_ALL=C sort >"$work/local-names"
 diff -u "$work/expected-names" "$work/local-names"
 
 gh api "repos/${repository}/immutable-releases" | jq -e '.enabled == true' >/dev/null
@@ -54,8 +66,8 @@ release_id=$(jq -r '.id' <<<"$release")
 
 for name in "${expected_assets[@]}"; do
   asset="$assets_dir/$name"
-  size=$(stat -c %s "$asset")
-  digest="sha256:$(sha256sum "$asset" | awk '{print $1}')"
+  size=$(file_size "$asset")
+  digest="sha256:$(file_sha256 "$asset")"
   existing=$(jq -c --arg name "$name" '[.assets[] | select(.name == $name)] | if length == 0 then null elif length == 1 then .[0] else error("duplicate asset name") end' <<<"$release")
   if [ "$existing" != "null" ] && jq -e --argjson size "$size" --arg digest "$digest" '.state == "uploaded" and .size == $size and .digest == $digest' <<<"$existing" >/dev/null; then
     echo "Already verified: $name"
@@ -86,8 +98,8 @@ jq -r '.assets[] | [.name, (.size | tostring), (.digest // "")] | @tsv' <<<"$rel
 : >"$work/expected-assets"
 for name in "${expected_assets[@]}"; do
   asset="$assets_dir/$name"
-  size=$(stat -c %s "$asset")
-  digest="sha256:$(sha256sum "$asset" | awk '{print $1}')"
+  size=$(file_size "$asset")
+  digest="sha256:$(file_sha256 "$asset")"
   printf '%s\t%s\t%s\n' "$name" "$size" "$digest" >>"$work/expected-assets"
 done
 LC_ALL=C sort -o "$work/expected-assets" "$work/expected-assets"

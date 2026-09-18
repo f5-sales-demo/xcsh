@@ -927,7 +927,9 @@ jobs:
     name: Publish immutable GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-release, build-sign-macos]
-    runs-on: xcsh-socketless
+    # This job performs strict codesign verification after archive assembly.
+    # Keep it on macOS; Linux cannot validate Developer ID signatures.
+    runs-on: macos-14
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -957,10 +959,10 @@ jobs:
           [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]] || exit 1
           export SOURCE_DATE_EPOCH
           bun scripts/ci-release-homebrew.ts --package-only
-          sha256sum packages/coding-agent/binaries/*.zip \
+          shasum -a 256 packages/coding-agent/binaries/*.zip \
             | LC_ALL=C sort > "$RUNNER_TEMP/homebrew-archives-first.sha256"
           bun scripts/ci-release-homebrew.ts --package-only
-          sha256sum packages/coding-agent/binaries/*.zip \
+          shasum -a 256 packages/coding-agent/binaries/*.zip \
             | LC_ALL=C sort > "$RUNNER_TEMP/homebrew-archives-second.sha256"
           diff -u "$RUNNER_TEMP/homebrew-archives-first.sha256" \
             "$RUNNER_TEMP/homebrew-archives-second.sha256"
@@ -999,7 +1001,8 @@ jobs:
     name: Publish Homebrew cask
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
-    runs-on: xcsh-socketless
+    # Downloaded cask archives are re-verified with strict codesign checks.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

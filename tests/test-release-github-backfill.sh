@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
 workflow="$repo_root/.github/workflows/release-github-backfill.yml"
+ci_workflow="$repo_root/.github/workflows/ci.yml"
 npm_workflow="$repo_root/.github/workflows/release-npm-backfill.yml"
 script="$repo_root/scripts/ci-release-github-backfill.sh"
 job_validator="$repo_root/scripts/ci-release-source-jobs.jq"
@@ -13,11 +14,19 @@ fail() {
 }
 
 test -f "$workflow" || fail "backfill workflow is missing"
+test -f "$ci_workflow" || fail "CI workflow is missing"
 test -f "$npm_workflow" || fail "npm backfill workflow is missing"
 test -x "$script" || fail "backfill script is not executable"
 test -f "$job_validator" || fail "source-run job validator is missing"
 
-grep -Fq 'runs-on: xcsh-socketless' "$workflow" || fail "backfill must use the canonical release route"
+grep -Fq 'runs-on: macos-14' "$workflow" || fail "backfill must run on macOS for strict codesign verification"
+if grep -Fq 'runs-on: xcsh-socketless' "$workflow"; then
+  fail "backfill must not route strict macOS verification to Linux"
+fi
+create_release=$(sed -n '/^  create-release:/,/^  update-homebrew:/p' "$ci_workflow")
+grep -Fq 'runs-on: macos-14' <<<"$create_release" || fail "immutable release publisher must run on macOS"
+update_homebrew=$(sed -n '/^  update-homebrew:/,/^  verify-homebrew-install:/p' "$ci_workflow")
+grep -Fq 'runs-on: macos-14' <<<"$update_homebrew" || fail "Homebrew publisher must run on macOS"
 grep -Fq 'environment: release' "$workflow" || fail "backfill must use the release environment"
 grep -Fq 'SOURCE_RUN_ID: ${{ inputs.source_run_id }}' "$workflow" || fail "source run input is not wired"
 grep -Fq '.event == "push" and .head_branch == $tag and .head_sha == $tag_sha' "$workflow" || fail "tag/run identity validation is missing"
@@ -29,6 +38,7 @@ grep -Fq 'release-binaries-linux-win' "$workflow" || fail "Linux/Windows artifac
 grep -Fq 'release-binaries-macos-*-signed' "$workflow" || fail "signed macOS artifacts are missing"
 grep -Fq 'archives-first.sha256' "$workflow" || fail "first deterministic archive pass is missing"
 grep -Fq 'archives-second.sha256' "$workflow" || fail "second deterministic archive pass is missing"
+grep -Fq 'shasum -a 256' "$workflow" || fail "backfill must use macOS-compatible SHA-256 tooling"
 grep -Fq 'ci-release-github-backfill.sh' "$workflow" || fail "backfill script is not invoked"
 
 expected_count=$(sed -n '/^expected_assets=(/,/^)/p' "$script" | grep -Ec '^  [A-Za-z0-9_.-]+$')
@@ -39,6 +49,10 @@ grep -Fq 'release upload "$tag" "$asset" --repo "$repository" --clobber' "$scrip
 grep -Fq 'diff -u "$work/expected-assets" "$work/actual-assets"' "$script" || fail "exact asset verification is missing"
 grep -Fq 'release edit "$tag" --repo "$repository" --draft=false' "$script" || fail "final publication is missing"
 grep -Fq '.immutable == true and (.assets | length) == 19' "$script" || fail "immutable final-state verification is missing"
+grep -Fq 'file_size()' "$script" || fail "uploader needs portable file-size lookup"
+grep -Fq 'stat -f %z' "$script" || fail "uploader must support macOS file-size lookup"
+grep -Fq 'file_sha256()' "$script" || fail "uploader needs portable SHA-256 lookup"
+grep -Fq 'shasum -a 256' "$script" || fail "uploader must support macOS SHA-256 lookup"
 
 if grep -Fq 'gh release create "$tag" "$assets_dir"/*' "$script"; then
   fail "bulk all-or-nothing release upload returned"
