@@ -237,7 +237,7 @@ jobs:
     timeout-minutes: 30
     env:
       XCSH_VERIFIED_NATIVE_MANIFEST: ${{ github.workspace }}/packages/natives/native/native-manifest.json
-      XCSH_TEST_FILE_WORKERS: "0"
+      XCSH_TEST_FILE_WORKERS: "10"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
