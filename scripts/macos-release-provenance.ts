@@ -159,6 +159,21 @@ function manifestPath(file: MacOsProvenanceFile, manifest: MacOsProvenanceManife
 	throw new Error(`unsupported provenance layout: ${layout}`);
 }
 
+function inventoryRoots(manifest: MacOsProvenanceManifest, layout: "release" | "homebrew" | "pkg"): string[] {
+	const roots = new Set<string>();
+	for (const file of manifest.files) roots.add(path.posix.dirname(manifestPath(file, manifest, layout)));
+	if (layout === "homebrew") roots.add("provenance");
+	return [...roots].sort();
+}
+
+function auxiliaryInventoryPaths(manifest: MacOsProvenanceManifest, layout: "release" | "homebrew" | "pkg"): string[] {
+	if (layout === "homebrew") return ["provenance/manifest.json"];
+	if (layout === "pkg") {
+		return [`Library/Application Support/xcsh/natives/${manifest.version}/provenance.json`];
+	}
+	return [];
+}
+
 function validateManifest(manifest: MacOsProvenanceManifest): string[] {
 	const failures: string[] = [];
 	if (manifest.schemaVersion !== 1) failures.push("unsupported schema version");
@@ -215,16 +230,18 @@ export async function verifyMacOsProvenance(options: {
 			}
 		}
 	}
+	for (const relative of auxiliaryInventoryPaths(manifest, options.layout)) allowed.add(relative);
 	if (options.rejectUnexpected) {
-		const walk = async (directory: string, prefix = ""): Promise<void> => {
+		const walk = async (directory: string, prefix: string): Promise<void> => {
 			for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
 				const relative = path.posix.join(prefix, entry.name);
 				if (entry.isDirectory()) await walk(path.join(directory, entry.name), relative);
-				else if (!allowed.has(relative) && relative !== "provenance/manifest.json" && !relative.endsWith("provenance.json"))
-					failures.push(`${relative}: unexpected file`);
+				else if (!allowed.has(relative)) failures.push(`${relative}: unexpected file`);
 			}
 		};
-		await walk(options.rootDir);
+		for (const root of inventoryRoots(manifest, options.layout)) {
+			await walk(path.join(options.rootDir, root), root === "." ? "" : root);
+		}
 	}
 	if (failures.length > 0) throw new Error(failures.join("\n"));
 }
