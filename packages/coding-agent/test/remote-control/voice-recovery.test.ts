@@ -68,6 +68,11 @@ async function reconnected(f: ReturnType<typeof fixture>) {
 	while (f.connections.length < 2 && Date.now() < deadline) await Bun.sleep(10);
 	expect(f.connections).toHaveLength(2);
 }
+async function recoveryStopped(f: ReturnType<typeof fixture>) {
+	const deadline = Date.now() + 3000;
+	while (f.voice.active && Date.now() < deadline) await Bun.sleep(10);
+	expect(f.voice.active).toBe(false);
+}
 const delegation = {
 	type: "delegation.created",
 	item: {
@@ -241,8 +246,7 @@ test("temporary reconnect failures have a finite retry budget", async () => {
 	await f.voice.start(start);
 	f.reject(new Error("Realtime connection closed"));
 	f.connections[0].handlers.closed();
-	await Bun.sleep(1600);
-	expect(f.voice.active).toBe(false);
+	await recoveryStopped(f);
 	expect(f.authorization).toHaveLength(4);
 	expect(f.events.filter(e => e.method === "thread/realtime/error")).toHaveLength(1);
 	expect(f.records.filter(e => e.stage === "sideband-reconnect").map(e => e.attempt)).toEqual([1, 2, 3]);
