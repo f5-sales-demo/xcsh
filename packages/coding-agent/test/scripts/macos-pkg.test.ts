@@ -3,6 +3,17 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { stageMacOsPackage } from "../../../../scripts/ci-release-macos-pkg";
+import { createMacOsProvenanceManifest } from "../../../../scripts/macos-release-provenance";
+
+const signature = {
+	authority: "Developer ID Application",
+	teamIdentifier: "97ZYL78T5F",
+	hardenedRuntime: true,
+	trustedTimestamp: true,
+	notarized: true,
+	entitlements: [] as string[],
+	architectures: ["arm64"],
+};
 
 describe("macOS pkg payload", () => {
 	it("stages the CLI and matching signed addons at stable install paths", async () => {
@@ -15,6 +26,21 @@ describe("macOS pkg payload", () => {
 			await Bun.write(binaryPath, "binary");
 			await Bun.write(path.join(nativeDir, "pi_natives.darwin-arm64.node"), "arm addon");
 			await Bun.write(path.join(nativeDir, "pi_natives.darwin-x64-modern.node"), "wrong arch");
+			await fs.rm(path.join(nativeDir, "pi_natives.darwin-x64-modern.node"));
+			const manifest = await createMacOsProvenanceManifest({
+				arch: "arm64",
+				version: "21.11.9",
+				binaryPath,
+				nativeDir,
+				inspectSignature: async file => ({
+					...signature,
+					entitlements: file.endsWith(".node")
+						? []
+						: ["com.apple.security.cs.allow-jit", "com.apple.security.cs.allow-unsigned-executable-memory"],
+				}),
+			});
+			const provenancePath = path.join(fixture, "provenance.json");
+			await Bun.write(provenancePath, JSON.stringify(manifest));
 
 			const staged = await stageMacOsPackage({
 				arch: "arm64",
@@ -22,11 +48,13 @@ describe("macOS pkg payload", () => {
 				binaryPath,
 				nativeDir,
 				rootDir,
+				provenancePath,
 			});
 
 			expect(staged).toEqual([
 				path.join(rootDir, "usr/local/bin/xcsh"),
 				path.join(rootDir, "Library/Application Support/xcsh/natives/21.11.9/pi_natives.darwin-arm64.node"),
+				path.join(rootDir, "Library/Application Support/xcsh/natives/21.11.9/provenance.json"),
 			]);
 			expect(await fs.readFile(staged[1], "utf8")).toBe("arm addon");
 		} finally {
@@ -46,6 +74,7 @@ describe("macOS pkg payload", () => {
 					binaryPath: path.join(fixture, "xcsh"),
 					nativeDir: path.join(fixture, "natives"),
 					rootDir: path.join(fixture, "root"),
+					provenancePath: path.join(fixture, "missing-provenance.json"),
 				}),
 			).rejects.toThrow("No signed native addons found for darwin-x64");
 		} finally {

@@ -13,7 +13,9 @@ describe("installed native addon paths", () => {
 		const candidates = getInstalledNativeCandidates({
 			platform: "darwin",
 			addonFilenames: ["pi_natives.darwin-arm64.node"],
+			resolvedExecPath: "/opt/homebrew/Caskroom/xcsh/21.31.0/bin/xcsh",
 			resolvedExecDir: "/opt/homebrew/Caskroom/xcsh/21.31.0/bin",
+			packageVersion: "21.31.0",
 		});
 
 		expect(candidates).toEqual(["/opt/homebrew/Caskroom/xcsh/21.31.0/libexec/pi_natives.darwin-arm64.node"]);
@@ -23,10 +25,36 @@ describe("installed native addon paths", () => {
 		const candidates = getInstalledNativeCandidates({
 			platform: "darwin",
 			addonFilenames: ["pi_natives.darwin-arm64.node"],
+			resolvedExecPath: "/opt/homebrew/Caskroom/xcsh/21.31.0/bin/xcsh",
 			resolvedExecDir: "/opt/homebrew/Caskroom/xcsh/21.31.0/bin",
+			packageVersion: "21.31.0",
 		});
 
 		expect(candidates).toEqual(["/opt/homebrew/Caskroom/xcsh/21.31.0/libexec/pi_natives.darwin-arm64.node"]);
+	});
+
+	it("uses the versioned system payload only for the direct MDM executable", () => {
+		const candidates = getInstalledNativeCandidates({
+			platform: "darwin",
+			addonFilenames: ["pi_natives.darwin-arm64.node"],
+			resolvedExecPath: "/usr/local/bin/xcsh",
+			resolvedExecDir: "/usr/local/bin",
+			packageVersion: "21.32.1",
+		});
+
+		expect(candidates).toEqual(["/Library/Application Support/xcsh/natives/21.32.1/pi_natives.darwin-arm64.node"]);
+	});
+
+	it("does not let an unrelated standalone binary see Caskroom or MDM payloads", () => {
+		expect(
+			getInstalledNativeCandidates({
+				platform: "darwin",
+				addonFilenames: ["pi_natives.darwin-arm64.node"],
+				resolvedExecPath: "/Users/username/bin/xcsh",
+				resolvedExecDir: "/Users/username/bin",
+				packageVersion: "21.32.1",
+			}),
+		).toEqual([]);
 	});
 
 	it("does not advertise macOS installation paths on other platforms", () => {
@@ -34,7 +62,9 @@ describe("installed native addon paths", () => {
 			getInstalledNativeCandidates({
 				platform: "linux",
 				addonFilenames: ["pi_natives.linux-x64.node"],
+				resolvedExecPath: "/home/username/.linuxbrew/bin/xcsh",
 				resolvedExecDir: "/home/username/.linuxbrew/bin",
+				packageVersion: "21.32.1",
 			}),
 		).toEqual([]);
 	});

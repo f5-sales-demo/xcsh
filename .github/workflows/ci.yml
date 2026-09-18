@@ -716,6 +716,10 @@ jobs:
             echo "::error::No Developer ID signing identity found for native addons"
             exit 1
           fi
+          if [ "$APPLE_TEAM_ID" != "97ZYL78T5F" ] || [[ "$SIGNING_IDENTITY" != *"(97ZYL78T5F)"* ]]; then
+            echo "::error::Release signing identity must use team 97ZYL78T5F"
+            exit 1
+          fi
           shopt -s nullglob
           NODES=(packages/natives/native/*.node)
           if [ ${#NODES[@]} -eq 0 ]; then
@@ -724,31 +728,23 @@ jobs:
           fi
           echo "Signing ${#NODES[@]} native addon(s) with: $SIGNING_IDENTITY"
           for node in "${NODES[@]}"; do
-            # Strip any prior ad-hoc/linker signature, then Dev-ID sign with hardened runtime.
-            codesign --remove-signature "$node" 2>/dev/null || true
-            ATTEMPT=1
-            until codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$node" 2>&1; do
-              if [ "$ATTEMPT" -ge 5 ]; then echo "::error::codesign failed for $node"; exit 1; fi
-              echo "::warning::codesign $node attempt $ATTEMPT failed, retrying..."; sleep $((ATTEMPT * 5)); ATTEMPT=$((ATTEMPT + 1))
-            done
-            codesign --verify --verbose "$node"
-            codesign -dvvv "$node" 2>&1 | grep -E "Authority=Developer ID Application|flags=" || true
+            codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$node"
+            codesign --verify --deep --strict --verbose=2 "$node"
           done
           # Notarize the addon(s). A bare .node cannot be stapled, so the load relies
           # on Gatekeeper's online notarization check (cdhash registered with Apple).
           ZIP="$RUNNER_TEMP/natives-${RELEASE_ARCH}.zip"
           ditto -c -k packages/natives/native "$ZIP"
-          xcrun notarytool submit "$ZIP" \
+          NOTARY_OUTPUT=$(xcrun notarytool submit "$ZIP" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait --output-format json)
+          echo "$NOTARY_OUTPUT"
+          jq -e '.status == "Accepted"' <<<"$NOTARY_OUTPUT" >/dev/null
 
-      # Hard gate: the sign step's own checks are soft (grep ... || true, and
-      # notarytool --wait does not fail on an Invalid result), so verify the addons
-      # are ACTUALLY Developer-ID signed + hardened-runtime + notarized before they
-      # are embedded. Without this a release could silently ship an ad-hoc/unnotarized
-      # .node that dies at dlopen on managed/MDM Macs ("could not verify... malware").
+      # Hard gate before embedding: exact team, runtime, timestamp, no entitlements,
+      # strict signature verification, and an accepted notarization assessment.
       - name: Verify native addons are signed + notarized
         run: bun run ci:release:verify-native-signing
 
@@ -775,67 +771,22 @@ jobs:
             echo "ERROR: No Developer ID signing identity found"
             exit 1
           fi
+          if [ "$APPLE_TEAM_ID" != "97ZYL78T5F" ] || [[ "$SIGNING_IDENTITY" != *"(97ZYL78T5F)"* ]]; then
+            echo "::error::Release signing identity must use team 97ZYL78T5F"
+            exit 1
+          fi
           echo "Using signing identity: $SIGNING_IDENTITY"
 
           BINARY_PATH="packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}"
           if [ -f "$BINARY_PATH" ]; then
-            echo "=== Binary diagnostics ==="
             file "$BINARY_PATH"
-            ls -la "$BINARY_PATH"
-            echo "Mach-O architectures:"
-            lipo -info "$BINARY_PATH" 2>&1 || true
-            echo "Existing signature state:"
-            codesign -dvvv "$BINARY_PATH" 2>&1 || true
-            echo "==========================="
-
-            # Strip any existing (possibly malformed) signature from Bun-compiled binary
-            # Bun's --compile can produce binaries with signature blocks that codesign --force
-            # cannot replace — removing first ensures a clean slate
-            echo "Stripping existing signature..."
-            codesign --remove-signature "$BINARY_PATH" 2>&1 || true
-            echo "After strip:"
-            codesign -dvvv "$BINARY_PATH" 2>&1 || true
-
-            # Apple's timestamp server can be transiently unavailable — retry with exponential backoff
-            CODESIGN_MAX_ATTEMPTS=5
-            CODESIGN_DELAY=5
-            for attempt in $(seq 1 "$CODESIGN_MAX_ATTEMPTS"); do
-              echo "codesign attempt $attempt/$CODESIGN_MAX_ATTEMPTS..."
-              if codesign --force --options runtime \
-                --entitlements scripts/entitlements.plist \
-                --sign "$SIGNING_IDENTITY" \
-                --timestamp "$BINARY_PATH" 2>&1; then
-                echo "codesign succeeded on attempt $attempt"
-                break
-              fi
-              if [ "$attempt" -eq "$CODESIGN_MAX_ATTEMPTS" ]; then
-                echo "::error::codesign failed after $CODESIGN_MAX_ATTEMPTS attempts"
-                exit 1
-              fi
-              echo "::warning::codesign attempt $attempt failed, retrying in ${CODESIGN_DELAY}s..."
-              sleep "$CODESIGN_DELAY"
-              CODESIGN_DELAY=$((CODESIGN_DELAY * 2))
-            done
-
-            codesign --verify --verbose "$BINARY_PATH" || {
-              echo "::error::Code signature verification failed for ${RELEASE_ARCH}"
-              exit 1
-            }
-
-            AUTHORITY=$(codesign -dvvv "$BINARY_PATH" 2>&1 | grep "Authority=Developer ID Application" || true)
-            if [ -z "$AUTHORITY" ]; then
-              echo "::error::Binary not signed with Developer ID Application certificate"
-              exit 1
-            fi
-            echo "  Signed with: $AUTHORITY"
-
-            FLAGS=$(codesign -dvvv "$BINARY_PATH" 2>&1 | grep "flags=" || true)
-            if echo "$FLAGS" | grep -q "runtime"; then
-              echo "  Hardened runtime enabled"
-            else
-              echo "::error::Hardened runtime not enabled"
-              exit 1
-            fi
+            lipo -info "$BINARY_PATH"
+            # Sign directly over Bun's linker signature exactly once. Failure is fatal.
+            codesign --force --options runtime \
+              --entitlements scripts/entitlements.plist \
+              --sign "$SIGNING_IDENTITY" \
+              --timestamp "$BINARY_PATH"
+            codesign --verify --deep --strict --verbose=2 "$BINARY_PATH"
 
             echo "${RELEASE_ARCH} signed successfully"
           else
@@ -855,8 +806,8 @@ jobs:
           ditto -c -k --keepParent "$BINARY_PATH" "$ZIP_PATH"
 
           echo "Submitting ${RELEASE_ARCH} for notarization..."
-          echo "Xcode version: $(xcode-select -p)"
-          xcrun notarytool --version 2>&1 || true
+          echo "Xcode path: $(xcode-select -p)"
+          xcrun notarytool --version
 
           MAX_ATTEMPTS=3
           BACKOFF=30
@@ -893,14 +844,22 @@ jobs:
             exit 1
           fi
 
-          STAPLE_OUTPUT=$(xcrun stapler staple "$BINARY_PATH" 2>&1) || true
-          if echo "$STAPLE_OUTPUT" | grep -q "The staple and validate action worked"; then
-            echo "  Notarization ticket stapled"
-          else
-            echo "  Stapling not supported for bare Mach-O CLI tools (expected)"
-          fi
-
           echo "All checks passed for ${RELEASE_ARCH}"
+
+      - name: Capture immutable macOS payload provenance
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          bun scripts/macos-release-provenance.ts create \
+            --arch "$RELEASE_ARCH" \
+            --version "$version" \
+            --binary "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}" \
+            --native-dir packages/coding-agent/binaries \
+            --output "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json"
+          bun scripts/macos-release-provenance.ts verify \
+            --manifest "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
+            --root packages/coding-agent/binaries \
+            --layout release
 
       - name: Build, sign, notarize, and staple macOS package
         env:
@@ -917,6 +876,7 @@ jobs:
             --version "$version" \
             --binary "$binary" \
             --native-dir packages/natives/native \
+            --provenance "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
             --output "$pkg"
 
           notary_accepted=false
@@ -942,6 +902,12 @@ jobs:
           xcrun stapler validate "$pkg"
           pkgutil --check-signature "$pkg" | grep -q "Developer ID Installer"
           spctl --assess --verbose=4 --type install "$pkg"
+          expanded="$RUNNER_TEMP/xcsh-pkg-expanded-${RELEASE_ARCH}"
+          pkgutil --expand-full "$pkg" "$expanded"
+          bun scripts/macos-release-provenance.ts verify \
+            --manifest "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
+            --root "$expanded/Payload" \
+            --layout pkg
 
       - name: Verify signed macOS sandbox check in a direct-home live profile
         env:
@@ -998,6 +964,15 @@ jobs:
             | LC_ALL=C sort > "$RUNNER_TEMP/homebrew-archives-second.sha256"
           diff -u "$RUNNER_TEMP/homebrew-archives-first.sha256" \
             "$RUNNER_TEMP/homebrew-archives-second.sha256"
+          for arch in arm64 x64; do
+            root="$RUNNER_TEMP/homebrew-${arch}"
+            mkdir "$root"
+            unzip -q "packages/coding-agent/binaries/xcsh-darwin-${arch}.zip" -d "$root"
+            bun scripts/macos-release-provenance.ts verify \
+              --manifest "$root/provenance/manifest.json" \
+              --root "$root" \
+              --layout homebrew
+          done
       - name: List release binaries
         run: ls -la packages/coding-agent/binaries/
       - name: Create GitHub Release
@@ -1089,6 +1064,18 @@ jobs:
           gh release download "$GITHUB_REF_NAME" \
             --pattern 'xcsh-*.zip' \
             --dir packages/coding-agent/binaries
+      - name: Verify downloaded archive provenance
+        run: |
+          set -euo pipefail
+          for arch in arm64 x64; do
+            root="$RUNNER_TEMP/downloaded-homebrew-${arch}"
+            mkdir "$root"
+            unzip -q "packages/coding-agent/binaries/xcsh-darwin-${arch}.zip" -d "$root"
+            bun scripts/macos-release-provenance.ts verify \
+              --manifest "$root/provenance/manifest.json" \
+              --root "$root" \
+              --layout homebrew
+          done
       - name: Update Homebrew tap
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
@@ -1150,6 +1137,44 @@ jobs:
             TMPDIR="$UAT_HOME/tmp" \
             PATH="$UAT_BREW_PREFIX/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
             /bin/bash "$UAT_HOME/ci-verify-homebrew-cask.sh"
+
+  verify-macos-pkg:
+    name: Verify direct MDM package (${{ matrix.arch }})
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [create-release]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x64
+          - os: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+      - name: Download immutable MDM package and provenance
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" \
+            --pattern "xcsh-darwin-${{ matrix.arch }}.pkg" \
+            --pattern "xcsh-darwin-${{ matrix.arch }}.provenance.json" \
+            --dir "$RUNNER_TEMP"
+      - name: Install as the MDM channel and run as a clean standard user
+        env:
+          EXPECTED_VERSION: ${{ github.ref_name }}
+          RELEASE_ARCH: ${{ matrix.arch }}
+          PKG_PATH: ${{ runner.temp }}/xcsh-darwin-${{ matrix.arch }}.pkg
+          PROVENANCE_PATH: ${{ runner.temp }}/xcsh-darwin-${{ matrix.arch }}.provenance.json
+        run: bash scripts/ci-verify-macos-pkg.sh
 
   # Publish to npm
   publish-npm:

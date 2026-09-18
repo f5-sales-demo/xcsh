@@ -1,21 +1,19 @@
 #!/usr/bin/env bun
 /**
- * Release gate: assert every macOS native addon is Developer-ID signed, built with
- * the hardened runtime, AND notarized — BEFORE it gets embedded into the compiled
+ * Release gate: assert every macOS native addon is Developer-ID signed by the
+ * expected team, built with the hardened runtime, timestamped, carries no
+ * entitlements, AND is notarized — BEFORE it gets embedded into the compiled
  * binary. xcsh extracts the embedded `.node` to `~/.xcsh/natives/<ver>/` at runtime
  * and `dlopen`s it; that extracted copy is a byte-for-byte image of what we embed,
  * so it only loads on managed/MDM Macs if the embedded `.node` carried a real
- * Developer-ID + notarized signature. The sign step's own checks are soft
- * (`… || true`, and `notarytool --wait` does not fail on an `Invalid` result), so
- * without this gate a release could silently ship an ad-hoc / unnotarized addon
- * that dies at load with "pi_natives… could not verify it is free of malware".
+ * Developer-ID + notarized signature.
  *
  * Usage: bun scripts/ci-release-verify-native-signing.ts [nativeDir]
  * macOS-only (uses codesign + spctl); no-op with a notice on other platforms.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { $ } from "bun";
+import { assertMacOsSignaturePolicy, inspectMacOsSignature } from "./macos-release-provenance";
 
 if (process.platform !== "darwin") {
 	console.log("ci-release-verify-native-signing: not macOS — skipping (nothing to verify here).");
@@ -41,32 +39,12 @@ if (nodes.length === 0) {
 }
 
 async function verifyOne(node: string): Promise<string[]> {
-	const failures: string[] = [];
-	const cs = await $`codesign -dvvv ${node}`.quiet().nothrow();
-	const csText = `${cs.stdout.toString()}${cs.stderr.toString()}`;
-	if (!/Authority=Developer ID Application/.test(csText)) {
-		const adhoc = /Signature=adhoc/.test(csText) ? " (found ad-hoc signature)" : "";
-		failures.push(`not Developer-ID Application signed${adhoc}`);
+	try {
+		assertMacOsSignaturePolicy(await inspectMacOsSignature(node), "native-addon");
+		return [];
+	} catch (error) {
+		return [error instanceof Error ? error.message : String(error)];
 	}
-	if (!/flags=0x[0-9a-f]*\([^)]*runtime/.test(csText)) {
-		failures.push("missing hardened runtime (flags=…runtime)");
-	}
-	// `-t install` is the assessment type that recognizes a notarized standalone
-	// Mach-O; `-t open`/`-t exec` return "Insufficient Context" for a bare dylib.
-	// Apple can accept a notary submission before the Gatekeeper assessment
-	// service has propagated that verdict to the runner. Keep the gate strict,
-	// but tolerate that documented short propagation window.
-	let gkText = "";
-	for (let attempt = 1; attempt <= 8; attempt += 1) {
-		const gk = await $`spctl -a -vv -t install ${node}`.quiet().nothrow();
-		gkText = `${gk.stdout.toString()}${gk.stderr.toString()}`;
-		if (/source=Notarized Developer ID/.test(gkText)) break;
-		if (attempt < 8) await Bun.sleep(15_000);
-	}
-	if (!/source=Notarized Developer ID/.test(gkText)) {
-		failures.push(`not notarized (spctl: ${gkText.trim().split("\n").pop() ?? "no verdict"})`);
-	}
-	return failures;
 }
 
 let ok = 0;
@@ -74,7 +52,7 @@ const problems: string[] = [];
 for (const node of nodes) {
 	const failures = await verifyOne(node);
 	if (failures.length === 0) {
-		console.log(`✓ ${path.basename(node)} — Developer-ID + hardened-runtime + notarized`);
+		console.log(`✓ ${path.basename(node)} — exact Developer-ID policy + notarization`);
 		ok++;
 	} else {
 		for (const f of failures) console.error(`::error::${path.basename(node)}: ${f}`);
@@ -86,4 +64,4 @@ if (problems.length > 0) {
 	console.error(`\n::error::native signing gate FAILED for ${problems.length}/${nodes.length}: ${problems.join(", ")}`);
 	process.exit(1);
 }
-console.log(`\nnative signing gate PASSED: ${ok}/${nodes.length} darwin addon(s) Developer-ID signed + notarized.`);
+console.log(`\nnative signing gate PASSED: ${ok}/${nodes.length} darwin addon(s) satisfy the exact signing policy.`);

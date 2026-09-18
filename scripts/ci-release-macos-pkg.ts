@@ -3,6 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { type MacOsProvenanceManifest, verifyMacOsProvenance } from "./macos-release-provenance";
 
 export interface StageMacOsPackageOptions {
 	arch: "arm64" | "x64";
@@ -10,10 +11,11 @@ export interface StageMacOsPackageOptions {
 	binaryPath: string;
 	nativeDir: string;
 	rootDir: string;
+	provenancePath: string;
 }
 
 export async function stageMacOsPackage(options: StageMacOsPackageOptions): Promise<string[]> {
-	const { arch, version, binaryPath, nativeDir, rootDir } = options;
+	const { arch, version, binaryPath, nativeDir, rootDir, provenancePath } = options;
 	if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Invalid release version: ${version}`);
 
 	const binaryTarget = path.join(rootDir, "usr", "local", "bin", "xcsh");
@@ -36,6 +38,12 @@ export async function stageMacOsPackage(options: StageMacOsPackageOptions): Prom
 		await fs.chmod(target, 0o755);
 		staged.push(target);
 	}
+	const manifest = (await Bun.file(provenancePath).json()) as MacOsProvenanceManifest;
+	if (manifest.arch !== arch || manifest.version !== version) throw new Error("Package provenance does not match target");
+	const installedManifest = path.join(nativeTargetDir, "provenance.json");
+	await fs.copyFile(provenancePath, installedManifest);
+	staged.push(installedManifest);
+	await verifyMacOsProvenance({ manifest, rootDir, layout: "pkg", inspectSignature: false, rejectUnexpected: true });
 	return staged;
 }
 
@@ -54,6 +62,7 @@ async function main(): Promise<void> {
 	const binaryPath = argument("--binary");
 	const nativeDir = argument("--native-dir");
 	const outputPath = argument("--output");
+	const provenancePath = argument("--provenance");
 	const signingIdentity = process.env.INSTALLER_SIGNING_IDENTITY;
 	if (!signingIdentity?.includes("Developer ID Installer")) {
 		throw new Error("INSTALLER_SIGNING_IDENTITY must name a Developer ID Installer identity");
@@ -61,7 +70,7 @@ async function main(): Promise<void> {
 
 	const rootDir = await fs.mkdtemp(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "xcsh-pkg-root-"));
 	try {
-		const staged = await stageMacOsPackage({ arch, version, binaryPath, nativeDir, rootDir });
+		const staged = await stageMacOsPackage({ arch, version, binaryPath, nativeDir, rootDir, provenancePath });
 		console.log(`Staged ${staged.length} signed executable file(s) for xcsh ${version} (${arch})`);
 		await fs.mkdir(path.dirname(outputPath), { recursive: true });
 		const proc = Bun.spawn(
