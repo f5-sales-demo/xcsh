@@ -15,6 +15,8 @@ import { loadCapability } from "../../discovery";
 import { getExtensionNameFromPath, getPreloadedPluginRoots } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
+import { integrationRegistry } from "../../integrations/registry";
+import type { IntegrationDefinition, IntegrationHandle } from "../../integrations/types";
 import { personProfileService } from "../../person-profile/service";
 import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
@@ -33,7 +35,6 @@ import type {
 	LoadExtensionsResult,
 	MessageRenderer,
 	RegisteredCommand,
-	ServiceStatusContribution,
 	ToolDefinition,
 } from "./types";
 
@@ -122,6 +123,7 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 		sourceId: string;
 	}> = [];
 	readonly personProfile: ExtensionAPI["personProfile"];
+	readonly integrations: ExtensionAPI["integrations"];
 
 	constructor(
 		public readonly pi: typeof import("@f5-sales-demo/xcsh"),
@@ -131,6 +133,8 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 		public readonly events: EventBus,
 	) {
 		const registrant = extension.resolvedPath;
+		integrationRegistry.unregisterOwner(registrant);
+		personProfileService.unregisterProfileCollectorsByRegistrant(registrant);
 		this.personProfile = Object.freeze({
 			get: () => personProfileService.get(),
 			registerCollector: collector => {
@@ -139,6 +143,46 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 				personProfileService.registerProfileCollector(collector, registrant);
 			},
 			unregisterCollector: (id: string) => personProfileService.unregisterProfileCollector(id, registrant),
+		});
+		this.integrations = Object.freeze({
+			register: <T>(definition: IntegrationDefinition<T>): IntegrationHandle<T> => {
+				const handle = integrationRegistry.register(registrant, definition);
+				extension.integrations.set(definition.id, handle as IntegrationHandle<unknown>);
+				if (definition.profile) {
+					const profile = definition.profile;
+					personProfileService.registerProfileCollector(
+						{
+							id: definition.id,
+							name: definition.name,
+							dependsOn: definition.dependencies,
+							available: async () => true,
+							collect: async signal => {
+								const snapshot = await handle.get(signal);
+								if (snapshot.state !== "ready" || snapshot.value === undefined)
+									return {
+										facts: {},
+										observations: [],
+										sourceState: {
+											state: snapshot.state,
+											...(snapshot.reason ? { reason: snapshot.reason } : {}),
+											...(snapshot.retryAt ? { retryAt: new Date(snapshot.retryAt).toISOString() } : {}),
+										},
+									};
+								return { ...profile(snapshot.value), sourceState: { state: snapshot.state } };
+							},
+						},
+						registrant,
+					);
+				}
+				return handle;
+			},
+			unregister: (id: string): boolean => {
+				const removed = integrationRegistry.unregister(registrant, id);
+				if (!removed) return false;
+				extension.integrations.delete(id);
+				personProfileService.unregisterProfileCollector(id, registrant);
+				return true;
+			},
 		});
 	}
 
@@ -192,10 +236,6 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 
 	registerMessageRenderer<T>(customType: string, renderer: MessageRenderer<T>): void {
 		this.extension.messageRenderers.set(customType, renderer as MessageRenderer);
-	}
-
-	registerServiceStatus(contribution: ServiceStatusContribution): void {
-		this.extension.serviceStatuses.set(contribution.name, contribution);
 	}
 
 	getFlag(name: string): boolean | string | undefined {
@@ -279,7 +319,7 @@ function createExtension(extensionPath: string, resolvedPath: string): Extension
 		commands: new Map(),
 		flags: new Map(),
 		shortcuts: new Map(),
-		serviceStatuses: new Map(),
+		integrations: new Map(),
 	};
 }
 

@@ -15,7 +15,15 @@
       "description": "A test plugin that greets",
       "version": "1.0.0",
       "author": { "name": "Test Author" },
-      "keywords": ["test", "greeting"]
+      "keywords": ["test", "greeting"],
+      "lifecycle": {
+        "mode": "content",
+        "integrations": [],
+        "requirements": [],
+        "setupRequired": false,
+        "collectedData": [],
+        "pluginDependencies": []
+      }
     }
   ]
 }

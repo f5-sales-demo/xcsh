@@ -1,7 +1,7 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import { Container, Input, matchesKey, replaceTabs, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
-import { getConfigDirName } from "@f5-sales-demo/pi-utils";
+import { APP_NAME, getConfigDirName } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../../../capability/fs";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../../discovery/helpers";
 import { PluginManager } from "../../../extensibility/plugins";
@@ -13,7 +13,6 @@ import {
 	getPluginsCacheDir,
 	MarketplaceManager,
 } from "../../../extensibility/plugins/marketplace";
-import { setupTool } from "../../../extensibility/plugins/marketplace/prerequisites";
 import { theme } from "../../theme/theme";
 import { type ActionReview, executeReviewedAction, StaleActionReviewError } from "../reviewed-action";
 import {
@@ -64,7 +63,7 @@ const EMPTY_OPERATIONS: PluginDashboardOperations = {
 		installed: plugins.length,
 		failed: 0,
 		total: plugins.length,
-		authenticationNeeded: [],
+		setupRequired: [],
 	}),
 };
 
@@ -104,7 +103,7 @@ function marketplacePluginName(plugin: DashboardPlugin): string {
 function catalogReviewRevision(plugin: DashboardPlugin): string {
 	return JSON.stringify({
 		catalogVersion: plugin.catalogVersion ?? plugin.version ?? null,
-		prerequisites: plugin.prerequisites ?? [],
+		lifecycle: plugin.lifecycle ?? null,
 	});
 }
 
@@ -227,7 +226,7 @@ export class PluginDashboard extends Container {
 					!current ||
 					JSON.stringify({
 						catalogVersion: current.version ?? null,
-						prerequisites: current.prerequisites ?? [],
+						lifecycle: current.lifecycle,
 					}) !== catalogReviewRevision(plugin)
 				)
 					throw new StaleActionReviewError();
@@ -266,7 +265,7 @@ export class PluginDashboard extends Container {
 				let failed = plugins.filter(
 					plugin => !plugin.marketplace || refresh.failed.includes(plugin.marketplace),
 				).length;
-				const authenticationNeeded: string[] = [];
+				const setupRequired: string[] = [];
 				for (const plugin of plugins.filter(
 					candidate => candidate.marketplace && !refresh.failed.includes(candidate.marketplace),
 				)) {
@@ -275,33 +274,23 @@ export class PluginDashboard extends Container {
 						!current ||
 						JSON.stringify({
 							catalogVersion: current.version ?? null,
-							prerequisites: current.prerequisites ?? [],
+							lifecycle: current.lifecycle,
 						}) !== catalogReviewRevision(plugin)
 					)
 						throw new StaleActionReviewError();
 				}
 				for (const plugin of plugins) {
 					if (!plugin.marketplace || refresh.failed.includes(plugin.marketplace)) continue;
-					let ready = true;
-					for (const prerequisite of plugin.prerequisites ?? []) {
-						const result = await setupTool(prerequisite);
-						if (result.installAttempted && !result.installSuccess) ready = false;
-						if (!result.authenticated && prerequisite.authLoginCmd)
-							authenticationNeeded.push(`${prerequisite.tool}: ${prerequisite.authLoginCmd}`);
-					}
-					if (!ready) {
-						failed++;
-						continue;
-					}
 					try {
 						const sourceName = marketplacePluginName(plugin);
 						await manager.installPlugin(sourceName, plugin.marketplace, { scope: "user" });
 						installed++;
+						if (plugin.lifecycle?.setupRequired) setupRequired.push(`${APP_NAME} plugin setup ${sourceName}`);
 					} catch {
 						failed++;
 					}
 				}
-				return { installed, failed, total: plugins.length, authenticationNeeded };
+				return { installed, failed, total: plugins.length, setupRequired };
 			},
 		};
 	}
@@ -488,7 +477,7 @@ export class PluginDashboard extends Container {
 				this.#replacePlugins(plugins, match ? pluginSelectionKey(match) : undefined);
 				this.#feedback = {
 					kind: "success",
-					message: `${label} completed. ${identity}.${match ? ` ${label === "Removal" && match.installed ? "Remaining copy shown" : "Shown"} in ${tab === "installed" ? "Installed" : "Discover"}.` : ""}`,
+					message: `${label} completed. ${identity}.${label === "Installation" && target?.lifecycle?.setupRequired ? ` Setup required: ${APP_NAME} plugin setup ${marketplacePluginName(target)}.` : ""}${match ? ` ${label === "Removal" && match.installed ? "Remaining copy shown" : "Shown"} in ${tab === "installed" ? "Installed" : "Discover"}.` : ""}`,
 				};
 			} catch {
 				this.#feedback = {
@@ -552,8 +541,7 @@ export class PluginDashboard extends Container {
 	#bulkOutcome(result: PluginBulkResult): string {
 		const parts = [`Installed ${result.installed} of ${result.total} recommended plugins`];
 		if (result.failed) parts.push(`${result.failed} failed`);
-		if (result.authenticationNeeded.length)
-			parts.push(`Authentication still needed: ${result.authenticationNeeded.join(", ")}`);
+		if (result.setupRequired.length) parts.push(`Setup required: ${result.setupRequired.join(", ")}`);
 		return `${parts.join(". ")}.`;
 	}
 
@@ -609,11 +597,7 @@ export class PluginDashboard extends Container {
 				},
 				{ field: "Destination", before: "Absent", after: `${scope} scope` },
 			],
-			consequence: `${
-				plugin.prerequisites?.length
-					? `Declared prerequisites: ${plugin.prerequisites.map(item => `${item.tool} (${item.installCmd})`).join(", ")}.`
-					: "No prerequisites are declared."
-			} The selected scoped registry and versioned cache are written only after confirmation.`,
+			consequence: `Lifecycle: ${plugin.lifecycle?.mode ?? "unknown"}. Requirements: ${plugin.lifecycle?.requirements.join(", ") || "none"}. The selected scoped registry and versioned cache are written only after confirmation.${plugin.lifecycle?.setupRequired ? ` Authentication is not launched by installation; next: ${APP_NAME} plugin setup ${marketplacePluginName(plugin)}.` : " No setup is required."}`,
 		};
 	}
 
@@ -655,29 +639,24 @@ export class PluginDashboard extends Container {
 			.map(plugin => ({
 				identity: `plugin:${plugin.source}:${plugin.id}:${plugin.scope ?? "catalog"}`,
 				version: plugin.catalogVersion ?? plugin.version ?? null,
-				prerequisites: plugin.prerequisites ?? [],
+				lifecycle: plugin.lifecycle ?? null,
 			}))
 			.sort((a, b) => a.identity.localeCompare(b.identity));
 		return {
 			identity: `plugins:recommended:${targets.map(target => target.identity).join(",")}`,
-			scope: "User plugin registry, versioned cache, and declared prerequisite tools",
+			scope: "User plugin registry and versioned cache",
 			revision: JSON.stringify(targets),
 			changes: targets.map(target => ({
 				field: target.identity.replaceAll("\0", " · "),
 				before: "Not installed",
 				after: `${target.version ?? "resolved manifest version"} (user scope)`,
 			})),
-			consequence: `Installs exactly the reviewed recommended entries. ${
-				targets
-					.flatMap(target => target.prerequisites)
-					.map(prerequisite => `${prerequisite.tool} (${prerequisite.installCmd})`)
-					.join(", ") || "No prerequisites are declared."
-			} Partial results remain explicit; retry reviews only entries still unresolved.`,
+			consequence: `Installs exactly the reviewed recommended entries without launching authentication. Plugins that require setup remain enabled and report the canonical ${APP_NAME} plugin setup <plugin> action. Partial results remain explicit; retry reviews only entries still unresolved.`,
 		};
 	}
 
 	#metadata(plugin: DashboardPlugin): string[] {
-		const prerequisites = plugin.prerequisites ?? [];
+		const lifecycle = plugin.lifecycle;
 		return [
 			`Identifier: ${plugin.id}`,
 			`Source: ${plugin.source}${plugin.marketplace ? ` · ${plugin.marketplace}` : ""}`,
@@ -693,15 +672,15 @@ export class PluginDashboard extends Container {
 			...(plugin.homepage ? [`Homepage: ${replaceTabs(plugin.homepage)}`] : []),
 			...(plugin.category ? [`Category: ${replaceTabs(plugin.category)}`] : []),
 			...(plugin.tags?.length ? [`Tags: ${plugin.tags.map(tag => replaceTabs(tag)).join(", ")}`] : []),
-			...(prerequisites.length
+			...(lifecycle
 				? [
-						"Prerequisites:",
-						...prerequisites.map(
-							item =>
-								`${item.tool} · install: ${item.installCmd}${item.authLoginCmd ? ` · sign in: ${item.authLoginCmd}` : ""}`,
-						),
+						`Lifecycle: ${lifecycle.mode}`,
+						`Setup: ${lifecycle.setupRequired ? `required · ${APP_NAME} plugin setup ${marketplacePluginName(plugin)}` : "not required"}`,
+						`Requirements: ${lifecycle.requirements.join(", ") || "none"}`,
+						`Plugin dependencies: ${lifecycle.pluginDependencies.join(", ") || "none"}`,
+						`Collected data: ${lifecycle.collectedData.join(", ") || "none"}`,
 					]
-				: ["Prerequisites: none declared"]),
+				: []),
 		];
 	}
 

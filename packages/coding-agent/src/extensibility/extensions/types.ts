@@ -975,20 +975,6 @@ export interface RegisteredCommand {
 }
 
 // ============================================================================
-// Service Status Contributions
-// ============================================================================
-
-export interface ServiceStatusContribution {
-	name: string;
-	group?: string;
-	check: () => Promise<{ state: "connected" | "unauthenticated" | "unavailable"; hint?: string }>;
-	fix?: {
-		prompt: string;
-		command: string[];
-	};
-}
-
-// ============================================================================
 // Extension API
 // ============================================================================
 
@@ -1018,6 +1004,14 @@ export interface ExtensionAPI {
 		get(): Promise<import("../../person-profile/schema").PersonProfile>;
 		registerCollector(collector: import("../../person-profile/service").ExtensionProfileCollector): void;
 		unregisterCollector(id: string): boolean;
+	};
+
+	/** Process-wide provider readiness, setup and profile-discovery lifecycle. */
+	readonly integrations: {
+		register<T>(
+			definition: import("../../integrations/types").IntegrationDefinition<T>,
+		): import("../../integrations/types").IntegrationHandle<T>;
+		unregister(id: string): boolean;
 	};
 
 	// =========================================================================
@@ -1128,9 +1122,6 @@ export interface ExtensionAPI {
 
 	/** Register a custom renderer for CustomMessageEntry. */
 	registerMessageRenderer<T = unknown>(customType: string, renderer: MessageRenderer<T>): void;
-
-	/** Register a service status check for the welcome screen. */
-	registerServiceStatus(contribution: ServiceStatusContribution): void;
 
 	// =========================================================================
 	// Actions
@@ -1422,7 +1413,7 @@ export interface Extension {
 	commands: Map<string, RegisteredCommand>;
 	flags: Map<string, ExtensionFlag>;
 	shortcuts: Map<KeyId, ExtensionShortcut>;
-	serviceStatuses: Map<string, ServiceStatusContribution>;
+	integrations: Map<string, import("../../integrations/types").IntegrationHandle<unknown>>;
 }
 
 /** Result of loading extensions. */

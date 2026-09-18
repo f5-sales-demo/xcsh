@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "93a20509fed804184201523b9e32ee295302a06c",
-  "fingerprint": "c41fdec03fb58380f042f34569d2e6d32588678e175e5f48d3227d254a28d9a9",
+  "revision": "1f8449ef3f8ec489d359155221ec7d58d97e1198",
+  "fingerprint": "d0596f2e310bef912c32ecc22e7bbab3be00cf0f021026097b88761b901b4745",
   "counts": {
     "total": 241,
     "components": 95,
@@ -499,7 +499,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "5d60eab9c5395f35708a6432c593410ebe4bc88a94e7cd1373703d28f99863be",
+      "sha256": "34cfb6b4c17318522490ef062539b6817d4a6a987a8ae27987ea7dc16b2ed09c",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -541,7 +541,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "f4c7f1ac90da3a9b7dd64befaaecdb2679bc1cb9cee6cf5b859edf1b683e62f7",
+      "sha256": "eb224eab05aed611d8ff5abb91ddeaa4fccb3bc0e279c04e85c68e44db542008",
       "exports": [
         "BranchHandler",
         "ExtensionErrorListener",
@@ -586,7 +586,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "991c228c8c400da9b4bfd4df96e3d993cb4613da9c978dd3e45da5ae4015e0b6",
+      "sha256": "cb6c207ad7454ead77f3652fc4127c683f3c044c8d89fcb8791a04c1ae625b49",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -656,7 +656,6 @@
         "ResourcesDiscoverResult",
         "SendMessageHandler",
         "SendUserMessageHandler",
-        "ServiceStatusContribution",
         "SessionBeforeBranchEvent",
         "SessionBeforeBranchResult",
         "SessionBeforeCompactEvent",
@@ -2083,7 +2082,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "1ad858579d116e045932be61d4b2df2ab15218ea515c8f2d7ff429f9ebbcfcd0",
+      "sha256": "3e5aa1f725ca3cb5ba3fa17b5b991b93e215ce9911e173ccae3fa7bab5e1002d",
       "exports": [
         "PluginDashboard"
       ],
@@ -2104,7 +2103,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "c214d4ca393b8a15e34d52378a8007bd6565d50ced111ab4eddca2cbc46ca5b0",
+      "sha256": "01eefc745585b18dd0f98ce11c064adc019b74d9e01289bb92fe2a77f4e227e1",
       "exports": [
         "applySearch",
         "buildTabs",
@@ -2128,7 +2127,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "669b39b4b284d7022788a23cce9ec550482a4fdbbcb47216a38634283a4b862d",
+      "sha256": "5402b2240d70ba49871e0767ff0d85b1cfc9adc77a788230523c2ffbf7098a14",
       "exports": [
         "DashboardPlugin",
         "PluginBulkResult",
@@ -3037,7 +3036,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "cdb390b71fe5c1b781f5f866bc19e21152b068593049cd501e85619bc6ed05f7",
+      "sha256": "02f7f83e2e6c5b577a03c2af3c80006fce609a2deebd0f2e7859418fdde460c4",
       "exports": [
         "ContextCheckState",
         "ModelCheckState",
@@ -3056,7 +3055,6 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/extension-loading-contract.test.ts",
         "packages/coding-agent/test/input-controller-escape.test.ts",
         "packages/coding-agent/test/input-controller-llm-gate.test.ts",
         "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
@@ -3821,7 +3819,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "944b8404ae63ce60c1c0a99da9dda9e76938af750f619e9dcafadf3da44319c7",
+      "sha256": "f10a5813425d7c478d2e8b227eb865828133424b72cb70155f4d5ea643343324",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -4511,7 +4509,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "19441abf7193652a7ed599b7b74ecd6720e639f0939854e7970f2e22fc1fcb62",
+      "sha256": "f0657ecec7d9f439d77bf6138ca14dfe821a6ab7d2a377fb35f7abb29d2feb66",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4608,7 +4606,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "d3159d0e7022008375ee5bcec8b193fe9bac2be806406b883afcf02330d005ff",
+      "sha256": "96cebb7677793bc0bc30aba1776d7997fafc02f2058576bf8c140d0a2d8d905f",
       "exports": [
         "PluginScope",
         "PluginSetupResult",
@@ -5470,7 +5468,7 @@
         "packages/coding-agent/test/extension-dashboard.test.ts",
         "packages/coding-agent/test/herdr-terminal.test.ts",
         "packages/coding-agent/test/input-controller-clipboard-review.test.ts",
-        "packages/coding-agent/test/interactive-mode-plan-review.test.ts"
+        "packages/coding-agent/test/integration-registry.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/review.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

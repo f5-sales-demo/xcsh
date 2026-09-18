@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 
@@ -135,6 +136,11 @@ export const PersonFactsSchema = Type.Partial(
 	),
 );
 export type UserProfile = Static<typeof PersonFactsSchema>;
+export type ProviderAccount = NonNullable<UserProfile["accounts"]>[number];
+export const accountKey = (account: ProviderAccount): string =>
+	createHash("sha256")
+		.update(JSON.stringify([account.provider, account.identifier, account.accountId ?? "", account.tenantId ?? ""]))
+		.digest("hex");
 export const FieldSchema = Type.KeyOf(PersonFactsSchema);
 const timestamp = Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" });
 const source = Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" });
@@ -156,7 +162,7 @@ export function validateObservation(value: unknown): asserts value is UserProfil
 }
 export const PersonProfileSchema = Type.Object(
 	{
-		schemaVersion: Type.Literal(1),
+		schemaVersion: Type.Literal(2),
 		revision: Type.Integer({ minimum: 0 }),
 		state: Type.Union([Type.Literal("empty"), Type.Literal("ready")]),
 		facts: PersonFactsSchema,
@@ -180,6 +186,16 @@ export const PersonProfileSchema = Type.Object(
 				additionalProperties: false,
 			}),
 		),
+		accountProvenance: Type.Optional(
+			Type.Record(Type.String({ pattern: "^[a-f0-9]{64}$" }), provenance, { additionalProperties: false }),
+		),
+		suppressedAccounts: Type.Optional(
+			Type.Record(
+				Type.String({ pattern: "^[a-f0-9]{64}$" }),
+				Type.Object({ forgottenAt: timestamp }, { additionalProperties: false }),
+				{ additionalProperties: false },
+			),
+		),
 		discoveryMode: Type.Optional(Type.Union([Type.Literal("automatic"), Type.Literal("configured")])),
 		collectionState: Type.Optional(
 			Type.Record(
@@ -189,7 +205,27 @@ export const PersonProfileSchema = Type.Object(
 						attemptedAt: timestamp,
 						succeededAt: Type.Optional(timestamp),
 						durationMs: Type.Optional(Type.Integer({ minimum: 0 })),
-						status: Type.Union([Type.Literal("collected"), Type.Literal("unavailable"), Type.Literal("error")]),
+						state: Type.Union([
+							Type.Literal("ready"),
+							Type.Literal("setup_required"),
+							Type.Literal("unavailable"),
+							Type.Literal("degraded"),
+							Type.Literal("rate_limited"),
+							Type.Literal("error"),
+						]),
+						reason: Type.Optional(
+							Type.Union([
+								Type.Literal("cli_missing"),
+								Type.Literal("not_authenticated"),
+								Type.Literal("expired"),
+								Type.Literal("permission_denied"),
+								Type.Literal("dependency_missing"),
+								Type.Literal("network"),
+								Type.Literal("rate_limited"),
+								Type.Literal("invalid_response"),
+							]),
+						),
+						retryAt: Type.Optional(timestamp),
 					},
 					{ additionalProperties: false },
 				),
@@ -210,6 +246,7 @@ export function validateProfile(value: unknown): asserts value is PersonProfile 
 	if (!Value.Check(PersonProfileSchema, value)) throw new Error("Invalid person profile storage");
 	const profile = value as PersonProfile;
 	for (const field of Object.keys(profile.facts) as (keyof UserProfile)[]) {
+		if (field === "accounts") continue;
 		if (!profile.provenance[field] || profile.suppressed[field]) throw new Error("Invalid person profile storage");
 	}
 	for (const field of Object.keys(profile.provenance) as (keyof UserProfile)[]) {
@@ -235,12 +272,20 @@ export function validateProfile(value: unknown): asserts value is PersonProfile 
 			if (values.length !== 1 || Object.hasOwn(profile.suppressedProperties ?? {}, values[0].propertyID))
 				throw new Error("Invalid person profile storage");
 		}
+	const accounts = profile.facts.accounts ?? [];
+	const accountKeys = new Set(accounts.map(accountKey));
+	if (accountKeys.size !== accounts.length) throw new Error("Invalid person profile storage");
+	for (const key of accountKeys)
+		if (!Object.hasOwn(profile.accountProvenance ?? {}, key) || Object.hasOwn(profile.suppressedAccounts ?? {}, key))
+			throw new Error("Invalid person profile storage");
+	for (const key of Object.keys(profile.accountProvenance ?? {}))
+		if (!accountKeys.has(key)) throw new Error("Invalid person profile storage");
 	if (profile.state !== (Object.keys(profile.facts).length || profile.observations.length ? "ready" : "empty"))
 		throw new Error("Invalid person profile storage");
 }
 export function emptyProfile(): PersonProfile {
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		revision: 0,
 		state: "empty",
 		facts: {},

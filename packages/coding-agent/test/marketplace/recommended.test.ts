@@ -240,11 +240,18 @@ describe("recommended field on DashboardPlugin", () => {
 			id: "azure@mkt",
 			name: "azure",
 			recommended: true,
-			prerequisites: [{ tool: "az", installCmd: "brew install azure-cli", detectCmd: "az version" }],
+			lifecycle: {
+				mode: "integrated",
+				integrations: ["azure"],
+				requirements: ["Azure CLI"],
+				setupRequired: true,
+				collectedData: ["accounts"],
+				pluginDependencies: [],
+			},
 		});
 		expect(plugin.recommended).toBe(true);
-		expect(plugin.prerequisites).toHaveLength(1);
-		expect(plugin.prerequisites![0].tool).toBe("az");
+		expect(plugin.lifecycle?.mode).toBe("integrated");
+		expect(plugin.lifecycle?.setupRequired).toBe(true);
 	});
 
 	it("defaults recommended to undefined when not set", () => {

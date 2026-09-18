@@ -645,20 +645,28 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 						? [mapContextStatus(welcomeResult.context ?? { state: "no_context" })]
 						: [];
 
-				// Collect service statuses from plugins
+				// Integration probes are process-wide and shared with profile/status consumers.
 				if (extensionRunner) {
-					const pluginContributions = extensionRunner.getAllRegisteredServiceStatuses();
-					for (const contribution of pluginContributions) {
+					for (const handle of extensionRunner.getAllRegisteredIntegrations()) {
 						try {
-							const status = await contribution.check();
-							services.push({ name: contribution.name, ...status, _isPlugin: true, _group: contribution.group });
+							const status = await handle.get();
+							services.push({
+								name: handle.name,
+								state: status.state,
+								reason: status.reason,
+								retryAt: status.retryAt,
+								hint:
+									status.state === "setup_required"
+										? `xcsh plugin setup ${handle.plugin ?? handle.id}`
+										: undefined,
+								_isPlugin: true,
+							});
 						} catch {
 							services.push({
-								name: contribution.name,
-								state: "unavailable",
-								hint: "check failed",
+								name: handle.name,
+								state: "error",
+								reason: "invalid_response",
 								_isPlugin: true,
-								_group: contribution.group,
 							});
 						}
 					}

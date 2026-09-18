@@ -20,12 +20,15 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fetcher";
+import { describeSetupPlan, executeReviewedSetup } from "../integrations/setup";
+import type { IntegrationHandle } from "../integrations/types";
 import { BorderedLoader } from "../modes/components/bordered-loader";
 import type { ActionReview } from "../modes/components/reviewed-action";
 import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
 import { getLoginOptions } from "../modes/controllers/login-options";
 import { theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
+import { personProfileService } from "../person-profile/service";
 import { resolveRemoteThreadId } from "../remote-control/thread-identity";
 import { ContextService } from "../services/xcsh-context";
 import { handleFastCommand } from "./fast-command";
@@ -33,7 +36,6 @@ import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace
 import {
 	executeMarketplaceAddition,
 	executePluginInstall,
-	executePluginSetup,
 	executePluginUpgrade,
 	executePluginUpgradeAll,
 	prepareMarketplaceAddition,
@@ -42,7 +44,6 @@ import {
 	preparePluginEnabled,
 	preparePluginInstall,
 	preparePluginRemoval,
-	preparePluginSetup,
 	preparePluginUpgrade,
 	preparePluginUpgradeAll,
 } from "./plugin-reviewed-actions";
@@ -1700,38 +1701,63 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						}
 						break;
 					}
-					// ── Setup (guided recommended plugin install) ──
+					// ── Setup (reviewed authentication/readiness plan) ──
 					case "setup": {
-						const prepared = await preparePluginSetup(mgr);
-						if (!prepared) {
-							showPluginStatus(t("commands.plugin.setup.allInstalled"));
+						if (!rest) {
+							runtime.ctx.showStatus("Usage: /plugin setup <plugin>");
 							break;
 						}
-						let result: Awaited<ReturnType<typeof executePluginSetup>> | undefined;
-						const outcome = await runReviewedAction(runtime.ctx, "recommended plugin setup", {
-							review: prepared.review,
-							resolve: async () => {
-								const current = await preparePluginSetup(mgr);
-								return current ? { review: current.review, target: current.target } : undefined;
-							},
+						const matches = (runtime.ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? []).filter(
+							handle =>
+								(handle.id === rest || handle.plugin === rest || handle.plugin?.split("@")[0] === rest) &&
+								handle.setupPlan !== undefined,
+						);
+						if (matches.length !== 1) {
+							runtime.ctx.showError(
+								matches.length
+									? `Plugin ${rest} registers multiple setup plans; use an integration id.`
+									: `No setup plan is registered for ${rest}.`,
+							);
+							break;
+						}
+						const handle = matches[0] as IntegrationHandle<unknown>;
+						const plan = handle.setupPlan;
+						if (!plan) {
+							runtime.ctx.showError(`Integration ${handle.id} does not declare setup.`);
+							break;
+						}
+						const current = await handle.get();
+						if (current.state === "ready") {
+							showPluginStatus(`${handle.plugin ?? handle.id}: ready (setup is not required)`);
+							break;
+						}
+						let result: Awaited<ReturnType<typeof executeReviewedSetup>> | undefined;
+						const review: ActionReview = {
+							identity: `integration:${handle.id}`,
+							scope: handle.plugin ?? handle.id,
+							revision: JSON.stringify(plan),
+							changes: plan.steps.map((step, index) => ({
+								field: `${index + 1}. ${step.kind}`,
+								before: "not run",
+								after: `${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`,
+							})),
+							consequence: describeSetupPlan(handle),
+						};
+						const outcome = await runReviewedAction(runtime.ctx, `plugin setup ${rest}`, {
+							review,
+							resolve: async () => ({ review, target: { handle, plan } }),
 							execute: async target => {
-								result = await executePluginSetup(mgr, target);
+								result = await executeReviewedSetup(target.handle, target.plan);
+								await personProfileService.reconcileFromCollectors(undefined, 0);
 							},
 						});
 						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
 						else if (outcome === "unresolved")
-							runtime.ctx.showError("Recommended plugin setup remains unresolved; retry from a fresh review.");
+							runtime.ctx.showError(`Plugin setup for ${rest} remains unresolved; retry from a fresh review.`);
 						else if (outcome === "succeeded" && result) {
-							const lines = [
-								`Installed ${result.installed.length} of ${prepared.target.items.length} recommended plugins.`,
-								...result.installed.map(pluginId => `  ✓ ${pluginId}`),
-								...result.failed.map(failure => `  ! ${failure.pluginId}: ${failure.error}`),
-								...(result.authenticationNeeded.length
-									? [`Authentication still needed: ${result.authenticationNeeded.join(", ")}`]
-									: []),
-								...(result.failed.length ? ["Re-run /plugin setup to review only unresolved plugins."] : []),
-							];
-							showPluginStatus(lines.join("\n"));
+							showPluginStatus(
+								`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}`,
+							);
 						}
 						break;
 					}

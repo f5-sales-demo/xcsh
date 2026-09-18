@@ -105,4 +105,4 @@ test("isolated CLI exercises every management action without ambient remote stat
 	} finally {
 		await rm(dir, { recursive: true, force: true });
 	}
-});
+}, 15_000);

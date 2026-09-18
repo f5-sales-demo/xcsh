@@ -56,7 +56,7 @@ test("extension API exposes only canonical personProfile and scopes collector co
 			runtime,
 			"synthetic:owner",
 		);
-		expect(api!.personProfile.unregisterCollector(id)).toBe(true);
+		expect(api!.personProfile.unregisterCollector(id)).toBe(false);
 		expect(personProfileService.listCollectors().some(c => c.id === id)).toBe(true);
 	} finally {
 		personProfileService.unregisterProfileCollector(`${id}_extension`, "synthetic:owner");

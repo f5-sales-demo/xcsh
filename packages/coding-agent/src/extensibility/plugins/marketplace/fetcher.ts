@@ -94,8 +94,10 @@ function assertField(condition: boolean, field: string, filePath: string): void 
  * Parse and validate a marketplace.json catalog from raw JSON content.
  *
  * Required fields: name (valid name segment), owner.name, plugins array.
- * Each plugin entry requires name (string) and source (string or object
- * with a "source" field). Extra fields are preserved via spread.
+ * Each plugin entry requires name (string), source (string or object with a
+ * "source" field), and exactly one validated lifecycle classification. A
+ * malformed entry rejects the catalog so lifecycle policy cannot be bypassed.
+ * Extra fields are preserved via spread.
  *
  * @throws on JSON parse failure or missing/invalid required fields.
  */
@@ -127,61 +129,82 @@ export function parseMarketplaceCatalog(content: string, filePath: string): Mark
 	const plugins = obj.plugins as unknown[];
 	const validPlugins: unknown[] = [];
 	for (let i = 0; i < plugins.length; i++) {
-		try {
-			const entry = plugins[i];
-			assertField(typeof entry === "object" && entry !== null && !Array.isArray(entry), `plugins[${i}]`, filePath);
-			const p = entry as Record<string, unknown>;
-			assertField(typeof p.name === "string" && isValidNameSegment(p.name), `plugins[${i}].name`, filePath);
-			// source can be a string path or a typed object (github/url/git-subdir/npm)
-			// all typed objects carry a "source" discriminant string field
+		const entry = plugins[i];
+		assertField(typeof entry === "object" && entry !== null && !Array.isArray(entry), `plugins[${i}]`, filePath);
+		const p = entry as Record<string, unknown>;
+		assertField(typeof p.name === "string" && isValidNameSegment(p.name), `plugins[${i}].name`, filePath);
+		// source can be a string path or a typed object (github/url/git-subdir/npm)
+		// all typed objects carry a "source" discriminant string field
+		assertField(
+			typeof p.source === "string" ||
+				(typeof p.source === "object" &&
+					p.source !== null &&
+					!Array.isArray(p.source) &&
+					typeof (p.source as Record<string, unknown>).source === "string"),
+			`plugins[${i}].source`,
+			filePath,
+		);
+		// String sources must be relative paths starting with "./"
+		if (typeof p.source === "string") {
+			assertField((p.source as string).startsWith("./"), `plugins[${i}].source (must start with "./")`, filePath);
+		}
+		assertField(!Object.hasOwn(p, "prerequisites"), `plugins[${i}].prerequisites (unsupported)`, filePath);
+		const lifecycle = p.lifecycle;
+		assertField(
+			typeof lifecycle === "object" && lifecycle !== null && !Array.isArray(lifecycle),
+			`plugins[${i}].lifecycle`,
+			filePath,
+		);
+		const lifecycleRecord = lifecycle as Record<string, unknown>;
+		assertField(
+			["content", "on_demand", "integrated"].includes(lifecycleRecord.mode as string),
+			`plugins[${i}].lifecycle.mode`,
+			filePath,
+		);
+		for (const field of ["integrations", "requirements", "collectedData", "pluginDependencies"] as const) {
+			const values = lifecycleRecord[field];
 			assertField(
-				typeof p.source === "string" ||
-					(typeof p.source === "object" &&
-						p.source !== null &&
-						!Array.isArray(p.source) &&
-						typeof (p.source as Record<string, unknown>).source === "string"),
-				`plugins[${i}].source`,
+				Array.isArray(values) && values.every(value => typeof value === "string" && value.length > 0),
+				`plugins[${i}].lifecycle.${field}`,
 				filePath,
 			);
-			// String sources must be relative paths starting with "./"
-			if (typeof p.source === "string") {
-				assertField((p.source as string).startsWith("./"), `plugins[${i}].source (must start with "./")`, filePath);
-			}
-			// Validate required fields for typed source variants
-			if (typeof p.source === "object" && p.source !== null) {
-				const src = p.source as Record<string, unknown>;
-				const variant = src.source as string;
-				if (variant === "github") {
-					assertField(typeof src.repo === "string" && src.repo.length > 0, `plugins[${i}].source.repo`, filePath);
-				} else if (variant === "url" || variant === "git-subdir") {
-					assertField(typeof src.url === "string" && src.url.length > 0, `plugins[${i}].source.url`, filePath);
-					if (variant === "git-subdir") {
-						assertField(
-							typeof src.path === "string" && src.path.length > 0,
-							`plugins[${i}].source.path`,
-							filePath,
-						);
-					}
-				} else if (variant === "npm") {
-					assertField(
-						typeof src.package === "string" && src.package.length > 0,
-						`plugins[${i}].source.package`,
-						filePath,
-					);
-				} else {
-					assertField(false, `plugins[${i}].source.source (unknown variant: "${variant}")`, filePath);
-				}
-			}
-			validPlugins.push(entry);
-		} catch (err) {
-			// Warn and skip invalid plugin entries instead of failing the entire catalog.
-			// This lets the rest of the marketplace load even if one entry has a bad name/source.
-			const name =
-				typeof plugins[i] === "object" && plugins[i] !== null
-					? ((plugins[i] as Record<string, unknown>).name ?? `[${i}]`)
-					: `[${i}]`;
-			logger.warn(`Skipping invalid plugin ${name}: ${(err as Error).message}`);
 		}
+		assertField(
+			typeof lifecycleRecord.setupRequired === "boolean",
+			`plugins[${i}].lifecycle.setupRequired`,
+			filePath,
+		);
+		if (lifecycleRecord.mode === "content") {
+			assertField(
+				(lifecycleRecord.integrations as unknown[]).length === 0 &&
+					(lifecycleRecord.collectedData as unknown[]).length === 0 &&
+					lifecycleRecord.setupRequired === false,
+				`plugins[${i}].lifecycle (invalid content lifecycle)`,
+				filePath,
+			);
+		}
+		// Validate required fields for typed source variants
+		if (typeof p.source === "object" && p.source !== null) {
+			const src = p.source as Record<string, unknown>;
+			const variant = src.source as string;
+			if (variant === "github") {
+				assertField(typeof src.repo === "string" && src.repo.length > 0, `plugins[${i}].source.repo`, filePath);
+			} else if (variant === "url" || variant === "git-subdir") {
+				assertField(typeof src.url === "string" && src.url.length > 0, `plugins[${i}].source.url`, filePath);
+				if (variant === "git-subdir") {
+					assertField(typeof src.path === "string" && src.path.length > 0, `plugins[${i}].source.path`, filePath);
+				}
+			} else if (variant === "npm") {
+				assertField(
+					typeof src.package === "string" && src.package.length > 0,
+					`plugins[${i}].source.package`,
+					filePath,
+				);
+			} else {
+				assertField(false, `plugins[${i}].source.source (unknown variant: "${variant}")`, filePath);
+			}
+		}
+		validPlugins.push(entry);
 	}
 	// Replace the plugins array with only valid entries
 	obj.plugins = validPlugins;

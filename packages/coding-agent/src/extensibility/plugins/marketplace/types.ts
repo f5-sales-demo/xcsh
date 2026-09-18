@@ -74,6 +74,17 @@ export interface MarketplacePluginAuthor {
 	email?: string;
 }
 
+export type PluginLifecycleMode = "content" | "on_demand" | "integrated";
+
+export interface MarketplacePluginLifecycle {
+	mode: PluginLifecycleMode;
+	integrations: string[];
+	requirements: string[];
+	setupRequired: boolean;
+	collectedData: string[];
+	pluginDependencies: string[];
+}
+
 export interface MarketplacePluginEntry {
 	name: string;
 	displayName?: string;
@@ -90,13 +101,7 @@ export interface MarketplacePluginEntry {
 	strict?: boolean;
 	defaultEnabled?: boolean;
 	recommended?: boolean;
-	prerequisites?: Array<{
-		tool: string;
-		installCmd: string;
-		detectCmd: string;
-		authDetectCmd?: string;
-		authLoginCmd?: string;
-	}>;
+	lifecycle: MarketplacePluginLifecycle;
 	commands?: string | string[];
 	agents?: string | string[];
 	hooks?: string | Record<string, unknown>;
