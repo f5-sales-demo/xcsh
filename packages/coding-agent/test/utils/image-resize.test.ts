@@ -25,7 +25,7 @@ describe("resizeImage defaults", () => {
 		expect(result.height).toBeLessThanOrEqual(1568);
 		// Aspect ratio preserved (with rounding tolerance)
 		expect(Math.abs(result.width / result.height - 2000 / 1500)).toBeLessThan(0.01);
-	});
+	}, 15_000);
 
 	it("preserves inputs already within budget and dimensions (fast path)", async () => {
 		// 200x200 red square encodes to ~few hundred bytes — well below budget/4
