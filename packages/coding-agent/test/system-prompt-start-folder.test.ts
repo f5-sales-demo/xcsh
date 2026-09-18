@@ -31,11 +31,11 @@ function flat(rendered: string): string {
 describe("start folder: GitHub-backed repository", () => {
 	let out = "";
 	beforeAll(async () => {
-		out = await render({ kind: "github", slug: "f5-sales-demo/mcn" });
+		out = await render({ kind: "github", slug: "f5-sales-demo/multi-cloud-networking" });
 	});
 
 	it("names the repository slug", () => {
-		expect(flat(out)).toContain("f5-sales-demo/mcn");
+		expect(flat(out)).toContain("f5-sales-demo/multi-cloud-networking");
 	});
 
 	it("puts git and GitHub work in scope", () => {

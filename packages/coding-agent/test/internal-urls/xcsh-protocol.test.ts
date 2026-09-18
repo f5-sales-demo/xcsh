@@ -256,7 +256,7 @@ describe("xcsh://fleet (handler wiring)", () => {
 		repo_classes: {
 			_default: "developer",
 			classes: { content: { authority: "author" }, developer: { authority: "delegate" } },
-			repos: { mcn: "content", xcsh: "developer" },
+			repos: { "multi-cloud-networking": "content", xcsh: "developer" },
 		},
 	});
 
@@ -266,9 +266,9 @@ describe("xcsh://fleet (handler wiring)", () => {
 			new InternalDocsProtocolHandler({
 				resolveBuildInfo: async () => injectedInfo(),
 				fleetDeps: {
-					cwd: () => "/work/mcn",
-					repoRoot: async () => "/work/mcn",
-					repoOrigin: async () => "https://github.com/f5-sales-demo/mcn.git",
+					cwd: () => "/work/multi-cloud-networking",
+					repoRoot: async () => "/work/multi-cloud-networking",
+					repoOrigin: async () => "https://github.com/f5-sales-demo/multi-cloud-networking.git",
 					readGovernance: async () => GOVERNANCE,
 					runGh: async () => ({ ok: false, stdout: "", stderr: "not called" }),
 				},
@@ -281,7 +281,7 @@ describe("xcsh://fleet (handler wiring)", () => {
 		const resource = await fleetRouter().resolve("xcsh://fleet");
 		expect(resource.contentType).toBe("text/markdown");
 		expect(resource.sourcePath).toBe("xcsh://fleet");
-		expect(resource.content).toContain("f5-sales-demo/mcn");
+		expect(resource.content).toContain("f5-sales-demo/multi-cloud-networking");
 		expect(resource.content).toContain("content");
 	});
 });
