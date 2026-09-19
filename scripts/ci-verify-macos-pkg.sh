@@ -35,14 +35,16 @@ bun scripts/macos-release-provenance.ts verify \
   --manifest "$native_root/provenance.json" --root / --layout pkg --installed-system-root
 
 before=$(find "$binary" "$native_root" -type f -exec shasum -a 256 {} + | LC_ALL=C sort)
-cd "$uat_workspace"
-sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" --version
-sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" --help >/dev/null
-sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" sandbox check 2>&1 |
+run_as_uat() {
+  sudo -H -u "$uat_user" /bin/bash -c 'cd "$1" && shift && exec "$@"' bash "$uat_workspace" "$@"
+}
+run_as_uat env HOME="$uat_home" PI_DEV=1 "$binary" --version
+run_as_uat env HOME="$uat_home" "$binary" --help >/dev/null
+run_as_uat env HOME="$uat_home" PI_DEV=1 "$binary" sandbox check 2>&1 |
   tee "$RUNNER_TEMP/xcsh-mdm-native-load.log"
 grep -F "Loaded native addon from ${native_root}/" "$RUNNER_TEMP/xcsh-mdm-native-load.log"
-sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" chrome recycle
-sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" office recycle
+run_as_uat env HOME="$uat_home" "$binary" chrome recycle
+run_as_uat env HOME="$uat_home" "$binary" office recycle
 after=$(find "$binary" "$native_root" -type f -exec shasum -a 256 {} + | LC_ALL=C sort)
 test "$before" = "$after"
 test ! -e "$uat_home/.xcsh/natives/$version"

@@ -591,7 +591,8 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		);
 		expect(script).toContain("brew install --cask");
 		expect(script).toContain("ci-homebrew-upgrade-fixture.sh");
-		expect(script).toContain("brew uninstall --cask xcsh");
+		expect(script).toContain('brew uninstall --cask "$cask"');
+		expect(script).not.toMatch(/brew uninstall --cask(?: --force)? xcsh/);
 		expect(script).toContain("shasum -a 256");
 		expect(script).toContain("codesign --verify --deep --strict");
 		expect(script).toContain("TeamIdentifier=97ZYL78T5F");
@@ -701,7 +702,9 @@ describe("macOS pkg release contract", () => {
 		expect(script).toContain("scripts/ci-macos-uat-user.sh");
 		expect(script).toContain('uat_workspace="$uat_home/workspace"');
 		expect(script).toContain('sudo chown "$uat_user":staff "$uat_workspace"');
-		expect(script).toContain('cd "$uat_workspace"');
+		expect(script).toContain("run_as_uat() {");
+		expect(script).toContain('cd "$1"');
+		expect(script).not.toMatch(/^cd "\\$uat_workspace"$/m);
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
 		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');
