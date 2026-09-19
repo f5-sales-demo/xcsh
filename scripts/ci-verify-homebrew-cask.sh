@@ -23,6 +23,7 @@ installed_root="${caskroom}/xcsh/${expected}"
 archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}.zip"
 source_root="${TMPDIR:-/tmp}/xcsh-homebrew-source-${RELEASE_ARCH}"
 data_marker="${HOME}/.xcsh/no-sudo-homebrew-uat"
+uat_workspace="${HOME}/xcsh-homebrew-uat-workspace"
 baseline_version=21.32.0
 baseline_archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}-${baseline_version}.zip"
 baseline_cask_dir="${TMPDIR:-/tmp}/xcsh-baseline-cask"
@@ -114,6 +115,11 @@ assert_no_legacy_package() {
 }
 
 mkdir -p "${HOME}/.xcsh" "$source_root"
+mkdir -p "$uat_workspace"
+chmod 700 "$uat_workspace"
+test -d "$uat_workspace"
+test "$(stat -f '%Su' "$uat_workspace")" = "$(id -un)"
+cd "$uat_workspace"
 printf '%s\n' preserve >"$data_marker"
 
 # A release runner starts clean. If it does not, stop: the historical package
