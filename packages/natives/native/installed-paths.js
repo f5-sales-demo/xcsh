@@ -1,18 +1,29 @@
 const path = require("node:path");
 
-function getInstalledNativeCandidates({ platform, addonFilenames, resolvedExecPath, resolvedExecDir, packageVersion }) {
-	if (platform !== "darwin") return [];
+const EMBEDDED_ONLY = Object.freeze({ mode: "embedded-only", candidates: [] });
 
-	if (resolvedExecPath === "/usr/local/bin/xcsh") {
-		return addonFilenames.map(filename =>
-			path.join("/Library/Application Support/xcsh/natives", packageVersion, filename),
-		);
+function getNativeLoadChannel({ platform, addonFilenames, rawExecPath, resolvedExecPath, packageVersion }) {
+	if (platform !== "darwin") return EMBEDDED_ONLY;
+
+	const normalizedResolvedPath = path.resolve(resolvedExecPath);
+	if (/\/Caskroom\/xcsh\/[^/]+\/bin\/xcsh$/u.test(normalizedResolvedPath)) {
+		const resolvedExecDir = path.dirname(normalizedResolvedPath);
+		return {
+			mode: "installed-only",
+			candidates: addonFilenames.map(filename => path.resolve(resolvedExecDir, "..", "libexec", filename)),
+		};
 	}
 
-	const normalized = path.resolve(resolvedExecPath);
-	const caskroomExecutable = /\/Caskroom\/xcsh\/[^/]+\/bin\/xcsh$/u.test(normalized);
-	if (!caskroomExecutable) return [];
-	return addonFilenames.map(filename => path.resolve(resolvedExecDir, "..", "libexec", filename));
+	if (rawExecPath === "/usr/local/bin/xcsh" && resolvedExecPath === "/usr/local/bin/xcsh") {
+		return {
+			mode: "installed-only",
+			candidates: addonFilenames.map(filename =>
+				path.join("/Library/Application Support/xcsh/natives", packageVersion, filename),
+			),
+		};
+	}
+
+	return EMBEDDED_ONLY;
 }
 
 function tryLoadCandidates(candidates, load, errors, onLoaded, onError) {
@@ -30,10 +41,13 @@ function tryLoadCandidates(candidates, load, errors, onLoaded, onError) {
 	return null;
 }
 
-function loadInstalledBeforeFallback(installedCandidates, load, errors, prepareFallback, onLoaded, onError) {
-	const installed = tryLoadCandidates(installedCandidates, load, errors, onLoaded, onError);
-	if (installed) return installed;
-	return tryLoadCandidates(prepareFallback(), load, errors, onLoaded, onError);
+function loadNativeChannel(channel, load, errors, prepareEmbedded, onLoaded, onError) {
+	if (channel.mode === "installed-only") {
+		return tryLoadCandidates(channel.candidates, load, errors, onLoaded, onError);
+	}
+
+	const embeddedCandidate = prepareEmbedded();
+	return tryLoadCandidates(embeddedCandidate ? [embeddedCandidate] : [], load, errors, onLoaded, onError);
 }
 
-module.exports = { getInstalledNativeCandidates, loadInstalledBeforeFallback, tryLoadCandidates };
+module.exports = { getNativeLoadChannel, loadNativeChannel, tryLoadCandidates };

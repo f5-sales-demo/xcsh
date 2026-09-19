@@ -1110,28 +1110,12 @@ jobs:
         run: |
           set -euo pipefail
           uat_home="/Users/${UAT_USER}"
-          uat_password=$(uuidgen)
-          # Hosted macOS may create the account but report a nonzero partial
-          # status because the requested home is assigned, not materialized.
-          # Capture that command outside errexit and then prove the account exists.
-          set +e
-          sudo sysadminctl -addUser "$UAT_USER" -fullName "xcsh Homebrew UAT" \
-            -home "$uat_home" -password "$uat_password"
-          sysadminctl_status=$?
-          set -e
-          if [[ "$sysadminctl_status" -ne 0 ]]; then
-            if ! id "$UAT_USER" >/dev/null 2>&1; then
-              echo "::error::sysadminctl failed to create the Homebrew UAT account"
-              exit 1
-            fi
-          fi
-          if id -Gn "$UAT_USER" | tr ' ' '\n' | grep -qx admin; then
-            echo "::error::UAT account is an administrator"
-            exit 1
-          fi
+          UAT_HOME="$uat_home" UAT_FULL_NAME="xcsh Homebrew UAT" \
+            bash scripts/ci-macos-uat-user.sh
           brew_prefix=$(brew --prefix)
           sudo mkdir -p "$uat_home/tmp"
           sudo cp scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
+          sudo cp scripts/ci-homebrew-upgrade-fixture.sh "$uat_home/ci-homebrew-upgrade-fixture.sh"
           sudo chown -R "$UAT_USER":staff "$uat_home" "$brew_prefix"
           {
             echo "UAT_USER=$UAT_USER"

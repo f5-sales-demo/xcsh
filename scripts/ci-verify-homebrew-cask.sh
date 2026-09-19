@@ -4,6 +4,8 @@ set -euo pipefail
 : "${EXPECTED_VERSION:?EXPECTED_VERSION is required}"
 : "${RELEASE_ARCH:?RELEASE_ARCH is required}"
 
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
 if id -Gn | tr ' ' '\n' | grep -qx admin; then
   echo "::error::Homebrew cask UAT must run as a standard non-admin account"
   exit 1
@@ -26,9 +28,6 @@ data_marker="${HOME}/.xcsh/no-sudo-homebrew-uat"
 uat_workspace="${HOME}/xcsh-homebrew-uat-workspace"
 baseline_version=21.32.0
 baseline_archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}-${baseline_version}.zip"
-baseline_tap="xcsh-uat/baseline"
-baseline_tap_dir="${brew_prefix}/Library/Taps/xcsh-uat/homebrew-baseline"
-baseline_cask="${baseline_tap_dir}/Casks/xcsh.rb"
 
 sha256() {
   shasum -a 256 "$1" | awk '{print $1}'
@@ -174,26 +173,10 @@ brew uninstall --cask xcsh
 curl --proto '=https' --tlsv1.2 -fsSLo "$baseline_archive" \
   "https://github.com/f5-sales-demo/xcsh/releases/download/v${baseline_version}/xcsh-darwin-${RELEASE_ARCH}.zip"
 baseline_sha=$(sha256 "$baseline_archive")
-# Homebrew 5 rejects standalone cask files.  The historic baseline remains
-# immutable, but it must be presented through a temporary, user-owned tap.
-brew untap "$baseline_tap" >/dev/null 2>&1 || true
-brew tap-new --no-git "$baseline_tap"
-mkdir -p "${baseline_tap_dir}/Casks"
-cat >"$baseline_cask" <<RUBY
-cask "xcsh" do
-  version "${baseline_version}"
-  sha256 "${baseline_sha}"
-  url "https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-${RELEASE_ARCH}.zip"
-  name "xcsh"
-  homepage "https://github.com/f5-sales-demo/xcsh"
-  binary "bin/xcsh"
-end
-RUBY
-brew trust --cask "${baseline_tap}/xcsh"
-brew install --cask "${baseline_tap}/xcsh"
-"$installed_link" --version | grep -F "$baseline_version"
-brew tap "$tap"
-brew upgrade --cask xcsh
+BASELINE_VERSION="$baseline_version" \
+  BASELINE_SHA256="$baseline_sha" \
+  RELEASE_ARCH="$RELEASE_ARCH" \
+  /bin/bash "$script_dir/ci-homebrew-upgrade-fixture.sh"
 verify_current_install
 
 assert_no_legacy_package

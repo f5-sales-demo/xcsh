@@ -549,14 +549,10 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 
 	it("runs the cask UAT under a standard account", async () => {
 		const job = await loadVerifyHomebrewJob();
-		expect(job).toContain("set +e");
-		expect(job).toContain('sudo sysadminctl -addUser "$UAT_USER"');
-		expect(job).toContain("sysadminctl_status=$?");
-		expect(job).toContain('if [[ "$sysadminctl_status" -ne 0 ]]; then');
-		expect(job).toContain('if ! id "$UAT_USER" >/dev/null 2>&1; then');
-		expect(job).toContain('id -Gn "$UAT_USER"');
+		expect(job).toContain("scripts/ci-macos-uat-user.sh");
 		expect(job).toContain('sudo -H -u "$UAT_USER"');
 		expect(job).toContain("scripts/ci-verify-homebrew-cask.sh");
+		expect(job).toContain("scripts/ci-homebrew-upgrade-fixture.sh");
 	});
 
 	it("runs the cask sandbox matrix from a clean user-owned workspace", async () => {
@@ -564,6 +560,7 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 			path.join(import.meta.dir, "../../../scripts/ci-verify-homebrew-cask.sh"),
 			"utf8",
 		);
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain('uat_workspace="${HOME}/xcsh-homebrew-uat-workspace"');
 		expect(script).toContain('chmod 700 "$uat_workspace"');
 		expect(script).toContain('test "$(stat -f \'%Su\' "$uat_workspace")" = "$(id -un)"');
@@ -572,14 +569,19 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 
 	it("installs the immutable upgrade baseline through a temporary user-owned tap", async () => {
 		const script = await fs.readFile(
-			path.join(import.meta.dir, "../../../scripts/ci-verify-homebrew-cask.sh"),
+			path.join(import.meta.dir, "../../../scripts/ci-homebrew-upgrade-fixture.sh"),
 			"utf8",
 		);
 		expect(script).toContain('baseline_tap="xcsh-uat/baseline"');
 		expect(script).toContain('brew tap-new --no-git "$baseline_tap"');
+		expect(script).toContain('brew --repository "$baseline_tap"');
+		expect(script).toContain('test -f "$baseline_cask"');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain('brew trust --cask "${baseline_tap}/xcsh"');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain('brew install --cask "${baseline_tap}/xcsh"');
-		expect(script).not.toContain('brew install --cask "$baseline_cask"');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
+		expect(script).toContain('brew upgrade --cask "${target_tap}/xcsh"');
 	});
 
 	it("enforces byte identity, provenance, native loading, and no package residue", async () => {
@@ -588,7 +590,7 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 			"utf8",
 		);
 		expect(script).toContain("brew install --cask");
-		expect(script).toContain("brew upgrade --cask xcsh");
+		expect(script).toContain("ci-homebrew-upgrade-fixture.sh");
 		expect(script).toContain("brew uninstall --cask xcsh");
 		expect(script).toContain("shasum -a 256");
 		expect(script).toContain("codesign --verify --deep --strict");
@@ -696,9 +698,7 @@ describe("macOS pkg release contract", () => {
 		expect(script).toContain("xcrun stapler validate");
 		expect(script).toContain("sudo installer -pkg");
 		expect(script).toContain("--installed-system-root");
-		expect(script).toContain('sudo mkdir -p "$uat_home"');
-		expect(script).toContain('sudo chown "$uat_user":staff "$uat_home"');
-		expect(script).toContain("stat -f '%Su' \"$uat_home\"");
+		expect(script).toContain("scripts/ci-macos-uat-user.sh");
 		expect(script).toContain('uat_workspace="$uat_home/workspace"');
 		expect(script).toContain('sudo chown "$uat_user":staff "$uat_workspace"');
 		expect(script).toContain('cd "$uat_workspace"');
@@ -707,15 +707,19 @@ describe("macOS pkg release contract", () => {
 		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');
 	});
 
-	it("materializes a freshly-created MDM UAT home even when sysadminctl returns partial status", async () => {
+	it("shares the bounded account-readiness helper with the MDM UAT", async () => {
 		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
-		expect(script).toContain('if id "$uat_user" >/dev/null 2>&1; then');
-		expect(script).toContain("set +e");
-		expect(script).toContain('sudo sysadminctl -addUser "$uat_user"');
-		expect(script).toContain("sysadminctl_status=$?");
-		expect(script).toContain('if [[ "$sysadminctl_status" -ne 0 ]]; then');
-		expect(script).toContain('if ! id "$uat_user" >/dev/null 2>&1; then');
-		expect(script).toContain('sudo mkdir -p "$uat_home"');
+		const helper = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-macos-uat-user.sh"), "utf8");
+		expect(script).toContain("scripts/ci-macos-uat-user.sh");
+		expect(helper).toContain("UAT_READY_TIMEOUT_SECONDS:-60");
+		expect(helper).toContain("set +e");
+		expect(helper).toContain('sudo sysadminctl -addUser "$UAT_USER"');
+		expect(helper).toContain("sysadminctl_status=$?");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
+		expect(helper).toContain('dscl . -read "/Users/${UAT_USER}" NFSHomeDirectory');
+		expect(helper).toContain('sudo mkdir -p "$UAT_HOME"');
+		expect(helper).toContain('sudo chown "$UAT_USER":staff "$UAT_HOME"');
+		expect(helper).toContain("stat -f '%Su' \"$UAT_HOME\"");
 		expect(script).toContain('sudo mkdir -p "$uat_workspace"');
 		expect(script).toContain('test "$(stat -f \'%Su\' "$uat_workspace")" = "$uat_user"');
 	});
