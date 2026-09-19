@@ -208,6 +208,17 @@ describe("Homebrew immutable-baseline upgrade fixture", () => {
 });
 
 describe("published macOS UAT execution boundaries", () => {
+	it("validates the private MDM workspace through sudo", async () => {
+		const script = await fs.readFile(pkgVerifier, "utf8");
+		expect(script).toContain('sudo test -d "$uat_workspace"');
+		expect(script).toContain("sudo stat -f '%Su' \"$uat_workspace\"");
+		expect(script).toContain("sudo stat -f '%Lp' \"$uat_workspace\"");
+		expect(script).toContain('sudo test ! -e "$uat_home/.xcsh/natives/$version"');
+		expect(script).not.toMatch(/^test -d "\$uat_workspace"$/m);
+		expect(script).not.toContain("$(stat -f '%Su' \"$uat_workspace\")");
+		expect(script).not.toMatch(/^test ! -e "\$uat_home/m);
+	});
+
 	it("runs direct-MDM commands after switching into the private UAT workspace", async () => {
 		const script = await fs.readFile(pkgVerifier, "utf8");
 		expect(script).toContain("run_as_uat() {");

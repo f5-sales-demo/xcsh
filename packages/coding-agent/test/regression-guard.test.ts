@@ -707,7 +707,7 @@ describe("macOS pkg release contract", () => {
 		expect(script).not.toMatch(/^cd "\\$uat_workspace"$/m);
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
-		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');
+		expect(script).toContain('sudo test ! -e "$uat_home/.xcsh/natives/$version"');
 	});
 
 	it("shares the bounded account-readiness helper with the MDM UAT", async () => {
@@ -724,7 +724,8 @@ describe("macOS pkg release contract", () => {
 		expect(helper).toContain('sudo chown "$UAT_USER":staff "$UAT_HOME"');
 		expect(helper).toContain("stat -f '%Su' \"$UAT_HOME\"");
 		expect(script).toContain('sudo mkdir -p "$uat_workspace"');
-		expect(script).toContain('test "$(stat -f \'%Su\' "$uat_workspace")" = "$uat_user"');
+		expect(script).toContain('test "$(sudo stat -f \'%Su\' "$uat_workspace")" = "$uat_user"');
+		expect(script).toContain('test "$(sudo stat -f \'%Lp\' "$uat_workspace")" = 700');
 	});
 });
 
