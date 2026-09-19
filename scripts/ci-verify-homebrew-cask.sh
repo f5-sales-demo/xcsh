@@ -126,7 +126,7 @@ printf '%s\n' preserve >"$data_marker"
 # A release runner starts clean. If it does not, stop: the historical package
 # must be removed through MDM before this unprivileged cask is used.
 brew uninstall --formula --force xcsh >/dev/null 2>&1 || true
-brew uninstall --cask --force xcsh >/dev/null 2>&1 || true
+brew uninstall --cask --force "$cask" >/dev/null 2>&1 || true
 assert_no_legacy_package
 
 curl --proto '=https' --tlsv1.2 -fsSLo "$archive" \
@@ -157,7 +157,7 @@ for attempt in $(seq 1 "$max_attempts"); do
     fi
   fi
 
-  brew uninstall --cask --force xcsh >/dev/null 2>&1 || true
+  brew uninstall --cask --force "$cask" >/dev/null 2>&1 || true
   if [[ "$attempt" -eq "$max_attempts" ]]; then
     echo "::error::Homebrew cask installation failed after ${max_attempts} attempts"
     exit 1
@@ -169,7 +169,7 @@ done
 verify_current_install
 
 # Exercise a real immutable-baseline upgrade after the independent fresh-install gate.
-brew uninstall --cask xcsh
+brew uninstall --cask "$cask"
 curl --proto '=https' --tlsv1.2 -fsSLo "$baseline_archive" \
   "https://github.com/f5-sales-demo/xcsh/releases/download/v${baseline_version}/xcsh-darwin-${RELEASE_ARCH}.zip"
 baseline_sha=$(sha256 "$baseline_archive")
@@ -180,7 +180,7 @@ BASELINE_VERSION="$baseline_version" \
 verify_current_install
 
 assert_no_legacy_package
-brew uninstall --cask xcsh
+brew uninstall --cask "$cask"
 test ! -e "$installed_link"
 test ! -e "$installed_root"
 test -f "$data_marker"

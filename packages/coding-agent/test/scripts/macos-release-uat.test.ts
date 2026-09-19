@@ -6,6 +6,8 @@ import * as path from "node:path";
 const root = path.resolve(import.meta.dir, "../../../..");
 const accountHelper = path.join(root, "scripts/ci-macos-uat-user.sh");
 const upgradeHelper = path.join(root, "scripts/ci-homebrew-upgrade-fixture.sh");
+const homebrewVerifier = path.join(root, "scripts/ci-verify-homebrew-cask.sh");
+const pkgVerifier = path.join(root, "scripts/ci-verify-macos-pkg.sh");
 
 async function executable(file: string, source: string): Promise<void> {
 	await Bun.write(file, source);
@@ -203,4 +205,22 @@ describe("Homebrew immutable-baseline upgrade fixture", () => {
 			expect(result.callLog).not.toMatch(/^upgrade --cask xcsh$/m);
 		});
 	}
+});
+
+describe("published macOS UAT execution boundaries", () => {
+	it("runs direct-MDM commands after switching into the private UAT workspace", async () => {
+		const script = await fs.readFile(pkgVerifier, "utf8");
+		expect(script).toContain("run_as_uat() {");
+		expect(script).toContain('cd "$1"');
+		expect(script).toContain('run_as_uat env HOME="$uat_home" PI_DEV=1 "$binary" --version');
+		expect(script).not.toMatch(/^cd "\$uat_workspace"$/m);
+	});
+
+	it("qualifies every Homebrew cask cleanup when both taps exist", async () => {
+		const script = await fs.readFile(homebrewVerifier, "utf8");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
+		expect(script).toContain('cask="${tap}/xcsh"');
+		expect(script.match(/brew uninstall --cask(?: --force)? "\$cask"/g)?.length).toBe(4);
+		expect(script).not.toMatch(/brew uninstall --cask(?: --force)? xcsh/);
+	});
 });
