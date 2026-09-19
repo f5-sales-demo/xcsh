@@ -4,6 +4,10 @@ const DOTTED_VERSION_PREFIX_RE =
 const SVG_PATH_ATTRIBUTE_RE = /(?:^|\s)d\s*=\s*(['"])/gi;
 const RFC_8555_TERM_RE =
 	/_acme-challenge|\bAutomated Certificate Management Environment\s*\(ACME\)|\bRFC\s*8555\s*\(ACME\)|\bACME\s*\(RFC\s*8555\)|\bACME\s+(?:account|authorization|certificate|challenge|client|directory|nonce|order|protocol|server|service)\b/gi;
+// Keep the approved RFC terms and the candidate placeholder in one scan. The placeholder hygiene
+// guard applies this to a 40+ MB generated index while the release suite runs test files in
+// parallel, so creating a protected full-text copy here makes a strict scan needlessly contend.
+const RFC_8555_OR_ACME_RE = new RegExp(`${RFC_8555_TERM_RE.source}|acme`, "gi");
 const RFC_8555_TOKEN_RE = /\0RFC8555_([0-9]+)\0/g;
 const SECRET_CONTEXT_TERM_RE = /access|auth|api|credential|creds|key|passw(?:or)?d|secret|token/i;
 const SYNTHETIC_NAMESPACE_EXAMPLE_RE = /When namespace = \\"system\\", all alerts for the tenant will be returned\./g;
@@ -80,8 +84,11 @@ function protectRfc8555Terms(text: string): ProtectedRfc8555Terms {
 
 /** Count uses of the name that are not RFC 8555 terminology. */
 export function countAcmePlaceholderOccurrences(text: string): number {
-	const protectedText = protectRfc8555Terms(text).text;
-	return protectedText.match(/acme/gi)?.length ?? 0;
+	let count = 0;
+	for (const match of text.matchAll(RFC_8555_OR_ACME_RE)) {
+		if (match[0].length === 4) count++;
+	}
+	return count;
 }
 
 /**
