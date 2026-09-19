@@ -53,8 +53,10 @@ const BINARY_EXTENSIONS = new Set([
 	".zip",
 ]);
 // This guard invokes `git grep` over the full tracked index. Under the 10-worker CI suite it can
-// briefly contend with other index-heavy guards, so it needs an explicit bounded deadline.
-const TRACKED_INDEX_SCAN_TIMEOUT_MS = 15_000;
+// briefly contend with other index-heavy guards and native builds. Keep the deadline bounded, but
+// allow the observed full-suite contention window rather than turning a successful strict scan
+// into a flaky failure.
+const TRACKED_INDEX_SCAN_TIMEOUT_MS = 60_000;
 
 /**
  * Tracked files that mention the name at all. `git grep` does the scan in C over the index; reading
