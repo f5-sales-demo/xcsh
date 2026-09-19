@@ -549,7 +549,8 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 
 	it("runs the cask UAT under a standard account", async () => {
 		const job = await loadVerifyHomebrewJob();
-		expect(job).toContain("sysadminctl -addUser");
+		expect(job).toContain('if ! sudo sysadminctl -addUser "$UAT_USER"');
+		expect(job).toContain('if ! id "$UAT_USER" >/dev/null 2>&1; then');
 		expect(job).toContain('id -Gn "$UAT_USER"');
 		expect(job).toContain('sudo -H -u "$UAT_USER"');
 		expect(job).toContain("scripts/ci-verify-homebrew-cask.sh");
@@ -564,6 +565,18 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(script).toContain('chmod 700 "$uat_workspace"');
 		expect(script).toContain('test "$(stat -f \'%Su\' "$uat_workspace")" = "$(id -un)"');
 		expect(script).toContain('cd "$uat_workspace"');
+	});
+
+	it("installs the immutable upgrade baseline through a temporary user-owned tap", async () => {
+		const script = await fs.readFile(
+			path.join(import.meta.dir, "../../../scripts/ci-verify-homebrew-cask.sh"),
+			"utf8",
+		);
+		expect(script).toContain('baseline_tap="xcsh-uat/baseline"');
+		expect(script).toContain('brew tap-new --no-git "$baseline_tap"');
+		expect(script).toContain('brew trust --cask "${baseline_tap}/xcsh"');
+		expect(script).toContain('brew install --cask "${baseline_tap}/xcsh"');
+		expect(script).not.toContain('brew install --cask "$baseline_cask"');
 	});
 
 	it("enforces byte identity, provenance, native loading, and no package residue", async () => {
