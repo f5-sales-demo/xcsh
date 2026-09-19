@@ -555,6 +555,17 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(job).toContain("scripts/ci-verify-homebrew-cask.sh");
 	});
 
+	it("runs the cask sandbox matrix from a clean user-owned workspace", async () => {
+		const script = await fs.readFile(
+			path.join(import.meta.dir, "../../../scripts/ci-verify-homebrew-cask.sh"),
+			"utf8",
+		);
+		expect(script).toContain('uat_workspace="${HOME}/xcsh-homebrew-uat-workspace"');
+		expect(script).toContain('chmod 700 "$uat_workspace"');
+		expect(script).toContain('test "$(stat -f \'%Su\' "$uat_workspace")" = "$(id -un)"');
+		expect(script).toContain('cd "$uat_workspace"');
+	});
+
 	it("enforces byte identity, provenance, native loading, and no package residue", async () => {
 		const script = await fs.readFile(
 			path.join(import.meta.dir, "../../../scripts/ci-verify-homebrew-cask.sh"),
@@ -678,6 +689,16 @@ describe("macOS pkg release contract", () => {
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
 		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');
+	});
+
+	it("materializes a freshly-created MDM UAT home even when sysadminctl returns partial status", async () => {
+		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
+		expect(script).toContain('if id "$uat_user" >/dev/null 2>&1; then');
+		expect(script).toContain('if ! sudo sysadminctl -addUser "$uat_user"');
+		expect(script).toContain('if ! id "$uat_user" >/dev/null 2>&1; then');
+		expect(script).toContain('sudo mkdir -p "$uat_home"');
+		expect(script).toContain('sudo mkdir -p "$uat_workspace"');
+		expect(script).toContain('test "$(stat -f \'%Su\' "$uat_workspace")" = "$uat_user"');
 	});
 });
 

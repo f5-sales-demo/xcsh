@@ -19,7 +19,20 @@ bun scripts/macos-release-provenance.ts verify \
   --manifest "$PROVENANCE_PATH" --root "$expanded/Payload" --layout pkg
 
 sudo installer -pkg "$PKG_PATH" -target /
-sudo sysadminctl -addUser "$uat_user" -fullName "xcsh MDM UAT" -home "$uat_home" -password "$(uuidgen)"
+if id "$uat_user" >/dev/null 2>&1; then
+  echo "::error::MDM UAT account already exists"
+  exit 1
+fi
+# Hosted macOS can create the account record while sysadminctl exits nonzero
+# after reporting that its requested home was merely assigned. Accept that
+# documented partial status only after proving that the new account exists,
+# then materialize and own the clean home below.
+if ! sudo sysadminctl -addUser "$uat_user" -fullName "xcsh MDM UAT" -home "$uat_home" -password "$(uuidgen)"; then
+  if ! id "$uat_user" >/dev/null 2>&1; then
+    echo "::error::sysadminctl failed to create the MDM UAT account"
+    exit 1
+  fi
+fi
 # sysadminctl records the requested home path but does not materialize it on
 # hosted macOS. The clean standard account must own a real home before xcsh
 # creates its ordinary logs/configuration there.
