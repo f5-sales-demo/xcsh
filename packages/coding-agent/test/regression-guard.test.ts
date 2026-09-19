@@ -647,6 +647,17 @@ describe("macOS pkg release contract", () => {
 		expect(entitlements.match(/<key>/g)?.length).toBe(2);
 	});
 
+	it("forbids legacy signature stripping and ad-hoc signing workflows", async () => {
+		const workflowDirectory = path.join(import.meta.dir, "../../../.github/workflows");
+		const workflows = await fs.readdir(workflowDirectory);
+		expect(workflows).not.toContain("test-codesign.yml");
+		for (const workflowName of workflows.filter(name => name.endsWith(".yml") || name.endsWith(".yaml"))) {
+			const workflow = await fs.readFile(path.join(workflowDirectory, workflowName), "utf8");
+			expect(workflow).not.toContain("codesign --remove-signature");
+			expect(workflow).not.toMatch(/codesign[^\n]*--sign\s+-/);
+		}
+	});
+
 	it("runs direct MDM package UAT on Intel and Apple silicon", async () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const job = workflow.match(/\n {2}verify-macos-pkg:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
@@ -661,6 +672,9 @@ describe("macOS pkg release contract", () => {
 		expect(script).toContain('sudo mkdir -p "$uat_home"');
 		expect(script).toContain('sudo chown "$uat_user":staff "$uat_home"');
 		expect(script).toContain("stat -f '%Su' \"$uat_home\"");
+		expect(script).toContain('uat_workspace="$uat_home/workspace"');
+		expect(script).toContain('sudo chown "$uat_user":staff "$uat_workspace"');
+		expect(script).toContain('cd "$uat_workspace"');
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
 		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');
