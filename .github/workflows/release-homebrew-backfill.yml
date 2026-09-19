@@ -141,8 +141,16 @@ jobs:
           set -euo pipefail
           uat_home="/Users/${UAT_USER}"
           uat_password=$(uuidgen)
-          sudo sysadminctl -addUser "$UAT_USER" -fullName "xcsh Homebrew UAT" \
-            -home "$uat_home" -password "$uat_password"
+          # Hosted macOS may create the account but report a nonzero partial
+          # status because the requested home is assigned, not materialized.
+          # Accept that status only after proving the account exists.
+          if ! sudo sysadminctl -addUser "$UAT_USER" -fullName "xcsh Homebrew UAT" \
+            -home "$uat_home" -password "$uat_password"; then
+            if ! id "$UAT_USER" >/dev/null 2>&1; then
+              echo "::error::sysadminctl failed to create the Homebrew UAT account"
+              exit 1
+            fi
+          fi
           if id -Gn "$UAT_USER" | tr ' ' '\n' | grep -qx admin; then
             echo "::error::UAT account is an administrator"
             exit 1

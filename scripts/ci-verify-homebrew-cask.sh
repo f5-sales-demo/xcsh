@@ -26,7 +26,9 @@ data_marker="${HOME}/.xcsh/no-sudo-homebrew-uat"
 uat_workspace="${HOME}/xcsh-homebrew-uat-workspace"
 baseline_version=21.32.0
 baseline_archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}-${baseline_version}.zip"
-baseline_cask_dir="${TMPDIR:-/tmp}/xcsh-baseline-cask"
+baseline_tap="xcsh-uat/baseline"
+baseline_tap_dir="${brew_prefix}/Library/Taps/xcsh-uat/homebrew-baseline"
+baseline_cask="${baseline_tap_dir}/Casks/xcsh.rb"
 
 sha256() {
   shasum -a 256 "$1" | awk '{print $1}'
@@ -172,9 +174,11 @@ brew uninstall --cask xcsh
 curl --proto '=https' --tlsv1.2 -fsSLo "$baseline_archive" \
   "https://github.com/f5-sales-demo/xcsh/releases/download/v${baseline_version}/xcsh-darwin-${RELEASE_ARCH}.zip"
 baseline_sha=$(sha256 "$baseline_archive")
-rm -rf "$baseline_cask_dir"
-mkdir -p "$baseline_cask_dir"
-baseline_cask="$baseline_cask_dir/xcsh.rb"
+# Homebrew 5 rejects standalone cask files.  The historic baseline remains
+# immutable, but it must be presented through a temporary, user-owned tap.
+brew untap "$baseline_tap" >/dev/null 2>&1 || true
+brew tap-new --no-git "$baseline_tap"
+mkdir -p "${baseline_tap_dir}/Casks"
 cat >"$baseline_cask" <<RUBY
 cask "xcsh" do
   version "${baseline_version}"
@@ -185,7 +189,8 @@ cask "xcsh" do
   binary "bin/xcsh"
 end
 RUBY
-brew install --cask "$baseline_cask"
+brew trust --cask "${baseline_tap}/xcsh"
+brew install --cask "${baseline_tap}/xcsh"
 "$installed_link" --version | grep -F "$baseline_version"
 brew tap "$tap"
 brew upgrade --cask xcsh
