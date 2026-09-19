@@ -96,16 +96,16 @@ validate_account() {
 
 max_attempts=$((ready_timeout / ready_poll + 1))
 for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-	if validate_account; then
-		if [[ "$sysadminctl_status" -ne 0 ]]; then
-			echo "sysadminctl status ${sysadminctl_status} accepted after account readiness validation"
-		fi
-		echo "macOS UAT account ${UAT_USER} is ready"
-		exit 0
-	else
-		readiness_status=$?
-	fi
-	if [[ "$readiness_status" -eq 2 || "$attempt" -eq "$max_attempts" ]]; then
+  if validate_account; then
+    if [[ "$sysadminctl_status" -ne 0 ]]; then
+      echo "sysadminctl status ${sysadminctl_status} accepted after account readiness validation"
+    fi
+    echo "macOS UAT account ${UAT_USER} is ready"
+    exit 0
+  else
+    readiness_status=$?
+  fi
+  if [[ "$readiness_status" -eq 2 || "$attempt" -eq "$max_attempts" ]]; then
     break
   fi
   sleep "$ready_poll"
