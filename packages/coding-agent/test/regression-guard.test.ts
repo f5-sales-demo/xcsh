@@ -549,7 +549,10 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 
 	it("runs the cask UAT under a standard account", async () => {
 		const job = await loadVerifyHomebrewJob();
-		expect(job).toContain('if ! sudo sysadminctl -addUser "$UAT_USER"');
+		expect(job).toContain("set +e");
+		expect(job).toContain('sudo sysadminctl -addUser "$UAT_USER"');
+		expect(job).toContain("sysadminctl_status=$?");
+		expect(job).toContain('if [[ "$sysadminctl_status" -ne 0 ]]; then');
 		expect(job).toContain('if ! id "$UAT_USER" >/dev/null 2>&1; then');
 		expect(job).toContain('id -Gn "$UAT_USER"');
 		expect(job).toContain('sudo -H -u "$UAT_USER"');
@@ -707,7 +710,10 @@ describe("macOS pkg release contract", () => {
 	it("materializes a freshly-created MDM UAT home even when sysadminctl returns partial status", async () => {
 		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
 		expect(script).toContain('if id "$uat_user" >/dev/null 2>&1; then');
-		expect(script).toContain('if ! sudo sysadminctl -addUser "$uat_user"');
+		expect(script).toContain("set +e");
+		expect(script).toContain('sudo sysadminctl -addUser "$uat_user"');
+		expect(script).toContain("sysadminctl_status=$?");
+		expect(script).toContain('if [[ "$sysadminctl_status" -ne 0 ]]; then');
 		expect(script).toContain('if ! id "$uat_user" >/dev/null 2>&1; then');
 		expect(script).toContain('sudo mkdir -p "$uat_home"');
 		expect(script).toContain('sudo mkdir -p "$uat_workspace"');

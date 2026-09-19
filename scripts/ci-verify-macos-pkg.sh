@@ -24,10 +24,14 @@ if id "$uat_user" >/dev/null 2>&1; then
   exit 1
 fi
 # Hosted macOS can create the account record while sysadminctl exits nonzero
-# after reporting that its requested home was merely assigned. Accept that
-# documented partial status only after proving that the new account exists,
-# then materialize and own the clean home below.
-if ! sudo sysadminctl -addUser "$uat_user" -fullName "xcsh MDM UAT" -home "$uat_home" -password "$(uuidgen)"; then
+# after reporting that its requested home was merely assigned. Capture this
+# command explicitly outside errexit, then accept a partial status only after
+# proving that the new account exists.
+set +e
+sudo sysadminctl -addUser "$uat_user" -fullName "xcsh MDM UAT" -home "$uat_home" -password "$(uuidgen)"
+sysadminctl_status=$?
+set -e
+if [[ "$sysadminctl_status" -ne 0 ]]; then
   if ! id "$uat_user" >/dev/null 2>&1; then
     echo "::error::sysadminctl failed to create the MDM UAT account"
     exit 1

@@ -143,9 +143,13 @@ jobs:
           uat_password=$(uuidgen)
           # Hosted macOS may create the account but report a nonzero partial
           # status because the requested home is assigned, not materialized.
-          # Accept that status only after proving the account exists.
-          if ! sudo sysadminctl -addUser "$UAT_USER" -fullName "xcsh Homebrew UAT" \
-            -home "$uat_home" -password "$uat_password"; then
+          # Capture that command outside errexit and then prove the account exists.
+          set +e
+          sudo sysadminctl -addUser "$UAT_USER" -fullName "xcsh Homebrew UAT" \
+            -home "$uat_home" -password "$uat_password"
+          sysadminctl_status=$?
+          set -e
+          if [[ "$sysadminctl_status" -ne 0 ]]; then
             if ! id "$UAT_USER" >/dev/null 2>&1; then
               echo "::error::sysadminctl failed to create the Homebrew UAT account"
               exit 1
