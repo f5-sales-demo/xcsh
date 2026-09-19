@@ -52,6 +52,9 @@ const BINARY_EXTENSIONS = new Set([
 	".woff2",
 	".zip",
 ]);
+// This guard invokes `git grep` over the full tracked index. Under the 10-worker CI suite it can
+// briefly contend with other index-heavy guards, so it needs an explicit bounded deadline.
+const TRACKED_INDEX_SCAN_TIMEOUT_MS = 15_000;
 
 /**
  * Tracked files that mention the name at all. `git grep` does the scan in C over the index; reading
@@ -74,28 +77,32 @@ function candidateFiles(): string[] {
 }
 
 describe("placeholder hygiene", () => {
-	it("no tracked file uses ACME as a placeholder organisation, tenant or domain", () => {
-		const offenders: string[] = [];
+	it(
+		"no tracked file uses ACME as a placeholder organisation, tenant or domain",
+		() => {
+			const offenders: string[] = [];
 
-		for (const rel of candidateFiles()) {
-			if (ALLOWED_FILES.has(rel)) continue;
-			if (BINARY_EXTENSIONS.has(path.extname(rel).toLowerCase())) continue;
+			for (const rel of candidateFiles()) {
+				if (ALLOWED_FILES.has(rel)) continue;
+				if (BINARY_EXTENSIONS.has(path.extname(rel).toLowerCase())) continue;
 
-			const abs = path.join(REPO_ROOT, rel);
-			let text: string;
-			try {
-				text = fs.readFileSync(abs, "utf8");
-			} catch {
-				continue; // deleted between listing and read, or unreadable
+				const abs = path.join(REPO_ROOT, rel);
+				let text: string;
+				try {
+					text = fs.readFileSync(abs, "utf8");
+				} catch {
+					continue; // deleted between listing and read, or unreadable
+				}
+				if (!/acme/i.test(text)) continue;
+
+				const count = countAcmePlaceholderOccurrences(text);
+				if (count > 0) offenders.push(`${rel} (${count})`);
 			}
-			if (!/acme/i.test(text)) continue;
 
-			const count = countAcmePlaceholderOccurrences(text);
-			if (count > 0) offenders.push(`${rel} (${count})`);
-		}
-
-		expect(offenders).toEqual([]);
-	});
+			expect(offenders).toEqual([]);
+		},
+		TRACKED_INDEX_SCAN_TIMEOUT_MS,
+	);
 
 	it("keeps the RFC 8555 DNS-01 record label, which is the protocol and not the placeholder", () => {
 		// Guards the guard: a blanket rename would silently destroy upstream API documentation.
