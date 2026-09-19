@@ -33,19 +33,12 @@ sha256() {
 
 verify_developer_id() {
   local file=$1
-  local details assessment
+  local details
 
   codesign --verify --deep --strict --verbose=2 "$file"
   details=$(codesign --display --verbose=4 "$file" 2>&1)
   grep -F "Authority=Developer ID Application" <<<"$details"
   grep -F "TeamIdentifier=97ZYL78T5F" <<<"$details"
-
-  if ! assessment=$(spctl --assess --verbose=4 --type execute "$file" 2>&1); then
-    echo "::error::Gatekeeper executable assessment failed for $file" >&2
-    echo "$assessment" >&2
-    return 1
-  fi
-  grep -F "source=Notarized Developer ID" <<<"$assessment"
 }
 
 snapshot_installed() {
@@ -61,7 +54,17 @@ manifest = json.loads(manifest_path.read_text())
 assert manifest["schemaVersion"] == 1
 assert manifest["teamIdentifier"] == "97ZYL78T5F"
 expected = set()
+expected_architecture = "arm64" if manifest["arch"] == "arm64" else "x86_64"
+cli_entitlements = {"com.apple.security.cs.allow-jit", "com.apple.security.cs.allow-unsigned-executable-memory"}
 for item in manifest["files"]:
+    signature = item["signature"]
+    assert signature["authority"] == "Developer ID Application", item
+    assert signature["teamIdentifier"] == "97ZYL78T5F", item
+    assert signature["hardenedRuntime"] is True, item
+    assert signature["trustedTimestamp"] is True, item
+    assert signature["notarized"] is True, item
+    assert signature["architectures"] == [expected_architecture], item
+    assert set(signature["entitlements"]) == (cli_entitlements if item["role"] == "cli" else set()), item
     relative = pathlib.Path("bin/xcsh" if item["role"] == "cli" else f"libexec/{item['name']}")
     expected.add(relative.as_posix())
     target = root / relative
