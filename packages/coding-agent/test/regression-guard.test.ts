@@ -658,6 +658,9 @@ describe("macOS pkg release contract", () => {
 		expect(script).toContain('sudo mkdir -p "$uat_home"');
 		expect(script).toContain('sudo chown "$uat_user":staff "$uat_home"');
 		expect(script).toContain("stat -f '%Su' \"$uat_home\"");
+		expect(script).toContain('uat_workspace="$uat_home/workspace"');
+		expect(script).toContain('sudo chown "$uat_user":staff "$uat_workspace"');
+		expect(script).toContain('cd "$uat_workspace"');
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
 		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');

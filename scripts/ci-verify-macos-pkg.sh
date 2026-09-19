@@ -28,6 +28,12 @@ sudo chown "$uat_user":staff "$uat_home"
 sudo chmod 700 "$uat_home"
 test -d "$uat_home"
 test "$(stat -f '%Su' "$uat_home")" = "$uat_user"
+uat_workspace="$uat_home/workspace"
+sudo mkdir -p "$uat_workspace"
+sudo chown "$uat_user":staff "$uat_workspace"
+sudo chmod 700 "$uat_workspace"
+test -d "$uat_workspace"
+test "$(stat -f '%Su' "$uat_workspace")" = "$uat_user"
 if id -Gn "$uat_user" | tr ' ' '\n' | grep -qx admin; then
   echo "::error::MDM UAT account is an administrator"
   exit 1
@@ -41,6 +47,7 @@ bun scripts/macos-release-provenance.ts verify \
   --manifest "$native_root/provenance.json" --root / --layout pkg --installed-system-root
 
 before=$(find "$binary" "$native_root" -type f -exec shasum -a 256 {} + | LC_ALL=C sort)
+cd "$uat_workspace"
 sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" --version
 sudo -H -u "$uat_user" env HOME="$uat_home" "$binary" --help >/dev/null
 sudo -H -u "$uat_user" env HOME="$uat_home" PI_DEV=1 "$binary" sandbox check 2>&1 |
