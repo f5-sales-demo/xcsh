@@ -4,10 +4,6 @@ const DOTTED_VERSION_PREFIX_RE =
 const SVG_PATH_ATTRIBUTE_RE = /(?:^|\s)d\s*=\s*(['"])/gi;
 const RFC_8555_TERM_RE =
 	/_acme-challenge|\bAutomated Certificate Management Environment\s*\(ACME\)|\bRFC\s*8555\s*\(ACME\)|\bACME\s*\(RFC\s*8555\)|\bACME\s+(?:account|authorization|certificate|challenge|client|directory|nonce|order|protocol|server|service)\b/gi;
-// Keep the approved RFC terms and the candidate placeholder in one scan. The placeholder hygiene
-// guard applies this to a 40+ MB generated index while the release suite runs test files in
-// parallel, so creating a protected full-text copy here makes a strict scan needlessly contend.
-const RFC_8555_OR_ACME_RE = new RegExp(`${RFC_8555_TERM_RE.source}|acme`, "gi");
 const RFC_8555_TOKEN_RE = /\0RFC8555_([0-9]+)\0/g;
 const SECRET_CONTEXT_TERM_RE = /access|auth|api|credential|creds|key|passw(?:or)?d|secret|token/i;
 const SYNTHETIC_NAMESPACE_EXAMPLE_RE = /When namespace = \\"system\\", all alerts for the tenant will be returned\./g;
@@ -85,10 +81,45 @@ function protectRfc8555Terms(text: string): ProtectedRfc8555Terms {
 /** Count uses of the name that are not RFC 8555 terminology. */
 export function countAcmePlaceholderOccurrences(text: string): number {
 	let count = 0;
-	for (const match of text.matchAll(RFC_8555_OR_ACME_RE)) {
-		if (match[0].length === 4) count++;
+	for (let index = 0; index <= text.length - 4; index++) {
+		if (!isAcmeAt(text, index)) continue;
+		if (isRfc8555TermAt(text, index)) continue;
+		count++;
 	}
 	return count;
+}
+
+/** Match ASCII text without allocating a lower-cased copy of a generated artifact. */
+function matchesAsciiIgnoreCaseAt(text: string, index: number, expected: string): boolean {
+	if (index < 0 || index + expected.length > text.length) return false;
+	for (let offset = 0; offset < expected.length; offset++) {
+		if ((text.charCodeAt(index + offset) | 0x20) !== expected.charCodeAt(offset)) return false;
+	}
+	return true;
+}
+
+function isAcmeAt(text: string, index: number): boolean {
+	return matchesAsciiIgnoreCaseAt(text, index, "acme");
+}
+
+/**
+ * Avoid applying the full RFC matcher to every byte of the 42 MB generated API index. Almost all
+ * occurrences there are the DNS-01 label, which we can recognize directly. The remaining handful
+ * of candidates use a small bounded excerpt, retaining the exact RFC matcher for all other terms.
+ */
+function isRfc8555TermAt(text: string, index: number): boolean {
+	if (index > 0 && text.charCodeAt(index - 1) === 0x5f && matchesAsciiIgnoreCaseAt(text, index, "acme-challenge")) {
+		return true;
+	}
+
+	const excerptStart = Math.max(0, index - 96);
+	const excerpt = text.slice(excerptStart, Math.min(text.length, index + 96));
+	for (const match of excerpt.matchAll(RFC_8555_TERM_RE)) {
+		const matchStart = excerptStart + (match.index ?? 0);
+		const matchEnd = matchStart + match[0].length;
+		if (matchStart <= index && index < matchEnd) return true;
+	}
+	return false;
 }
 
 /**
