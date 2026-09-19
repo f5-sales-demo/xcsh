@@ -60,6 +60,12 @@ describe("generated-content sanitization", () => {
 		expect(countAcmePlaceholderOccurrences(source)).toBe(1);
 	});
 
+	it("counts a placeholder after a large run of RFC DNS-01 labels", () => {
+		const source = `${"_acme-challenge\n".repeat(250_000)}ACME tenant`;
+
+		expect(countAcmePlaceholderOccurrences(source)).toBe(1);
+	});
+
 	it("replaces the scanner-sensitive namespace example deterministically", () => {
 		const source = 'When namespace = \\"system\\", all alerts for the tenant will be returned.';
 
