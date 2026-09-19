@@ -25,8 +25,9 @@ uat_workspace="$uat_home/workspace"
 sudo mkdir -p "$uat_workspace"
 sudo chown "$uat_user":staff "$uat_workspace"
 sudo chmod 700 "$uat_workspace"
-test -d "$uat_workspace"
-test "$(stat -f '%Su' "$uat_workspace")" = "$uat_user"
+sudo test -d "$uat_workspace"
+test "$(sudo stat -f '%Su' "$uat_workspace")" = "$uat_user"
+test "$(sudo stat -f '%Lp' "$uat_workspace")" = 700
 binary=/usr/local/bin/xcsh
 native_root="/Library/Application Support/xcsh/natives/${version}"
 test -x "$binary"
@@ -47,6 +48,6 @@ run_as_uat env HOME="$uat_home" "$binary" chrome recycle
 run_as_uat env HOME="$uat_home" "$binary" office recycle
 after=$(find "$binary" "$native_root" -type f -exec shasum -a 256 {} + | LC_ALL=C sort)
 test "$before" = "$after"
-test ! -e "$uat_home/.xcsh/natives/$version"
+sudo test ! -e "$uat_home/.xcsh/natives/$version"
 
 echo "Direct MDM package verification passed for ${RELEASE_ARCH}"
