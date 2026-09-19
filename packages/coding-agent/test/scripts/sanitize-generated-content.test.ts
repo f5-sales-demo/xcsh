@@ -54,6 +54,12 @@ describe("generated-content sanitization", () => {
 		expect(sanitizeAcmePlaceholders(source)).toBe(source);
 	});
 
+	it("counts placeholders without counting RFC 8555 terms in the same document", () => {
+		const source = ["ACME tenant", "ACME account", "_acme-challenge", "RFC 8555 (ACME)"].join("\n");
+
+		expect(countAcmePlaceholderOccurrences(source)).toBe(1);
+	});
+
 	it("replaces the scanner-sensitive namespace example deterministically", () => {
 		const source = 'When namespace = \\"system\\", all alerts for the tenant will be returned.';
 
