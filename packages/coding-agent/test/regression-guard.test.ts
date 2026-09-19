@@ -655,6 +655,9 @@ describe("macOS pkg release contract", () => {
 		expect(script).toContain("xcrun stapler validate");
 		expect(script).toContain("sudo installer -pkg");
 		expect(script).toContain("--installed-system-root");
+		expect(script).toContain('sudo mkdir -p "$uat_home"');
+		expect(script).toContain('sudo chown "$uat_user":staff "$uat_home"');
+		expect(script).toContain("stat -f '%Su' \"$uat_home\"");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation
 		expect(script).toContain("/Library/Application Support/xcsh/natives/${version}");
 		expect(script).toContain('test ! -e "$uat_home/.xcsh/natives/$version"');

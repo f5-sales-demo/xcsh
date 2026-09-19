@@ -20,6 +20,14 @@ bun scripts/macos-release-provenance.ts verify \
 
 sudo installer -pkg "$PKG_PATH" -target /
 sudo sysadminctl -addUser "$uat_user" -fullName "xcsh MDM UAT" -home "$uat_home" -password "$(uuidgen)"
+# sysadminctl records the requested home path but does not materialize it on
+# hosted macOS. The clean standard account must own a real home before xcsh
+# creates its ordinary logs/configuration there.
+sudo mkdir -p "$uat_home"
+sudo chown "$uat_user":staff "$uat_home"
+sudo chmod 700 "$uat_home"
+test -d "$uat_home"
+test "$(stat -f '%Su' "$uat_home")" = "$uat_user"
 if id -Gn "$uat_user" | tr ' ' '\n' | grep -qx admin; then
   echo "::error::MDM UAT account is an administrator"
   exit 1
