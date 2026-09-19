@@ -276,7 +276,19 @@ async function main(): Promise<void> {
 		const manifest = (await Bun.file(arg("--manifest")).json()) as MacOsProvenanceManifest;
 		const layout = arg("--layout");
 		if (layout !== "release" && layout !== "homebrew" && layout !== "pkg") throw new Error("invalid --layout");
-		await verifyMacOsProvenance({ manifest, rootDir: arg("--root"), layout, rejectUnexpected: true });
+		const installedSystemRoot = process.argv.includes("--installed-system-root");
+		if (installedSystemRoot && layout !== "pkg") {
+			throw new Error("--installed-system-root is valid only for pkg verification");
+		}
+		await verifyMacOsProvenance({
+			manifest,
+			rootDir: arg("--root"),
+			layout,
+			// Expanded package payloads are closed inventories. A live system root is
+			// not: hosted runners legitimately contain unrelated /usr/local/bin tools.
+			// Hashes and strict signatures for every manifest-owned file remain required.
+			rejectUnexpected: !installedSystemRoot,
+		});
 		return;
 	}
 	throw new Error("usage: macos-release-provenance.ts <create|verify> ...");
