@@ -19,43 +19,14 @@ bun scripts/macos-release-provenance.ts verify \
   --manifest "$PROVENANCE_PATH" --root "$expanded/Payload" --layout pkg
 
 sudo installer -pkg "$PKG_PATH" -target /
-if id "$uat_user" >/dev/null 2>&1; then
-  echo "::error::MDM UAT account already exists"
-  exit 1
-fi
-# Hosted macOS can create the account record while sysadminctl exits nonzero
-# after reporting that its requested home was merely assigned. Capture this
-# command explicitly outside errexit, then accept a partial status only after
-# proving that the new account exists.
-set +e
-sudo sysadminctl -addUser "$uat_user" -fullName "xcsh MDM UAT" -home "$uat_home" -password "$(uuidgen)"
-sysadminctl_status=$?
-set -e
-if [[ "$sysadminctl_status" -ne 0 ]]; then
-  if ! id "$uat_user" >/dev/null 2>&1; then
-    echo "::error::sysadminctl failed to create the MDM UAT account"
-    exit 1
-  fi
-fi
-# sysadminctl records the requested home path but does not materialize it on
-# hosted macOS. The clean standard account must own a real home before xcsh
-# creates its ordinary logs/configuration there.
-sudo mkdir -p "$uat_home"
-sudo chown "$uat_user":staff "$uat_home"
-sudo chmod 700 "$uat_home"
-test -d "$uat_home"
-test "$(stat -f '%Su' "$uat_home")" = "$uat_user"
+UAT_USER="$uat_user" UAT_HOME="$uat_home" UAT_FULL_NAME="xcsh MDM UAT" \
+  bash scripts/ci-macos-uat-user.sh
 uat_workspace="$uat_home/workspace"
 sudo mkdir -p "$uat_workspace"
 sudo chown "$uat_user":staff "$uat_workspace"
 sudo chmod 700 "$uat_workspace"
 test -d "$uat_workspace"
 test "$(stat -f '%Su' "$uat_workspace")" = "$uat_user"
-if id -Gn "$uat_user" | tr ' ' '\n' | grep -qx admin; then
-  echo "::error::MDM UAT account is an administrator"
-  exit 1
-fi
-
 binary=/usr/local/bin/xcsh
 native_root="/Library/Application Support/xcsh/natives/${version}"
 test -x "$binary"

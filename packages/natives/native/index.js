@@ -8,7 +8,7 @@ const { createRequire } = require("node:module");
 const os = require("node:os");
 const path = require("node:path");
 const { ensureEmbeddedAddon } = require("./embedded-extraction");
-const { getInstalledNativeCandidates, loadInstalledBeforeFallback, tryLoadCandidates } = require("./installed-paths");
+const { getNativeLoadChannel, loadNativeChannel, tryLoadCandidates } = require("./installed-paths");
 const { exposeNativeApi } = require("./public-api");
 
 function getNativesDir() {
@@ -35,10 +35,6 @@ try {
 	// Keep process.execPath as the fallback when the executable cannot be resolved.
 }
 const versionedDir = path.join(getNativesDir(), packageVersion);
-const userDataDir =
-	process.platform === "win32"
-		? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "xcsh")
-		: path.join(os.homedir(), ".local", "bin");
 // PI_COMPILED is replaced with `true` at compile time by bun build --define PI_COMPILED=true.
 // In non-compiled contexts the identifier is undefined, so wrap in try-catch.
 // The __filename checks are kept as a secondary heuristic but are unreliable
@@ -129,11 +125,11 @@ const variantOverride = getVariantOverride();
 const selectedVariant = resolveCpuVariant(variantOverride);
 const addonFilenames = getAddonFilenames(platformTag, selectedVariant);
 const addonLabel = selectedVariant ? `${platformTag} (${selectedVariant})` : platformTag;
-const installedCandidates = getInstalledNativeCandidates({
+const nativeLoadChannel = getNativeLoadChannel({
 	platform: process.platform,
 	addonFilenames,
+	rawExecPath: process.execPath,
 	resolvedExecPath,
-	resolvedExecDir,
 	packageVersion,
 });
 
@@ -166,12 +162,7 @@ const baseReleaseCandidates = [
 	]),
 	...platformPackageCandidates,
 ];
-const compiledCandidates = addonFilenames.flatMap(filename => [
-	path.join(versionedDir, filename),
-	path.join(userDataDir, filename),
-]);
-const releaseCandidates = isCompiledBinary ? [...compiledCandidates, ...baseReleaseCandidates] : baseReleaseCandidates;
-const dedupedCandidates = [...new Set(releaseCandidates)];
+const dedupedCandidates = [...new Set(baseReleaseCandidates)];
 
 function runCommand(command, args) {
 	// removed logger.time
@@ -233,14 +224,9 @@ function loadNative() {
 	const onError = (candidate, err) => {
 		if (process.env.PI_DEV) console.error("Error loading native addon from %s:", candidate, err);
 	};
-	const fallbackCandidates = () => {
-		const embeddedCandidate = maybeExtractEmbeddedAddon(errors);
-		return embeddedCandidate ? [embeddedCandidate, ...dedupedCandidates] : dedupedCandidates;
-	};
 	const loaded = isCompiledBinary
-		? loadInstalledBeforeFallback(installedCandidates, require_, errors, fallbackCandidates, onLoaded, onError)
-		: tryLoadCandidates(fallbackCandidates(), require_, errors, onLoaded, onError) ||
-			tryLoadCandidates(installedCandidates, require_, errors, onLoaded, onError);
+		? loadNativeChannel(nativeLoadChannel, require_, errors, () => maybeExtractEmbeddedAddon(errors), onLoaded, onError)
+		: tryLoadCandidates(dedupedCandidates, require_, errors, onLoaded, onError);
 	if (loaded) return loaded;
 	// Check if this is an unsupported platform
 	if (!SUPPORTED_PLATFORMS.includes(platformTag)) {
@@ -252,7 +238,12 @@ function loadNative() {
 	}
 	const details = errors.map(error => `- ${error}`).join("\n");
 	let helpMessage;
-	if (isCompiledBinary) {
+	if (isCompiledBinary && nativeLoadChannel.mode === "installed-only") {
+		const expectedPaths = nativeLoadChannel.candidates.map(candidate => `  ${candidate}`).join("\n");
+		helpMessage =
+			`This installed xcsh channel requires one of:\n${expectedPaths}\n\n` +
+			"Reinstall the same channel; embedded and cross-channel native fallbacks are disabled.";
+	} else if (isCompiledBinary) {
 		const expectedPaths = addonFilenames.map(filename => `  ${path.join(versionedDir, filename)}`).join("\n");
 		const downloadHints = addonFilenames
 			.map(filename => {

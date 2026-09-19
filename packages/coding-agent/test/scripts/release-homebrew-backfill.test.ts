@@ -39,7 +39,9 @@ describe("release Homebrew backfill workflow contract", () => {
 		expect(workflow).toContain('cd "$UAT_HOME"');
 		expect(workflow).toContain('sudo -H -u "$UAT_USER" env');
 		expect(workflow).toContain("path: .controller");
+		expect(workflow).toContain(".controller/scripts/ci-macos-uat-user.sh");
 		expect(workflow).toContain(".controller/scripts/ci-verify-homebrew-cask.sh");
+		expect(workflow).toContain(".controller/scripts/ci-homebrew-upgrade-fixture.sh");
 		const uatStart = workflow.indexOf("verify-homebrew-install:");
 		const tagCheckout = workflow.indexOf("ref: $" + "{{ inputs.tag }}", uatStart);
 		const controllerCheckout = workflow.indexOf("path: .controller", uatStart);
