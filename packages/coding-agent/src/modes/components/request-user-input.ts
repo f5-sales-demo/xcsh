@@ -115,6 +115,10 @@ export class RequestUserInputComponent implements Component {
 		} else if (matchesKey(data, "tab")) {
 			this.form.toggleNotes();
 			this.#restore();
+		} else if (!this.form.notesVisible && data === " ") this.form.commitSelection();
+		else if (!this.form.notesVisible && (matchesKey(data, "backspace") || matchesKey(data, "delete"))) {
+			this.form.clearSelection();
+			this.#restore();
 		} else if (enter) this.#submit();
 		else if (
 			matchesKey(data, "ctrl+p") ||
@@ -134,7 +138,7 @@ export class RequestUserInputComponent implements Component {
 		else if (keys.matches(data, "tui.select.up")) this.form.moveOption(-1);
 		else if (keys.matches(data, "tui.select.down")) this.form.moveOption(1);
 		else if (/^[1-9]$/.test(data) && Number(data) <= this.form.options.length) {
-			this.form.moveOption(Number(data) - 1 - this.form.draft.highlighted);
+			this.form.selectOption(Number(data) - 1);
 			this.#submit();
 		}
 		this.tui.requestRender();

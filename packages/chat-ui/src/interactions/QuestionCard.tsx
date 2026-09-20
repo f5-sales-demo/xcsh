@@ -65,7 +65,7 @@ export function QuestionCard({ requestId, questions, onRespond, onInterrupt }: Q
 								name={requestId}
 								checked={form.draft.highlighted === index}
 								onChange={() => {
-									form.moveOption(index - form.draft.highlighted);
+									form.selectOption(index);
 									render(null);
 								}}
 							/>

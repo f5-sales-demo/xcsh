@@ -482,6 +482,39 @@ describe("ExtensionUiController hook editor abort", () => {
 		expect(editorContainer.children).toEqual([editor]);
 	});
 
+	it("space commits an option without advancing and backspace or delete clears it", async () => {
+		const { ctx, editorContainer } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		controller.initializeInteractionPresenters();
+		const result = ctx.session.userInteractions.requestInput({
+			title: "Question",
+			inputQuestions: [
+				{
+					id: "color",
+					header: "Color",
+					question: "Color?",
+					options: [{ label: "Blue", description: "Cool" }],
+					isOther: true,
+				},
+			],
+		});
+		await Bun.sleep(0);
+		const widget = editorContainer.children[0] as RequestUserInputComponent;
+
+		widget.handleInput(" ");
+		expect(widget.form.index).toBe(0);
+		expect(widget.form.unanswered).toBe(0);
+		widget.handleInput("\x7f");
+		expect(widget.form.unanswered).toBe(1);
+		widget.handleInput(" ");
+		expect(widget.form.unanswered).toBe(0);
+		widget.handleInput("\x1b[3~");
+		expect(widget.form.unanswered).toBe(1);
+
+		ctx.session.userInteractions.cancelAll();
+		expect(await result).toBeUndefined();
+	});
+
 	it("masks secret free text without changing the submitted answer", async () => {
 		const { ctx, editorContainer } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);
