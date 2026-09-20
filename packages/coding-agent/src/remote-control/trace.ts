@@ -62,8 +62,6 @@ const protocolValues = new Set([
 	"webrtc",
 	"websocket",
 	"existingCall",
-	"v1",
-	"v2",
 	"v3",
 	"audio",
 	"text",

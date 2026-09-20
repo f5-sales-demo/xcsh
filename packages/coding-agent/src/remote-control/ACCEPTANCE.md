@@ -6,6 +6,26 @@ This audit preserves the full user objective. Passing one row does not imply
 completion of another. Codex baseline: 0.153.4,
 `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`.
 
+## Current voice acceptance gate — issue #3935
+
+The historical matrix below does not qualify the current clean-break voice
+implementation. xcsh now has one internal OpenAI Live path (`/v1/live`,
+`gpt-live-1-codex`); `"v3"` exists only as the iPhone boundary literal.
+There are no supported older internal voice versions.
+
+Before any GitHub synchronization, a source-matched compiled candidate must be
+installed in the Ubuntu supervised service and proven healthy with sanitized
+metadata. Robin must then hear ten fresh iPhone sessions using the same app
+build, selected voice, and Live model: eight ordinary identity/product prompts
+must produce “X-C-shell”, and two explicit spelling/repair prompts must produce
+“X-C-S-H”. Record only trial ID, expected/heard form, pass/fail, artifact SHA,
+model, and voice label. Require 10/10; any miss starts a new candidate and a
+fresh ten-trial set. This is 100% observed over ten trials, not deterministic
+behavior or a 100% population probability.
+
+The version-specific voice claims in the historical audit are superseded and
+must not be used as release or phone-acceptance evidence.
+
 <!-- markdownlint-disable MD013 -->
 
 | Requirement | Current evidence | Remaining completion evidence |

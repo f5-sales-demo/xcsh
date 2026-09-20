@@ -206,11 +206,11 @@ test("backing voice mode instructions retain developer priority", () => {
 	}
 });
 
-test.each(["v1", "v3"])("explicit empty %s mode overrides are retained", async version => {
+test("explicit empty Live mode overrides are retained", async () => {
 	const f = fixture();
 	await f.voice.start({
 		...params,
-		version,
+		version: "v3",
 		transport: transports[1],
 		realtimeStartInstructions: "",
 		realtimeEndInstructions: "",

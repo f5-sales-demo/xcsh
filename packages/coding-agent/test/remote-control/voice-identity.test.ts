@@ -5,9 +5,7 @@ import type { VoiceHandlers } from "../../src/remote-control/voice-socket";
 // Codex 0.153.4 core/src/realtime_conversation.rs: build_realtime_session_config,
 // prepare_realtime_start and realtime_request_headers. Source contract, not phone capture.
 const identities = [undefined, null, "example-voice-session", ""];
-const cases = ["v1", "v3"].flatMap(version =>
-	["webrtc", "existingCall"].flatMap(type => identities.map(identity => ({ version, type, identity }))),
-);
+const cases = ["webrtc", "existingCall"].flatMap(type => identities.map(identity => ({ type, identity })));
 
 function fixture() {
 	const events: { method: string; params: Record<string, unknown> }[] = [];
@@ -34,14 +32,14 @@ function fixture() {
 	return { voice: new NativeVoice(deps), events, records, calls, connections };
 }
 
-test.each(cases)("$type $version preserves the pinned identity semantics for $identity", async testCase => {
-	const { version, type, identity } = testCase;
+test.each(cases)("Live $type preserves the pinned identity semantics for $identity", async testCase => {
+	const { type, identity } = testCase;
 	const f = fixture();
 	const expected = identity ?? (type === "webrtc" ? "example-thread" : null);
 	try {
 		await f.voice.start({
 			threadId: "example-thread",
-			version,
+			version: "v3",
 			outputModality: "audio",
 			includeStartupContext: false,
 			...(identity === undefined ? {} : { realtimeSessionId: identity }),
@@ -55,14 +53,12 @@ test.each(cases)("$type $version preserves the pinned identity semantics for $id
 			expect(Object.hasOwn(headers, "x-session-id")).toBe(expected !== null);
 			if (expected !== null) expect(headers["x-session-id"]).toBe(expected);
 		}
-		if (version === "v3") {
-			f.connections[0].handlers.closed();
-			const deadline = Date.now() + 2000;
-			while (f.connections.length < 2 && Date.now() < deadline) await Bun.sleep(10);
-			expect(f.connections).toHaveLength(2);
-			expect(f.connections[1].headers).toEqual(f.connections[0].headers);
-			expect(f.events.filter(event => event.method === "thread/realtime/started")).toHaveLength(1);
-		}
+		f.connections[0].handlers.closed();
+		const deadline = Date.now() + 2000;
+		while (f.connections.length < 2 && Date.now() < deadline) await Bun.sleep(10);
+		expect(f.connections).toHaveLength(2);
+		expect(f.connections[1].headers).toEqual(f.connections[0].headers);
+		expect(f.events.filter(event => event.method === "thread/realtime/started")).toHaveLength(1);
 	} finally {
 		await f.voice.stop();
 	}

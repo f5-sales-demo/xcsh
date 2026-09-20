@@ -1,6 +1,6 @@
 # GPT-Live guidance review
 
-Reviewed against the official documentation on 2026-09-13. This review covers
+Reviewed against the official documentation on 2026-09-20. This review covers
 architecture and conversational behavior; it does not certify phone acceptance.
 
 ## Architecture and transport
@@ -21,11 +21,17 @@ source-contract and integration qualification.
 
 [Live prompting](https://developers.openai.com/api/docs/guides/live-prompting)
 recommends a compact speaking/delegation policy and backend-owned procedures.
-The v3 persona now uses `remote-voice-live.md`, with registered tool names and bounded
-speaking preferences and recent context. It omits the terminal system prompt and
-full tool descriptions. The complete envelope stays within 8 KiB. This is a local
-engineering budget, not an OpenAI token-limit claim. Legacy fixtures retain their
-existing contract.
+xcsh has one Live persona in `remote-voice-live.md`, with registered tool names
+and bounded speaking preferences and recent context. It omits the terminal system
+prompt and full tool descriptions. The complete envelope stays within 8 KiB. This
+is a local engineering budget, not an OpenAI token-limit claim: the documented
+provider limits are 16,384 instruction tokens, 128 startup messages / 8,192
+combined startup-history tokens, and a 128,000-token default context window.
+
+The final server-owned section follows phone preferences. It fixes identity,
+written `xcsh` branding, normal “X-C-shell” pronunciation, and the
+“X-C-S-H” spelling/repair form. The iPhone boundary literal `"v3"` selects
+this one implementation; it is not an xcsh internal version branch.
 
 The listening policy intentionally disables backchannels to honor the user's
 preference. Prompt tests check this boundary; actual pauses and interruptions still

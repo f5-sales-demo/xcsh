@@ -1,11 +1,30 @@
 # Observed native remote parity
 
-Reference: instrumented Codex 0.153.4, source commit
-`3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`. Native implementation and reference
-recordings are separate processes and enrollments. This is an evidence matrix,
-not a declaration of complete feature parity.
+## Current voice contract — issue #3935
 
-## Legacy WebRTC source contract
+xcsh has one internal OpenAI Live voice implementation. It uses `/v1/live`,
+`gpt-live-1-codex`, a single Live event decoder, and one voice/output path for
+WebRTC, existing-call sideband, and API-key WebSocket attachment. The iPhone
+JSON-RPC boundary retains only the Codex-required literal `"v3"`; omitted/null
+also select this implementation and all other values are rejected. There is no
+internal legacy voice generation, fallback, model mapping, or compatibility path.
+
+The compact server-owned prompt excludes terminal procedures, person data, and
+tool descriptions. Its final identity/pronunciation section follows phone
+preferences: written branding is `xcsh`; normal speech is “X-C-shell”; explicit
+spelling or repair is “X-C-S-H”. Phone text cannot override those facts. The
+8 KiB prompt budget is an xcsh engineering limit, not an OpenAI API maximum.
+
+Current Codex `main` was inspected at
+`e29eceb7513163ba1f600d0b87f6751ec9323d24`. Codex's internal compatibility
+generations are not part of xcsh's unreleased clean-break implementation. This
+matrix does not establish physical iPhone pronunciation acceptance: a fresh
+compiled candidate must pass 10/10 human-heard trials before delivery.
+
+The version-specific material below is retained as historical source/fixture
+provenance only. It is superseded as a description of supported xcsh behavior.
+
+## Historical WebRTC source contract (superseded)
 
 WebRTC accepts v1 and v3; an omitted or null version defaults to v1. The pinned
 App Server requires explicit audio output. The v1 configuration retains the
