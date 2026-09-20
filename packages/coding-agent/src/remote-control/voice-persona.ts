@@ -34,12 +34,15 @@ export interface VoicePersonaDiagnostics {
 	};
 }
 
-const MAX_INSTRUCTIONS = 64 * 1024;
+// Keep server-managed instructions comfortably below the smallest documented
+// Realtime context window (32k tokens) so voice turns retain operating room.
+// This is a byte budget, not a claim about an OpenAI token-limit contract.
+const MAX_INSTRUCTIONS = 16 * 1024;
 const MAX_SYSTEM_PROMPT = 160 * 1024;
 const MAX_CAPABILITIES = 16 * 1024;
 const MAX_PREFERENCES = 32 * 1024;
 const MAX_HISTORY = 32 * 1024;
-const MIN_SYSTEM_PROMPT = 16 * 1024;
+const MIN_SYSTEM_PROMPT = 4 * 1024;
 const IDENTITY_ANCHOR = prompt.render(identityTemplate);
 function bytes(value: string): number {
 	return Buffer.byteLength(value);
