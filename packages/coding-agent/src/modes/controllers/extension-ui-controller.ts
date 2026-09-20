@@ -20,9 +20,8 @@ import { HookInputComponent } from "../../modes/components/hook-input";
 import { HookSelectorComponent } from "../../modes/components/hook-selector";
 import { getAvailableThemesWithPaths, getThemeByName, setTheme, type Theme, theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
-import type { InteractionQuestion, QuestionAnswers } from "../../session/question-types";
 import { setSessionTerminalTitle, setTerminalTitle } from "../../utils/title-generator";
-import { runQuestionGroup } from "../components/question-flow";
+import { RequestUserInputComponent } from "../components/request-user-input";
 
 const MAX_WIDGET_LINES = 10;
 
@@ -36,10 +35,39 @@ export class ExtensionUiController {
 	/**
 	 * Initialize the hook system with TUI-based UI context.
 	 */
+	initializeInteractionPresenters(): void {
+		this.ctx.session.userInteractions.setAsyncPresenter(async (request, signal) => {
+			const id = request.identity?.itemId ?? "answer";
+			const response = await this.showHookCustom<
+				import("../../../../chat-ui/src/interactions/contract").InputResponse | undefined
+			>(
+				(tui, _theme, _keys, done) =>
+					new RequestUserInputComponent(
+						tui,
+						[
+							{
+								id,
+								header: "Question",
+								question: request.title,
+								isOther: true,
+								options: request.options?.map(label => ({ label, description: "" })),
+							},
+						],
+						done,
+						signal,
+					),
+			);
+			return response?.answers[id]?.answers.join("\n");
+		});
+		this.ctx.session.userInteractions.setQuestionPresenter((questions, signal) =>
+			this.showHookCustom((tui, _theme, _keys, done) => new RequestUserInputComponent(tui, questions, done, signal)),
+		);
+	}
+
 	async initHooksAndCustomTools(): Promise<void> {
+		this.initializeInteractionPresenters();
 		// Create and set hook & tool UI context
 		const uiContext: ExtensionUIContext = {
-			questions: (questions, options) => this.showHookQuestions(questions, options),
 			select: (title, options, dialogOptions) => this.showHookSelector(title, options, dialogOptions),
 			confirm: (title, message, dialogOptions) => this.showHookConfirm(title, message, dialogOptions),
 			input: (title, placeholder, dialogOptions) => this.showHookInput(title, placeholder, dialogOptions),
@@ -668,28 +696,6 @@ export class ExtensionUiController {
 		this.ctx.session.notifyUserPrompt(type === "user_prompt_start" ? "start" : "end", kind);
 	}
 
-	showHookQuestions(
-		questions: readonly InteractionQuestion[],
-		options?: ExtensionUIDialogOptions,
-	): Promise<QuestionAnswers | undefined> {
-		return this.ctx.session.userInteractions.requestQuestions(
-			{ title: "Questions", questions },
-			async (signal, complete) => {
-				const answers = await runQuestionGroup(
-					questions,
-					{
-						select: (title, choices, dialogOptions) => this.#showHookSelector(title, choices, dialogOptions),
-						editor: (title, prefill, dialogOptions, editorOptions) =>
-							this.#showHookEditor(title, prefill, dialogOptions, editorOptions),
-					},
-					{ signal, timeout: options?.timeout },
-				);
-				complete(answers);
-				return answers;
-			},
-			options?.signal,
-		);
-	}
 	showHookSelector(
 		title: string,
 		options: string[],

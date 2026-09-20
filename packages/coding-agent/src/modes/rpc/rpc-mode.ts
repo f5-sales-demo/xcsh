@@ -534,6 +534,23 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 		const id = command.id;
 
 		switch (command.type) {
+			case "interaction_snapshot":
+				return success(id, command.type, {
+					sessionId: session.sessionId,
+					...session.userInteractions.replay(command.after ?? 0),
+					plan: session.conversationPlans.current,
+				});
+			case "interaction_respond":
+				return success(id, command.type, {
+					accepted: session.userInteractions.respondExternal(
+						command.requestId,
+						command.responseId,
+						command.value,
+						command.identity,
+					),
+				});
+			case "plan_decide":
+				return success(id, command.type, await session.decidePlan(command.planId, command.action));
 			// =================================================================
 			// Prompting
 			// =================================================================

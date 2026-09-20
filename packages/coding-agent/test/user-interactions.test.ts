@@ -112,52 +112,38 @@ test("aborted queued input never renders and observer changes cannot alter valid
 	await first;
 });
 
-test("grouped answers settle once and close the active terminal form", async () => {
+test("question answers settle once and close the active terminal form", async () => {
 	const interactions = new UserInteractions();
 	let signal: AbortSignal | undefined;
-	const questions = [
-		{ id: "color", question: "Choose colors", options: [{ label: "Blue" }, { label: "Green" }], multi: true },
-		{ id: "note", question: "Add a note", options: [], isOther: true },
-	];
-	const result = interactions.requestQuestions({ title: "Fixture", questions }, abort => {
+	interactions.setQuestionPresenter((_questions, abort) => {
 		signal = abort;
 		return new Promise(() => {});
 	});
+	const inputQuestions = [
+		{
+			id: "color",
+			header: "Color",
+			question: "Choose color",
+			options: [
+				{ label: "Blue", description: "Cool" },
+				{ label: "Green", description: "Warm" },
+			],
+			isOther: true,
+		},
+	];
+	const result = interactions.requestInput({ title: "Fixture", inputQuestions });
 	const id = interactions.pending()[0].id;
-	const answer = {
-		color: { selectedOptions: ["Blue", "Green"] },
-		note: { selectedOptions: [], customInput: "Keep both" },
-	};
+	const answer = { answers: { color: { answers: ["Blue", "user_note: Keep it"] } } };
+	for (const invalid of [
+		{},
+		{ answers: { foreign: { answers: ["Blue"] } } },
+		{ answers: { color: { answers: ["Blue", "Green"] } } },
+	])
+		expect(interactions.respond(id, invalid)).toBe(false);
 	expect(interactions.respond(id, answer)).toBe(true);
 	expect(signal?.aborted).toBe(true);
 	expect(await result).toEqual(answer);
 	expect(interactions.respond(id, answer)).toBe(false);
-});
-
-test("grouped answers reject missing, foreign or invalid selections without completing the form", async () => {
-	const interactions = new UserInteractions();
-	const result = interactions.requestQuestions(
-		{
-			title: "Fixture",
-			questions: [
-				{ id: "choice", question: "Choose", options: [{ label: "One" }, { label: "Two" }], isOther: false },
-			],
-		},
-		() => new Promise(() => {}),
-	);
-	const id = interactions.pending()[0].id;
-	for (const invalid of [
-		"One",
-		{},
-		{ foreign: { selectedOptions: ["One"] } },
-		{ choice: { selectedOptions: ["One", "Two"] } },
-		{ choice: { selectedOptions: ["unknown"] } },
-		{ choice: { selectedOptions: [], customInput: "not allowed" } },
-	])
-		expect(interactions.respond(id, invalid)).toBe(false);
-	expect(interactions.pending()).toHaveLength(1);
-	interactions.cancelAll();
-	expect(await result).toBeUndefined();
 });
 
 test("nested terminal pauses retain queued input while remote answers still complete", async () => {

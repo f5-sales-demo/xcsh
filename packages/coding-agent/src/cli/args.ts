@@ -470,7 +470,8 @@ ${chalk.bold("Available Tools (default-enabled unless noted):")}
   task          - Launch sub-agents for parallel tasks
   todo_write    - Manage todo/task lists
   web_search    - Search the web
-  ask           - Ask user questions (interactive mode only)
+  request_user_input       - Ask structured questions and wait (Plan mode by default)
+  request_user_input_async - Ask questions without blocking ongoing work
 
 ${chalk.bold("Sandbox Options:")}
   --no-sandbox               ${LAUNCH_FLAGS["no-sandbox"].description}

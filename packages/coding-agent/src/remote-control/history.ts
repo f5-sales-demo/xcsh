@@ -274,6 +274,17 @@ export function messageHistoryItems(
 			),
 		];
 	if (message.role === "custom" || message.role === "hookMessage") {
+		if (message.customType === "async-user-input" && message.details && typeof message.details === "object") {
+			const item = (message.details as { item?: Record<string, unknown> }).item;
+			if (
+				item?.type === "agentMessage" &&
+				item.delivery === "async" &&
+				typeof item.id === "string" &&
+				typeof item.text === "string" &&
+				Array.isArray(item.questions)
+			)
+				return [structuredClone(item)];
+		}
 		if (!message.display || message.customType === "async-result") return [];
 		return hookHistoryItem(id, message.customType, textContent(message.content));
 	}

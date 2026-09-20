@@ -128,6 +128,7 @@ export type ChatStreamMsg = ChatMessageStart | ChatDelta | ChatMessageEnd | Chat
  * and the provider-configure replies.
  */
 export type ChatInboundMsg =
+	| import("@f5-sales-demo/xcsh-chat-ui/src/interactions/transport").InteractionFrame
 	| ChatStreamMsg
 	| ChatKeepalive
 	| ChatMedia

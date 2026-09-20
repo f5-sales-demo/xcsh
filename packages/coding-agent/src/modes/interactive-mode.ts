@@ -1,11 +1,4 @@
-/**
- * Interactive mode for the coding agent.
- * Handles TUI rendering and user interaction, delegating business logic to AgentSession.
- */
-import { createHash } from "node:crypto";
-import * as fs from "node:fs/promises";
 import * as os from "node:os";
-import * as path from "node:path";
 import type { Agent, AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
 	type AssistantMessage,
@@ -17,7 +10,7 @@ import {
 } from "@f5-sales-demo/pi-ai";
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { Container, Loader, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
-import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5-sales-demo/pi-utils";
+import { getProjectDir, hsvToRgb, logger, postmortem } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { KeybindingsManager } from "../config/keybindings";
 import { type Settings, settings } from "../config/settings";
@@ -29,21 +22,15 @@ import type {
 } from "../extensibility/extensions";
 import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
-import { resolveLocalUrlToPath } from "../internal-urls";
-import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
-import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
 import { startSessionBridge } from "../remote-control/bridge";
 import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
 import type { NewSessionOptions, SessionContext, SessionManager } from "../session/session-manager";
-import { withPlanReviewInteraction } from "../session/user-interactions";
 import { profileMark } from "../startup-profile";
 import { STTController, type SttState } from "../stt";
-import type { ExitPlanModeDetails } from "../tools";
 import { applyHyperlinkSetting } from "../tui/hyperlink";
 import type { EventBus } from "../utils/event-bus";
-import { getEditorCommand, openInEditor } from "../utils/external-editor";
 import type { OpenHttpUrlResult } from "../utils/open";
 import { popTerminalTitle, pushTerminalTitle, setSessionTerminalTitle } from "../utils/title-generator";
 import type { AssistantMessageComponent } from "./components/assistant-message";
@@ -53,7 +40,6 @@ import { DisposableContainer, type GutterBlock } from "./components/gutter-block
 import type { HookEditorComponent } from "./components/hook-editor";
 import type { HookInputComponent } from "./components/hook-input";
 import type { HookSelectorComponent } from "./components/hook-selector";
-import { PlanPreviewComponent } from "./components/plan-preview";
 import type { PythonExecutionComponent } from "./components/python-execution";
 import { StatusLineComponent } from "./components/status-line";
 import type { ToolExecutionHandle } from "./components/tool-execution";
@@ -87,9 +73,6 @@ import { UiHelpers } from "./utils/ui-helpers";
 const EDITOR_MAX_HEIGHT_MIN = 6;
 const EDITOR_MAX_HEIGHT_MAX = 18;
 const EDITOR_RESERVED_ROWS = 12;
-
-import { type ActionReview, executeReviewedAction } from "./components/reviewed-action";
-import { runReviewedAction } from "./components/reviewed-action-dialog";
 
 const EDITOR_FALLBACK_ROWS = 24;
 
@@ -141,7 +124,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	todoExpanded = false;
 	planModeEnabled = false;
 	planModePaused = false;
-	planModePlanFilePath: string | undefined = undefined;
 	todoPhases: TodoPhase[] = [];
 	hideThinkingBlock = false;
 	pendingImages: ImageContent[] = [];
@@ -187,20 +169,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#planModeHasEntered = false;
-	#planReviewTask?: Promise<void>;
-	#planReviewAbort?: AbortController;
-	#planEditorEpoch = 0;
-	#planCommandActive = false;
-	#pendingPlanSave?: {
-		session: AgentSession;
-		manager: SessionManager;
-		sessionId: string;
-		wasEnabled: boolean;
-		prompt?: string;
-		resumeAfterPause?: boolean;
-		revision: string;
-	};
-	#planReviewContainer: Container | undefined;
 	lspServers?: import("../tools").LspStartupServerInfo[];
 	mcpManager?: import("../mcp").MCPManager;
 	readonly #toolUiContextSetter: (uiContext: ExtensionUIContext, hasUI: boolean) => void;
@@ -727,20 +695,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#renderTodoList();
 	}
 
-	async #getPlanFilePath(): Promise<string> {
-		return "local://PLAN.md";
-	}
-
-	#resolvePlanFilePath(planFilePath: string): string {
-		if (planFilePath.startsWith("local://")) {
-			return resolveLocalUrlToPath(planFilePath, {
-				getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-				getSessionId: () => this.sessionManager.getSessionId(),
-			});
-		}
-		return path.resolve(this.sessionManager.getCwd(), planFilePath);
-	}
-
 	#updatePlanModeStatus(): void {
 		const status =
 			this.planModeEnabled || this.planModePaused
@@ -804,8 +758,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	async #restoreModeFromSession(): Promise<void> {
 		const sessionContext = this.sessionManager.buildSessionContext();
 		if (sessionContext.mode === "plan") {
-			const planFilePath = sessionContext.modeData?.planFilePath as string | undefined;
-			await this.#enterPlanMode({ planFilePath });
+			await this.#enterPlanMode();
 		} else if (sessionContext.mode === "plan_paused") {
 			this.planModePaused = true;
 			this.#planModeHasEntered = true;
@@ -814,7 +767,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	async #enterPlanMode(options?: {
-		planFilePath?: string;
 		workflow?: "parallel" | "iterative";
 		preserveModel?: boolean;
 		silent?: boolean;
@@ -823,21 +775,16 @@ export class InteractiveMode implements InteractiveModeContext {
 			return;
 		}
 
-		const planFilePath = options?.planFilePath ?? (await this.#getPlanFilePath());
 		const previousTools = this.session.getActiveToolNames();
-		const hasExitTool = this.session.getToolByName("exit_plan_mode") !== undefined;
-		const planTools = hasExitTool ? [...previousTools, "exit_plan_mode"] : previousTools;
-		const uniquePlanTools = [...new Set(planTools)];
-
-		await this.session.setActiveToolsByName(uniquePlanTools);
+		await this.session.setActiveToolsByName([
+			...new Set([...previousTools, "request_user_input", "request_user_input_async"]),
+		]);
 		this.planModePaused = false;
 		this.#planModePreviousTools = previousTools;
-		this.planModePlanFilePath = planFilePath;
 		this.planModeEnabled = true;
 
 		this.session.setPlanModeState({
 			enabled: true,
-			planFilePath,
 			workflow: options?.workflow ?? "parallel",
 			reentry: this.#planModeHasEntered,
 		});
@@ -847,8 +794,8 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#planModeHasEntered = true;
 		if (!options?.preserveModel) await this.#applyPlanModeModel();
 		this.#updatePlanModeStatus();
-		this.sessionManager.appendModeChange("plan", { planFilePath });
-		if (!options?.silent) this.showStatus(`Plan mode enabled. Plan file: ${planFilePath}`);
+		this.sessionManager.appendModeChange("plan");
+		if (!options?.silent) this.showStatus("Plan mode enabled.");
 	}
 
 	async #exitPlanMode(options?: { silent?: boolean; paused?: boolean }): Promise<void> {
@@ -879,7 +826,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.session.setPlanModeState(undefined);
 		this.planModeEnabled = false;
 		this.planModePaused = options?.paused ?? false;
-		this.planModePlanFilePath = undefined;
 		this.#planModePreviousTools = undefined;
 		this.#planModePreviousModelState = undefined;
 		this.#updatePlanModeStatus();
@@ -890,774 +836,10 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
-	async #readPlanFile(planFilePath: string): Promise<string | null> {
-		const resolvedPath = this.#resolvePlanFilePath(planFilePath);
-		try {
-			return await Bun.file(resolvedPath).text();
-		} catch (error) {
-			if (isEnoent(error)) {
-				return null;
-			}
-			throw error;
-		}
-	}
-
-	#renderPlanPreview(planContent: string): void {
-		const planReviewContainer = this.#planReviewContainer ?? new Container();
-		if (this.#planReviewContainer) {
-			// Re-append the preview so repeated plan-review refreshes stay adjacent to the
-			// active selector instead of updating an older off-screen preview in place.
-			this.chatContainer.removeChild(this.#planReviewContainer);
-		}
-		planReviewContainer.clear();
-		planReviewContainer.addChild(new Spacer(1));
-		planReviewContainer.addChild(new PlanPreviewComponent(planContent));
-		this.chatContainer.addChild(planReviewContainer);
-		this.#planReviewContainer = planReviewContainer;
-		this.ui.requestRender();
-	}
-
-	#getEditorTerminalPath(): string | null {
-		if (process.platform === "win32") {
-			return null;
-		}
-		return "/dev/tty";
-	}
-
-	async #openEditorTerminalHandle(): Promise<fs.FileHandle | null> {
-		const terminalPath = this.#getEditorTerminalPath();
-		if (!terminalPath) {
-			return null;
-		}
-		try {
-			return await fs.open(terminalPath, "r+");
-		} catch {
-			return null;
-		}
-	}
-
-	#getPlanReviewHelpText(): string {
-		const externalEditorKey = this.keybindings.getDisplayString("app.editor.external");
-		if (!externalEditorKey) {
-			return "";
-		}
-		return `${externalEditorKey}: open in editor`;
-	}
-
-	async #openPlanInExternalEditor(planFilePath: string, signal?: AbortSignal): Promise<void> {
-		const session = this.session;
-		const manager = this.sessionManager;
-		const sessionId = manager.getSessionId();
-		const editorEpoch = this.#planEditorEpoch;
-		const current = () =>
-			!signal?.aborted &&
-			!session.isDisposing &&
-			editorEpoch === this.#planEditorEpoch &&
-			this.session === session &&
-			this.sessionManager === manager &&
-			manager.getSessionId() === sessionId &&
-			this.planModeEnabled;
-		const editorCmd = getEditorCommand();
-		if (!editorCmd) {
-			this.showWarning("No editor configured. Set $VISUAL or $EDITOR environment variable.");
-			return;
-		}
-
-		const resolvedPath = this.#resolvePlanFilePath(planFilePath);
-		let currentText: string;
-		try {
-			currentText = await Bun.file(resolvedPath).text();
-		} catch (error) {
-			if (isEnoent(error)) {
-				this.showError(`Plan file not found at ${planFilePath}`);
-				return;
-			}
-			this.showWarning(`Failed to open external editor: ${error instanceof Error ? error.message : String(error)}`);
-			return;
-		}
-
-		if (!current()) return;
-		let ttyHandle: fs.FileHandle | null = null;
-		let resumeInteractions: (() => void) | undefined;
-		let terminalStopped = false;
-		let resumed = false;
-		const resumeTerminal = async () => {
-			try {
-				await ttyHandle?.close();
-			} finally {
-				ttyHandle = null;
-				if (!resumed) {
-					resumed = true;
-					if (terminalStopped) {
-						this.ui.start(settings.get("startup.clearScreen"));
-						this.ui.requestRender(true);
-					}
-				}
-			}
-		};
-		try {
-			ttyHandle = await this.#openEditorTerminalHandle();
-			if (!current()) return;
-			resumeInteractions = session.userInteractions.pauseLocalPresentation();
-			this.ui.stop();
-			terminalStopped = true;
-
-			const stdio: [number | "inherit", number | "inherit", number | "inherit"] = ttyHandle
-				? [ttyHandle.fd, ttyHandle.fd, ttyHandle.fd]
-				: ["inherit", "inherit", "inherit"];
-
-			const result = await openInEditor(editorCmd, currentText, {
-				extension: path.extname(resolvedPath) || ".md",
-				stdio,
-				trimTrailingNewline: false,
-			});
-			if (!current()) {
-				this.showWarning("The plan editor session changed; returned edits were not saved.");
-				return;
-			}
-			if (result === currentText) return;
-			if (result !== null) {
-				await resumeTerminal();
-				const reviewFor = (before: string): ActionReview => ({
-					identity: `plan-file:${sessionId}:${resolvedPath}`,
-					scope: `Current session plan · ${resolvedPath}`,
-					revision: before,
-					changes: [{ field: "File content", before, after: result }],
-					consequence: "Overwrite this plan file with the edited text. This does not approve or execute the plan.",
-				});
-				await runReviewedAction(this, "plan file edit", {
-					review: reviewFor(currentText),
-					resolve: async () => {
-						if (!current()) return undefined;
-						const latest = await Bun.file(resolvedPath).text();
-						return current() ? { review: reviewFor(latest), target: resolvedPath } : undefined;
-					},
-					execute: async destination => {
-						await Bun.write(destination, result);
-						if (current()) this.#renderPlanPreview(result);
-						this.showStatus("Plan file updated from external editor.");
-					},
-				});
-			}
-		} catch (error) {
-			this.showWarning(`Failed to open external editor: ${error instanceof Error ? error.message : String(error)}`);
-		} finally {
-			resumeInteractions?.();
-			await resumeTerminal();
-		}
-	}
-
-	async #approvePlan(options: {
-		planFilePath: string;
-		finalPlanFilePath: string;
-		review?: { sessionId: string; entryId: string };
-	}): Promise<void> {
-		if (!options.planFilePath.startsWith("local://") || !options.finalPlanFilePath.startsWith("local://")) {
-			this.showError("Plan approval requires local:// source and destination paths.");
-			return;
-		}
-		const reviewedSession = this.session;
-		const reviewedManager = this.sessionManager;
-		const reviewedSessionId = reviewedManager.getSessionId();
-		const sourceSessionFile = reviewedSession.sessionFile;
-		const sourceTitle = reviewedSession.sessionName;
-		const sourceTitleSource = reviewedManager.titleSource;
-		const remoteThreadId = reviewedManager.getHeader()?.remoteThreadId ?? reviewedSessionId;
-		let cancelledByDispose = reviewedSession.isDisposing;
-		const executionSessionOptions = {
-			parentSession: sourceSessionFile,
-			forkedFromId: reviewedSessionId,
-			remoteThreadId,
-			title: sourceTitle,
-			titleSource: sourceTitleSource,
-		};
-		const executionSessionPreview = reviewedManager.previewNewSession(executionSessionOptions);
-		const reviewedArtifactsDir = reviewedManager.getArtifactsDir();
-		const previousTools = this.#planModePreviousTools ?? reviewedSession.getActiveToolNames();
-		const resolveReviewedPath = (value: string) =>
-			resolveLocalUrlToPath(value, {
-				getArtifactsDir: () => reviewedArtifactsDir,
-				getSessionId: () => reviewedSessionId,
-			});
-		const sourcePath = resolveReviewedPath(options.planFilePath);
-		const approvedPath = resolveReviewedPath(options.finalPlanFilePath);
-		let preparationStarted = false;
-		let renamed = sourcePath === approvedPath;
-		let executionSessionId: string | undefined;
-		let executionSessionReady = false;
-		let executionLinked = false;
-		let viewReset = false;
-		let planWritten = false;
-		let toolsRestored = false;
-		let promptStarted = false;
-		let promptCompleted = false;
-		let promptStartEntryCount = 0;
-		let approvedSnapshot:
-			| {
-					content: string;
-					destinationBlocked: boolean;
-					review: ActionReview;
-			  }
-			| undefined;
-
-		const readCurrentPlan = async (): Promise<string | undefined> => {
-			try {
-				return await fs.readFile(renamed ? approvedPath : sourcePath, "utf8");
-			} catch (error) {
-				if (isEnoent(error)) return undefined;
-				throw error;
-			}
-		};
-		const inspect = async () => {
-			const content = await readCurrentPlan();
-			if (content === undefined) return undefined;
-			let destinationBlocked = false;
-			let destinationState = renamed ? "approved plan already staged" : "available";
-			if (!renamed && sourcePath !== approvedPath) {
-				try {
-					const stat = await fs.lstat(approvedPath);
-					destinationBlocked = true;
-					destinationState = stat.isFile()
-						? `occupied file (${stat.size} bytes)`
-						: stat.isDirectory()
-							? "occupied directory"
-							: "occupied non-regular path";
-				} catch (error) {
-					if (!isEnoent(error)) throw error;
-				}
-			}
-			const contentDigest = createHash("sha256").update(content).digest("hex");
-			const sessionRevision = createHash("sha256")
-				.update(
-					JSON.stringify({
-						entries: reviewedManager.getEntries(),
-						planMode: reviewedSession.getPlanModeState(),
-						activeTools: reviewedSession.getActiveToolNames(),
-						model: reviewedSession.model,
-						thinking: reviewedSession.thinkingLevel,
-					}),
-				)
-				.digest("hex");
-			const review: ActionReview = {
-				identity: `plan-approval:${reviewedSessionId}:${executionSessionPreview.targetSessionId}:${options.finalPlanFilePath}`,
-				scope: `Planning session ${reviewedSessionId} → execution session ${executionSessionPreview.targetSessionId}`,
-				revision: JSON.stringify({
-					contentDigest,
-					sessionRevision,
-					destinationState,
-					executionSessionPreview,
-				}),
-				changes: [
-					{
-						field: "Approved plan",
-						before: `${options.planFilePath} · ${Buffer.byteLength(content, "utf8")} bytes · sha256:${contentDigest.slice(0, 12)}`,
-						after: `${options.finalPlanFilePath} in both planning and execution sessions`,
-					},
-					{
-						field: "Plan destination",
-						before: destinationState,
-						after: "approved plan file",
-					},
-					{
-						field: "Active session",
-						before: reviewedSessionId,
-						after: executionSessionPreview.targetSessionId,
-					},
-					{
-						field: "Execution session file",
-						before: "Not created",
-						after: executionSessionPreview.targetSessionFile ?? "In-memory",
-					},
-					{
-						field: "Plan mode",
-						before: "on",
-						after: "off in the execution session",
-					},
-					{
-						field: "Active tools",
-						before: reviewedSession.getActiveToolNames().join(", ") || "none",
-						after: previousTools.join(", ") || "none",
-					},
-					{
-						field: "Execution prompt",
-						before: "not submitted",
-						after: `submit approved ${options.finalPlanFilePath} after the new session is saved`,
-					},
-				],
-				consequence: destinationBlocked
-					? "The approved-plan destination is occupied. No change can be applied; choose another plan title and review again."
-					: "Preserves the planning conversation, finalizes its plan filename, starts and saves a new execution session, restores execution tools, copies the approved plan there, then submits it for execution. Execution can use model tokens, tools and configured remote services. The transition is tracked until submission settles and is not interruptible as one atomic action.",
-			};
-			return { content, destinationBlocked, review };
-		};
-
-		const initial = await inspect();
-		if (!initial) {
-			this.showError(`Plan file not found at ${options.planFilePath}`);
-			return;
-		}
-		if (initial.destinationBlocked) {
-			this.showError(
-				`Plan destination already exists at ${options.finalPlanFilePath}. Choose a different title and call exit_plan_mode again.`,
-			);
-			return;
-		}
-
-		type ReviewedPlanSnapshot = NonNullable<Awaited<ReturnType<typeof inspect>>>;
-		const action = {
-			review: initial.review,
-			resolve: async () => {
-				if (
-					this.session !== reviewedSession ||
-					this.sessionManager !== reviewedManager ||
-					(reviewedManager.getSessionId() !== reviewedSessionId &&
-						reviewedManager.getSessionId() !== executionSessionId)
-				)
-					return undefined;
-				if (preparationStarted || executionSessionId) {
-					if (!approvedSnapshot || (await readCurrentPlan()) !== approvedSnapshot.content) return undefined;
-					return { review: approvedSnapshot.review, target: approvedSnapshot };
-				}
-				const current = await inspect();
-				return current ? { review: current.review, target: current } : undefined;
-			},
-			execute: async (target: ReviewedPlanSnapshot) => {
-				if (target.destinationBlocked)
-					throw new Error(
-						`Plan destination is occupied at ${options.finalPlanFilePath}; choose a different title before retrying.`,
-					);
-				approvedSnapshot = target;
-				if (!executionSessionReady) {
-					try {
-						executionSessionId = await this.#commandController.executeReviewedNewSession(
-							reviewedSessionId,
-							async () => {
-								preparationStarted = true;
-								if (!renamed) {
-									await renameApprovedPlanFile({
-										planFilePath: options.planFilePath,
-										finalPlanFilePath: options.finalPlanFilePath,
-										getArtifactsDir: () => reviewedArtifactsDir,
-										getSessionId: () => reviewedSessionId,
-									});
-									renamed = true;
-								}
-								await this.#exitPlanMode({ silent: true, paused: false });
-							},
-							executionSessionPreview,
-							executionSessionOptions,
-						);
-						executionSessionReady = true;
-					} finally {
-						if (reviewedManager.getSessionId() !== reviewedSessionId)
-							executionSessionId = reviewedManager.getSessionId();
-					}
-				}
-				if (cancelledByDispose || reviewedSession.isDisposing) return;
-				if (!viewReset) {
-					await this.#commandController.resetNewSessionView();
-					this.#planReviewContainer = undefined;
-					viewReset = true;
-				}
-				if (!executionLinked && options.review) {
-					reviewedManager.appendCustomEntry("plan-review", {
-						kind: "execution",
-						sourceSessionId: options.review.sessionId,
-						sourceEntryId: options.review.entryId,
-						planFilePath: options.finalPlanFilePath,
-					});
-					executionLinked = true;
-				}
-
-				const executionPlanPath = resolveLocalUrlToPath(options.finalPlanFilePath, {
-					getArtifactsDir: () => reviewedManager.getArtifactsDir(),
-					getSessionId: () => reviewedManager.getSessionId(),
-				});
-				if (!planWritten) {
-					try {
-						const existing = await fs.readFile(executionPlanPath, "utf8");
-						if (existing !== target.content)
-							throw new Error(`Execution-session plan destination changed at ${options.finalPlanFilePath}.`);
-					} catch (error) {
-						if (!isEnoent(error)) throw error;
-						await fs.mkdir(path.dirname(executionPlanPath), {
-							recursive: true,
-						});
-						await fs.writeFile(executionPlanPath, target.content, {
-							flag: "wx",
-						});
-					}
-					planWritten = true;
-				}
-				if (!toolsRestored) {
-					await reviewedSession.setActiveToolsByName(previousTools);
-					toolsRestored = true;
-				}
-				reviewedSession.setPlanReferencePath(options.finalPlanFilePath);
-				reviewedSession.markPlanReferenceSent();
-				await reviewedManager.retryPersistence();
-				const planModePrompt = prompt.render(planModeApprovedPrompt, {
-					planContent: target.content,
-					finalPlanFilePath: options.finalPlanFilePath,
-				});
-				if (promptStarted && !promptCompleted) {
-					if (reviewedManager.getEntries().length > promptStartEntryCount)
-						throw new Error(
-							"The execution prompt may already have been accepted. Inspect the execution session before submitting it again.",
-						);
-					promptStarted = false;
-				}
-				if (!promptCompleted) {
-					if (cancelledByDispose || reviewedSession.isDisposing) return;
-					promptStartEntryCount = reviewedManager.getEntries().length;
-					promptStarted = true;
-					await reviewedSession.prompt(planModePrompt, { synthetic: true });
-					promptCompleted = true;
-					await reviewedManager.flush();
-				}
-			},
-		};
-		const unsubscribeDispose = reviewedSession.addBeforeDisposeHook(() => {
-			cancelledByDispose = true;
-		});
-		let outcome: "succeeded" | "unresolved";
-		try {
-			try {
-				await executeReviewedAction(action.review, action.resolve, target => action.execute(target));
-			} catch (error) {
-				// Once the reviewed execution session exists, every remaining step is guarded by
-				// idempotent progress flags. Retry one transient persistence failure in that same
-				// identity; never repeat the phone approval or create a second session.
-				if (!executionSessionId || cancelledByDispose) throw error;
-				await executeReviewedAction(action.review, action.resolve, target => action.execute(target));
-			}
-			outcome = "succeeded";
-		} catch (error) {
-			if (cancelledByDispose) return;
-			this.showError(`Plan execution could not complete: ${error instanceof Error ? error.message : String(error)}`);
-			outcome = "unresolved";
-		} finally {
-			unsubscribeDispose();
-		}
-		if (cancelledByDispose) return;
-		if (outcome === "succeeded")
-			this.showStatus(
-				`Approved plan saved and submitted in execution session ${executionSessionId ?? reviewedManager.getSessionId()}.`,
-			);
-		else if (outcome === "unresolved")
-			this.showError(
-				executionSessionId
-					? `Plan approval is unresolved in execution session ${executionSessionId}. Inspect its saved plan and prompt state before retrying.`
-					: "Plan approval is unresolved in the planning session. Review the current plan before retrying.",
-			);
-	}
-
 	async handlePlanModeCommand(initialPrompt?: string): Promise<void> {
-		if (this.#planCommandActive) {
-			this.showWarning("A plan mode change is already open.");
-			return;
-		}
-		this.#planCommandActive = true;
-		const session = this.session;
-		const manager = this.sessionManager;
-		const sessionId = manager.getSessionId();
-		const pending = this.#pendingPlanSave;
-		const ownsPending = () =>
-			this.#pendingPlanSave?.session === session &&
-			this.#pendingPlanSave?.manager === manager &&
-			this.#pendingPlanSave?.sessionId === sessionId;
-		const wasEnabled = ownsPending() ? pending!.wasEnabled : this.planModeEnabled;
-		const proposedPendingPrompt = !wasEnabled
-			? (initialPrompt ?? (ownsPending() ? pending!.prompt : undefined))
-			: undefined;
-		const stateRevision = () =>
-			JSON.stringify({
-				mode: session.getPlanModeState(),
-				enabled: this.planModeEnabled,
-				paused: this.planModePaused,
-				model: session.model,
-				thinking: session.thinkingLevel,
-				tools: session.getActiveToolNames(),
-				entries: manager.getEntries(),
-			});
-		try {
-			if (ownsPending() && ((pending!.wasEnabled && initialPrompt) || pending!.resumeAfterPause)) {
-				const submit = this.onInputCallback;
-				const requestedPrompt = initialPrompt ?? pending!.prompt;
-				if (!requestedPrompt) {
-					this.showWarning("The pending plan-mode recovery has no planning prompt. Open /plan again.");
-					return;
-				}
-				const review = (): ActionReview => {
-					const recovery = this.#pendingPlanSave!;
-					const savingPause = recovery.wasEnabled && !recovery.resumeAfterPause;
-					return {
-						identity: `plan-mode:${sessionId}`,
-						scope: "Current session · recover paused plan mode and submit a reviewed prompt",
-						revision: stateRevision(),
-						changes: [
-							{
-								field: "Persistence",
-								before: savingPause ? "Paused state save unresolved" : "Plan re-enable save unresolved",
-								after: savingPause ? "Save pending pause, then re-enable" : "Retry saving only",
-							},
-							{
-								field: "Plan mode",
-								before: this.planModeEnabled ? "on" : "paused",
-								after: "on",
-							},
-							{
-								field:
-									recovery.prompt && recovery.prompt !== requestedPrompt
-										? "Pending planning prompt"
-										: "Planning prompt",
-								before:
-									recovery.prompt && recovery.prompt !== requestedPrompt ? recovery.prompt : "not submitted",
-								after: requestedPrompt,
-							},
-						],
-						consequence:
-							"Persist the already-applied pause, restore plan mode without approving a plan, persist the restored mode, then queue only this reviewed prompt. The model request can use tokens and remains pending after it is queued.",
-					};
-				};
-				const outcome = await runReviewedAction(this, "plan mode recovery", {
-					review: review(),
-					resolve: async () => {
-						if (
-							this.session !== session ||
-							this.sessionManager !== manager ||
-							manager.getSessionId() !== sessionId ||
-							!ownsPending() ||
-							this.onInputCallback !== submit
-						)
-							return undefined;
-						return { review: review(), target: requestedPrompt };
-					},
-					execute: async text => {
-						const recovery = this.#pendingPlanSave!;
-						if (recovery.wasEnabled && !recovery.resumeAfterPause) {
-							await manager.retryPersistence();
-							this.#pendingPlanSave = {
-								session,
-								manager,
-								sessionId,
-								wasEnabled: false,
-								prompt: text,
-								resumeAfterPause: true,
-								revision: stateRevision(),
-							};
-						}
-						if (!this.planModeEnabled) {
-							try {
-								await this.#enterPlanMode({ silent: true });
-							} finally {
-								if (ownsPending()) this.#pendingPlanSave!.revision = stateRevision();
-							}
-						}
-						await manager.retryPersistence();
-						this.#pendingPlanSave = undefined;
-						if (submit) submit(this.startPendingSubmission({ text }));
-						else this.editor.setText(text);
-					},
-				});
-				if (outcome === "succeeded")
-					this.showStatus(
-						submit
-							? "Plan mode restored and planning prompt queued. Model completion is pending."
-							: "Plan mode restored; the reviewed prompt was returned to the editor.",
-					);
-				return;
-			}
-			if (initialPrompt && wasEnabled && !ownsPending()) {
-				const submit = this.onInputCallback;
-				const review = (): ActionReview => ({
-					identity: `plan-prompt:${sessionId}`,
-					scope: `Current planning session ${sessionId} · ${this.planModePlanFilePath ?? "local://PLAN.md"}`,
-					revision: stateRevision(),
-					changes: [
-						{ field: "Plan mode", before: "on", after: "on" },
-						{
-							field: "Planning prompt",
-							before: "not submitted",
-							after: initialPrompt,
-						},
-					],
-					consequence:
-						"Keeps the current plan mode, model, tools and plan path unchanged. Saves outstanding session state, then queues this prompt for the active planning conversation. The subsequent model request can use tokens but is not claimed complete by this review.",
-				});
-				const outcome = await runReviewedAction(this, "planning prompt", {
-					review: review(),
-					resolve: async () =>
-						this.session === session &&
-						this.sessionManager === manager &&
-						manager.getSessionId() === sessionId &&
-						this.planModeEnabled &&
-						this.onInputCallback === submit
-							? { review: review(), target: initialPrompt }
-							: undefined,
-					execute: async text => {
-						await manager.retryPersistence();
-						if (submit) submit(this.startPendingSubmission({ text }));
-						else this.editor.setText(text);
-					},
-				});
-				if (outcome === "succeeded")
-					this.showStatus(
-						submit
-							? "Planning prompt queued in the active plan-mode session. Model completion is pending."
-							: "Planning prompt reviewed and restored to the editor; it was not submitted.",
-					);
-				return;
-			}
-			if (!initialPrompt) {
-				const label = ownsPending()
-					? "Retry saving plan mode"
-					: wasEnabled
-						? "Pause plan mode without approval"
-						: "Enable plan mode";
-				if ((await this.showHookSelector("Plan mode", ["Cancel", label])) !== label) return;
-			}
-			const current = () =>
-				this.session === session &&
-				this.sessionManager === manager &&
-				manager.getSessionId() === sessionId &&
-				(ownsPending() ? this.#pendingPlanSave!.revision === stateRevision() : this.planModeEnabled === wasEnabled);
-			if (!current()) {
-				this.showWarning("The plan mode target changed. Open /plan again.");
-				return;
-			}
-			const prepare = (): ActionReview => {
-				if (ownsPending())
-					return {
-						identity: `plan-mode:${sessionId}`,
-						scope: "Current session · persisted mode and tool state",
-						revision: stateRevision(),
-						changes: [
-							{
-								field: "Persistence",
-								before: "Mode applied; save unresolved",
-								after: "Retry saving only",
-							},
-							{
-								field: "Plan mode",
-								before: this.planModeEnabled ? "on" : "paused",
-								after: this.planModeEnabled ? "on" : "paused",
-							},
-							...(!wasEnabled && proposedPendingPrompt
-								? [
-										{
-											field: initialPrompt ? "Pending planning prompt" : "Submit after saving",
-											before: initialPrompt ? (this.#pendingPlanSave?.prompt ?? "none") : "not submitted",
-											after: proposedPendingPrompt,
-										},
-									]
-								: []),
-						],
-						consequence: `Save the already-applied session state without repeating mode, tool or model changes.${proposedPendingPrompt ? " Queue the reviewed pending planning prompt only after that save succeeds." : ""}`,
-					};
-				const role = session.resolveRoleModelWithThinking("plan");
-				const nextModel = wasEnabled
-					? (this.#planModePreviousModelState?.model ?? session.model)
-					: (role.model ?? session.model);
-				const modelName = (model: typeof nextModel) => (model ? `${model.provider}/${model.id}` : "none");
-				const nextTools = wasEnabled
-					? (this.#planModePreviousTools ?? session.getActiveToolNames())
-					: [
-							...new Set([
-								...session.getActiveToolNames(),
-								...(session.getToolByName("exit_plan_mode") ? ["exit_plan_mode"] : []),
-							]),
-						];
-				return {
-					identity: `plan-mode:${sessionId}`,
-					scope: "Current session · persisted mode and tool state",
-					revision: JSON.stringify({
-						enabled: this.planModeEnabled,
-						paused: this.planModePaused,
-						model: session.model,
-						thinking: session.thinkingLevel,
-						role,
-						tools: session.getActiveToolNames(),
-						previous: this.#planModePreviousModelState,
-						nextTools,
-						streaming: session.isStreaming,
-					}),
-					changes: [
-						{
-							field: "Plan mode",
-							before: wasEnabled ? "on" : "off",
-							after: wasEnabled ? "paused" : "on",
-						},
-						{
-							field: "Active tools",
-							before: session.getActiveToolNames().join(", ") || "none",
-							after: nextTools.join(", ") || "none",
-						},
-						{
-							field: "Requested model",
-							before: modelName(session.model),
-							after: modelName(nextModel),
-						},
-						{
-							field: "Requested thinking",
-							before: session.thinkingLevel ?? "model default",
-							after: wasEnabled
-								? (this.#planModePreviousModelState?.thinkingLevel ?? session.thinkingLevel ?? "model default")
-								: role.model && role.explicitThinkingLevel
-									? (role.thinkingLevel ?? "model default")
-									: modelsAreEqual(session.model, nextModel)
-										? (session.thinkingLevel ?? "model default")
-										: "model default",
-						},
-						{
-							field: "Plan reference",
-							before: this.planModePlanFilePath ?? "none",
-							after: wasEnabled ? "none" : "local://PLAN.md",
-						},
-						...(!wasEnabled && initialPrompt
-							? [
-									{
-										field: "Submit after saving",
-										before: "not submitted",
-										after: initialPrompt,
-									},
-								]
-							: []),
-					],
-					consequence: `${wasEnabled ? "Pause without approving or executing a plan." : "Enable planning and record the mode in this session. No plan file is created by this change."} Model changes may affect costs${session.isStreaming ? " and are queued until the current stream ends" : ""}.${initialPrompt && !wasEnabled ? " Submit the supplied planning prompt after enabling." : ""}`,
-				};
-			};
-			await runReviewedAction(this, "plan mode", {
-				review: prepare(),
-				resolve: async () => (current() ? { review: prepare(), target: wasEnabled } : undefined),
-				execute: async enabled => {
-					if (!ownsPending()) {
-						if (enabled) await this.#exitPlanMode({ paused: true, silent: true });
-						else await this.#enterPlanMode({ silent: true });
-						this.#pendingPlanSave = {
-							session,
-							manager,
-							sessionId,
-							wasEnabled: enabled,
-							prompt: initialPrompt,
-							revision: stateRevision(),
-						};
-					}
-					await manager.retryPersistence();
-					const savedPrompt = ownsPending() && !enabled ? proposedPendingPrompt : this.#pendingPlanSave?.prompt;
-					this.#pendingPlanSave = undefined;
-					this.showStatus(
-						enabled ? "Plan mode paused and saved." : "Plan mode enabled and saved. Plan file: local://PLAN.md",
-					);
-					if (!enabled && savedPrompt && this.onInputCallback)
-						this.onInputCallback(this.startPendingSubmission({ text: savedPrompt }));
-				},
-			});
-		} catch (error) {
-			this.showError(`Plan mode change failed: ${error instanceof Error ? error.message : String(error)}`);
-		} finally {
-			this.#planCommandActive = false;
-		}
+		if (this.planModeEnabled) await this.#exitPlanMode();
+		else await this.#enterPlanMode();
+		if (initialPrompt?.trim()) await this.session.prompt(initialPrompt, { streamingBehavior: "followUp" });
 	}
 
 	getRemoteCollaborationMode(): "plan" | "default" {
@@ -1679,157 +861,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		await this.#exitPlanMode();
 	}
 
-	async handleExitPlanModeTool(details: ExitPlanModeDetails, toolCallId?: string): Promise<void> {
-		if (this.#planReviewTask) return this.#planReviewTask;
-		const abort = new AbortController();
-		const unsubscribe = this.session.subscribe(event => {
-			if (event.type === "agent_start") abort.abort();
-		});
-		const unsubscribeTransition = this.session.subscribeSessionTransitions(phase => {
-			if (phase === "before") abort.abort();
-		});
-		const unsubscribeDispose = this.session.addBeforeDisposeHook(() => {
-			abort.abort();
-			this.#planEditorEpoch++;
-		});
-		const task = this.#reviewPlan(details, abort.signal, toolCallId);
-		this.#planReviewTask = task;
-		this.#planReviewAbort = abort;
-		const retire = () => {
-			if (this.#planReviewTask === task) this.#planReviewTask = undefined;
-		};
-		abort.signal.addEventListener("abort", retire, { once: true });
-		if (abort.signal.aborted) retire();
-		try {
-			await task;
-		} finally {
-			unsubscribe();
-			unsubscribeTransition();
-			unsubscribeDispose();
-			abort.signal.removeEventListener("abort", retire);
-			if (this.#planReviewAbort === abort) this.#planReviewAbort = undefined;
-			if (this.#planReviewTask === task) this.#planReviewTask = undefined;
-		}
-	}
-
-	async #reviewPlan(details: ExitPlanModeDetails, signal: AbortSignal, toolCallId?: string): Promise<void> {
-		const sessionId = this.session.sessionId;
-		if (!this.planModeEnabled) {
-			this.showWarning("Plan mode is not active.");
-			return;
-		}
-		const reviewedSession = this.session;
-		const reviewedManager = this.sessionManager;
-		const reviewedSessionId = reviewedManager.getSessionId();
-		const currentReview = () => {
-			if (
-				!signal.aborted &&
-				this.session === reviewedSession &&
-				this.sessionManager === reviewedManager &&
-				reviewedManager.getSessionId() === reviewedSessionId &&
-				this.planModeEnabled
-			)
-				return true;
-			this.showWarning("The plan review session changed. Open a new review before continuing.");
-			return false;
-		};
-
-		// Abort the agent to prevent it from continuing (e.g., calling exit_plan_mode
-		// again) while the popup is showing. The event listener fires asynchronously
-		// (agent's #emit is fire-and-forget), so without this the model sees "Plan
-		// ready for approval." and immediately calls exit_plan_mode in a loop.
-		await this.session.abort();
-		if (!currentReview()) return;
-
-		const planFilePath = details.planFilePath || this.planModePlanFilePath || (await this.#getPlanFilePath());
-		if (!currentReview()) return;
-		this.planModePlanFilePath = planFilePath;
-		const planContent = await this.#readPlanFile(planFilePath);
-		if (!currentReview()) return;
-		if (!planContent) {
-			this.showError(`Plan file not found at ${planFilePath}`);
-			return;
-		}
-
-		this.#renderPlanPreview(planContent);
-		const source = { sessionId, toolCallId: toolCallId ?? "", planFilePath, content: planContent };
-		const withReview = <T>(action: () => T): T => (toolCallId ? withPlanReviewInteraction(source, action) : action());
-		const choice = await withReview(() =>
-			this.showHookSelector("Plan mode - next step", ["Approve and execute", "Refine plan", "Stay in plan mode"], {
-				signal,
-				initialIndex: 2,
-				helpText: this.#getPlanReviewHelpText(),
-				onExternalEditor: () => {
-					if (currentReview()) {
-						this.session.userInteractions.cancelAll();
-						void this.#openPlanInExternalEditor(planFilePath, signal);
-					}
-				},
-			}),
-		);
-
-		if (!currentReview()) return;
-		if (choice === "Approve and execute") {
-			const finalPlanFilePath = details.finalPlanFilePath || planFilePath;
-			try {
-				const latestPlanContent = await this.#readPlanFile(planFilePath);
-				if (!currentReview()) return;
-				if (!latestPlanContent) {
-					this.showError(`Plan file not found at ${planFilePath}`);
-					return;
-				}
-				if (latestPlanContent !== planContent) {
-					this.showWarning(
-						"The plan changed while awaiting approval. Review the updated content before executing.",
-					);
-					await this.#reviewPlan({ ...details, planFilePath }, signal, toolCallId);
-					return;
-				}
-				const entryId = this.sessionManager.appendCustomEntry("plan-review", {
-					kind: "decision",
-					decision: choice,
-					content: planContent,
-					planFilePath,
-					toolCallId,
-				});
-				await this.#approvePlan({
-					planFilePath,
-					finalPlanFilePath,
-					review: { sessionId, entryId },
-				});
-			} catch (error) {
-				this.showError(
-					`Failed to finalize approved plan: ${error instanceof Error ? error.message : String(error)}`,
-				);
-			}
-			return;
-		}
-		this.sessionManager.appendCustomEntry("plan-review", {
-			kind: "decision",
-			decision: choice ?? "Cancel",
-			content: planContent,
-			planFilePath,
-			toolCallId,
-		});
-		if (choice === "Refine plan") {
-			const refinement = (
-				await withReview(() => this.showHookInput("What should be refined?", undefined, { signal }))
-			)?.trim();
-			if (!currentReview()) return;
-			if (refinement) {
-				if (this.onInputCallback) {
-					this.onInputCallback(this.startPendingSubmission({ text: refinement }));
-				} else {
-					this.editor.setText(refinement);
-				}
-			}
-			return;
-		}
-	}
-
 	stop(): void {
-		this.#planEditorEpoch++;
-		this.#planReviewAbort?.abort();
 		this.#stopRemoteBridge?.();
 		this.#stopRemoteBridge = undefined;
 		if (this.loadingAnimation) {
@@ -2126,7 +1158,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	): Promise<void> {
 		this.#btwController.dispose();
 		this.#extensionUiController.clearExtensionTerminalInputListeners();
-		this.#planReviewContainer = undefined;
 		return this.#commandController.handleClearCommand(options, createSession);
 	}
 

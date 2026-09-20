@@ -108,7 +108,7 @@ describe("Herdr protocol client", () => {
 	});
 
 	test("rejects unreviewed future protocols", async () => {
-		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 24, version: "future" }));
+		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 26, version: "future" }));
 		try {
 			await expect(new HerdrClient(fake.socketPath).ensureProtocol()).rejects.toMatchObject({
 				code: "protocol_mismatch",

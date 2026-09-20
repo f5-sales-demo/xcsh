@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage, AssistantMessagePhase, ImageContent } from "@f5-sales-demo/pi-ai";
+import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { parseModelString } from "../config/model-resolver";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
@@ -112,6 +113,7 @@ export class ChatHandler {
 	// and awaits the correlated `host_tool_result`. Reused verbatim from the stdio RPC
 	// driver — the only WS-specific wiring is the `send()` output sink below.
 	#hostToolBridge: RpcHostToolBridge;
+	#unsubscribeInteractions?: () => void;
 
 	constructor(server: BridgeServer, session: AgentSession) {
 		this.#server = server;
@@ -126,7 +128,50 @@ export class ChatHandler {
 	}
 
 	attach(): void {
+		this.#unsubscribeInteractions = this.#session.subscribe(event => {
+			if (event.type === "interaction")
+				this.#server.send({ type: "interaction_event", revision: event.event.revision, event: event.event });
+			if (event.type === "interaction_snapshot") this.#server.send(event);
+			if (event.type === "plan_available" || event.type === "plan_resolved") this.#server.send(event);
+		});
 		this.#server.onMessage(msg => {
+			if (msg.type === "interaction_snapshot") {
+				this.#server.send({
+					type: "interaction_snapshot",
+					sessionId: this.#session.sessionId,
+					...this.#session.userInteractions.snapshot(),
+					plan: this.#session.conversationPlans.current,
+				});
+				return;
+			}
+			if (isInteractionCommand(msg) && (msg.type === "interaction_respond" || msg.type === "interaction_cancel")) {
+				if (msg.type === "interaction_respond") {
+					const accepted = this.#session.userInteractions.respondExternal(
+						msg.requestId,
+						msg.responseId,
+						msg.value,
+						msg.identity,
+					);
+					this.#server.send({ type: "interaction_receipt", responseId: msg.responseId, accepted });
+				} else {
+					const request = this.#session.userInteractions.pending().find(request => request.id === msg.requestId);
+					const matches =
+						request?.identity &&
+						Object.entries(request.identity).every(
+							([key, value]) => msg.identity[key as keyof typeof msg.identity] === value,
+						);
+					if (matches && this.#session.userInteractions.resolve(msg.requestId, "interrupted"))
+						void this.#session.abort();
+				}
+				return;
+			}
+			if (isInteractionCommand(msg) && msg.type === "plan_decide") {
+				void this.#session.decidePlan(msg.planId, msg.action).then(
+					receipt => this.#server.send({ type: "interaction_receipt", responseId: msg.responseId, ...receipt }),
+					() => this.#server.send({ type: "interaction_receipt", responseId: msg.responseId, accepted: false }),
+				);
+				return;
+			}
 			if (this.#server.serveKind === "browser" && isBrowserChatRequest(msg)) this.#handleChatRequest(msg);
 			else if (this.#server.serveKind === "office" && isTransportChatRequest(msg)) this.#handleChatRequest(msg);
 			else if (isChatStop(msg)) this.#handleChatStop(msg as unknown as { id: string });
@@ -655,6 +700,7 @@ export class ChatHandler {
 	}
 
 	dispose(): void {
+		this.#unsubscribeInteractions?.();
 		this.#disposed = true;
 		this.#pendingRequest = null; // abandon any queued prompt — don't replay into a dead session
 		// Fail any in-flight host-tool call — the session is going away.

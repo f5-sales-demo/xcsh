@@ -39,7 +39,6 @@ import type { PythonResult } from "../../ipy/executor";
 import type { Theme } from "../../modes/theme/theme";
 import type { CompactionPreparation, CompactionResult } from "../../session/compaction";
 import type { CustomMessage } from "../../session/messages";
-import type { InteractionQuestion, QuestionAnswers } from "../../session/question-types";
 import type {
 	BranchSummaryEntry,
 	CompactionEntry,
@@ -112,12 +111,6 @@ export type ExtensionWidgetContent = string[] | ExtensionUiComponentFactory | un
  * Each mode (interactive, RPC, print) provides its own implementation.
  */
 export interface ExtensionUIContext {
-	/** Present a whole question set through one shared completion owner when supported. */
-	questions?(
-		questions: readonly InteractionQuestion[],
-		dialogOptions?: ExtensionUIDialogOptions,
-	): Promise<QuestionAnswers | undefined>;
-
 	/** Show a selector and return the user's choice. */
 	select(title: string, options: string[], dialogOptions?: ExtensionUIDialogOptions): Promise<string | undefined>;
 
@@ -555,7 +548,7 @@ export interface MessageEndEvent {
 export type UserPromptKind = "select" | "confirm" | "input";
 
 /**
- * Fired when an interactive prompt (permission gate, `ask` tool, confirm/input
+ * Fired when an interactive prompt (permission gate, waiting user-input tool, confirm/input
  * dialog) is shown and is awaiting the user. Signals a "blocked / needs
  * attention" state that is otherwise not observable from the agent event stream,
  * since the session stays `isStreaming` while a prompt is open.

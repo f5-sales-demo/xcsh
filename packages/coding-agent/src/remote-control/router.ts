@@ -894,6 +894,7 @@ export class RemoteRouter {
 						};
 						break;
 					}
+					case "xcsh/interaction":
 					case "thread/goal/get":
 					case "thread/queue/list":
 					case "thread/turns/list":

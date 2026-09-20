@@ -1,3 +1,5 @@
+import { HerdrClient } from "../herdr/client";
+import { HerdrInteractionBridge } from "../herdr/interactions";
 /**
  * AgentSession - Core abstraction for agent lifecycle and session management.
  *
@@ -63,6 +65,11 @@ import {
 	Snowflake,
 	setNativeKillTree,
 } from "@f5-sales-demo/pi-utils";
+import {
+	type ConversationPlan,
+	ConversationPlans,
+	type PlanAction,
+} from "../../../chat-ui/src/interactions/conversation-plan";
 import type { AsyncJob, AsyncJobManager } from "../async";
 import type { Rule } from "../capability/rule";
 import { MODEL_ROLE_IDS, type ModelRegistry } from "../config/model-registry";
@@ -108,7 +115,6 @@ import { ExtensionToolWrapper } from "../extensibility/extensions/wrapper";
 import type { HookCommandContext } from "../extensibility/hooks/types";
 import type { Skill, SkillWarning } from "../extensibility/skills";
 import { expandSlashCommand, type FileSlashCommand } from "../extensibility/slash-commands";
-import { resolveLocalUrlToPath } from "../internal-urls";
 import {
 	disposeKernelSessionsByOwner,
 	executePython as executePythonCommand,
@@ -127,13 +133,10 @@ import {
 import { getCurrentThemeName, theme } from "../modes/theme/theme";
 import type { PlanModeState } from "../plan-mode/state";
 import autoHandoffThresholdFocusPrompt from "../prompts/system/auto-handoff-threshold-focus.md" with { type: "text" };
+import defaultModePrompt from "../prompts/system/default-mode-active.md" with { type: "text" };
 import eagerTodoPrompt from "../prompts/system/eager-todo.md" with { type: "text" };
 import handoffDocumentPrompt from "../prompts/system/handoff-document.md" with { type: "text" };
 import planModeActivePrompt from "../prompts/system/plan-mode-active.md" with { type: "text" };
-import planModeReferencePrompt from "../prompts/system/plan-mode-reference.md" with { type: "text" };
-import planModeToolDecisionReminderPrompt from "../prompts/system/plan-mode-tool-decision-reminder.md" with {
-	type: "text",
-};
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
 import type { RoutingState, RoutingTier } from "../routing";
 import { RoutingCoordinator } from "../routing/coordinator";
@@ -200,6 +203,29 @@ import { UserInteractions } from "./user-interactions";
 /** Session-specific events that extend the core AgentEvent */
 export type AgentSessionEvent =
 	| AgentEvent
+	| { type: "plan_available"; plan: ConversationPlan }
+	| { type: "plan_resolved"; planId: string }
+	| { type: "interaction"; event: import("./user-interactions").UserInteractionEvent }
+	| {
+			type: "interaction_snapshot";
+			sessionId: string;
+			revision: number;
+			pending: import("./user-interactions").UserInteraction[];
+			plan?: ConversationPlan;
+	  }
+	| {
+			type: "async_user_input";
+			item: {
+				id: string;
+				type: "agentMessage";
+				text: string;
+				phase: "final_answer";
+				delivery: "async";
+				questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[];
+			};
+			questionIds: string[];
+	  }
+	| { type: "interaction_error"; itemId: string; message: string }
 	| { type: "async_job_update"; jobId: string; details?: Record<string, unknown> }
 	| { type: "async_job_settled"; jobId: string; receiptId: string }
 	| TurnPhaseEvent
@@ -527,6 +553,11 @@ export class AgentSession {
 	#eventListeners: AgentSessionEventSubscription[] = [];
 	#sessionTransitions = new SessionTransitions();
 	readonly userInteractions = new UserInteractions();
+	#herdrInteractions?: HerdrInteractionBridge;
+	readonly conversationPlans = new ConversationPlans();
+	#planMessageId = "";
+	#planDecisionInFlight = false;
+	#publishedPlanId?: string;
 	#turnPhase = new TurnPhaseController(event => this.#publishTurnPhase(event));
 
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
@@ -544,8 +575,6 @@ export class AgentSession {
 	#pendingNextTurnMessages: CustomMessage[] = [];
 	#scheduledHiddenNextTurnGeneration: number | undefined = undefined;
 	#planModeState: PlanModeState | undefined;
-	#planReferenceSent = false;
-	#planReferencePath = "local://PLAN.md";
 
 	// Compaction state
 	#compactionAbortController: AbortController | undefined = undefined;
@@ -740,9 +769,66 @@ export class AgentSession {
 		this.agent.providerSessionState = this.#providerSessionState;
 		this.#syncTodoPhasesFromBranch();
 
+		this.#restorePlanStateFromSession();
+
 		// Always subscribe to agent events for internal handling
 		// (session persistence, hooks, auto-compaction, retry logic)
 		this.#unsubscribeAgent = this.agent.subscribe(this.#handleAgentEvent);
+		this.addDisposeHook(
+			this.userInteractions.subscribe(event => {
+				this.sessionManager.appendCustomEntry("interaction-event", event);
+				void this.#emitSessionEvent({ type: "interaction", event });
+				this.#turnPhase.setOutstandingUserPrompts(
+					this.userInteractions.pending().filter(request => request.delivery !== "async").length,
+				);
+			}),
+		);
+		const interactionEvents: import("./user-interactions").UserInteractionEvent[] = [];
+		for (const entry of this.sessionManager.getBranch()) {
+			if (entry.type !== "custom") continue;
+			if (entry.customType === "interaction-event")
+				interactionEvents.push(entry.data as import("./user-interactions").UserInteractionEvent);
+		}
+		if (interactionEvents.length) this.userInteractions.restore(interactionEvents);
+		const herdrGeneration = process.env.HERDR_EXECUTION_GENERATION;
+		if (
+			process.env.HERDR_SOCKET_PATH &&
+			process.env.HERDR_EXECUTION_ID &&
+			process.env.HERDR_PANE_ID &&
+			herdrGeneration !== undefined &&
+			/^(0|[1-9][0-9]*)$/.test(herdrGeneration) &&
+			Number.isSafeInteger(Number(herdrGeneration))
+		) {
+			this.#herdrInteractions = new HerdrInteractionBridge(
+				new HerdrClient(process.env.HERDR_SOCKET_PATH),
+				this.userInteractions,
+				{
+					execution_id: process.env.HERDR_EXECUTION_ID,
+					pane_id: process.env.HERDR_PANE_ID,
+					producer: "xcsh",
+					generation: Number(herdrGeneration),
+				},
+				() => {
+					void this.#emitSessionEvent({
+						type: "interaction_error",
+						itemId: "herdr",
+						message: "Herdr interaction delivery is unavailable; local questions remain available.",
+					});
+				},
+				process.env.HERDR_NATIVE_CAPABILITY,
+			);
+			this.addBeforeDisposeHook(() => this.#herdrInteractions!.close());
+			this.addDisposeHook(
+				this.subscribe(event => {
+					if (event.type === "plan_available")
+						this.#herdrInteractions?.plan(event.plan, this.getInteractionIdentity(event.plan.id), action =>
+							this.decidePlan(event.plan.id, action),
+						);
+					if (event.type === "plan_resolved") this.#herdrInteractions?.resolvePlan(event.planId);
+				}),
+			);
+		}
+
 		this.addDisposeHook(
 			this.agent.setContextMessagesProvider(messages =>
 				this.isDisposing ? [] : this.#realtimeContext.messages(this.sessionId, messages),
@@ -753,6 +839,121 @@ export class AgentSession {
 	/** Model registry for API key resolution and model discovery */
 	get modelRegistry(): ModelRegistry {
 		return this.#modelRegistry;
+	}
+	getInteractionIdentity(itemId: string): import("./user-interactions").InteractionIdentity {
+		return {
+			sessionId: this.sessionId,
+			threadId: this.sessionId,
+			turnId: String(this.#turnPhase.current.turnId),
+			itemId,
+			generation: this.#promptGeneration,
+		};
+	}
+	#restorePlanStateFromSession(): void {
+		this.conversationPlans.reset();
+		for (const entry of this.sessionManager.getBranch()) {
+			if (entry.type !== "custom") continue;
+			if (entry.customType === "proposed-plan") this.conversationPlans.restore(entry.data as ConversationPlan);
+			if (entry.customType === "plan-decision") {
+				const decision = entry.data as { planId: string; action: PlanAction };
+				this.conversationPlans.decide(decision.planId, decision.action);
+			}
+		}
+		this.#publishedPlanId = undefined;
+		this.#planModeState = this.sessionManager.buildSessionContext().mode === "plan" ? { enabled: true } : undefined;
+		this.#syncWaitingToolAvailability();
+	}
+	#restoreInteractionStateFromSession(): void {
+		const events: import("./user-interactions").UserInteractionEvent[] = [];
+		for (const entry of this.sessionManager.getBranch())
+			if (entry.type === "custom" && entry.customType === "interaction-event")
+				events.push(entry.data as import("./user-interactions").UserInteractionEvent);
+		this.userInteractions.restore(events);
+	}
+	async #emitInteractionSnapshot(): Promise<void> {
+		await this.#emitSessionEvent({
+			type: "interaction_snapshot",
+			sessionId: this.sessionId,
+			...this.userInteractions.snapshot(),
+			plan: this.conversationPlans.current,
+		});
+	}
+	async decidePlan(planId: string, action: PlanAction): Promise<{ accepted: boolean }> {
+		if (this.#planDecisionInFlight || !this.getPlanModeState()?.enabled || this.isSessionChanging)
+			return { accepted: false };
+		const selected = this.conversationPlans.current;
+		const decision = this.conversationPlans.decide(planId, action);
+		if (!decision || !selected) return { accepted: false };
+		this.#planDecisionInFlight = true;
+		const sourceSession = this.sessionId;
+		this.sessionManager.appendCustomEntry("plan-decision", { planId, action });
+		try {
+			if (decision.freshContext) {
+				try {
+					if (!(await this.newSession())) {
+						this.conversationPlans.restore(selected);
+						this.sessionManager.appendCustomEntry("proposed-plan", selected);
+						void this.#emitSessionEvent({ type: "plan_available", plan: selected });
+						return { accepted: false };
+					}
+				} catch (error) {
+					if (this.sessionId === sourceSession) {
+						this.conversationPlans.restore(selected);
+						this.sessionManager.appendCustomEntry("proposed-plan", selected);
+						void this.#emitSessionEvent({ type: "plan_available", plan: selected });
+					}
+					throw error;
+				}
+			}
+			if (decision.mode === "plan") {
+				await this.#emitSessionEvent({ type: "plan_resolved", planId });
+				return { accepted: true };
+			}
+			this.setPlanModeState(undefined);
+			this.sessionManager.appendModeChange("none");
+			await this.sendCustomMessage(
+				{ customType: "collaboration-mode", content: defaultModePrompt, display: false },
+				{ deliverAs: "nextTurn" },
+			);
+			await this.#emitSessionEvent({ type: "plan_resolved", planId });
+			void this.prompt(decision.text!, { streamingBehavior: "followUp", expandPromptTemplates: false }).catch(
+				error => this.reportInteractionFailure(planId, error),
+			);
+			return { accepted: true };
+		} finally {
+			this.#planDecisionInFlight = false;
+		}
+	}
+	publishAsyncQuestions(
+		itemId: string,
+		questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[],
+		questionIds: string[],
+	): void {
+		const item = {
+			id: itemId,
+			type: "agentMessage" as const,
+			text: questions
+				.map(question => [question.title, ...(question.options?.map(option => `- ${option}`) ?? [])].join("\n"))
+				.join("\n\n"),
+			phase: "final_answer" as const,
+			delivery: "async" as const,
+			questions: structuredClone(questions),
+		};
+		this.sessionManager.appendCustomMessageEntry("async-user-input", item.text, true, { item, questionIds }, "agent");
+		void this.#emitSessionEvent({ type: "async_user_input", item, questionIds });
+	}
+	async deliverAsyncAnswer(itemId: string, questionId: string, answer: string): Promise<void> {
+		await this.prompt(JSON.stringify({ type: "user_input_reply", itemId, questionId, answer }), {
+			streamingBehavior: "steer",
+			expandPromptTemplates: false,
+		});
+	}
+	reportInteractionFailure(itemId: string, _error: unknown): void {
+		void this.#emitSessionEvent({
+			type: "interaction_error",
+			itemId,
+			message: "Unable to deliver the interaction reply",
+		});
 	}
 
 	/** Advance the tool-choice queue and return the next directive for the upcoming LLM call. */
@@ -926,6 +1127,31 @@ export class AgentSession {
 
 	/** Internal handler for agent events - shared by subscribe and reconnect */
 	#handleAgentEvent = async (event: AgentEvent): Promise<void> => {
+		if (event.type === "message_start" && event.message.role === "assistant")
+			this.#planMessageId = `${this.sessionId}:${crypto.randomUUID()}`;
+		if (
+			this.#planModeState?.enabled &&
+			event.type === "message_update" &&
+			event.assistantMessageEvent.type === "text_delta"
+		) {
+			const plan = this.conversationPlans.append(this.#planMessageId, event.assistantMessageEvent.delta);
+			if (plan) this.sessionManager.appendCustomEntry("proposed-plan", plan);
+		}
+		if (this.#planModeState?.enabled && event.type === "message_end" && event.message.role === "assistant") {
+			const text = event.message.content
+				.filter(part => part.type === "text")
+				.map(part => part.text)
+				.join("\n");
+			const plan = this.conversationPlans.complete(this.#planMessageId, text);
+			if (plan) this.sessionManager.appendCustomEntry("proposed-plan", plan);
+		}
+		if (event.type === "agent_end") {
+			const plan = this.conversationPlans.current;
+			if (this.#planModeState?.enabled && plan?.status === "pending" && plan.id !== this.#publishedPlanId) {
+				this.#publishedPlanId = plan.id;
+				void this.#emitSessionEvent({ type: "plan_available", plan });
+			}
+		}
 		// Capture synchronously before extension/subscriber awaits or a later reused call ID.
 		const toolExecution =
 			event.type === "message_end" && event.message.role === "toolResult"
@@ -2332,8 +2558,9 @@ export class AgentSession {
 	}
 
 	notifyUserPrompt(type: "start" | "end", kind: UserPromptKind): void {
-		if (type === "start") this.#turnPhase.startUserPrompt();
-		else this.#turnPhase.endUserPrompt();
+		this.#turnPhase.setOutstandingUserPrompts(
+			this.userInteractions.pending().filter(request => request.delivery !== "async").length,
+		);
 		if (!this.#extensionRunner) return;
 		const emit = async () => {
 			await this.#extensionRunner?.emit({ type: type === "start" ? "user_prompt_start" : "user_prompt_end", kind });
@@ -2390,7 +2617,8 @@ export class AgentSession {
 	): Promise<T> {
 		return this.#sessionTransitions.run(async owner => {
 			try {
-				this.userInteractions.cancelAll();
+				this.userInteractions.cancelAll("superseded");
+				this.conversationPlans.invalidate();
 				await this.abort();
 				await this.#settleToolExecutionsForTransition();
 				await this.#settleBackgroundJobsForTransition();
@@ -2640,7 +2868,7 @@ export class AgentSession {
 	#setDiscoverableTools(): void {
 		this.#discoverableTools = new Map(
 			collectDiscoverableTools(this.#toolRegistry.values())
-				.filter(tool => !["search_tool_bm25", "resolve", "exit_plan_mode"].includes(tool.name))
+				.filter(tool => !["search_tool_bm25", "resolve"].includes(tool.name))
 				.map(tool => [tool.name, tool] as const),
 		);
 		this.#discoverableToolSearchIndex = null;
@@ -2831,6 +3059,12 @@ export class AgentSession {
 		const tools: AgentTool[] = [];
 		const validToolNames: string[] = [];
 		for (const name of toolNames) {
+			if (
+				name === "request_user_input" &&
+				!this.#planModeState?.enabled &&
+				!this.settings.get("interactions.waitingInDefault")
+			)
+				continue;
 			const tool = this.#toolRegistry.get(name);
 			if (tool) {
 				tools.push(tool);
@@ -3119,18 +3353,14 @@ export class AgentSession {
 
 	setPlanModeState(state: PlanModeState | undefined): void {
 		this.#planModeState = state;
-		if (state?.enabled) {
-			this.#planReferenceSent = false;
-			this.#planReferencePath = state.planFilePath;
-		}
+		this.#syncWaitingToolAvailability();
 	}
-
-	markPlanReferenceSent(): void {
-		this.#planReferenceSent = true;
-	}
-
-	setPlanReferencePath(path: string): void {
-		this.#planReferencePath = path;
+	#syncWaitingToolAvailability(): void {
+		const enabled = this.#planModeState?.enabled || this.settings.get("interactions.waitingInDefault");
+		const tools = this.agent.state.tools.filter(tool => tool.name !== "request_user_input");
+		const waiting = this.#toolRegistry.get("request_user_input");
+		if (enabled && waiting) tools.push(waiting);
+		this.agent.setTools(tools);
 	}
 
 	getCheckpointState(): CheckpointState | undefined {
@@ -3203,77 +3433,13 @@ export class AgentSession {
 	 * Returns null if plan mode is not enabled.
 	 * @returns The plan mode message, or null if plan mode is not enabled.
 	 */
-	async #buildPlanReferenceMessage(): Promise<CustomMessage | null> {
-		if (this.#planModeState?.enabled) return null;
-		if (this.#planReferenceSent) return null;
-
-		const planFilePath = this.#planReferencePath;
-		const resolvedPlanPath = resolveLocalUrlToPath(planFilePath, {
-			getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-			getSessionId: () => this.sessionManager.getSessionId(),
-		});
-		let planContent: string;
-		try {
-			planContent = await Bun.file(resolvedPlanPath).text();
-		} catch (error) {
-			if (isEnoent(error)) {
-				return null;
-			}
-			throw error;
-		}
-
-		const content = prompt.render(planModeReferencePrompt, {
-			planFilePath,
-			planContent,
-		});
-
-		this.#planReferenceSent = true;
-
-		return {
-			role: "custom",
-			customType: "plan-mode-reference",
-			content,
-			display: false,
-			attribution: "agent",
-			timestamp: Date.now(),
-		};
-	}
 
 	async #buildPlanModeMessage(): Promise<CustomMessage | null> {
-		const state = this.#planModeState;
-		if (!state?.enabled) return null;
-		const sessionPlanUrl = "local://PLAN.md";
-		const resolvedPlanPath = state.planFilePath.startsWith("local://")
-			? resolveLocalUrlToPath(state.planFilePath, {
-					getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-					getSessionId: () => this.sessionManager.getSessionId(),
-				})
-			: resolveToCwd(state.planFilePath, this.sessionManager.getCwd());
-		const resolvedSessionPlan = resolveLocalUrlToPath(sessionPlanUrl, {
-			getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-			getSessionId: () => this.sessionManager.getSessionId(),
-		});
-		const displayPlanPath =
-			state.planFilePath.startsWith("local://") || resolvedPlanPath !== resolvedSessionPlan
-				? state.planFilePath
-				: sessionPlanUrl;
-
-		const planExists = fs.existsSync(resolvedPlanPath);
-		const content = prompt.render(planModeActivePrompt, {
-			planFilePath: displayPlanPath,
-			planExists,
-			askToolName: "ask",
-			writeToolName: "write",
-			editToolName: "edit",
-			exitToolName: "exit_plan_mode",
-			reentry: state.reentry ?? false,
-			iterative: state.workflow === "iterative",
-		});
-
+		if (!this.#planModeState?.enabled) return null;
 		return {
 			role: "custom",
 			customType: "plan-mode-context",
-			content,
+			content: planModeActivePrompt,
 			display: false,
 			attribution: "agent",
 			timestamp: Date.now(),
@@ -3404,9 +3570,6 @@ export class AgentSession {
 			// Clean up residual eager-todo directive if the prompt never consumed it
 			// (e.g., compaction aborted, validation failed).
 			this.#toolChoiceQueue.removeByLabel("eager-todo");
-		}
-		if (!options?.synthetic && this.#isPromptCurrent(generation)) {
-			await this.#enforcePlanModeToolDecision();
 		}
 	}
 
@@ -3787,10 +3950,6 @@ export class AgentSession {
 			// hidden/context injection so it remains the final instruction to the model.
 			const messages: AgentMessage[] = await logger.ttftAttr("ttft.build-context", async () => {
 				const built: AgentMessage[] = [];
-				const planReferenceMessage = await this.#buildPlanReferenceMessage?.();
-				if (planReferenceMessage) {
-					built.push(planReferenceMessage);
-				}
 				const planModeMessage = await this.#buildPlanModeMessage();
 				if (planModeMessage) {
 					built.push(planModeMessage);
@@ -4544,6 +4703,7 @@ export class AgentSession {
 	 * Abort current operation and wait for agent to become idle.
 	 */
 	async abort(): Promise<void> {
+		this.userInteractions.cancelAll("interrupted");
 		this.abortRetry();
 		this.#promptGeneration++;
 		this.#scheduledHiddenNextTurnGeneration = undefined;
@@ -4633,6 +4793,8 @@ export class AgentSession {
 			await this.sessionManager.flush();
 			await this.sessionManager.newSession(options, preview);
 			this.agent.reset();
+			this.#restorePlanStateFromSession();
+			this.#restoreInteractionStateFromSession();
 			this.setTodoPhases([]);
 			this.agent.sessionId = this.sessionManager.getSessionId();
 			this.#steeringMessages = [];
@@ -4655,8 +4817,6 @@ export class AgentSession {
 			);
 
 			this.#todoReminderCount = 0;
-			this.#planReferenceSent = false;
-			this.#planReferencePath = "local://PLAN.md";
 			this.#reconnectToAgent();
 
 			// Emit session_switch event with reason "new" to hooks
@@ -4668,6 +4828,7 @@ export class AgentSession {
 				});
 			}
 
+			await this.#emitInteractionSnapshot();
 			return true;
 		}, scope);
 	}
@@ -5722,43 +5883,6 @@ export class AgentSession {
 		this.sessionManager.appendCustomMessageEntry("rewind-report", report, false, details, "agent");
 		this.#checkpointState = undefined;
 		this.#pendingRewindReport = undefined;
-	}
-	async #enforcePlanModeToolDecision(): Promise<void> {
-		if (!this.#planModeState?.enabled) {
-			return;
-		}
-		const assistantMessage = this.#findLastAssistantMessage();
-		if (!assistantMessage) {
-			return;
-		}
-		if (assistantMessage.stopReason === "error" || assistantMessage.stopReason === "aborted") {
-			return;
-		}
-
-		const calledRequiredTool = assistantMessage.content.some(
-			content => content.type === "toolCall" && (content.name === "ask" || content.name === "exit_plan_mode"),
-		);
-		if (calledRequiredTool) {
-			return;
-		}
-		const hasRequiredTools = this.#toolRegistry.has("ask") && this.#toolRegistry.has("exit_plan_mode");
-		if (!hasRequiredTools) {
-			logger.warn("Plan mode enforcement skipped because ask/exit tools are unavailable", {
-				activeToolNames: this.agent.state.tools.map(tool => tool.name),
-			});
-			return;
-		}
-
-		const reminder = prompt.render(planModeToolDecisionReminderPrompt, {
-			askToolName: "ask",
-			exitToolName: "exit_plan_mode",
-		});
-
-		await this.prompt(reminder, {
-			synthetic: true,
-			expandPromptTemplates: false,
-			toolChoice: "required",
-		});
 	}
 
 	#createEagerTodoPrelude(promptText: string): { message: AgentMessage; toolChoice: ToolChoice } | undefined {
@@ -7488,6 +7612,8 @@ export class AgentSession {
 			try {
 				await this.sessionManager.setSessionFile(sessionPath);
 				this.agent.sessionId = this.sessionManager.getSessionId();
+				this.#restorePlanStateFromSession();
+				this.#restoreInteractionStateFromSession();
 
 				const sessionContext = this.buildDisplaySessionContext();
 				const didReloadConversationChange =
@@ -7568,10 +7694,13 @@ export class AgentSession {
 						: configuredServiceTier;
 
 				this.#reconnectToAgent();
+				await this.#emitInteractionSnapshot();
 				return true;
 			} catch (error) {
 				this.sessionManager.restoreState(previousSessionState);
 				this.agent.sessionId = previousSessionState.sessionId;
+				this.#restorePlanStateFromSession();
+				this.#restoreInteractionStateFromSession();
 				let restoreMcpError: unknown;
 				try {
 					await this.#restoreMCPSelectionsForSessionContext(previousSessionContext, {

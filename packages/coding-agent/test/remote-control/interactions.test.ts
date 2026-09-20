@@ -84,10 +84,12 @@ test("tool questions use pinned request fields and settle with one owner", async
 		id => (id === "ask-a" ? { threadId: "thread-a", turnId: "turn-a", itemId: "item-a" } : undefined),
 		event => events.push(event),
 	);
-	const result = broker.request(
-		{ kind: "select", title: "Choose fixture", options: ["Alpha", "Beta"], toolCallId: "ask-a" },
-		() => new Promise(() => {}),
-	);
+	const result = broker.request({
+		kind: "select",
+		title: "Choose fixture",
+		options: ["Alpha", "Beta"],
+		toolCallId: "ask-a",
+	});
 	const id = broker.pending()[0].id;
 	expect(events).toEqual([
 		{
@@ -132,15 +134,9 @@ test("tool questions use pinned request fields and settle with one owner", async
 
 test("only active tool prompts are published and transport closure leaves terminal input pending", async () => {
 	const broker = new UserInteractions();
-	const input = broker.request(
-		{ kind: "input", title: "Existing question", toolCallId: "live" },
-		() => new Promise(() => {}),
-	);
+	const input = broker.request({ kind: "input", title: "Existing question", toolCallId: "live" });
 	const admin = broker.request({ kind: "input", title: "Administrative input" }, () => new Promise(() => {}));
-	const stale = broker.request(
-		{ kind: "input", title: "Departed tool", toolCallId: "old" },
-		() => new Promise(() => {}),
-	);
+	const stale = broker.request({ kind: "input", title: "Departed tool", toolCallId: "old" });
 	const remote = new RemoteInteractions(
 		broker,
 		id => (id === "live" ? { threadId: "thread-a", turnId: "turn-a", itemId: "item-a" } : undefined),
@@ -162,10 +158,7 @@ test("malformed and mismatched answers cannot resolve input; an empty answer map
 		() => ({ threadId: "thread-a", turnId: "turn-a", itemId: "item-a" }),
 		() => {},
 	);
-	const input = broker.request(
-		{ kind: "input", title: "Fixture input", toolCallId: "ask-a" },
-		() => new Promise(() => {}),
-	);
+	const input = broker.request({ kind: "input", title: "Fixture input", toolCallId: "ask-a" });
 	const id = broker.pending()[0].id;
 	for (const invalid of [
 		null,
@@ -184,7 +177,7 @@ test("malformed and mismatched answers cannot resolve input; an empty answer map
 	remote.close();
 });
 
-test("grouped questions preserve their IDs and accept multiple selections plus free text", async () => {
+test("questions preserve their IDs and accept a choice plus notes", async () => {
 	const broker = new UserInteractions();
 	const events: Notification[] = [];
 	const remote = new RemoteInteractions(
@@ -195,16 +188,18 @@ test("grouped questions preserve their IDs and accept multiple selections plus f
 	const questions = [
 		{
 			id: "colors",
+			header: "colors",
+			isOther: true,
+			isSecret: false,
 			question: "Choose colors",
-			options: [{ label: "Blue", description: "First color" }, { label: "Green" }],
-			multi: true,
+			options: [
+				{ label: "Blue", description: "First color" },
+				{ label: "Green", description: "" },
+			],
 		},
-		{ id: "note", question: "Add a note", options: [] },
+		{ id: "note", header: "note", question: "Add a note", options: null, isOther: true, isSecret: false },
 	];
-	const result = broker.requestQuestions(
-		{ title: "Fixture", toolCallId: "ask-a", questions },
-		() => new Promise(() => {}),
-	);
+	const result = broker.requestInput({ title: "Fixture", toolCallId: "input-a", inputQuestions: questions });
 	const request = remote.pending()[0];
 	expect(request.params.questions).toEqual([
 		{
@@ -222,13 +217,12 @@ test("grouped questions preserve their IDs and accept multiple selections plus f
 	]);
 	expect(validRequest(request.params), JSON.stringify(validRequest.errors)).toBe(true);
 	expect(() => remote.respond(request.id, { answers: { colors: { answers: ["Blue"] } } })).toThrow("Invalid answer");
-	const response = { answers: { colors: { answers: ["Blue", "Green"] }, note: { answers: ["Keep both"] } } };
+	const response = {
+		answers: { colors: { answers: ["Blue", "user_note: Green too"] }, note: { answers: ["Keep both"] } },
+	};
 	expect(validResponse(response)).toBe(true);
 	expect(remote.respond(request.id, response)).toEqual({ accepted: true });
-	expect(await result).toEqual({
-		colors: { selectedOptions: ["Blue", "Green"] },
-		note: { selectedOptions: [], customInput: "Keep both" },
-	});
+	expect(await result).toEqual(response);
 	expect(events.at(-1)).toEqual({
 		method: "serverRequest/resolved",
 		params: { threadId: "thread-a", requestId: request.id },
@@ -236,24 +230,23 @@ test("grouped questions preserve their IDs and accept multiple selections plus f
 	remote.close();
 });
 
-test("an empty grouped response cancels instead of producing default choices", async () => {
+test("an explicitly submitted unanswered question remains empty", async () => {
 	const broker = new UserInteractions();
 	const remote = new RemoteInteractions(
 		broker,
 		() => ({ threadId: "thread-a", turnId: "turn-a", itemId: "item-a" }),
 		() => {},
 	);
-	const result = broker.requestQuestions(
-		{
-			title: "Fixture",
-			toolCallId: "ask-a",
-			questions: [{ id: "choice", question: "Choose", options: [{ label: "Allow" }] }],
-		},
-		() => new Promise(() => {}),
-	);
+	const result = broker.requestInput({
+		title: "Fixture",
+		toolCallId: "ask-a",
+		inputQuestions: [
+			{ id: "choice", header: "Choice", question: "Choose", options: [{ label: "Allow", description: "Permit" }] },
+		],
+	});
 	const request = remote.pending()[0];
 	expect(remote.respond(request.id, { answers: { choice: { answers: [] } } })).toEqual({ accepted: true });
-	expect(await result).toBeUndefined();
+	expect(await result).toEqual({ answers: { choice: { answers: [] } } });
 	remote.close();
 });
 
@@ -283,10 +276,12 @@ test.each([
 		() => ({ threadId: "thread-a", turnId: "turn-a", itemId: "item-a", startedAtMs: 1234, item }),
 		event => events.push(event),
 	);
-	const result = broker.request(
-		{ kind: "select", title: "Apply fixture change?", options: ["Yes", "No"], toolCallId: "tool-a" },
-		() => new Promise(() => {}),
-	);
+	const result = broker.request({
+		kind: "select",
+		title: "Apply fixture change?",
+		options: ["Yes", "No"],
+		toolCallId: "tool-a",
+	});
 	const request = remote.pending()[0];
 	expect(request).toEqual({
 		id: broker.pending()[0].id,

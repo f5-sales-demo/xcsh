@@ -67,7 +67,7 @@ describe("createTools", () => {
 		expect(names).toContain("task");
 		expect(names).toContain("todo_write");
 		expect(names).toContain("web_search");
-		expect(names).toContain("exit_plan_mode");
+		expect(names).not.toContain("exit_plan_mode");
 		expect(names).not.toContain("fetch");
 		expect(names).not.toContain("vim");
 	});
@@ -121,7 +121,7 @@ describe("createTools", () => {
 		const names = tools.map(t => t.name);
 
 		expect(names).toContain("bash");
-		expect(names).toContain("exit_plan_mode");
+		expect(names).not.toContain("exit_plan_mode");
 		expect(names).not.toContain("python");
 	});
 
@@ -136,7 +136,7 @@ describe("createTools", () => {
 		const tools = await createTools(session, ["read", "lsp", "write"]);
 		const names = tools.map(t => t.name);
 
-		expect(names).toEqual(["read", "write", "exit_plan_mode"]);
+		expect(names).toEqual(["read", "write"]);
 	});
 
 	it("excludes lsp tool when disabled", async () => {
@@ -152,7 +152,7 @@ describe("createTools", () => {
 		const tools = await createTools(session, ["read", "write"]);
 		const names = tools.map(t => t.name);
 
-		expect(names).toEqual(["read", "write", "exit_plan_mode"]);
+		expect(names).toEqual(["read", "write"]);
 	});
 
 	it("ignores vim as an unknown requested tool even when vim edit mode is active", async () => {
@@ -164,7 +164,7 @@ describe("createTools", () => {
 		const tools = await createTools(session, ["read", "vim"]);
 		const names = tools.map(t => t.name);
 
-		expect(names).toEqual(["read", "exit_plan_mode"]);
+		expect(names).toEqual(["read"]);
 	});
 
 	it("lowercases requested tool subset", async () => {
@@ -172,7 +172,7 @@ describe("createTools", () => {
 		const tools = await createTools(session, ["Read", "Write"]);
 		const names = tools.map(t => t.name);
 
-		expect(names).toEqual(["read", "write", "exit_plan_mode"]);
+		expect(names).toEqual(["read", "write"]);
 	});
 
 	it("includes hidden tools when explicitly requested", async () => {
@@ -180,7 +180,7 @@ describe("createTools", () => {
 		const tools = await createTools(session, ["report_finding"]);
 		const names = tools.map(t => t.name);
 
-		expect(names).toEqual(["report_finding", "exit_plan_mode"]);
+		expect(names).toEqual(["report_finding"]);
 	});
 
 	it("includes submit_result tool when required", async () => {
@@ -191,20 +191,22 @@ describe("createTools", () => {
 		expect(names).toContain("submit_result");
 	});
 
-	it("excludes ask tool when hasUI is false", async () => {
+	it("includes session-owned questions when hasUI is false", async () => {
 		const session = createTestSession({ hasUI: false });
 		const tools = await createTools(session);
 		const names = tools.map(t => t.name);
 
 		expect(names).not.toContain("ask");
+		expect(names).toContain("request_user_input_async");
 	});
 
-	it("includes ask tool when hasUI is true", async () => {
+	it("includes session-owned questions when hasUI is true", async () => {
 		const session = createTestSession({ hasUI: true });
 		const tools = await createTools(session);
 		const names = tools.map(t => t.name);
 
-		expect(names).toContain("ask");
+		expect(names).toContain("request_user_input");
+		expect(names).toContain("request_user_input_async");
 	});
 
 	it("filters disabled builtin tools by settings", async () => {
@@ -274,7 +276,6 @@ describe("createTools", () => {
 
 	it("HIDDEN_TOOLS contains review tools", () => {
 		expect(Object.keys(HIDDEN_TOOLS).sort()).toEqual([
-			"exit_plan_mode",
 			"report_finding",
 			"report_tool_issue",
 			"resolve",

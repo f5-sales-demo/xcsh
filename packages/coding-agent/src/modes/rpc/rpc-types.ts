@@ -29,6 +29,21 @@ import type { TodoPhase } from "../../tools/todo-write";
 // ============================================================================
 
 export type RpcCommand =
+	| { id?: string; type: "interaction_snapshot"; after?: number }
+	| {
+			id?: string;
+			type: "interaction_respond";
+			requestId: string;
+			responseId: string;
+			identity: import("../../session/user-interactions").InteractionIdentity;
+			value: unknown;
+	  }
+	| {
+			id?: string;
+			type: "plan_decide";
+			planId: string;
+			action: import("../../../../chat-ui/src/interactions/conversation-plan").PlanAction;
+	  }
 	// Prompting
 	| {
 			id?: string;

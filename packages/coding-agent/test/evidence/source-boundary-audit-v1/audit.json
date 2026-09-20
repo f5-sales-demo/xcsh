@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "revision": "1f8449ef3f8ec489d359155221ec7d58d97e1198",
-  "fingerprint": "d0596f2e310bef912c32ecc22e7bbab3be00cf0f021026097b88761b901b4745",
+  "revision": "6433e0042abcb148408df2c09df3ee8c8b41164a",
+  "fingerprint": "b2d9c4d272433b2d9bf6d2ef9b21b7c639d1c28a525ae1b61a6b15ddbc0bdab7",
   "counts": {
-    "total": 241,
+    "total": 240,
     "components": 95,
-    "integrations": 146
+    "integrations": 145
   },
   "audits": [
     {
@@ -586,7 +586,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "cb6c207ad7454ead77f3652fc4127c683f3c044c8d89fcb8791a04c1ae625b49",
+      "sha256": "ba7f390ad01907e05a828066d20238dc9fccd7941419c52749c250dafdde9970",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -2216,23 +2216,6 @@
       "classification": "packages/coding-agent/src/modes/components/python-execution.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
-      "source": "packages/coding-agent/src/modes/components/question-flow.ts",
-      "kind": "component",
-      "ownership": "read-only-renderer",
-      "domain": "core",
-      "sha256": "a1659bbe0a28039bd67f866711f2f002380091645847beaad86dc7641f7d74db",
-      "exports": [
-        "QuestionFormUI",
-        "runQuestionGroup"
-      ],
-      "interactionSignals": [],
-      "persistenceSignals": [],
-      "directTests": [
-        "packages/coding-agent/test/question-flow.test.ts"
-      ],
-      "classification": "packages/coding-agent/src/modes/components/question-flow.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
-    },
-    {
       "source": "packages/coding-agent/src/modes/components/queue-mode-selector.ts",
       "kind": "component",
       "ownership": "caller-owned-draft",
@@ -2267,6 +2250,29 @@
         "packages/coding-agent/test/pending-glyph-sweep.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/read-tool-group.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "kind": "component",
+      "ownership": "caller-owned-draft",
+      "domain": "core",
+      "sha256": "e9d8418872ca71a42d077f4510af27f3576253984514d0ca1ad42730ccde40dd",
+      "exports": [
+        "RequestUserInputComponent"
+      ],
+      "interactionSignals": [
+        "render",
+        "keyboard-input",
+        "terminal-control"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/codex-interaction-source.test.ts",
+        "packages/coding-agent/test/hook-editor.test.ts",
+        "packages/coding-agent/test/remote-control/interaction-host.test.ts",
+        "packages/coding-agent/test/request-user-input-contract.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/components/request-user-input.ts is individually classified as caller-owned-draft in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts",
@@ -2442,7 +2448,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "a56c7005c331e27c517d93f323aae6ec7f3f26d3b470624fb03bf0c2b94af6c3",
+      "sha256": "291f72ed5e1561fcb49089dbdb42e11e2221e9edb94823782f9b80d4461a06c5",
       "exports": [
         "BooleanSettingDef",
         "EnumSettingDef",
@@ -2743,7 +2749,6 @@
         "packages/coding-agent/test/prompt-templates.test.ts",
         "packages/coding-agent/test/scripts/release-staged-guard.test.ts",
         "packages/coding-agent/test/scripts/run-rs-task.test.ts",
-        "packages/coding-agent/test/tools/exit-plan-mode.test.ts",
         "packages/coding-agent/test/xcsh-context-service.test.ts",
         "packages/tui/test/horizontal-split.test.ts"
       ],
@@ -3241,7 +3246,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "da24b8837973c730d7ac16d5241344f9e84dbb0089f3b948e31f1f06a96ee9fd",
+      "sha256": "03a88c7638d0c53ad02bc60d959f093432c8689bdb75fa56ac6156d863e66457",
       "exports": [
         "EventController"
       ],
@@ -3253,7 +3258,6 @@
       "directTests": [
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/event-controller-warning-outcome.test.ts",
-        "packages/coding-agent/test/interactive-mode-plan-review.test.ts",
         "packages/coding-agent/test/modes/controllers/event-controller-background.test.ts",
         "packages/coding-agent/test/modes/controllers/event-controller-idle-compaction.test.ts",
         "packages/coding-agent/test/read-group-outcome-aggregator.test.ts"
@@ -3265,7 +3269,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "a436f624b68f11be6a9a242600dfdeea53ef2af208a9475487a104c321e702f8",
+      "sha256": "c6e0e45cf6c71e86cb04a6e98343546508ae43d61cfd2a39ff480ef93d853068",
       "exports": [
         "ExtensionUiController"
       ],
@@ -3681,22 +3685,19 @@
     {
       "source": "packages/coding-agent/src/modes/interactive-mode.ts",
       "kind": "integration",
-      "ownership": "reviewed-mutation-adapter",
+      "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "f23efe2d5504ba8433968d29ffa134e869e7ffa74fa7642d14695f28e7702e62",
+      "sha256": "96a5783f668cc55bb3bebb41439781bc527bfa6b7597479c1d076aecbd1631f4",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
         "shouldAutoLaunchProviderLogin"
       ],
       "interactionSignals": [
-        "render",
         "async-progress",
         "terminal-control"
       ],
       "persistenceSignals": [
-        "file-write",
-        "file-replace",
         "session-persistence",
         "settings-mutation"
       ],
@@ -3722,7 +3723,7 @@
         "packages/coding-agent/test/media-message-component.test.ts",
         "packages/coding-agent/test/modes/controllers/btw-controller.test.ts"
       ],
-      "classification": "packages/coding-agent/src/modes/interactive-mode.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+      "classification": "packages/coding-agent/src/modes/interactive-mode.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/oauth-manual-input.ts",
@@ -3819,7 +3820,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "f10a5813425d7c478d2e8b227eb865828133424b72cb70155f4d5ea643343324",
+      "sha256": "dfa00a5a2a350f055b530b2b02950fa42f512760773dbe280522fd276a670008",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -3843,7 +3844,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "836268b839bc996b6cb71c2c6d10316fd2ea717a2b75d07ea207321bf6b5a176",
+      "sha256": "a3e10446d05b45b7390d7bb73625e55d3fdc634547b23f3892b4c4d0cf258867",
       "exports": [
         "RpcCommand",
         "RpcCommandType",
@@ -4133,7 +4134,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "b2d3dffa22199ea9e7a7409fa0c25ad37e0a693cd516ca445db427a088aa2fdb",
+      "sha256": "528f3cb16a145bd4d0c6f0047606baf4d437f118757258e12daaac3e4d32013a",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",
@@ -4342,7 +4343,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "b2a4ecc37d9435f3baea25683f6849f81aedad64ae278aa91aca658dcda74b35",
+      "sha256": "64f5610aa09691df3bf93f0061c0929269fb8a0934ed4cfb325f02971545c845",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -4509,7 +4510,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "f0657ecec7d9f439d77bf6138ca14dfe821a6ab7d2a377fb35f7abb29d2feb66",
+      "sha256": "1e6b7e590d84f4b7b2a8762c5b3b2024092a1f959877e9828ad92567e1982dc2",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4737,48 +4738,6 @@
         "packages/coding-agent/test/component-boundary-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/action-renderer.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
-    },
-    {
-      "source": "packages/coding-agent/src/tools/ask.ts",
-      "kind": "integration",
-      "ownership": "tool-authority-boundary",
-      "domain": "tools",
-      "sha256": "f7a51d0d4d0400b916d598a037ce51e7e36d82705622de1d585bedcb667651ed",
-      "exports": [
-        "AskTool",
-        "AskToolDetails",
-        "AskToolInput",
-        "QuestionResult",
-        "askToolRenderer"
-      ],
-      "interactionSignals": [
-        "render",
-        "terminal-control"
-      ],
-      "persistenceSignals": [],
-      "directTests": [
-        "packages/coding-agent/test/agent-dashboard.test.ts",
-        "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
-        "packages/coding-agent/test/agent-session-auto-compaction-x-initiator.test.ts",
-        "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-concurrent.test.ts",
-        "packages/coding-agent/test/agent-session-configuration-lifecycle.test.ts",
-        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
-        "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
-        "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
-        "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
-        "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
-        "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
-        "packages/coding-agent/test/args.test.ts",
-        "packages/coding-agent/test/async-job-cancellation.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/bench-routing-matrix.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/acquire-helpers.test.ts"
-      ],
-      "classification": "packages/coding-agent/src/tools/ask.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/tools/ast-edit.ts",
@@ -5367,7 +5326,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "11da1f7ed8c0446576375e5e762f9e11bc25003f1a55ccb75620800241597572",
+      "sha256": "261b39a083c19f3e881c1e53793734c097cc122694ccba1dcb8b0d1d728c1074",
       "exports": [
         "toolRenderers"
       ],
@@ -6202,6 +6161,7 @@
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
         "packages/coding-agent/test/html-math-export.test.ts",
+        "packages/coding-agent/test/internal-urls/api-catalog-discovery.test.ts",
         "packages/coding-agent/test/internal-urls/api-catalog-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-integration.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts",
@@ -6211,8 +6171,7 @@
         "packages/coding-agent/test/internal-urls/local-protocol.test.ts",
         "packages/coding-agent/test/internal-urls/memory-protocol.test.ts",
         "packages/coding-agent/test/internal-urls/skill-protocol.test.ts",
-        "packages/coding-agent/test/internal-urls/source-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/xcsh-protocol-console.test.ts"
+        "packages/coding-agent/test/internal-urls/source-resolve.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6415,7 +6374,7 @@
         "packages/coding-agent/test/compaction-hooks.test.ts",
         "packages/coding-agent/test/e2e/bench/multi-resource-report.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
-        "packages/coding-agent/test/interactive-mode-plan-review.test.ts",
+        "packages/coding-agent/test/interaction-parity.test.ts",
         "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
         "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
@@ -6955,6 +6914,7 @@
         "packages/coding-agent/test/branding-lowercase.test.ts",
         "packages/coding-agent/test/browser/dom-context.test.ts",
         "packages/coding-agent/test/btw-panel-pending.test.ts",
+        "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/components/read-tool-group.test.ts",
         "packages/coding-agent/test/components/todo-reminder.test.ts",
@@ -6963,8 +6923,7 @@
         "packages/coding-agent/test/custom-editor-keybindings.test.ts",
         "packages/coding-agent/test/debug/debug-selector-review.test.ts",
         "packages/coding-agent/test/debug/log-viewer.test.ts",
-        "packages/coding-agent/test/event-controller-warning-outcome.test.ts",
-        "packages/coding-agent/test/first-run-provider-selector.test.ts"
+        "packages/coding-agent/test/event-controller-warning-outcome.test.ts"
       ],
       "classification": "packages/tui/src/tui.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
