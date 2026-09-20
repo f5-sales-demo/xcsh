@@ -53,6 +53,7 @@ providers:
       groupLabel: LiteLLM
       sectionLabel: OpenAI
     modelAllowlist:
+      - gpt-6-astra
       - gpt-5.6-sol
       - gpt-5.6-terra
       - gpt-5.6-luna
@@ -90,6 +91,13 @@ Both select `anthropic/claude-fable-5-1` deterministically.
 ## Where does LiteLLM fit?
 
 LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.
+
+GPT-6 Astra has route-specific limits. xcsh-generated LiteLLM configuration exposes the model's full
+1,050,000-token context window (922,000 input plus up to 128,000 output). The ChatGPT Codex subscription
+transport remains at 272,000 context with the same 128,000 maximum output because upstream deliberately
+keeps that route in its short-context pricing tier. Both routes support image input and `low`, `medium`,
+`high`, `xhigh`, and `max` reasoning. Astra is selectable explicitly but is not assigned to an automatic
+role by default.
 
 ## How do I test licensed Vertex locally?
 
