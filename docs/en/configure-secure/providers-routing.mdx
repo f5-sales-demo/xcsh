@@ -99,6 +99,11 @@ keeps that route in its short-context pricing tier. Both routes support image in
 `high`, `xhigh`, and `max` reasoning. Astra is selectable explicitly but is not assigned to an automatic
 role by default.
 
+Generated LiteLLM configuration routes only Astra through LiteLLM's OpenAI Responses endpoint
+(`/openai/v1/responses`). This is required when Astra uses tools with reasoning: its Chat Completions route
+rejects that combination. Luna, Terra, and Sol keep the configured OpenAI-compatible Chat Completions base
+path. Astra also omits temperature because the Responses route rejects sampling temperature for that model.
+
 ## How do I test licensed Vertex locally?
 
 `bun run dev` and local coding-agent binary builds load the licensed Vertex OAuth client pair automatically. Explicit `XCSH_VERTEX_OAUTH_CLIENT_ID` and `XCSH_VERTEX_OAUTH_CLIENT_SECRET` build inputs take precedence; supply both together.

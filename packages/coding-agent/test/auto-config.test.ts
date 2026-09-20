@@ -1029,14 +1029,14 @@ describe("config schema versioning", () => {
 	);
 
 	test.skipIf(process.platform === "win32")(
-		"startupHealthCheck upgrades generated v6 config to v7 without losing its route or credential",
+		"startupHealthCheck upgrades generated v7 config to v8 without losing its route or credential",
 		() => {
 			clearEnv();
-			const v6 = generateModelsYml("https://proxy.example.com", {
+			const v7 = generateModelsYml("https://proxy.example.com", {
 				apiBasePath: "/api/v1",
 				apiKeyLiteral: "literal-test-key",
-			}).replace("configVersion: 7", "configVersion: 6");
-			fs.writeFileSync(modelsPath, v6, { mode: 0o644 });
+			}).replace("configVersion: 8", "configVersion: 7");
+			fs.writeFileSync(modelsPath, v7, { mode: 0o644 });
 
 			const repaired = startupHealthCheck("ok", modelsPath, {
 				anthropic: { baseUrl: "https://proxy.example.com/anthropic" },
@@ -1044,11 +1044,12 @@ describe("config schema versioning", () => {
 
 			expect(repaired).toBe(true);
 			const content = fs.readFileSync(modelsPath, "utf-8");
-			expect(content).toContain("configVersion: 7");
+			expect(content).toContain("configVersion: 8");
 			expect(content).toContain('baseUrl: "https://proxy.example.com/api/v1"');
+			expect(content).toContain('baseUrl: "https://proxy.example.com/openai/v1"');
 			expect(content).toContain('apiKey: "literal-test-key"');
 			expect(content).toContain("- gpt-6-astra");
-			expect(fs.readFileSync(`${modelsPath}.bak`, "utf-8")).toBe(v6);
+			expect(fs.readFileSync(`${modelsPath}.bak`, "utf-8")).toBe(v7);
 			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
 			expect(fs.statSync(`${modelsPath}.bak`).mode & 0o777).toBe(0o600);
 		},
