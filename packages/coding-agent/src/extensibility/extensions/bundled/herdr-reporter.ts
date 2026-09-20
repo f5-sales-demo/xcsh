@@ -171,9 +171,9 @@ function nativeCapability(): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-/** Protocol 23 adds a workspace receipt without changing native action semantics. */
+/** Protocol 22 introduced native lifecycle frames. Later protocols negotiate support by capability. */
 function supportsNativeLifecycle(protocol: number | undefined): boolean {
-	return protocol === 22 || protocol === 23;
+	return protocol !== undefined && protocol >= 22;
 }
 
 function persistedTurns(ctx: ExtensionContext): PersistedTurn[] {
