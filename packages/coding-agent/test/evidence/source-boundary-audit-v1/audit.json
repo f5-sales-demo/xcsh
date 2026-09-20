@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "1f8449ef3f8ec489d359155221ec7d58d97e1198",
+  "revision": "1311bf5a46e79295992d9c0ebfd0763913613de2",
   "fingerprint": "d0596f2e310bef912c32ecc22e7bbab3be00cf0f021026097b88761b901b4745",
   "counts": {
     "total": 241,
@@ -5466,9 +5466,9 @@
         "packages/coding-agent/test/debug/log-viewer.test.ts",
         "packages/coding-agent/test/discovery/agent-fields.test.ts",
         "packages/coding-agent/test/extension-dashboard.test.ts",
-        "packages/coding-agent/test/herdr-terminal.test.ts",
         "packages/coding-agent/test/input-controller-clipboard-review.test.ts",
-        "packages/coding-agent/test/integration-registry.test.ts"
+        "packages/coding-agent/test/integration-registry.test.ts",
+        "packages/coding-agent/test/interactive-mode-plan-review.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/review.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

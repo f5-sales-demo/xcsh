@@ -50,6 +50,9 @@
 
 ### Fixed
 
+- Discovered compatible Herdr protocol generations through the server ping and advertised
+  capabilities, preventing protocol-24 semantic tracking from being rejected by a stale client
+  upper bound ([#4107](https://github.com/f5-sales-demo/xcsh/issues/4107)).
 - Routed MCP and Gemini web-search OAuth refreshes through the shared durable refresh coordinator,
   including proactive refresh and forced retry after authentication failures
   ([#3796](https://github.com/f5-sales-demo/xcsh/issues/3796)).

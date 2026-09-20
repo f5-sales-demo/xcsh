@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { connect } from "node:net";
 
 export const HERDR_PROTOCOL_MIN_VERSION = 19;
-export const HERDR_PROTOCOL_MAX_VERSION = 23;
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
@@ -41,14 +40,9 @@ export class HerdrClient {
 			version: string;
 			capabilities?: Record<string, unknown>;
 		}>("ping", {});
-		if (
-			pong.type !== "pong" ||
-			!Number.isInteger(pong.protocol) ||
-			pong.protocol < HERDR_PROTOCOL_MIN_VERSION ||
-			pong.protocol > HERDR_PROTOCOL_MAX_VERSION
-		) {
+		if (pong.type !== "pong" || !Number.isInteger(pong.protocol) || pong.protocol < HERDR_PROTOCOL_MIN_VERSION) {
 			throw new HerdrProtocolError(
-				`Herdr protocol mismatch: supported ${HERDR_PROTOCOL_MIN_VERSION}-${HERDR_PROTOCOL_MAX_VERSION}, received ${String(pong.protocol)}`,
+				`Herdr protocol mismatch: requires ${HERDR_PROTOCOL_MIN_VERSION} or later, received ${String(pong.protocol)}`,
 				"protocol_mismatch",
 			);
 		}
