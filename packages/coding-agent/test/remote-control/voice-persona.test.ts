@@ -38,7 +38,7 @@ test("phone preferences cannot supersede the final server-owned identity and pro
 		"xcsh is an AI assistant and agentic shell interface for F5 Distributed Cloud",
 	);
 	expect(instructions.slice(identityOffset)).toContain(
-		"built from pi.dev/pi-mono and inspired by bash, zsh, tcsh, and the Aider agentic shell",
+		"built from pi.dev/pi-mono and inspired by bash, Zsh, tcsh, and the Aider agentic shell",
 	);
 	expect(instructions.slice(identityOffset)).toContain("Never introduce yourself as ChatGPT");
 	expect(reference).toContain('"X-C-shell" ("ex-see-shell")');
