@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import type { ConversationPlan, PlanAction } from "../../../chat-ui/src/interactions/conversation-plan";
 import type {
 	InteractionIdentity,
+	InteractionResolution,
 	UserInteraction,
 	UserInteractionEvent,
 	UserInteractions,
@@ -17,10 +18,10 @@ interface Binding {
 	pane_id: string;
 	producer: string;
 	generation: number;
-}
-interface Owner extends Binding {
+	/** Stable Herdr producer session; unlike the conversation thread, this cannot change in-process. */
 	session_id: string;
 }
+type Owner = Binding;
 interface Target {
 	owner: Owner;
 	request_id: string;
@@ -30,6 +31,9 @@ interface Entry {
 	identity: InteractionIdentity;
 	report: Record<string, unknown>;
 	decide?: (action: PlanAction) => Promise<{ accepted: boolean }>;
+	questionRequests?: Map<string, string>;
+	pendingRequestIds?: Set<string>;
+	resolutions?: InteractionResolution[];
 }
 const record = (value: unknown): value is Record<string, unknown> =>
 	value !== null && typeof value === "object" && !Array.isArray(value);
@@ -37,6 +41,7 @@ const record = (value: unknown): value is Record<string, unknown> =>
 /** Additional observation never owns completion or disables the local interaction path. */
 export class HerdrInteractionBridge {
 	#entries = new Map<string, Entry>();
+	#entryByInteraction = new Map<string, string>();
 	#reports: Record<string, unknown>[] = [];
 	#acks: Record<string, unknown>[] = [];
 	#decisions = new Map<string, { action: unknown; accepted: boolean }>();
@@ -65,46 +70,102 @@ export class HerdrInteractionBridge {
 	#observe(event: UserInteractionEvent): void {
 		if (event.type === "opened") this.#open(event.interaction, event.revision);
 		else {
-			const entry = this.#entries.get(event.interaction.id);
+			const key = this.#entryByInteraction.get(event.interaction.id) ?? event.interaction.id;
+			const entry = this.#entries.get(key);
 			if (!entry) return;
-			entry.report = { ...entry.report, event_revision: event.revision, state: event.reason ?? "owner_lost" };
-			this.#reports.push(structuredClone(entry.report));
+			if (entry.pendingRequestIds) {
+				entry.pendingRequestIds.delete(event.interaction.id);
+				entry.resolutions?.push(event.reason ?? "owner_lost");
+				if (entry.pendingRequestIds.size) return;
+			}
+			const resolutions = entry.resolutions ?? [event.reason ?? "owner_lost"];
+			const state = resolutions.every(reason => reason === "answered")
+				? "answered"
+				: (resolutions.find(reason => reason !== "answered") ?? "owner_lost");
+			entry.report = { ...entry.report, event_revision: event.revision, state };
+			this.#queueReport(entry.report);
 		}
 	}
 	#open(request: UserInteraction, revision: number): void {
 		const identity = request.identity;
 		if (!identity || (request.kind !== "request_user_input" && request.delivery !== "async")) return;
-		const target = { owner: { ...this.binding, session_id: identity.sessionId }, request_id: request.id };
+		const batch = request.delivery === "async" ? request.asyncBatch : undefined;
+		const requestId = batch?.requestId ?? request.id;
+		const existing = this.#entries.get(requestId);
+		if (existing?.questionRequests && request.questionId) {
+			existing.questionRequests.set(request.questionId, request.id);
+			existing.pendingRequestIds?.add(request.id);
+			this.#entryByInteraction.set(request.id, requestId);
+			return;
+		}
+		if (this.#entries.size >= 64) {
+			this.onError(new Error("Herdr interaction bridge capacity exceeded"));
+			return;
+		}
+		const target = { owner: { ...this.binding }, request_id: requestId };
+		const asyncQuestions = batch?.questions ?? [
+			{ title: request.title, ...(request.options ? { options: [...request.options] } : {}) },
+		];
+		const asyncQuestionIds = batch?.questionIds ?? [request.questionId ?? identity.itemId];
+		const asyncItem = batch?.item ?? {
+			id: identity.itemId,
+			type: "agentMessage" as const,
+			text: asyncQuestions
+				.map(question => [question.title, ...(question.options?.map(option => `- ${option}`) ?? [])].join("\n"))
+				.join("\n\n"),
+			phase: "final_answer" as const,
+			delivery: "async" as const,
+			questions: asyncQuestions,
+		};
 		const report = {
 			target,
 			thread_id: identity.threadId,
 			turn_id: identity.turnId,
 			item_id: identity.itemId,
-			question_ids: request.inputQuestions?.map(question => question.id) ?? [request.questionId ?? identity.itemId],
+			question_ids: request.inputQuestions?.map(question => question.id) ?? asyncQuestionIds,
 			event_revision: revision,
 			kind: request.delivery === "async" ? "async" : "waiting",
 			state: "pending",
 			payload:
 				request.delivery === "async"
-					? {
-							id: identity.itemId,
-							type: "agentMessage",
-							text: request.title,
-							phase: "final_answer",
-							delivery: "async",
-							questions: [{ title: request.title, ...(request.options ? { options: request.options } : {}) }],
-						}
+					? asyncItem
 					: { questions: request.inputQuestions, isBlocking: true, autoResolutionMs: null },
 		};
-		this.#entries.set(request.id, { target, identity: structuredClone(identity), report });
+		const entry: Entry = { target, identity: structuredClone(identity), report };
+		if (request.delivery === "async") {
+			entry.questionRequests = new Map([[request.questionId ?? identity.itemId, request.id]]);
+			entry.pendingRequestIds = new Set([request.id]);
+			entry.resolutions = [];
+		}
+		this.#entries.set(requestId, entry);
+		this.#entryByInteraction.set(request.id, requestId);
+		this.#queueReport(report);
+	}
+	#queueReport(report: Record<string, unknown>): void {
+		const target = JSON.stringify(report.target);
+		const state = report.state;
+		const index = this.#reports.findIndex(
+			queued =>
+				JSON.stringify(queued.target) === target &&
+				(state === "pending" ? queued.state === "pending" : queued.state !== "pending"),
+		);
+		if (index >= 0) {
+			this.#reports[index] = structuredClone(report);
+			return;
+		}
 		this.#reports.push(structuredClone(report));
+		if (this.#reports.length > 128) this.onError(new Error("Herdr interaction report queue capacity exceeded"));
 	}
 	plan(
 		plan: ConversationPlan,
 		identity: InteractionIdentity,
 		decide: (action: PlanAction) => Promise<{ accepted: boolean }>,
 	): void {
-		const target = { owner: { ...this.binding, session_id: identity.sessionId }, request_id: plan.id };
+		if (!this.#entries.has(plan.id) && this.#entries.size >= 64) {
+			this.onError(new Error("Herdr interaction bridge capacity exceeded"));
+			return;
+		}
+		const target = { owner: { ...this.binding }, request_id: plan.id };
 		const report = {
 			target,
 			thread_id: identity.threadId,
@@ -117,13 +178,13 @@ export class HerdrInteractionBridge {
 			state: "pending",
 		};
 		this.#entries.set(plan.id, { target, identity, report, decide });
-		this.#reports.push(structuredClone(report));
+		this.#queueReport(report);
 	}
 	resolvePlan(planId: string): void {
 		const entry = this.#entries.get(planId);
 		if (!entry) return;
 		entry.report = { ...entry.report, event_revision: Number(entry.report.event_revision) + 1, state: "answered" };
-		this.#reports.push(structuredClone(entry.report));
+		this.#queueReport(entry.report);
 	}
 	flush(): Promise<void> {
 		if (this.#closed) return Promise.resolve();
@@ -152,6 +213,10 @@ export class HerdrInteractionBridge {
 			});
 			if (response.type !== "agent_interaction") throw new Error("Herdr did not acknowledge the interaction report");
 			this.#reports.shift();
+			if (report.state !== "pending" && record(report.target)) {
+				const requestId = report.target.request_id;
+				if (typeof requestId === "string") this.#dropEntry(requestId);
+			}
 		}
 		const owners = new Map(
 			[...this.#entries.values()]
@@ -184,8 +249,23 @@ export class HerdrInteractionBridge {
 							typeof delivery.answer === "string" &&
 							["implement", "fresh", "stay"].includes(delivery.answer) &&
 							(await entry.decide(delivery.answer as PlanAction)).accepted;
-						this.#decisions.set(receipt.response_id as string, { action: delivery.answer, accepted });
+						this.#rememberDecision(receipt.response_id as string, delivery.answer, accepted);
 					}
+				} else if (entry.questionRequests) {
+					const answer = record(delivery.answer) ? delivery.answer : undefined;
+					const questionId = answer?.questionId;
+					const value = answer?.answer;
+					const interactionId =
+						typeof questionId === "string" ? entry.questionRequests.get(questionId) : undefined;
+					accepted =
+						typeof interactionId === "string" &&
+						typeof value === "string" &&
+						this.interactions.respondExternal(
+							interactionId,
+							receipt.response_id as string,
+							value,
+							entry.identity,
+						);
 				} else
 					accepted = this.interactions.respondExternal(
 						target.request_id,
@@ -203,6 +283,20 @@ export class HerdrInteractionBridge {
 			}
 		}
 		this.#failureReported = false;
+	}
+	#dropEntry(requestId: string): void {
+		const entry = this.#entries.get(requestId);
+		if (!entry) return;
+		for (const interactionId of entry.questionRequests?.values() ?? [])
+			this.#entryByInteraction.delete(interactionId);
+		this.#entries.delete(requestId);
+	}
+	#rememberDecision(responseId: string, action: unknown, accepted: boolean): void {
+		this.#decisions.set(responseId, { action, accepted });
+		for (const [oldestResponseId] of this.#decisions) {
+			if (this.#decisions.size <= 256) break;
+			this.#decisions.delete(oldestResponseId);
+		}
 	}
 	async #flushAcknowledgements(): Promise<void> {
 		while (this.#acks.length) {

@@ -160,6 +160,27 @@ test("scroll-to-bottom FAB appears when scrolled up and hides after a click to t
 	expect(screen.queryByRole("button", { name: /scroll to bottom/i })).toBeNull();
 });
 
+test("a follow revision resumes tail following before the next turn", () => {
+	const messages: ChatMessage[] = [msg({ id: "1", role: "assistant", text: "plan" })];
+	const { container, rerender } = render(<Transcript messages={messages} streaming={false} followRevision={0} />);
+	const list = container.querySelector(".messages") as HTMLElement;
+	let top = 0;
+	Object.defineProperty(list, "scrollHeight", { configurable: true, get: () => 1000 });
+	Object.defineProperty(list, "clientHeight", { configurable: true, get: () => 200 });
+	Object.defineProperty(list, "scrollTop", {
+		configurable: true,
+		get: () => top,
+		set: value => {
+			top = value;
+		},
+	});
+	fireEvent.scroll(list);
+	expect(screen.getByRole("button", { name: /scroll to bottom/i })).toBeDefined();
+	rerender(<Transcript messages={messages} streaming={false} followRevision={1} />);
+	expect(top).toBe(1000);
+	expect(screen.queryByRole("button", { name: /scroll to bottom/i })).toBeNull();
+});
+
 test("thinkingLabel annotates the pre-first-token row (so a slow turn doesn't read as a hang)", () => {
 	const msgs: ChatMessage[] = [{ id: "a1", role: "assistant", text: "" }];
 	const { container } = render(<Transcript messages={msgs} streaming={true} thinkingLabel="with web search" />);

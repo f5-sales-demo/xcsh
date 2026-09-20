@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6433e0042abcb148408df2c09df3ee8c8b41164a",
-  "fingerprint": "b2d9c4d272433b2d9bf6d2ef9b21b7c639d1c28a525ae1b61a6b15ddbc0bdab7",
+  "revision": "c70679a6c57b69623410e766140f858ee2475a25",
+  "fingerprint": "ef8ac7630711afea405d9a67eda9005235a00d7abdb6399a5e3b1dc5bd666bb0",
   "counts": {
     "total": 240,
     "components": 95,
@@ -2256,7 +2256,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "e9d8418872ca71a42d077f4510af27f3576253984514d0ca1ad42730ccde40dd",
+      "sha256": "15aba4d8bcef7a601a174957df42b29ec972e8c332064c70b2e334b4d5bb4443",
       "exports": [
         "RequestUserInputComponent"
       ],
@@ -6159,6 +6159,7 @@
         "packages/coding-agent/test/core/hashline.test.ts",
         "packages/coding-agent/test/core/python-kernel-display.test.ts",
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
+        "packages/coding-agent/test/herdr/interaction-bridge.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
         "packages/coding-agent/test/html-math-export.test.ts",
         "packages/coding-agent/test/internal-urls/api-catalog-discovery.test.ts",
@@ -6170,8 +6171,7 @@
         "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/local-protocol.test.ts",
         "packages/coding-agent/test/internal-urls/memory-protocol.test.ts",
-        "packages/coding-agent/test/internal-urls/skill-protocol.test.ts",
-        "packages/coding-agent/test/internal-urls/source-resolve.test.ts"
+        "packages/coding-agent/test/internal-urls/skill-protocol.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

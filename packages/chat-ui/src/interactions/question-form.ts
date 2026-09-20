@@ -1,7 +1,7 @@
 import { INPUT_COPY, type InputQuestion, type InputResponse } from "./contract";
 
 interface Draft {
-	highlighted: number;
+	highlighted: number | undefined;
 	notes: string;
 	committed: boolean;
 	notesVisible: boolean;
@@ -56,8 +56,37 @@ export class QuestionForm {
 		this.interact();
 		if (!this.options.length) return;
 		const draft = this.#drafts[this.index];
-		draft.highlighted = (draft.highlighted + delta + this.options.length) % this.options.length;
+		draft.highlighted =
+			draft.highlighted === undefined
+				? delta < 0
+					? this.options.length - 1
+					: 0
+				: (draft.highlighted + delta + this.options.length) % this.options.length;
 		draft.committed = false;
+	}
+	selectOption(index: number): void {
+		this.interact();
+		if (index < 0 || index >= this.options.length) return;
+		const draft = this.#drafts[this.index];
+		draft.highlighted = index;
+		draft.committed = false;
+	}
+	commitSelection(): void {
+		this.interact();
+		if (!this.options.length) return;
+		const draft = this.#drafts[this.index];
+		draft.highlighted ??= 0;
+		draft.committed = true;
+	}
+	clearSelection(): void {
+		this.interact();
+		if (!this.options.length) return;
+		Object.assign(this.#drafts[this.index], {
+			highlighted: undefined,
+			notes: "",
+			committed: false,
+			notesVisible: false,
+		});
 	}
 	editNotes(notes: string): void {
 		this.interact();
@@ -68,7 +97,7 @@ export class QuestionForm {
 	}
 	toggleNotes(): void {
 		this.interact();
-		if (!this.options.length) return;
+		if (!this.options.length || this.draft.highlighted === undefined) return;
 		const draft = this.#drafts[this.index];
 		if (draft.notesVisible) this.#clearNotes();
 		else draft.notesVisible = true;
@@ -95,7 +124,7 @@ export class QuestionForm {
 			draft.notesVisible = true;
 			return { kind: "notes" };
 		}
-		draft.committed = true;
+		draft.committed = !this.options.length ? Boolean(draft.notes.trim()) : draft.highlighted !== undefined;
 		if (this.index < this.questions.length - 1) {
 			this.moveQuestion(1);
 			return { kind: "next" };
@@ -121,7 +150,7 @@ export class QuestionForm {
 					const draft = this.#drafts[index];
 					const answers: string[] = [];
 					if (draft.committed) {
-						const option = question.options?.[draft.highlighted];
+						const option = draft.highlighted === undefined ? undefined : question.options?.[draft.highlighted];
 						if (option) answers.push(option.label);
 						else if (
 							question.options?.length &&

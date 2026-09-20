@@ -1,7 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { type InputQuestion, type InputResponse, validInputResponse } from "../../../chat-ui/src/interactions/contract";
+import {
+	type AsyncInputQuestion,
+	type AsyncQuestionItem,
+	type InputQuestion,
+	type InputResponse,
+	validInputResponse,
+} from "../../../chat-ui/src/interactions/contract";
 import { isInteractionFrame, isInteractionIdentity } from "../../../chat-ui/src/interactions/transport";
 
 const toolCalls = new AsyncLocalStorage<string>();
@@ -20,6 +26,12 @@ export interface UserInteractionSpec {
 	options?: readonly string[];
 	toolCallId?: string;
 	isSecret?: boolean;
+	asyncBatch?: {
+		requestId: string;
+		questionIds: readonly string[];
+		questions: readonly AsyncInputQuestion[];
+		item: AsyncQuestionItem;
+	};
 }
 export interface UserInteraction extends UserInteractionSpec {
 	id: string;
@@ -210,13 +222,14 @@ export class UserInteractions {
 	}
 	requestAsyncBatch(
 		specs: readonly (UserInteractionSpec & { kind: "input"; delivery: "async" })[],
+		batch?: NonNullable<UserInteractionSpec["asyncBatch"]>,
 	): Promise<string | undefined>[] {
 		if (this.#closed || this.#cancelling) throw new Error("Session interaction owner unavailable");
 		if (!specs.length || this.#pending.size + specs.length > 32)
 			throw new Error("Too many pending user interactions");
 		this.#batchDepth++;
 		try {
-			return specs.map(spec => this.request(spec));
+			return specs.map(spec => this.request({ ...spec, ...(batch ? { asyncBatch: batch } : {}) }));
 		} finally {
 			this.#batchDepth--;
 			this.#flushNotifications();
