@@ -2180,9 +2180,13 @@ describe("ModelRegistry", () => {
 				const legacyGenerated = generateModelsYml("https://proxy.example.com", {
 					apiBasePath: "/api/v1",
 					apiKeyLiteral: "test-key",
-				}).replace(/\n {8}input:\n {10}- text\n {10}- image/, "");
+				}).replace(/( {6}gpt-5\.6-sol:\n {8}reasoning: true)\n {8}input:\n {10}- text\n {10}- image/, "$1");
 				expect(legacyGenerated).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
-				expect(legacyGenerated).not.toContain("        input:");
+				const solOverride = legacyGenerated.slice(
+					legacyGenerated.indexOf("      gpt-5.6-sol:"),
+					legacyGenerated.indexOf("      gpt-5.6-terra:"),
+				);
+				expect(solOverride).not.toContain("        input:");
 				fs.writeFileSync(legacyModelsPath, legacyGenerated);
 
 				const registry = new ModelRegistry(authStorage, legacyModelsPath);
@@ -2240,6 +2244,85 @@ describe("ModelRegistry", () => {
 					compat: { supportsTemperature: false },
 				});
 				expect(registry.find("litellm", "unrelated-model")).toBeUndefined();
+			} finally {
+				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
+				else Bun.env.LITELLM_BASE_URL = previousBaseUrl;
+				if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
+				else Bun.env.LITELLM_API_KEY = previousApiKey;
+			}
+		});
+
+		test("generated config retains cached Astra with exact LiteLLM capabilities", () => {
+			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
+			const previousApiKey = Bun.env.LITELLM_API_KEY;
+			try {
+				delete Bun.env.LITELLM_BASE_URL;
+				delete Bun.env.LITELLM_API_KEY;
+				const generatedModelsPath = path.join(tempDir, "generated-models.yml");
+				const cached = {
+					...getBundledModel("litellm", "gpt-5.6-sol"),
+					id: "gpt-6-astra",
+					name: "GPT-6 Astra",
+					input: ["text"] as Array<"text" | "image">,
+				};
+				writeModelCache("litellm", Date.now(), [cached], true, cacheDbPath);
+				fs.writeFileSync(
+					generatedModelsPath,
+					generateModelsYml("https://proxy.example.com", {
+						apiBasePath: "/api/v1",
+						apiKeyLiteral: "test-key",
+					}),
+				);
+
+				const registry = new ModelRegistry(authStorage, generatedModelsPath);
+				const astra = registry.find("litellm", "gpt-6-astra");
+
+				expect(registry.getProviderDiscoveryState("litellm")?.status).toBe("cached");
+				expect(astra).toMatchObject({
+					reasoning: true,
+					input: ["text", "image"],
+					contextWindow: 1_050_000,
+					maxTokens: 128_000,
+					compat: { supportsTemperature: false },
+				});
+				expect(astra?.thinking?.defaultLevel).toBe(Effort.Medium);
+				expect(astra?.thinking?.supportedLevels.map(level => level.effort)).toEqual([
+					Effort.Low,
+					Effort.Medium,
+					Effort.High,
+					Effort.XHigh,
+					ReasoningEffort.Max,
+				]);
+			} finally {
+				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
+				else Bun.env.LITELLM_BASE_URL = previousBaseUrl;
+				if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
+				else Bun.env.LITELLM_API_KEY = previousApiKey;
+			}
+		});
+
+		test("generated config makes Astra selectable before a discovery cache exists", () => {
+			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
+			const previousApiKey = Bun.env.LITELLM_API_KEY;
+			try {
+				delete Bun.env.LITELLM_BASE_URL;
+				delete Bun.env.LITELLM_API_KEY;
+				const generatedModelsPath = path.join(tempDir, "generated-models.yml");
+				fs.writeFileSync(
+					generatedModelsPath,
+					generateModelsYml("https://proxy.example.com", {
+						apiBasePath: "/api/v1",
+						apiKeyLiteral: "test-key",
+					}),
+				);
+
+				const registry = new ModelRegistry(authStorage, generatedModelsPath);
+				expect(registry.find("litellm", "gpt-6-astra")).toMatchObject({
+					name: "GPT-6 Astra",
+					input: ["text", "image"],
+					contextWindow: 1_050_000,
+					maxTokens: 128_000,
+				});
 			} finally {
 				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
 				else Bun.env.LITELLM_BASE_URL = previousBaseUrl;

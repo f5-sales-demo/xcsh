@@ -27,8 +27,8 @@ const state = (
 beforeAll(() => initTheme());
 
 describe("authenticated provider model groups", () => {
-	it("groups both LiteLLM transports into one six-model tab", () => {
-		const ids = ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
+	it("groups both LiteLLM transports into one tab with unassigned Astra", () => {
+		const ids = ["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
 		const claudeIds = ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"];
 		const metadata = (provider: string) => ({
 			groupId: "litellm",
@@ -57,7 +57,11 @@ describe("authenticated provider model groups", () => {
 		expect(groups[0]?.label).toBe("LiteLLM");
 		expect(groups[0]?.providers).toEqual(["litellm", "anthropic"]);
 		expect(groups[0]?.stale).toBe(false);
-		expect(groups[0]?.models).toHaveLength(6);
+		expect(groups[0]?.models).toHaveLength(7);
+		expect(groups[0]?.models.some(item => item.selector === "litellm/gpt-6-astra")).toBe(true);
+		expect(Object.values(Settings.isolated().getModelRoles()).some(role => role?.includes("gpt-6-astra"))).toBe(
+			false,
+		);
 		expect(new Set(groups[0]?.models.map(item => item.sectionLabel))).toEqual(new Set(["OpenAI", "Anthropic"]));
 	});
 
