@@ -1,3 +1,4 @@
+import { matchesBaselineCatalogDiscoveryTerm, normalizeApiCatalogDiscoveryTerm } from "./api-catalog-discovery";
 import type {
 	ApiCatalogCategory,
 	ApiCatalogCategorySummary,
@@ -6,10 +7,6 @@ import type {
 } from "./api-catalog-types";
 import type { ApiSpecDomainResource, ApiSpecIndex } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
-
-function normalizeSearchTerm(s: string): string {
-	return s.toLowerCase().replace(/[_\s]+/g, "-");
-}
 
 function normalizeApiPath(apiPath: string): string {
 	return apiPath.replace(/\{(?:metadata|system_metadata)\.(namespace|name)\}/g, "{$1}");
@@ -165,13 +162,15 @@ function renderCatalogSearch(
 	term: string,
 	specIndex?: ApiSpecIndex,
 ): string {
-	const normalized = normalizeSearchTerm(term);
 	const matchingResources = (specIndex?.domains ?? []).flatMap(domain =>
 		domain.resources
 			.filter(resource =>
-				[resource.name, resource.description, resource.descriptionShort ?? "", ...(resource.apiPaths ?? [])].some(
-					value => normalizeSearchTerm(value).includes(normalized),
-				),
+				matchesBaselineCatalogDiscoveryTerm(term, [
+					resource.name,
+					resource.description,
+					resource.descriptionShort ?? "",
+					...(resource.apiPaths ?? []),
+				]),
 			)
 			.map(resource => ({ domain: domain.domain, resource })),
 	);
@@ -188,11 +187,14 @@ function renderCatalogSearch(
 			const category = data[summary.name];
 			return (
 				resourceCategoryNames.has(summary.name) ||
-				[summary.name, summary.displayName].some(value => normalizeSearchTerm(value).includes(normalized)) ||
+				matchesBaselineCatalogDiscoveryTerm(term, [summary.name, summary.displayName]) ||
 				(category?.operations ?? []).some(operation =>
-					[operation.name, operation.description, operation.path, operation.operationId].some(value =>
-						normalizeSearchTerm(value).includes(normalized),
-					),
+					matchesBaselineCatalogDiscoveryTerm(term, [
+						operation.name,
+						operation.description,
+						operation.path,
+						operation.operationId,
+					]),
 				)
 			);
 		})
@@ -573,8 +575,8 @@ function renderListableTypes(
 function renderUnknownCategory(requested: string, summaries: readonly ApiCatalogCategorySummary[]): string {
 	const suggestions = summaries
 		.filter(c => {
-			const norm = normalizeSearchTerm(requested);
-			const normName = normalizeSearchTerm(c.name);
+			const norm = normalizeApiCatalogDiscoveryTerm(requested);
+			const normName = normalizeApiCatalogDiscoveryTerm(c.name);
 			return normName.includes(norm) || norm.includes(normName.slice(0, 4));
 		})
 		.slice(0, 5);
