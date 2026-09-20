@@ -276,6 +276,7 @@ describe("setup litellm round-trip", () => {
 		expect(lines[4]).toContain("apiKey: LITELLM_API_KEY");
 		expect(yml.match(/modelAllowlist:/g)).toHaveLength(2);
 		for (const id of [
+			"gpt-6-astra",
 			"gpt-5.6-sol",
 			"gpt-5.6-terra",
 			"gpt-5.6-luna",
@@ -286,5 +287,26 @@ describe("setup litellm round-trip", () => {
 			expect(yml).toContain(`- ${id}`);
 		}
 		expect(yml.match(/groupId: litellm/g)).toHaveLength(2);
+	});
+
+	test("generated config gives Astra the full LiteLLM route capabilities", () => {
+		const yml = generateModelsYml("https://litellm.internal:4000");
+		const astra = yml.slice(yml.indexOf("      gpt-6-astra:"), yml.indexOf("      gpt-5.6-sol:"));
+
+		expect(CURRENT_CONFIG_VERSION).toBe(7);
+		expect(yml).toContain("      - id: gpt-6-astra\n        name: GPT-6 Astra");
+		expect(astra).toContain("contextWindow: 1050000");
+		expect(astra).toContain("maxTokens: 128000");
+		expect(astra).toContain("- image");
+		expect(astra).toContain("defaultLevel: medium");
+		expect(astra.match(/effort: (low|medium|high|xhigh|max)/g)).toEqual([
+			"effort: low",
+			"effort: medium",
+			"effort: high",
+			"effort: xhigh",
+			"effort: max",
+		]);
+		expect(astra).not.toContain("effort: none");
+		expect(astra).toContain("supportsTemperature: false");
 	});
 });

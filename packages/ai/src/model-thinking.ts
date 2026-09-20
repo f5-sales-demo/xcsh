@@ -420,6 +420,14 @@ function applyAnthropicCatalogPolicy(model: ApiModel<Api>, parsedModel: Anthropi
 }
 
 function applyOpenAICatalogPolicy(model: ApiModel<Api>, parsedModel: OpenAIModel): void {
+	// The ChatGPT Codex subscription transport deliberately stays in the
+	// short-context tier even when the underlying Astra model advertises its
+	// full direct-API window. Provider overrides remain available to callers.
+	if (model.provider === "openai-codex" && model.id === "gpt-6-astra") {
+		model.contextWindow = 272000;
+		model.maxTokens = 128000;
+	}
+
 	// LiteLLM's GPT-5.6 Sol route accepts image input, but upstream catalog
 	// metadata currently reports text only. Keep this correction exact so other
 	// providers and GPT-5.6 variants retain their advertised capabilities.

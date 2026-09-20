@@ -546,6 +546,37 @@ describe("model thinking runtime helpers", () => {
 });
 
 describe("discovered Codex model reasoning metadata", () => {
+	it("keeps Astra on the Codex subscription short-context route", () => {
+		const models: Model<Api>[] = [
+			{
+				...createModel({ id: "gpt-6-astra", api: "openai-codex-responses", provider: "openai-codex" }),
+				contextWindow: 1_050_000,
+				maxTokens: 128_000,
+				input: ["text", "image"],
+				thinking: createThinkingConfig(
+					[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max],
+					"effort",
+					Effort.Medium,
+				),
+			},
+		];
+
+		applyGeneratedModelPolicies(models, { preserveDiscoveredThinking: true });
+
+		expect(models[0]).toMatchObject({
+			contextWindow: 272_000,
+			maxTokens: 128_000,
+			input: ["text", "image"],
+		});
+		expect(models[0].thinking?.supportedLevels.map(level => level.effort)).toEqual([
+			Effort.Low,
+			Effort.Medium,
+			Effort.High,
+			Effort.XHigh,
+			Effort.Max,
+		]);
+	});
+
 	it.each(["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])(
 		"preserves advertised effort choices for %s",
 		id => {
