@@ -71,7 +71,19 @@ describe("createExtensionBridgeTools", () => {
 
 describe("OFFICE_TOOL_NAMES (full CLI-parity tool set)", () => {
 	test("includes the general native tools so the pane matches the CLI (bash/az/gh, file, search)", () => {
-		for (const n of ["read", "write", "edit", "bash", "grep", "todo_write", "task", "calc", "inspect_image"]) {
+		for (const n of [
+			"read",
+			"write",
+			"edit",
+			"bash",
+			"grep",
+			"todo_write",
+			"task",
+			"calc",
+			"inspect_image",
+			"request_user_input",
+			"request_user_input_async",
+		]) {
 			expect(OFFICE_TOOL_NAMES).toContain(n);
 		}
 	});
@@ -82,8 +94,7 @@ describe("OFFICE_TOOL_NAMES (full CLI-parity tool set)", () => {
 		}
 	});
 
-	test("excludes tools that would hang headless (ask) or add kernel startup cost (python)", () => {
-		expect(OFFICE_TOOL_NAMES).not.toContain("ask");
+	test("excludes tools that add kernel startup cost", () => {
 		expect(OFFICE_TOOL_NAMES).not.toContain("python");
 	});
 

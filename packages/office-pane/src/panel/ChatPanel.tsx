@@ -21,6 +21,7 @@ import {
 	F5Logo,
 	HeaderBar,
 	type ImageAttachment,
+	InteractionPanel,
 	isImageAttachment,
 	type MenuItem,
 	type SkillPill,
@@ -193,6 +194,10 @@ export function ChatPanel({
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason }), [turns, status, reason]);
 	const streaming = status === "streaming";
+	const interactionTransport = useMemo(
+		() => ({ send: transport.send.bind(transport), onMessage: transport.onMessage.bind(transport) }),
+		[transport],
+	);
 
 	// The "+" categories: photos + file/folder context + the web-search toggle always;
 	// Skills only when the engine reports skills.
@@ -488,6 +493,7 @@ export function ChatPanel({
 			/>
 			{/* No interaction-mode toggle: those modes are Chrome browser-automation
 			    only. The Office pane fixes the mode to `educational` (see useChatSession). */}
+			{ready && !viewing ? <InteractionPanel transport={interactionTransport} /> : null}
 			<Composer
 				ref={composerRef}
 				streaming={streaming}

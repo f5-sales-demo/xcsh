@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { connect } from "node:net";
 
 export const HERDR_PROTOCOL_MIN_VERSION = 19;
-export const HERDR_PROTOCOL_MAX_VERSION = 23;
+export const HERDR_PROTOCOL_MAX_VERSION = 25;
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
@@ -59,6 +59,11 @@ export class HerdrClient {
 
 	get protocolVersion(): number | undefined {
 		return this.negotiatedProtocol;
+	}
+
+	capabilityVersion(name: string): number | undefined {
+		const version = this.capabilities[name];
+		return typeof version === "number" && Number.isSafeInteger(version) ? version : undefined;
 	}
 
 	hasCapability(name: string): boolean {

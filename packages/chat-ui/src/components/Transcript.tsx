@@ -139,6 +139,7 @@ function renderMessage(
 		<AssistantMessage
 			key={m.id}
 			text={m.text}
+			phase={m.phase}
 			references={m.references}
 			media={m.media}
 			streaming={streaming && m.id === lastId}

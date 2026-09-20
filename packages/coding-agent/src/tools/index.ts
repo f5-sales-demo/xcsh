@@ -18,7 +18,6 @@ import { TaskTool } from "../task";
 import type { AgentOutputManager } from "../task/output-manager";
 import type { EventBus } from "../utils/event-bus";
 import { SearchTool } from "../web/search";
-import { AskTool } from "./ask";
 import { AstEditTool } from "./ast-edit";
 import { AstGrepTool } from "./ast-grep";
 import { BashTool } from "./bash";
@@ -29,7 +28,6 @@ import { CatalogWorkflowRunnerTool } from "./catalog-workflow-runner";
 import { type CheckpointState, CheckpointTool, RewindTool } from "./checkpoint";
 import { DebugTool } from "./debug";
 import { DisplayMediaTool } from "./display-media";
-import { ExitPlanModeTool } from "./exit-plan-mode";
 import { FindTool } from "./find";
 import { GetPageContextTool } from "./get-page-context";
 import { GrepTool } from "./grep";
@@ -44,6 +42,7 @@ import { ReadTool } from "./read";
 import { RenderMapTool } from "./render-map";
 import { RenderMermaidTool } from "./render-mermaid";
 import { createReportToolIssueTool, isAutoQaEnabled } from "./report-tool-issue";
+import { RequestUserInputAsyncTool, RequestUserInputTool } from "./request-user-input";
 import { ResolveTool } from "./resolve";
 import { reportFindingTool } from "./review";
 import { SearchToolBm25Tool } from "./search-tool-bm25";
@@ -64,7 +63,6 @@ export * from "../lsp";
 export * from "../session/streaming-output";
 export * from "../task";
 export * from "../web/search";
-export * from "./ask";
 export * from "./ast-edit";
 export * from "./ast-grep";
 export * from "./bash";
@@ -75,7 +73,6 @@ export * from "./catalog-workflow-runner";
 export * from "./checkpoint";
 export * from "./debug";
 export * from "./display-media";
-export * from "./exit-plan-mode";
 export * from "./find";
 export * from "./gemini-image";
 export * from "./grep";
@@ -87,6 +84,8 @@ export * from "./read";
 export * from "./render-map";
 export * from "./render-mermaid";
 export * from "./report-tool-issue";
+export * from "./request-user-input";
+export * from "./request-user-input";
 export * from "./resolve";
 export * from "./review";
 export * from "./search-tool-bm25";
@@ -109,6 +108,15 @@ export type { DiscoverableMCPTool } from "../mcp/discoverable-tool-metadata";
 
 /** Session context for tool factories */
 export interface ToolSession {
+	getUserInteractions?: () => import("../session/user-interactions").UserInteractions;
+	getInteractionIdentity?: (itemId: string) => import("../session/user-interactions").InteractionIdentity;
+	publishAsyncQuestions?: (
+		itemId: string,
+		questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[],
+		questionIds: string[],
+	) => void;
+	deliverAsyncAnswer?: (itemId: string, questionId: string, answer: string) => Promise<void>;
+	reportInteractionFailure?: (itemId: string, error: unknown) => void;
 	getContextService?: () => Promise<import("../services/xcsh-context").ContextService>;
 	personProfileService?: import("../person-profile/service").PersonProfileService;
 	machineProfileService?: import("../person-profile/machine-profile").MachineProfileService;
@@ -233,7 +241,8 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	ast_grep: s => new AstGrepTool(s),
 	ast_edit: s => new AstEditTool(s),
 	render_mermaid: s => new RenderMermaidTool(s),
-	ask: AskTool.createIf,
+	request_user_input: s => new RequestUserInputTool(s),
+	request_user_input_async: s => new RequestUserInputAsyncTool(s),
 	bash: s => new BashTool(s),
 	debug: DebugTool.createIf,
 	python: s => new PythonTool(s),
@@ -268,7 +277,6 @@ export const HIDDEN_TOOLS: Record<string, ToolFactory> = {
 	submit_result: s => new SubmitResultTool(s),
 	report_finding: () => reportFindingTool,
 	report_tool_issue: s => createReportToolIssueTool(s),
-	exit_plan_mode: s => new ExitPlanModeTool(s),
 	resolve: s => new ResolveTool(s),
 };
 
@@ -312,9 +320,6 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 	const enableLsp = session.enableLsp ?? true;
 	const requestedTools =
 		toolNames && toolNames.length > 0 ? [...new Set(toolNames.map(name => name.toLowerCase()))] : undefined;
-	if (requestedTools && !requestedTools.includes("exit_plan_mode")) {
-		requestedTools.push("exit_plan_mode");
-	}
 	const pythonMode = getPythonModeFromEnv() ?? session.settings.get("python.toolMode");
 	const skipPythonPreflight = session.skipPythonPreflight === true;
 	let pythonAvailable = true;
@@ -444,7 +449,6 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 			: [
 					...Object.entries(BUILTIN_TOOLS).filter(([name]) => isToolAllowed(name)),
 					...(includeSubmitResult ? ([["submit_result", HIDDEN_TOOLS.submit_result]] as const) : []),
-					...([["exit_plan_mode", HIDDEN_TOOLS.exit_plan_mode]] as const),
 				];
 
 	const baseResults = await Promise.all(

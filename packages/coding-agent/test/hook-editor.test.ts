@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { setKeybindings, type TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { KeybindingsManager } from "../src/config/keybindings";
 import { HookEditorComponent } from "../src/modes/components/hook-editor";
+import { RequestUserInputComponent } from "../src/modes/components/request-user-input";
 import { ExtensionUiController } from "../src/modes/controllers/extension-ui-controller";
 import { getThemeByName, setThemeInstance } from "../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../src/modes/types";
@@ -48,7 +49,7 @@ type TestContext = InteractiveModeContext & {
 
 function createControllerContext() {
 	const notifyUserPrompt = vi.fn();
-	const editor = { id: "core-editor" };
+	const editor = { id: "core-editor", getText: () => "draft", setText: vi.fn() };
 	const editorContainer = {
 		children: [editor] as unknown[],
 		clear() {
@@ -424,53 +425,60 @@ describe("ExtensionUiController hook editor abort", () => {
 		expect(editorContainer.children).toEqual([editor]);
 	});
 
-	it("a grouped remote answer dismisses the terminal form without exposing intermediate dialogs", async () => {
+	it("a remote answer dismisses the terminal form and restores the draft", async () => {
 		const { ctx, editorContainer, editor } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);
-		const questions = [
-			{ id: "colors", question: "Colors?", options: [{ label: "Blue" }, { label: "Green" }], multi: true },
-			{ id: "note", question: "Note?", options: [] },
-		];
-		const result = controller.showHookQuestions(questions);
-		const pending = ctx.session.userInteractions.pending();
-		expect(pending).toHaveLength(1);
-		expect(pending[0]).toMatchObject({ kind: "questions", questions });
-		const oldWidget = ctx.hookSelector!;
-		const answer = {
-			colors: { selectedOptions: ["Blue", "Green"] },
-			note: { selectedOptions: [], customInput: "Keep both" },
-		};
-		expect(ctx.session.userInteractions.respond(pending[0].id, answer)).toBe(true);
+		controller.initializeInteractionPresenters();
+		const result = ctx.session.userInteractions.requestInput({
+			title: "Colors",
+			inputQuestions: [
+				{
+					id: "color",
+					header: "Color",
+					question: "Color?",
+					options: [{ label: "Blue", description: "Cool" }],
+					isOther: true,
+				},
+			],
+		});
+		await Bun.sleep(0);
+		const oldWidget = editorContainer.children[0] as RequestUserInputComponent;
+		expect(oldWidget).toBeInstanceOf(RequestUserInputComponent);
+		const pending = ctx.session.userInteractions.pending()[0];
+		const answer = { answers: { color: { answers: ["Blue", "user_note: Keep it"] } } };
+		expect(ctx.session.userInteractions.respond(pending.id, answer)).toBe(true);
 		expect(await result).toEqual(answer);
-		const next = controller.showHookInput("Next");
-		const nextWidget = ctx.hookInput;
-		oldWidget.handleInput("\x1b");
-		expect(editorContainer.children).toEqual([nextWidget]);
-		ctx.session.userInteractions.cancelAll();
-		await next;
+		await Bun.sleep(0);
 		expect(editorContainer.children).toEqual([editor]);
+		oldWidget.handleInput("\r");
+		expect(ctx.session.userInteractions.pending()).toEqual([]);
+		expect(editor.setText).toHaveBeenCalledWith("draft");
 	});
 
-	it("the terminal completes grouped choices and free text through one request identity", async () => {
+	it("terminal choices and notes commit through one request identity", async () => {
 		const { ctx, editorContainer, editor } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);
-		const result = controller.showHookQuestions([
-			{ id: "color", question: "Color?", options: [{ label: "Blue" }] },
-			{ id: "note", question: "Note?", options: [] },
-		]);
-		const id = ctx.session.userInteractions.pending()[0].id;
-		ctx.hookSelector!.handleInput("\r");
-		await Bun.sleep(0);
-		expect(ctx.session.userInteractions.pending().map(value => value.id)).toEqual([id]);
-		ctx.hookSelector!.handleInput("\r");
-		await Bun.sleep(0);
-		ctx.hookEditor!.handleInput("Local note");
-		ctx.hookEditor!.handleInput("\r");
-		expect(await result).toEqual({
-			color: { selectedOptions: ["Blue"] },
-			note: { selectedOptions: [], customInput: "Local note" },
+		controller.initializeInteractionPresenters();
+		const result = ctx.session.userInteractions.requestInput({
+			title: "Question",
+			inputQuestions: [
+				{
+					id: "color",
+					header: "Color",
+					question: "Color?",
+					options: [{ label: "Blue", description: "Cool" }],
+					isOther: true,
+				},
+			],
 		});
-		expect(ctx.session.userInteractions.pending()).toEqual([]);
+		await Bun.sleep(0);
+		const widget = editorContainer.children[0] as RequestUserInputComponent;
+		widget.handleInput("\t");
+		widget.handleInput("Local note");
+		expect(ctx.session.userInteractions.pending()).toHaveLength(1);
+		widget.handleInput("\r");
+		expect(await result).toEqual({ answers: { color: { answers: ["Blue", "user_note: Local note"] } } });
+		await Bun.sleep(0);
 		expect(editorContainer.children).toEqual([editor]);
 	});
 

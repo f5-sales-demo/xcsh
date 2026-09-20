@@ -837,6 +837,18 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 					"annotation": "Annotate the page for documentation and teaching."
 				}
 			}
+		},
+		"interactions": {
+			"contract": "xcsh.interaction.v1",
+			"waiting": "request_user_input",
+			"asynchronous": "request_user_input_async",
+			"planActions": [
+				"implement",
+				"fresh",
+				"stay"
+			],
+			"snapshot": true,
+			"responseReceipts": true
 		}
 	}
 };

@@ -19,6 +19,7 @@ const COMMIT_PROMPTS_DIR = new URL("../src/commit/prompts/", import.meta.url).pa
 const AGENTIC_PROMPTS_DIR = new URL("../src/commit/agentic/prompts/", import.meta.url).pathname;
 
 const PROMPT_DIRS = [PROMPTS_DIR, COMMIT_PROMPTS_DIR, AGENTIC_PROMPTS_DIR];
+const SOURCE_EXACT_PROMPTS = new Set([`${PROMPTS_DIR}system/plan-mode-active.md`]);
 
 const PROMPT_FORMAT_OPTIONS = {
 	renderPhase: "pre-render",
@@ -34,7 +35,9 @@ async function main() {
 
 	for (const dir of PROMPT_DIRS) {
 		for await (const path of glob.scan(dir)) {
-			files.push(`${dir}${path}`);
+			const fullPath = `${dir}${path}`;
+			// Codex parity fixtures verify this prompt byte-for-byte against the pinned source.
+			if (!SOURCE_EXACT_PROMPTS.has(fullPath)) files.push(fullPath);
 		}
 	}
 

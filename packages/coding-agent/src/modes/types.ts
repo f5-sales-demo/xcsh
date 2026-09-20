@@ -14,7 +14,7 @@ import type { MCPManager } from "../mcp";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import type { HistoryStorage } from "../session/history-storage";
 import type { NewSessionOptions, SessionContext, SessionManager } from "../session/session-manager";
-import type { ExitPlanModeDetails, LspStartupServerInfo } from "../tools";
+import type { LspStartupServerInfo } from "../tools";
 import type { OpenHttpUrlResult } from "../utils/open";
 import type { AssistantMessageComponent } from "./components/assistant-message";
 import type { BashExecutionComponent } from "./components/bash-execution";
@@ -87,7 +87,7 @@ export interface InteractiveModeContext {
 	toolOutputExpanded: boolean;
 	todoExpanded: boolean;
 	planModeEnabled: boolean;
-	planModePlanFilePath?: string;
+	setRemoteCollaborationMode(mode: "plan" | "default"): Promise<void>;
 	hideThinkingBlock: boolean;
 	pendingImages: ImageContent[];
 	compactionQueuedMessages: CompactionQueuedMessage[];
@@ -245,7 +245,6 @@ export interface InteractiveModeContext {
 	openExternalEditor(): void;
 	registerExtensionShortcuts(): void;
 	handlePlanModeCommand(initialPrompt?: string): Promise<void>;
-	handleExitPlanModeTool(details: ExitPlanModeDetails, toolCallId?: string): Promise<void>;
 
 	// Hook UI methods
 	initHooksAndCustomTools(): Promise<void>;

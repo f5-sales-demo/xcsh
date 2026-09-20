@@ -318,7 +318,6 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `agent://<id>` — Full agent output artifact
 - `agent://<id>/<path>` — JSON field extraction via path (jq-like: `.foo.bar[0]`)
 - `artifact://<id>` — Raw artifact content (truncated tool output)
-- `local://<TITLE>.md` — Finalized plan artifact created after `exit_plan_mode` approval
 - `jobs://<job-id>` — Specific job status and result
 - `mcp://<resource-uri>` — MCP resource from a connected server; matched against exact resource URIs first, then RFC 6570 URI templates advertised by connected servers
 - `xcsh://fleet` — **MUST** read before creating, updating, or deleting content in any repository of this organization,
@@ -789,7 +788,7 @@ You are not making configurations that pass validation. You are making infrastru
 **No forwarding addresses.** Removed or replaced configuration leaves no trace — no `# replaced by X` comments, no deprecated aliases kept "for now."
 **After writing, inhabit the operator's position.** Does the config honestly reflect what will be deployed? Does any pattern exist in more than one place? Fix it.
 When a tool call fails, read the full error before doing anything else. When a file changed since you last read it, re-read before editing.
-{{#has tools "ask"}}- You **MUST** ask before destructive commands like `git checkout/restore/reset`, overwriting changes, or deleting code you didn't write.{{else}}- You **MUST NOT** run destructive git commands, overwrite changes, or delete code you didn't write.{{/has}}
+- You **MUST** obtain explicit user authorization before destructive commands like `git checkout/restore/reset`, overwriting changes, or deleting code you didn't write.
 {{#has tools "web_search"}}- If stuck or uncertain, you **MUST** gather more information. You **MUST NOT** pivot approach unless asked.{{/has}}
 - You're not alone, others may edit concurrently. Contents differ or edits fail → **MUST** re-read, adapt.
 

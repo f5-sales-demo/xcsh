@@ -18,24 +18,11 @@ export function resolvePlanPath(session: ToolSession, targetPath: string): strin
 
 export function enforcePlanModeWrite(
 	session: ToolSession,
-	targetPath: string,
-	options?: { move?: string; op?: "create" | "update" | "delete" },
+	_targetPath: string,
+	_options?: { move?: string; op?: "create" | "update" | "delete" },
 ): void {
 	const state = session.getPlanModeState?.();
 	if (!state?.enabled) return;
 
-	const resolvedTarget = resolvePlanPath(session, targetPath);
-	const resolvedPlan = resolvePlanPath(session, state.planFilePath);
-
-	if (options?.move) {
-		throw new ToolError("Plan mode: renaming files is not allowed.");
-	}
-
-	if (options?.op === "delete") {
-		throw new ToolError("Plan mode: deleting files is not allowed.");
-	}
-
-	if (resolvedTarget !== resolvedPlan) {
-		throw new ToolError(`Plan mode: only the plan file may be modified (${state.planFilePath}).`);
-	}
+	throw new ToolError("Plan mode: file modifications are not allowed.");
 }

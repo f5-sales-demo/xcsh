@@ -7,7 +7,6 @@ import { Type } from "@sinclair/typebox";
 import { ModelRegistry } from "../../src/config/model-registry";
 import { Settings } from "../../src/config/settings";
 import type { CustomToolContext } from "../../src/extensibility/custom-tools/types";
-import type { ExtensionUIContext } from "../../src/extensibility/extensions/types";
 import { ExtensionUiController } from "../../src/modes/controllers/extension-ui-controller";
 import { initTheme } from "../../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../../src/modes/types";
@@ -17,8 +16,8 @@ import { connectPeer } from "../../src/remote-control/ipc";
 import { AgentSession } from "../../src/session/agent-session";
 import { AuthStorage } from "../../src/session/auth-storage";
 import { SessionManager } from "../../src/session/session-manager";
-import { AskTool } from "../../src/tools/ask";
 import { ToolContextStore } from "../../src/tools/context";
+import { RequestUserInputTool } from "../../src/tools/request-user-input";
 
 test.each(["scalar", "group"])(
 	"a real owner question survives host restart and the phone answers its original tool once (%s)",
@@ -32,11 +31,25 @@ test.each(["scalar", "group"])(
 		const entered = Promise.withResolvers<void>();
 		const grouped = kind === "group";
 		const questions = [
-			{ id: "colors", question: "Colors?", options: [{ label: "Blue" }, { label: "Green" }], multi: true },
-			{ id: "note", question: "Note?", options: [] },
+			{
+				id: "colors",
+				header: "Colors",
+				question: "Colors?",
+				options: [
+					{ label: "Blue", description: "First" },
+					{ label: "Green", description: "Second" },
+				],
+			},
+			{
+				id: "note",
+				header: "Note",
+				question: "Note?",
+				options: [{ label: "Keep both", description: "Preserve choices" }],
+			},
 		];
-		const settings = Settings.isolated({ "compaction.enabled": false, "ask.notify": "off" });
-		const ask = new AskTool({
+		const settings = Settings.isolated({ "compaction.enabled": false, "interactions.waitingInDefault": true });
+		const ask = new RequestUserInputTool({
+			getUserInteractions: () => session.userInteractions,
 			cwd: dir,
 			hasUI: true,
 			settings,
@@ -87,7 +100,7 @@ test.each(["scalar", "group"])(
 								{
 									type: "toolCall",
 									id: "fixture-call",
-									name: grouped ? "ask" : "fixture",
+									name: grouped ? "request_user_input" : "fixture",
 									arguments: grouped ? { questions } : {},
 								},
 							]
@@ -119,6 +132,7 @@ test.each(["scalar", "group"])(
 			sessionManager: manager,
 			settings,
 			modelRegistry: new ModelRegistry(auth),
+			toolRegistry: new Map([[ask.name, ask as never]]),
 		});
 		const editor = { id: "core-editor" };
 		const children: unknown[] = [];
@@ -133,11 +147,7 @@ test.each(["scalar", "group"])(
 			},
 			ui: { requestRender() {}, setFocus() {}, terminal: { columns: 120, rows: 24 } },
 		} as unknown as InteractiveModeContext;
-		const controller = new ExtensionUiController(ctx);
-		contextStore.setUIContext(
-			{ questions: (value, options) => controller.showHookQuestions(value, options) } as ExtensionUIContext,
-			true,
-		);
+		const _controller = new ExtensionUiController(ctx);
 		// This scenario exercises remote ownership across a host restart. Keep the
 		// synthetic terminal surface paused so its incomplete UI stub cannot settle
 		// the same broker request before the phone does.
@@ -201,12 +211,18 @@ test.each(["scalar", "group"])(
 				id: original.id,
 				result: {
 					answers: grouped
-						? { colors: { answers: ["Blue", "Green"] }, note: { answers: ["Keep both"] } }
+						? { colors: { answers: ["Blue", "user_note: Green too"] }, note: { answers: ["Keep both"] } }
 						: { [original.id]: { answers: ["Deny"] } },
 				},
 			};
 			expect(await phone.call("protocol", { request: response })).toBeNull();
-			await agent.waitForIdle();
+			await waitFor(() => session.userInteractions.pending().length === 0);
+			await Promise.race([
+				agent.waitForIdle(),
+				Bun.sleep(2000).then(() => {
+					throw new Error("agent did not become idle after the accepted interaction response");
+				}),
+			]);
 			await waitFor(() => events.some(event => event.method === "serverRequest/resolved"));
 			if (grouped) {
 				expect(askExecute).toHaveBeenCalledTimes(1);

@@ -1,0 +1,16 @@
+{
+  "commit": "392f56a611c412b9b2eb1d9d4e59a3b42bee483a",
+  "repository": "https://github.com/openai/codex",
+  "files": {
+    "codex-rs/core/src/tools/handlers/request_user_input_spec.source": "86ef5b005211ea6cc14c5a99821357a4484cccbb4756c911bbeba3913315d16f",
+    "codex-rs/core/src/tools/handlers/request_user_input_spec_tests.source": "b8a63477430a481f8368df689ed92683ec1c5c86b8e8b3d5027b4db2f92ec97a",
+    "codex-rs/core/src/tools/handlers/request_user_input_async.source": "c6d01d84aa0d3af0aa3427dff6ab0fafc4ec9d08027966c0bbae4813b567e31b",
+    "codex-rs/protocol/src/request_user_input.source": "616c81d35b96785aa30766bedb50d4597aae219879b237b4a2ebbe8315242591",
+    "codex-rs/collaboration-mode-templates/templates/plan.source": "d6d46c2d460a9d91ada2167605a8dfc56efde6b2ab61e101444c736c6fd6960a",
+    "codex-rs/tui/src/chatwidget/plan_implementation.source": "40377f0e255332ad25394869c3c2b64b21f431bdf4834716f93521ef84d28d36",
+    "codex-rs/tui/src/bottom_pane/request_user_input/mod.source": "fb1d21766904199c07b162c719848df426343863a0fe1a18e2ac46d8c67876db",
+    "codex-rs/tui/src/bottom_pane/request_user_input/render.source": "686ee905a854d8aa94d530597cdd695c93821e104b557c6995c8bf13ea5dc4c1",
+    "LICENSE": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc",
+    "NOTICE": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915"
+  }
+}

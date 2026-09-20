@@ -173,7 +173,7 @@ function nativeCapability(): string | undefined {
 
 /** Protocol 23 adds a workspace receipt without changing native action semantics. */
 function supportsNativeLifecycle(protocol: number | undefined): boolean {
-	return protocol === 22 || protocol === 23;
+	return protocol !== undefined && protocol >= 22 && protocol <= 25;
 }
 
 function persistedTurns(ctx: ExtensionContext): PersistedTurn[] {
@@ -962,7 +962,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		if (!normalizedPhasesObserved) scheduleSettledTurnReconcile(ctx);
 	});
 
-	// An interactive prompt (permission gate, ask tool, confirm/input) is
+	// An interactive prompt (permission gate, waiting user-input tool, confirm/input) is
 	// awaiting the user: that is herdr's "needs attention" (blocked) state.
 	pi.on("user_prompt_start", async event => {
 		promptBlockedReason = getPromptBlockedReason(event.kind);

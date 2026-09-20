@@ -1,6 +1,7 @@
 import { INTENT_FIELD } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { Loader, Spacer, TERMINAL } from "@f5-sales-demo/pi-tui";
+import { PLAN_ACTIONS } from "../../../../chat-ui/src/interactions/conversation-plan";
 import { settings } from "../../config/settings";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
@@ -19,7 +20,7 @@ import type { InteractiveModeContext, TodoPhase } from "../../modes/types";
 import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome-aggregator";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import { calculatePromptTokens } from "../../session/compaction/compaction";
-import type { ExitPlanModeDetails } from "../../tools";
+import { HookSelectorComponent } from "../components/hook-selector";
 
 export class EventController {
 	#lastReadGroup: ReadToolGroupComponent | undefined = undefined;
@@ -142,6 +143,49 @@ export class EventController {
 		this.ctx.updateEditorTopBorder();
 
 		switch (event.type) {
+			case "plan_resolved":
+				if (!this.ctx.session.getPlanModeState()?.enabled) await this.ctx.setRemoteCollaborationMode("default");
+				break;
+			case "async_user_input":
+				this.ctx.showStatus(`${event.item.text}\nUse /questions to answer while work continues.`);
+				break;
+			case "plan_available": {
+				void this.ctx
+					.showHookCustom<string | undefined>((tui, _theme, _keys, done) => {
+						const unsubscribe = this.ctx.session.subscribe(next => {
+							if (
+								(next.type === "plan_resolved" && next.planId === event.plan.id) ||
+								next.type === "agent_start"
+							)
+								done(undefined);
+						});
+						const component = new HookSelectorComponent(
+							"Implement this plan?",
+							PLAN_ACTIONS.map(action => action.label),
+							done,
+							() => done(undefined),
+							{ tui },
+						);
+						const dispose = component.dispose.bind(component);
+						component.dispose = () => {
+							unsubscribe();
+							dispose();
+						};
+						return component;
+					})
+					.then(async label => {
+						const action = PLAN_ACTIONS.find(action => action.label === label);
+						if (!action) return;
+						await this.ctx.session.decidePlan(event.plan.id, action.id);
+						if (!this.ctx.session.getPlanModeState()?.enabled) {
+							this.ctx.planModeEnabled = false;
+							this.ctx.statusLine.setPlanModeStatus(undefined);
+							this.ctx.ui.requestRender();
+						}
+					})
+					.catch(error => this.ctx.showError(String(error)));
+				break;
+			}
 			case "turn_phase":
 				this.ctx.statusLine.setTurnPhase(event.phase);
 				this.ctx.ui.requestRender();
@@ -498,12 +542,7 @@ export class EventController {
 						`Todo update failed${textContent ? `: ${textContent}` : ". Progress may be stale until todo_write succeeds."}`,
 					);
 				}
-				if (event.toolName === "exit_plan_mode" && !event.isError) {
-					const details = event.result.details as ExitPlanModeDetails | undefined;
-					if (details) {
-						await this.ctx.handleExitPlanModeTool(details, event.toolCallId);
-					}
-				}
+
 				break;
 			}
 

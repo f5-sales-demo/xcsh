@@ -42,6 +42,8 @@ export interface ChatMessage {
 	id: string;
 	role: ChatRole;
 	text: string;
+	/** Assistant stream phase; hosts preserve separate commentary and final rows. */
+	phase?: "commentary" | "final_answer";
 	/** tool rows only: the tool name and whether it succeeded. */
 	tool?: string;
 	ok?: boolean;

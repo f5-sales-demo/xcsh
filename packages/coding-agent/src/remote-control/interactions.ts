@@ -125,6 +125,7 @@ export class RemoteInteractions {
 		for (const interaction of broker.pending()) this.#open(interaction);
 	}
 	#open(interaction: UserInteraction): void {
+		if (interaction.delivery === "async") return;
 		if (!interaction.toolCallId) return;
 		const context = this.context(interaction.toolCallId, interaction);
 		if (!context) return;
@@ -171,28 +172,13 @@ export class RemoteInteractions {
 				params: {
 					...wireContext,
 					questions:
-						interaction.kind === "questions"
-							? interaction.questions?.map(question => ({
-									id: question.id,
-									header: question.header ?? question.id,
-									question: question.question,
-									isOther: question.isOther ?? true,
-									isSecret: question.isSecret ?? false,
-									options: question.options.length
-										? question.options.map((option, index) => ({
-												label: option.label,
-												description:
-													option.description ?? (index === question.recommended ? "Recommended" : ""),
-											}))
-										: null,
-								}))
+						interaction.kind === "request_user_input"
+							? interaction.inputQuestions
 							: [
 									{
 										id: interaction.id,
 										header: "Question",
-										question: interaction.planReview
-											? `${interaction.title}\n\nPlan: ${interaction.planReview.planFilePath}\n\n${interaction.planReview.content}`
-											: interaction.title,
+										question: interaction.title,
 										isOther: false,
 										isSecret: interaction.isSecret ?? false,
 										options:
@@ -239,34 +225,9 @@ export class RemoteInteractions {
 			return { accepted: true };
 		}
 		if (!record(response) || !record(response.answers)) throw invalid();
-		if (pending.interaction.kind === "questions") {
-			const questions = pending.interaction.questions ?? [];
-			const answers = response.answers;
-			if (Object.keys(answers).length === 0) return { accepted: this.broker.respond(id, undefined) };
-			if (Object.keys(answers).length !== questions.length) throw invalid();
-			const values = Object.fromEntries(
-				questions.map(question => {
-					if (!Object.hasOwn(answers, question.id)) throw invalid();
-					const answer = answers[question.id];
-					if (
-						!record(answer) ||
-						!Array.isArray(answer.answers) ||
-						answer.answers.some(value => typeof value !== "string")
-					)
-						throw invalid();
-					const selectedOptions = answer.answers.filter(value =>
-						question.options.some(option => option.label === value),
-					);
-					const custom = answer.answers.filter(value => !question.options.some(option => option.label === value));
-					if (custom.length > 1) throw invalid();
-					return [question.id, { selectedOptions, ...(custom.length ? { customInput: custom[0] } : {}) }];
-				}),
-			);
-			const emptySingle =
-				questions.length === 1 &&
-				values[questions[0].id].selectedOptions.length === 0 &&
-				values[questions[0].id].customInput === undefined;
-			if (!this.broker.respond(id, emptySingle ? undefined : values)) throw invalid();
+		if (pending.interaction.kind === "request_user_input") {
+			if (Object.keys(response.answers).length === 0) return { accepted: this.broker.resolve(id, "dismissed") };
+			if (!this.broker.respond(id, response)) throw invalid();
 			return { accepted: true };
 		}
 		const keys = Object.keys(response.answers);
