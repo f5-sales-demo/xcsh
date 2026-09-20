@@ -552,6 +552,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		},
 	},
 	{
+		name: "questions",
+		description: "Answer pending questions while work continues",
+		handle: (_command, runtime) => {
+			const pending = runtime.ctx.session.userInteractions.pending().filter(request => request.delivery === "async");
+			if (!pending.length) runtime.ctx.showStatus("No pending questions.");
+			for (const request of pending) runtime.ctx.session.userInteractions.presentAsync(request.id);
+			runtime.ctx.editor.setText("");
+		},
+	},
+	{
 		name: "plan",
 		description: t("commands.plan.description"),
 		inlineHint: t("commands.plan.inlineHint"),

@@ -7,7 +7,6 @@ import { GutterBlock } from "../src/modes/components/gutter-block";
 import { ToolExecutionComponent } from "../src/modes/components/tool-execution";
 import { getThemeByName, initTheme, type Theme } from "../src/modes/theme/theme";
 import { taskToolRenderer } from "../src/task/render";
-import { askToolRenderer } from "../src/tools/ask";
 import { astEditToolRenderer } from "../src/tools/ast-edit";
 import { astGrepToolRenderer } from "../src/tools/ast-grep";
 import { bashToolRenderer } from "../src/tools/bash";
@@ -363,16 +362,6 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 			const component = renderExaResult(result as never, fullOptions, theme);
 			assertNoGlyphInFull(component, `exa (${label})`);
 		}
-	});
-
-	it("ask renderResult (fallback, no details) is glyph-free", async () => {
-		const theme = (await getThemeByName("xcsh-dark")) as Theme;
-		// Note: ask's per-question result branch intentionally renders status.success/
-		// status.warning symbols as part of each question verdict. The fallback branch
-		// (no details) renders just the header and raw text, which must stay glyph-free.
-		const result = { content: [{ type: "text", text: "plain fallback answer" }] };
-		const component = askToolRenderer.renderResult(result as never, { expanded: true, isPartial: false }, theme);
-		assertNoGlyphInFull(component, "ask (fallback)");
 	});
 
 	it("search-tool-bm25 renderResult is glyph-free", async () => {

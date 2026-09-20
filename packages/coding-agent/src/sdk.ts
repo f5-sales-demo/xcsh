@@ -1106,6 +1106,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const profileService = options.personProfileService ?? personProfileService;
 		const deviceService = options.machineProfileService ?? machineProfileService;
 		const toolSession: ToolSession = {
+			getUserInteractions: () => session.userInteractions,
+			getInteractionIdentity: itemId => session.getInteractionIdentity(itemId),
+			publishAsyncQuestions: (itemId, questions, questionIds) =>
+				session.publishAsyncQuestions(itemId, questions, questionIds),
+			deliverAsyncAnswer: (itemId, questionId, answer) => session.deliverAsyncAnswer(itemId, questionId, answer),
+			reportInteractionFailure: (itemId, error) => session.reportInteractionFailure(itemId, error),
 			personProfileService: profileService,
 			machineProfileService: deviceService,
 			cwd,
@@ -1777,15 +1783,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			(options.toolNames ? [...new Set(options.toolNames.map(name => name.toLowerCase()))] : undefined) ??
 			toolNamesFromRegistry;
 		const normalizedRequested = requestedToolNames.filter(name => toolRegistry.has(name));
-		const includeExitPlanMode = requestedToolNames.includes("exit_plan_mode");
 		const progressiveLoading = contextLoadingMode === "progressive";
 		const mcpDiscoveryEnabled = (settings.get("mcp.discoveryMode") ?? false) || progressiveLoading;
 		const defaultInactiveToolNames = new Set(
 			registeredTools.filter(tool => tool.definition.defaultInactive).map(tool => tool.definition.name),
 		);
-		const requestedActiveToolNames = includeExitPlanMode
-			? normalizedRequested
-			: normalizedRequested.filter(name => name !== "exit_plan_mode");
+		const requestedActiveToolNames = normalizedRequested;
 		const progressiveCoreToolNames = [
 			"read",
 			"grep",

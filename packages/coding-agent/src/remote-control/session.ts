@@ -4,6 +4,7 @@ import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Model, Usage } from "@f5-sales-demo/pi-ai";
+import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
 	applyRemotePermissionProfile,
@@ -73,6 +74,8 @@ export type SessionTarget = Pick<
 			| "addBeforeDisposeHook"
 			| "addBeforeUserInputHook"
 			| "userInteractions"
+			| "conversationPlans"
+			| "decidePlan"
 			| "isSessionChanging"
 			| "isDisposing"
 		>
@@ -248,26 +251,8 @@ export class RemoteSession {
 		if (target.userInteractions)
 			this.#interactions = new RemoteInteractions(
 				target.userInteractions,
-				(toolCallId, interaction) => {
+				(toolCallId, _interaction) => {
 					if (this.#disposed || this.#suspended || this.#boundId !== target.sessionId) return undefined;
-					if (interaction.planReview) {
-						if (
-							interaction.planReview.sessionId !== this.#boundId ||
-							interaction.planReview.toolCallId !== toolCallId
-						)
-							return undefined;
-						for (const turn of this.history().toReversed()) {
-							const item = turn.items.findLast(
-								value =>
-									value.type === "dynamicToolCall" &&
-									value.tool === "exit_plan_mode" &&
-									value.status === "completed" &&
-									String(value.id).endsWith(`:tool:${toolCallId}`),
-							);
-							if (item) return { threadId: this.#threadId, turnId: turn.id, itemId: String(item.id) };
-						}
-						return undefined;
-					}
 					if (!this.#active) return undefined;
 					const item = this.#active.items.findLast(
 						value =>
@@ -730,6 +715,34 @@ export class RemoteSession {
 			return Promise.reject(error);
 		}
 		params = params.threadId === this.#boundId ? params : { ...params, threadId: this.#boundId };
+		if (method === "xcsh/interaction") {
+			const command = params.command;
+			if (!isInteractionCommand(command))
+				return Promise.reject(new ProtocolError(-32602, "Invalid interaction command"));
+			const owner = this.target.userInteractions;
+			if (!owner) return Promise.reject(new ProtocolError(-32601, "Session interactions unavailable"));
+			if (command.type === "interaction_snapshot")
+				return Promise.resolve({
+					contract: "xcsh.interaction.v1",
+					sessionId: this.target.sessionId,
+					...owner.snapshot(),
+					plan: this.target.conversationPlans?.current,
+					...(command.after !== undefined ? { replay: owner.replay(command.after) } : {}),
+				});
+			if (command.type === "interaction_respond")
+				return Promise.resolve({
+					accepted: owner.respondExternal(command.requestId, command.responseId, command.value, command.identity),
+				});
+			if (command.type === "plan_decide")
+				return this.target.decidePlan?.(command.planId, command.action) ?? Promise.resolve({ accepted: false });
+			const pending = owner.pending().find(request => request.id === command.requestId);
+			const matches =
+				pending?.identity &&
+				Object.entries(pending.identity).every(
+					([key, value]) => command.identity[key as keyof typeof command.identity] === value,
+				);
+			return Promise.resolve({ accepted: !!matches && owner.resolve(command.requestId, "interrupted") });
+		}
 		if (method === "session/interaction/respond") {
 			try {
 				if (typeof params.requestId !== "string") throw new ProtocolError(-32602, "Invalid request identity");
@@ -1558,6 +1571,23 @@ export class RemoteSession {
 	}
 	#event(event: AgentSessionEvent): void {
 		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
+		if (event.type === "interaction") {
+			this.#emit("xcsh/interaction/event", { contract: "xcsh.interaction.v1", event: event.event });
+			return;
+		}
+		if (event.type === "interaction_snapshot") {
+			this.#emit("xcsh/interaction/event", { contract: "xcsh.interaction.v1", event });
+			return;
+		}
+		if (event.type === "plan_available" || event.type === "plan_resolved") {
+			this.#emit("xcsh/interaction/plan", { contract: "xcsh.interaction.v1", event });
+			return;
+		}
+		if (event.type === "async_user_input") {
+			this.#rememberItem(event.item, true);
+			this.#voice?.mirrorText(event.item.text, "final_answer");
+			return;
+		}
 		if (this.#durable) {
 			this.#durableEvent(event);
 			return;

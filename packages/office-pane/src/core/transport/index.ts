@@ -25,6 +25,7 @@ import type {
  * / `host_tool_update`), plus the `configure` frame that sets xcsh's provider.
  */
 export type ChatOutbound =
+	| import("@f5-sales-demo/xcsh-chat-ui/src/interactions/transport").InteractionCommand
 	| ChatRequestMsg
 	| ChatStopMsg
 	| SetHostToolsMsg

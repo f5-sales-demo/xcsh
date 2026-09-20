@@ -75,6 +75,11 @@ export class TurnPhaseController {
 		this.#userPromptDepth++;
 		this.#transition("awaiting_user");
 	}
+	setOutstandingUserPrompts(count: number): void {
+		this.#userPromptDepth = Math.max(0, count);
+		if (count > 0) this.#transition("awaiting_user");
+		else this.#transition(!this.#activeTurn ? "idle" : this.#activeToolCalls.size ? "tool_call" : "thinking");
+	}
 
 	endUserPrompt(): void {
 		this.#userPromptDepth = Math.max(0, this.#userPromptDepth - 1);

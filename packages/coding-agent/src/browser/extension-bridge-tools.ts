@@ -112,8 +112,8 @@ export const BROWSER_TOOL_NAMES: readonly string[] = [
  * DELIBERATELY EXCLUDED:
  *  - Every {@link BROWSER_TOOL_NAMES} entry — there is no browser to drive in a
  *    document pane, so navigate/click/screenshot would only be hallucinated.
- *  - `ask` (needs interactive stdin → would hang headless), `python` (spawns a
- *    kernel → startup cost), `ssh`/`debug`/`notebook`/`browser`/`get_page_context`.
+ *  - `python` (spawns a kernel → startup cost),
+ *    `ssh`/`debug`/`notebook`/`browser`/`get_page_context`.
  *
  * SAFETY: the headless session pairs this with the bundled `sandbox-guard`
  * extension (see headless-bridge.ts `bundledExtensions`), which confines the file
@@ -145,4 +145,6 @@ export const OFFICE_TOOL_NAMES: readonly string[] = [
 	"task",
 	"calc",
 	"inspect_image",
+	"request_user_input",
+	"request_user_input_async",
 ];

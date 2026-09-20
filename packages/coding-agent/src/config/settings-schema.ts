@@ -951,22 +951,14 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "interaction", label: "Completion Notification", description: "Notify when the agent completes" },
 	},
 
-	"ask.timeout": {
-		type: "number",
-		default: 30,
+	"interactions.waitingInDefault": {
+		type: "boolean",
+		default: false,
 		ui: {
 			tab: "interaction",
-			label: "Ask Timeout",
-			description: "Auto-select recommended option after timeout (0 to disable)",
-			submenu: true,
+			label: "Waiting questions in Default mode",
+			description: "Allow request_user_input outside Plan mode",
 		},
-	},
-
-	"ask.notify": {
-		type: "enum",
-		values: ["on", "off"] as const,
-		default: "on",
-		ui: { tab: "interaction", label: "Ask Notification", description: "Notify when ask tool is waiting for input" },
 	},
 
 	// Speech-to-text

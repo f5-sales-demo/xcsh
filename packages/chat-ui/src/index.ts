@@ -58,6 +58,12 @@ export { ToolUseContent, type ToolUseContentProps } from "./components/ToolUseCo
 export { Transcript, type TranscriptProps } from "./components/Transcript";
 // ── Shared hooks ──────────────────────────────────────────────────────────
 export { type UseMenuResult, useMenu } from "./components/useMenu";
+export type { AsyncInputQuestion, InputQuestion, InputResponse } from "./interactions/contract";
+export { type ConversationPlan, PLAN_ACTIONS, type PlanAction } from "./interactions/conversation-plan";
+export { InteractionPanel, type InteractionTransport } from "./interactions/InteractionPanel";
+export { PlanDecision } from "./interactions/PlanDecision";
+export { AsyncQuestionCard, QuestionCard, type QuestionCardProps } from "./interactions/QuestionCard";
+export { type InteractionCommand, type InteractionFrame, isInteractionFrame } from "./interactions/transport";
 export { createMathExtensions, type MathToken, renderMath, TEMML_OPTIONS } from "./markdown/math";
 // ── Markdown ──────────────────────────────────────────────────────────────
 export { escapeHtml, isSafeUrl, renderMarkdown } from "./markdown/render";

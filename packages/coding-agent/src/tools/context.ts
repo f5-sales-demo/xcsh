@@ -27,12 +27,6 @@ export class ToolContextStore {
 			original && toolCallId
 				? {
 						...original,
-						...(original.questions
-							? {
-									questions: (...args: Parameters<NonNullable<ExtensionUIContext["questions"]>>) =>
-										withToolInteraction(toolCallId, () => original.questions!(...args)),
-								}
-							: {}),
 						select: (...args: Parameters<ExtensionUIContext["select"]>) =>
 							withToolInteraction(toolCallId, () => original.select(...args)),
 						input: (...args: Parameters<ExtensionUIContext["input"]>) =>

@@ -7807,6 +7807,25 @@
     },
     {
       "surface": {
+        "id": "/questions",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "command"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "/quit",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"
@@ -13415,25 +13434,6 @@
     },
     {
       "surface": {
-        "id": "source:packages/coding-agent/src/modes/components/question-flow.ts",
-        "source": "packages/coding-agent/src/modes/components/question-flow.ts",
-        "kind": "component"
-      },
-      "status": "required",
-      "adapter": null,
-      "reviewPolicy": null,
-      "states": [],
-      "tests": [],
-      "persistence": [],
-      "captures": [],
-      "visualVerdicts": [],
-      "fingerprint": null,
-      "notes": [
-        "Unverified. Source discovery is not implementation or acceptance evidence."
-      ]
-    },
-    {
-      "surface": {
         "id": "source:packages/coding-agent/src/modes/components/queue-mode-selector.ts",
         "source": "packages/coding-agent/src/modes/components/queue-mode-selector.ts",
         "kind": "component"
@@ -13527,6 +13527,25 @@
         "Individually classified from current source SHA-256 2ebf47054a45feb689659b94a343ab39781d443e7b9247881535cb556d16fc88.",
         "Ownership: read-only-renderer; domain: core; direct tests: 2.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/request-user-input.ts",
+        "source": "packages/coding-agent/src/modes/components/request-user-input.ts",
+        "kind": "component"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
       ]
     },
     {
@@ -18140,71 +18159,6 @@
       "notes": [
         "Individually classified from current source SHA-256 1765acea89dba36d08497adc67194c50e46d4c551e8166dd2b0676b298d79357.",
         "Ownership: tool-authority-boundary; domain: tools; direct tests: 1.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "source:packages/coding-agent/src/tools/ask.ts",
-        "source": "packages/coding-agent/src/tools/ask.ts",
-        "kind": "integration"
-      },
-      "status": "verified",
-      "adapter": "tool authority, execution outcome, and bounded terminal rendering pipeline; packages/coding-agent/src/tools/ask.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
-      "reviewPolicy": "Tool invocation authority is explicit and separate from rendering; displayed success follows the actual tool result and never authorizes work.",
-      "states": [
-        "queued",
-        "running",
-        "progress",
-        "success",
-        "failure",
-        "interrupted",
-        "retry",
-        "rendered",
-        "render",
-        "terminal-control"
-      ],
-      "tests": [
-        "packages/coding-agent/test/agent-dashboard.test.ts",
-        "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
-        "packages/coding-agent/test/agent-session-auto-compaction-x-initiator.test.ts",
-        "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-concurrent.test.ts",
-        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
-        "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
-        "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
-        "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
-        "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
-        "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
-        "packages/coding-agent/test/args.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/bench-routing-matrix.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/acquire-helpers.test.ts",
-        "packages/coding-agent/test/browser/bridge-cert.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.configure.test.ts",
-        "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
-      ],
-      "persistence": [
-        "Tool invocation authority is explicit and separate from rendering; displayed success follows the actual tool result and never authorizes work.",
-        "Applicable domain matrices prove isolated cancellation/no-op, truthful outcomes, and reopen behavior."
-      ],
-      "captures": [
-        "packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json · packages/coding-agent/src/tools/ask.ts · sha256 a3b5ca8b16c8c42b916dae5ed84cf176c9123e792121ede4a5d1e9f638602fef",
-        "packages/coding-agent/test/evidence/terminal-reports-final-v1 · complete 16-variant actual-terminal domain matrix",
-        "packages/coding-agent/test/evidence/terminal-route-mode-final-v1 · complete 16-variant actual-terminal domain matrix"
-      ],
-      "visualVerdicts": [
-        "packages/coding-agent/test/evidence/terminal-reports-final-v1/visual-review.md · pass-actual-terminal",
-        "packages/coding-agent/test/evidence/terminal-route-mode-final-v1/visual-review.md · pass-actual-terminal"
-      ],
-      "fingerprint": "4699b6eb6ad5507860d87e6105ef49bd8576e325f853a0b078d7654d9847f54d",
-      "notes": [
-        "Individually classified from current source SHA-256 a3b5ca8b16c8c42b916dae5ed84cf176c9123e792121ede4a5d1e9f638602fef.",
-        "Ownership: tool-authority-boundary; domain: tools; direct tests: 20.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
       ]
     },
