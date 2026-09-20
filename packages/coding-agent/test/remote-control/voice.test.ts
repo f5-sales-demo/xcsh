@@ -180,35 +180,8 @@ test("handoff notification retains active speech once and appends missing reques
 	await f.voice.stop();
 });
 
-test("legacy handoff notification preserves distinct handoff and item identities", async () => {
-	const f = fixture();
-	f.deps.open = async (_url, _headers, handlers) => {
-		queueMicrotask(() =>
-			handlers.message(
-				JSON.stringify({
-					type: "conversation.handoff.requested",
-					handoff_id: "h1",
-					item_id: "i1",
-					input_transcript: "legacy work",
-				}),
-			),
-		);
-		return { send: () => {}, close: () => {}, bufferedAmount: 0 };
-	};
-	await f.voice.start({ ...start, version: "v1" });
-	await Bun.sleep(0);
-	expect(f.events.find(event => event.method === "thread/realtime/itemAdded")?.params).toMatchObject({
-		item: { type: "handoff_request", handoff_id: "h1", item_id: "i1", input_transcript: "legacy work" },
-	});
-	f.finish("Done.");
-	await f.voice.stop();
-});
-
 test("pinned existing-call URL encodes one path segment and retains client-owned configuration", () => {
-	expect(existingCallConfig(start)).toMatchObject({ version: "v3", url: "wss://api.openai.com/v1/live/fixture-call" });
-	expect(existingCallConfig({ ...start, version: "v1" }).url).toBe(
-		"wss://api.openai.com/v1/realtime?intent=quicksilver&call_id=fixture-call",
-	);
+	expect(existingCallConfig(start)).toMatchObject({ url: "wss://api.openai.com/v1/live/fixture-call" });
 	expect(existingCallConfig({ ...start, transport: { type: "existingCall", callId: "../../admin" } }).url).toContain(
 		"..%2F..%2Fadmin",
 	);
@@ -230,34 +203,22 @@ test("context chunks preserve Unicode within the pinned 500 UTF-8 byte bound", (
 	expect(chunks.join("")).toBe(text);
 	expect(chunks.every(chunk => Buffer.byteLength(chunk) <= 500)).toBe(true);
 });
-test("pinned v3 events distinguish transcripts from delegated work and ignore malformed data", () => {
-	expect(decodeVoiceEvent("v3", { type: "turn.done", turn: { id: "t1", role: "user", transcript: "hello" } })).toEqual(
-		{ kind: "transcript", done: true, id: "t1", role: "user", text: "hello" },
-	);
-	expect(decodeVoiceEvent("v3", delegation)).toMatchObject({ kind: "delegation", id: "d1", text: "change fixture" });
+test("Live events distinguish transcripts from delegated work and ignore malformed data", () => {
+	expect(decodeVoiceEvent({ type: "turn.done", turn: { id: "t1", role: "user", transcript: "hello" } })).toEqual({
+		kind: "transcript",
+		done: true,
+		id: "t1",
+		role: "user",
+		text: "hello",
+	});
+	expect(decodeVoiceEvent(delegation)).toMatchObject({ kind: "delegation", id: "d1", text: "change fixture" });
 	for (const event of [
 		null,
 		[],
 		{ type: "turn.done" },
 		{ ...delegation, item: { ...delegation.item, target: "server" } },
 	])
-		expect(decodeVoiceEvent("v3", event)).toBeNull();
-});
-test("pinned v1 transcript and handoff event shapes remain compatible", () => {
-	expect(decodeVoiceEvent("v1", { type: "conversation.input_transcript.delta", delta: "hello" })).toMatchObject({
-		kind: "transcript",
-		done: false,
-		role: "user",
-		text: "hello",
-	});
-	expect(
-		decodeVoiceEvent("v1", {
-			type: "conversation.handoff.requested",
-			handoff_id: "h1",
-			item_id: "i1",
-			input_transcript: "work",
-		}),
-	).toMatchObject({ kind: "delegation", id: "h1", text: "work" });
+		expect(decodeVoiceEvent(event)).toBeNull();
 });
 test("existing-call attachment never sends session.update or changes the work model", async () => {
 	const f = fixture();
@@ -437,7 +398,7 @@ test("router advertises pinned voices and routes start/stop to the existing term
 		params: { clientInfo: { name: "fixture", version: "1" } },
 	});
 	expect(await router.handle("phone", { id: 2, method: "thread/realtime/listVoices" })).toMatchObject({
-		result: { voices: { defaultV1: "cove", defaultV2: "marin" } },
+		result: { voices: ["juniper", "maple", "spruce", "ember", "vale", "breeze", "arbor", "sol", "cove"] },
 	});
 	for (const method of ["thread/realtime/start", "thread/realtime/stop"])
 		expect(await router.handle("phone", { id: method, method, params: { ...start, threadId: "fixture" } })).toEqual({
@@ -489,13 +450,11 @@ test("a closed attachment cannot be reused while previous delegation results are
 
 test.each(
 	["gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-6-astra"].flatMap(model =>
-		[false, true].flatMap(streamed =>
-			["v1", "v3"].flatMap(version => [false, true].map(asItems => ({ model, streamed, version, asItems }))),
-		),
+		[false, true].flatMap(streamed => [false, true].map(asItems => ({ model, streamed, asItems }))),
 	),
 )(
-	"owning $model adapter forwards $version streamed=$streamed items=$asItems output through its sole owner",
-	async ({ model, streamed, version, asItems }) => {
+	"owning $model adapter forwards Live streamed=$streamed items=$asItems output through its sole owner",
+	async ({ model, streamed, asItems }) => {
 		const { spyOn } = await import("bun:test");
 		const { RemoteSession } = await import("../../src/remote-control/session");
 		const { SessionManager } = await import("../../src/session/session-manager");
@@ -590,7 +549,7 @@ test.each(
 					}
 					await Bun.sleep(250);
 					expect(outputs.map(output => output.channel)).toEqual(
-						terminalInitiated || version === "v1" || asItems ? [] : ["commentary", "speakable"],
+						terminalInitiated || asItems ? [] : ["commentary", "speakable"],
 					);
 					expect(JSON.stringify(outputs)).not.toContain("private reasoning");
 					endMessage(partial);
@@ -612,20 +571,12 @@ test.each(
 		try {
 			await remote.call("voice-start", "thread/realtime/start", {
 				...start,
-				version,
+				version: "v3",
 				codexResponseHandoffMode: "bemTags",
 				codexResponsesAsItems: asItems,
 				threadId: target.sessionId,
 			});
-			const request =
-				version === "v1"
-					? {
-							type: "conversation.handoff.requested",
-							handoff_id: "h1",
-							item_id: "i1",
-							input_transcript: "change fixture",
-						}
-					: delegation;
+			const request = delegation;
 			socket.onmessage({ data: JSON.stringify(request) });
 			socket.onmessage({ data: JSON.stringify(request) });
 			await Bun.sleep(streamed ? 300 : 0);
@@ -639,32 +590,12 @@ test.each(
 					{ text: `${streamed ? "[FINAL]" : ""}The fixture is updated.`, channel: "speakable" },
 				];
 				expect(outputs).toEqual(
-					expected.map(({ text, channel }) =>
-						version === "v1"
-							? {
-									type: "conversation.item.create",
-									item: { type: "message", role: "developer", content: [{ type: "input_text", text }] },
-								}
-							: { type: "session.context.append", channel, content: [{ type: "input_text", text }] },
-					),
+					expected.map(({ text, channel }) => ({
+						type: "session.context.append",
+						channel,
+						content: [{ type: "input_text", text }],
+					})),
 				);
-			} else if (version === "v1") {
-				expect(outputs).toEqual([
-					...(streamed
-						? [
-								{
-									type: "conversation.handoff.append",
-									handoff_id: "h1",
-									output_text: "[COMMENTARY]Updating the fixture.",
-								},
-							]
-						: []),
-					{
-						type: "conversation.handoff.append",
-						handoff_id: "h1",
-						output_text: `"Agent Final Message":\n\n${streamed ? "[FINAL]" : ""}The fixture is updated.`,
-					},
-				]);
 			} else
 				expect(outputs).toContainEqual(
 					expect.objectContaining({
@@ -693,7 +624,6 @@ test.each(
 					const { delegation_item_id: _id, ...rest } = output;
 					return { ...rest, type: "session.context.append" };
 				}
-				if (output.type === "conversation.handoff.append") return { ...output, handoff_id: "codex" };
 				return output;
 			});
 			outputs.length = 0;

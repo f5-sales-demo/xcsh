@@ -5,8 +5,8 @@ import { ProtocolError } from "./session";
 import { handoffOptions } from "./voice-handoff";
 import type { VoicePersonaSnapshot } from "./voice-persona";
 import { voicePersonaInstructions } from "./voice-persona";
-import { voiceInstructions, voices } from "./voice-protocol";
-export function voiceCallConfig(params: Record<string, unknown>, persona: VoicePersonaSnapshot | string) {
+import { defaultVoice, requireLiveVersion, voiceInstructions, voices } from "./voice-protocol";
+export function voiceCallConfig(params: Record<string, unknown>, persona: VoicePersonaSnapshot) {
 	voiceInstructions(params);
 	handoffOptions(params);
 	const transport = params.transport as { type?: unknown; sdp?: unknown } | undefined;
@@ -17,9 +17,8 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 		Buffer.byteLength(transport.sdp) > 262_144
 	)
 		throw new ProtocolError(-32602, "Invalid realtime SDP offer");
-	const version = params.version ?? "v1";
-	if ((version !== "v1" && version !== "v3") || params.outputModality !== "audio")
-		throw new ProtocolError(-32602, "WebRTC requires realtime v1 or v3 audio");
+	requireLiveVersion(params.version);
+	if (params.outputModality !== "audio") throw new ProtocolError(-32602, "WebRTC Live requires audio output");
 	const initialItems = params.initialItems ?? [];
 	if (
 		!Array.isArray(initialItems) ||
@@ -30,16 +29,14 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 		initialItems.reduce((bytes, item) => bytes + Buffer.byteLength(item.text), 0) > 32768
 	)
 		throw new ProtocolError(-32602, "Invalid or excessive realtime initial history");
-	if (version === "v1" && initialItems.length)
-		throw new ProtocolError(-32602, "Initial realtime items require realtime v3");
-	const model = params.model ?? (version === "v1" ? "gpt-realtime-1.5" : "gpt-live-1-codex"),
-		voice = params.voice ?? "cove";
+	const model = params.model ?? "gpt-live-1-codex",
+		voice = params.voice ?? defaultVoice;
 	if (
 		typeof model !== "string" ||
 		!model ||
 		model.length > 256 ||
 		typeof voice !== "string" ||
-		!voices.v1.includes(voice)
+		!voices.includes(voice)
 	)
 		throw new ProtocolError(-32602, "Invalid realtime model or voice");
 	if (params.prompt != null && (typeof params.prompt !== "string" || Buffer.byteLength(params.prompt) > 262_144))
@@ -53,38 +50,25 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 		throw new ProtocolError(-32602, "Invalid realtime session identity");
 	const instructions = voicePersonaInstructions(params, persona).instructions;
 	return {
-		version,
 		sdp: transport.sdp,
-		session:
-			version === "v1"
+		session: {
+			model,
+			instructions,
+			audio: { output: { voice } },
+			delegation: {
+				type: "client",
+				...(typeof params.delegationAckFiller === "boolean" ? { ack_filler: params.delegationAckFiller } : {}),
+			},
+			...(initialItems.length
 				? {
-						type: "quicksilver",
-						model,
-						instructions,
-						audio: { input: { format: { type: "audio/pcm", rate: 24000 } }, output: { voice } },
+						initial_items: initialItems.map(item => ({
+							type: "message",
+							role: item.role,
+							content: [{ type: item.role === "assistant" ? "output_text" : "input_text", text: item.text }],
+						})),
 					}
-				: {
-						model,
-						instructions,
-						audio: { output: { voice } },
-						delegation: {
-							type: "client",
-							...(typeof params.delegationAckFiller === "boolean"
-								? { ack_filler: params.delegationAckFiller }
-								: {}),
-						},
-						...(initialItems.length
-							? {
-									initial_items: initialItems.map(item => ({
-										type: "message",
-										role: item.role,
-										content: [
-											{ type: item.role === "assistant" ? "output_text" : "input_text", text: item.text },
-										],
-									})),
-								}
-							: {}),
-					},
+				: {}),
+		},
 	};
 }
 export async function createVoiceCall(
@@ -95,8 +79,6 @@ export async function createVoiceCall(
 	signal?: AbortSignal,
 ): Promise<{ sdp: string; callId: string }> {
 	const session: Record<string, unknown> = { ...config.session };
-	// The AVAS subscription endpoint selects the legacy v1 model and rejects an explicit value.
-	if (config.version === "v1") delete session.model;
 	let response: Response;
 	try {
 		response = await fetcher(

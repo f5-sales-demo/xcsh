@@ -16,9 +16,10 @@ import {
 	type VoiceOutputUpdate,
 } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
-import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
+import { CompletedVoiceHandoff, completedVoiceText } from "./voice-output";
 import { type VoicePersonaSnapshot, voicePersonaInstructions } from "./voice-persona";
 import {
+	CODEX_LIVE_VERSION,
 	contextChunks,
 	decodeVoiceEvent,
 	existingCallConfig,
@@ -89,12 +90,9 @@ export class NativeVoice {
 	#pendingBytes = 0;
 	#seen = new Set<string>();
 	#pendingDelegations = 0;
-	#responseActive = false;
-	#responsePending = false;
-	#outputAudio?: { itemId: string; audioEndMs: number };
-	#awaitingV3Session = false;
-	#v3SessionReady?: { resolve: () => void; reject: (error: Error) => void };
-	#persona: VoicePersonaSnapshot | string = "";
+	#awaitingSession = false;
+	#sessionReady?: { resolve: () => void; reject: (error: Error) => void };
+	#persona: VoicePersonaSnapshot = { systemPrompt: "", tools: [], history: "" };
 	constructor(private readonly deps: VoiceDependencies) {}
 	get active(): boolean {
 		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
@@ -112,10 +110,8 @@ export class NativeVoice {
 			standalone = transport == null || transport.type === "websocket";
 			this.#persona = (await this.deps.persona?.()) ?? this.#persona;
 			if (this.#state !== "opening") throw new Error("Voice stopped during persona snapshot");
-			if (typeof this.#persona !== "string") {
-				Object.freeze(this.#persona);
-				Object.freeze(this.#persona.tools);
-			}
+			Object.freeze(this.#persona);
+			Object.freeze(this.#persona.tools);
 			callConfig = transport?.type === "webrtc" ? voiceCallConfig(params, this.#persona) : undefined;
 			config = callConfig
 				? undefined
@@ -137,16 +133,13 @@ export class NativeVoice {
 		let stage = "authentication";
 		const startedAt = Date.now();
 		try {
-			if (typeof this.#persona !== "string") {
-				const diagnostics = voicePersonaInstructions(params, this.#persona).diagnostics;
-				await this.deps.record({ kind: "voicePersonaDiagnostic", ...diagnostics });
-				if (this.#state !== "opening") throw new Error("Voice stopped during persona diagnostics");
-			}
+			const diagnostics = voicePersonaInstructions(params, this.#persona).diagnostics;
+			await this.deps.record({ kind: "voicePersonaDiagnostic", ...diagnostics });
+			if (this.#state !== "opening") throw new Error("Voice stopped during persona diagnostics");
 			const apiKey = standalone ? await this.deps.authenticateApiKey?.() : undefined;
 			if (standalone && !apiKey) throw new ProtocolError(-32602, "Realtime conversation requires API key auth");
 			const auth = standalone ? undefined : await this.deps.authenticate();
 			if (this.#state !== "opening") throw new Error("Voice stopped during authentication");
-			const version = callConfig?.version ?? config!.version;
 			// Pinned created calls default to their owning thread; existing calls retain the client's optional identity.
 			const sessionId =
 				config?.realtimeSessionId ??
@@ -161,7 +154,7 @@ export class NativeVoice {
 						Authorization: `Bearer ${auth!.accessToken}`,
 						"ChatGPT-Account-Id": auth!.accountId,
 						originator: "xcsh",
-						"openai-alpha": version === "v3" ? "quicksilver=v2" : "quicksilver=v1",
+						"openai-alpha": "quicksilver=v2",
 					};
 			if (standalone && config?.kind === "websocket" && config.alpha) headers["openai-alpha"] = config.alpha;
 			if (sessionId !== null) headers["x-session-id"] = sessionId;
@@ -176,7 +169,7 @@ export class NativeVoice {
 				);
 				if (this.#state !== "opening") throw new Error("Voice stopped during call creation");
 				config = existingCallConfig({
-					version,
+					version: CODEX_LIVE_VERSION,
 					realtimeSessionId: sessionId,
 					outputModality: "audio",
 					includeStartupContext: false,
@@ -195,7 +188,7 @@ export class NativeVoice {
 				this.#chain = this.#history.start(sessionId);
 				await this.#chain;
 				if (!this.active) throw new Error("Voice stopped during history initialization");
-				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
+				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version: CODEX_LIVE_VERSION });
 				this.deps.emit("thread/realtime/sdp", { sdp: call.sdp });
 			}
 			this.#config = config;
@@ -209,22 +202,14 @@ export class NativeVoice {
 			this.#state = "open";
 			this.#connectedAt = Date.now();
 			if (standalone && this.#config?.kind === "websocket") {
-				if (version === "v3") {
-					this.#awaitingV3Session = true;
-					const ready = new Promise<void>((resolve, reject) => {
-						this.#v3SessionReady = { resolve, reject };
-					});
-					socket.send(JSON.stringify({ type: "session.update", session: this.#config.session }));
-					await ready;
-					this.#v3SessionReady = undefined;
-				} else socket.send(JSON.stringify({ type: "session.update", session: this.#config.session }));
+				this.#awaitingSession = true;
+				const ready = new Promise<void>((resolve, reject) => {
+					this.#sessionReady = { resolve, reject };
+				});
+				socket.send(JSON.stringify({ type: "session.update", session: this.#config.session }));
+				await ready;
+				this.#sessionReady = undefined;
 				if (!this.active) throw new Error("Voice stopped during standalone initialization");
-			}
-			if (callConfig?.version === "v1") {
-				// Created legacy calls configure their sideband; client-created calls do not.
-				const { model: _model, ...session } = callConfig.session;
-				socket.send(JSON.stringify({ type: "session.update", session }));
-				if (!this.active) throw new Error("Voice stopped during sideband initialization");
 			}
 			if (!this.#started) {
 				this.#started = true;
@@ -238,7 +223,7 @@ export class NativeVoice {
 				this.#chain = this.#history.start(sessionId);
 				await this.#chain;
 				if (!this.active) throw new Error("Voice stopped during history initialization");
-				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
+				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version: CODEX_LIVE_VERSION });
 			}
 			stage = "mode-instructions";
 			this.#modeInstructions = instructions;
@@ -289,9 +274,9 @@ export class NativeVoice {
 		this.#outboundBytes = 0;
 		this.#openingInputs = [];
 		this.#openingBytes = 0;
-		this.#awaitingV3Session = false;
-		this.#v3SessionReady?.reject(new Error("Voice stopped during standalone initialization"));
-		this.#v3SessionReady = undefined;
+		this.#awaitingSession = false;
+		this.#sessionReady?.reject(new Error("Voice stopped during standalone initialization"));
+		this.#sessionReady = undefined;
 		this.#abort.abort();
 		const endInstructions = this.#modeUpdates
 			.catch(() => {})
@@ -304,8 +289,7 @@ export class NativeVoice {
 		this.#socket = undefined;
 		if (socket) {
 			try {
-				if (reason === "requested" && this.#config?.version === "v3")
-					socket.send(JSON.stringify({ type: "session.close" }));
+				if (reason === "requested") socket.send(JSON.stringify({ type: "session.close" }));
 			} catch {}
 			socket.close();
 		}
@@ -340,11 +324,11 @@ export class NativeVoice {
 	}
 	#transportLost(): void {
 		if (!this.active || this.#state === "reconnecting") return;
-		if (this.#awaitingV3Session) {
-			this.#awaitingV3Session = false;
-			this.#v3SessionReady?.reject(new Error("Realtime session ended before session.started"));
+		if (this.#awaitingSession) {
+			this.#awaitingSession = false;
+			this.#sessionReady?.reject(new Error("Realtime session ended before session.started"));
 		}
-		if (this.#state !== "open" || this.#config?.version !== "v3" || this.#config.kind === "websocket") {
+		if (this.#state !== "open" || this.#config?.kind === "websocket") {
 			this.stop("transportClosed");
 			return;
 		}
@@ -353,7 +337,7 @@ export class NativeVoice {
 		const socket = this.#socket;
 		this.#socket = undefined;
 		socket?.close();
-		// Match the pinned v3 sideband's 200 ms exponential backoff, capped at
+		// Match the pinned Live sideband's 200 ms exponential backoff, capped at
 		// five seconds, and reset after a connection survives thirty seconds.
 		if (Date.now() - this.#connectedAt >= 30_000) this.#rapidDisconnects = 0;
 		this.#reconnectAttempts = 0;
@@ -458,34 +442,12 @@ export class NativeVoice {
 		)
 			throw new ProtocolError(-32602, "Invalid realtime text input");
 		const outputText = speakable ? completedVoiceText(text) : text;
-		if (this.#config?.version === "v3") {
-			for (const chunk of contextChunks(outputText))
-				this.#send({
-					type: "session.context.append",
-					...(speakable ? { channel: "speakable" } : {}),
-					content: [{ type: "input_text", text: chunk }],
-				});
-		} else if (this.#config?.version === "v2") {
-			if (speakable) {
-				this.#sendV2Message(this.#prefixV2(outputText, "[BACKEND] "), "user");
-				this.#requestV2Response();
-			} else
-				this.#sendV2Message(
-					role === "user" ? this.#prefixV2(outputText, "[USER] ") : outputText,
-					role as "user" | "assistant" | "developer",
-				);
-		} else if (speakable) {
-			this.#send({ type: "conversation.handoff.append", handoff_id: "codex", output_text: outputText });
-		} else {
+		for (const chunk of contextChunks(outputText))
 			this.#send({
-				type: "conversation.item.create",
-				item: {
-					type: "message",
-					role,
-					content: [{ type: role === "assistant" ? "output_text" : "input_text", text: outputText }],
-				},
+				type: "session.context.append",
+				...(speakable ? { channel: "speakable" } : {}),
+				content: [{ type: "input_text", text: chunk }],
 			});
-		}
 	}
 	appendAudio(audio: unknown): void {
 		if (this.#state !== "open" || this.#config?.kind !== "websocket")
@@ -504,40 +466,9 @@ export class NativeVoice {
 		)
 			throw new ProtocolError(-32602, "Invalid realtime audio input");
 		this.#send({
-			type: this.#config.version === "v3" ? "input_audio.append" : "input_audio_buffer.append",
+			type: "input_audio.append",
 			audio: frame.data,
 		});
-	}
-	#prefixV2(text: string, prefix: string): string {
-		return text && !text.startsWith(prefix) ? `${prefix}${text}` : text;
-	}
-	#sendV2Message(text: string, role: "user" | "assistant" | "developer"): void {
-		this.#send({
-			type: "conversation.item.create",
-			item: {
-				type: "message",
-				role,
-				content: [{ type: role === "assistant" ? "output_text" : "input_text", text }],
-			},
-		});
-	}
-	#sendV2FunctionOutput(id: string, output: string): void {
-		this.#send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: id, output } });
-	}
-	#requestV2Response(): void {
-		if (this.#responseActive) {
-			this.#responsePending = true;
-			return;
-		}
-		this.#send({ type: "response.create" });
-		this.#responseActive = true;
-	}
-	#finishV2Response(): void {
-		this.#responseActive = false;
-		this.#outputAudio = undefined;
-		if (!this.#responsePending) return;
-		this.#responsePending = false;
-		this.#requestV2Response();
 	}
 	#receive(data: string): void {
 		if (!this.active) return;
@@ -547,22 +478,22 @@ export class NativeVoice {
 			return;
 		}
 		if (!this.#ready) {
-			if (this.#awaitingV3Session && this.#config?.version === "v3") {
+			if (this.#awaitingSession) {
 				let input: unknown;
 				try {
 					input = JSON.parse(data);
 				} catch {
 					return;
 				}
-				const event = decodeVoiceEvent("v3", input);
+				const event = decodeVoiceEvent(input);
 				if (!event) return;
-				this.#awaitingV3Session = false;
+				this.#awaitingSession = false;
 				if (event.kind === "sessionUpdated") {
 					this.#openingInputs.push(data);
 					this.#openingBytes += bytes;
-					this.#v3SessionReady?.resolve();
+					this.#sessionReady?.resolve();
 				} else
-					this.#v3SessionReady?.reject(
+					this.#sessionReady?.reject(
 						new Error(
 							event.kind === "error"
 								? "The realtime service reported an error"
@@ -586,7 +517,7 @@ export class NativeVoice {
 					this.#fail("Malformed realtime event");
 					return;
 				}
-				const event = decodeVoiceEvent(this.#config.version, input);
+				const event = decodeVoiceEvent(input);
 				if (event) await this.#event(event);
 			})
 			.catch(() => this.#fail())
@@ -650,74 +581,19 @@ export class NativeVoice {
 			return;
 		}
 		if (event.kind === "audio") {
-			if (this.#config?.version === "v2" && event.itemId) {
-				const samples = event.samplesPerChannel ?? this.#decodedSamples(event);
-				if (samples !== undefined) {
-					const duration = Math.floor((samples * 1000) / Math.max(1, event.sampleRate));
-					if (duration > 0)
-						this.#outputAudio =
-							this.#outputAudio?.itemId === event.itemId
-								? {
-										itemId: event.itemId,
-										audioEndMs: Math.min(0xffffffff, this.#outputAudio.audioEndMs + duration),
-									}
-								: { itemId: event.itemId, audioEndMs: duration };
-				}
-			}
 			if (!this.active) return;
 			this.deps.emit("thread/realtime/outputAudio/delta", {
 				audio: {
 					data: event.data,
 					sampleRate: event.sampleRate,
 					numChannels: event.numChannels,
-					samplesPerChannel: event.samplesPerChannel ?? null,
-					itemId: event.itemId ?? null,
+					samplesPerChannel: null,
+					itemId: null,
 				},
 			});
 			return;
 		}
 		if (event.kind === "sessionUpdated") return;
-		if (event.kind === "responseCreated") {
-			this.#responseActive = true;
-			return;
-		}
-		if (event.kind === "responseDone") {
-			this.#finishV2Response();
-			return;
-		}
-		if (event.kind === "responseCancelled") {
-			this.#finishV2Response();
-			if (this.active)
-				this.deps.emit("thread/realtime/itemAdded", {
-					item: { type: "response.cancelled", response_id: event.id ?? null },
-				});
-			return;
-		}
-		if (event.kind === "itemAdded") {
-			if (this.active) this.deps.emit("thread/realtime/itemAdded", { item: event.item });
-			return;
-		}
-		if (event.kind === "speechStarted") {
-			const output = this.#outputAudio;
-			this.#outputAudio = undefined;
-			if (output && (event.itemId === undefined || event.itemId === output.itemId))
-				this.#send({
-					type: "conversation.item.truncate",
-					item_id: output.itemId,
-					content_index: 0,
-					audio_end_ms: output.audioEndMs,
-				});
-			if (this.active)
-				this.deps.emit("thread/realtime/itemAdded", {
-					item: { type: "input_audio_buffer.speech_started", item_id: event.itemId ?? null },
-				});
-			return;
-		}
-		if (event.kind === "noop") {
-			this.#outputAudio = undefined;
-			this.#sendV2FunctionOutput(event.id, "");
-			return;
-		}
 		if (event.kind === "transcript") {
 			if (event.done) {
 				const key = this.#key("transcript", event.id ?? randomUUID());
@@ -775,25 +651,11 @@ export class NativeVoice {
 				item: {
 					type: "handoff_request",
 					handoff_id: event.id,
-					item_id: event.itemId ?? event.id,
+					item_id: event.id,
 					input_transcript: event.text,
 					active_transcript: activeTranscript,
 				},
 			});
-		if (this.#config?.version === "v2" && this.#activeHandoffId !== undefined) {
-			this.#sendV2FunctionOutput(event.id, "This was sent to steer the previous background agent task.");
-			this.#requestV2Response();
-			this.#pendingDelegations++;
-			void this.deps
-				.delegate(
-					key,
-					voiceDelegation(event.text, activeTranscript.map(entry => `${entry.role}: ${entry.text}`).join("\n")),
-				)
-				.then(text => this.deps.record({ key, kind: "delegationResult", text }))
-				.catch(() => this.#fail("The backing agent could not accept voice steering"))
-				.finally(() => this.#pendingDelegations--);
-			return;
-		}
 		this.#pendingDelegations++;
 		this.#handoff?.close();
 		const handoff = this.#createHandoff(event.id);
@@ -826,33 +688,17 @@ export class NativeVoice {
 	}
 	#createHandoff(id: string): VoiceHandoff | CompletedVoiceHandoff | undefined {
 		if (this.#config?.clientManagedHandoffs) return;
-		const v3 = this.#config?.version === "v3";
-		if (this.#config?.version === "v2")
-			return new CompletedVoiceHandoff(
-				(text, phase) => this.#sendCompletedOutput(text, phase, id),
-				() => {
-					this.#sendV2FunctionOutput(
-						id,
-						this.#handoffOptions.asItems
-							? ""
-							: "Background agent finished. Use the preceding [BACKEND] messages as the result.",
-					);
-					if (!this.#handoffOptions.asItems) this.#requestV2Response();
-				},
-			);
 		if (this.#handoffOptions.asItems)
 			return new CompletedVoiceHandoff((text, phase) => this.#sendCompletedOutput(text, phase, id));
-		if (v3)
-			return new VoiceHandoff(this.#handoffOptions, (channel, text) => {
-				for (const chunk of contextChunks(text))
-					this.#send({
-						type: "delegation.context.append",
-						delegation_item_id: id,
-						...(channel ? { channel } : {}),
-						content: [{ type: "input_text", text: chunk }],
-					});
-			});
-		return new CompletedVoiceHandoff((text, phase) => this.#sendCompletedOutput(text, phase, id));
+		return new VoiceHandoff(this.#handoffOptions, (channel, text) => {
+			for (const chunk of contextChunks(text))
+				this.#send({
+					type: "delegation.context.append",
+					delegation_item_id: id,
+					...(channel ? { channel } : {}),
+					content: [{ type: "input_text", text: chunk }],
+				});
+		});
 	}
 	/** Mirror completed backing events; streaming delegation updates retain their existing owner. */
 	mirrorText(text: string, phase?: HandoffPhase): void {
@@ -865,47 +711,17 @@ export class NativeVoice {
 		this.#sendCompletedOutput(text, phase, this.#activeHandoffId);
 	}
 	#sendCompletedOutput(text: string, phase?: HandoffPhase, handoffId?: string): void {
-		const v3 = this.#config?.version === "v3";
 		const options = this.#handoffOptions;
-		if (v3 && options.mode === "bemTags") phase = handoffPhase(text, options.prefixes) ?? "final_answer";
+		if (options.mode === "bemTags") phase = handoffPhase(text, options.prefixes) ?? "final_answer";
 		let output = completedVoiceText(text);
-		if (this.#config?.version !== "v2" && options.asItems && options.itemPrefix)
-			output = completedVoiceText(`${options.itemPrefix}\n\n${output}`);
-		if (v3) {
-			const channel = handoffChannel(options, phase);
-			for (const chunk of contextChunks(output))
-				this.#send({
-					type:
-						options.asItems || handoffId === undefined ? "session.context.append" : "delegation.context.append",
-					...(!options.asItems && handoffId !== undefined ? { delegation_item_id: handoffId } : {}),
-					...(channel ? { channel } : {}),
-					content: [{ type: "input_text", text: chunk }],
-				});
-		} else if (this.#config?.version === "v2") {
-			const backend = this.#prefixV2(output, "[BACKEND] ");
-			if (options.asItems)
-				this.#sendV2Message(
-					options.itemPrefix ? completedVoiceText(`${options.itemPrefix}\n\n${backend}`) : backend,
-					"developer",
-				);
-			else this.#sendV2Message(backend, "user");
-			if (handoffId === undefined && !options.asItems) this.#requestV2Response();
-		} else if (options.asItems) {
+		if (options.asItems && options.itemPrefix) output = completedVoiceText(`${options.itemPrefix}\n\n${output}`);
+		const channel = handoffChannel(options, phase);
+		for (const chunk of contextChunks(output))
 			this.#send({
-				type: "conversation.item.create",
-				item: { type: "message", role: "developer", content: [{ type: "input_text", text: output }] },
+				type: options.asItems || handoffId === undefined ? "session.context.append" : "delegation.context.append",
+				...(!options.asItems && handoffId !== undefined ? { delegation_item_id: handoffId } : {}),
+				...(channel ? { channel } : {}),
+				content: [{ type: "input_text", text: chunk }],
 			});
-		} else {
-			this.#send({
-				type: "conversation.handoff.append",
-				handoff_id: handoffId ?? "codex",
-				output_text: `${phase === "commentary" ? "" : '"Agent Final Message":\n\n'}${output}`,
-			});
-		}
-	}
-	#decodedSamples(event: Extract<VoiceEvent, { kind: "audio" }>): number | undefined {
-		if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(event.data)) return;
-		const samples = Math.floor(Buffer.from(event.data, "base64").byteLength / 2 / Math.max(1, event.numChannels));
-		return samples <= 0xffffffff ? samples : undefined;
 	}
 }

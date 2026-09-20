@@ -36,12 +36,11 @@ function fixture(record: (record: Record<string, unknown>) => Promise<void> = as
 	};
 }
 
-test.each(["v1", "v3"])("%s mirrors completed standalone text and respects response-item routing", async version => {
+test("Live mirrors completed standalone text and respects response-item routing", async () => {
 	for (const asItems of [false, true]) {
 		const f = fixture();
 		await f.voice.start({
 			...start,
-			version,
 			codexResponseHandoffMode: "bemTags",
 			codexResponsesAsItems: asItems,
 			codexResponseItemPrefix: "PREFIX",
@@ -50,14 +49,7 @@ test.each(["v1", "v3"])("%s mirrors completed standalone text and respects respo
 			f.voice.mirrorText("[FINAL]Terminal result", "commentary");
 			const text = asItems ? "PREFIX\n\n[FINAL]Terminal result" : "[FINAL]Terminal result";
 			expect(f.sent).toEqual([
-				version === "v3"
-					? { type: "session.context.append", channel: "speakable", content: [{ type: "input_text", text }] }
-					: asItems
-						? {
-								type: "conversation.item.create",
-								item: { type: "message", role: "developer", content: [{ type: "input_text", text }] },
-							}
-						: { type: "conversation.handoff.append", handoff_id: "codex", output_text: text },
+				{ type: "session.context.append", channel: "speakable", content: [{ type: "input_text", text }] },
 			]);
 			f.voice.mirrorText(" \n\t");
 			expect(f.sent).toHaveLength(1);
@@ -155,7 +147,7 @@ test("tool-input mirrors use the pinned core event envelope and never consume th
 test.each(["thinking", "commentary", "bemTags"])(
 	"standalone %s routing preserves completed-output budgets",
 	async mode => {
-		const { completedVoiceText } = await import("../../src/remote-control/voice-legacy");
+		const { completedVoiceText } = await import("../../src/remote-control/voice-output");
 		const f = fixture();
 		await f.voice.start({
 			...start,

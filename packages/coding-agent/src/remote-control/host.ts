@@ -418,7 +418,7 @@ export async function startLocalHost(
 						const p = (incoming.message as { params?: Record<string, unknown> }).params ?? {};
 						const t = (p.transport as { type?: unknown } | undefined)?.type;
 						process.stdout.write(
-							`${JSON.stringify({ stage: "voice-shape", transport: ["existingCall", "webrtc", "websocket"].includes(String(t)) ? t : "unset", version: ["v1", "v2", "v3"].includes(String(p.version)) ? p.version : "unset", includeStartupContext: p.includeStartupContext !== false, flushTail: p.flushTranscriptTailOnSessionEnd === true, responseItems: p.codexResponsesAsItems === true, initialItems: Array.isArray(p.initialItems) ? p.initialItems.length : 0, startInstructions: typeof p.realtimeStartInstructions === "string" && p.realtimeStartInstructions.length > 0, endInstructions: typeof p.realtimeEndInstructions === "string" && p.realtimeEndInstructions.length > 0, at: Date.now() })}\n`,
+							`${JSON.stringify({ stage: "voice-shape", transport: ["existingCall", "webrtc", "websocket"].includes(String(t)) ? t : "unset", version: p.version === "v3" ? "v3" : "unset", includeStartupContext: p.includeStartupContext !== false, flushTail: p.flushTranscriptTailOnSessionEnd === true, responseItems: p.codexResponsesAsItems === true, initialItems: Array.isArray(p.initialItems) ? p.initialItems.length : 0, startInstructions: typeof p.realtimeStartInstructions === "string" && p.realtimeStartInstructions.length > 0, endInstructions: typeof p.realtimeEndInstructions === "string" && p.realtimeEndInstructions.length > 0, at: Date.now() })}\n`,
 						);
 					}
 					if (method === "turn/start" || method === "thread/settings/update") {

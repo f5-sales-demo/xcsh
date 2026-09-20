@@ -6,6 +6,14 @@ licensed under Apache License 2.0 (included in LICENSE).
 Compatibility baseline: Codex rust-v0.153.4, commit
 `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`.
 
+Current voice implementation: xcsh intentionally uses one OpenAI Live path,
+with the iPhone's `"v3"` literal preserved only at the public JSON-RPC
+boundary. Current Codex `main` was reviewed at
+`e29eceb7513163ba1f600d0b87f6751ec9323d24`. The version-specific source
+inventory below is historical provenance for copied schemas and prior fixtures;
+it does not describe supported xcsh voice behavior or reintroduce legacy voice
+paths.
+
 Source files under `codex-rs/app-server-transport/src/transport/remote_control/`:
 
 - `protocol.rs`: enrollment request and response fields.

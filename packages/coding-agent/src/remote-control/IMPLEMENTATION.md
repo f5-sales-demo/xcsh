@@ -4,6 +4,27 @@ This is an unfinished implementation of the first gate in issue 3818, not a
 completed remote voice feature. Do not merge or publish before the acceptance
 criteria in that issue are satisfied.
 
+## Current voice implementation — issue #3935
+
+The active xcsh voice design is a prerelease clean break: one OpenAI Live
+implementation with `/v1/live` and `gpt-live-1-codex`. WebRTC, existing-call
+sideband, and API-key WebSocket share this implementation. The iPhone boundary
+keeps only its required `"v3"` literal; no older internal voice generation,
+fallback, default, or transport mapping remains.
+
+The Live prompt is a compact server-owned policy. It omits the terminal system
+prompt, person data, and tool descriptions, holds an 8 KiB xcsh engineering
+budget, and ends after phone preferences with immutable xcsh identity and
+pronunciation instructions. Normal speech is “X-C-shell”; spelling or repair is
+“X-C-S-H”; written branding remains `xcsh`. OpenAI documents a 16,384-token
+`instructions` limit, 128-message/8,192-token startup history limit, and
+128,000-token default context window. Those provider limits do not change xcsh's
+local budget.
+
+The detailed version-specific checkpoints below are historical implementation
+evidence, not a supported runtime matrix. This implementation remains unaccepted
+until a fresh compiled candidate passes the required physical iPhone trials.
+
 ## Source contract
 
 Codex rust-v0.153.4 commit `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a` is the
