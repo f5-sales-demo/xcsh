@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "c156a1d76f946f4c26c0a87922701be8c983d188",
+  "revision": "6433e0042abcb148408df2c09df3ee8c8b41164a",
   "fingerprint": "b2d9c4d272433b2d9bf6d2ef9b21b7c639d1c28a525ae1b61a6b15ddbc0bdab7",
   "counts": {
     "total": 240,
@@ -6161,6 +6161,7 @@
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
         "packages/coding-agent/test/html-math-export.test.ts",
+        "packages/coding-agent/test/internal-urls/api-catalog-discovery.test.ts",
         "packages/coding-agent/test/internal-urls/api-catalog-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-integration.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts",
@@ -6170,8 +6171,7 @@
         "packages/coding-agent/test/internal-urls/local-protocol.test.ts",
         "packages/coding-agent/test/internal-urls/memory-protocol.test.ts",
         "packages/coding-agent/test/internal-urls/skill-protocol.test.ts",
-        "packages/coding-agent/test/internal-urls/source-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/xcsh-protocol-console.test.ts"
+        "packages/coding-agent/test/internal-urls/source-resolve.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
