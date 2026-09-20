@@ -184,6 +184,7 @@ export function ChatPanel({
 		pickPath,
 	} = useChatSession(transport, { provision, onConnected, selectModel: selectEngineModel });
 	const composerRef = useRef<ComposerHandle>(null);
+	const [transcriptFollowRevision, setTranscriptFollowRevision] = useState(0);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	// Photo/image attachments staged for the next send. The host owns this state and
 	// clears it in onSend (per the shared Composer's host-maps-its-own-state contract).
@@ -472,6 +473,7 @@ export function ChatPanel({
 			<Transcript
 				messages={messages}
 				streaming={streaming}
+				followRevision={transcriptFollowRevision}
 				// A server-side web search adds several seconds before the first token;
 				// say so rather than showing a bare "Thinking…" that reads as a hang.
 				thinkingLabel={webSearch ? "with web search" : undefined}
@@ -493,7 +495,12 @@ export function ChatPanel({
 			/>
 			{/* No interaction-mode toggle: those modes are Chrome browser-automation
 			    only. The Office pane fixes the mode to `educational` (see useChatSession). */}
-			{ready && !viewing ? <InteractionPanel transport={interactionTransport} /> : null}
+			{ready && !viewing ? (
+				<InteractionPanel
+					transport={interactionTransport}
+					onFollowTranscript={() => setTranscriptFollowRevision(value => value + 1)}
+				/>
+			) : null}
 			<Composer
 				ref={composerRef}
 				streaming={streaming}

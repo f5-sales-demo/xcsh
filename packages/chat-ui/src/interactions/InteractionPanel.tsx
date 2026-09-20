@@ -8,7 +8,13 @@ export interface InteractionTransport {
 	send(message: InteractionCommand): void;
 	onMessage(callback: (message: unknown) => void): () => void;
 }
-export function InteractionPanel({ transport }: { transport: InteractionTransport }) {
+export function InteractionPanel({
+	transport,
+	onFollowTranscript,
+}: {
+	transport: InteractionTransport;
+	onFollowTranscript?: () => void;
+}) {
 	const [pending, setPending] = useState<PendingInteraction[]>([]);
 	const [plan, setPlan] = useState<ConversationPlan>();
 	const revision = useRef(-1);
@@ -147,9 +153,10 @@ export function InteractionPanel({ transport }: { transport: InteractionTranspor
 				<PlanDecision
 					key={plan.id}
 					plan={plan}
-					onDecide={(planId, action) =>
-						submit({ type: "plan_decide", planId, action, responseId: crypto.randomUUID() })
-					}
+					onDecide={(planId, action) => {
+						if (action === "implement") onFollowTranscript?.();
+						return submit({ type: "plan_decide", planId, action, responseId: crypto.randomUUID() });
+					}}
 				/>
 			) : null}
 		</aside>

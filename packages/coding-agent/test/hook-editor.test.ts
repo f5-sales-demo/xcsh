@@ -482,6 +482,32 @@ describe("ExtensionUiController hook editor abort", () => {
 		expect(editorContainer.children).toEqual([editor]);
 	});
 
+	it("masks secret free text without changing the submitted answer", async () => {
+		const { ctx, editorContainer } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		controller.initializeInteractionPresenters();
+		const result = ctx.session.userInteractions.requestInput({
+			title: "Credential",
+			inputQuestions: [
+				{
+					id: "token",
+					header: "Token",
+					question: "Enter the token",
+					options: null,
+					isSecret: true,
+				},
+			],
+		});
+		await Bun.sleep(0);
+		const widget = editorContainer.children[0] as RequestUserInputComponent;
+		widget.handleInput("sëcret-🙂");
+		const rendered = Bun.stripANSI(widget.render(80).join("\n"));
+		expect(rendered).not.toContain("sëcret-🙂");
+		expect(rendered).toContain("********");
+		widget.handleInput("\r");
+		expect(await result).toEqual({ answers: { token: { answers: ["user_note: sëcret-🙂"] } } });
+	});
+
 	it("confirmation cancellation reaches the selector and never becomes consent", async () => {
 		const { ctx, editor, editorContainer } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);

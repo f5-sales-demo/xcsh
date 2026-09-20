@@ -1,4 +1,4 @@
-/** Codex 392f56a611c4 payloads. xcsh resolution metadata belongs in separate events. */
+/** Codex d6d43270bd79 payloads. xcsh resolution metadata belongs in separate events. */
 export interface InputOption {
 	label: string;
 	description: string;
@@ -17,6 +17,30 @@ export interface InputResponse {
 export interface AsyncInputQuestion {
 	title: string;
 	options?: string[];
+}
+export interface AsyncQuestionItem {
+	id: string;
+	type: "agentMessage";
+	text: string;
+	phase: "final_answer";
+	delivery: "async";
+	questions: AsyncInputQuestion[];
+}
+export function createAsyncQuestionItem(id: string, questions: readonly AsyncInputQuestion[]): AsyncQuestionItem {
+	const copied = questions.map(question => ({
+		...question,
+		...(question.options ? { options: [...question.options] } : {}),
+	}));
+	return {
+		id,
+		type: "agentMessage",
+		text: copied
+			.map(question => [question.title, ...(question.options?.map(option => `- ${option}`) ?? [])].join("\n"))
+			.join("\n\n"),
+		phase: "final_answer",
+		delivery: "async",
+		questions: copied,
+	};
 }
 
 export const INPUT_COPY = {

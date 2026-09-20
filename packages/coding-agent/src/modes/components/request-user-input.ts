@@ -3,6 +3,16 @@ import { INPUT_COPY, type InputQuestion, type InputResponse } from "../../../../
 import { QuestionForm } from "../../../../chat-ui/src/interactions/question-form";
 import { getEditorTheme } from "../theme/theme";
 
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+function maskedEditorLines(text: string, width: number): string[] {
+	const masked = text
+		.split("\n")
+		.map(line => [...graphemes.segment(line)].map(() => "*").join(""))
+		.join("\n");
+	return masked.split("\n").flatMap(line => wrapTextWithAnsi(line, Math.max(1, width)));
+}
+
 /** Uses the ordinary multiline composer; form state stays local until explicit submission. */
 export class RequestUserInputComponent implements Component {
 	readonly form: QuestionForm;
@@ -63,7 +73,11 @@ export class RequestUserInputComponent implements Component {
 			add("");
 			add(this.form.options.length ? INPUT_COPY.notes : INPUT_COPY.answer);
 			this.#editor.setMaxHeight(Math.max(3, (this.tui.terminal.rows || 24) - lines.length - 3));
-			lines.push(...this.#editor.render(Math.max(1, width)));
+			lines.push(
+				...(this.form.question.isSecret
+					? maskedEditorLines(this.#editor.getText(), Math.max(1, width))
+					: this.#editor.render(Math.max(1, width))),
+			);
 		}
 		add("");
 		add(

@@ -60,6 +60,19 @@ test("async tool immediately acknowledges and preserves pending attention withou
 	expect(owner.pending()).toHaveLength(2);
 	expect(owner.pending().map(question => question.identity?.itemId)).toEqual(["call", "call"]);
 	expect(owner.pending().map(question => question.questionId)).toEqual(["call:0", "call:1"]);
+	expect(owner.pending()[0].asyncBatch).toEqual({
+		requestId: "call",
+		questionIds: ["call:0", "call:1"],
+		questions: [{ title: "Which scope?", options: ["Small", "Large"] }, { title: "Any details?" }],
+		item: {
+			id: "call",
+			type: "agentMessage",
+			text: "Which scope?\n- Small\n- Large\n\nAny details?",
+			phase: "final_answer",
+			delivery: "async",
+			questions: [{ title: "Which scope?", options: ["Small", "Large"] }, { title: "Any details?" }],
+		},
+	});
 	expect(owner.waitingOnUserInput).toBe(false);
 	owner.cancelAll();
 });

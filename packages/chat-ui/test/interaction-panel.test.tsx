@@ -47,3 +47,48 @@ test("a new session accepts its lower revision snapshot on the same transport", 
 	h.receive({ type: "interaction_snapshot", sessionId: "new", revision: 0, pending: [] });
 	expect(screen.queryByText("Which scope?")).toBeNull();
 });
+
+test("secret questions use a masked input while retaining the submitted value", () => {
+	const h = harness();
+	render(<InteractionPanel transport={h.transport} />);
+	h.receive({
+		type: "interaction_snapshot",
+		sessionId: "s",
+		revision: 1,
+		pending: [
+			{
+				...h.request,
+				inputQuestions: [
+					{ id: "token", header: "Token", question: "Enter token", options: null, isSecret: true },
+				],
+			},
+		],
+	});
+	const input = screen.getByLabelText("Type your answer (optional)") as HTMLInputElement;
+	expect(input.type).toBe("password");
+	fireEvent.change(input, { target: { value: "secret-value" } });
+	fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+	expect(h.sent.at(-1)).toMatchObject({
+		type: "interaction_respond",
+		value: { answers: { token: { answers: ["user_note: secret-value"] } } },
+	});
+});
+
+test("same-context implementation requests transcript follow before sending the decision", async () => {
+	const h = harness();
+	const order: string[] = [];
+	h.transport.send = message => {
+		order.push(message.type);
+		h.sent.push(message);
+	};
+	render(<InteractionPanel transport={h.transport} onFollowTranscript={() => order.push("follow")} />);
+	h.receive({
+		type: "interaction_snapshot",
+		sessionId: "s",
+		revision: 0,
+		pending: [],
+		plan: { id: "p", itemId: "i", revision: 1, markdown: "Plan", status: "pending" },
+	});
+	fireEvent.click(screen.getByRole("button", { name: "Yes, implement this plan" }));
+	expect(order.slice(-2)).toEqual(["follow", "plan_decide"]);
+});

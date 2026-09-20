@@ -65,6 +65,7 @@ import {
 	Snowflake,
 	setNativeKillTree,
 } from "@f5-sales-demo/pi-utils";
+import { createAsyncQuestionItem } from "../../../chat-ui/src/interactions/contract";
 import {
 	type ConversationPlan,
 	ConversationPlans,
@@ -807,6 +808,7 @@ export class AgentSession {
 					pane_id: process.env.HERDR_PANE_ID,
 					producer: "xcsh",
 					generation: Number(herdrGeneration),
+					session_id: this.sessionId,
 				},
 				() => {
 					void this.#emitSessionEvent({
@@ -815,7 +817,7 @@ export class AgentSession {
 						message: "Herdr interaction delivery is unavailable; local questions remain available.",
 					});
 				},
-				process.env.HERDR_NATIVE_CAPABILITY,
+				process.env.HERDR_NATIVE_CAPABILITY ?? process.env.HERDR_INTERACTION_CAPABILITY,
 			);
 			this.addBeforeDisposeHook(() => this.#herdrInteractions!.close());
 			this.addDisposeHook(
@@ -929,16 +931,7 @@ export class AgentSession {
 		questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[],
 		questionIds: string[],
 	): void {
-		const item = {
-			id: itemId,
-			type: "agentMessage" as const,
-			text: questions
-				.map(question => [question.title, ...(question.options?.map(option => `- ${option}`) ?? [])].join("\n"))
-				.join("\n\n"),
-			phase: "final_answer" as const,
-			delivery: "async" as const,
-			questions: structuredClone(questions),
-		};
+		const item = createAsyncQuestionItem(itemId, questions);
 		this.sessionManager.appendCustomMessageEntry("async-user-input", item.text, true, { item, questionIds }, "agent");
 		void this.#emitSessionEvent({ type: "async_user_input", item, questionIds });
 	}
