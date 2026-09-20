@@ -13,7 +13,12 @@ Date: 2026-09-20
 
 The model-free SDK probe (`createStore`, `update`, and `searchLex`) ran in-process under Bun 1.4.2 with lifecycle scripts suppressed. It performed no vector embedding, reranking, MCP, CLI subprocess, or model download.
 
-The release compile gate failed before an executable could be produced. `bun build --compile packages/coding-agent/src/cli.ts` resolves QMD's transitive `node-llama-cpp` imports and fails on unavailable optional platform modules, including `@node-llama-cpp/mac-arm64-metal`, `@node-llama-cpp/mac-x64`, `@node-llama-cpp/linux-riscv64`, and Windows variants. The compile also requires generated internal-url inputs, which were absent from the direct probe invocation; the QMD native-module failures are independent of those generated inputs.
+The release compile gate failed before an executable could be produced. `bun build --compile
+packages/coding-agent/src/cli.ts` resolves QMD's transitive `node-llama-cpp` imports and fails on
+unavailable optional platform modules, including `@node-llama-cpp/mac-arm64-metal`,
+`@node-llama-cpp/mac-x64`, `@node-llama-cpp/linux-riscv64`, and Windows variants. The compile also
+requires generated internal-url inputs, which were absent from the direct probe invocation; the QMD
+native-module failures are independent of those generated inputs.
 
 ## Decision
 
