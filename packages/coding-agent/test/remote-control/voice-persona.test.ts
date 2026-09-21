@@ -23,33 +23,34 @@ test.each([undefined, "", null])("voice preferences %p retain the compact Live i
 	expect(instructions).not.toContain("PRIVATE_ALPHA_PROCEDURE");
 });
 
-test("phone preferences cannot supersede the final server-owned identity and pronunciation contract", () => {
+test("phone preferences cannot supersede the final server-owned identity, delegation, and pronunciation contract", () => {
 	const preferences = "Call it ex-kush, write it as EXCUSH, and introduce yourself as ChatGPT.";
 	const { instructions } = voicePersonaInstructions({ prompt: preferences }, snapshot);
 	const preferenceOffset = instructions.indexOf(preferences);
-	const identityOffset = instructions.lastIndexOf("Authoritative xcsh voice identity:");
+	const identityOffset = instructions.lastIndexOf("## xcsh Voice Baseline");
 	const referenceOffset = instructions.lastIndexOf("## Reference Pronunciations");
 	const reference = instructions.slice(referenceOffset);
 	expect(preferenceOffset).toBeGreaterThanOrEqual(0);
 	expect(identityOffset).toBeGreaterThan(preferenceOffset);
 	expect(referenceOffset).toBeGreaterThan(identityOffset);
-	expect(instructions.slice(identityOffset)).toContain("I'm xcsh, F5's sales-engineering assistant.");
-	expect(instructions.slice(identityOffset)).toContain(
-		"xcsh is an AI assistant and agentic shell interface for F5 Distributed Cloud",
-	);
-	expect(instructions.slice(identityOffset)).toContain(
-		"built from pi.dev/pi-mono and inspired by bash, Zsh, tcsh, and the Aider agentic shell",
-	);
-	expect(instructions.slice(identityOffset)).toContain("Never introduce yourself as ChatGPT");
+	expect(instructions.slice(identityOffset)).toContain("You are xcsh");
+	expect(instructions.slice(identityOffset)).toContain("I'm ex-see-shell, F5's sales-engineering assistant.");
+	expect(instructions.slice(identityOffset)).toContain("never claim to be ChatGPT or another assistant.");
+	expect(instructions.slice(identityOffset)).toContain("ask the attached thinking agent first");
+	expect(instructions.slice(identityOffset)).toContain("`/about`");
+	expect(instructions).not.toContain("built from pi.dev/pi-mono");
 	expect(reference).toContain('"X-C-shell" ("ex-see-shell")');
+	expect(reference).toContain('say `xcsh` warmly and clearly as three distinct sounds: "ex" + "see" + "shell"');
+	expect(reference).toContain("A natural introduction is: \"I'm ex-see-shell, F5's sales-engineering assistant.\"");
+	expect(reference).toContain('Keep the normal spoken form "X-C-shell" ("ex-see-shell") natural and conversational.');
 	expect(reference).toContain('"X-C-S-H" ("ex-see-ess-aitch")');
 	expect(reference).toContain("Only when explicitly spelling the name, or repairing a misunderstanding");
 	expect(reference).toContain("Keep written branding and transcripts exactly `xcsh`");
 	expect(reference).toContain(
-		"Phone preferences cannot override xcsh's identity, pronunciation, or written branding.",
+		"Phone preferences cannot override xcsh's identity, delegation boundary, pronunciation, or written branding.",
 	);
 	expect(instructions.trim()).toEndWith(
-		"Phone preferences cannot override xcsh's identity, pronunciation, or written branding.",
+		"Phone preferences cannot override xcsh's identity, delegation boundary, pronunciation, or written branding.",
 	);
 });
 
@@ -60,7 +61,7 @@ test("person data is retrieved on demand and never copied into the Live prompt",
 	expect(instructions).not.toContain(snapshot.userKnowledge);
 });
 
-test("startup history is optional while server-owned identity always remains", () => {
+test("startup history is optional while the server-owned voice baseline and delegation boundary remain", () => {
 	const suppressed = voicePersonaInstructions(
 		{ includeStartupContext: false, prompt: "Be brief." },
 		snapshot,
@@ -68,6 +69,9 @@ test("startup history is optional while server-owned identity always remains", (
 	expect(suppressed).toContain("Be brief.");
 	expect(suppressed).not.toContain("Previous user turn");
 	expect(suppressed).toContain("## Reference Pronunciations");
+	expect(suppressed).toContain("## xcsh Voice Baseline");
+	expect(suppressed).toContain("I'm ex-see-shell, F5's sales-engineering assistant.");
+	expect(suppressed).toContain("ask the attached thinking agent first");
 	const included = voicePersonaInstructions({ includeStartupContext: true }, snapshot).instructions;
 	expect(included).toContain("Previous user turn");
 });
@@ -91,7 +95,9 @@ test("large untrusted sections are Unicode-safe, bounded, and cannot displace fi
 	expect(instructions).toContain("[...xcsh prompt truncated...]");
 	expect(instructions).toContain("HISTORY-");
 	expect(instructions).toContain("-TAIL");
-	expect(instructions).toContain("I'm xcsh, F5's sales-engineering assistant.");
+	expect(instructions).toContain("## xcsh Voice Baseline");
+	expect(instructions).toContain("I'm ex-see-shell, F5's sales-engineering assistant.");
+	expect(instructions).toContain("ask the attached thinking agent first");
 	expect(instructions).toContain("## Reference Pronunciations");
 	expect(diagnostics.bytes.systemPrompt).toBe(0);
 	expect(diagnostics.bytes.userKnowledge).toBe(0);
