@@ -4,10 +4,11 @@
  * Handles `xcsh plugin <command>` subcommands for plugin lifecycle management.
  */
 
+import * as os from "node:os";
 import { createInterface } from "node:readline/promises";
 import { APP_NAME, getProjectDir } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
-import { resolveOrDefaultProjectRegistryPath } from "../discovery/helpers";
+import { preloadPluginRoots, resolveOrDefaultProjectRegistryPath } from "../discovery/helpers";
 import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import { PluginManager, parseSettingValue, validateSetting } from "../extensibility/plugins";
 import {
@@ -206,8 +207,12 @@ export async function runPluginCommand(cmd: PluginCommandArgs): Promise<void> {
 	}
 }
 
-async function loadIntegrationHandles(): Promise<IntegrationHandle<unknown>[]> {
-	const loaded = await discoverAndLoadExtensions([], process.cwd());
+export async function loadIntegrationHandles(
+	home: string = os.homedir(),
+	cwd: string = process.cwd(),
+): Promise<IntegrationHandle<unknown>[]> {
+	await preloadPluginRoots(home, cwd);
+	const loaded = await discoverAndLoadExtensions([], cwd);
 	if (loaded.errors.length) throw new Error(`Unable to load ${loaded.errors.length} plugin extension(s)`);
 	return loaded.extensions.flatMap(extension => [...extension.integrations.values()]);
 }
