@@ -434,13 +434,46 @@ export class MarketplaceManager {
 		if (!entry) throw new Error(`Marketplace "${marketplace}" not found`);
 		const catalog = await this.#readCatalog(entry);
 		const plan = this.#dependencyPlan(catalog, name);
+		const registryPath = this.#registryPath(scope);
+		const before = await readInstalledPluginsRegistry(registryPath);
+		const introduced: string[] = [];
 		let result: InstalledPluginEntry | undefined;
-		for (const pluginName of plan) {
-			// Dependencies are synchronized to the catalog before their dependent.
-			result = await this.#installPluginOne(pluginName, marketplace, {
-				scope,
-				force: pluginName === name ? options?.force : true,
-			});
+		try {
+			for (const pluginName of plan) {
+				const pluginId = buildPluginId(pluginName, marketplace);
+				const wasInstalled = (before.plugins[pluginId]?.length ?? 0) > 0;
+				// Dependencies are synchronized to the catalog before their dependent.
+				result = await this.#installPluginOne(pluginName, marketplace, {
+					scope,
+					force: pluginName === name ? options?.force : true,
+				});
+				if (!wasInstalled) introduced.push(pluginId);
+			}
+		} catch (error) {
+			let rollback = await readInstalledPluginsRegistry(registryPath);
+			const staged = introduced.flatMap(pluginId => rollback.plugins[pluginId] ?? []);
+			for (const pluginId of introduced.reverse()) rollback = removeInstalledPlugin(rollback, pluginId);
+			await writeInstalledPluginsRegistry(registryPath, rollback);
+			const [userRegistry, projectRegistry] = await Promise.all([
+				readInstalledPluginsRegistry(this.#opts.installedRegistryPath),
+				this.#opts.projectInstalledRegistryPath
+					? readInstalledPluginsRegistry(this.#opts.projectInstalledRegistryPath)
+					: Promise.resolve({
+							version: 2 as const,
+							plugins: {} as Record<string, InstalledPluginEntry[]>,
+						}),
+			]);
+			const referenced = collectReferencedPaths(userRegistry, projectRegistry);
+			for (const stagedEntry of staged) {
+				if (!referenced.has(stagedEntry.installPath)) {
+					await fs.rm(stagedEntry.installPath, {
+						recursive: true,
+						force: true,
+					});
+				}
+			}
+			this.#clearCache();
+			throw error;
 		}
 		if (!result) throw new Error(`Plugin "${name}" not found in marketplace "${marketplace}"`);
 		return result;

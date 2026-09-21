@@ -338,6 +338,52 @@ describe("MarketplaceManager", () => {
 		);
 	});
 
+	it("rolls back newly installed dependencies when a dependent cannot be staged", async () => {
+		const fixture = path.join(ctx.tmpDir, "rollback-marketplace");
+		fs.mkdirSync(path.join(fixture, ".xcsh-plugin"), { recursive: true });
+		fs.mkdirSync(path.join(fixture, "plugins", "xorg"), { recursive: true });
+		fs.writeFileSync(path.join(fixture, "plugins", "xorg", "README.md"), "xorg");
+		fs.writeFileSync(
+			path.join(fixture, ".xcsh-plugin", "marketplace.json"),
+			JSON.stringify({
+				name: "rollback-marketplace",
+				owner: { name: "Test" },
+				plugins: [
+					{
+						name: "xorg",
+						source: "./plugins/xorg",
+						version: "1.0.0",
+						lifecycle: {
+							mode: "content",
+							integrations: [],
+							requirements: [],
+							setupRequired: false,
+							collectedData: [],
+							pluginDependencies: [],
+						},
+					},
+					{
+						name: "zoom",
+						source: "./plugins/missing",
+						version: "1.0.0",
+						lifecycle: {
+							mode: "content",
+							integrations: [],
+							requirements: [],
+							setupRequired: false,
+							collectedData: [],
+							pluginDependencies: ["xorg"],
+						},
+					},
+				],
+			}),
+		);
+		await ctx.manager.addMarketplace(fixture);
+		await expect(ctx.manager.installPlugin("zoom", "rollback-marketplace")).rejects.toThrow();
+		expect(await ctx.manager.listInstalledPlugins()).toEqual([]);
+		expect(fs.readdirSync(path.join(ctx.tmpDir, "cache", "plugins"))).toEqual([]);
+	});
+
 	// ── Uninstall ──────────────────────────────────────────────────────────
 
 	it("uninstallPlugin → cache removed + deregistered", async () => {
