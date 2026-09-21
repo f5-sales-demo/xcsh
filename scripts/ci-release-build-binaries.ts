@@ -95,7 +95,7 @@ async function buildBinary(target: BinaryTarget): Promise<void> {
 		entrypoints: [path.join(repoRoot, entrypoint)],
 		compile: { target: target.target, outfile: path.join(repoRoot, target.outfile) },
 		root: repoRoot,
-		external: ["mupdf"],
+		external: ["mupdf", "node-llama-cpp", "@node-llama-cpp/*"],
 		define: { PI_COMPILED: "true", ...vertexBuildDefines(Bun.env, true) },
 		throw: false,
 	});
