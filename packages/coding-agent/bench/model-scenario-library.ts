@@ -10,6 +10,7 @@ import apiCatalogSemanticPrompt from "./prompts/api-catalog-semantic-probe.md" w
 import apiCatalogAnswerAmbiguousPrompt from "./prompts/api-catalog-answer-ambiguous.md" with { type: "text" };
 import apiCatalogAnswerNoMatchPrompt from "./prompts/api-catalog-answer-no-match.md" with { type: "text" };
 import apiCatalogAnswerWafPrompt from "./prompts/api-catalog-answer-waf.md" with { type: "text" };
+import apiCatalogAnswerCloneDnsZonePrompt from "./prompts/api-catalog-answer-clone-dns-zone.md" with { type: "text" };
 import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { type: "text" };
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
 import modelPingPrompt from "./prompts/model-ping.md" with { type: "text" };
@@ -364,6 +365,34 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "safe-discovery", label: "Uses exactly the catalog lookup", weight: 35, requiresContract: true },
 			{ id: "clarification", label: "Requests a meaningful disambiguating choice", weight: 35, responsePattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i },
 			{ id: "no-invented-path", label: "Does not invent a mutation path", weight: 30, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
+		],
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-answer-clone-dns-zone",
+		label: "API discovery answer quality: clone DNS zone",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogAnswerCloneDnsZonePrompt.trim(),
+		contract: {
+			requiredToolSequence: [
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone$/ } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/dns-dns-zone-clone-from-dns-domain" } },
+			],
+			requiredResponsePatterns: [
+				{ label: "selects the DNS-zone clone category", pattern: /dns-dns-zone-clone-from-dns-domain/i },
+				{ label: "states the clone method and path", pattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
+				{ label: "states that no fields are required", pattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
+			],
+			forbiddenResponsePatterns: [{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i }],
+		},
+		quality: [
+			{ id: "evidence-sequence", label: "Reads the QMD-discovered category after the natural-language query", weight: 30, requiresContract: true },
+			{ id: "resource", label: "Selects the DNS-zone clone category", weight: 20, responsePattern: /dns-dns-zone-clone-from-dns-domain/i },
+			{ id: "internal-urls", label: "Cites both internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone[\s\S]*xcsh:\/\/api-catalog\/dns-dns-zone-clone-from-dns-domain/i },
+			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
+			{ id: "required-fields", label: "States that the operation has no required fields", weight: 10, responsePattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
+			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},

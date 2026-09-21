@@ -58,6 +58,7 @@ describe("model scenario library", () => {
 			"api-catalog-ambiguous",
 			"api-catalog-answer-waf",
 			"api-catalog-answer-ambiguous",
+			"api-catalog-answer-clone-dns-zone",
 			"api-catalog-answer-no-match",
 			"api-catalog-exact-resource",
 			"api-catalog-direct-category",
