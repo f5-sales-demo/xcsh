@@ -11,15 +11,14 @@ Date: 2026-09-20
 
 ## Reproducible result
 
-The model-free SDK probe (`createStore`, `update`, and `searchLex`) ran in-process under Bun 1.4.2 with lifecycle scripts suppressed. It performed no vector embedding, reranking, MCP, CLI subprocess, or model download.
+The production candidate uses QMD's in-process, model-free BM25 `createStore` and `searchLex` path under Bun 1.4.2. It performs no vector embedding, reranking, MCP, CLI subprocess, or model download. QMD ranks only natural-language `xcsh://api-catalog/?search=` candidates; existing catalog/spec resolvers remain authoritative for content and schemas.
 
-The release compile gate failed before an executable could be produced. `bun build --compile
-packages/coding-agent/src/cli.ts` resolves QMD's transitive `node-llama-cpp` imports and fails on
-unavailable optional platform modules, including `@node-llama-cpp/mac-arm64-metal`,
-`@node-llama-cpp/mac-x64`, `@node-llama-cpp/linux-riscv64`, and Windows variants. The compile also
-requires generated internal-url inputs, which were absent from the direct probe invocation; the QMD
-native-module failures are independent of those generated inputs.
+The deterministic corpus has 925 documents and fingerprint `f672936520235ab57544e861b9d8f49d0841d60791218be93001a59e40c85c6d`. Two independent generator runs produced the same generated-source SHA-256: `bb577b7972e1b793b56463079813ee19aa38b6e550e06209186dd3d625790b55`.
+
+On the frozen 60-query benchmark, QMD improved recall@1/3/5 from 0.300/0.350/0.350 to 0.467/0.533/0.567 and MRR from 0.329 to 0.507. The current local retrieval run took 160 ms for QMD and 201 ms for baseline. In the five-measured-sample Sol/high UAT matrix, discovery-only median end-to-end time was 6812 ms for QMD vs 8000 ms for baseline (14.8% faster), with no per-model p95 regression in TTFT, first-tool time, or response time. The full mixed-route matrix was 9.9% faster; it is informational because it includes routes QMD cannot affect.
+
+`bun run --cwd packages/coding-agent build` completed and the generated Linux binary passed `--help`. The build externalizes QMD's unused optional `node-llama-cpp` platform modules, preserving the model-free runtime while allowing package compilation.
 
 ## Decision
 
-QMD is unqualified for this release because compilation/package coverage cannot be proven on supported Linux/macOS targets. Per the clean-break experiment rule, the package, adapter, generated index, cache handling, experimental switch, and runtime path are removed. The deterministic corpus and byte-equivalent baseline seam remain available for the reusable API-awareness benchmark.
+Promote the clean-break QMD BM25 candidate under the revised policy: its discovery-specific speed improvement exceeds 10% and relevance is materially stronger. The generated index is checksum-verified, extracted atomically, and has a focused cold/warm/corrupt-cache repair test. Raw UAT responses remain outside the repository in the local benchmark directory; this finding contains no credentials, tenant data, or raw responses.

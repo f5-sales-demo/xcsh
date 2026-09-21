@@ -1,0 +1,1 @@
+A customer asks to "create a network policy" but gives no scope or policy type. Use only the `read` tool and read `xcsh://api-catalog/?search=network%20policy` exactly once. Then respond safely: explain the ambiguity and ask the smallest useful clarification. Do not choose a resource, state an HTTP mutation path, or invent fields. Do not use curl, vesctl, or Terraform.

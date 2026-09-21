@@ -1,15 +1,21 @@
 import * as path from "node:path";
 import assistantIdentityPrompt from "./prompts/assistant-identity.md" with { type: "text" };
-import azureCliAuthPrompt from "./prompts/azure-cli-auth.md" with { type: "text" };
+import apiCatalogDirectCategoryPrompt from "./prompts/api-catalog-direct-category-probe.md" with { type: "text" };
+import apiCatalogExactResourcePrompt from "./prompts/api-catalog-exact-resource-probe.md" with { type: "text" };
+import apiCatalogAliasPrompt from "./prompts/api-catalog-alias-probe.md" with { type: "text" };
+import apiCatalogAmbiguousPrompt from "./prompts/api-catalog-ambiguous-probe.md" with { type: "text" };
+import apiCatalogKnownResourcePrompt from "./prompts/api-catalog-known-resource-probe.md" with { type: "text" };
+import apiCatalogNoMatchPrompt from "./prompts/api-catalog-no-match-probe.md" with { type: "text" };
+import apiCatalogSemanticPrompt from "./prompts/api-catalog-semantic-probe.md" with { type: "text" };
+import apiCatalogAnswerAmbiguousPrompt from "./prompts/api-catalog-answer-ambiguous.md" with { type: "text" };
+import apiCatalogAnswerNoMatchPrompt from "./prompts/api-catalog-answer-no-match.md" with { type: "text" };
+import apiCatalogAnswerWafPrompt from "./prompts/api-catalog-answer-waf.md" with { type: "text" };
+import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { type: "text" };
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
-import githubCliAuthPrompt from "./prompts/github-cli-auth.md" with { type: "text" };
-import gitlabCliAuthPrompt from "./prompts/gitlab-cli-auth.md" with { type: "text" };
-import meddpiccSkillPrompt from "./prompts/meddpicc-skill-probe.md" with { type: "text" };
 import modelPingPrompt from "./prompts/model-ping.md" with { type: "text" };
 import pluginSkillPrompt from "./prompts/plugin-skill-probe.md" with { type: "text" };
 import pluginToolPrompt from "./prompts/plugin-tool-probe.md" with { type: "text" };
 import readToolPrompt from "./prompts/read-tool-probe.md" with { type: "text" };
-import salesforceCliAuthPrompt from "./prompts/salesforce-cli-auth.md" with { type: "text" };
 import userAssistancePrompt from "./prompts/user-assistance.md" with { type: "text" };
 
 export type ModelScenarioSuite = "ping" | "identity" | "tools" | "plugins" | "authenticated" | "integrations";
@@ -31,6 +37,7 @@ export interface ModelScenarioQualityCriterion {
 	label: string;
 	weight: number;
 	responsePattern?: RegExp;
+	forbiddenResponsePattern?: RegExp;
 	responseIncludes?: string;
 	maxVisibleWords?: number;
 	requiresContract?: boolean;
@@ -41,6 +48,8 @@ export interface ModelScenarioContract {
 	requiredResponsePatterns?: ModelScenarioResponsePattern[];
 	forbiddenResponsePatterns?: ModelScenarioResponsePattern[];
 	requiredTools?: ModelScenarioToolExpectation[];
+	/** Ordered evidence reads; additional non-error reads remain permitted. */
+	requiredToolSequence?: ModelScenarioToolExpectation[];
 	exclusiveTools?: boolean;
 }
 
@@ -235,6 +244,149 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
+		id: "api-catalog-known-resource",
+		label: "API catalog known-resource lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogKnownResourcePrompt.trim(),
+		contract: {
+			expectedResponse: "API_CATALOG_KNOWN_RESOURCE_OK_1E7A",
+			requiredTools: [
+				{
+					name: "read",
+					count: 1,
+					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=http%20load%20balancer$/ },
+				},
+			],
+			exclusiveTools: true,
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-alias",
+		label: "API catalog alias lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogAliasPrompt.trim(),
+		contract: {
+			expectedResponse: "API_CATALOG_ALIAS_OK_5C92",
+			requiredTools: [
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=create%20zone$/ } },
+			],
+			exclusiveTools: true,
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-semantic",
+		label: "API catalog natural-language lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogSemanticPrompt.trim(),
+		contract: {
+			expectedResponse: "API_CATALOG_NATURAL_LANGUAGE_OK_8B4D",
+			requiredTools: [
+				{
+					name: "read",
+					count: 1,
+					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=web%20application%20firewall$/ },
+				},
+			],
+			exclusiveTools: true,
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-ambiguous",
+		label: "API catalog ambiguous discovery lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogAmbiguousPrompt.trim(),
+		contract: {
+			expectedResponse: "API_CATALOG_AMBIGUOUS_OK_3F61",
+			requiredTools: [
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=network%20policy$/ } },
+			],
+			exclusiveTools: true,
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-answer-waf",
+		label: "API discovery answer quality: Web Application Firewall",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogAnswerWafPrompt.trim(),
+		contract: {
+			requiredToolSequence: [
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=web%20application%20firewall$/ } },
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/[a-z0-9-]+$/ } },
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-spec\/virtual\?resource=app_firewall$/ } },
+			],
+			requiredResponsePatterns: [
+				{ label: "selects app_firewall", pattern: /\bapp[_ -]?firewall\b/i },
+				{ label: "states the create method and path", pattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
+				{ label: "states all required fields", pattern: /metadata\.name[\s\S]{0,160}metadata\.namespace[\s\S]{0,160}path\.metadata\.namespace/i },
+			],
+			forbiddenResponsePatterns: [
+				{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i },
+			],
+		},
+		quality: [
+			{ id: "evidence-sequence", label: "Follows the catalog-to-schema internal URL sequence", weight: 30, requiresContract: true },
+			{ id: "resource", label: "Selects the app_firewall resource", weight: 15, responsePattern: /\bapp[_ -]?firewall\b/i },
+			{ id: "internal-urls", label: "Cites both catalog and API-spec internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/[\s\S]*xcsh:\/\/api-spec\//i },
+			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
+			{ id: "required-fields", label: "States the required field set", weight: 15, responsePattern: /metadata\.name[\s\S]{0,160}metadata\.namespace[\s\S]{0,160}path\.metadata\.namespace/i },
+			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
+		],
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-answer-ambiguous",
+		label: "API discovery answer quality: ambiguous intent",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogAnswerAmbiguousPrompt.trim(),
+		contract: {
+			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=network%20policy$/ } }],
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "asks for clarification", pattern: /\bclarif|which (?:policy )?(?:kind|scope|type)|could mean\b/i },
+			],
+			forbiddenResponsePatterns: [{ label: "does not invent an API path", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i }],
+		},
+		quality: [
+			{ id: "safe-discovery", label: "Uses exactly the catalog lookup", weight: 35, requiresContract: true },
+			{ id: "clarification", label: "Requests a meaningful disambiguating choice", weight: 35, responsePattern: /\bclarif|which (?:policy )?(?:kind|scope|type)|could mean\b/i },
+			{ id: "no-invented-path", label: "Does not invent a mutation path", weight: 30, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
+		],
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-answer-no-match",
+		label: "API discovery answer quality: no match",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogAnswerNoMatchPrompt.trim(),
+		contract: {
+			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=unmatched%20api%20intent$/ } }],
+			exclusiveTools: true,
+			requiredResponsePatterns: [{ label: "reports no catalog match", pattern: /\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i }],
+			forbiddenResponsePatterns: [{ label: "does not invent an API method or path", pattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i }],
+		},
+		quality: [
+			{ id: "safe-discovery", label: "Uses exactly the no-match catalog lookup", weight: 40, requiresContract: true },
+			{ id: "no-match", label: "Clearly reports that no supported match was found", weight: 35, responsePattern: /\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i },
+			{ id: "no-invention", label: "Does not invent an API method or path", weight: 25, forbiddenResponsePattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i },
+		],
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
 		id: "plugin-skill",
 		label: "Plugin skill",
 		suite: "plugins",
@@ -316,80 +468,60 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		runtime: { tools: ["xcsh_api"], extensions: "none", skills: "none", requiresContext: true },
 	},
 	{
-		id: "github-cli-auth",
-		label: "Authenticated GitHub CLI",
-		suite: "integrations",
-		tier: 5,
-		prompt: githubCliAuthPrompt.trim(),
+		id: "api-catalog-exact-resource",
+		label: "API catalog exact resource lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogExactResourcePrompt.trim(),
 		contract: {
-			expectedResponse: "GitHub CLI authenticated: yes",
-			requiredTools: [{ name: "gh_exec", count: 1, arguments: { args: ["auth", "status"] } }],
+			expectedResponse: "API_CATALOG_EXACT_RESOURCE_OK_6D18",
+			requiredTools: [{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer" } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
-		runtime: { tools: ["gh_exec"], extensions: "installed", skills: "none", requiresContext: false },
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
-		id: "azure-cli-auth",
-		label: "Authenticated Azure CLI",
-		suite: "integrations",
-		tier: 5,
-		prompt: azureCliAuthPrompt.trim(),
+		id: "api-catalog-direct-category",
+		label: "API catalog direct category lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogDirectCategoryPrompt.trim(),
 		contract: {
-			expectedResponse: "Azure CLI authenticated: yes",
-			requiredTools: [{ name: "az_account_show", count: 1, arguments: { action: "show" } }],
+			expectedResponse: "API_CATALOG_DIRECT_CATEGORY_OK_7A3E",
+			requiredTools: [{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/http-loadbalancers" } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
-		runtime: { tools: ["az_account_show"], extensions: "installed", skills: "none", requiresContext: false },
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
-		id: "gitlab-cli-auth",
-		label: "Authenticated GitLab CLI",
-		suite: "integrations",
-		tier: 5,
-		prompt: gitlabCliAuthPrompt.trim(),
+		id: "api-spec-resource-schema",
+		label: "API specification schema lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiSpecResourcePrompt.trim(),
 		contract: {
-			expectedResponse: "GitLab CLI authenticated: yes",
-			requiredTools: [
-				{
-					name: "glab_exec",
-					count: 1,
-					arguments: { args: ["repo", "list", "--member", "--output", "json", "--per-page", "1"] },
-				},
-			],
+			expectedResponse: "API_SPEC_RESOURCE_OK_4B29",
+			requiredTools: [{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer" } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
-		runtime: { tools: ["glab_exec"], extensions: "installed", skills: "none", requiresContext: false },
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
-		id: "meddpicc-skill",
-		label: "MEDDPICC plugin skill",
-		suite: "integrations",
-		tier: 5,
-		prompt: meddpiccSkillPrompt.trim(),
+		id: "api-catalog-no-match",
+		label: "API catalog no-match lookup",
+		suite: "tools",
+		tier: 2,
+		prompt: apiCatalogNoMatchPrompt.trim(),
 		contract: {
-			expectedResponse: "MEDDPICC operating principle: Evidence over hope",
-			requiredTools: [{ name: "read", count: 1, arguments: { path: "skill://meddpicc:coach" } }],
+			expectedResponse: "API_CATALOG_NO_MATCH_OK_9F50",
+			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=unmatched%20api%20intent$/ } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
-		runtime: { tools: ["read"], extensions: "installed", skills: ["meddpicc:coach"], requiresContext: false },
-	},
-	{
-		id: "salesforce-cli-auth",
-		label: "Authenticated Salesforce CLI",
-		suite: "integrations",
-		tier: 5,
-		prompt: salesforceCliAuthPrompt.trim(),
-		contract: {
-			expectedResponse: "Salesforce CLI authenticated: yes",
-			requiredTools: [{ name: "sf_org_display", count: 1, arguments: {} }],
-			exclusiveTools: true,
-		},
-		quality: EXACT_CONTRACT_QUALITY,
-		runtime: { tools: ["sf_org_display"], extensions: "installed", skills: "none", requiresContext: false },
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 ];
 
