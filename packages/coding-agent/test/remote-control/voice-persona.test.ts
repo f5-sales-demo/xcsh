@@ -56,8 +56,10 @@ test("phone preferences cannot supersede the final server-owned identity, delega
 
 test("person data is retrieved on demand and never copied into the Live prompt", () => {
 	const { instructions } = voicePersonaInstructions({}, snapshot);
-	expect(instructions).toContain("Retrieve current person data");
-	expect(instructions).toContain("project memory and previous tests are not authoritative person data");
+	expect(instructions).toContain("delegate for current person data");
+	expect(instructions).toContain("Do not answer from voice context or say you lack information");
+	expect(instructions).toContain("wait for the attached agent's verified result");
+	expect(instructions).toContain('While waiting, only say: "Let me check that for you."');
 	expect(instructions).not.toContain(snapshot.userKnowledge);
 });
 
