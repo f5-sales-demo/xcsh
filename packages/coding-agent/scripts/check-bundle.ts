@@ -20,7 +20,7 @@ const result = await Bun.build({
 	entrypoints: [cliEntry],
 	target: "bun",
 	define: { PI_COMPILED: "true", ...vertexBuildDefines() },
-	external: ["mupdf"],
+	external: ["mupdf", "node-llama-cpp", "@node-llama-cpp/*"],
 	throw: false,
 });
 
