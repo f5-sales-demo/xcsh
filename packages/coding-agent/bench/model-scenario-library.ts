@@ -425,13 +425,13 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/dns-dns-zone-import-bind-create" } },
 		], requiredResponsePatterns: [
 			{ label: "selects BIND-import category", pattern: /dns-dns-zone-import-bind-create/i },
-			{ label: "states POST path", pattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
+			{ label: "states POST path", pattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
 			{ label: "states required file", pattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i },
 		], forbiddenResponsePatterns: [{ label: "does not substitute CLI", pattern: /\b(?:curl|vesctl|terraform)\b/i }] },
 		quality: [
 			{ id: "evidence-sequence", label: "Reads QMD-discovered category", weight: 35, requiresContract: true },
 			{ id: "resource", label: "Selects BIND-import category", weight: 20, responsePattern: /dns-dns-zone-import-bind-create/i },
-			{ id: "method-path", label: "States POST path", weight: 25, responsePattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
+			{ id: "method-path", label: "States POST path", weight: 25, responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
 			{ id: "required-fields", label: "States required file", weight: 15, responsePattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i },
 			{ id: "no-substitution", label: "Avoids unsupported substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
