@@ -42,6 +42,9 @@ test("phone preferences cannot supersede the final server-owned identity and pro
 	);
 	expect(instructions.slice(identityOffset)).toContain("Never introduce yourself as ChatGPT");
 	expect(reference).toContain('"X-C-shell" ("ex-see-shell")');
+	expect(reference).toContain('say `xcsh` warmly and clearly as three distinct sounds: "ex" + "see" + "shell"');
+	expect(reference).toContain("A natural introduction is: \"I'm ex-see-shell, F5's sales-engineering assistant.\"");
+	expect(reference).toContain('Keep the normal spoken form "X-C-shell" ("ex-see-shell") natural and conversational.');
 	expect(reference).toContain('"X-C-S-H" ("ex-see-ess-aitch")');
 	expect(reference).toContain("Only when explicitly spelling the name, or repairing a misunderstanding");
 	expect(reference).toContain("Keep written branding and transcripts exactly `xcsh`");
