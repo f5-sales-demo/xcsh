@@ -45,6 +45,7 @@ type Surfaces = {
 	permissionsQueryProtoCallIsNative: boolean;
 	chromeRuntimePresent: boolean;
 	leftoverIframes: number;
+	monospaceWidth: number;
 };
 
 /**
@@ -86,6 +87,11 @@ async function readSurfaces(page: Page): Promise<Surfaces> {
 		const gl = g.document.createElement("canvas").getContext("webgl");
 		const dbg = gl?.getExtension("WEBGL_debug_renderer_info") ?? null;
 		const nav = g.navigator;
+		const text = g.document.createElement("canvas").getContext("2d") as unknown as {
+			font: string;
+			measureText(value: string): { width: number };
+		};
+		text.font = "20px monospace";
 		return JSON.stringify({
 			surfaceErrors: g.__xcshStealthErrors ?? [],
 			// `undefined` would vanish from JSON, which is the very value under test.
@@ -110,6 +116,7 @@ async function readSurfaces(page: Page): Promise<Surfaces> {
 			chromeRuntimePresent: typeof g.chrome !== "undefined",
 			// The preamble must not leave a helper element behind as a tell.
 			leftoverIframes: g.document.querySelectorAll("iframe").length,
+			monospaceWidth: Math.round(text.measureText("abc").width),
 		});
 	});
 	return JSON.parse(json) as Surfaces;
@@ -385,7 +392,9 @@ describe.skipIf(isCI)("Stealth injected surfaces (real Chrome via Puppeteer)", (
 			const r = JSON.parse(json) as Record<string, unknown>;
 			expect(r.fetchStatus).toBe(200);
 			expect(r.xhrStatus).toBe(200);
-			expect(r.measuredWidth).toBe(36);
+			// Generic font resolution is host-configurable. Compare against the bare
+			// browser instead of pinning one machine's monospace glyph metric.
+			expect(r.measuredWidth).toBe(bare.monospaceWidth);
 			expect(r.dataUrlPrefix).toBe("data:image/png;");
 			expect(r.imageDataLength).toBe(16);
 			expect(r.canPlayMp4).toBe("probably");

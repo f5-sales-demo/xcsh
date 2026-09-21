@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "c70679a6c57b69623410e766140f858ee2475a25",
-  "fingerprint": "ef8ac7630711afea405d9a67eda9005235a00d7abdb6399a5e3b1dc5bd666bb0",
+  "revision": "7d8504f25811efe4fecbdd3241c1c55fa6b83c55",
+  "fingerprint": "fd15b9f49eb03fb930617a1dece1704486f298699674c8743f26fc842c458b50",
   "counts": {
     "total": 240,
     "components": 95,
@@ -2082,7 +2082,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "3e5aa1f725ca3cb5ba3fa17b5b991b93e215ce9911e173ccae3fa7bab5e1002d",
+      "sha256": "9e80d172c9ec49c442ffadf952ae2105327a9b9d29ecd20dbf4d180046b4f864",
       "exports": [
         "PluginDashboard"
       ],
@@ -2103,7 +2103,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "01eefc745585b18dd0f98ce11c064adc019b74d9e01289bb92fe2a77f4e227e1",
+      "sha256": "ac6fe50722c8041be5d6081d70edd2b1730f82941d3fc08278dd3109991a3e8a",
       "exports": [
         "applySearch",
         "buildTabs",
@@ -2127,7 +2127,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "5402b2240d70ba49871e0767ff0d85b1cfc9adc77a788230523c2ffbf7098a14",
+      "sha256": "40761cebdc1e2593ad67c027988f0168900574bd8051df717906b195f93d9eb3",
       "exports": [
         "DashboardPlugin",
         "PluginBulkResult",
@@ -4607,7 +4607,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "96cebb7677793bc0bc30aba1776d7997fafc02f2058576bf8c140d0a2d8d905f",
+      "sha256": "73735d4e399bffcbc0f82f81f08130a71b631340c921a74342be009dedad1e99",
       "exports": [
         "PluginScope",
         "PluginSetupResult",

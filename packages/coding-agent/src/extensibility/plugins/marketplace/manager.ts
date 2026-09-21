@@ -55,11 +55,6 @@ export interface MarketplaceManagerOptions {
 	 * Resolved by resolveActiveProjectRegistryPath(cwd) in callers.
 	 */
 	projectInstalledRegistryPath?: string;
-	/**
-	 * Path to the local-scoped installed_plugins.json (gitignored, project-specific).
-	 * Same as project path but under a `.local` variant so it stays out of VCS.
-	 */
-	localInstalledRegistryPath?: string;
 	marketplacesCacheDir: string;
 	pluginsCacheDir: string;
 	/** Injected for testing; production callers pass clearXcshPluginRootsCache.
@@ -72,7 +67,7 @@ export interface MarketplaceManagerOptions {
 
 export interface PluginUpdate {
 	pluginId: string;
-	scope: "user" | "project" | "local";
+	scope: "user" | "project";
 	from: string;
 	to: string;
 }
@@ -84,6 +79,51 @@ export interface MarketplaceRefreshResult {
 
 export interface MarketplaceCatalogPreview extends MarketplaceRefreshResult {
 	plugins: Array<{ marketplace: string; plugin: MarketplacePluginEntry }>;
+}
+
+export interface PluginDependencyPlanItem {
+	pluginId: string;
+	version: string;
+	scope: "user" | "project";
+	dependency: boolean;
+}
+
+function resolvePluginDependencyNames(catalog: MarketplaceCatalog, root: string): string[] {
+	const plugins = new Map(catalog.plugins.map(plugin => [plugin.name, plugin]));
+	const state = new Map<string, "visiting" | "visited">();
+	const plan: string[] = [];
+	const visit = (name: string, trail: string[]): void => {
+		const plugin = plugins.get(name);
+		if (!plugin) {
+			if (trail.length === 0) throw new Error(`Plugin "${name}" not found in marketplace "${catalog.name}"`);
+			throw new Error(`Plugin dependency "${name}" is missing from marketplace "${catalog.name}"`);
+		}
+		if (state.get(name) === "visiting") throw new Error(`Plugin dependency cycle: ${[...trail, name].join(" -> ")}`);
+		if (state.get(name) === "visited") return;
+		state.set(name, "visiting");
+		for (const dependency of plugin.lifecycle.pluginDependencies) {
+			if (dependency === name) throw new Error(`Plugin "${name}" cannot depend on itself`);
+			visit(dependency, [...trail, name]);
+		}
+		state.set(name, "visited");
+		plan.push(name);
+	};
+	visit(root, []);
+	return plan;
+}
+
+export function resolvePluginDependencyPlan(
+	catalog: MarketplaceCatalog,
+	root: string,
+	scope: "user" | "project",
+): PluginDependencyPlanItem[] {
+	const plugins = new Map(catalog.plugins.map(plugin => [plugin.name, plugin]));
+	return resolvePluginDependencyNames(catalog, root).map(name => ({
+		pluginId: buildPluginId(name, catalog.name),
+		version: plugins.get(name)?.version ?? "resolved manifest version",
+		scope,
+		dependency: name !== root,
+	}));
 }
 
 // ── Manager ──────────────────────────────────────────────────────────────────
@@ -421,49 +461,48 @@ export class MarketplaceManager {
 		return plugins.find(p => p.name === name) ?? null;
 	}
 
+	async getPluginDependencyPlan(
+		name: string,
+		marketplace: string,
+		scope: "user" | "project" = "user",
+	): Promise<PluginDependencyPlanItem[]> {
+		const marketplaces = await this.#readMarketplacesRegistry();
+		const entry = getMarketplaceEntry(marketplaces, marketplace);
+		if (!entry) throw new Error(`Marketplace "${marketplace}" not found`);
+		return resolvePluginDependencyPlan(await this.#readCatalog(entry), name, scope);
+	}
+
 	// ── Install / uninstall ───────────────────────────────────────────────────
 
 	async installPlugin(
 		name: string,
 		marketplace: string,
-		options?: { force?: boolean; scope?: "user" | "project" | "local" },
+		options?: { force?: boolean; scope?: "user" | "project" },
 	): Promise<InstalledPluginEntry> {
 		const scope = options?.scope ?? "user";
 		const marketplaces = await this.#readMarketplacesRegistry();
 		const entry = getMarketplaceEntry(marketplaces, marketplace);
 		if (!entry) throw new Error(`Marketplace "${marketplace}" not found`);
 		const catalog = await this.#readCatalog(entry);
-		const plan = this.#dependencyPlan(catalog, name);
+		const plan = resolvePluginDependencyNames(catalog, name);
 		const registryPath = this.#registryPath(scope);
 		const before = await readInstalledPluginsRegistry(registryPath);
-		const introduced: string[] = [];
+		const staged: InstalledPluginEntry[] = [];
 		let result: InstalledPluginEntry | undefined;
 		try {
 			for (const pluginName of plan) {
-				const pluginId = buildPluginId(pluginName, marketplace);
-				const wasInstalled = (before.plugins[pluginId]?.length ?? 0) > 0;
 				// Dependencies are synchronized to the catalog before their dependent.
 				result = await this.#installPluginOne(pluginName, marketplace, {
 					scope,
 					force: pluginName === name ? options?.force : true,
+					enable: pluginName !== name,
+					cleanupExisting: false,
 				});
-				if (!wasInstalled) introduced.push(pluginId);
+				staged.push(result);
 			}
 		} catch (error) {
-			let rollback = await readInstalledPluginsRegistry(registryPath);
-			const staged = introduced.flatMap(pluginId => rollback.plugins[pluginId] ?? []);
-			for (const pluginId of introduced.reverse()) rollback = removeInstalledPlugin(rollback, pluginId);
-			await writeInstalledPluginsRegistry(registryPath, rollback);
-			const [userRegistry, projectRegistry] = await Promise.all([
-				readInstalledPluginsRegistry(this.#opts.installedRegistryPath),
-				this.#opts.projectInstalledRegistryPath
-					? readInstalledPluginsRegistry(this.#opts.projectInstalledRegistryPath)
-					: Promise.resolve({
-							version: 2 as const,
-							plugins: {} as Record<string, InstalledPluginEntry[]>,
-						}),
-			]);
-			const referenced = collectReferencedPaths(userRegistry, projectRegistry);
+			await writeInstalledPluginsRegistry(registryPath, before);
+			const referenced = collectReferencedPaths(...(await this.#readInstalledRegistries()));
 			for (const stagedEntry of staged) {
 				if (!referenced.has(stagedEntry.installPath)) {
 					await fs.rm(stagedEntry.installPath, {
@@ -476,38 +515,27 @@ export class MarketplaceManager {
 			throw error;
 		}
 		if (!result) throw new Error(`Plugin "${name}" not found in marketplace "${marketplace}"`);
+		const referenced = collectReferencedPaths(...(await this.#readInstalledRegistries()));
+		for (const pluginName of plan) {
+			const pluginId = buildPluginId(pluginName, marketplace);
+			for (const previous of before.plugins[pluginId] ?? []) {
+				if (!referenced.has(previous.installPath)) {
+					await fs.rm(previous.installPath, { recursive: true, force: true });
+				}
+			}
+		}
 		return result;
-	}
-
-	#dependencyPlan(catalog: MarketplaceCatalog, root: string): string[] {
-		const plugins = new Map(catalog.plugins.map(plugin => [plugin.name, plugin]));
-		const state = new Map<string, "visiting" | "visited">();
-		const plan: string[] = [];
-		const visit = (name: string, trail: string[]): void => {
-			const plugin = plugins.get(name);
-			if (!plugin) {
-				if (trail.length === 0) throw new Error(`Plugin "${name}" not found in marketplace "${catalog.name}"`);
-				throw new Error(`Plugin dependency "${name}" is missing from marketplace "${catalog.name}"`);
-			}
-			if (state.get(name) === "visiting")
-				throw new Error(`Plugin dependency cycle: ${[...trail, name].join(" -> ")}`);
-			if (state.get(name) === "visited") return;
-			state.set(name, "visiting");
-			for (const dependency of plugin.lifecycle.pluginDependencies) {
-				if (dependency === name) throw new Error(`Plugin "${name}" cannot depend on itself`);
-				visit(dependency, [...trail, name]);
-			}
-			state.set(name, "visited");
-			plan.push(name);
-		};
-		visit(root, []);
-		return plan;
 	}
 
 	async #installPluginOne(
 		name: string,
 		marketplace: string,
-		options?: { force?: boolean; scope?: "user" | "project" | "local" },
+		options?: {
+			force?: boolean;
+			scope?: "user" | "project";
+			enable?: boolean;
+			cleanupExisting?: boolean;
+		},
 	): Promise<InstalledPluginEntry> {
 		const force = options?.force ?? false;
 		const scope = options?.scope ?? "user";
@@ -587,20 +615,12 @@ export class MarketplaceManager {
 			await writeInstalledPluginsRegistry(registryPath, prunedReg);
 
 			// Read both registries AFTER removal — only delete paths no longer referenced by either.
-			const [userReg, projectReg] = await Promise.all([
-				readInstalledPluginsRegistry(this.#opts.installedRegistryPath),
-				this.#opts.projectInstalledRegistryPath
-					? readInstalledPluginsRegistry(this.#opts.projectInstalledRegistryPath)
-					: Promise.resolve({
-							version: 2 as const,
-							plugins: {} as Record<string, InstalledPluginEntry[]>,
-						}),
-			]);
-			const referenced = collectReferencedPaths(userReg, projectReg);
-
-			for (const entry of existing) {
-				if (entry.installPath !== cachePath && !referenced.has(entry.installPath)) {
-					await fs.rm(entry.installPath, { recursive: true, force: true });
+			if (options?.cleanupExisting !== false) {
+				const referenced = collectReferencedPaths(...(await this.#readInstalledRegistries()));
+				for (const entry of existing) {
+					if (entry.installPath !== cachePath && !referenced.has(entry.installPath)) {
+						await fs.rm(entry.installPath, { recursive: true, force: true });
+					}
 				}
 			}
 		}
@@ -608,7 +628,7 @@ export class MarketplaceManager {
 		// 6. Build and register the entry, preserving enabled state from previous install
 		const now = new Date().toISOString();
 		// Carry over enabled flag from existing entry — a disabled plugin must stay disabled after upgrade
-		const wasDisabled = existing?.some(e => e.enabled === false);
+		const wasDisabled = options?.enable !== true && existing?.some(e => e.enabled === false);
 		// Honor defaultEnabled from catalog — new installs with defaultEnabled: false start disabled
 		const defaultDisabled = !existing && pluginEntry.defaultEnabled === false;
 		const installedEntry: InstalledPluginEntry = {
@@ -664,7 +684,7 @@ export class MarketplaceManager {
 		return "0.0.0";
 	}
 
-	async uninstallPlugin(pluginId: string, scope?: "user" | "project" | "local"): Promise<void> {
+	async uninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<void> {
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID format: "${pluginId}". Expected "name@marketplace".`);
@@ -680,7 +700,7 @@ export class MarketplaceManager {
 		}
 
 		// Disambiguation: if installed in both scopes and no explicit scope, require one.
-		let targetScope: "user" | "project" | "local";
+		let targetScope: "user" | "project";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(
@@ -791,7 +811,7 @@ export class MarketplaceManager {
 		return results;
 	}
 
-	async setPluginEnabled(pluginId: string, enabled: boolean, scope?: "user" | "project" | "local"): Promise<void> {
+	async setPluginEnabled(pluginId: string, enabled: boolean, scope?: "user" | "project"): Promise<void> {
 		const { userEntries, projectEntries, userReg, projectReg } = await this.#findInBothRegistries(pluginId);
 
 		const inUser = userEntries && userEntries.length > 0;
@@ -802,7 +822,7 @@ export class MarketplaceManager {
 		}
 
 		// Disambiguation: if installed in both scopes and no explicit scope, require one.
-		let targetScope: "user" | "project" | "local";
+		let targetScope: "user" | "project";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(
@@ -914,14 +934,9 @@ export class MarketplaceManager {
 
 		// Keyed by (path, scope) so each scope is checked independently.
 		// A plugin current in user scope but stale in project scope must still appear.
-		const registryEntries: Array<[string, "user" | "project" | "local"]> = [
-			[this.#opts.installedRegistryPath, "user"],
-		];
+		const registryEntries: Array<[string, "user" | "project"]> = [[this.#opts.installedRegistryPath, "user"]];
 		if (this.#opts.projectInstalledRegistryPath) {
 			registryEntries.push([this.#opts.projectInstalledRegistryPath, "project"]);
-		}
-		if (this.#opts.localInstalledRegistryPath) {
-			registryEntries.push([this.#opts.localInstalledRegistryPath, "local"]);
 		}
 
 		for (const [regPath, scope] of registryEntries) {
@@ -974,7 +989,7 @@ export class MarketplaceManager {
 	// Re-install a specific plugin at the latest catalog version (force-overwrites).
 	async upgradePlugin(
 		pluginId: string,
-		scope?: "user" | "project" | "local",
+		scope?: "user" | "project",
 		opts?: { refresh?: boolean },
 	): Promise<InstalledPluginEntry> {
 		if (opts?.refresh) await this.refreshMarketplaces();
@@ -992,7 +1007,7 @@ export class MarketplaceManager {
 			throw new Error(`Plugin "${pluginId}" is not installed`);
 		}
 
-		let resolvedScope: "user" | "project" | "local";
+		let resolvedScope: "user" | "project";
 		if (inUser && inProject) {
 			if (!scope) {
 				throw new Error(
@@ -1076,20 +1091,21 @@ export class MarketplaceManager {
 
 	// ── Private helpers ───────────────────────────────────────────────────────
 
-	#registryPath(scope: "user" | "project" | "local"): string {
+	#registryPath(scope: "user" | "project"): string {
 		if (scope === "project") {
 			if (!this.#opts.projectInstalledRegistryPath) {
 				throw new Error("project-scoped install requires running inside a project directory");
 			}
 			return this.#opts.projectInstalledRegistryPath;
 		}
-		if (scope === "local") {
-			if (!this.#opts.localInstalledRegistryPath) {
-				throw new Error("local-scoped install requires running inside a project directory");
-			}
-			return this.#opts.localInstalledRegistryPath;
-		}
 		return this.#opts.installedRegistryPath;
+	}
+
+	async #readInstalledRegistries(): Promise<InstalledPluginsRegistry[]> {
+		const paths = [this.#opts.installedRegistryPath, this.#opts.projectInstalledRegistryPath].filter(
+			(registryPath): registryPath is string => registryPath !== undefined,
+		);
+		return Promise.all(paths.map(readInstalledPluginsRegistry));
 	}
 
 	async #assertNoInstalledDependents(pluginId: string, registry: InstalledPluginsRegistry): Promise<void> {

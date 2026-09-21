@@ -1,3 +1,4 @@
+import type { PluginDependencyPlanItem } from "../../../extensibility/plugins/marketplace/manager";
 import type { MarketplacePluginLifecycle } from "../../../extensibility/plugins/marketplace/types";
 
 export interface DashboardPlugin {
@@ -6,7 +7,7 @@ export interface DashboardPlugin {
 	displayName?: string;
 	marketplace?: string;
 	source: "npm" | "marketplace";
-	scope?: "user" | "project" | "local";
+	scope?: "user" | "project";
 	version?: string;
 	catalogVersion?: string;
 	description?: string;
@@ -22,6 +23,8 @@ export interface DashboardPlugin {
 	updateVersion?: string;
 	recommended?: boolean;
 	lifecycle?: MarketplacePluginLifecycle;
+	dependencyPlan?: PluginDependencyPlanItem[];
+	dependencyPlanError?: string;
 }
 
 export type PluginTabId = "installed" | "recommended" | "discover" | "updates";
