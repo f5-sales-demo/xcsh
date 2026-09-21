@@ -1,4 +1,12 @@
-import { matchesBaselineCatalogDiscoveryTerm, normalizeApiCatalogDiscoveryTerm } from "./api-catalog-discovery";
+import os from "node:os";
+import path from "node:path";
+import {
+	matchesBaselineCatalogDiscoveryTerm,
+	normalizeApiCatalogDiscoveryTerm,
+	primeQmdBm25CatalogDiscovery,
+	rankQmdBm25CatalogDiscovery,
+} from "./api-catalog-discovery";
+import { QMD_API_CATALOG_PREBUILT_INDEX } from "./api-catalog-qmd-index.generated";
 import type {
 	ApiCatalogCategory,
 	ApiCatalogCategorySummary,
@@ -68,6 +76,15 @@ export function createApiCatalogResolver(
 	data: Readonly<Record<string, ApiCatalogCategory>>,
 	specIndex?: ApiSpecIndex,
 ): ApiCatalogResolver {
+	// This overlaps verified QMD-store opening with model reasoning. A failed
+	// prewarm is never a fallback: the eventual discovery lookup still surfaces
+	// its QMD error explicitly.
+	void primeQmdBm25CatalogDiscovery({
+		cacheRoot: path.join(os.homedir(), ".xcsh", "cache", "qmd-api-catalog"),
+		prebuiltIndex: QMD_API_CATALOG_PREBUILT_INDEX,
+		limit: 5,
+	}).catch(() => undefined);
+
 	function lookup(category: string): ApiCatalogCategory {
 		const cat = data[category];
 		if (!cat) throw new Error(`No catalog data for category: ${category}`);
@@ -95,11 +112,14 @@ export function createApiCatalogResolver(
 							if (expectsCrud) return makeResource(url, renderMissingCrud(domain.domain, res, ranked));
 						}
 					}
-					return makeResource(url, renderCatalogSearch(index, categorySummaries, data, resourceName, specIndex));
+					return makeResource(
+						url,
+						await renderCatalogSearch(index, categorySummaries, data, resourceName, specIndex),
+					);
 				}
 
 				const content = search
-					? renderCatalogSearch(index, categorySummaries, data, search, specIndex)
+					? await renderCatalogSearch(index, categorySummaries, data, search, specIndex)
 					: renderCatalogIndex(index, categorySummaries);
 				return makeResource(url, content);
 			}
@@ -155,13 +175,19 @@ function renderCatalogIndex(index: ApiCatalogIndex, summaries: readonly ApiCatal
 	].join("\n");
 }
 
-function renderCatalogSearch(
+async function renderCatalogSearch(
 	_index: ApiCatalogIndex,
 	summaries: readonly ApiCatalogCategorySummary[],
 	data: Readonly<Record<string, ApiCatalogCategory>>,
 	term: string,
 	specIndex?: ApiSpecIndex,
-): string {
+): Promise<string> {
+	const qmdCandidates = await rankQmdBm25CatalogDiscovery(term, {
+		cacheRoot: path.join(os.homedir(), ".xcsh", "cache", "qmd-api-catalog"),
+		prebuiltIndex: QMD_API_CATALOG_PREBUILT_INDEX,
+		limit: 5,
+	});
+	const qmdCategoryNames = new Set(qmdCandidates.map(candidate => candidate.categoryName));
 	const matchingResources = (specIndex?.domains ?? []).flatMap(domain =>
 		domain.resources
 			.filter(resource =>
@@ -186,6 +212,7 @@ function renderCatalogSearch(
 		.filter(summary => {
 			const category = data[summary.name];
 			return (
+				qmdCategoryNames.has(summary.name) ||
 				resourceCategoryNames.has(summary.name) ||
 				matchesBaselineCatalogDiscoveryTerm(term, [summary.name, summary.displayName]) ||
 				(category?.operations ?? []).some(operation =>

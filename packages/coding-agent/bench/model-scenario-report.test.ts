@@ -52,8 +52,34 @@ describe("model scenario library", () => {
 			"assistant-identity",
 			"user-assistance",
 			"read-tool",
+			"api-catalog-known-resource",
+			"api-catalog-alias",
+			"api-catalog-semantic",
+			"api-catalog-ambiguous",
+			"api-catalog-answer-waf",
+			"api-catalog-answer-ambiguous",
+			"api-catalog-answer-clone-dns-zone",
+			"api-catalog-answer-validate-cloud-user-account",
+			"api-catalog-answer-import-bind-dns-zone",
+			"api-catalog-answer-no-match",
+			"api-catalog-exact-resource",
+			"api-catalog-direct-category",
+			"api-spec-resource-schema",
+			"api-catalog-no-match",
 		]);
 		expect(throughTools.every(scenario => scenario.tier <= 2)).toBe(true);
+	});
+
+	it("requires the published catalog-to-schema evidence sequence for answer-quality scenarios", () => {
+		const scenario = MODEL_BENCHMARK_SCENARIOS.find(candidate => candidate.id === "api-catalog-answer-waf")!;
+		const response = [
+			"Resource: app_firewall",
+			"Evidence: xcsh://api-catalog/?search=web%20application%20firewall then xcsh://api-spec/virtual?resource=app_firewall",
+			"Create: POST /api/config/namespaces/{metadata.namespace}/app_firewalls",
+			"Required fields: metadata.name, metadata.namespace, path.metadata.namespace",
+		].join("\\n");
+		expect(evaluateScenarioQuality(scenario, response, true).score).toBe(100);
+		expect(buildScenarioBenchmarkSample({ target, scenario, round: 1, warmup: false, startedAt: "2026-08-02T00:00:00.000Z", processDurationMs: 1, exitCode: 0, timedOut: false, stderr: "", stdoutErrors: [], events: [] }).contractFailures).toEqual(expect.arrayContaining([expect.stringContaining("tool sequence missing")]));
 	});
 
 	it("grades identity output against the exact selected context", () => {

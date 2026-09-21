@@ -52,6 +52,12 @@ const BINARY_EXTENSIONS = new Set([
 	".woff2",
 	".zip",
 ]);
+// The QMD BM25 index is a deterministic compressed SQLite payload encoded as source text.
+// Lexical placeholder strings inside it are not readable catalog content, so scan only
+// human-readable generated artifacts for placeholder hygiene.
+const OPAQUE_GENERATED_ARTIFACTS = new Set([
+	"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
+]);
 // This guard invokes `git grep` over the full tracked index. Under the 10-worker CI suite it can
 // briefly contend with other index-heavy guards and native builds. Keep the deadline bounded, but
 // allow the observed full-suite contention window rather than turning a successful strict scan
@@ -87,6 +93,7 @@ describe("placeholder hygiene", () => {
 			for (const rel of candidateFiles()) {
 				if (ALLOWED_FILES.has(rel)) continue;
 				if (BINARY_EXTENSIONS.has(path.extname(rel).toLowerCase())) continue;
+				if (OPAQUE_GENERATED_ARTIFACTS.has(rel)) continue;
 
 				const abs = path.join(REPO_ROOT, rel);
 				let text: string;
@@ -111,6 +118,17 @@ describe("placeholder hygiene", () => {
 		const generated = path.join(REPO_ROOT, "packages/coding-agent/src/internal-urls/api-spec-index.generated.ts");
 		const text = fs.readFileSync(generated, "utf8");
 		expect(text).toContain("_acme-challenge");
+	});
+
+	it("exempts only the opaque compressed QMD index payload", () => {
+		expect([...OPAQUE_GENERATED_ARTIFACTS]).toEqual([
+			"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
+		]);
+		const qmdIndex = fs.readFileSync(
+			path.join(REPO_ROOT, "packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts"),
+			"utf8",
+		);
+		expect(qmdIndex).toContain("gzipBase64:");
 	});
 
 	it("the spec-index generator sanitises its output, so regeneration cannot reintroduce the placeholder", () => {

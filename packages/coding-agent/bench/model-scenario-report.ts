@@ -269,6 +269,17 @@ export function evaluateScenarioContract(
 			failures.push(`tool ${toolExpectationLabel(expected)} called ${count} times, expected ${expected.count}`);
 		}
 	}
+	if (contract.requiredToolSequence) {
+		let after = 0;
+		for (const expected of contract.requiredToolSequence) {
+			const found = toolCalls.findIndex((call, index) => index >= after && matchesToolExpectation(call, expected));
+			if (found < 0) {
+				failures.push(`tool sequence missing ${toolExpectationLabel(expected)} after position ${after}`);
+				break;
+			}
+			after = found + 1;
+		}
+	}
 	if (contract.exclusiveTools) {
 		const expectedCount = (contract.requiredTools ?? []).reduce((sum, expectation) => sum + expectation.count, 0);
 		if (toolCalls.length !== expectedCount) {
@@ -299,6 +310,7 @@ export function evaluateScenarioQuality(
 	const criteria = scenario.quality.map(criterion => {
 		const checks: boolean[] = [];
 		if (criterion.responsePattern) checks.push(criterion.responsePattern.test(response));
+		if (criterion.forbiddenResponsePattern) checks.push(!criterion.forbiddenResponsePattern.test(response));
 		if (criterion.responseIncludes) {
 			checks.push(normalizedResponse.includes(criterion.responseIncludes.toLocaleLowerCase("en-US")));
 		}

@@ -1,0 +1,1 @@
+A platform operator needs to validate a cloud user account. Use only `read`. First read `xcsh://api-catalog/?search=validate%20cloud%20user%20account`; if it identifies a category, read it. Otherwise say no category safely. State selected category, URLs, method/path, and required parameters; do not invent a mutation or fields.

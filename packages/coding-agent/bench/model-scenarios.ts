@@ -22,7 +22,6 @@ import {
 	summarizeScenarioBenchmarks,
 } from "./model-scenario-report";
 
-const CLI = path.join(import.meta.dir, "../src/cli.ts");
 const REPO_ROOT = path.join(import.meta.dir, "../../..");
 const DEFAULT_TARGETS: ModelBenchmarkTarget[] = [
 	{ label: "Gemini 3.6 Flash", selector: "google-vertex/gemini-3.6-flash" },
@@ -237,7 +236,9 @@ function scenarioArgs(
 ): string[] {
 	const args = [
 		process.execPath,
-		CLI,
+		"run",
+		"dev",
+		"--",
 		"--mode",
 		"json",
 		"--no-session",

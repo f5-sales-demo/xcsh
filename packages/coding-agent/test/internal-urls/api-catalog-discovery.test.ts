@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import {
 	buildApiCatalogDiscoveryCorpus,
+	extractPrebuiltQmdBm25Index,
 	fingerprintApiCatalogDiscoveryCorpus,
 	rankBaselineCatalogDiscovery,
 } from "../../src/internal-urls/api-catalog-discovery";
@@ -92,5 +97,36 @@ describe("API catalog discovery corpus", () => {
 			"dns-zones",
 		]);
 		expect(rankBaselineCatalogDiscovery("absent thing", corpus)).toEqual([]);
+	});
+
+	it("atomically repairs a stale prebuilt-index cache and reuses a verified warm index", async () => {
+		const cacheRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-qmd-cache-"));
+		const sqlite = Buffer.from("verified test index");
+		const fingerprint = "test-stale-cache";
+		const options = {
+			cacheRoot,
+			prebuiltIndex: {
+				fingerprint,
+				sqliteSha256: createHash("sha256").update(sqlite).digest("hex"),
+				gzipBase64: gzipSync(sqlite).toString("base64"),
+			},
+		};
+		try {
+			const cold = await extractPrebuiltQmdBm25Index(options);
+			expect(Buffer.from(await Bun.file(cold).bytes())).toEqual(sqlite);
+			expect(await extractPrebuiltQmdBm25Index(options)).toBe(cold);
+
+			const staleOptions = {
+				...options,
+				prebuiltIndex: { ...options.prebuiltIndex, fingerprint: "test-stale-repair" },
+			};
+			const staleDirectory = path.join(cacheRoot, staleOptions.prebuiltIndex.fingerprint);
+			await mkdir(staleDirectory, { recursive: true });
+			await Bun.write(path.join(staleDirectory, "index.sqlite"), "corrupt");
+			const repaired = await extractPrebuiltQmdBm25Index(staleOptions);
+			expect(Buffer.from(await Bun.file(repaired).bytes())).toEqual(sqlite);
+		} finally {
+			await rm(cacheRoot, { recursive: true, force: true });
+		}
 	});
 });
