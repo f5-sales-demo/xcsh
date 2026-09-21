@@ -1,6 +1,6 @@
 import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { type Static, Type } from "@sinclair/typebox";
-import type { AsyncInputQuestion } from "../../../chat-ui/src/interactions/contract";
+import { type AsyncInputQuestion, createAsyncQuestionItem } from "../../../chat-ui/src/interactions/contract";
 import asyncDescription from "../prompts/tools/request-user-input-async.md" with { type: "text" };
 import type { ToolSession } from ".";
 import { ToolAbortError, ToolError } from "./tool-errors";
@@ -114,6 +114,7 @@ export class RequestUserInputAsyncTool implements AgentTool<typeof requestUserIn
 		if (!owner) throw new ToolError("Session interaction owner unavailable");
 		const identity = this.session.getInteractionIdentity?.(callId);
 		const questionIds = args.questions.map((_, index) => `${callId}:${index}`);
+		const item = createAsyncQuestionItem(callId, args.questions as AsyncInputQuestion[]);
 		const pending = owner.requestAsyncBatch(
 			args.questions.map((question, index) => ({
 				kind: "input",
@@ -124,6 +125,7 @@ export class RequestUserInputAsyncTool implements AgentTool<typeof requestUserIn
 				toolCallId: callId,
 				identity,
 			})),
+			{ requestId: callId, questionIds, questions: item.questions, item },
 		);
 		for (const [index, result] of pending.entries()) {
 			void result

@@ -2,8 +2,10 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ConversationPlans } from "../../../chat-ui/src/interactions/conversation-plan";
 import { Settings } from "../../src/config/settings";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
+import { UserInteractions } from "../../src/session/user-interactions";
 
 function fixture(
 	id: string,
@@ -12,6 +14,7 @@ function fixture(
 		setCollaborationMode?: (mode: "plan" | "default") => Promise<void>;
 		setModel?: (model: any, thinkingLevel: any) => Promise<void>;
 	} = {},
+	extensions: Partial<SessionTarget> = {},
 ) {
 	const prompts: string[] = [];
 	let finish = () => {};
@@ -45,9 +48,59 @@ function fixture(
 			sessionName = name.trim();
 			return true;
 		},
+		...extensions,
 	} as unknown as SessionTarget;
 	return { remote: new RemoteSession(target, "21.22.0", controls), prompts, finish: () => finish(), settings };
 }
+
+test("blocking questions set waitingOnUserInput and clear it atomically at resolution", async () => {
+	const interactions = new UserInteractions();
+	const { remote } = fixture("waiting-status", {}, { userInteractions: interactions });
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	const pending = interactions.requestInput({
+		title: "Scope",
+		inputQuestions: [
+			{
+				id: "scope",
+				header: "Scope",
+				question: "Which scope?",
+				options: [{ label: "Focused", description: "Keep the change small." }],
+			},
+		],
+	});
+	expect(remote.thread().status).toEqual({ type: "active", activeFlags: ["waitingOnUserInput"] });
+	expect(events.at(-1)).toMatchObject({
+		method: "thread/status/changed",
+		params: { status: { type: "active", activeFlags: ["waitingOnUserInput"] } },
+	});
+	const request = interactions.pending()[0]!;
+	expect(interactions.respond(request.id, { answers: { scope: { answers: ["Focused"] } } })).toBe(true);
+	expect(await pending).toEqual({ answers: { scope: { answers: ["Focused"] } } });
+	expect(remote.thread().status).toEqual({ type: "idle" });
+	expect(events.at(-1)).toMatchObject({ method: "thread/status/changed", params: { status: { type: "idle" } } });
+	remote.dispose();
+});
+
+test("asynchronous questions remain observable without blocking thread status", () => {
+	const interactions = new UserInteractions();
+	const { remote } = fixture("async-status", {}, { userInteractions: interactions });
+	void interactions.request({ kind: "input", delivery: "async", title: "Background question" });
+	expect(interactions.pending()).toHaveLength(1);
+	expect(remote.thread().status).toEqual({ type: "idle" });
+	interactions.cancelAll();
+	remote.dispose();
+});
+
+test("pending plan decisions expose waitingOnUserInput until revision-fenced resolution", () => {
+	const plans = new ConversationPlans();
+	const plan = plans.complete("plan-item", "<proposed_plan>\n# Plan\n</proposed_plan>")!;
+	const { remote } = fixture("plan-status", {}, { conversationPlans: plans });
+	expect(remote.thread().status).toEqual({ type: "active", activeFlags: ["waitingOnUserInput"] });
+	expect(plans.decide(plan.id, "stay")).toEqual({ mode: "plan", freshContext: false });
+	expect(remote.thread().status).toEqual({ type: "idle" });
+	remote.dispose();
+});
 
 test("phone rename follows the pinned trim, response and notification contract", async () => {
 	const a = fixture("a");

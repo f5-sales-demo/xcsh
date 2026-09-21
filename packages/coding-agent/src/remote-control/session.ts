@@ -161,6 +161,7 @@ export class RemoteSession {
 	#unsubscribeTransitions?: () => void;
 	#unsubscribeDispose?: () => void;
 	#unsubscribeTitle?: () => void;
+	#unsubscribeInteractionStatus?: () => void;
 	#interactions?: RemoteInteractions;
 	#effects = new Set<Promise<unknown>>();
 	#voiceHistoryOwner!: SessionVoiceHistory;
@@ -189,7 +190,7 @@ export class RemoteSession {
 	#startedAtMs = 0;
 	#lastProviderUsage?: Usage;
 	#usageEmitted = new Set<string>();
-	#threadStatus: "active" | "idle" = "idle";
+	#threadStatus = JSON.stringify({ type: "idle" });
 	get #durable(): boolean {
 		return typeof this.target.sessionManager.getBranch === "function";
 	}
@@ -278,6 +279,9 @@ export class RemoteSession {
 					void this.target.abort();
 				},
 			);
+		if (target.userInteractions)
+			this.#unsubscribeInteractionStatus = target.userInteractions.subscribe(() => this.#emitThreadStatus());
+		this.#threadStatus = JSON.stringify(this.#threadStatusValue());
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
 		this.#unsubscribeTitle = subscribeSessionTitle(target.sessionManager, title =>
 			this.#emit("thread/name/updated", { threadName: title }),
@@ -334,7 +338,7 @@ export class RemoteSession {
 				this.#hydrateActiveStream();
 			}
 		}
-		this.#threadStatus = this.#active || this.target.isStreaming ? "active" : "idle";
+		this.#threadStatus = JSON.stringify(this.#threadStatusValue());
 	}
 	#historyToolContext(message: AgentMessage): HistoryToolContext | undefined {
 		if (message.role === "bashExecution" || message.role === "pythonExecution")
@@ -402,6 +406,7 @@ export class RemoteSession {
 		this.#unsubscribeTransitions?.();
 		this.#unsubscribeDispose?.();
 		this.#unsubscribeTitle?.();
+		this.#unsubscribeInteractionStatus?.();
 		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
 		this.#interactions?.close();
@@ -439,12 +444,22 @@ export class RemoteSession {
 		this.#updatedAt = Math.floor(Date.now() / 1000);
 		for (const listener of this.#listeners) listener({ method, params: { ...params, threadId: this.#threadId } });
 	}
-	#emitThreadStatus(status: "active" | "idle"): void {
-		if (this.#threadStatus === status) return;
-		this.#threadStatus = status;
-		this.#emit("thread/status/changed", {
-			status: status === "active" ? { type: "active", activeFlags: [] } : { type: "idle" },
-		});
+	#threadStatusValue(
+		runtimeActive = Boolean(this.#active) || this.target.isStreaming,
+	): { type: "active"; activeFlags: string[] } | { type: "idle" } {
+		const waiting =
+			this.target.userInteractions?.waitingOnUserInput === true ||
+			this.target.conversationPlans?.current?.status === "pending";
+		return runtimeActive || waiting
+			? { type: "active", activeFlags: waiting ? ["waitingOnUserInput"] : [] }
+			: { type: "idle" };
+	}
+	#emitThreadStatus(runtimeStatus?: "active" | "idle"): void {
+		const status = this.#threadStatusValue(runtimeStatus === undefined ? undefined : runtimeStatus === "active");
+		const serialized = JSON.stringify(status);
+		if (this.#threadStatus === serialized) return;
+		this.#threadStatus = serialized;
+		this.#emit("thread/status/changed", { status });
 	}
 	#usageBreakdown(usage: Usage) {
 		return {
@@ -653,7 +668,7 @@ export class RemoteSession {
 			createdAt: this.#createdAt,
 			updatedAt: this.#updatedAt,
 			recencyAt: this.#updatedAt,
-			status: this.target.isStreaming || this.#active ? { type: "active", activeFlags: [] } : { type: "idle" },
+			status: this.#threadStatusValue(),
 			path: this.target.sessionFile ?? null,
 			cwd: this.target.sessionManager.getCwd(),
 			cliVersion: this.version,
@@ -1581,6 +1596,7 @@ export class RemoteSession {
 		}
 		if (event.type === "plan_available" || event.type === "plan_resolved") {
 			this.#emit("xcsh/interaction/plan", { contract: "xcsh.interaction.v1", event });
+			this.#emitThreadStatus();
 			return;
 		}
 		if (event.type === "async_user_input") {

@@ -65,7 +65,7 @@ export function QuestionCard({ requestId, questions, onRespond, onInterrupt }: Q
 								name={requestId}
 								checked={form.draft.highlighted === index}
 								onChange={() => {
-									form.moveOption(index - form.draft.highlighted);
+									form.selectOption(index);
 									render(null);
 								}}
 							/>
@@ -73,15 +73,28 @@ export function QuestionCard({ requestId, questions, onRespond, onInterrupt }: Q
 							<small style={{ display: "block" }}>{option.description}</small>
 						</label>
 					))}
-					<label>
+					<label htmlFor={`${requestId}-notes-${form.index}`}>
 						{form.options.length ? INPUT_COPY.notes : INPUT_COPY.answer}
-						<textarea
-							value={form.draft.notes}
-							onChange={event => {
-								form.editNotes(event.currentTarget.value);
-								render(null);
-							}}
-						/>
+						{form.question.isSecret ? (
+							<input
+								id={`${requestId}-notes-${form.index}`}
+								type="password"
+								value={form.draft.notes}
+								onChange={event => {
+									form.editNotes(event.currentTarget.value);
+									render(null);
+								}}
+							/>
+						) : (
+							<textarea
+								id={`${requestId}-notes-${form.index}`}
+								value={form.draft.notes}
+								onChange={event => {
+									form.editNotes(event.currentTarget.value);
+									render(null);
+								}}
+							/>
+						)}
 					</label>
 					{questions.length > 1 ? (
 						<>

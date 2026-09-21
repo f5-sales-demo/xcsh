@@ -52,6 +52,17 @@ test("navigation wraps and changing a committed draft invalidates commitment", (
 	expect(form.finish().answers.scope.answers).toEqual([]);
 });
 
+test("space-style commit and delete-style clearing preserve Codex skipped-answer semantics", () => {
+	const form = new QuestionForm([questions[0]]);
+	form.commitSelection();
+	expect(form.unanswered).toBe(0);
+	form.clearSelection();
+	expect(form.draft.highlighted).toBeUndefined();
+	expect(form.unanswered).toBe(1);
+	expect(form.submit()).toEqual({ kind: "confirm" });
+	expect(form.finish()).toEqual({ answers: { scope: { answers: [] } } });
+});
+
 test("None of the above opens notes and commits only on submission", () => {
 	const form = new QuestionForm([questions[0]]);
 	form.moveOption(2);

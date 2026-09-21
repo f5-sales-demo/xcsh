@@ -36,6 +36,8 @@ export interface TranscriptProps {
 	emptyState?: ReactNode;
 	/** Accessible label for the transcript live region (default "Conversation"). */
 	label?: string;
+	/** Increment to explicitly resume following the live transcript tail. */
+	followRevision?: number;
 }
 
 export function Transcript({
@@ -46,6 +48,7 @@ export function Transcript({
 	brand,
 	emptyState,
 	label = "Conversation",
+	followRevision,
 }: TranscriptProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const userAtBottom = useRef(true);
@@ -73,6 +76,11 @@ export function Transcript({
 
 	const lastId = messages.length > 0 ? messages[messages.length - 1].id : null;
 	const empty = messages.length === 0;
+
+	useLayoutEffect(() => {
+		if (followRevision === undefined) return;
+		scrollToBottom();
+	}, [followRevision, scrollToBottom]);
 
 	// After each render, follow the tail only if the user was already at the bottom.
 	// NOT while empty: `userAtBottom` starts true and this effect has no dep array, so
