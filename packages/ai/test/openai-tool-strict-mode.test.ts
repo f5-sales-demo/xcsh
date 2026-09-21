@@ -58,17 +58,32 @@ function captureCompletionsPayload(
 	return promise;
 }
 
-function captureResponsesPayload(model: Model<"openai-responses">): Promise<unknown> {
+function captureResponsesPayload(
+	model: Model<"openai-responses">,
+	options?: { temperature?: number },
+): Promise<unknown> {
 	const { promise, resolve } = Promise.withResolvers<unknown>();
 	streamOpenAIResponses(model, testContext, {
 		apiKey: "test-key",
 		signal: createAbortedSignal(),
+		...options,
 		onPayload: payload => resolve(payload),
 	});
 	return promise;
 }
 
 describe("OpenAI tool strict mode", () => {
+	it("omits temperature for a Responses model that disables sampling", async () => {
+		const model = {
+			...getBundledModel("openai", "gpt-5-mini"),
+			api: "openai-responses",
+			compat: { supportsTemperature: false },
+		} as unknown as Model<"openai-responses">;
+
+		const payload = (await captureResponsesPayload(model, { temperature: 0 })) as { temperature?: number };
+		expect(payload.temperature).toBeUndefined();
+	});
+
 	it("sends strict=true for openai-completions tool schemas", async () => {
 		const model: Model<"openai-completions"> = {
 			...getBundledModel("openai", "gpt-4o-mini"),
