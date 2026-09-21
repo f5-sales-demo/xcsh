@@ -17,7 +17,7 @@ const result = await Bun.build({
 	entrypoints: [path.join(packageRoot, "src", "cli.ts")],
 	compile: { outfile: path.join(packageRoot, "dist", "xcsh") },
 	root: repoRoot,
-	external: ["mupdf", "node-llama-cpp", "@node-llama-cpp/*"],
+	external: ["mupdf"],
 	define: {
 		PI_COMPILED: "true",
 		...vertexBuildDefines(vertexEnvironment),

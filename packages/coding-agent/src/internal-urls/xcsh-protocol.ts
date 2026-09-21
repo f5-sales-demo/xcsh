@@ -23,8 +23,6 @@
  * Note: Salesforce context (xcsh://salesforce) has been extracted to the
  * salesforce plugin. See packages/salesforce/ for the standalone implementation.
  */
-
-import os from "node:os";
 import * as path from "node:path";
 import { logger } from "@f5-sales-demo/pi-utils";
 import {
@@ -37,8 +35,6 @@ import { type PersonProfileService, personProfileService } from "../person-profi
 import type { ContainmentStatus } from "../sandbox/containment";
 import type { ContextStatus } from "../services/xcsh-context";
 import type { ActiveModelSnapshot } from "../session/active-model";
-import { primeQmdBm25CatalogDiscovery } from "./api-catalog-discovery";
-import { QMD_API_CATALOG_PREBUILT_INDEX } from "./api-catalog-qmd-index.generated";
 import { type ApiCatalogResolver, createApiCatalogResolver } from "./api-catalog-resolve";
 import type { ApiCatalogCategory, ApiCatalogCategorySummary, ApiCatalogIndex } from "./api-catalog-types";
 import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve";
@@ -370,12 +366,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#terraformResolver = null;
 		this.#getPluginRoots = options.getPluginRoots;
 		this.#fleetDeps = options.fleetDeps;
-		void primeQmdBm25CatalogDiscovery({
-			cacheRoot: path.join(os.homedir(), ".xcsh", "cache", "qmd-api-catalog"),
-			prebuiltIndex: QMD_API_CATALOG_PREBUILT_INDEX,
-			limit: 5,
-		}).catch(() => undefined);
-
 		this.#registryDeps = options.registryDeps;
 	}
 

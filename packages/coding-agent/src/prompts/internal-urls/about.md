@@ -15,7 +15,6 @@ This document is the authoritative answer when the user asks about xcsh itself.
 - Built from dirty tree: {{#if info.dirty}}yes{{else}}no{{/if}}
 - PR that shipped this version: {{#if info.prNumber}}#{{info.prNumber}}{{else}}unknown (resolve via gh if needed){{/if}}
 - Provenance source: `{{info.source}}` (resolved at {{info.resolvedAt}})
-- API discovery ranking: native QMD BM25 (`@tobilu/qmd@2.8.3`), using a build-generated offline index
 
 {{{platformContext}}}{{{activeModel}}}{{{containment}}}## Source of truth
 

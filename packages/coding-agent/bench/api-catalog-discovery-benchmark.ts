@@ -1,14 +1,11 @@
 #!/usr/bin/env bun
 
-import os from "node:os";
 import path from "node:path";
 import {
 	buildApiCatalogDiscoveryCorpus,
 	rankBaselineCatalogDiscovery,
-	rankQmdBm25CatalogDiscovery,
 } from "../src/internal-urls/api-catalog-discovery";
 import { API_CATALOG_DATA, API_CATALOG_INDEX } from "../src/internal-urls/api-catalog-index.generated";
-import { QMD_API_CATALOG_PREBUILT_INDEX } from "../src/internal-urls/api-catalog-qmd-index.generated";
 
 interface Query {
 	id: string;
@@ -44,20 +41,11 @@ function score(queries: readonly Query[], ranked: ReadonlyMap<string, readonly s
 
 const fixture = (await Bun.file(path.join(import.meta.dir, "fixtures/api-catalog-retrieval-v1.json")).json()) as { queries: Query[] };
 const corpus = buildApiCatalogDiscoveryCorpus(API_CATALOG_INDEX, API_CATALOG_DATA);
-const cacheRoot = process.env.XCSH_QMD_BENCH_CACHE_ROOT ?? path.join(os.tmpdir(), "xcsh-qmd-benchmark");
 const baseline = new Map<string, readonly string[]>();
-const qmd = new Map<string, readonly string[]>();
-const baselineStarted = performance.now();
+const started = performance.now();
 for (const query of fixture.queries) baseline.set(query.id, rankBaselineCatalogDiscovery(query.query, corpus).map(candidate => candidate.categoryName));
-const qmdStarted = performance.now();
-for (const query of fixture.queries) {
-	qmd.set(query.id, (await rankQmdBm25CatalogDiscovery(query.query, { cacheRoot, prebuiltIndex: QMD_API_CATALOG_PREBUILT_INDEX, limit: 5 })).map(candidate => candidate.categoryName));
-}
 console.log(JSON.stringify({
-	corpus: { documents: corpus.documents.length, fingerprint: QMD_API_CATALOG_PREBUILT_INDEX.fingerprint },
-	baselineElapsedMs: Math.round(qmdStarted - baselineStarted),
-	qmdElapsedMs: Math.round(performance.now() - qmdStarted),
+	corpus: { documents: corpus.documents.length },
+	baselineElapsedMs: Math.round(performance.now() - started),
 	baseline: score(fixture.queries, baseline),
-	qmdBm25: score(fixture.queries, qmd),
 }, null, 2));
-
