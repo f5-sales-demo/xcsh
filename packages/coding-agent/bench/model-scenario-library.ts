@@ -330,7 +330,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			requiredResponsePatterns: [
 				{ label: "selects app_firewall", pattern: /\bapp[_ -]?firewall\b/i },
 				{ label: "states the create method and path", pattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
-				{ label: "states all required fields", pattern: /metadata\.name[\s\S]{0,160}metadata\.namespace[\s\S]{0,160}path\.metadata\.namespace/i },
+				{ label: "states all required fields", pattern: /metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i },
 			],
 			forbiddenResponsePatterns: [
 				{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i },
@@ -341,7 +341,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "resource", label: "Selects the app_firewall resource", weight: 15, responsePattern: /\bapp[_ -]?firewall\b/i },
 			{ id: "internal-urls", label: "Cites both catalog and API-spec internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/[\s\S]*xcsh:\/\/api-spec\//i },
 			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
-			{ id: "required-fields", label: "States the required field set", weight: 15, responsePattern: /metadata\.name[\s\S]{0,160}metadata\.namespace[\s\S]{0,160}path\.metadata\.namespace/i },
+			{ id: "required-fields", label: "States the required field set", weight: 15, responsePattern: /metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i },
 			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
@@ -356,13 +356,13 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=network%20policy$/ } }],
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{ label: "asks for clarification", pattern: /\bclarif|which (?:policy )?(?:kind|scope|type)|could mean\b/i },
+				{ label: "asks for clarification", pattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i },
 			],
 			forbiddenResponsePatterns: [{ label: "does not invent an API path", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i }],
 		},
 		quality: [
 			{ id: "safe-discovery", label: "Uses exactly the catalog lookup", weight: 35, requiresContract: true },
-			{ id: "clarification", label: "Requests a meaningful disambiguating choice", weight: 35, responsePattern: /\bclarif|which (?:policy )?(?:kind|scope|type)|could mean\b/i },
+			{ id: "clarification", label: "Requests a meaningful disambiguating choice", weight: 35, responsePattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i },
 			{ id: "no-invented-path", label: "Does not invent a mutation path", weight: 30, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
