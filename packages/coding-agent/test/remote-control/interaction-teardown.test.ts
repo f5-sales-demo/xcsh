@@ -121,7 +121,7 @@ test("a rejected replacement preserves the current owner and its pending phone q
 		expect(f.host.router.sessions.has("thread-c")).toBe(false);
 		await f.phone.call("protocol", { request: { id: "question-a", result: { answers: {} } } });
 		expect(f.calls).toHaveLength(2);
-		expect(f.events).toEqual([question]);
+		expect(f.events).toEqual([question, second]);
 	} finally {
 		other.close();
 		await f.cleanup();

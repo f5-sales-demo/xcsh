@@ -187,3 +187,235 @@ test("request identities cannot collide across owners and hidden-owner events ar
 	expect(router.sessions.get("thread-b")?.requests).toEqual([]);
 	router.dispose();
 });
+
+test("a secondary terminal publishes and subscribes before its grouped asynchronous item", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture", undefined, "primary");
+	const sent: { client: string; event: Notification }[] = [];
+	router.notify = (client, event) => sent.push({ client, event });
+	const endpoint = (id: string) => ({
+		thread: { id, name: id },
+		call: async () => ({ thread: { id }, turns: [] }),
+	});
+	router.registerSession("primary", endpoint("primary"));
+	router.registerSession("secondary", endpoint("secondary"));
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "phone", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	const before = (await router.handle("phone", { id: 2, method: "thread/list", params: {} })) as any;
+	expect(before.result.data.map((thread: any) => thread.id)).toEqual(["primary"]);
+	const item = {
+		id: "ask",
+		type: "agentMessage",
+		text: "Phone structured UAT\n- Alpha\n- Beta",
+		phase: "final_answer",
+		delivery: "async",
+		questions: [{ title: "Phone structured UAT", options: ["Alpha", "Beta"] }],
+	};
+	router.publish({ method: "item/completed", params: { threadId: "secondary", turnId: "turn", item } });
+	expect(router.subscribed("phone", "secondary")).toBe(true);
+	expect(sent.map(value => value.event.method)).toEqual(["thread/started", "item/started", "item/completed"]);
+	expect((sent[1].event.params.item as any).questions).toEqual(item.questions);
+	const after = (await router.handle("phone", { id: 3, method: "thread/list", params: {} })) as any;
+	expect(new Set(after.result.data.map((thread: any) => thread.id))).toEqual(new Set(["primary", "secondary"]));
+	router.dispose();
+});
+
+test("a structured async item keeps its required lifecycle when the phone opts out of ordinary item starts", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture", undefined, "primary");
+	const sent: Notification[] = [];
+	router.notify = (_client, event) => sent.push(event);
+	router.registerSession("primary", { thread: { id: "primary" }, call: async () => ({}) });
+	router.registerSession("secondary", {
+		thread: { id: "secondary", name: null },
+		asyncInteractions: [
+			{
+				requestId: "request",
+				questionId: "ask:0",
+				title: "Phone structured UAT",
+				options: ["Alpha", "Beta"],
+				identity: { sessionId: "secondary", threadId: "secondary", turnId: "turn", itemId: "ask", generation: 1 },
+			},
+		],
+		call: async () => ({}),
+	});
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: {
+			clientInfo: { name: "phone", version: "1" },
+			capabilities: { experimentalApi: true, optOutNotificationMethods: ["item/started"] },
+		},
+	});
+	await Bun.sleep(5);
+	const item = {
+		id: "ask",
+		type: "agentMessage",
+		text: "Phone structured UAT\n- Alpha\n- Beta",
+		phase: "final_answer",
+		delivery: "async",
+		questions: [{ title: "Phone structured UAT", options: ["Alpha", "Beta"] }],
+	};
+	router.publish({
+		method: "item/started",
+		params: { threadId: "secondary", turnId: "turn", item: { ...item, text: "" } },
+	});
+	router.publish({ method: "item/completed", params: { threadId: "secondary", turnId: "turn", item } });
+	expect(sent.map(event => event.method)).toEqual([
+		"thread/started",
+		"item/tool/requestUserInput",
+		"item/started",
+		"item/completed",
+	]);
+	expect(sent[1]).toMatchObject({
+		method: "item/tool/requestUserInput",
+		params: {
+			isBlocking: false,
+			questions: [
+				{
+					header: "Phone structured UAT",
+					question: "Phone structured UAT",
+					options: [{ label: "Alpha" }, { label: "Beta" }],
+				},
+			],
+		},
+	});
+	expect((sent[0].params.thread as Record<string, unknown>).name).toBe("Phone structured UAT");
+	expect(
+		((await router.handle("phone", { id: 2, method: "thread/list", params: {} })) as any).result.data.find(
+			(thread: any) => thread.id === "secondary",
+		).name,
+	).toBe("Phone structured UAT");
+	router.publish({ method: "item/started", params: { threadId: "primary", turnId: "turn", item: { id: "plain" } } });
+	expect(sent.map(event => event.method)).toEqual([
+		"thread/started",
+		"item/tool/requestUserInput",
+		"item/started",
+		"item/completed",
+	]);
+	router.dispose();
+});
+
+test("blocking publication survives resolution and reconnect until its secondary owner closes", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture", undefined, "primary");
+	const sent: { client: string; event: Notification }[] = [];
+	router.notify = (client, event) => sent.push({ client, event });
+	router.registerSession("primary", { thread: { id: "primary" }, call: async () => ({}) });
+	const secondary = {
+		thread: { id: "secondary", name: "Phone structured UAT" },
+		requests: [{ ...question, params: { ...question.params, threadId: "secondary" } }],
+		call: async () => ({ thread: { id: "secondary" }, turns: [] }),
+	};
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "phone", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	router.registerSession("secondary", secondary);
+	expect(sent.map(value => value.event.method)).toEqual(["thread/started", "item/tool/requestUserInput"]);
+	router.publish({ method: "serverRequest/resolved", params: { threadId: "secondary", requestId: question.id } });
+	expect(
+		((await router.handle("phone", { id: 2, method: "thread/list", params: {} })) as any).result.data,
+	).toHaveLength(2);
+	router.close("phone");
+	sent.length = 0;
+	await router.handle("phone", {
+		id: 3,
+		method: "initialize",
+		params: { clientInfo: { name: "phone", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	await Bun.sleep(5);
+	expect(sent.map(value => value.event.method)).toEqual(["thread/started"]);
+	expect(router.subscribed("phone", "secondary")).toBe(true);
+	expect(
+		(await router.handle("phone", { id: 4, method: "thread/resume", params: { threadId: "secondary" } })) as any,
+	).toMatchObject({ result: { thread: { id: "secondary" } } });
+	router.removeSession("secondary");
+	expect(sent.at(-1)?.event).toEqual({ method: "thread/closed", params: { threadId: "secondary" } });
+	expect(router.subscribed("phone", "secondary")).toBe(false);
+	router.dispose();
+});
+
+test("pending asynchronous registration republishes after host reconstruction without answer data", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture", undefined, "primary");
+	const sent: { client: string; event: Notification }[] = [];
+	router.notify = (client, event) => sent.push({ client, event });
+	router.registerSession("primary", { thread: { id: "primary" }, call: async () => ({}) });
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "phone", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	router.registerSession("secondary", {
+		thread: { id: "secondary", name: null },
+		publishedInteraction: true,
+		asyncInteractions: [
+			{
+				requestId: "request",
+				questionId: "ask:0",
+				title: "Phone structured UAT",
+				identity: { sessionId: "secondary", threadId: "secondary", turnId: "turn", itemId: "ask", generation: 1 },
+			},
+		],
+		call: async () => ({ thread: { id: "secondary" }, turns: [] }),
+	});
+	expect(sent.map(value => value.event.method)).toEqual(["thread/started", "item/tool/requestUserInput"]);
+	expect((sent[0].event.params.thread as Record<string, unknown>).name).toBe("Phone structured UAT");
+	expect(JSON.stringify(sent)).not.toContain("answer");
+	router.registerSession("secondary", {
+		thread: { id: "secondary" },
+		publishedInteraction: true,
+		asyncInteractions: [],
+		call: async () => ({ thread: { id: "secondary" }, turns: [] }),
+	});
+	expect(sent.map(value => value.event.method)).toEqual([
+		"thread/started",
+		"item/tool/requestUserInput",
+		"serverRequest/resolved",
+	]);
+	router.dispose();
+});
+
+test("a published secondary routes stable asynchronous receipts to its existing completion owner", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture", undefined, "primary");
+	const calls: unknown[][] = [];
+	router.registerSession("primary", { thread: { id: "primary" }, call: async () => ({}) });
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "phone", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	router.registerSession("secondary", {
+		thread: { id: "secondary" },
+		publishedInteraction: true,
+		call: async (...args) => {
+			calls.push(args);
+			return { accepted: calls.length === 1 };
+		},
+	});
+	const command = {
+		type: "interaction_respond",
+		requestId: "request",
+		responseId: "response",
+		identity: { sessionId: "secondary", threadId: "secondary", turnId: "turn", itemId: "ask", generation: 1 },
+		value: "Beta",
+	};
+	expect(
+		await router.handle("phone", {
+			id: 2,
+			method: "xcsh/interaction",
+			params: { threadId: "secondary", command },
+		}),
+	).toEqual({ id: 2, result: { accepted: true } });
+	expect(
+		await router.handle("phone", {
+			id: 3,
+			method: "xcsh/interaction",
+			params: { threadId: "secondary", command },
+		}),
+	).toEqual({ id: 3, result: { accepted: false } });
+	expect(calls).toHaveLength(2);
+	expect(calls[0].slice(1)).toEqual(["xcsh/interaction", { threadId: "secondary", command }]);
+	router.dispose();
+});

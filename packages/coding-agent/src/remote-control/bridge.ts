@@ -51,7 +51,9 @@ export function startSessionBridge(
 				await peer.call("register", {
 					thread: remote.thread(),
 					collaborationMode: controls.getCollaborationMode?.() ?? "default",
+					publishedInteraction: remote.publishesInteractions(),
 					requests: remote.pendingRequests(),
+					asyncInteractions: remote.pendingAsyncInteractions(),
 					skills: catalog.skills,
 					skillErrors: catalog.errors,
 					models: remote.models(),
@@ -68,7 +70,12 @@ export function startSessionBridge(
 	const unsubscribe = remote.subscribe(event => {
 		const current = peer;
 		if (!current) return;
-		const sent = current.call("event", { event }).then(
+		const item = event.params.item as { delivery?: unknown } | undefined;
+		const sent = (
+			event.method === "item/started" && item?.delivery === "async"
+				? update().then(() => current.call("event", { event }))
+				: current.call("event", { event })
+		).then(
 			() => {},
 			() => {
 				current.close();
