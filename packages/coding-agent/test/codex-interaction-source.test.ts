@@ -9,6 +9,8 @@ const root = resolve(import.meta.dir, "../../chat-ui/test/fixtures/codex-interac
 const manifest = JSON.parse(readFileSync(resolve(root, "manifest.json"), "utf8"));
 test("pinned reference fixture bytes retain independent upstream provenance", () => {
 	expect(manifest.commit).toBe("d6d43270bd791c41624fd3ee25a37e80a38d374e");
+	expect(manifest.upstreamComparisonCommit).toBe("ebc05da3bdb76f25861e7cb418bd06d28cadc609");
+	expect(manifest.upstreamComparisonCommit).toBe("ebc05da3bdb76f25861e7cb418bd06d28cadc609");
 	for (const [file, digest] of Object.entries(manifest.files))
 		expect(
 			createHash("sha256")

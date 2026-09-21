@@ -122,9 +122,19 @@ describe("MarketplaceManager", () => {
 			expect(await manager.listMarketplaces()).toEqual(first);
 			expect((await manager.listAvailablePlugins()).some(plugin => plugin.recommended)).toBe(true);
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
-			expect(getBuiltinMarketplaceSnapshot().catalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
+			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
+			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("886a8944a95f39b39d38a6443e856e066dfd6f2a");
+			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "xorg")).toMatchObject({
+				version: "1.0.5",
+				lifecycle: { pluginDependencies: [] },
+			});
+			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "zoom")).toMatchObject({
+				version: "1.0.5",
+				lifecycle: { pluginDependencies: ["xorg"] },
+			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"7af8a089fad2a019e703be4914fdc77082c88bd95a0471dcc2dae2814ad3b532",
+				"3ee4df7b958f2a7009ed25c56173cb9ef41535f6937f9a727fbba0871346cc35",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {

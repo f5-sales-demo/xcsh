@@ -163,6 +163,7 @@ export class RemoteSession {
 	#unsubscribeTitle?: () => void;
 	#unsubscribeInteractionStatus?: () => void;
 	#interactions?: RemoteInteractions;
+	#publishedInteraction = false;
 	#effects = new Set<Promise<unknown>>();
 	#voiceHistoryOwner!: SessionVoiceHistory;
 	#unsubscribeVoiceHistory?: () => void;
@@ -272,6 +273,7 @@ export class RemoteSession {
 						: undefined;
 				},
 				event => {
+					if (event.id !== undefined) this.#publishedInteraction = true;
 					for (const listener of this.#listeners) listener(event);
 				},
 				(request, callId) => this.#voice?.mirrorText(voiceInputText(request, callId)),
@@ -721,6 +723,32 @@ export class RemoteSession {
 	pendingRequests() {
 		return this.#interactions?.pending() ?? [];
 	}
+	pendingAsyncInteractions() {
+		return (this.target.userInteractions?.pending() ?? []).flatMap(interaction =>
+			interaction.delivery === "async" && interaction.questionId && interaction.identity
+				? [
+						{
+							requestId: interaction.id,
+							questionId: interaction.questionId,
+							title: interaction.title,
+							...(interaction.options ? { options: [...interaction.options] } : {}),
+							identity: structuredClone(interaction.identity),
+						},
+					]
+				: [],
+		);
+	}
+	publishesInteractions(): boolean {
+		return (
+			this.#publishedInteraction ||
+			(this.target.userInteractions?.pending() ?? []).some(interaction => interaction.delivery === "async") ||
+			this.history().some(turn =>
+				turn.items.some(
+					item => item.type === "agentMessage" && item.delivery === "async" && Array.isArray(item.questions),
+				),
+			)
+		);
+	}
 	call(identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
 		try {
 			this.#assertCurrent();
@@ -761,6 +789,47 @@ export class RemoteSession {
 		if (method === "session/interaction/respond") {
 			try {
 				if (typeof params.requestId !== "string") throw new ProtocolError(-32602, "Invalid request identity");
+				const owner = this.target.userInteractions;
+				const pending = owner?.pending().find(request => request.id === params.requestId);
+				if (owner && pending?.delivery === "async" && pending.asyncBatch) {
+					const response = params.response as { answers?: unknown } | undefined;
+					if (!response?.answers || typeof response.answers !== "object" || Array.isArray(response.answers))
+						throw new ProtocolError(-32602, "Invalid answer to asynchronous interaction");
+					const answers = response.answers as Record<string, unknown>;
+					if (
+						Object.keys(answers).length !== pending.asyncBatch.questionIds.length ||
+						pending.asyncBatch.questionIds.some(questionId => {
+							const answer = answers[questionId] as { answers?: unknown } | undefined;
+							return (
+								!answer ||
+								!Array.isArray(answer.answers) ||
+								answer.answers.length !== 1 ||
+								typeof answer.answers[0] !== "string"
+							);
+						})
+					)
+						throw new ProtocolError(-32602, "Invalid answer to asynchronous interaction");
+					const batch = owner
+						.pending()
+						.filter(
+							request =>
+								request.delivery === "async" &&
+								request.asyncBatch?.requestId === pending.asyncBatch?.requestId &&
+								request.identity,
+						);
+					if (batch.length !== pending.asyncBatch.questionIds.length) return Promise.resolve({ accepted: false });
+					const responseId = createHash("sha256").update(identity).digest("hex");
+					const accepted = batch.every((request, index) => {
+						const answer = answers[request.questionId!] as { answers: string[] };
+						return owner.respondExternal(
+							request.id,
+							`${responseId}:${index}`,
+							answer.answers[0],
+							request.identity!,
+						);
+					});
+					return Promise.resolve({ accepted });
+				}
 				return Promise.resolve(
 					this.#interactions?.respond(params.requestId, params.response) ?? { accepted: false },
 				);
@@ -1600,6 +1669,7 @@ export class RemoteSession {
 			return;
 		}
 		if (event.type === "async_user_input") {
+			this.#publishedInteraction = true;
 			this.#rememberItem(event.item, true);
 			this.#voice?.mirrorText(event.item.text, "final_answer");
 			return;

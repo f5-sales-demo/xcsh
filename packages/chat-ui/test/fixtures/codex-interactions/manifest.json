@@ -1,5 +1,7 @@
 {
   "commit": "d6d43270bd791c41624fd3ee25a37e80a38d374e",
+  "upstreamComparisonCommit": "ebc05da3bdb76f25861e7cb418bd06d28cadc609",
+  "upstreamComparisonCommit": "ebc05da3bdb76f25861e7cb418bd06d28cadc609",
   "repository": "https://github.com/openai/codex",
   "files": {
     "codex-rs/core/src/tools/handlers/request_user_input_spec.source": "86ef5b005211ea6cc14c5a99821357a4484cccbb4756c911bbeba3913315d16f",

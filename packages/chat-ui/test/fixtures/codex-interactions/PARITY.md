@@ -1,6 +1,8 @@
 # Codex interaction parity evidence
 
 Reference: OpenAI Codex `d6d43270bd791c41624fd3ee25a37e80a38d374e`.
+The async handler and app-server v2 item/thread sources remain byte-equivalent at the independently checked upstream commit `ebc05da3bdb76f25861e7cb418bd06d28cadc609`; `manifest.json` pins both identities while retaining the licensed reference bytes and hashes.
+The async handler and app-server v2 item/thread sources remain byte-equivalent at the independently checked upstream commit `ebc05da3bdb76f25861e7cb418bd06d28cadc609`; `manifest.json` pins both identities while retaining the licensed reference bytes and hashes.
 Independent upstream files, original LICENSE and NOTICE, and SHA-256 hashes are retained in this directory. The test `coding-agent/test/codex-interaction-source.test.ts` verifies those hashes and compares fixed field instructions, plan instructions, action labels and fresh-context text against the source. Codex source is Apache-2.0; see LICENSE and NOTICE here.
 
 Baseline repositories: xcsh `1fdeb1fe5f311e79fb2c2adcf15747d39217429e`, Chrome `1cdf28cf70e71f736ac80dd8455be4fd1c81c169`, Herdr `af2b66a58d723fa319fe14688bb52b3f6a2b4e03`.
@@ -29,6 +31,8 @@ This phase accepts xcsh core terminal/RPC/remote behavior, Herdr, and the existi
 | RPC and remote completion receipts | modes/rpc/rpc-mode.ts; remote-control/interactions.ts | interaction-parity.test.ts; remote-control/interaction-host.test.ts; live remote response qualification outstanding |
 | Reconnect, remote original request and owner completion | remote-control/interactions.ts | remote-control/interaction-host.test.ts; remote-control/interactions.test.ts |
 | Async structured history replay | remote-control/history.ts; remote-control/session.ts | remote-control/async-question-history.test.ts |
+| Secondary structured-interaction publication | remote-control/router.ts; remote-control/bridge.ts; remote-control/host.ts | remote-control/interaction-router.test.ts; secondary publication remains visible across resolution/reconnect and closes only with its owner |
+| Secondary structured-interaction publication | remote-control/router.ts; remote-control/bridge.ts; remote-control/host.ts | remote-control/interaction-router.test.ts; secondary publication remains visible across resolution/reconnect and closes only with its owner |
 | Explicit resolution reasons and owner loss | session/user-interactions.ts | interaction-parity.test.ts; durable session-switch qualification outstanding |
 | Voice mirroring and correlated replies | remote-control/session.ts; tools/request-user-input.ts | actual voice qualification outstanding |
 | Protocol 25 and negotiated Herdr interaction capability | herdr/client.ts; Herdr schema/server.rs | herdr-terminal.test.ts; cross-host compatibility qualification outstanding |
