@@ -670,6 +670,7 @@ export class MarketplaceManager {
 		const targetEntries = targetScope === "project" ? projectEntries! : userEntries!;
 		const targetReg = targetScope === "project" ? projectReg : userReg;
 		const registryPath = this.#registryPath(targetScope);
+		await this.#assertNoInstalledDependents(pluginId, targetReg);
 
 		const updatedReg = removeInstalledPlugin(targetReg, pluginId);
 		await writeInstalledPluginsRegistry(registryPath, updatedReg);
@@ -791,6 +792,7 @@ export class MarketplaceManager {
 		const reg = targetScope === "project" ? projectReg : userReg;
 		const entries = targetScope === "project" ? projectEntries! : userEntries!;
 		const registryPath = this.#registryPath(targetScope);
+		if (!enabled) await this.#assertNoInstalledDependents(pluginId, reg);
 
 		const updated = {
 			...reg,
@@ -1055,6 +1057,22 @@ export class MarketplaceManager {
 			return this.#opts.localInstalledRegistryPath;
 		}
 		return this.#opts.installedRegistryPath;
+	}
+
+	async #assertNoInstalledDependents(pluginId: string, registry: InstalledPluginsRegistry): Promise<void> {
+		const target = parsePluginId(pluginId);
+		if (!target) return;
+		const marketplaces = await this.#readMarketplacesRegistry();
+		const marketplace = getMarketplaceEntry(marketplaces, target.marketplace);
+		if (!marketplace) return;
+		const catalog = await this.#readCatalog(marketplace);
+		for (const plugin of catalog.plugins) {
+			if (!plugin.lifecycle.pluginDependencies.includes(target.name)) continue;
+			const dependentId = buildPluginId(plugin.name, target.marketplace);
+			if ((registry.plugins[dependentId]?.length ?? 0) > 0) {
+				throw new Error(`Plugin "${pluginId}" is required by installed plugin "${dependentId}"`);
+			}
+		}
 	}
 
 	async #findInBothRegistries(pluginId: string): Promise<{
