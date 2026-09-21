@@ -11,6 +11,8 @@ import apiCatalogAnswerAmbiguousPrompt from "./prompts/api-catalog-answer-ambigu
 import apiCatalogAnswerNoMatchPrompt from "./prompts/api-catalog-answer-no-match.md" with { type: "text" };
 import apiCatalogAnswerWafPrompt from "./prompts/api-catalog-answer-waf.md" with { type: "text" };
 import apiCatalogAnswerCloneDnsZonePrompt from "./prompts/api-catalog-answer-clone-dns-zone.md" with { type: "text" };
+import apiCatalogAnswerImportBindDnsZonePrompt from "./prompts/api-catalog-answer-import-bind-dns-zone.md" with { type: "text" };
+import apiCatalogAnswerValidateCloudUserAccountPrompt from "./prompts/api-catalog-answer-validate-cloud-user-account.md" with { type: "text" };
 import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { type: "text" };
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
 import modelPingPrompt from "./prompts/model-ping.md" with { type: "text" };
@@ -395,6 +397,44 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-answer-validate-cloud-user-account", label: "API discovery answer quality: validate cloud user account", suite: "tools", tier: 2,
+		prompt: apiCatalogAnswerValidateCloudUserAccountPrompt.trim(),
+		contract: { requiredToolSequence: [
+			{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=validate%20cloud%20user%20account$/ } },
+			{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/cloud-data-cloud-user-accounts-validate" } },
+		], requiredResponsePatterns: [
+			{ label: "selects validation category", pattern: /cloud-data-cloud-user-accounts-validate/i },
+			{ label: "states GET path", pattern: /GET\s+\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
+			{ label: "states required path parameter", pattern: /cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i },
+		], forbiddenResponsePatterns: [{ label: "does not invent mutation", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i }] },
+		quality: [
+			{ id: "evidence-sequence", label: "Reads QMD-discovered category", weight: 35, requiresContract: true },
+			{ id: "resource", label: "Selects validation category", weight: 20, responsePattern: /cloud-data-cloud-user-accounts-validate/i },
+			{ id: "method-path", label: "States GET path", weight: 25, responsePattern: /GET\s+\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
+			{ id: "parameter", label: "States required parameter", weight: 15, responsePattern: /cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i },
+			{ id: "no-invention", label: "Does not invent mutation", weight: 5, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
+		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-catalog-answer-import-bind-dns-zone", label: "API discovery answer quality: import BIND DNS zone", suite: "tools", tier: 2,
+		prompt: apiCatalogAnswerImportBindDnsZonePrompt.trim(),
+		contract: { requiredToolSequence: [
+			{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=import%20bind%20DNS%20zone$/ } },
+			{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/dns-dns-zone-import-bind-create" } },
+		], requiredResponsePatterns: [
+			{ label: "selects BIND-import category", pattern: /dns-dns-zone-import-bind-create/i },
+			{ label: "states POST path", pattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
+			{ label: "states required file", pattern: /\bfile\b.{0,80}\brequired\b|\brequired\b.{0,80}\bfile\b/i },
+		], forbiddenResponsePatterns: [{ label: "does not substitute CLI", pattern: /\b(?:curl|vesctl|terraform)\b/i }] },
+		quality: [
+			{ id: "evidence-sequence", label: "Reads QMD-discovered category", weight: 35, requiresContract: true },
+			{ id: "resource", label: "Selects BIND-import category", weight: 20, responsePattern: /dns-dns-zone-import-bind-create/i },
+			{ id: "method-path", label: "States POST path", weight: 25, responsePattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
+			{ id: "required-fields", label: "States required file", weight: 15, responsePattern: /\bfile\b.{0,80}\brequired\b|\brequired\b.{0,80}\bfile\b/i },
+			{ id: "no-substitution", label: "Avoids unsupported substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
+		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
 		id: "api-catalog-answer-no-match",

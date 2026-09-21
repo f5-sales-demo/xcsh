@@ -59,6 +59,8 @@ describe("model scenario library", () => {
 			"api-catalog-answer-waf",
 			"api-catalog-answer-ambiguous",
 			"api-catalog-answer-clone-dns-zone",
+			"api-catalog-answer-validate-cloud-user-account",
+			"api-catalog-answer-import-bind-dns-zone",
 			"api-catalog-answer-no-match",
 			"api-catalog-exact-resource",
 			"api-catalog-direct-category",
