@@ -71,7 +71,7 @@ export interface ApiCatalogResolver {
 }
 
 export function createApiCatalogResolver(
-	_index: ApiCatalogIndex,
+	index: ApiCatalogIndex,
 	categorySummaries: readonly ApiCatalogCategorySummary[],
 	data: Readonly<Record<string, ApiCatalogCategory>>,
 	specIndex?: ApiSpecIndex,
@@ -176,7 +176,7 @@ function renderCatalogIndex(index: ApiCatalogIndex, summaries: readonly ApiCatal
 }
 
 async function renderCatalogSearch(
-	index: ApiCatalogIndex,
+	_index: ApiCatalogIndex,
 	summaries: readonly ApiCatalogCategorySummary[],
 	data: Readonly<Record<string, ApiCatalogCategory>>,
 	term: string,
