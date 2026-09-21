@@ -1,12 +1,21 @@
 import { mkdir, stat } from "node:fs/promises";
 import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import type { InteractionIdentity } from "../session/user-interactions";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError, type RemoteModelDescriptor } from "./session";
 import { voices } from "./voice-protocol";
+
+export interface AsyncInteractionRegistration {
+	requestId: string;
+	questionId: string;
+	title?: string;
+	options?: string[];
+	identity: InteractionIdentity;
+}
 
 interface InitializeCapabilities {
 	experimentalApi?: boolean;
@@ -90,6 +99,8 @@ function initializeCapabilities(value: unknown): InitializeCapabilities {
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
 	collaborationMode?: "plan" | "default";
+	publishedInteraction?: boolean;
+	asyncInteractions?: AsyncInteractionRegistration[];
 	models?: RemoteModelDescriptor[];
 	requests?: InteractionRequest[];
 	skills?: Array<{
@@ -151,6 +162,7 @@ export class RemoteRouter {
 	notify: (client: string, event: Notification) => void = () => {};
 	#currentSessionId: string | undefined;
 	#managed = new Set<string>();
+	#publishedInteractions = new Set<string>();
 	#currentSession(): SessionEndpoint | undefined {
 		return (
 			(this.#currentSessionId ? this.sessions.get(this.#currentSessionId) : undefined) ??
@@ -168,6 +180,9 @@ export class RemoteRouter {
 			...[...this.sessions].flatMap(([id, session]) =>
 				this.#managed.has(id) && session !== current ? [session] : [],
 			),
+			...[...this.sessions].flatMap(([id, session]) =>
+				this.#publishedInteractions.has(id) && !this.#managed.has(id) && session !== current ? [session] : [],
+			),
 		];
 	}
 	#visibleThreads(params?: Record<string, unknown>): Record<string, unknown>[] {
@@ -179,7 +194,90 @@ export class RemoteRouter {
 		return this.#currentSession()?.thread.id === threadId;
 	}
 	#isVisible(threadId: string): boolean {
-		return this.#isCurrent(threadId) || this.#managed.has(threadId);
+		return this.#isCurrent(threadId) || this.#managed.has(threadId) || this.#publishedInteractions.has(threadId);
+	}
+	#isAsyncQuestionItem(event: Notification): boolean {
+		if (event.method !== "item/started" && event.method !== "item/completed") return false;
+		const item = event.params.item;
+		return (
+			!!item &&
+			typeof item === "object" &&
+			!Array.isArray(item) &&
+			(item as Record<string, unknown>).type === "agentMessage" &&
+			(item as Record<string, unknown>).delivery === "async" &&
+			Array.isArray((item as Record<string, unknown>).questions)
+		);
+	}
+	#interactionTitle(event: Notification): string | undefined {
+		const questions =
+			event.id !== undefined
+				? event.params.questions
+				: (event.params.item as { questions?: unknown } | undefined)?.questions;
+		if (!Array.isArray(questions) || !questions.length) return;
+		const question = questions[0];
+		if (!question || typeof question !== "object" || Array.isArray(question)) return;
+		const title = (question as Record<string, unknown>).title ?? (question as Record<string, unknown>).header;
+		return typeof title === "string" && title.length > 0 && title.length <= 256 ? title : undefined;
+	}
+	#setInteractionTitle(session: SessionEndpoint, title: string | undefined): void {
+		if ((session.thread.name === null || session.thread.name === undefined) && title) session.thread.name = title;
+	}
+	#asyncInteractionRequests(threadId: string, interactions: AsyncInteractionRegistration[]): InteractionRequest[] {
+		const groups = new Map<string, AsyncInteractionRegistration[]>();
+		for (const interaction of interactions) {
+			if (interaction.identity.threadId !== threadId) continue;
+			const entries = groups.get(interaction.identity.itemId) ?? [];
+			entries.push(interaction);
+			groups.set(interaction.identity.itemId, entries);
+		}
+		return [...groups.values()].flatMap(entries => {
+			const first = entries[0];
+			if (!first || entries.some(entry => entry.identity.turnId !== first.identity.turnId)) return [];
+			return [
+				{
+					id: first.requestId,
+					method: "item/tool/requestUserInput",
+					params: {
+						threadId,
+						turnId: first.identity.turnId,
+						itemId: first.identity.itemId,
+						questions: entries.map(entry => ({
+							id: entry.questionId,
+							header: entry.title ?? "Question",
+							question: entry.title ?? "Question",
+							isOther: true,
+							isSecret: false,
+							options: entry.options?.map(label => ({ label, description: "" })) ?? null,
+						})),
+						isBlocking: false,
+						autoResolutionMs: null,
+					},
+				},
+			];
+		});
+	}
+	#attachPublished(client: string, threadId: string, defer = false): void {
+		if (!this.#experimental.has(client)) return;
+		const subscriptions = this.#clients.get(client);
+		const session = this.sessions.get(threadId);
+		if (!subscriptions || !session || subscriptions.has(threadId)) return;
+		subscriptions.add(threadId);
+		const announce = () => {
+			if (!this.subscribed(client, threadId) || this.sessions.get(threadId) !== session) return;
+			this.#emit(client, {
+				method: "thread/started",
+				params: { thread: threadWireView(session.thread, true, true) },
+			});
+			for (const request of session.requests ?? []) this.#deliver(client, request);
+		};
+		if (defer) setTimeout(announce, 0);
+		else announce();
+	}
+	#publishInteractionThread(threadId: string): void {
+		if (this.#isCurrent(threadId) || this.#managed.has(threadId) || this.#publishedInteractions.has(threadId)) return;
+		if (!this.sessions.has(threadId)) return;
+		this.#publishedInteractions.add(threadId);
+		for (const client of this.#clients.keys()) this.#attachPublished(client, threadId);
 	}
 	#processes = new RemoteProcesses(
 		(client, event) => this.#emit(client, event),
@@ -192,6 +290,7 @@ export class RemoteRouter {
 		this.#notificationOptOuts.clear();
 		this.#delivered.clear();
 		this.#lifecycleNotifications.clear();
+		this.#publishedInteractions.clear();
 	}
 	#clients = new Map<string, Set<string>>();
 	#experimental = new Set<string>();
@@ -213,8 +312,8 @@ export class RemoteRouter {
 	hasSubscribers(threadId: string): boolean {
 		return [...this.#clients.values()].some(threads => threads.has(threadId));
 	}
-	#emit(client: string, event: Notification): void {
-		if (this.#notificationOptOuts.get(client)?.has(event.method)) return;
+	#emit(client: string, event: Notification, requiredInteractionLifecycle = false): void {
+		if (!requiredInteractionLifecycle && this.#notificationOptOuts.get(client)?.has(event.method)) return;
 		const threadId = String(event.params.threadId ?? "");
 		const turn = event.params.turn as { id?: unknown } | undefined;
 		const item = event.params.item as { id?: unknown } | undefined;
@@ -327,7 +426,11 @@ export class RemoteRouter {
 	}
 	registerSession(threadId: string, endpoint: SessionEndpoint, replacedThreadId?: string): void {
 		const previous = this.sessions.get(threadId);
-		const requests = this.validateSessionRequests(threadId, endpoint.requests ?? []);
+		const requests = this.validateSessionRequests(threadId, [
+			...(endpoint.requests ?? []),
+			...this.#asyncInteractionRequests(threadId, endpoint.asyncInteractions ?? []),
+		]);
+		endpoint.requests = requests;
 		const nextIds = new Set(requests.map(request => request.id));
 		for (const request of previous?.requests ?? []) {
 			if (!nextIds.has(request.id))
@@ -336,6 +439,11 @@ export class RemoteRouter {
 		// Heartbeats retain the same live owner, including calls already awaiting a response.
 		const current = previous ? Object.assign(previous, endpoint) : endpoint;
 		this.sessions.set(threadId, current);
+		this.#setInteractionTitle(
+			current,
+			current.asyncInteractions?.find(interaction => interaction.title)?.title ??
+				current.requests?.map(request => this.#interactionTitle(request)).find(title => title !== undefined),
+		);
 		if (
 			(!this.#currentSessionId && this.#currentSession()?.thread.id === threadId) ||
 			this.preferredPrimaryId === threadId
@@ -350,6 +458,12 @@ export class RemoteRouter {
 				});
 			}
 		}
+		if (
+			current.publishedInteraction ||
+			(current.requests?.length ?? 0) > 0 ||
+			(current.asyncInteractions?.length ?? 0) > 0
+		)
+			this.#publishInteractionThread(threadId);
 		if (this.#isCurrent(threadId))
 			for (const request of current.requests ?? [])
 				for (const client of this.#clients.keys()) this.#deliver(client, request);
@@ -363,9 +477,11 @@ export class RemoteRouter {
 		if (!this.sessions.has(threadId)) return;
 		const wasCurrent = this.#isCurrent(threadId);
 		const wasManaged = this.#managed.delete(threadId);
+		const wasPublished = this.#publishedInteractions.has(threadId);
 		for (const request of this.sessions.get(threadId)?.requests ?? [])
 			this.publish({ method: "serverRequest/resolved", params: { threadId, requestId: request.id } });
-		if (wasCurrent) this.publish({ method: "thread/closed", params: { threadId } });
+		if (wasCurrent || wasPublished) this.publish({ method: "thread/closed", params: { threadId } });
+		this.#publishedInteractions.delete(threadId);
 		this.sessions.delete(threadId);
 		if (wasCurrent) this.#currentSessionId = [...this.sessions.keys()].find(id => !this.#managed.has(id));
 		for (const subscriptions of this.#clients.values()) subscriptions.delete(threadId);
@@ -383,7 +499,17 @@ export class RemoteRouter {
 	publish(event: Notification): void {
 		const threadId = String(event.params.threadId);
 		const session = this.sessions.get(threadId);
-		if (!session || !this.#isVisible(threadId)) return;
+		if (!session) return;
+		this.#setInteractionTitle(session, this.#interactionTitle(event));
+		if (event.id !== undefined)
+			try {
+				this.validateSessionRequests(threadId, [event]);
+			} catch (error) {
+				if (!this.#isVisible(threadId)) return;
+				throw error;
+			}
+		if (event.id !== undefined || this.#isAsyncQuestionItem(event)) this.#publishInteractionThread(threadId);
+		if (!this.#isVisible(threadId)) return;
 		if (event.method === "thread/name/updated") {
 			const name = event.params.threadName;
 			if (name !== null && typeof name !== "string") return;
@@ -420,7 +546,6 @@ export class RemoteRouter {
 			return;
 		}
 		if (event.id !== undefined) {
-			this.validateSessionRequests(threadId, [event]);
 			const request = event as InteractionRequest;
 			session.requests ??= [];
 			const requests = session.requests;
@@ -442,7 +567,25 @@ export class RemoteRouter {
 			}
 			return;
 		}
-		for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
+		if (event.method === "item/completed" && this.#isAsyncQuestionItem(event)) {
+			const item = event.params.item as Record<string, unknown>;
+			const started: Notification = {
+				method: "item/started",
+				params: { ...event.params, item: { ...item, text: "" } },
+			};
+			for (const client of this.#clients.keys())
+				if (this.subscribed(client, threadId)) {
+					// A hidden owner can persist the item start before its bridge
+					// registration publishes the thread. Reconstitute that transition
+					// at the delivery boundary; #emit suppresses it when this client
+					// already received the original start.
+					this.#emit(client, started, true);
+					this.#emit(client, event, true);
+				}
+			return;
+		}
+		for (const client of this.#clients.keys())
+			if (this.subscribed(client, threadId)) this.#emit(client, event, this.#isAsyncQuestionItem(event));
 	}
 	async #response(
 		client: string,
@@ -455,11 +598,17 @@ export class RemoteRouter {
 		const session = this.sessions.get(threadId);
 		if (!session?.requests?.some(value => value.id === response.id)) return null;
 		try {
-			await session.call(JSON.stringify([client, "answer", response.id]), "session/interaction/respond", {
-				threadId,
-				requestId: response.id,
-				response: response.result,
-			});
+			const result = await session.call(
+				JSON.stringify([client, "answer", response.id]),
+				"session/interaction/respond",
+				{
+					threadId,
+					requestId: response.id,
+					response: response.result,
+				},
+			);
+			if ((result as { accepted?: unknown } | undefined)?.accepted === true)
+				this.publish({ method: "serverRequest/resolved", params: { threadId, requestId: response.id } });
 		} catch {
 			/* JSON-RPC responses have no response. Keep the question pending for a valid answer. */
 		}
@@ -622,6 +771,7 @@ export class RemoteRouter {
 				this.#experimental.delete(client);
 				this.#notificationOptOuts.set(client, new Set((optOut ?? []) as string[]));
 				if (capabilities?.experimentalApi === true) this.#experimental.add(client);
+				for (const threadId of this.#publishedInteractions) this.#attachPublished(client, threadId, true);
 				result = {
 					userAgent: `xcsh/${this.version}`,
 					codexHome: this.home,

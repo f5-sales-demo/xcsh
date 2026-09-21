@@ -1,5 +1,6 @@
 import { lstat, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, normalize } from "node:path";
+import { isInteractionIdentity } from "../../../chat-ui/src/interactions/transport";
 import type { Enrollment } from "./enrollment";
 import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
 import { ManagedRemoteSessions } from "./managed-sessions";
@@ -127,6 +128,36 @@ function registrationCollaborationMode(value: unknown): NonNullable<SessionEndpo
 	return value;
 }
 
+function registrationAsyncInteractions(value: unknown): NonNullable<SessionEndpoint["asyncInteractions"]> {
+	if (value == null) return [];
+	if (
+		!Array.isArray(value) ||
+		value.length > 32 ||
+		value.some(
+			interaction =>
+				!interaction ||
+				typeof interaction !== "object" ||
+				typeof interaction.requestId !== "string" ||
+				!interaction.requestId ||
+				interaction.requestId.length > 256 ||
+				typeof interaction.questionId !== "string" ||
+				!interaction.questionId ||
+				interaction.questionId.length > 256 ||
+				(interaction.title !== undefined &&
+					(typeof interaction.title !== "string" || !interaction.title || interaction.title.length > 256)) ||
+				(interaction.options !== undefined &&
+					(!Array.isArray(interaction.options) ||
+						interaction.options.length > 32 ||
+						interaction.options.some(
+							(option: unknown) => typeof option !== "string" || !option || option.length > 1024,
+						))) ||
+				!isInteractionIdentity(interaction.identity),
+		)
+	)
+		throw new ProtocolError(-32602, "Invalid asynchronous interaction registration");
+	return structuredClone(value) as NonNullable<SessionEndpoint["asyncInteractions"]>;
+}
+
 function replayResumeSettings(
 	router: RemoteRouter,
 	client: string,
@@ -250,6 +281,9 @@ export async function startLocalHost(
 				const skillErrors = registrationSkillErrors(params.skillErrors);
 				const models = registrationModels(params.models);
 				const collaborationMode = registrationCollaborationMode(params.collaborationMode);
+				const asyncInteractions = registrationAsyncInteractions(params.asyncInteractions);
+				if (params.publishedInteraction != null && typeof params.publishedInteraction !== "boolean")
+					throw new ProtocolError(-32602, "Invalid interaction publication registration");
 				router.registerSession(
 					thread.id,
 					{
@@ -259,6 +293,8 @@ export async function startLocalHost(
 						skillErrors,
 						models,
 						collaborationMode,
+						publishedInteraction: params.publishedInteraction === true,
+						asyncInteractions,
 						call: (identity, command, input) =>
 							peer.call("session/call", { identity, method: command, params: input }),
 					},
