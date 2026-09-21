@@ -685,8 +685,10 @@ test("WebRTC uses on-demand person routing without startup person values", async
 		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
 	});
 	expect(instructions).not.toContain("The user validates F5 sales-engineering workflows.");
-	expect(instructions).toContain("Retrieve current person data");
-	expect(instructions).toContain("previous tests are not authoritative person data");
+	expect(instructions).toContain("delegate for current person data");
+	expect(instructions).toContain("Do not answer from voice context or say you lack information");
+	expect(instructions).toContain("wait for the attached agent's verified result");
+	expect(instructions).toContain('While waiting, only say: "Let me check that for you."');
 	await f.voice.stop();
 });
 test("a pending persona snapshot fences concurrent starts and respects stop", async () => {
