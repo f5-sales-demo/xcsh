@@ -406,13 +406,13 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/cloud-data-cloud-user-accounts-validate" } },
 		], requiredResponsePatterns: [
 			{ label: "selects validation category", pattern: /cloud-data-cloud-user-accounts-validate/i },
-			{ label: "states GET path", pattern: /GET\s+\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
+			{ label: "states GET path", pattern: /GET[\s\S]{0,200}\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
 			{ label: "states required path parameter", pattern: /cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i },
 		], forbiddenResponsePatterns: [{ label: "does not invent mutation", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i }] },
 		quality: [
 			{ id: "evidence-sequence", label: "Reads QMD-discovered category", weight: 35, requiresContract: true },
 			{ id: "resource", label: "Selects validation category", weight: 20, responsePattern: /cloud-data-cloud-user-accounts-validate/i },
-			{ id: "method-path", label: "States GET path", weight: 25, responsePattern: /GET\s+\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
+			{ id: "method-path", label: "States GET path", weight: 25, responsePattern: /GET[\s\S]{0,200}\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
 			{ id: "parameter", label: "States required parameter", weight: 15, responsePattern: /cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i },
 			{ id: "no-invention", label: "Does not invent mutation", weight: 5, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
 		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
