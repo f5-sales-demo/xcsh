@@ -383,7 +383,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			],
 			requiredResponsePatterns: [
 				{ label: "selects the DNS-zone clone category", pattern: /dns-dns-zone-clone-from-dns-domain/i },
-				{ label: "states the clone method and path", pattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
+				{ label: "states the clone method and path", pattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
 				{ label: "states that no fields are required", pattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
 			],
 			forbiddenResponsePatterns: [{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i }],
@@ -392,7 +392,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "evidence-sequence", label: "Reads the QMD-discovered category after the natural-language query", weight: 30, requiresContract: true },
 			{ id: "resource", label: "Selects the DNS-zone clone category", weight: 20, responsePattern: /dns-dns-zone-clone-from-dns-domain/i },
 			{ id: "internal-urls", label: "Cites both internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone[\s\S]*xcsh:\/\/api-catalog\/dns-dns-zone-clone-from-dns-domain/i },
-			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST\s+\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
+			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
 			{ id: "required-fields", label: "States that the operation has no required fields", weight: 10, responsePattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
 			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
