@@ -14,6 +14,7 @@ import {
 	isSpecialServiceTier,
 	type MessageAttribution,
 	type Model,
+	type OpenAICompat,
 	type ProviderSessionState,
 	type ServiceTier,
 	type StreamFunction,
@@ -349,7 +350,8 @@ function buildParams(
 		params.max_output_tokens = options?.maxTokens;
 	}
 
-	if (options?.temperature !== undefined) {
+	const modelCompat = (model as unknown as { compat?: Pick<OpenAICompat, "supportsTemperature"> }).compat;
+	if (options?.temperature !== undefined && modelCompat?.supportsTemperature !== false) {
 		params.temperature = options?.temperature;
 	}
 	if (options?.topP !== undefined) {

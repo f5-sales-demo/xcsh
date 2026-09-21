@@ -93,11 +93,17 @@ Both select `anthropic/claude-fable-5-1` deterministically.
 LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.
 
 GPT-6 Astra has route-specific limits. xcsh-generated LiteLLM configuration exposes the model's full
-1,050,000-token context window (922,000 input plus up to 128,000 output). The ChatGPT Codex subscription
-transport remains at 272,000 context with the same 128,000 maximum output because upstream deliberately
-keeps that route in its short-context pricing tier. Both routes support image input and `low`, `medium`,
-`high`, `xhigh`, and `max` reasoning. Astra is selectable explicitly but is not assigned to an automatic
-role by default.
+1,050,000-token context window (922,000 input plus up to 128,000 output). xcsh uses the ChatGPT Codex
+subscription catalog's 272,000-token effective context window and 128,000-token maximum output. That
+catalog also advertises an 872,000-token maximum context window, which can be available when the Codex
+transport expands its effective window. Both routes support image input and `low`, `medium`, `high`,
+`xhigh`, and `max` reasoning. Astra is selectable explicitly but is not assigned to an automatic role by
+default.
+
+Generated LiteLLM configuration routes only Astra through LiteLLM's OpenAI Responses endpoint
+(`/openai/v1/responses`). This is required when Astra uses tools with reasoning: its Chat Completions route
+rejects that combination. Luna, Terra, and Sol keep the configured OpenAI-compatible Chat Completions base
+path. Astra also omits temperature because the Responses route rejects sampling temperature for that model.
 
 ## How do I test licensed Vertex locally?
 
