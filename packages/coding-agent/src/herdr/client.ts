@@ -34,6 +34,14 @@ export class HerdrClient {
 	}
 
 	async ensureProtocol(): Promise<void> {
+		await this.negotiateProtocol(false);
+	}
+
+	async ensureSemanticProtocol(): Promise<void> {
+		await this.negotiateProtocol(true);
+	}
+
+	private async negotiateProtocol(allowNamedSemanticCapability: boolean): Promise<void> {
 		if (this.protocolChecked) return;
 		const pong = await this.requestRaw<{
 			type: string;
@@ -41,11 +49,16 @@ export class HerdrClient {
 			version: string;
 			capabilities?: Record<string, unknown>;
 		}>("ping", {});
+		const capabilities = isRecord(pong.capabilities) ? Object.freeze({ ...pong.capabilities }) : {};
+		const semanticCapability = capabilities.xcsh_semantic_tracking === 1;
+		const supportedByVersion =
+			Number.isInteger(pong.protocol) &&
+			pong.protocol >= HERDR_PROTOCOL_MIN_VERSION &&
+			pong.protocol <= HERDR_PROTOCOL_MAX_VERSION;
 		if (
 			pong.type !== "pong" ||
 			!Number.isInteger(pong.protocol) ||
-			pong.protocol < HERDR_PROTOCOL_MIN_VERSION ||
-			pong.protocol > HERDR_PROTOCOL_MAX_VERSION
+			!(supportedByVersion || (allowNamedSemanticCapability && semanticCapability))
 		) {
 			throw new HerdrProtocolError(
 				`Herdr protocol mismatch: supported ${HERDR_PROTOCOL_MIN_VERSION}-${HERDR_PROTOCOL_MAX_VERSION}, received ${String(pong.protocol)}`,
@@ -53,7 +66,7 @@ export class HerdrClient {
 			);
 		}
 		this.negotiatedProtocol = pong.protocol;
-		this.capabilities = isRecord(pong.capabilities) ? Object.freeze({ ...pong.capabilities }) : {};
+		this.capabilities = capabilities;
 		this.protocolChecked = true;
 	}
 
@@ -68,6 +81,16 @@ export class HerdrClient {
 
 	hasCapability(name: string): boolean {
 		return this.capabilities[name] === true;
+	}
+
+	supportsSemanticTracking(): boolean {
+		if (this.capabilityVersion("xcsh_semantic_tracking") === 1) return true;
+		return (
+			this.negotiatedProtocol !== undefined &&
+			this.negotiatedProtocol >= HERDR_PROTOCOL_MIN_VERSION &&
+			this.negotiatedProtocol <= HERDR_PROTOCOL_MAX_VERSION &&
+			this.hasCapability("agent_turn_journal")
+		);
 	}
 
 	async request<T extends Record<string, unknown>>(method: string, params: Record<string, unknown>): Promise<T> {

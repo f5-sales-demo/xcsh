@@ -81,7 +81,7 @@ interface FakeHerdrOptions {
 	/** Methods whose first request is admitted but loses its response. */
 	failOnceMethods?: ReadonlySet<string>;
 	protocol?: number;
-	capabilities?: Record<string, boolean>;
+	capabilities?: Record<string, boolean | number>;
 	respond?: (request: { id: string; method: string; params: Record<string, unknown> }) => Record<string, unknown>;
 }
 
@@ -437,8 +437,11 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
-	it("publishes a durable semantic result only through a tracked protocol-20 execution", async () => {
-		const herdr = await startFakeHerdr({ protocol: 20, capabilities: { agent_turn_journal: true } });
+	it("publishes semantic results to a future protocol with the named capability", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 26,
+			capabilities: { xcsh_semantic_tracking: 1 },
+		});
 		try {
 			process.env.HERDR_PANE_ID = "w1:p1";
 			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
