@@ -52,6 +52,43 @@ function createTestContext(): TestContext {
 	return { manager, tmpDir, clearCount: () => count };
 }
 
+function writeDependencyMarketplace(
+	root: string,
+	name: string,
+	plugins: ReadonlyArray<{ name: string; dependencies?: readonly string[]; source?: string; version?: string }>,
+): string {
+	const fixture = path.join(root, name);
+	fs.mkdirSync(path.join(fixture, ".xcsh-plugin"), { recursive: true });
+	for (const plugin of plugins) {
+		const source = plugin.source ?? `./plugins/${plugin.name}`;
+		if (!source.startsWith("./plugins/missing")) {
+			fs.mkdirSync(path.resolve(fixture, source), { recursive: true });
+			fs.writeFileSync(path.resolve(fixture, source, "README.md"), plugin.name);
+		}
+	}
+	fs.writeFileSync(
+		path.join(fixture, ".xcsh-plugin", "marketplace.json"),
+		JSON.stringify({
+			name,
+			owner: { name: "Test" },
+			plugins: plugins.map(plugin => ({
+				name: plugin.name,
+				source: plugin.source ?? `./plugins/${plugin.name}`,
+				version: plugin.version ?? "1.0.0",
+				lifecycle: {
+					mode: "content",
+					integrations: [],
+					requirements: [],
+					setupRequired: false,
+					collectedData: [],
+					pluginDependencies: plugin.dependencies ?? [],
+				},
+			})),
+		}),
+	);
+	return fixture;
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("MarketplaceManager", () => {
@@ -87,7 +124,7 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			expect(getBuiltinMarketplaceSnapshot().catalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"9e0ca8d299c7da4d45585dc391d1f2f4102e1e9b45b549a82da0b68200db344d",
+				"7af8a089fad2a019e703be4914fdc77082c88bd95a0471dcc2dae2814ad3b532",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
@@ -284,6 +321,227 @@ describe("MarketplaceManager", () => {
 		expect(ctx.clearCount()).toBe(before + 1);
 	});
 
+	it("installs a dependency before its dependent and protects the dependency from uninstall", async () => {
+		const fixture = path.join(ctx.tmpDir, "dependency-marketplace");
+		fs.mkdirSync(path.join(fixture, ".xcsh-plugin"), { recursive: true });
+		for (const name of ["xorg", "zoom"]) {
+			fs.mkdirSync(path.join(fixture, "plugins", name), { recursive: true });
+			fs.writeFileSync(path.join(fixture, "plugins", name, "README.md"), name);
+		}
+		fs.writeFileSync(
+			path.join(fixture, ".xcsh-plugin", "marketplace.json"),
+			JSON.stringify({
+				name: "dependency-marketplace",
+				owner: { name: "Test" },
+				plugins: [
+					{
+						name: "xorg",
+						source: "./plugins/xorg",
+						version: "1.0.0",
+						lifecycle: {
+							mode: "content",
+							integrations: [],
+							requirements: [],
+							setupRequired: false,
+							collectedData: [],
+							pluginDependencies: [],
+						},
+					},
+					{
+						name: "zoom",
+						source: "./plugins/zoom",
+						version: "1.0.0",
+						lifecycle: {
+							mode: "content",
+							integrations: [],
+							requirements: [],
+							setupRequired: false,
+							collectedData: [],
+							pluginDependencies: ["xorg"],
+						},
+					},
+				],
+			}),
+		);
+		await ctx.manager.addMarketplace(fixture);
+		await ctx.manager.installPlugin("zoom", "dependency-marketplace");
+		const installed = await ctx.manager.listInstalledPlugins();
+		expect(installed.map(entry => entry.id)).toEqual(["xorg@dependency-marketplace", "zoom@dependency-marketplace"]);
+		await expect(ctx.manager.setPluginEnabled("xorg@dependency-marketplace", false)).rejects.toThrow(
+			/required by installed plugin/,
+		);
+		await expect(ctx.manager.uninstallPlugin("xorg@dependency-marketplace")).rejects.toThrow(
+			/required by installed plugin/,
+		);
+	});
+
+	it("rolls back newly installed dependencies when a dependent cannot be staged", async () => {
+		const fixture = path.join(ctx.tmpDir, "rollback-marketplace");
+		fs.mkdirSync(path.join(fixture, ".xcsh-plugin"), { recursive: true });
+		fs.mkdirSync(path.join(fixture, "plugins", "xorg"), { recursive: true });
+		fs.writeFileSync(path.join(fixture, "plugins", "xorg", "README.md"), "xorg");
+		fs.writeFileSync(
+			path.join(fixture, ".xcsh-plugin", "marketplace.json"),
+			JSON.stringify({
+				name: "rollback-marketplace",
+				owner: { name: "Test" },
+				plugins: [
+					{
+						name: "xorg",
+						source: "./plugins/xorg",
+						version: "1.0.0",
+						lifecycle: {
+							mode: "content",
+							integrations: [],
+							requirements: [],
+							setupRequired: false,
+							collectedData: [],
+							pluginDependencies: [],
+						},
+					},
+					{
+						name: "zoom",
+						source: "./plugins/missing",
+						version: "1.0.0",
+						lifecycle: {
+							mode: "content",
+							integrations: [],
+							requirements: [],
+							setupRequired: false,
+							collectedData: [],
+							pluginDependencies: ["xorg"],
+						},
+					},
+				],
+			}),
+		);
+		await ctx.manager.addMarketplace(fixture);
+		await expect(ctx.manager.installPlugin("zoom", "rollback-marketplace")).rejects.toThrow();
+		expect(await ctx.manager.listInstalledPlugins()).toEqual([]);
+		expect(fs.readdirSync(path.join(ctx.tmpDir, "cache", "plugins"))).toEqual([]);
+	});
+
+	it.each([
+		["missing", [{ name: "zoom", dependencies: ["xorg"] }], /dependency "xorg" is missing/],
+		["self", [{ name: "zoom", dependencies: ["zoom"] }], /cannot depend on itself/],
+		[
+			"cycle",
+			[
+				{ name: "zoom", dependencies: ["xorg"] },
+				{ name: "xorg", dependencies: ["zoom"] },
+			],
+			/dependency cycle: zoom -> xorg -> zoom/,
+		],
+	] as const)("rejects a %s dependency graph before mutation", async (name, plugins, error) => {
+		const fixture = writeDependencyMarketplace(ctx.tmpDir, `${name}-marketplace`, [...plugins]);
+		await ctx.manager.addMarketplace(fixture);
+
+		await expect(ctx.manager.installPlugin("zoom", `${name}-marketplace`)).rejects.toThrow(error);
+		expect(await ctx.manager.listInstalledPlugins()).toEqual([]);
+		expect(fs.existsSync(path.join(ctx.tmpDir, "cache", "plugins"))).toBe(false);
+	});
+
+	it("installs transitive dependencies in topological order and re-enables required plugins", async () => {
+		const fixture = writeDependencyMarketplace(ctx.tmpDir, "ordered-marketplace", [
+			{ name: "base" },
+			{ name: "xorg", dependencies: ["base"] },
+			{ name: "zoom", dependencies: ["xorg"] },
+		]);
+		await ctx.manager.addMarketplace(fixture);
+		await ctx.manager.installPlugin("xorg", "ordered-marketplace");
+		await ctx.manager.setPluginEnabled("xorg@ordered-marketplace", false);
+
+		await ctx.manager.installPlugin("zoom", "ordered-marketplace");
+		const installed = await ctx.manager.listInstalledPlugins();
+		expect(installed.map(entry => entry.id)).toEqual([
+			"base@ordered-marketplace",
+			"xorg@ordered-marketplace",
+			"zoom@ordered-marketplace",
+		]);
+		expect(installed.find(entry => entry.id === "xorg@ordered-marketplace")?.effectiveEnabled).toBe(true);
+	});
+
+	it("describes the complete dependency plan and installs every node at project scope", async () => {
+		const fixture = writeDependencyMarketplace(ctx.tmpDir, "project-plan-marketplace", [
+			{ name: "base", version: "1.0.0" },
+			{ name: "xorg", version: "1.1.0", dependencies: ["base"] },
+			{ name: "zoom", version: "1.2.0", dependencies: ["xorg"] },
+		]);
+		await ctx.manager.addMarketplace(fixture);
+
+		expect(await ctx.manager.getPluginDependencyPlan("zoom", "project-plan-marketplace", "project")).toEqual([
+			{
+				pluginId: "base@project-plan-marketplace",
+				version: "1.0.0",
+				scope: "project",
+				dependency: true,
+			},
+			{
+				pluginId: "xorg@project-plan-marketplace",
+				version: "1.1.0",
+				scope: "project",
+				dependency: true,
+			},
+			{
+				pluginId: "zoom@project-plan-marketplace",
+				version: "1.2.0",
+				scope: "project",
+				dependency: false,
+			},
+		]);
+
+		await ctx.manager.installPlugin("zoom", "project-plan-marketplace", { scope: "project" });
+		const installed = await ctx.manager.listInstalledPlugins();
+		expect(installed.map(entry => [entry.id, entry.scope])).toEqual([
+			["base@project-plan-marketplace", "project"],
+			["xorg@project-plan-marketplace", "project"],
+			["zoom@project-plan-marketplace", "project"],
+		]);
+		expect(await readInstalledPluginsRegistry(path.join(ctx.tmpDir, "installed_plugins.json"))).toEqual({
+			version: 2,
+			plugins: {},
+		});
+	});
+
+	it.each(["user", "project"] as const)(
+		"restores an existing dependency and removes its staged cache when the dependent fails in %s scope",
+		async scope => {
+			const fixture = writeDependencyMarketplace(ctx.tmpDir, "upgrade-rollback-marketplace", [{ name: "xorg" }]);
+			const marketplace = await ctx.manager.addMarketplace(fixture);
+			const original = await ctx.manager.installPlugin("xorg", "upgrade-rollback-marketplace", { scope });
+			const catalog = JSON.parse(fs.readFileSync(marketplace.catalogPath, "utf8")) as {
+				plugins: Array<Record<string, unknown>>;
+			};
+			catalog.plugins[0] = { ...catalog.plugins[0], version: "2.0.0" };
+			catalog.plugins.push({
+				name: "zoom",
+				source: "./plugins/missing",
+				version: "1.0.0",
+				lifecycle: {
+					mode: "content",
+					integrations: [],
+					requirements: [],
+					setupRequired: false,
+					collectedData: [],
+					pluginDependencies: ["xorg"],
+				},
+			});
+			fs.writeFileSync(marketplace.catalogPath, JSON.stringify(catalog));
+
+			await expect(ctx.manager.installPlugin("zoom", "upgrade-rollback-marketplace", { scope })).rejects.toThrow();
+			const installed = await ctx.manager.listInstalledPlugins();
+			expect(installed).toHaveLength(1);
+			expect(installed[0]).toMatchObject({
+				scope,
+				entries: [{ version: "1.0.0", installPath: original.installPath }],
+			});
+			expect(fs.existsSync(original.installPath)).toBe(true);
+			expect(
+				fs.existsSync(path.join(ctx.tmpDir, "cache", "plugins", "upgrade-rollback-marketplace", "xorg", "2.0.0")),
+			).toBe(false);
+		},
+	);
+
 	// ── Uninstall ──────────────────────────────────────────────────────────
 
 	it("uninstallPlugin → cache removed + deregistered", async () => {
@@ -351,9 +609,11 @@ describe("MarketplaceManager", () => {
 		expect(await ctx.manager.listAvailablePlugins("test-marketplace")).toEqual([]);
 		expect(await ctx.manager.refreshMarketplaces(["test-marketplace"])).toEqual({ successful: [], failed: [] });
 		await expect(ctx.manager.updateMarketplace("test-marketplace")).rejects.toThrow(/disabled/);
-		await expect(ctx.manager.installPlugin("hello-plugin", "test-marketplace", { force: true })).rejects.toThrow(
-			/disabled/,
-		);
+		await expect(
+			ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+				force: true,
+			}),
+		).rejects.toThrow(/disabled/);
 		expect(await ctx.manager.checkForUpdates()).toEqual([]);
 
 		await ctx.manager.setMarketplaceEnabled("test-marketplace", true);
@@ -393,7 +653,9 @@ describe("MarketplaceManager", () => {
 
 	it("installPlugin scope:project → writes to project registry, not user registry", async () => {
 		await ctx.manager.addMarketplace(FIXTURE_DIR);
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		const projectReg = await readInstalledPluginsRegistry(path.join(ctx.tmpDir, "project_installed_plugins.json"));
 		expect(projectReg.plugins["hello-plugin@test-marketplace"]).toBeDefined();
@@ -415,7 +677,9 @@ describe("MarketplaceManager", () => {
 			});
 			await noProjectManager.addMarketplace(FIXTURE_DIR);
 			await expect(
-				noProjectManager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" }),
+				noProjectManager.installPlugin("hello-plugin", "test-marketplace", {
+					scope: "project",
+				}),
 			).rejects.toThrow(/project directory/);
 		} finally {
 			fs.rmSync(tmp, { recursive: true, force: true });
@@ -424,8 +688,12 @@ describe("MarketplaceManager", () => {
 
 	it("uninstallPlugin with plugin in both scopes, no scope arg → throws disambiguation error", async () => {
 		await ctx.manager.addMarketplace(FIXTURE_DIR);
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "user" });
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "user",
+		});
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		await expect(ctx.manager.uninstallPlugin("hello-plugin@test-marketplace")).rejects.toThrow(
 			/both user and project scope/,
@@ -434,8 +702,12 @@ describe("MarketplaceManager", () => {
 
 	it("uninstallPlugin scope:user removes only user entry, keeps project entry", async () => {
 		await ctx.manager.addMarketplace(FIXTURE_DIR);
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "user" });
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "user",
+		});
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		await ctx.manager.uninstallPlugin("hello-plugin@test-marketplace", "user");
 
@@ -453,7 +725,9 @@ describe("MarketplaceManager", () => {
 			scope: "user",
 		});
 		// Same plugin+version → same cache path for the project-scope install.
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		await ctx.manager.uninstallPlugin("hello-plugin@test-marketplace", "user");
 
@@ -463,8 +737,12 @@ describe("MarketplaceManager", () => {
 
 	it("setPluginEnabled with plugin in both scopes, no scope arg → throws disambiguation error", async () => {
 		await ctx.manager.addMarketplace(FIXTURE_DIR);
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "user" });
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "user",
+		});
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		await expect(ctx.manager.setPluginEnabled("hello-plugin@test-marketplace", false)).rejects.toThrow(
 			/both user and project scope/,
@@ -473,8 +751,12 @@ describe("MarketplaceManager", () => {
 
 	it("upgradePlugin with plugin in both scopes, no scope arg → throws disambiguation error", async () => {
 		await ctx.manager.addMarketplace(FIXTURE_DIR);
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "user" });
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "user",
+		});
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		await expect(ctx.manager.upgradePlugin("hello-plugin@test-marketplace")).rejects.toThrow(
 			/both user and project scope/,
@@ -483,8 +765,12 @@ describe("MarketplaceManager", () => {
 
 	it("listInstalledPlugins marks user entry as shadowed when project entry exists for same ID", async () => {
 		await ctx.manager.addMarketplace(FIXTURE_DIR);
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "user" });
-		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "user",
+		});
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+			scope: "project",
+		});
 
 		const installed = await ctx.manager.listInstalledPlugins();
 		const userSummary = installed.find(p => p.id === "hello-plugin@test-marketplace" && p.scope === "user");
@@ -505,7 +791,9 @@ describe("MarketplaceManager", () => {
 		async function bumpCatalogVersion(newVersion: string): Promise<void> {
 			const catalogPath = await getCatalogPath();
 			const content = await Bun.file(catalogPath).text();
-			const catalog = JSON.parse(content) as { plugins: Array<Record<string, unknown>> };
+			const catalog = JSON.parse(content) as {
+				plugins: Array<Record<string, unknown>>;
+			};
 			catalog.plugins[0] = { ...catalog.plugins[0], version: newVersion };
 			await Bun.write(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
 		}
@@ -533,7 +821,9 @@ describe("MarketplaceManager", () => {
 
 			// Publish 1.2.0 to the SOURCE only; the on-disk cached catalog still says 1.0.0.
 			const srcCatalog = path.join(sourceDir, ".xcsh-plugin", "marketplace.json");
-			const cat = JSON.parse(fs.readFileSync(srcCatalog, "utf-8")) as { plugins: Array<Record<string, unknown>> };
+			const cat = JSON.parse(fs.readFileSync(srcCatalog, "utf-8")) as {
+				plugins: Array<Record<string, unknown>>;
+			};
 			cat.plugins[0] = { ...cat.plugins[0], version: "1.2.0" };
 			fs.writeFileSync(srcCatalog, JSON.stringify(cat, null, 2));
 
@@ -589,7 +879,10 @@ describe("MarketplaceManager", () => {
 			const sourceCatalog = JSON.parse(fs.readFileSync(sourceCatalogPath, "utf-8")) as {
 				plugins: Array<Record<string, unknown>>;
 			};
-			sourceCatalog.plugins[0] = { ...sourceCatalog.plugins[0], version: "2.0.0" };
+			sourceCatalog.plugins[0] = {
+				...sourceCatalog.plugins[0],
+				version: "2.0.0",
+			};
 			fs.writeFileSync(sourceCatalogPath, JSON.stringify(sourceCatalog, null, 2));
 
 			expect(await ctx.manager.previewPluginUpdates()).toEqual([
@@ -625,7 +918,9 @@ describe("MarketplaceManager", () => {
 			// Strip the version field from the cached catalog entry.
 			const catalogPath = await getCatalogPath();
 			const content = await Bun.file(catalogPath).text();
-			const catalog = JSON.parse(content) as { plugins: Array<Record<string, unknown>> };
+			const catalog = JSON.parse(content) as {
+				plugins: Array<Record<string, unknown>>;
+			};
 			delete catalog.plugins[0].version;
 			await Bun.write(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
 
@@ -665,7 +960,9 @@ describe("MarketplaceManager", () => {
 
 		it("upgradePlugin preserves the scope of the existing install", async () => {
 			await ctx.manager.addMarketplace(FIXTURE_DIR);
-			await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+			await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+				scope: "project",
+			});
 			await bumpCatalogVersion("2.0.0");
 
 			const entry = await ctx.manager.upgradePlugin("hello-plugin@test-marketplace");
@@ -686,7 +983,13 @@ describe("MarketplaceManager", () => {
 			};
 			const now = new Date().toISOString();
 			reg.plugins["phantom-plugin@test-marketplace"] = [
-				{ scope: "user", installPath: "/nonexistent", version: "1.0.0", installedAt: now, lastUpdated: now },
+				{
+					scope: "user",
+					installPath: "/nonexistent",
+					version: "1.0.0",
+					installedAt: now,
+					lastUpdated: now,
+				},
 			];
 			fs.writeFileSync(instRegPath, JSON.stringify(reg, null, 2));
 
@@ -723,7 +1026,9 @@ describe("MarketplaceManager", () => {
 			// Catalog should remain at 2.0.0 — the marketplace was not re-fetched.
 			const catalogPath = await getCatalogPath();
 			const content = await Bun.file(catalogPath).text();
-			const catalog = JSON.parse(content) as { plugins: Array<{ version?: string }> };
+			const catalog = JSON.parse(content) as {
+				plugins: Array<{ version?: string }>;
+			};
 			expect(catalog.plugins[0].version).toBe("2.0.0");
 		});
 
@@ -741,14 +1046,20 @@ describe("MarketplaceManager", () => {
 			// updateMarketplace re-fetches from FIXTURE_DIR which has version 1.0.0.
 			const catalogPath = await getCatalogPath();
 			const content = await Bun.file(catalogPath).text();
-			const catalog = JSON.parse(content) as { plugins: Array<{ version?: string }> };
+			const catalog = JSON.parse(content) as {
+				plugins: Array<{ version?: string }>;
+			};
 			expect(catalog.plugins[0].version).toBe("1.0.0");
 		});
 
 		it("upgradePluginAcrossScopes upgrades in all scopes, returns both entries", async () => {
 			await ctx.manager.addMarketplace(FIXTURE_DIR);
-			await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "user" });
-			await ctx.manager.installPlugin("hello-plugin", "test-marketplace", { scope: "project" });
+			await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+				scope: "user",
+			});
+			await ctx.manager.installPlugin("hello-plugin", "test-marketplace", {
+				scope: "project",
+			});
 			await bumpCatalogVersion("2.0.0");
 
 			const entries = await ctx.manager.upgradePluginAcrossScopes("hello-plugin@test-marketplace");
@@ -805,7 +1116,10 @@ describe("MarketplaceManager", () => {
 
 		const result = await ctx.manager.refreshMarketplaces();
 
-		expect(result).toEqual({ successful: ["test-marketplace"], failed: ["failing-marketplace"] });
+		expect(result).toEqual({
+			successful: ["test-marketplace"],
+			failed: ["failing-marketplace"],
+		});
 		expect((await ctx.manager.listAvailablePlugins("test-marketplace"))[0].version).toBe("2.0.0");
 		expect((await ctx.manager.listAvailablePlugins("failing-marketplace"))[0].version).toBe("1.0.0");
 	});

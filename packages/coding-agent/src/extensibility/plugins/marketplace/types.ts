@@ -207,7 +207,7 @@ export interface InstalledPluginEntry {
  */
 export interface InstalledPluginSummary {
 	id: string;
-	scope: "user" | "project" | "local";
+	scope: "user" | "project";
 	entries: InstalledPluginEntry[];
 	/** Effective state after applying both plugin and marketplace enablement. */
 	effectiveEnabled?: boolean;

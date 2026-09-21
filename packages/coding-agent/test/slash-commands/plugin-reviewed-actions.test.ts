@@ -83,6 +83,11 @@ test("reviewed plugin lifecycle persists install, disable, upgrade, and removal 
 		before: "Not installed",
 		after: "1.0.0",
 	});
+	expect(proposedInstall.review.changes).toContainEqual({
+		field: "Dependency install order",
+		before: "None",
+		after: "hello-plugin@test-marketplace@1.0.0",
+	});
 	// Merely preparing/cancelling the review cannot create an installed entry.
 	expect(await f.manager().listInstalledPlugins()).toEqual([]);
 	await executePluginInstall(f.manager(), proposedInstall.target);
@@ -195,6 +200,7 @@ test("recommended setup isolates an unavailable marketplace and retries only its
 	await f.manager().addMarketplace(second);
 	const prepared = await preparePluginSetup(f.manager());
 	expect(prepared?.target.items).toHaveLength(2);
+	expect(prepared?.review.changes.some(change => change.field.includes("dependency order"))).toBe(true);
 	await fs.rm(second, { recursive: true, force: true });
 
 	const result = await executePluginSetup(f.manager(), prepared!.target);

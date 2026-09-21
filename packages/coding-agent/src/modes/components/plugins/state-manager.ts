@@ -1,5 +1,5 @@
 import type { PluginManager } from "../../../extensibility/plugins/manager";
-import type { MarketplaceManager } from "../../../extensibility/plugins/marketplace";
+import { type MarketplaceManager, resolvePluginDependencyPlan } from "../../../extensibility/plugins/marketplace";
 import type { InstalledPluginSummary, MarketplacePluginEntry } from "../../../extensibility/plugins/marketplace/types";
 import type { DashboardPlugin, PluginDashboardState, PluginTab, PluginTabId } from "./types";
 
@@ -42,7 +42,22 @@ function installedToDashboard(summary: InstalledPluginSummary, updateMap: Map<st
 	};
 }
 
-function catalogToDashboard(entry: MarketplacePluginEntry, marketplace: string): DashboardPlugin {
+function catalogToDashboard(
+	entry: MarketplacePluginEntry,
+	marketplace: string,
+	available: MarketplacePluginEntry[],
+): DashboardPlugin {
+	let dependencyPlan: DashboardPlugin["dependencyPlan"];
+	let dependencyPlanError: string | undefined;
+	try {
+		dependencyPlan = resolvePluginDependencyPlan(
+			{ name: marketplace, owner: { name: marketplace }, plugins: available },
+			entry.name,
+			"user",
+		);
+	} catch (error) {
+		dependencyPlanError = error instanceof Error ? error.message : String(error);
+	}
 	return {
 		id: `${entry.name}@${marketplace}`,
 		name: normalizePluginDisplayName(entry.name),
@@ -62,6 +77,8 @@ function catalogToDashboard(entry: MarketplacePluginEntry, marketplace: string):
 		hasUpdate: false,
 		recommended: entry.recommended,
 		lifecycle: entry.lifecycle,
+		dependencyPlan,
+		dependencyPlanError,
 	};
 }
 
@@ -93,6 +110,7 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 	for (const mkt of marketplaces) {
 		const available = await mgr.listAvailablePlugins(mkt.name).catch(() => []);
 		for (const entry of available) {
+			const catalog = catalogToDashboard(entry, mkt.name, available);
 			const pluginId = `${entry.name}@${mkt.name}`;
 			if (installedIds.has(pluginId)) {
 				for (const existing of plugins.filter(p => p.source === "marketplace" && p.id === pluginId)) {
@@ -106,10 +124,12 @@ export async function loadAllPlugins(mgr: MarketplaceManager, npmMgr: PluginMana
 					existing.homepage = existing.homepage || entry.homepage;
 					existing.license = existing.license || entry.license;
 					existing.catalogVersion = entry.version;
+					existing.dependencyPlan = catalog.dependencyPlan;
+					existing.dependencyPlanError = catalog.dependencyPlanError;
 				}
 				continue;
 			}
-			plugins.push(catalogToDashboard(entry, mkt.name));
+			plugins.push(catalog);
 		}
 	}
 

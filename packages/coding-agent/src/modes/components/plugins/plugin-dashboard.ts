@@ -104,7 +104,13 @@ function catalogReviewRevision(plugin: DashboardPlugin): string {
 	return JSON.stringify({
 		catalogVersion: plugin.catalogVersion ?? plugin.version ?? null,
 		lifecycle: plugin.lifecycle ?? null,
+		dependencyPlan: plugin.dependencyPlan ?? null,
+		dependencyPlanError: plugin.dependencyPlanError ?? null,
 	});
+}
+
+function dependencyPlanText(plugin: DashboardPlugin): string {
+	return plugin.dependencyPlan?.map(item => `${item.pluginId}@${item.version}`).join(" → ") || "none";
 }
 
 export class PluginDashboard extends Container {
@@ -222,11 +228,14 @@ export class PluginDashboard extends Container {
 					);
 				const sourceName = marketplacePluginName(plugin);
 				const current = await manager.getPluginInfo(sourceName, plugin.marketplace);
+				const dependencyPlan = await manager.getPluginDependencyPlan(sourceName, plugin.marketplace, "user");
 				if (
 					!current ||
 					JSON.stringify({
 						catalogVersion: current.version ?? null,
 						lifecycle: current.lifecycle,
+						dependencyPlan,
+						dependencyPlanError: null,
 					}) !== catalogReviewRevision(plugin)
 				)
 					throw new StaleActionReviewError();
@@ -596,8 +605,9 @@ export class PluginDashboard extends Container {
 					after: plugin.catalogVersion ?? plugin.version ?? "resolved manifest version",
 				},
 				{ field: "Destination", before: "Absent", after: `${scope} scope` },
+				{ field: "Dependency install order", before: "None", after: dependencyPlanText(plugin) },
 			],
-			consequence: `Lifecycle: ${plugin.lifecycle?.mode ?? "unknown"}. Requirements: ${plugin.lifecycle?.requirements.join(", ") || "none"}. The selected scoped registry and versioned cache are written only after confirmation.${plugin.lifecycle?.setupRequired ? ` Authentication is not launched by installation; next: ${APP_NAME} plugin setup ${marketplacePluginName(plugin)}.` : " No setup is required."}`,
+			consequence: `Lifecycle: ${plugin.lifecycle?.mode ?? "unknown"}. Requirements: ${plugin.lifecycle?.requirements.join(", ") || "none"}. ${plugin.dependencyPlanError ? `Dependency plan error: ${plugin.dependencyPlanError}. ` : ""}The selected scoped registry and versioned cache are written only after confirmation.${plugin.lifecycle?.setupRequired ? ` Authentication is not launched by installation; next: ${APP_NAME} plugin setup ${marketplacePluginName(plugin)}.` : " No setup is required."}`,
 		};
 	}
 
@@ -609,6 +619,8 @@ export class PluginDashboard extends Container {
 				installed: plugin.version ?? null,
 				available: plugin.updateVersion ?? null,
 				enabled: plugin.enabled,
+				dependencyPlan: plugin.dependencyPlan ?? null,
+				dependencyPlanError: plugin.dependencyPlanError ?? null,
 			}),
 			changes: [
 				{
@@ -616,8 +628,13 @@ export class PluginDashboard extends Container {
 					before: plugin.version ?? "unknown",
 					after: plugin.updateVersion ?? "latest",
 				},
+				{
+					field: "Dependency upgrade order",
+					before: "Current installed graph",
+					after: dependencyPlanText(plugin),
+				},
 			],
-			consequence: "Updates only this scoped installation and preserves its enabled state.",
+			consequence: `${plugin.dependencyPlanError ? `Dependency plan error: ${plugin.dependencyPlanError}. ` : ""}Updates this scoped dependency graph in order and preserves enabled state.`,
 		};
 	}
 
@@ -640,17 +657,28 @@ export class PluginDashboard extends Container {
 				identity: `plugin:${plugin.source}:${plugin.id}:${plugin.scope ?? "catalog"}`,
 				version: plugin.catalogVersion ?? plugin.version ?? null,
 				lifecycle: plugin.lifecycle ?? null,
+				dependencyPlan: plugin.dependencyPlan ?? null,
+				dependencyPlanError: plugin.dependencyPlanError ?? null,
 			}))
 			.sort((a, b) => a.identity.localeCompare(b.identity));
 		return {
 			identity: `plugins:recommended:${targets.map(target => target.identity).join(",")}`,
 			scope: "User plugin registry and versioned cache",
 			revision: JSON.stringify(targets),
-			changes: targets.map(target => ({
-				field: target.identity.replaceAll("\0", " · "),
-				before: "Not installed",
-				after: `${target.version ?? "resolved manifest version"} (user scope)`,
-			})),
+			changes: targets.flatMap(target => [
+				{
+					field: target.identity.replaceAll("\0", " · "),
+					before: "Not installed",
+					after: `${target.version ?? "resolved manifest version"} (user scope)`,
+				},
+				{
+					field: `${target.identity.split(":").at(-2)} dependency order`,
+					before: "None",
+					after:
+						target.dependencyPlan?.map(item => `${item.pluginId}@${item.version}`).join(" → ") ??
+						`Unavailable${target.dependencyPlanError ? `: ${target.dependencyPlanError}` : ""}`,
+				},
+			]),
 			consequence: `Installs exactly the reviewed recommended entries without launching authentication. Plugins that require setup remain enabled and report the canonical ${APP_NAME} plugin setup <plugin> action. Partial results remain explicit; retry reviews only entries still unresolved.`,
 		};
 	}
@@ -666,6 +694,8 @@ export class PluginDashboard extends Container {
 			...(plugin.catalogVersion ? [`Catalog version: ${plugin.catalogVersion}`] : []),
 			...(plugin.updateVersion ? [`Available version: ${plugin.updateVersion}`] : []),
 			...(plugin.shadowedBy ? [`Availability: shadowed by ${plugin.shadowedBy} scope`] : []),
+			...(plugin.source === "marketplace" ? [`Dependency install order: ${dependencyPlanText(plugin)}`] : []),
+			...(plugin.dependencyPlanError ? [`Dependency plan error: ${plugin.dependencyPlanError}`] : []),
 			...(plugin.description ? [`Description: ${replaceTabs(plugin.description)}`] : []),
 			...(plugin.author ? [`Author: ${replaceTabs(plugin.author)}`] : []),
 			...(plugin.license ? [`License: ${replaceTabs(plugin.license)}`] : []),

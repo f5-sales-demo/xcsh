@@ -120,6 +120,44 @@ describe("PluginDashboard interaction contract", () => {
 		expect(text(dashboard)).toContain("Review installation");
 	});
 
+	it("shows the complete dependency plan in details and installation review", () => {
+		const dashboard = create([
+			plugin({
+				id: "zoom@catalog",
+				name: "zoom",
+				dependencyPlan: [
+					{ pluginId: "xorg@catalog", version: "1.0.1", scope: "user", dependency: true },
+					{ pluginId: "zoom@catalog", version: "1.0.1", scope: "user", dependency: false },
+				],
+			}),
+		]);
+		dashboard.handleInput("\r");
+		expect(text(dashboard)).toContain("Dependency install order: xorg@catalog@1.0.1 → zoom@catalog@1.0.1");
+		dashboard.handleInput("\r");
+		expect(text(dashboard)).toContain("Dependency install order: None → xorg@catalog@1.0.1 → zoom@catalog@1.0.1");
+	});
+
+	it("includes dependency plans in recommended bulk review", () => {
+		const dashboard = create(
+			[
+				plugin({
+					id: "zoom@catalog",
+					name: "zoom",
+					recommended: true,
+					dependencyPlan: [
+						{ pluginId: "xorg@catalog", version: "1.0.1", scope: "user", dependency: true },
+						{ pluginId: "zoom@catalog", version: "1.0.1", scope: "user", dependency: false },
+					],
+				}),
+			],
+			"recommended",
+		);
+		dashboard.handleInput("\x1b[B");
+		dashboard.handleInput("\r");
+		expect(text(dashboard)).toContain("zoom@catalog dependency order");
+		expect(text(dashboard)).toContain("xorg@catalog@1.0.1 → zoom@catalog@1.0.1");
+	});
+
 	it("starts destructive removal confirmation on Cancel", () => {
 		const remove = vi.fn(async () => {});
 		const dashboard = create(

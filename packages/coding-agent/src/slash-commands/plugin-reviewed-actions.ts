@@ -8,7 +8,7 @@ import type {
 	MarketplaceRegistryEntry,
 	PluginUpdate,
 } from "../extensibility/plugins/marketplace";
-import { fetchMarketplace } from "../extensibility/plugins/marketplace";
+import { fetchMarketplace, resolvePluginDependencyPlan } from "../extensibility/plugins/marketplace";
 import type { ActionReview } from "../modes/components/reviewed-action";
 import { StaleActionReviewError } from "../modes/components/reviewed-action";
 
@@ -27,6 +27,7 @@ export interface PreparedPluginInstall {
 		scope: PluginScope;
 		force: boolean;
 		catalogRevision: string;
+		dependencyPlanRevision: string;
 	};
 	warnings: string[];
 }
@@ -42,7 +43,7 @@ export interface PreparedInstalledPluginAction {
 }
 
 export interface PreparedPluginUpgrade extends PreparedInstalledPluginAction {
-	target: PreparedInstalledPluginAction["target"] & { to: string };
+	target: PreparedInstalledPluginAction["target"] & { to: string; dependencyPlanRevision: string };
 }
 
 export interface PreparedPluginUpgradeAll {
@@ -74,6 +75,8 @@ export interface PreparedPluginSetup {
 			marketplace: string;
 			catalogRevision: string;
 			plugin: MarketplacePluginEntry;
+			dependencyPlan: ReturnType<typeof resolvePluginDependencyPlan>;
+			dependencyPlanRevision: string;
 		}>;
 	};
 	warnings: string[];
@@ -173,6 +176,16 @@ export async function preparePluginInstall(
 			? "Disabled"
 			: "Enabled";
 	const catalogRevision = pluginCatalogRevision(catalog);
+	const dependencyPlan = resolvePluginDependencyPlan(
+		{
+			name: marketplace,
+			owner: { name: marketplace },
+			plugins: preview.plugins.filter(item => item.marketplace === marketplace).map(item => item.plugin),
+		},
+		name,
+		scope,
+	);
+	const dependencyPlanRevision = JSON.stringify(dependencyPlan);
 	return {
 		review: {
 			identity: `plugin:${pluginId}:${scope}`,
@@ -193,10 +206,15 @@ export async function preparePluginInstall(
 					after: enabledAfter,
 				},
 				{ field: "Destination", before: oldEntry ? `${scope} scope` : "Absent", after: `${scope} scope` },
+				{
+					field: "Dependency install order",
+					before: "None",
+					after: dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> "),
+				},
 			],
 			consequence: `${force ? "Reinstalls" : "Installs"} this exact catalog entry and writes the ${scope} registry. Lifecycle: ${catalog.lifecycle.mode}; setup ${catalog.lifecycle.setupRequired ? "required" : "not required"}. ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "The catalog preview is current."} --force controls replacement only; this review is still required.`,
 		},
-		target: { name, marketplace, scope, force, catalogRevision },
+		target: { name, marketplace, scope, force, catalogRevision, dependencyPlanRevision },
 		warnings: preview.failed.map(source => `Using last-known catalog data for ${source}.`),
 	};
 }
@@ -210,6 +228,11 @@ export async function executePluginInstall(
 		throw new Error(`Marketplace "${target.marketplace}" could not be refreshed; installation was not started.`);
 	const catalog = await manager.getPluginInfo(target.name, target.marketplace);
 	if (!catalog || pluginCatalogRevision(catalog) !== target.catalogRevision) throw new StaleActionReviewError();
+	if (
+		JSON.stringify(await manager.getPluginDependencyPlan(target.name, target.marketplace, target.scope)) !==
+		target.dependencyPlanRevision
+	)
+		throw new StaleActionReviewError();
 	await manager.installPlugin(target.name, target.marketplace, { force: target.force, scope: target.scope });
 }
 
@@ -304,12 +327,29 @@ export async function preparePluginUpgrade(
 		from: installed.entry.version,
 		to: catalogVersion,
 	};
+	const dependencyPlan = resolvePluginDependencyPlan(
+		{
+			name: marketplace,
+			owner: { name: marketplace },
+			plugins: preview.plugins.filter(item => item.marketplace === marketplace).map(item => item.plugin),
+		},
+		name,
+		scope,
+	);
+	const dependencyPlanRevision = JSON.stringify(dependencyPlan);
 	return {
 		review: {
 			identity: `plugin:${pluginId}:${scope}`,
 			scope: `${scope} plugin registry and versioned cache`,
 			revision: JSON.stringify({ installed: installedRevision(installed), update }),
-			changes: [{ field: "Installed version", before: update.from, after: update.to }],
+			changes: [
+				{ field: "Installed version", before: update.from, after: update.to },
+				{
+					field: "Dependency upgrade order",
+					before: "Current installed graph",
+					after: dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> "),
+				},
+			],
 			consequence: `Refreshes the source catalog, installs the reviewed version, preserves the enabled state, and removes unreferenced old cache data. ${
 				preview.failed.length
 					? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.`
@@ -322,6 +362,7 @@ export async function preparePluginUpgrade(
 			version: installed.entry.version,
 			enabled: installed.entry.enabled !== false,
 			to: update.to,
+			dependencyPlanRevision,
 		},
 	};
 }
@@ -338,6 +379,16 @@ export async function executePluginUpgrade(
 		candidate => candidate.pluginId === target.pluginId && candidate.scope === target.scope,
 	);
 	if (!update || update.from !== target.version || update.to !== target.to) throw new StaleActionReviewError();
+	if (
+		JSON.stringify(
+			await manager.getPluginDependencyPlan(
+				target.pluginId.slice(0, target.pluginId.lastIndexOf("@")),
+				marketplace,
+				target.scope,
+			),
+		) !== target.dependencyPlanRevision
+	)
+		throw new StaleActionReviewError();
 	await manager.upgradePlugin(target.pluginId, target.scope);
 }
 
@@ -387,13 +438,28 @@ export async function preparePluginSetup(manager: MarketplaceManager): Promise<P
 	const installedIds = new Set((await manager.listInstalledPlugins()).map(summary => summary.id));
 	const items = preview.plugins
 		.filter(item => item.plugin.recommended && !installedIds.has(`${item.plugin.name}@${item.marketplace}`))
-		.map(item => ({
-			name: item.plugin.name,
-			displayName: item.plugin.displayName || item.plugin.name,
-			marketplace: item.marketplace,
-			catalogRevision: pluginCatalogRevision(item.plugin),
-			plugin: item.plugin,
-		}))
+		.map(item => {
+			const dependencyPlan = resolvePluginDependencyPlan(
+				{
+					name: item.marketplace,
+					owner: { name: item.marketplace },
+					plugins: preview.plugins
+						.filter(candidate => candidate.marketplace === item.marketplace)
+						.map(candidate => candidate.plugin),
+				},
+				item.plugin.name,
+				"user",
+			);
+			return {
+				name: item.plugin.name,
+				displayName: item.plugin.displayName || item.plugin.name,
+				marketplace: item.marketplace,
+				catalogRevision: pluginCatalogRevision(item.plugin),
+				plugin: item.plugin,
+				dependencyPlan,
+				dependencyPlanRevision: JSON.stringify(dependencyPlan),
+			};
+		})
 		.sort((a, b) => `${a.name}\0${a.marketplace}`.localeCompare(`${b.name}\0${b.marketplace}`));
 	if (!items.length && preview.failed.length)
 		throw new Error(
@@ -407,11 +473,18 @@ export async function preparePluginSetup(manager: MarketplaceManager): Promise<P
 			revision: JSON.stringify(
 				items.map(item => ({ id: `${item.name}@${item.marketplace}`, catalog: item.catalogRevision })),
 			),
-			changes: items.map(item => ({
-				field: `${item.name}@${item.marketplace}`,
-				before: "Not installed",
-				after: `${item.plugin.version ?? "resolved manifest version"} (user scope)`,
-			})),
+			changes: items.flatMap(item => [
+				{
+					field: `${item.name}@${item.marketplace}`,
+					before: "Not installed",
+					after: `${item.plugin.version ?? "resolved manifest version"} (user scope)`,
+				},
+				{
+					field: `${item.name}@${item.marketplace} dependency order`,
+					before: "None",
+					after: item.dependencyPlan.map(planItem => `${planItem.pluginId}@${planItem.version}`).join(" -> "),
+				},
+			]),
 			consequence: `Installs ${items.length} recommended plugin(s). Authentication is never launched by this bulk install. Plugins whose lifecycle requires setup remain enabled and report xcsh plugin setup <plugin>. ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "All catalog previews are current."} Failures are isolated; re-run setup to review only unresolved plugins.`,
 		},
 		target: { items },
@@ -428,6 +501,11 @@ export async function executePluginSetup(
 	for (const item of target.items.filter(candidate => !refresh.failed.includes(candidate.marketplace))) {
 		const current = await manager.getPluginInfo(item.name, item.marketplace);
 		if (!current || pluginCatalogRevision(current) !== item.catalogRevision) throw new StaleActionReviewError();
+		if (
+			JSON.stringify(await manager.getPluginDependencyPlan(item.name, item.marketplace, "user")) !==
+			item.dependencyPlanRevision
+		)
+			throw new StaleActionReviewError();
 	}
 	const installed: string[] = [];
 	const failed: Array<{ pluginId: string; error: string }> = target.items

@@ -17,6 +17,7 @@ import {
 	getMarketplacesRegistryPath,
 	getPluginsCacheDir,
 	MarketplaceManager,
+	resolvePluginDependencyPlan,
 } from "../extensibility/plugins/marketplace/index.js";
 import { describeSetupPlan, executeReviewedSetup } from "../integrations/setup";
 import type { IntegrationHandle } from "../integrations/types";
@@ -298,6 +299,7 @@ async function reportMarketplaceInstallation(
 	marketplace: string,
 	entry: { version: string; scope: string; setupRequired: boolean },
 	flags: { json?: boolean },
+	dependencyPlan: ReturnType<typeof resolvePluginDependencyPlan>,
 ): Promise<void> {
 	let handles: IntegrationHandle<unknown>[] = [];
 	try {
@@ -319,12 +321,16 @@ async function reportMarketplaceInstallation(
 	if (flags.json || !process.stdin.isTTY || !process.stdout.isTTY) {
 		const result = {
 			installation: { state: "installed", plugin, marketplace, version: entry.version, scope: entry.scope },
+			dependencyPlan,
 			readiness: { integrations: statuses },
 			...(nextAction ? { nextAction } : {}),
 		};
 		if (flags.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 		else {
 			process.stdout.write(`${theme.status.success} Installed ${plugin} from ${marketplace} (${entry.version})\n`);
+			process.stdout.write(
+				`  Dependency plan: ${dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> ")}\n`,
+			);
 			for (const status of statuses)
 				process.stdout.write(`  ${status.id}: ${status.state}${status.reason ? ` (${status.reason})` : ""}\n`);
 			if (nextAction) process.stdout.write(`  next: ${nextAction}\n`);
@@ -332,6 +338,9 @@ async function reportMarketplaceInstallation(
 		return;
 	}
 	process.stdout.write(`${theme.status.success} Installed ${plugin} from ${marketplace} (${entry.version})\n`);
+	process.stdout.write(
+		`Dependency plan: ${dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> ")}\n`,
+	);
 	if (!setupHandle || setupStatus?.state === "ready") return;
 	try {
 		const result = await reviewAndExecuteIntegrationSetup(setupHandle);
@@ -506,18 +515,44 @@ async function handleUpgrade(args: string[], flags: PluginCommandArgs["flags"]):
 					(pluginId === undefined || update.pluginId === pluginId) &&
 					(flags.scope === undefined || update.scope === flags.scope),
 			);
+			const marketplaces = [
+				...new Set(updates.map(update => update.pluginId.slice(update.pluginId.lastIndexOf("@") + 1))),
+			];
+			const dependencyPreview = await manager.previewMarketplacePlugins(marketplaces);
+			const plannedUpdates = updates.map(update => {
+				const separator = update.pluginId.lastIndexOf("@");
+				const name = update.pluginId.slice(0, separator);
+				const marketplace = update.pluginId.slice(separator + 1);
+				return {
+					...update,
+					dependencyPlan: resolvePluginDependencyPlan(
+						{
+							name: marketplace,
+							owner: { name: marketplace },
+							plugins: dependencyPreview.plugins
+								.filter(item => item.marketplace === marketplace)
+								.map(item => item.plugin),
+						},
+						name,
+						update.scope,
+					),
+				};
+			});
 			if (flags.json) {
-				process.stdout.write(`${JSON.stringify({ dryRun: true, updates }, null, 2)}\n`);
+				process.stdout.write(`${JSON.stringify({ dryRun: true, updates: plannedUpdates }, null, 2)}\n`);
 			} else if (updates.length === 0) {
 				process.stdout.write(
 					`${pluginId ? `${pluginId} is up to date.` : "All marketplace plugins are up to date."}\n`,
 				);
 			} else {
-				for (const update of updates) {
+				for (const update of plannedUpdates) {
 					process.stdout.write(
 						`${chalk.dim(
 							`[dry-run] Would upgrade ${update.pluginId} (${update.scope}): ${update.from} -> ${update.to}`,
 						)}\n`,
+					);
+					process.stdout.write(
+						`${chalk.dim(`  Dependency plan: ${update.dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> ")}`)}\n`,
 					);
 				}
 			}
@@ -616,15 +651,33 @@ async function handleInstall(
 			const catalogEntry = listings.find(
 				item => item.marketplace === target.marketplace && item.plugin.name === target.name,
 			)?.plugin;
+			const scope = flags.scope ?? "user";
+			const dependencyPlan = resolvePluginDependencyPlan(
+				{
+					name: target.marketplace,
+					owner: { name: target.marketplace },
+					plugins: listings.filter(item => item.marketplace === target.marketplace).map(item => item.plugin),
+				},
+				target.name,
+				scope,
+			);
 			if (flags.dryRun) {
 				const preview = {
 					action: "install",
 					target: `${target.name}@${target.marketplace}`,
-					scope: flags.scope ?? "user",
+					scope,
 					dryRun: true,
+					dependencyPlan,
 				};
 				if (flags.json) console.log(JSON.stringify(preview, null, 2));
-				else console.log(chalk.dim(`[dry-run] Would install ${preview.target} (${preview.scope})`));
+				else {
+					console.log(chalk.dim(`[dry-run] Would install ${preview.target} (${preview.scope})`));
+					console.log(
+						chalk.dim(
+							`  Dependency plan: ${dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> ")}`,
+						),
+					);
+				}
 				continue;
 			}
 			try {
@@ -637,6 +690,7 @@ async function handleInstall(
 					target.marketplace,
 					{ ...entry, setupRequired: catalogEntry?.lifecycle.setupRequired ?? false },
 					flags,
+					dependencyPlan,
 				);
 			} catch (err) {
 				console.error(chalk.red(`${theme.status.error} Failed to install ${spec}: ${err}`));
