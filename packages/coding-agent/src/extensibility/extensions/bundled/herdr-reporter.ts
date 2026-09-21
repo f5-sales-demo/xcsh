@@ -474,9 +474,11 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		await enqueue(async () => {
 			const client = getHerdrClient(socketPath);
 			try {
-				await client.ensureProtocol();
-				if (!client.hasCapability("agent_turn_journal")) {
-					onError(new Error("Herdr does not advertise agent_turn_journal; semantic tracking is degraded"));
+				await client.ensureSemanticProtocol();
+				if (!client.supportsSemanticTracking()) {
+					onError(
+						new Error("Herdr does not advertise supported semantic tracking; semantic tracking is degraded"),
+					);
 					return;
 				}
 				const capability = nativeCapability();

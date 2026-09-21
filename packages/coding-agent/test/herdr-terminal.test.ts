@@ -87,7 +87,7 @@ describe("Herdr protocol client", () => {
 		);
 		try {
 			const client = new HerdrClient(fake.socketPath);
-			await client.ensureProtocol();
+			await client.ensureSemanticProtocol();
 			expect(client.protocolVersion).toBe(23);
 			expect(client.hasCapability("agent_turn_journal")).toBe(true);
 			expect(client.hasCapability("unknown")).toBe(false);
@@ -113,6 +113,60 @@ describe("Herdr protocol client", () => {
 			await expect(new HerdrClient(fake.socketPath).ensureProtocol()).rejects.toMatchObject({
 				code: "protocol_mismatch",
 			});
+		} finally {
+			await fake.close();
+		}
+	});
+
+	test.each([18, 26])("accepts protocol %i with semantic tracking capability v1", async protocol => {
+		const fake = await fakeHerdr(request =>
+			request.method === "ping"
+				? {
+						type: "pong",
+						protocol,
+						version: "named-capability",
+						capabilities: { xcsh_semantic_tracking: 1, agent_turn_journal: true },
+					}
+				: { type: "workspace_list", workspaces: [] },
+		);
+		try {
+			const client = new HerdrClient(fake.socketPath);
+			await client.ensureSemanticProtocol();
+			expect(client.protocolVersion).toBe(protocol);
+			expect(client.supportsSemanticTracking()).toBe(true);
+		} finally {
+			await fake.close();
+		}
+	});
+
+	test("retains protocol 19 through 25 as the semantic tracking fallback", async () => {
+		for (const protocol of [19, 25]) {
+			const fake = await fakeHerdr(request =>
+				request.method === "ping"
+					? { type: "pong", protocol, version: "legacy", capabilities: { agent_turn_journal: true } }
+					: { type: "workspace_list", workspaces: [] },
+			);
+			try {
+				const client = new HerdrClient(fake.socketPath);
+				await client.ensureProtocol();
+				expect(client.supportsSemanticTracking()).toBe(true);
+			} finally {
+				await fake.close();
+			}
+		}
+	});
+
+	test("degrades semantic tracking when a legacy server lacks its fallback capability", async () => {
+		const fake = await fakeHerdr(request =>
+			request.method === "ping"
+				? { type: "pong", protocol: 25, version: "legacy", capabilities: {} }
+				: { type: "workspace_list", workspaces: [] },
+		);
+		try {
+			const client = new HerdrClient(fake.socketPath);
+			await client.ensureSemanticProtocol();
+			expect(client.protocolVersion).toBe(25);
+			expect(client.supportsSemanticTracking()).toBe(false);
 		} finally {
 			await fake.close();
 		}
