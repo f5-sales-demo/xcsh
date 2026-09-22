@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "bee1297e3819292278f197f92f7296c763c4acea",
-  "fingerprint": "fd15b9f49eb03fb930617a1dece1704486f298699674c8743f26fc842c458b50",
+  "revision": "11d3b1c6a29a0c15fe71e22266869bc2543053e4",
+  "fingerprint": "08315d4113f8d0505cb95cc9bd4e55a6f21f0a53152eabd178f098df0bbb92ed",
   "counts": {
     "total": 240,
     "components": 95,
@@ -499,7 +499,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "34cfb6b4c17318522490ef062539b6817d4a6a987a8ae27987ea7dc16b2ed09c",
+      "sha256": "55d348236a0f553dd366b10ebb7b9db0038a2382267e7cb69c3fb0d1aab13a11",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -532,7 +532,7 @@
         "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
-        "packages/coding-agent/test/xcsh-context-service.test.ts"
+        "packages/coding-agent/test/scoped-advisories.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -541,7 +541,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "eb224eab05aed611d8ff5abb91ddeaa4fccb3bc0e279c04e85c68e44db542008",
+      "sha256": "c9c61c400eb8cd838a1b189fc1c05684def8d20022bab3863a2740b9476bc9af",
       "exports": [
         "BranchHandler",
         "ExtensionErrorListener",
@@ -586,7 +586,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "ba7f390ad01907e05a828066d20238dc9fccd7941419c52749c250dafdde9970",
+      "sha256": "f63c362b259d64041329473b87670e9414a26e74a47593ce0c550bbeac8bda80",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -652,8 +652,10 @@
         "ReadToolResultEvent",
         "RegisteredCommand",
         "RegisteredTool",
+        "RegisteredToolAdvisory",
         "ResourcesDiscoverEvent",
         "ResourcesDiscoverResult",
+        "ScopedToolAdvisory",
         "SendMessageHandler",
         "SendUserMessageHandler",
         "SessionBeforeBranchEvent",
@@ -678,6 +680,10 @@
         "SetThinkingLevelHandler",
         "TerminalInputHandler",
         "TodoReminderEvent",
+        "ToolAdvisory",
+        "ToolAdvisoryDiagnostic",
+        "ToolAdvisoryEvaluation",
+        "ToolAdvisoryRegistration",
         "ToolCallEvent",
         "ToolCallEventResult",
         "ToolDefinition",
@@ -3515,7 +3521,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "01edc290cc08c86bf74daefcb2754f08d351740f152b05089b255063c02fdfb8",
+      "sha256": "a4477d9d779260093a4ce65031b8e3c865f140a0c365965b4e5c3a5d88bafc69",
       "exports": [
         "SelectorController"
       ],
@@ -3687,7 +3693,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "96a5783f668cc55bb3bebb41439781bc527bfa6b7597479c1d076aecbd1631f4",
+      "sha256": "1ee89477b100dbdb07403bc532a9f2eb92a51bde5194f953716a28c7931584f7",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4134,7 +4140,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "528f3cb16a145bd4d0c6f0047606baf4d437f118757258e12daaac3e4d32013a",
+      "sha256": "29b7fc23214cccdf353425ffc16693eda07c4da52a8cb1ed3ad41f95f9f8cee6",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",
@@ -4510,7 +4516,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "1e6b7e590d84f4b7b2a8762c5b3b2024092a1f959877e9828ad92567e1982dc2",
+      "sha256": "cd4c29ea5551dbaa70e47bc55af9a8e93b6e89fe250c59b0c532c9bcae77eb2d",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -6125,7 +6131,7 @@
         "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
-        "packages/coding-agent/test/xcsh-context-service.test.ts"
+        "packages/coding-agent/test/scoped-advisories.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

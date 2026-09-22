@@ -52,6 +52,7 @@ test.each([
 			},
 		};
 		const wrapper = new ExtensionToolWrapper(tool, {
+			evaluateAdvisories: async () => ({ advisories: [], diagnostics: [] }),
 			hasHandlers: (name: string) => name === "tool_result",
 			emitToolResult: async (event: any) => {
 				observed = event;
@@ -77,6 +78,7 @@ test("an extension marking success as failure preserves its complete modified re
 		execute: async () => ({ content, details }),
 	};
 	const wrapper = new ExtensionToolWrapper(tool, {
+		evaluateAdvisories: async () => ({ advisories: [], diagnostics: [] }),
 		hasHandlers: (name: string) => name === "tool_result",
 		emitToolResult: async () => ({ isError: true }),
 	} as any);
