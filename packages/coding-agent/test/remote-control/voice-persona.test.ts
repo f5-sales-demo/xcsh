@@ -1,15 +1,10 @@
 import { expect, test } from "bun:test";
-import { voicePersonaInstructions } from "../../src/remote-control/voice-persona";
+import { type VoicePersonaSnapshot, voicePersonaInstructions } from "../../src/remote-control/voice-persona";
 
 const snapshot = {
-	systemPrompt: "BACKEND_ONLY_SYSTEM_PROMPT",
-	userKnowledge: "PRIVATE_PERSON_PROFILE",
-	tools: [
-		{ name: "zeta", description: "PRIVATE_ZETA_PROCEDURE" },
-		{ name: "alpha", description: "PRIVATE_ALPHA_PROCEDURE" },
-	],
+	tools: [{ name: "zeta" }, { name: "alpha" }],
 	history: '[{"role":"user","text":"Previous user turn"}]',
-};
+} satisfies VoicePersonaSnapshot;
 
 test.each([undefined, "", null])("voice preferences %p retain the compact Live identity", phonePrompt => {
 	const { instructions } = voicePersonaInstructions(
@@ -18,9 +13,8 @@ test.each([undefined, "", null])("voice preferences %p retain the compact Live i
 	);
 	expect(instructions).toContain("xcsh's voice surface");
 	expect(instructions).toContain("alpha, zeta");
-	expect(instructions).not.toContain(snapshot.systemPrompt);
-	expect(instructions).not.toContain(snapshot.userKnowledge);
-	expect(instructions).not.toContain("PRIVATE_ALPHA_PROCEDURE");
+	expect(Object.keys(snapshot)).toEqual(["tools", "history"]);
+	expect(Object.keys(snapshot.tools[0])).toEqual(["name"]);
 });
 
 test("phone preferences cannot supersede the final server-owned identity, delegation, and pronunciation contract", () => {
@@ -60,7 +54,7 @@ test("person data is retrieved on demand and never copied into the Live prompt",
 	expect(instructions).toContain("Do not answer from voice context or say you lack information");
 	expect(instructions).toContain("wait for the attached agent's verified result");
 	expect(instructions).toContain('While waiting, only say: "Let me check that for you."');
-	expect(instructions).not.toContain(snapshot.userKnowledge);
+	expect(Object.keys(snapshot)).not.toContain("userKnowledge");
 });
 
 test("startup history is optional while the server-owned voice baseline and delegation boundary remain", () => {
@@ -82,17 +76,13 @@ test("large untrusted sections are Unicode-safe, bounded, and cannot displace fi
 	const { instructions, diagnostics } = voicePersonaInstructions(
 		{ prompt: "🌳".repeat(20_000) },
 		{
-			systemPrompt: "BACKEND_ONLY_PROCEDURE ".repeat(8_000),
 			tools: Array.from({ length: 1_000 }, (_, index) => ({
 				name: `example_tool_${String(index).padStart(4, "0")}`,
-				description: "PRIVATE_TOOL_PROCEDURE ".repeat(100),
 			})),
 			history: `HISTORY-${"🌳".repeat(10_000)}-TAIL`,
 		},
 	);
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(8192);
-	expect(instructions).not.toContain("BACKEND_ONLY_PROCEDURE");
-	expect(instructions).not.toContain("PRIVATE_TOOL_PROCEDURE");
 	expect(instructions).toContain("example_tool_0000");
 	expect(instructions).toContain("[...xcsh prompt truncated...]");
 	expect(instructions).toContain("HISTORY-");
@@ -101,8 +91,12 @@ test("large untrusted sections are Unicode-safe, bounded, and cannot displace fi
 	expect(instructions).toContain("I'm ex-see-shell, F5's sales-engineering assistant.");
 	expect(instructions).toContain("ask the attached thinking agent first");
 	expect(instructions).toContain("## Reference Pronunciations");
-	expect(diagnostics.bytes.systemPrompt).toBe(0);
-	expect(diagnostics.bytes.userKnowledge).toBe(0);
+	expect(Object.keys(diagnostics.bytes).sort()).toEqual(
+		["capabilities", "history", "instructions", "preferences"].sort(),
+	);
+	expect(Object.keys(diagnostics.truncated).sort()).toEqual(
+		["capabilities", "history", "instructions", "preferences"].sort(),
+	);
 	expect(diagnostics.bytes.capabilities).toBeLessThanOrEqual(2200);
 	expect(diagnostics.bytes.preferences).toBeLessThanOrEqual(1024);
 	expect(diagnostics.bytes.history).toBeLessThanOrEqual(2048);

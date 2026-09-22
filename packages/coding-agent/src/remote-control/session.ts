@@ -43,7 +43,6 @@ export type SessionTarget = Pick<
 	| "sessionFile"
 	| "model"
 	| "messages"
-	| "systemPrompt"
 	| "getActiveToolNames"
 	| "isStreaming"
 	| "activeStreamMessage"
@@ -107,7 +106,7 @@ interface Turn {
 	items: Record<string, unknown>[];
 	itemsView: string;
 	status: string;
-	error: { message: string; codexErrorInfo: null; additionalDetails: null } | null;
+	error: { message: string; codexErrorInfo: "misalignmentPolicyViolation" | null; additionalDetails: null } | null;
 	startedAt: number | null;
 	completedAt: number | null;
 	durationMs: number | null;
@@ -122,10 +121,11 @@ function textOf(message: AgentMessage): string {
 				.map(part => part.text)
 				.join("\n");
 }
-function turnError() {
+function turnError(providerFailureCode?: string) {
 	return {
 		message: "The selected model could not complete this turn. Check the terminal for details.",
-		codexErrorInfo: null,
+		codexErrorInfo:
+			providerFailureCode === "misalignment_policy_violation" ? ("misalignmentPolicyViolation" as const) : null,
 		additionalDetails: null,
 	};
 }
@@ -169,6 +169,8 @@ export class RemoteSession {
 	#unsubscribeVoiceHistory?: () => void;
 	#cancelDelegations = new Set<() => void>();
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
+	#voiceAdmissionTail: Promise<void> = Promise.resolve();
+	#voiceHandoffsRetired = false;
 	#voice?: NativeVoice;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
 	#configurationTail: Promise<void> = Promise.resolve();
@@ -573,7 +575,7 @@ export class RemoteSession {
 			} else if (message.role === "assistant" && turns.length) {
 				if (message.stopReason === "error") {
 					turns[turns.length - 1].status = "failed";
-					turns[turns.length - 1].error = turnError();
+					turns[turns.length - 1].error = turnError(message.providerFailureCode);
 				} else if (message.stopReason === "aborted") turns[turns.length - 1].status = "interrupted";
 				const text = textOf(message);
 				if (text)
@@ -1022,21 +1024,16 @@ export class RemoteSession {
 			if (this.#voice?.active) throw new ProtocolError(-32000, "Voice is already active");
 			await this.#voice?.stop();
 			this.#assertCurrent(epoch);
+			this.#voiceHandoffsRetired = false;
+			this.#voiceAdmissionTail = Promise.resolve();
 			this.#voice = new NativeVoice({
 				history: this.#voiceHistoryOwner.history,
 				persona: async () => {
 					this.#assertCurrent(epoch);
 					const tools = (this.target.getActiveToolNames?.() ?? [])
 						.sort((left, right) => left.localeCompare(right))
-						.map(name => {
-							const tool = this.target.getToolByName?.(name) as { description?: unknown } | undefined;
-							return {
-								name,
-								...(typeof tool?.description === "string" ? { description: tool.description } : {}),
-							};
-						});
+						.map(name => ({ name }));
 					const snapshot = {
-						systemPrompt: this.target.systemPrompt ?? "",
 						tools,
 						history: JSON.stringify(
 							(this.target.messages ?? [])
@@ -1568,50 +1565,69 @@ export class RemoteSession {
 	}
 	#delegateVoice(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string> {
 		return new Promise((resolve, reject) => {
-			const current = this.#active;
-			const turnId = current?.id ?? this.#nextTurnId();
-			const stream = output ? { turnId, send: output } : undefined;
-			if (stream) this.#voiceOutputs.add(stream);
-			const cancel = () => {
-				unsubscribe();
-				this.#cancelDelegations.delete(cancel);
-				if (stream) this.#voiceOutputs.delete(stream);
-				reject(new Error("Backing session changed"));
+			const admit = async () => {
+				if (this.#voiceHandoffsRetired) {
+					const error = new Error("Voice handoff retired") as Error & { voiceHandoffRetired?: boolean };
+					error.voiceHandoffRetired = true;
+					throw error;
+				}
+				const current = this.#active;
+				const turnId = current?.id ?? this.#nextTurnId();
+				const stream = output ? { turnId, send: output } : undefined;
+				if (stream) this.#voiceOutputs.add(stream);
+				let unsubscribe = () => {};
+				const cancel = () => {
+					unsubscribe();
+					this.#cancelDelegations.delete(cancel);
+					if (stream) this.#voiceOutputs.delete(stream);
+					reject(new Error("Backing session changed"));
+				};
+				this.#cancelDelegations.add(cancel);
+				unsubscribe = this.subscribe(event => {
+					const result = event.params.turn as Turn | undefined;
+					if (event.method !== "turn/completed" || result?.id !== turnId) return;
+					unsubscribe();
+					this.#cancelDelegations.delete(cancel);
+					if (stream) this.#voiceOutputs.delete(stream);
+					if (result.status === "failed") {
+						const error = new Error("Backing turn failed") as Error & { codexErrorInfo?: string };
+						if (result.error?.codexErrorInfo) error.codexErrorInfo = result.error.codexErrorInfo;
+						if (error.codexErrorInfo === "misalignmentPolicyViolation") this.#voiceHandoffsRetired = true;
+						reject(error);
+						return;
+					}
+					if (result.status === "interrupted") {
+						resolve("The active turn was interrupted. This does not confirm that completed actions were undone.");
+						return;
+					}
+					resolve(
+						result.items
+							.filter(item => item.type === "agentMessage")
+							.slice(-1)
+							.map(item => String(item.text))
+							.join("\n"),
+					);
+				});
+				try {
+					await this.call(`voice:${id}`, current ? "turn/steer" : "turn/start", {
+						threadId: this.target.sessionId,
+						...(current ? { expectedTurnId: current.id } : {}),
+						clientUserMessageId: `voice:${id}`,
+						input: [{ type: "text", text }],
+					});
+				} catch (error) {
+					unsubscribe();
+					this.#cancelDelegations.delete(cancel);
+					if (stream) this.#voiceOutputs.delete(stream);
+					reject(error);
+				}
 			};
-			this.#cancelDelegations.add(cancel);
-			const unsubscribe = this.subscribe(event => {
-				const result = event.params.turn as Turn | undefined;
-				if (event.method !== "turn/completed" || result?.id !== turnId) return;
-				unsubscribe();
-				this.#cancelDelegations.delete(cancel);
-				if (stream) this.#voiceOutputs.delete(stream);
-				if (result.status === "failed") {
-					reject(new Error("Backing turn failed"));
-					return;
-				}
-				if (result.status === "interrupted") {
-					resolve("The active turn was interrupted. This does not confirm that completed actions were undone.");
-					return;
-				}
-				resolve(
-					result.items
-						.filter(item => item.type === "agentMessage")
-						.slice(-1)
-						.map(item => String(item.text))
-						.join("\n"),
-				);
-			});
-			void this.call(`voice:${id}`, current ? "turn/steer" : "turn/start", {
-				threadId: this.target.sessionId,
-				...(current ? { expectedTurnId: current.id } : {}),
-				clientUserMessageId: `voice:${id}`,
-				input: [{ type: "text", text }],
-			}).catch(error => {
-				unsubscribe();
-				this.#cancelDelegations.delete(cancel);
-				if (stream) this.#voiceOutputs.delete(stream);
-				reject(error);
-			});
+			const admission = this.#voiceAdmissionTail.then(admit, admit);
+			this.#voiceAdmissionTail = admission.then(
+				() => undefined,
+				() => undefined,
+			);
+			void admission.catch(reject);
 		});
 	}
 	#finish(status: string, expectedId?: string): void {
@@ -1647,7 +1663,7 @@ export class RemoteSession {
 			turn: {
 				...active,
 				status,
-				error: status === "failed" ? turnError() : null,
+				error: status === "failed" ? (latest?.error ?? turnError()) : null,
 				items: latest?.items ?? [],
 				completedAt: Math.floor(Date.now() / 1000),
 			},

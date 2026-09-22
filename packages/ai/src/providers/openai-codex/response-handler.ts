@@ -14,6 +14,7 @@ export type CodexRateLimits = {
 export type CodexErrorInfo = {
 	message: string;
 	status: number;
+	code?: string;
 	friendlyMessage?: string;
 	rateLimits?: CodexRateLimits;
 	raw?: string;
@@ -24,6 +25,7 @@ export async function parseCodexError(response: Response): Promise<CodexErrorInf
 	let message = raw || response.statusText || "Request failed";
 	let friendlyMessage: string | undefined;
 	let rateLimits: CodexRateLimits | undefined;
+	let code: string | undefined;
 
 	try {
 		const parsed = JSON.parse(raw) as { error?: Record<string, unknown> };
@@ -45,16 +47,17 @@ export async function parseCodexError(response: Response): Promise<CodexErrorInf
 				? { primary, secondary }
 				: undefined;
 
-		const code = String((err as { code?: string; type?: string }).code ?? (err as { type?: string }).type ?? "");
+		code =
+			String((err as { code?: string; type?: string }).code ?? (err as { type?: string }).type ?? "") || undefined;
 		const resetsAt = (err as { resets_at?: number }).resets_at ?? primary.resets_at ?? secondary.resets_at;
 		const mins = resetsAt ? Math.max(0, Math.round((resetsAt * 1000 - Date.now()) / 60000)) : undefined;
 
-		if (/usage_limit_reached|usage_not_included/i.test(code)) {
+		if (/usage_limit_reached|usage_not_included/i.test(code ?? "")) {
 			const planType = (err as { plan_type?: string }).plan_type;
 			const plan = planType ? ` (${String(planType).toLowerCase()} plan)` : "";
 			const when = mins !== undefined ? ` Try again in ~${mins} min.` : "";
 			friendlyMessage = `You have hit your ChatGPT usage limit${plan}.${when}`.trim();
-		} else if (/rate_limit_exceeded/i.test(code) || response.status === 429) {
+		} else if (/rate_limit_exceeded/i.test(code ?? "") || response.status === 429) {
 			const when = mins !== undefined ? ` Try again in ~${mins} min.` : "";
 			friendlyMessage = `ChatGPT rate limit exceeded.${when}`.trim();
 		}
@@ -68,6 +71,7 @@ export async function parseCodexError(response: Response): Promise<CodexErrorInf
 	return {
 		message,
 		status: response.status,
+		...(code ? { code } : {}),
 		friendlyMessage,
 		rateLimits,
 		raw: raw,

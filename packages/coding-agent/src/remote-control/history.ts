@@ -7,7 +7,7 @@ export interface HistoryTurn {
 	items: Record<string, unknown>[];
 	itemsView: string;
 	status: string;
-	error: { message: string; codexErrorInfo: null; additionalDetails: null } | null;
+	error: { message: string; codexErrorInfo: "misalignmentPolicyViolation" | null; additionalDetails: null } | null;
 	startedAt: number | null;
 	completedAt: number | null;
 	durationMs: number | null;
@@ -24,10 +24,13 @@ export interface TimelineRow {
 	sourceId: string;
 	entry: TimelineEntry;
 }
-export function historyError() {
+function codexErrorInfo(providerFailureCode?: string): "misalignmentPolicyViolation" | null {
+	return providerFailureCode === "misalignment_policy_violation" ? "misalignmentPolicyViolation" : null;
+}
+export function historyError(providerFailureCode?: string) {
 	return {
 		message: "The selected model could not complete this turn. Check the terminal for details.",
-		codexErrorInfo: null,
+		codexErrorInfo: codexErrorInfo(providerFailureCode),
 		additionalDetails: null,
 	};
 }
@@ -426,7 +429,7 @@ export function projectHistorySnapshot(
 				current.status = ["completed", "failed", "interrupted"].includes(String(record.status))
 					? String(record.status)
 					: "interrupted";
-				current.error = current.status === "failed" ? historyError() : null;
+				current.error = current.status === "failed" ? (current.error ?? historyError()) : null;
 				const end = typeof record.completedAtMs === "number" ? record.completedAtMs : ms;
 				current.completedAt = Math.floor(end / 1000);
 				current.durationMs = Math.max(0, end - startMs);
@@ -548,7 +551,7 @@ export function projectHistorySnapshot(
 			continuingTools = message.stopReason === "toolUse";
 			if (message.stopReason === "error") {
 				current.status = "failed";
-				current.error = historyError();
+				current.error = historyError(message.providerFailureCode);
 			} else if (message.stopReason === "aborted") {
 				current.status = "interrupted";
 				current.error = null;

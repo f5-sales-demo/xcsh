@@ -4,7 +4,7 @@ import { decodeVoiceEvent } from "../../src/remote-control/voice-protocol";
 import type { VoiceHandlers } from "../../src/remote-control/voice-socket";
 import { standaloneVoiceConfig } from "../../src/remote-control/voice-standalone";
 
-const persona = { systemPrompt: "fixture system prompt", tools: [], history: "fixture history" };
+const persona = { tools: [], history: "fixture history" };
 const base = {
 	version: "v3",
 	outputModality: "audio",
