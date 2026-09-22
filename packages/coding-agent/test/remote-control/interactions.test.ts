@@ -44,6 +44,7 @@ test.each([
 		() => {},
 	);
 	const runner = {
+		evaluateAdvisories: async () => ({ advisories: [], diagnostics: [] }),
 		hasHandlers: (event: string) => event === "tool_call",
 		emitToolCall: async () => {
 			const answer = await broker.request(

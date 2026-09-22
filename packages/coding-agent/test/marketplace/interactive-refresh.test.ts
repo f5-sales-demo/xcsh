@@ -271,6 +271,7 @@ describe("interactive marketplace refresh surfaces", () => {
 					   const ctx = {
 					     editor: { setText() {} },
 					     sessionManager: { getCwd: () => process.cwd() },
+					     refreshSlashCommandState: async () => {},
 					     showStatus: value => statuses.push(value),
 					     showError: value => { throw new Error(value); },
 					     showHookCustom(factory) {
