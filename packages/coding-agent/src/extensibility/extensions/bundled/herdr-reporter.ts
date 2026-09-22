@@ -3,6 +3,7 @@ import * as path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import type { ExtensionAPI, ExtensionContext, UserPromptKind } from "@f5-sales-demo/xcsh";
 import { HerdrClient } from "../../../herdr/client";
+import { HERDR_SEMANTIC_REPORT_TIMEOUT_MS, requestSemanticReport } from "../../../herdr/semantic-report";
 import { finalAnswerText } from "../../../session/final-answer";
 import { requestNativeLifecycleCancellation } from "./native-lifecycle-control";
 
@@ -173,7 +174,7 @@ function nativeCapability(): string | undefined {
 
 /** Protocol 23 adds a workspace receipt without changing native action semantics. */
 function supportsNativeLifecycle(protocol: number | undefined): boolean {
-	return protocol !== undefined && protocol >= 22 && protocol <= 25;
+	return protocol !== undefined && protocol >= 22 && protocol <= 26;
 }
 
 function persistedTurns(ctx: ExtensionContext): PersistedTurn[] {
@@ -281,12 +282,20 @@ function decodeNativeActions(result: Record<string, unknown>): NativeActionRecor
 // Reused across calls for the life of the extension so `ensureProtocol()`'s
 // `ping` validation happens at most once per socket path, not once per frame.
 let cachedClient: HerdrClient | undefined;
+let cachedSemanticClient: HerdrClient | undefined;
 
 function getHerdrClient(socketPath: string): HerdrClient {
 	if (!cachedClient || cachedClient.socketPath !== socketPath) {
 		cachedClient = new HerdrClient(socketPath, SOCKET_TIMEOUT_MS);
 	}
 	return cachedClient;
+}
+
+function getSemanticHerdrClient(socketPath: string): HerdrClient {
+	if (!cachedSemanticClient || cachedSemanticClient.socketPath !== socketPath) {
+		cachedSemanticClient = new HerdrClient(socketPath, HERDR_SEMANTIC_REPORT_TIMEOUT_MS);
+	}
+	return cachedSemanticClient;
 }
 
 /**
@@ -472,7 +481,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		};
 		let delivered = false;
 		await enqueue(async () => {
-			const client = getHerdrClient(socketPath);
+			const client = getSemanticHerdrClient(socketPath);
 			try {
 				await client.ensureSemanticProtocol();
 				if (!client.supportsSemanticTracking()) {
@@ -486,7 +495,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 					supportsNativeLifecycle(client.protocolVersion) && capability
 						? { ...baseFrame, native_capability: capability }
 						: baseFrame;
-				const response = await client.request<Record<string, unknown>>(TURN_REPORT_METHOD, frame);
+				const response = await requestSemanticReport(client, TURN_REPORT_METHOD, frame);
 				if (supportsNativeLifecycle(client.protocolVersion) && response.type !== "agent_turn") {
 					throw new Error("Herdr did not confirm the native turn journal write");
 				}
@@ -685,7 +694,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		pi.appendEntry(TURN_ENTRY_TYPE, { ...activeSemanticTurn, eventRevision: 0 });
 		const registered = await reportSemanticTurn("starting");
 		const socketPath = process.env.HERDR_SOCKET_PATH;
-		const client = socketPath ? getHerdrClient(socketPath) : undefined;
+		const client = socketPath ? getSemanticHerdrClient(socketPath) : undefined;
 		nativeActionsEnabled =
 			registered && supportsNativeLifecycle(client?.protocolVersion) && nativeCapability() !== undefined;
 		if (nativeActionsEnabled) startActionPolling(ctx);

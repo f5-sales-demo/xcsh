@@ -80,6 +80,10 @@ interface FakeHerdrOptions {
 	failMethods?: ReadonlySet<string>;
 	/** Methods whose first request is admitted but loses its response. */
 	failOnceMethods?: ReadonlySet<string>;
+	/** Methods that return a typed remote error instead of a result. */
+	errorMethods?: ReadonlyMap<string, { message: string; code: string }>;
+	/** Methods whose response is delayed by the specified duration. */
+	delayMethods?: ReadonlyMap<string, number>;
 	protocol?: number;
 	capabilities?: Record<string, boolean | number>;
 	respond?: (request: { id: string; method: string; params: Record<string, unknown> }) => Record<string, unknown>;
@@ -136,8 +140,15 @@ function startFakeHerdr(options: FakeHerdrOptions = {}): Promise<FakeHerdr> {
 						sock.destroy();
 					} else if (handshakeDone) {
 						received.push({ ...request, order: order++ });
-						const result = options.respond?.(request) ?? {};
-						sock.end(`${JSON.stringify({ id: request.id, result })}\n`);
+						const error = options.errorMethods?.get(request.method);
+						if (error) sock.end(`${JSON.stringify({ id: request.id, error })}\n`);
+						else {
+							const result = options.respond?.(request) ?? {};
+							const response = `${JSON.stringify({ id: request.id, result })}\n`;
+							const delay = options.delayMethods?.get(request.method);
+							if (delay === undefined) sock.end(response);
+							else setTimeout(() => sock.end(response), delay);
+						}
 					} else {
 						// Protocol-19 gate: no ping yet, so the method is refused and never recorded.
 						sock.end(
@@ -439,7 +450,7 @@ describe("herdr-reporter extension", () => {
 
 	it("publishes semantic results to a future protocol with the named capability", async () => {
 		const herdr = await startFakeHerdr({
-			protocol: 26,
+			protocol: 27,
 			capabilities: { xcsh_semantic_tracking: 1 },
 		});
 		try {
@@ -486,7 +497,189 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
-	it("registers protocol-23 native provenance before cooperatively cancelling at a working safe point", async () => {
+	it("retries one ambiguously accepted semantic event with identical params and marks the duplicate receipt delivered", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 26,
+			capabilities: { agent_turn_journal: true },
+			failOnceMethods: new Set(["agent.turn.report"]),
+			respond: request =>
+				request.method === "agent.turn.report" ? { type: "agent_turn", turn: {}, admitted: false } : {},
+		});
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			process.env.HERDR_EXECUTION_ID = "execution-retry";
+			process.env.HERDR_EXECUTION_GENERATION = "9";
+			process.env.HERDR_NATIVE_CAPABILITY = "private-retry-capability";
+			const { pi, handlers, entries, debugCalls } = makeMockPi();
+			const notify = vi.fn();
+			const setStatus = vi.fn();
+			const ctx = {
+				isIdle: () => false,
+				ui: { notify, setStatus },
+				sessionManager: {
+					getSessionId: () => "0123abcd4567ef89",
+					getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
+				},
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("before_agent_start")?.({}, ctx);
+
+			const attempts = herdr.received.filter(frame => frame.method === "agent.turn.report");
+			expect(attempts).toHaveLength(2);
+			expect(attempts[0]?.id).not.toBe(attempts[1]?.id);
+			expect(attempts[0]?.params).toEqual(attempts[1]?.params);
+			expect(attempts[1]?.params).toMatchObject({
+				execution_id: "execution-retry",
+				generation: 9,
+				event_revision: 1,
+				native_capability: "private-retry-capability",
+			});
+			expect(entries.filter(entry => (entry.data as { delivered?: boolean }).delivered === true)).toHaveLength(1);
+			expect(debugCalls).toEqual([]);
+			expect(notify).not.toHaveBeenCalled();
+			expect(setStatus).toHaveBeenLastCalledWith("herdr-tracking", undefined);
+			expect(JSON.stringify(entries)).not.toContain("private-retry-capability");
+			await handlers.get("session_shutdown")?.({}, ctx);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("warns only after both ambiguous semantic attempts fail", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 26,
+			capabilities: { agent_turn_journal: true },
+			failMethods: new Set(["agent.turn.report"]),
+		});
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			process.env.HERDR_EXECUTION_ID = "execution-exhausted";
+			process.env.HERDR_EXECUTION_GENERATION = "2";
+			const { pi, handlers, entries, debugCalls } = makeMockPi();
+			const notify = vi.fn();
+			const setStatus = vi.fn();
+			const ctx = {
+				isIdle: () => false,
+				ui: { notify, setStatus },
+				sessionManager: {
+					getSessionId: () => "0123abcd4567ef89",
+					getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
+				},
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("before_agent_start")?.({}, ctx);
+
+			expect(herdr.received.filter(frame => frame.method === "agent.turn.report")).toHaveLength(2);
+			expect(entries.some(entry => (entry.data as { delivered?: boolean }).delivered === true)).toBe(false);
+			expect(debugCalls.filter(call => call.message === "herdr report failed")).toHaveLength(1);
+			expect(notify).toHaveBeenCalledTimes(1);
+			expect(setStatus).toHaveBeenCalledWith("herdr-tracking", "Herdr tracking degraded");
+			await handlers.get("session_shutdown")?.({}, ctx);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("accepts a delayed semantic receipt within the five-second deadline without retrying", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 26,
+			capabilities: { agent_turn_journal: true },
+			delayMethods: new Map([["agent.turn.report", 50]]),
+			respond: request =>
+				request.method === "agent.turn.report" ? { type: "agent_turn", turn: {}, admitted: true } : {},
+		});
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			process.env.HERDR_EXECUTION_ID = "execution-delayed";
+			process.env.HERDR_EXECUTION_GENERATION = "4";
+			const { pi, handlers, entries, debugCalls } = makeMockPi();
+			const ctx = {
+				isIdle: () => false,
+				sessionManager: {
+					getSessionId: () => "0123abcd4567ef89",
+					getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
+				},
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("before_agent_start")?.({}, ctx);
+
+			expect(herdr.received.filter(frame => frame.method === "agent.turn.report")).toHaveLength(1);
+			expect(entries.filter(entry => (entry.data as { delivered?: boolean }).delivered === true)).toHaveLength(1);
+			expect(debugCalls).toEqual([]);
+			await handlers.get("session_shutdown")?.({}, ctx);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("does not retry explicit semantic remote errors", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 26,
+			capabilities: { agent_turn_journal: true },
+			errorMethods: new Map([["agent.turn.report", { message: "stale generation", code: "stale_generation" }]]),
+		});
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			process.env.HERDR_EXECUTION_ID = "execution-stale";
+			process.env.HERDR_EXECUTION_GENERATION = "3";
+			const { pi, handlers, entries, debugCalls } = makeMockPi();
+			const ctx = {
+				isIdle: () => false,
+				sessionManager: {
+					getSessionId: () => "0123abcd4567ef89",
+					getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
+				},
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("before_agent_start")?.({}, ctx);
+
+			expect(herdr.received.filter(frame => frame.method === "agent.turn.report")).toHaveLength(1);
+			expect(debugCalls).toHaveLength(1);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("does not retry a malformed semantic receipt", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 26,
+			capabilities: { agent_turn_journal: true },
+			respond: () => ({ type: "unexpected_receipt" }),
+		});
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			process.env.HERDR_EXECUTION_ID = "execution-invalid-receipt";
+			process.env.HERDR_EXECUTION_GENERATION = "5";
+			const { pi, handlers, entries, debugCalls } = makeMockPi();
+			const ctx = {
+				isIdle: () => false,
+				sessionManager: {
+					getSessionId: () => "0123abcd4567ef89",
+					getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
+				},
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("before_agent_start")?.({}, ctx);
+
+			expect(herdr.received.filter(frame => frame.method === "agent.turn.report")).toHaveLength(1);
+			expect(entries.some(entry => (entry.data as { delivered?: boolean }).delivered === true)).toBe(false);
+			expect(debugCalls).toHaveLength(1);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("registers protocol-26 native provenance before cooperatively cancelling at a working safe point", async () => {
 		let exposeCancel = false;
 		let registeredTurnId: string | undefined;
 		const action = (state: "requested" | "safe_point" | "timed_out") => ({
@@ -498,7 +691,7 @@ describe("herdr-reporter extension", () => {
 			...(state === "safe_point" ? { acknowledged_at_unix_ms: 2, turn_id: registeredTurnId } : {}),
 		});
 		const herdr = await startFakeHerdr({
-			protocol: 23,
+			protocol: 26,
 			capabilities: { agent_turn_journal: true },
 			respond: request => {
 				if (request.method === "agent.turn.report") {
