@@ -82,6 +82,16 @@ export default function (pi: ExtensionAPI) {
   }
  });
 
+ // Register scoped guidance that is appended to matching tool results but never blocks execution.
+ pi.advisories.register({
+  id: "prefer-project-search",
+  capabilities: ["grep"],
+  match: event =>
+   String(event.input.pattern).includes("node_modules")
+    ? { code: "narrow-search", message: "Prefer searching project source directories." }
+    : undefined,
+ });
+
  // Register custom tools
  pi.registerTool({
   name: "greet",

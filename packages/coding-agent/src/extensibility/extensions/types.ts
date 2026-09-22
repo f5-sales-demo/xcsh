@@ -880,6 +880,51 @@ export interface ToolCallEventResult {
 	reason?: string;
 }
 
+/** A non-blocking recommendation associated with an exact tool capability. */
+export interface ToolAdvisory {
+	code: string;
+	message: string;
+	severity?: "info" | "warning";
+}
+
+/** Provenance attached by xcsh rather than supplied by a plugin matcher. */
+export interface ScopedToolAdvisory extends Required<ToolAdvisory> {
+	provenance: {
+		owner: string;
+		registrationId: string;
+		capability: string;
+	};
+}
+
+/** Diagnostic emitted when advisory evaluation fails open. */
+export interface ToolAdvisoryDiagnostic {
+	code: "advisory_matcher_failed";
+	message: string;
+	owner: string;
+	registrationId: string;
+	capability: string;
+}
+
+export interface ToolAdvisoryEvaluation {
+	advisories: ScopedToolAdvisory[];
+	diagnostics: ToolAdvisoryDiagnostic[];
+}
+
+export interface ToolAdvisoryRegistration {
+	/** Stable identifier unique within the owning extension. */
+	id: string;
+	/** Exact tool names for which the matcher may run. */
+	capabilities: readonly string[];
+	match(
+		event: ToolCallEvent,
+		ctx: ExtensionContext,
+	): ToolAdvisory | readonly ToolAdvisory[] | undefined | Promise<ToolAdvisory | readonly ToolAdvisory[] | undefined>;
+}
+
+export interface RegisteredToolAdvisory extends ToolAdvisoryRegistration {
+	owner: string;
+}
+
 /** Result from input event handler */
 export interface InputEventResult {
 	/** If true, the input was handled and should not continue through normal flow */
@@ -1004,6 +1049,12 @@ export interface ExtensionAPI {
 		register<T>(
 			definition: import("../../integrations/types").IntegrationDefinition<T>,
 		): import("../../integrations/types").IntegrationHandle<T>;
+		unregister(id: string): boolean;
+	};
+
+	/** Owner-scoped, non-blocking recommendations for exact tool capabilities. */
+	readonly advisories: {
+		register(registration: ToolAdvisoryRegistration): () => void;
 		unregister(id: string): boolean;
 	};
 
@@ -1407,6 +1458,7 @@ export interface Extension {
 	flags: Map<string, ExtensionFlag>;
 	shortcuts: Map<KeyId, ExtensionShortcut>;
 	integrations: Map<string, import("../../integrations/types").IntegrationHandle<unknown>>;
+	advisories: Map<string, RegisteredToolAdvisory>;
 }
 
 /** Result of loading extensions. */

@@ -35,6 +35,8 @@ import type {
 	LoadExtensionsResult,
 	MessageRenderer,
 	RegisteredCommand,
+	RegisteredToolAdvisory,
+	ToolAdvisoryRegistration,
 	ToolDefinition,
 } from "./types";
 
@@ -124,6 +126,7 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 	}> = [];
 	readonly personProfile: ExtensionAPI["personProfile"];
 	readonly integrations: ExtensionAPI["integrations"];
+	readonly advisories: ExtensionAPI["advisories"];
 
 	constructor(
 		public readonly pi: typeof import("@f5-sales-demo/xcsh"),
@@ -183,6 +186,36 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 				personProfileService.unregisterProfileCollector(id, registrant);
 				return true;
 			},
+		});
+		this.advisories = Object.freeze({
+			register: (registration: ToolAdvisoryRegistration): (() => void) => {
+				if (!registration || typeof registration.id !== "string" || registration.id.trim() === "") {
+					throw new Error("Advisory registration requires a non-empty id");
+				}
+				if (!Array.isArray(registration.capabilities) || registration.capabilities.length === 0) {
+					throw new Error(`Advisory '${registration.id}' requires at least one exact capability`);
+				}
+				if (
+					registration.capabilities.some(capability => typeof capability !== "string" || capability.trim() === "")
+				) {
+					throw new Error(`Advisory '${registration.id}' contains an invalid capability`);
+				}
+				if (typeof registration.match !== "function") {
+					throw new Error(`Advisory '${registration.id}' requires a matcher`);
+				}
+				const value: RegisteredToolAdvisory = {
+					...registration,
+					capabilities: [...new Set(registration.capabilities)],
+					owner: this.extension.resolvedPath,
+				};
+				this.extension.advisories.set(registration.id, value);
+				return () => {
+					if (this.extension.advisories.get(registration.id) === value) {
+						this.extension.advisories.delete(registration.id);
+					}
+				};
+			},
+			unregister: (id: string): boolean => this.extension.advisories.delete(id),
 		});
 	}
 
@@ -320,6 +353,7 @@ function createExtension(extensionPath: string, resolvedPath: string): Extension
 		flags: new Map(),
 		shortcuts: new Map(),
 		integrations: new Map(),
+		advisories: new Map(),
 	};
 }
 

@@ -20,6 +20,7 @@ import type {
 	ExtensionWidgetContent,
 	ExtensionWidgetOptions,
 } from "../extensibility/extensions";
+import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
 import { startSessionBridge } from "../remote-control/bridge";
@@ -490,8 +491,15 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	/** Reload slash commands and autocomplete for the provided working directory. */
-	async refreshSlashCommandState(cwd?: string): Promise<void> {
+	async refreshSlashCommandState(cwd?: string, options?: { reloadAdvisories?: boolean }): Promise<void> {
 		const basePath = cwd ?? this.sessionManager.getCwd();
+		if (options?.reloadAdvisories && this.session.extensionRunner) {
+			const result = await discoverAndLoadExtensions([], basePath);
+			this.session.extensionRunner.reloadAdvisories(result.extensions);
+			for (const error of result.errors) {
+				logger.warn("Plugin advisory reload skipped an extension", error);
+			}
+		}
 		const fileCommands = await loadSlashCommands({ cwd: basePath });
 		this.fileSlashCommands = new Set(fileCommands.map(cmd => cmd.name));
 		const fileSlashCommands: SlashCommandDiscoveryCandidate[] = fileCommands.map(cmd => ({

@@ -203,7 +203,7 @@ export interface InteractiveModeContext {
 	executeCompaction(customInstructionsOrOptions?: string | CompactOptions, isAuto?: boolean): Promise<void>;
 	openInBrowser(urlOrPath: string): void;
 	openHttpUrl(url: string): Promise<OpenHttpUrlResult>;
-	refreshSlashCommandState(cwd?: string): Promise<void>;
+	refreshSlashCommandState(cwd?: string, options?: { reloadAdvisories?: boolean }): Promise<void>;
 
 	// Selector handling
 	showSettingsSelector(): void;

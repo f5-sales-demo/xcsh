@@ -1500,9 +1500,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							execute: target => executePluginInstall(mgr, target),
 						});
 						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
-						else if (outcome === "succeeded")
+						else if (outcome === "succeeded") {
+							await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 							showPluginStatus(t("commands.plugin.installed", { name, marketplace }));
-						else if (outcome === "unresolved")
+						} else if (outcome === "unresolved")
 							runtime.ctx.showError("Plugin installation remains unresolved; retry from a fresh review.");
 						break;
 					}
@@ -1526,13 +1527,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							execute: target => mgr.uninstallPlugin(target.pluginId, target.scope),
 						});
 						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
-						else if (outcome === "succeeded")
+						else if (outcome === "succeeded") {
+							await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 							runtime.ctx.showStatus(
 								t("commands.plugin.uninstalled", {
 									pluginId: uninstArgs.pluginId,
 								}),
 							);
-						else if (outcome === "unresolved")
+						} else if (outcome === "unresolved")
 							runtime.ctx.showError("Plugin removal remains unresolved; retry from a fresh review.");
 						break;
 					}
@@ -1564,13 +1566,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							execute: target => mgr.setPluginEnabled(target.pluginId, isEnable, target.scope),
 						});
 						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
-						else if (outcome === "succeeded")
+						else if (outcome === "succeeded") {
+							await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 							runtime.ctx.showStatus(
 								isEnable
 									? t("commands.plugin.enabled", { pluginId: parsed.pluginId })
 									: t("commands.plugin.disabled", { pluginId: parsed.pluginId }),
 							);
-						else if (outcome === "unresolved")
+						} else if (outcome === "unresolved")
 							runtime.ctx.showError(`Plugin ${sub} remains unresolved; retry from a fresh review.`);
 						break;
 					}
@@ -1599,14 +1602,15 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								execute: target => executePluginUpgrade(mgr, target),
 							});
 							if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
-							else if (outcome === "succeeded")
+							else if (outcome === "succeeded") {
+								await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 								showPluginStatus(
 									t("commands.plugin.upgraded", {
 										pluginId: upArgs.pluginId,
 										version: prepared.target.to,
 									}),
 								);
-							else if (outcome === "unresolved")
+							} else if (outcome === "unresolved")
 								runtime.ctx.showError("Plugin upgrade remains unresolved; retry from a fresh review.");
 						} else {
 							const prepared = await preparePluginUpgradeAll(mgr);
@@ -1629,6 +1633,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							else if (outcome === "unresolved")
 								runtime.ctx.showError("Plugin upgrades remain unresolved; retry from a fresh review.");
 							else if (outcome === "succeeded" && result) {
+								await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 								const lines = result.completed.map(
 									update => `  ${update.pluginId} [${update.scope}]: ${update.from} -> ${update.to}`,
 								);
@@ -1806,7 +1811,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			}
 
 			pluginMetadataRefreshes.add(runtime.ctx);
-			runtime.ctx.showStatus("Refreshing plugin metadata… Running plugin processes will not be restarted.");
+			runtime.ctx.showStatus(
+				"Refreshing plugin metadata and advisory registrations… Running plugin processes will not be restarted.",
+			);
 			try {
 				// Invalidate the fs content cache for all registry files so
 				// every provider re-reads command and plugin metadata from disk.
@@ -1816,9 +1823,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				const projectPath = await resolveActiveProjectRegistryPath(runtime.ctx.sessionManager.getCwd());
 				if (projectPath) invalidateFsCache(projectPath);
 				clearXcshPluginRootsCache();
-				await runtime.ctx.refreshSlashCommandState();
+				await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 				runtime.ctx.showStatus(
-					"Plugin metadata refreshed. Commands, skills, hooks, tools, agents, and MCP registrations now use the latest discovered files. Running plugin processes were not restarted.",
+					"Plugin metadata and advisory registrations refreshed. Commands, skills, hooks, tools, agents, and MCP metadata now use the latest discovered files. Running plugin processes were not restarted.",
 				);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
