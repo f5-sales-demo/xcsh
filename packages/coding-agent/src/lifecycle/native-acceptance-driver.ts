@@ -91,7 +91,7 @@ export function currentXcshCommand(args: string[], argv = process.argv, execPath
 
 async function startReporterTransport(
 	directory: string,
-	options: { loseFirstTurnReply: boolean; managedCancel: boolean },
+	options: { loseTurnReplyCount: number; managedCancel: boolean },
 ): Promise<ReporterTransport> {
 	const socketPath = path.join(directory, `.native-lifecycle-${randomUUID()}.sock`);
 	const attempts: TurnAttempt[] = [];
@@ -105,7 +105,7 @@ async function startReporterTransport(
 		reject: (error: Error) => void;
 	}>();
 	let handshakeComplete = false;
-	let lostReply = false;
+	let lostReplyCount = 0;
 	let cancellationRequested = false;
 	let cancellationAcknowledged = false;
 	let registeredTurnId: string | undefined;
@@ -144,7 +144,7 @@ async function startReporterTransport(
 				if (request.method === "ping") {
 					handshakeComplete = true;
 					socket.end(
-						`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: options.managedCancel ? 22 : 20, version: "native-lifecycle", capabilities: { agent_turn_journal: true } } })}\n`,
+						`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 26, version: "native-lifecycle", capabilities: { agent_turn_journal: true } } })}\n`,
 					);
 					continue;
 				}
@@ -158,8 +158,8 @@ async function startReporterTransport(
 					if (request.params.state === "starting" && typeof request.params.turn_id === "string") {
 						registeredTurnId = request.params.turn_id;
 					}
-					const replyLost = options.loseFirstTurnReply && !lostReply;
-					lostReply ||= replyLost;
+					const replyLost = lostReplyCount < options.loseTurnReplyCount;
+					if (replyLost) lostReplyCount++;
 					const attempt = { ordinal: attempts.length + 1, params: request.params, replyLost };
 					attempts.push(attempt);
 					publish(attempt);
@@ -167,12 +167,10 @@ async function startReporterTransport(
 						socket.destroy();
 						continue;
 					}
-					if (options.managedCancel) {
-						socket.end(
-							`${JSON.stringify({ id: request.id, result: { type: "agent_turn", turn: {}, admitted: true } })}\n`,
-						);
-						continue;
-					}
+					socket.end(
+						`${JSON.stringify({ id: request.id, result: { type: "agent_turn", turn: {}, admitted: true } })}\n`,
+					);
+					continue;
 				}
 				if (options.managedCancel && request.method === "agent.turn.action.get" && isRecord(request.params)) {
 					actionAttempts.push({
@@ -369,7 +367,7 @@ export async function runNativeLifecycleAcceptance(
 	await fs.mkdir(options.sessionDir, { recursive: true, mode: 0o700 });
 	const fixture = await prepareFixture(options);
 	const transport = await startReporterTransport(options.sessionDir, {
-		loseFirstTurnReply: options.scenario === "reply-loss-replay",
+		loseTurnReplyCount: options.scenario === "reply-loss-replay" ? 2 : 0,
 		managedCancel: options.scenario === "managed-cancel" || options.scenario === "managed-working-cancel",
 	});
 	const executionId = `xcsh-native-${randomUUID()}`;
@@ -410,7 +408,7 @@ export async function runNativeLifecycleAcceptance(
 			const working = await withTimeout(transport.waitFor(stateIs("working")), timeoutMs, "working");
 			control.workingOrdinal = working.ordinal;
 			transport.requestCancel();
-			control.cancellation = "protocol22_cooperative_working_action";
+			control.cancellation = "protocol26_cooperative_working_action";
 		}
 
 		if (
@@ -430,7 +428,7 @@ export async function runNativeLifecycleAcceptance(
 				control.cancellation = "pty_process_group_sigint";
 			} else {
 				transport.requestCancel();
-				control.cancellation = "protocol22_cooperative_action";
+				control.cancellation = "protocol26_cooperative_action";
 			}
 		}
 

@@ -42,7 +42,7 @@ describe("native lifecycle acceptance contract", () => {
 
 	it("requires exact path resume and documents real process controls", () => {
 		const contract = nativeLifecycleContract();
-		expect(contract.version).toBe(2);
+		expect(contract.version).toBe(3);
 		expect(contract.session_id).toBe("^[0-9a-f]{16}$");
 		expect(contract.session_dir).toContain("absolute directory");
 		expect(contract.session_header_sha256).toContain("terminating LF byte");
@@ -51,14 +51,16 @@ describe("native lifecycle acceptance contract", () => {
 			resume: "--resume <exact-session-path>",
 			cancel: "PtySession.interrupt() sends SIGINT to the native child process group",
 			managed_cancel:
-				"protocol 22 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
+				"protocol 26 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
 			await_user: "--native-lifecycle-control await-user uses the interactive ExtensionUiController",
 			continuation: "write the continuation and Enter to the same native PTY",
 			replay: "restart --resume <exact-session-path> with the same authenticated binding",
 		});
 		expect(contract.scenarios).toEqual(NATIVE_LIFECYCLE_SCENARIOS);
 		expect(contract.reporter).toEqual({
-			protocol: 22,
+			protocol: 26,
+			semantic_report_timeout_ms: 5_000,
+			ambiguous_retry_limit: 1,
 			capability_env: "HERDR_NATIVE_CAPABILITY",
 			capability_persistence: "never",
 			actions: ["cancel:1:requested", "cancel:1:safe_point", "cancel:1:timed_out"],

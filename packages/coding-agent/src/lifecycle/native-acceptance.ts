@@ -1,3 +1,6 @@
+import { HERDR_PROTOCOL_MAX_VERSION } from "../herdr/client";
+import { HERDR_SEMANTIC_REPORT_TIMEOUT_MS } from "../herdr/semantic-report";
+
 /**
  * Stable argv contract for the producer-owned native lifecycle driver.
  *
@@ -5,7 +8,7 @@
  * reporter frames or supply an offline model: callers must provide a normally
  * configured model and inspect the child's JSON stream and session file.
  */
-export const NATIVE_LIFECYCLE_DRIVER_VERSION = 2;
+export const NATIVE_LIFECYCLE_DRIVER_VERSION = 3;
 export const NATIVE_LIFECYCLE_SCENARIOS = [
 	"success",
 	"failure",
@@ -67,13 +70,15 @@ export function nativeLifecycleContract(): Record<string, unknown> {
 			resume: "--resume <exact-session-path>",
 			cancel: "PtySession.interrupt() sends SIGINT to the native child process group",
 			managed_cancel:
-				"protocol 22 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
+				"protocol 26 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
 			await_user: "--native-lifecycle-control await-user uses the interactive ExtensionUiController",
 			continuation: "write the continuation and Enter to the same native PTY",
 			replay: "restart --resume <exact-session-path> with the same authenticated binding",
 		},
 		reporter: {
-			protocol: 22,
+			protocol: HERDR_PROTOCOL_MAX_VERSION,
+			semantic_report_timeout_ms: HERDR_SEMANTIC_REPORT_TIMEOUT_MS,
+			ambiguous_retry_limit: 1,
 			capability_env: "HERDR_NATIVE_CAPABILITY",
 			capability_persistence: "never",
 			actions: ["cancel:1:requested", "cancel:1:safe_point", "cancel:1:timed_out"],

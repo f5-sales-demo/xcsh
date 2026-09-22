@@ -50,6 +50,9 @@
 
 ### Fixed
 
+- Added Herdr protocol 26 native-interaction compatibility and bounded idempotent retry for
+  ambiguously acknowledged semantic reports without exposing interaction content
+  ([#4161](https://github.com/f5-sales-demo/xcsh/issues/4161)).
 - Routed MCP and Gemini web-search OAuth refreshes through the shared durable refresh coordinator,
   including proactive refresh and forced retry after authentication failures
   ([#3796](https://github.com/f5-sales-demo/xcsh/issues/3796)).

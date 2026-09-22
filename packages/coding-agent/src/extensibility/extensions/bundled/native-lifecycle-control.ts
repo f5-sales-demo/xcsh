@@ -10,7 +10,7 @@ let activeManagedCancellation: ((reason: string) => void) | undefined;
 
 /**
  * Abort an acceptance prompt at its real ExtensionUIController signal boundary.
- * The protocol-22 reporter also aborts the AgentSession through its current
+ * The protocol-26 reporter also aborts the AgentSession through its current
  * ExtensionContext; this hook only owns the interactive prompt that would
  * otherwise remain open while the session cancellation unwinds.
  */

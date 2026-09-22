@@ -107,8 +107,17 @@ describe("Herdr protocol client", () => {
 		}
 	});
 
-	test("rejects unreviewed future protocols", async () => {
-		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 26, version: "future" }));
+	test("accepts protocol 26 and rejects unreviewed future protocols", async () => {
+		const supported = await fakeHerdr(() => ({ type: "pong", protocol: 26, version: "native-interactions" }));
+		try {
+			const client = new HerdrClient(supported.socketPath);
+			await expect(client.ensureProtocol()).resolves.toBeUndefined();
+			expect(client.protocolVersion).toBe(26);
+		} finally {
+			await supported.close();
+		}
+
+		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 27, version: "future" }));
 		try {
 			await expect(new HerdrClient(fake.socketPath).ensureProtocol()).rejects.toMatchObject({
 				code: "protocol_mismatch",
@@ -118,7 +127,7 @@ describe("Herdr protocol client", () => {
 		}
 	});
 
-	test.each([18, 26])("accepts protocol %i with semantic tracking capability v1", async protocol => {
+	test.each([18, 27])("accepts protocol %i with semantic tracking capability v1", async protocol => {
 		const fake = await fakeHerdr(request =>
 			request.method === "ping"
 				? {
@@ -139,8 +148,8 @@ describe("Herdr protocol client", () => {
 		}
 	});
 
-	test("retains protocol 19 through 25 as the semantic tracking fallback", async () => {
-		for (const protocol of [19, 25]) {
+	test("retains protocol 19 through 26 as the semantic tracking fallback", async () => {
+		for (const protocol of [19, 26]) {
 			const fake = await fakeHerdr(request =>
 				request.method === "ping"
 					? { type: "pong", protocol, version: "legacy", capabilities: { agent_turn_journal: true } }
