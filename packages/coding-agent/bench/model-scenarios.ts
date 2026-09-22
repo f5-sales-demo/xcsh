@@ -41,6 +41,7 @@ interface CliOptions {
 	targets: ModelBenchmarkTarget[];
 	thinkingEfforts: Effort[];
 	failFastProviderError: boolean;
+	binaryPath?: string;
 }
 
 interface CapturedEvents {
@@ -110,6 +111,7 @@ function parseArgs(args: string[]): CliOptions {
 	let allThinkingEfforts = false;
 	let failFastProviderError = false;
 	let outFile: string | undefined;
+	let binaryPath: string | undefined;
 	const scenarioIds: string[] = [];
 	const targets: ModelBenchmarkTarget[] = [];
 	for (let index = 0; index < args.length; index++) {
@@ -152,9 +154,12 @@ function parseArgs(args: string[]): CliOptions {
 		} else if (argument === "--model") {
 			targets.push(parseTarget(readValue(args, index, argument)));
 			index++;
+		} else if (argument === "--binary") {
+			binaryPath = path.resolve(readValue(args, index, argument));
+			index++;
 		} else if (argument === "--help" || argument === "-h") {
 			process.stdout.write(
-				"Usage: bun bench:model-scenarios [--suite identity|tools|plugins|authenticated|integrations|all] [--tier 0-5] [--thinking low|medium|high|xhigh|max|all] [--scenario ID] [--context NAME] [--runs N] [--warmups N] [--fail-fast-provider-error] [--model LABEL=PROVIDER/MODEL] [--out FILE]\n",
+				"Usage: bun bench:model-scenarios [--suite identity|tools|plugins|authenticated|integrations|all] [--tier 0-5] [--thinking low|medium|high|xhigh|max|all] [--scenario ID] [--context NAME] [--runs N] [--warmups N] [--fail-fast-provider-error] [--model LABEL=PROVIDER/MODEL] [--binary PATH] [--out FILE]\n",
 			);
 			process.exit(0);
 		} else {
@@ -180,6 +185,7 @@ function parseArgs(args: string[]): CliOptions {
 				? thinkingEfforts
 				: [Effort.High],
 		failFastProviderError,
+		binaryPath,
 	};
 }
 
@@ -228,17 +234,19 @@ async function terminateProcess(child: Bun.Subprocess): Promise<number> {
 	return child.exited;
 }
 
+export function benchmarkExecutableArgs(binaryPath?: string): string[] {
+	return binaryPath ? [binaryPath] : [process.execPath, "run", "dev", "--"];
+}
+
 function scenarioArgs(
 	scenario: ModelBenchmarkScenario,
 	target: ModelBenchmarkTarget,
 	contextName: string | undefined,
 	thinking: Effort,
+	binaryPath: string | undefined,
 ): string[] {
 	const args = [
-		process.execPath,
-		"run",
-		"dev",
-		"--",
+		...benchmarkExecutableArgs(binaryPath),
 		"--mode",
 		"json",
 		"--no-session",
@@ -281,10 +289,11 @@ async function runSample(
 	warmup: boolean,
 	timeoutMs: number,
 	failFastProviderError: boolean,
+	binaryPath: string | undefined,
 ): Promise<ScenarioBenchmarkSample> {
 	const startedAt = new Date().toISOString();
 	const startNs = Bun.nanoseconds();
-	const child = Bun.spawn(scenarioArgs(scenario, target, contextName, thinking), {
+	const child = Bun.spawn(scenarioArgs(scenario, target, contextName, thinking, binaryPath), {
 		cwd: REPO_ROOT,
 		env: process.env,
 		stdin: "ignore",
@@ -405,6 +414,7 @@ async function main(): Promise<void> {
 					warmup,
 					options.timeoutMs,
 					options.failFastProviderError,
+					options.binaryPath,
 				);
 				(warmup ? warmupSamples : samples).push(sample);
 				printProgress(sample);
@@ -418,6 +428,7 @@ async function main(): Promise<void> {
 		schemaVersion: 3,
 		createdAt,
 		config: {
+			binaryPath: options.binaryPath,
 			thinkingEfforts: options.thinkingEfforts,
 			runs: options.runs,
 			warmups: options.warmups,

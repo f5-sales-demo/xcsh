@@ -180,6 +180,26 @@ async function smokeTestHostBinary(): Promise<void> {
 	}
 	console.log(`  ${specStdout}`);
 
+	const qmdHome = await fs.mkdtemp(path.join(repoRoot, ".tmp-smoke-qmd-"));
+	try {
+		const qmdResult = Bun.spawnSync([binaryPath], {
+			stdout: "pipe",
+			stderr: "pipe",
+			env: { ...Bun.env, HOME: qmdHome, PI_DEV: "1", XCSH_SMOKE_TEST_QMD: "1" },
+		});
+		const qmdStdout = qmdResult.stdout.toString().trim();
+		const qmdStderr = qmdResult.stderr.toString().trim();
+		if (qmdResult.exitCode !== 0 || qmdStdout !== "XCSH_QMD_SMOKE_OK" || qmdStderr.length > 0) {
+			console.error(`FAIL: compiled binary QMD smoke exited with code ${qmdResult.exitCode}`);
+			if (qmdStdout) console.error(qmdStdout);
+			if (qmdStderr) console.error(qmdStderr);
+			throw new Error("Compiled binary QMD BM25 smoke test failed");
+		}
+		console.log(`  ${qmdStdout}`);
+	} finally {
+		await fs.rm(qmdHome, { recursive: true, force: true });
+	}
+
 	// Guard the embedded office-pane bundle: `xcsh office manifest` reads the
 	// embedded pane assets, so a missing/empty embed (e.g. the release build
 	// forgetting the office-pane --generate step) fails here instead of shipping.

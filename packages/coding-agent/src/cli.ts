@@ -202,4 +202,15 @@ if (process.env.XCSH_SMOKE_TEST_VERTEX_AUTH === "1") {
 	}
 }
 
+if (process.env.XCSH_SMOKE_TEST_QMD === "1") {
+	try {
+		const { runQmdSmoke } = await import("./qmd-smoke");
+		process.stdout.write(`${await runQmdSmoke()}\n`);
+		process.exit(0);
+	} catch (error) {
+		process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+		process.exit(1);
+	}
+}
+
 await runCli(process.argv.slice(2));

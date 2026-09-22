@@ -132,6 +132,7 @@ export interface ScenarioBenchmarkReport {
 	schemaVersion: 3;
 	createdAt: string;
 	config: {
+		binaryPath?: string;
 		thinkingEfforts: Effort[];
 		runs: number;
 		warmups: number;
