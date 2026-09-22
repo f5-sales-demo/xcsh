@@ -106,7 +106,7 @@ describe("Claude Fable transport", () => {
 		expect(apiKeyHeaders.Authorization).toBeUndefined();
 		expect(oauthHeaders.Authorization).toBe("Bearer sk-ant-oat-test");
 		expect(oauthHeaders["X-Api-Key"]).toBeUndefined();
-		expect(oauthHeaders["User-Agent"]).toBe("claude-cli/2.1.278 (external, cli)");
+		expect(oauthHeaders["User-Agent"]).toBe("claude-cli/2.1.280 (external, cli)");
 	});
 
 	it("leaves retries to the classified provider loop", () => {
