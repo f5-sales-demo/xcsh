@@ -96,6 +96,12 @@ verify_current_install() {
   before=$(snapshot_installed)
   "$installed_link" --version
   "$installed_link" --help >/dev/null
+  qmd_home=$(mktemp -d "${TMPDIR:-/tmp}/xcsh-qmd-smoke.XXXXXX")
+  qmd_stderr="${TMPDIR:-/tmp}/xcsh-qmd-smoke.stderr"
+  qmd_output=$(HOME="$qmd_home" XCSH_SMOKE_TEST_QMD=1 "$installed_link" 2>"$qmd_stderr")
+  test "$qmd_output" = "XCSH_QMD_SMOKE_OK"
+  test ! -s "$qmd_stderr"
+  rm -rf "$qmd_home" "$qmd_stderr"
   PI_DEV=1 "$installed_link" sandbox check 2>&1 | tee "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
   grep -F "Loaded native addon from ${installed_root}/libexec/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
   "$installed_link" chrome recycle

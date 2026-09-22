@@ -1,0 +1,58 @@
+diff --git a/dist/db.js b/dist/db.js
+index acef8250fb369378129a963753774d65d0116559..d19dfd7c8e151cddbf1ae9af5888af53a6130a60 100644
+--- a/dist/db.js
++++ b/dist/db.js
+@@ -5,10 +5,8 @@
+  * and Node.js (better-sqlite3). The APIs are nearly identical — the main
+  * difference is the import path.
+  *
+- * On macOS, Apple's system SQLite is compiled with SQLITE_OMIT_LOAD_EXTENSION,
+- * which prevents loading native extensions like sqlite-vec. When running under
+- * Bun we call Database.setCustomSQLite() to swap in Homebrew's full-featured
+- * SQLite build before creating any database instances.
++ * Bun uses its embedded SQLite. Optional native extensions are probed without
++ * changing the process-global SQLite implementation.
+  */
+ export const isBun = "Bun" in globalThis;
+ let _Database;
+@@ -17,22 +15,8 @@ if (isBun) {
+     // Dynamic string prevents tsc from resolving bun:sqlite on Node.js builds
+     const bunSqlite = "bun:" + "sqlite";
+     const BunDatabase = (await import(/* @vite-ignore */ bunSqlite)).Database;
+-    // See: https://bun.com/docs/runtime/sqlite#setcustomsqlite
+-    if (process.platform === "darwin") {
+-        const homebrewPaths = [
+-            "/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib", // Apple Silicon
+-            "/usr/local/opt/sqlite/lib/libsqlite3.dylib", // Intel
+-        ];
+-        for (const p of homebrewPaths) {
+-            try {
+-                BunDatabase.setCustomSQLite(p);
+-                break;
+-            }
+-            catch { }
+-        }
+-    }
+     _Database = BunDatabase;
+-    // setCustomSQLite may have silently failed — test that extensions actually work.
++    // sqlite-vec is optional — test whether the embedded SQLite can load it.
+     try {
+         const { getLoadablePath } = await import("sqlite-vec");
+         const vecPath = getLoadablePath();
+diff --git a/dist/store.js b/dist/store.js
+index cd6c7cd87d4b912f19ca30d0bcf4adec4046a877..b839c8ffe42b0202ceb28ce69735fa411ad9e91b 100644
+--- a/dist/store.js
++++ b/dist/store.js
+@@ -992,10 +992,10 @@ function initializeDatabase(db) {
+         _sqliteVecUnavailableReason = null;
+     }
+     catch (err) {
+-        // sqlite-vec is optional — vector search won't work but FTS is fine
++        // sqlite-vec is optional. Preserve the reason for vector callers without
++        // warning BM25-only consumers during ordinary database initialization.
+         _sqliteVecAvailable = false;
+         _sqliteVecUnavailableReason = getErrorMessage(err);
+-        console.warn(_sqliteVecUnavailableReason);
+     }
+     db.exec("PRAGMA foreign_keys = ON");
+     // Drop legacy tables that are now managed in YAML

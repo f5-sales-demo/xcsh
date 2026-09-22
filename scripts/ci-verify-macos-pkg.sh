@@ -41,6 +41,13 @@ run_as_uat() {
 }
 run_as_uat env HOME="$uat_home" PI_DEV=1 "$binary" --version
 run_as_uat env HOME="$uat_home" "$binary" --help >/dev/null
+qmd_home="$uat_home/qmd-smoke"
+sudo mkdir -p "$qmd_home"
+sudo chown "$uat_user":staff "$qmd_home"
+qmd_stderr="$RUNNER_TEMP/xcsh-mdm-qmd-smoke.stderr"
+qmd_output=$(run_as_uat env HOME="$qmd_home" XCSH_SMOKE_TEST_QMD=1 "$binary" 2>"$qmd_stderr")
+test "$qmd_output" = "XCSH_QMD_SMOKE_OK"
+test ! -s "$qmd_stderr"
 run_as_uat env HOME="$uat_home" PI_DEV=1 "$binary" sandbox check 2>&1 |
   tee "$RUNNER_TEMP/xcsh-mdm-native-load.log"
 grep -F "Loaded native addon from ${native_root}/" "$RUNNER_TEMP/xcsh-mdm-native-load.log"

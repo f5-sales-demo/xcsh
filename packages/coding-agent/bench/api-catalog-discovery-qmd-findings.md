@@ -13,6 +13,27 @@ Date: 2026-09-20
 
 The production candidate uses QMD's in-process, model-free BM25 `createStore` and `searchLex` path under Bun 1.4.2. It performs no vector embedding, reranking, MCP, CLI subprocess, or model download. QMD ranks only natural-language `xcsh://api-catalog/?search=` candidates; existing catalog/spec resolvers remain authoritative for content and schemas.
 
+## macOS SQLite patch
+
+QMD 2.8.3 unconditionally attempts a macOS `Database.setCustomSQLite()` switch to
+Homebrew SQLite during Bun module initialization. That process-global override is
+unnecessary for xcsh's BM25-only use and can prevent the subsequently opened xcsh
+agent database from using Bun's embedded SQLite in a signed, clean installation.
+The override originated from upstream issue
+[`tobi/qmd#238`](https://github.com/tobi/qmd/issues/238), which addressed vector
+extension loading rather than BM25-only embedded use.
+The pinned dependency patch `patches/@tobilu%2Fqmd@2.8.3.patch` removes only that
+override. QMD continues to probe sqlite-vec as an optional capability, but xcsh
+does not call vector APIs, package an extension dylib, or download a model. The
+patch also keeps an unavailable optional extension silent during BM25 startup;
+an actual vector caller still receives QMD's stored diagnostic.
+
+Upstream source provenance remains commit
+`04e4dbd8245c527a88f1a8f0bda547aef9ca81fb`. Retire the patch only after a later
+QMD release passes xcsh's clean-runtime dependency contract and compiled-binary
+smoke: embedded BM25 rank 1 for the frozen DNS-clone query, followed by a fresh
+xcsh agent database open on both macOS architectures.
+
 The deterministic corpus has 925 documents and fingerprint `f672936520235ab57544e861b9d8f49d0841d60791218be93001a59e40c85c6d`. Two independent generator runs produced the same generated-source SHA-256: `bb577b7972e1b793b56463079813ee19aa38b6e550e06209186dd3d625790b55`.
 
 On the frozen 60-query benchmark, QMD improved recall@1/3/5 from 0.300/0.350/0.350 to

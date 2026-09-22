@@ -57,6 +57,7 @@ describe("npm binary bootstrap", () => {
 		expect(
 			releaseValidationEnvironment({
 				PATH: "/test/bin",
+				XCSH_SMOKE_TEST_QMD: "1",
 				XCSH_SMOKE_TEST_SPECS: "1",
 				XCSH_SMOKE_TEST_VERTEX_AUTH: "1",
 			}),
