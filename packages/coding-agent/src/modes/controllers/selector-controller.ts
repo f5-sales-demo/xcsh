@@ -577,6 +577,7 @@ export class SelectorController {
 		this.showSelector(done => {
 			dashboard.onClose = () => {
 				done();
+				void this.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
 				this.ctx.ui.requestRender();
 			};
 			dashboard.onRequestRender = () => {

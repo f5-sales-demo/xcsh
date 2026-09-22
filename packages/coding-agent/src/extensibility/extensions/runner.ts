@@ -35,6 +35,7 @@ import type {
 	MessageRenderer,
 	RegisteredCommand,
 	RegisteredTool,
+	RegisteredToolAdvisory,
 	ResourcesDiscoverEvent,
 	ResourcesDiscoverResult,
 	SessionBeforeBranchResult,
@@ -42,6 +43,7 @@ import type {
 	SessionBeforeSwitchResult,
 	SessionBeforeTreeResult,
 	SessionCompactingResult,
+	ToolAdvisoryEvaluation,
 	ToolCallEvent,
 	ToolCallEventResult,
 	ToolResultEvent,
@@ -185,6 +187,7 @@ export class ExtensionRunner {
 	#reloadHandler: () => Promise<void> = async () => {};
 	#shutdownHandler: ShutdownHandler = () => {};
 	#commandDiagnostics: Array<{ type: string; message: string; path: string }> = [];
+	#advisoriesByOwner = new Map<string, Map<string, RegisteredToolAdvisory>>();
 
 	constructor(
 		private readonly extensions: Extension[],
@@ -195,6 +198,7 @@ export class ExtensionRunner {
 		private readonly settings?: ExtensionContext["settings"],
 	) {
 		this.#uiContext = noOpUIContext;
+		this.reloadAdvisories(extensions);
 	}
 
 	initialize(
@@ -425,6 +429,69 @@ export class ExtensionRunner {
 			}
 		}
 		return undefined;
+	}
+
+	/** Evaluate all advisory registrations scoped to this exact tool capability. */
+	async evaluateAdvisories(event: ToolCallEvent): Promise<ToolAdvisoryEvaluation> {
+		const advisories: ToolAdvisoryEvaluation["advisories"] = [];
+		const diagnostics: ToolAdvisoryEvaluation["diagnostics"] = [];
+		const ctx = this.createContext();
+
+		for (const registrations of this.#advisoriesByOwner.values()) {
+			for (const registration of registrations.values()) {
+				if (!registration.capabilities.includes(event.toolName)) continue;
+				try {
+					const matched = await registration.match(event, ctx);
+					const findings = matched ? (Array.isArray(matched) ? matched : [matched]) : [];
+					for (const finding of findings) {
+						if (!finding || typeof finding.code !== "string" || typeof finding.message !== "string") continue;
+						advisories.push({
+							code: finding.code,
+							message: finding.message,
+							severity: finding.severity ?? "warning",
+							provenance: {
+								owner: registration.owner,
+								registrationId: registration.id,
+								capability: event.toolName,
+							},
+						});
+					}
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					diagnostics.push({
+						code: "advisory_matcher_failed",
+						message,
+						owner: registration.owner,
+						registrationId: registration.id,
+						capability: event.toolName,
+					});
+					this.emitError({
+						extensionPath: registration.owner,
+						event: "advisory",
+						error: message,
+					});
+				}
+			}
+		}
+		return { advisories, diagnostics };
+	}
+
+	/** Remove all advisory registrations owned by an extension during lifecycle refresh. */
+	removeAdvisoryOwner(owner: string): number {
+		const registrations = this.#advisoriesByOwner.get(owner);
+		if (!registrations) return 0;
+		this.#advisoriesByOwner.delete(owner);
+		return registrations.size;
+	}
+
+	/** Atomically replace advisory registrations after plugin discovery changes. */
+	reloadAdvisories(extensions: readonly Extension[]): void {
+		const next = new Map<string, Map<string, RegisteredToolAdvisory>>();
+		for (const extension of extensions) {
+			if (extension.advisories.size === 0) continue;
+			next.set(extension.resolvedPath, new Map(extension.advisories));
+		}
+		this.#advisoriesByOwner = next;
 	}
 
 	createContext(): ExtensionContext {
