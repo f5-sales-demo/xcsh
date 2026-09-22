@@ -43,7 +43,11 @@ xcsh never guesses a generation: without both values it retains ordinary pane li
 Protocol 26 is the current producer-native contract. Herdr injects a one-time `HERDR_NATIVE_CAPABILITY` into the child. xcsh includes it only in authenticated turn-report and action requests; it is never written to the session journal, logs, diagnostics, or receipts.
 Herdr does not authorize actions until the first `starting` report has been durably journaled and bound to the owned PTY, pane, session, generation, and turn.
 
-Each semantic report has a five-second deadline. xcsh retries exactly once only when timeout, EOF, or a transport error leaves admission ambiguous. The retry preserves the method and complete semantic payload and changes only the transport request ID. Either correlated receipt marks the event delivered; protocol, validation, malformed-response, and explicit remote errors are definitive and are not retried. Degraded tracking is shown only after both ambiguous attempts fail.
+Each semantic report has a five-second deadline. xcsh retries exactly once only when timeout,
+EOF, or a transport error leaves admission ambiguous. The retry preserves the method and complete
+semantic payload and changes only the transport request ID. Either correlated receipt marks the
+event delivered; protocol, validation, malformed-response, and explicit remote errors are definitive
+and are not retried. Degraded tracking is shown only after both ambiguous attempts fail.
 
 The producer wire shapes align with [Herdr PR #49](https://github.com/f5-sales-demo/herdr/pull/49) at cancellation-settlement commit `2c838cf545ed06439b4988cedb3e044f1d436264`, starting-replay recovery commit `edd5611cfd7685c0f069f244ceee0ac6c0a0678e`, and native-argv alignment commit `3397302960593a552fb37ceb71053cf99f2619a3`.
 Those commits are an integration contract under independent review, not released-backend evidence.
@@ -101,7 +105,11 @@ The verified contract is:
 | Reconnect/order | Serialized queue and persisted event revision | Exact duplicates are idempotent; stale/conflicting revisions fail; terminal state is immutable. |
 | Application exit | `session_shutdown` | Active turn becomes `interrupted`, then pane authority is released; never success. |
 
-The protocol-26 native-interaction update is tracked by [issue #4161](https://github.com/f5-sales-demo/xcsh/issues/4161); its producer lifecycle foundation is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791) and [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The active protocol and lifecycle behavior is described on this page; obsolete delivery checklists are not part of the runtime contract.
+The protocol-26 native-interaction update is tracked by
+[issue #4161](https://github.com/f5-sales-demo/xcsh/issues/4161); its producer lifecycle foundation is
+tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791) and
+[issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The active protocol and lifecycle
+behavior is described on this page; obsolete delivery checklists are not part of the runtime contract.
 
 Herdr lifecycle reconciliation is tracked by issue #5 in the F5 Herdr fork. Current source already recognizes the exact `("herdr:xcsh", "xcsh")` resume pair; deployed build provenance and live resume/fork acceptance remain required before feature acceptance.
 
