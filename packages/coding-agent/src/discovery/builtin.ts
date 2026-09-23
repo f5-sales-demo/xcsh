@@ -225,7 +225,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 	const items: SystemPrompt[] = [];
 
 	const userPath = path.join(ctx.home, PATHS.userAgent, "SYSTEM.md");
-	const userContent = await readFile(userPath);
+	const userContent = await readFile(userPath, ctx.signal);
 	if (userContent) {
 		items.push({
 			path: userPath,
@@ -238,7 +238,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 	const nearestProjectConfigDir = await findNearestProjectConfigDir(ctx.cwd, ctx.repoRoot);
 	if (nearestProjectConfigDir) {
 		const projectPath = path.join(nearestProjectConfigDir.dir, "SYSTEM.md");
-		const projectContent = await readFile(projectPath);
+		const projectContent = await readFile(projectPath, ctx.signal);
 		if (projectContent) {
 			items.push({
 				path: projectPath,
@@ -270,6 +270,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 			providerId: PROVIDER_ID,
 			level: "project",
 			requireDescription: true,
+			signal: ctx.signal,
 		}),
 	);
 
@@ -279,6 +280,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 		providerId: PROVIDER_ID,
 		level: "user",
 		requireDescription: true,
+		signal: ctx.signal,
 	});
 
 	const results = await Promise.all([...projectScans, userScan]);
@@ -814,7 +816,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	const warnings: string[] = [];
 
 	const userPath = path.join(ctx.home, PATHS.userAgent, "XCSH.md");
-	const userContent = await readFile(userPath);
+	const userContent = await readFile(userPath, ctx.signal);
 	if (userContent) {
 		items.push({
 			path: userPath,
@@ -827,7 +829,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	const nearestProjectConfigDir = await findNearestProjectConfigDir(ctx.cwd, ctx.repoRoot);
 	if (nearestProjectConfigDir) {
 		const projectPath = path.join(nearestProjectConfigDir.dir, "XCSH.md");
-		const projectContent = await readFile(projectPath);
+		const projectContent = await readFile(projectPath, ctx.signal);
 		if (projectContent) {
 			items.push({
 				path: projectPath,

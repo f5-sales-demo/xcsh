@@ -16,6 +16,8 @@ export interface LoadContext {
 	home: string;
 	/** Git repository root (directory containing .git), or null if not in a repo */
 	repoRoot: string | null;
+	/** Cancellation for bounded discovery. */
+	signal?: AbortSignal;
 }
 
 /**
@@ -72,6 +74,8 @@ export interface LoadOptions {
 	includeDisabled?: boolean;
 	/** Explicit disabled extension IDs to apply instead of settings. */
 	disabledExtensions?: string[];
+	/** Cancellation for bounded discovery. */
+	signal?: AbortSignal;
 }
 
 /**
