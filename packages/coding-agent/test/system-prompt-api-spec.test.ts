@@ -63,6 +63,16 @@ describe("system prompt API spec integration", () => {
 		expect(rendered).toContain("**MUST NOT** generate spec bodies from memory");
 	});
 
+	it("routes API metadata through deterministic internal discovery before public docs", async () => {
+		const rendered = await buildSystemPrompt({ tools: new Map() });
+		expect(rendered).toContain("api-catalog-preflight");
+		expect(rendered).toContain("API metadata is the exception to the documentation-first rule");
+		expect(rendered).toContain(
+			"Public `llms.txt` and web search may supplement only missing conceptual or operational guidance",
+		);
+		expect(rendered).toContain("Conceptual F5 XC questions remain documentation-first");
+	});
+
 	it("contains MUST NOT read proactively directive scoped to api-spec", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
 		expect(rendered).toContain("`xcsh://api-spec/` **MUST NOT** be read proactively");

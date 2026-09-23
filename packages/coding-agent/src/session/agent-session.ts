@@ -116,6 +116,7 @@ import { ExtensionToolWrapper } from "../extensibility/extensions/wrapper";
 import type { HookCommandContext } from "../extensibility/hooks/types";
 import type { Skill, SkillWarning } from "../extensibility/skills";
 import { expandSlashCommand, type FileSlashCommand } from "../extensibility/slash-commands";
+import { type ApiCatalogPreflightResult, runApiCatalogPreflight } from "../internal-urls/api-catalog-preflight";
 import {
 	disposeKernelSessionsByOwner,
 	executePython as executePythonCommand,
@@ -252,6 +253,30 @@ export type AgentSessionEvent =
 
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => unknown;
+
+function renderApiCatalogPreflight(result: ApiCatalogPreflightResult): string {
+	const selected =
+		result.ranked.find(candidate => candidate.resource === result.resource && candidate.domain === result.domain) ??
+		result.ranked[0];
+	return [
+		"# Deterministic F5 XC API catalog preflight",
+		"",
+		`Catalog version: ${result.catalogVersion}`,
+		`Queries: ${result.queries.map(query => `\`${query}\``).join(", ")}`,
+		`Duration: ${result.durationMs} ms`,
+		"",
+		"Read these exact authoritative destinations before public documentation or web search:",
+		...(selected ? [`1. \`${selected.resourceUrl}\``, `2. \`${selected.specUrl}\``] : []),
+		"",
+		"Ranked QMD category destinations:",
+		...result.ranked.map(
+			candidate =>
+				`${candidate.rank}. \`${candidate.catalogUrl}\` (resource \`${candidate.resource}\`, domain \`${candidate.domain}\`)`,
+		),
+		"",
+		"Generated catalog and API-spec reads are authoritative for exact paths, methods, fields, and constraints.",
+	].join("\n");
+}
 export interface AgentSessionEventSubscriptionOptions {
 	/** Delay normalized turn settlement until this listener finishes handling agent_end. */
 	waitForTurnSettlement?: boolean;
@@ -312,6 +337,11 @@ export interface AgentSessionConfig {
 	convertToLlm?: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 	/** System prompt builder that can consider tool availability */
 	rebuildSystemPrompt?: (toolNames: string[], tools: Map<string, AgentTool>) => Promise<string>;
+	/** Injectable deterministic API discovery boundary used by tests and embedded sessions. */
+	apiCatalogPreflight?: (
+		prompt: string,
+		options: { toolsEnabled: boolean },
+	) => Promise<ApiCatalogPreflightResult | null>;
 	/** Enable hidden-by-default MCP tool discovery for this session. */
 	mcpDiscoveryEnabled?: boolean;
 	/** MCP tool names to activate for the current session when discovery mode is enabled. */
@@ -635,6 +665,7 @@ export class AgentSession {
 	#onPayload: SimpleStreamOptions["onPayload"] | undefined;
 	#convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 	#rebuildSystemPrompt: ((toolNames: string[], tools: Map<string, AgentTool>) => Promise<string>) | undefined;
+	#apiCatalogPreflight: NonNullable<AgentSessionConfig["apiCatalogPreflight"]>;
 	#toolSelectionRevision = 0;
 	#baseSystemPrompt: string;
 	#mcpDiscoveryEnabled = false;
@@ -732,6 +763,7 @@ export class AgentSession {
 		this.#onPayload = config.onPayload;
 		this.#convertToLlm = config.convertToLlm ?? convertToLlm;
 		this.#rebuildSystemPrompt = config.rebuildSystemPrompt;
+		this.#apiCatalogPreflight = config.apiCatalogPreflight ?? runApiCatalogPreflight;
 		this.#baseSystemPrompt = this.agent.state.systemPrompt;
 		this.#mcpDiscoveryEnabled = config.mcpDiscoveryEnabled ?? false;
 		this.#setDiscoverableMCPTools(this.#collectDiscoverableMCPToolsFromRegistry());
@@ -3911,6 +3943,16 @@ export class AgentSession {
 			// Reset todo reminder count on new user prompt
 			this.#todoReminderCount = 0;
 
+			// Classified F5 XC API/schema intent is discovered locally before any
+			// compaction or provider inference. A QMD/index error is deliberately
+			// terminal for this turn so the model cannot substitute web search or a guess.
+			const apiCatalogPreflight =
+				message.role === "user"
+					? await this.#apiCatalogPreflight(expandedText, {
+							toolsEnabled: this.getActiveToolNames().includes("read"),
+						})
+					: null;
+
 			// Validate model
 			if (!this.model) {
 				throw new Error(
@@ -3943,6 +3985,17 @@ export class AgentSession {
 			// hidden/context injection so it remains the final instruction to the model.
 			const messages: AgentMessage[] = await logger.ttftAttr("ttft.build-context", async () => {
 				const built: AgentMessage[] = [];
+				if (apiCatalogPreflight) {
+					built.push({
+						role: "custom",
+						customType: "api-catalog-preflight",
+						content: renderApiCatalogPreflight(apiCatalogPreflight),
+						display: false,
+						details: apiCatalogPreflight,
+						attribution: "agent",
+						timestamp: Date.now(),
+					});
+				}
 				const planModeMessage = await this.#buildPlanModeMessage();
 				if (planModeMessage) {
 					built.push(planModeMessage);

@@ -7,6 +7,7 @@ import type {
 import type { Effort } from "@f5-sales-demo/pi-ai";
 import type {
 	ModelBenchmarkScenario,
+	ModelScenarioKnowledgeExpectation,
 	ModelScenarioSuite,
 	ModelScenarioToolExpectation,
 } from "./model-scenario-library";
@@ -34,6 +35,13 @@ export interface ScenarioToolCall {
 	durationMs?: number;
 	isError: boolean;
 	isWarning: boolean;
+}
+
+export interface ScenarioKnowledgeEvent {
+	type: "api-catalog-preflight" | "read";
+	atMs: number;
+	query?: string;
+	path?: string;
 }
 
 export interface BuildScenarioBenchmarkSampleInput {
@@ -81,7 +89,9 @@ export interface ScenarioBenchmarkSample {
 	turnCount: number;
 	assistantMessageCount: number;
 	toolCalls: ScenarioToolCall[];
+	knowledgeEvents: ScenarioKnowledgeEvent[];
 	startupMs?: number;
+	timeToAuthoritativeEvidenceMs?: number;
 	ttftMs?: number;
 	timeToFirstToolMs?: number;
 	startupInclusiveTtftMs?: number;
@@ -113,6 +123,7 @@ export interface ScenarioBenchmarkSummary {
 		startup: NumericSummary | null;
 		ttft: NumericSummary | null;
 		timeToFirstTool: NumericSummary | null;
+		authoritativeEvidence: NumericSummary | null;
 		response: NumericSummary | null;
 		toolExecution: NumericSummary | null;
 		process: NumericSummary | null;
@@ -248,10 +259,26 @@ function matchesToolExpectation(call: ScenarioToolCall, expectation: ModelScenar
 	});
 }
 
+function matchesKnowledgeExpectation(
+	event: ScenarioKnowledgeEvent,
+	expectation: ModelScenarioKnowledgeExpectation,
+): boolean {
+	if (event.type !== expectation.type) return false;
+	if (expectation.query !== undefined && event.query !== expectation.query) return false;
+	if (expectation.path !== undefined && event.path !== expectation.path) return false;
+	if (expectation.pathPattern && (!event.path || !expectation.pathPattern.test(event.path))) return false;
+	return true;
+}
+
+function isReadContinuation(call: ScenarioToolCall): boolean {
+	return call.name === "read" && typeof call.args?.sel === "string" && call.args.sel.trim().length > 0;
+}
+
 export function evaluateScenarioContract(
 	scenario: ModelBenchmarkScenario,
 	response: string,
 	toolCalls: ScenarioToolCall[],
+	knowledgeEvents: ScenarioKnowledgeEvent[] = [],
 ): string[] {
 	const failures: string[] = [];
 	const { contract } = scenario;
@@ -265,9 +292,13 @@ export function evaluateScenarioContract(
 		if (forbidden.pattern.test(response)) failures.push(`response included forbidden content: ${forbidden.label}`);
 	}
 	for (const expected of contract.requiredTools ?? []) {
-		const count = toolCalls.filter(call => matchesToolExpectation(call, expected)).length;
+		const matchingCalls = toolCalls.filter(call => matchesToolExpectation(call, expected));
+		const count = contract.allowReadContinuations
+			? matchingCalls.filter(call => !isReadContinuation(call)).length
+			: matchingCalls.length;
 		if (count !== expected.count) {
-			failures.push(`tool ${toolExpectationLabel(expected)} called ${count} times, expected ${expected.count}`);
+			const callKind = contract.allowReadContinuations ? "initial calls" : "times";
+			failures.push(`tool ${toolExpectationLabel(expected)} called ${count} ${callKind}, expected ${expected.count}`);
 		}
 	}
 	if (contract.requiredToolSequence) {
@@ -281,14 +312,41 @@ export function evaluateScenarioContract(
 			after = found + 1;
 		}
 	}
-	if (contract.exclusiveTools) {
-		const expectedCount = (contract.requiredTools ?? []).reduce((sum, expectation) => sum + expectation.count, 0);
-		if (toolCalls.length !== expectedCount) {
-			failures.push(`tool call count was ${toolCalls.length}, expected exactly ${expectedCount}`);
+	if (contract.requiredKnowledgeSequence) {
+		let after = 0;
+		for (const [requiredIndex, expected] of contract.requiredKnowledgeSequence.entries()) {
+			const found = knowledgeEvents.findIndex(
+				(event, index) => index >= after && matchesKnowledgeExpectation(event, expected),
+			);
+			if (found < 0) {
+				failures.push(`knowledge sequence missing ${expected.type} after position ${after}`);
+				break;
+			}
+			if (requiredIndex === 0 && contract.knowledgeSequenceStartsAtFirst && found !== 0) {
+				failures.push(`first knowledge event was ${knowledgeEvents[0]?.type ?? "missing"}, expected ${expected.type}`);
+				break;
+			}
+			after = found + 1;
 		}
-		const expectedNames = new Set((contract.requiredTools ?? []).map(tool => tool.name));
-		const unexpected = [...new Set(toolCalls.map(call => call.name).filter(name => !expectedNames.has(name)))];
-		if (unexpected.length > 0) failures.push(`unexpected tools called: ${unexpected.join(", ")}`);
+	}
+	if (contract.exclusiveTools) {
+		const expectedTools = contract.requiredTools ?? [];
+		if (contract.allowReadContinuations) {
+			const unexpected = toolCalls.filter(
+				call => !expectedTools.some(expected => matchesToolExpectation(call, expected)),
+			);
+			if (unexpected.length > 0) {
+				failures.push(`unexpected tool calls: ${unexpected.map(call => `${call.name} ${JSON.stringify(call.args)}`).join(", ")}`);
+			}
+		} else {
+			const expectedCount = expectedTools.reduce((sum, expectation) => sum + expectation.count, 0);
+			if (toolCalls.length !== expectedCount) {
+				failures.push(`tool call count was ${toolCalls.length}, expected exactly ${expectedCount}`);
+			}
+			const expectedNames = new Set(expectedTools.map(tool => tool.name));
+			const unexpected = [...new Set(toolCalls.map(call => call.name).filter(name => !expectedNames.has(name)))];
+			if (unexpected.length > 0) failures.push(`unexpected tools called: ${unexpected.join(", ")}`);
+		}
 	}
 	const failedTools = toolCalls.filter(call => call.isError).map(call => call.name);
 	if (failedTools.length > 0) failures.push(`tool execution failed: ${failedTools.join(", ")}`);
@@ -348,6 +406,7 @@ export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSample
 	const assistantErrors = new Set<string>();
 	const toolCalls: ScenarioToolCall[] = [];
 	const toolCallsById = new Map<string, ScenarioToolCall>();
+	const knowledgeEvents: ScenarioKnowledgeEvent[] = [];
 
 	for (const timed of input.events) {
 		const event = record(timed.event);
@@ -360,6 +419,15 @@ export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSample
 			continue;
 		}
 		const message = record(event.message);
+		if (type === "message_start" && message?.role === "custom" && message.customType === "api-catalog-preflight") {
+			const details = record(message.details);
+			const queries = Array.isArray(details?.queries) ? details.queries : [];
+			knowledgeEvents.push({
+				type: "api-catalog-preflight",
+				atMs: round(timed.elapsedMs),
+				query: queries.find((query): query is string => typeof query === "string"),
+			});
+		}
 		if (type === "message_start" && message?.role === "user" && promptAt === undefined) {
 			promptAt = timed.elapsedMs;
 		}
@@ -396,6 +464,10 @@ export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSample
 				};
 				toolCalls.push(call);
 				toolCallsById.set(id, call);
+				const knowledgePath = typeof call.args?.path === "string" ? call.args.path : undefined;
+				if (name === "read" && knowledgePath) {
+					knowledgeEvents.push({ type: "read", atMs: round(timed.elapsedMs), path: knowledgePath });
+				}
 			}
 		}
 		if (type === "tool_execution_end") {
@@ -426,7 +498,7 @@ export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSample
 		failures.push(`resolved ${provider}/${model} instead of ${input.target.selector}`);
 	}
 
-	const contractFailures = evaluateScenarioContract(input.scenario, response, toolCalls);
+	const contractFailures = evaluateScenarioContract(input.scenario, response, toolCalls, knowledgeEvents);
 	const transportSucceeded = failures.length === 0;
 	const quality = evaluateScenarioQuality(
 		input.scenario,
@@ -475,6 +547,10 @@ export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSample
 		turnCount,
 		assistantMessageCount: assistantMessages.length,
 		toolCalls,
+		knowledgeEvents,
+		timeToAuthoritativeEvidenceMs: knowledgeEvents.find(
+			event => event.type === "api-catalog-preflight" || event.path?.startsWith("xcsh://"),
+		)?.atMs,
 		startupMs: promptAt === undefined ? undefined : round(promptAt),
 		ttftMs: promptAt === undefined || firstTextAt === undefined ? undefined : round(firstTextAt - promptAt),
 		timeToFirstToolMs:
@@ -545,6 +621,7 @@ export function summarizeScenarioBenchmarks(
 					startup: summarizeNumbers(successful.map(sample => sample.startupMs)),
 					ttft: summarizeNumbers(successful.map(sample => sample.ttftMs)),
 					timeToFirstTool: summarizeNumbers(successful.map(sample => sample.timeToFirstToolMs)),
+					authoritativeEvidence: summarizeNumbers(successful.map(sample => sample.timeToAuthoritativeEvidenceMs)),
 					response: summarizeNumbers(successful.map(sample => sample.responseDurationMs)),
 					toolExecution: summarizeNumbers(successful.map(sample => sample.totalToolDurationMs)),
 					process: summarizeNumbers(successful.map(sample => sample.processDurationMs)),
@@ -576,7 +653,12 @@ export function regradeScenarioBenchmarkReport(
 	const regrade = (sample: ScenarioBenchmarkSample): ScenarioBenchmarkSample => {
 		const scenario = byId.get(sample.scenarioId);
 		if (!scenario) throw new Error(`Cannot regrade sample for unknown scenario: ${sample.scenarioId}`);
-		const contractFailures = evaluateScenarioContract(scenario, sample.response, sample.toolCalls);
+		const contractFailures = evaluateScenarioContract(
+			scenario,
+			sample.response,
+			sample.toolCalls,
+			sample.knowledgeEvents ?? [],
+		);
 		return {
 			...sample,
 			contractPassed: contractFailures.length === 0,
@@ -622,7 +704,17 @@ export function describeScenarioContract(scenario: ModelBenchmarkScenario): stri
 	);
 	descriptions.push(
 		...(scenario.contract.requiredTools ?? []).map(
-			tool => `${toolExpectationLabel(tool)} called exactly ${tool.count} time(s)`,
+			tool =>
+				scenario.contract.allowReadContinuations
+					? `${toolExpectationLabel(tool)} called exactly ${tool.count} initial time(s); bounded sel continuations permitted`
+					: `${toolExpectationLabel(tool)} called exactly ${tool.count} time(s)`,
+		),
+	);
+	descriptions.push(
+		...(scenario.contract.requiredKnowledgeSequence ?? []).map(event =>
+			event.type === "api-catalog-preflight"
+				? `preflight query ${JSON.stringify(event.query)}`
+				: `read ${event.path ?? event.pathPattern}`,
 		),
 	);
 	if (scenario.contract.exclusiveTools) descriptions.push("no unexpected tools");
