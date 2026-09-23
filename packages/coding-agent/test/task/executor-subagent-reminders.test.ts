@@ -151,6 +151,33 @@ describe("runSubprocess submit_result reminders", () => {
 		expect(result.output.includes("SYSTEM WARNING")).toBe(false);
 	});
 
+	it("excludes todo_write before subagent construction without rebuilding afterward", async () => {
+		const session = createMockSession(
+			({ emit }) => {
+				emit({
+					type: "tool_execution_end",
+					toolCallId: "tool-excluded",
+					toolName: "submit_result",
+					result: {
+						content: [{ type: "text", text: "Result submitted." }],
+						details: { status: "success", data: { ok: true } },
+					},
+					isError: false,
+				});
+			},
+			["read", "submit_result", "todo_write"],
+		);
+		const setActiveToolsByName = vi.spyOn(session, "setActiveToolsByName");
+		const createAgentSessionSpy = mockCreateAgentSession(session);
+
+		await runSubprocess({ ...baseOptions, id: "subagent-excluded-tool" });
+
+		const createdOptions = createAgentSessionSpy.mock.calls[0]?.[0];
+		expect(createdOptions).toBeDefined();
+		expect(createdOptions?.excludedToolNames).toEqual(["todo_write"]);
+		expect(setActiveToolsByName).not.toHaveBeenCalled();
+	});
+
 	it("keeps null submit_result warning when subagent submits success without data", async () => {
 		const session = createMockSession(({ promptIndex, emit, state }) => {
 			if (promptIndex === 1) {

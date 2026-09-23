@@ -52,10 +52,10 @@ function getProjectPathCandidates(ctx: LoadContext, ...segments: string[]): stri
 // Skills
 async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 	const projectScans = getProjectPathCandidates(ctx, "skills").map(dir =>
-		scanSkillsFromDir(ctx, { dir, providerId: PROVIDER_ID, level: "project" }),
+		scanSkillsFromDir(ctx, { dir, providerId: PROVIDER_ID, level: "project", signal: ctx.signal }),
 	);
 	const userScans = getUserPathCandidates(ctx, "skills").map(dir =>
-		scanSkillsFromDir(ctx, { dir, providerId: PROVIDER_ID, level: "user" }),
+		scanSkillsFromDir(ctx, { dir, providerId: PROVIDER_ID, level: "user", signal: ctx.signal }),
 	);
 
 	const results = await Promise.all([...projectScans, ...userScans]);
@@ -170,7 +170,7 @@ registerProvider<SlashCommand>(slashCommandCapability.id, {
 // Context Files (AGENTS.md)
 async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFile>> {
 	const load = async (filePath: string, level: "user" | "project"): Promise<ContextFile | null> => {
-		const content = await readFile(filePath);
+		const content = await readFile(filePath, ctx.signal);
 		if (!content) return null;
 		// filePath is <ancestor>/.agent(s)/AGENTS.md — go up past the config dir to the ancestor
 		const ancestorDir = path.dirname(path.dirname(filePath));
@@ -197,7 +197,7 @@ registerProvider<ContextFile>(contextFileCapability.id, {
 // System Prompt (SYSTEM.md)
 async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemPrompt>> {
 	const load = async (filePath: string, level: "user" | "project"): Promise<SystemPrompt | null> => {
-		const content = await readFile(filePath);
+		const content = await readFile(filePath, ctx.signal);
 		if (!content) return null;
 		return { path: filePath, content, level, _source: createSourceMeta(PROVIDER_ID, filePath, level) };
 	};

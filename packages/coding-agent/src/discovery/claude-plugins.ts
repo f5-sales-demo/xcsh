@@ -37,7 +37,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 	const items: Skill[] = [];
 	const warnings: string[] = [];
 
-	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
+	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd, ctx.signal);
 	warnings.push(...rootWarnings);
 
 	const results = await Promise.all(
@@ -47,6 +47,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 				dir: skillsDir,
 				providerId: PROVIDER_ID,
 				level: scopeToLevel(root.scope),
+				signal: ctx.signal,
 			});
 			return { root, result };
 		}),
