@@ -68,10 +68,13 @@ describe("authenticated provider model groups", () => {
 	it("keeps only current GPT and per-lineage Gemini families in the browser", () => {
 		const filtered = filterCurrentBrowserModels([
 			model("openai-codex", "gpt-5.5"),
-			model("openai-codex", "gpt-5.6-sol"),
 			model("openai-codex", "gpt-5.6-terra"),
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-6-astra"),
+			model("openai-codex", "gpt-6-luna"),
+			model("openai-codex", "gpt-6-sol"),
+			model("anthropic", "claude-opus-5"),
+			model("anthropic", "claude-opus-5-5"),
 			model("google-vertex", "gemini-2.5-flash"),
 			model("google-vertex", "gemini-3.8-flash"),
 			model("google-antigravity", "gemini-3.6-flash-tiered"),
@@ -90,10 +93,11 @@ describe("authenticated provider model groups", () => {
 			model("github-copilot", "gpt-5.6-sol"),
 		]);
 		expect(filtered.map(item => `${item.provider}/${item.id}`)).toEqual([
-			"openai-codex/gpt-5.6-sol",
 			"openai-codex/gpt-5.6-terra",
-			"openai-codex/gpt-5.6-luna",
 			"openai-codex/gpt-6-astra",
+			"openai-codex/gpt-6-luna",
+			"openai-codex/gpt-6-sol",
+			"anthropic/claude-opus-5-5",
 			"google-vertex/gemini-3.8-flash",
 			"google-antigravity/gemini-3.7-flash-tiered",
 			"google-antigravity/gemini-3.1-pro-high",
@@ -120,7 +124,7 @@ describe("authenticated provider model groups", () => {
 
 	it("admits successful and cached authenticated catalogs, retains failures, and separates local runtimes", () => {
 		const models = [
-			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-sol"),
 			model("google-vertex", "gemini-3.8-flash"),
 			model("google-antigravity", "gemini-3.7-flash-tiered"),
 			model("anthropic", "claude-sonnet-4-6"),
@@ -155,7 +159,7 @@ describe("authenticated provider model groups", () => {
 
 	it("uses configured-provider order before display-name order when the current provider is absent", () => {
 		const models = [
-			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-sol"),
 			model("google-vertex", "gemini-3.8-flash"),
 			model("anthropic", "claude-sonnet-4-6"),
 		];
@@ -176,10 +180,10 @@ function selectorHarness(
 		ubuntuProviders?: boolean;
 	} = {},
 ) {
-	const sol = model("openai-codex", "gpt-5.6-sol", {
-		name: "GPT-5.6-Sol",
+	const sol = model("openai-codex", "gpt-6-sol", {
+		name: "GPT-6 Sol",
 		publisher: "OpenAI",
-		family: "GPT-5.6",
+		family: "GPT-6",
 		tier: "Sol",
 		reasoning: true,
 		thinking: createThinkingConfig([
@@ -197,10 +201,10 @@ function selectorHarness(
 		family: "GPT-5.6",
 		tier: "Terra",
 	});
-	const luna = model("openai-codex", "gpt-5.6-luna", {
-		name: "GPT-5.6-Luna",
+	const luna = model("openai-codex", "gpt-6-luna", {
+		name: "GPT-6 Luna",
 		publisher: "OpenAI",
-		family: "GPT-5.6",
+		family: "GPT-6",
 		tier: "Luna",
 	});
 	const astra = model("openai-codex", "gpt-6-astra", {
@@ -304,14 +308,18 @@ describe("provider-tab model selector", () => {
 				Effort.Max,
 			]),
 		});
-		const opus = model("anthropic", "claude-opus-5", { name: "Claude Opus 5" });
+		const opus = model("anthropic", "claude-opus-5-5", {
+			name: "Claude Opus 5.5",
+			reasoning: true,
+			thinking: createThinkingConfig([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max]),
+		});
 		const models = [haiku, sonnet, opus];
 		const settings = Settings.isolated({
 			modelRoles: {
 				smol: "anthropic/claude-haiku-4-5-20251001:low",
 				default: "anthropic/claude-sonnet-5:medium",
-				slow: "anthropic/claude-opus-5:high",
-				plan: "anthropic/claude-opus-5:high",
+				slow: "anthropic/claude-opus-5-5:high",
+				plan: "anthropic/claude-opus-5-5:high",
 			},
 		});
 		const registry = {
@@ -339,7 +347,8 @@ describe("provider-tab model selector", () => {
 		expect(rendered).toContain("Assignment");
 		expect(rendered).toContain("Claude Haiku 4.5");
 		expect(rendered).toContain("Claude Sonnet 5");
-		expect(rendered).toContain("Claude Opus 5");
+		expect(rendered).toContain("Claude Opus 5.5");
+		expect(rendered).not.toContain("Claude Opus 5\n");
 		expect(rendered).toContain("Fast");
 		expect(rendered).toContain("Default");
 		expect(rendered).toContain("Thinking");
@@ -363,10 +372,12 @@ describe("provider-tab model selector", () => {
 		expect(rendered).toContain("ChatGPT");
 		expect(rendered).toContain("Assignment");
 		expect(rendered).not.toContain("OpenAI › GPT-5.6");
-		expect(rendered).toContain("GPT-5.6 Sol");
+		expect(rendered).toContain("GPT-6 Sol");
 		expect(rendered).toContain("GPT-5.6 Terra");
-		expect(rendered).toContain("GPT-5.6 Luna");
+		expect(rendered).toContain("GPT-6 Luna");
 		expect(rendered).toContain("GPT-6 Astra");
+		expect(rendered).not.toContain("GPT-5.6 Sol");
+		expect(rendered).not.toContain("GPT-5.6 Luna");
 		expect(rendered).not.toContain("QUICK");
 		expect(rendered).not.toContain("ALL MODELS");
 		expect(rendered).not.toContain("Gemini 3.8 Flash");
@@ -417,7 +428,7 @@ describe("provider-tab model selector", () => {
 		expect(rendered).toContain("google-vertex/gemini-3.8-flash");
 		for (let index = 0; index < 6; index += 1) selector.handleInput("\x7f");
 		rendered = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(rendered).toContain("GPT-5.6 Sol");
+		expect(rendered).toContain("GPT-6 Sol");
 		expect(rendered).not.toContain("Gemini 3.8 Flash");
 	});
 
@@ -532,10 +543,10 @@ describe("provider-tab model selector", () => {
 		selector.handleInput("\r");
 		expect(onSelect).toHaveBeenCalledWith(
 			expect.objectContaining({
-				model: expect.objectContaining({ id: "gpt-5.6-sol" }),
+				model: expect.objectContaining({ id: "gpt-6-sol" }),
 				scope: "conversation",
 				thinkingLevel: Effort.XHigh,
-				selector: "openai-codex/gpt-5.6-sol",
+				selector: "openai-codex/gpt-6-sol",
 			}),
 		);
 	});

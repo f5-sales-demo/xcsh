@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -9,6 +9,11 @@ import { integrationRegistry } from "../src/integrations/registry";
 describe("plugin CLI integration loading", () => {
 	let tempHome = "";
 	let tempProject = "";
+
+	beforeEach(() => {
+		integrationRegistry.clear();
+		clearXcshPluginRootsCache();
+	});
 
 	afterEach(async () => {
 		integrationRegistry.clear();

@@ -210,6 +210,10 @@ At the xcsh prompt, open the provider picker:
 
 Choose a provider and follow its sign-in flow. You can also enter `/login PROVIDER` to open a known provider directly. Keep credentials in the provider-supported environment or subscription login—never in a prompt or committed settings file. See [model authentication](/xcsh/en/getting-started/model-authentication/) for provider-specific options.
 
+GPT-6 Luna and Sol use a 272K-token context window by default for ChatGPT subscription sessions.
+To opt in to their published 1.05M-token window, open `/settings`, select **Providers**, and enable
+**OpenAI Codex Maximum Context**. OpenAI applies higher token pricing to requests above 272K.
+
 After sign-in selects a model, stay in the TUI and send a small first prompt.
 
 ## Quickstart

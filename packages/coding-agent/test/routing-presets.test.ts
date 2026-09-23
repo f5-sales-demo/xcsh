@@ -14,7 +14,7 @@ describe("Routing Presets (R03)", () => {
 		});
 		expect(BUILTIN_ROUTING_PRESETS["anthropic/claude"]).toBeDefined();
 		expect(BUILTIN_ROUTING_PRESETS["anthropic/claude"]).toMatchObject({
-			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5" },
+			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5-5" },
 			effortPolicy: {
 				byTier: { utility: "low", balanced: "medium", frontier: "high" },
 				frontierEscalation: { effort: "xhigh", minimumComplexityScore: 90 },
@@ -29,9 +29,9 @@ describe("Routing Presets (R03)", () => {
 			provider: "litellm",
 			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5" },
 		});
-		expect(BUILTIN_ROUTING_PRESETS["openai-codex/gpt-5.6"]).toMatchObject({
+		expect(BUILTIN_ROUTING_PRESETS["openai-codex/gpt-6"]).toMatchObject({
 			provider: "openai-codex",
-			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+			tiers: { utility: "gpt-6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-6-sol" },
 		});
 	});
 

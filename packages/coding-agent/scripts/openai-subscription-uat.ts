@@ -9,11 +9,11 @@ interface UatTarget {
 	executable?: string;
 }
 
-export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-5.6-sol";
+export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-6-sol";
 export const OPENAI_CODEX_DEFAULT_MODEL = "openai-codex/gpt-5.6-terra";
 export const OPENAI_CODEX_ASTRA_MODEL = "openai-codex/gpt-6-astra";
 export const OPENAI_CODEX_PICKER_MODELS = [
-	"openai-codex/gpt-5.6-luna",
+	"openai-codex/gpt-6-luna",
 	"openai-codex/gpt-5.6-terra",
 	OPENAI_CODEX_SOL_MODEL,
 	OPENAI_CODEX_ASTRA_MODEL,
@@ -280,9 +280,9 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 				const normalized = visible.replace(/\s+/g, " ");
 				return (
 					visible.includes("ChatGPT Subscription") &&
-					normalized.includes("gpt-5.6-luna] SMOL (low)") &&
+					normalized.includes("gpt-6-luna] SMOL (low)") &&
 					normalized.includes("gpt-5.6-terra] DEFAULT (medium)") &&
-					normalized.includes("gpt-5.6-sol] SLOW (high) PLAN (high)") &&
+					normalized.includes("gpt-6-sol] SLOW (high) PLAN (high)") &&
 					normalized.includes("gpt-6-astra]") &&
 					!normalized.includes("gpt-6-astra] SMOL") &&
 					!normalized.includes("gpt-6-astra] DEFAULT") &&
@@ -310,7 +310,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		await promptAndVerify(OPENAI_CODEX_DEFAULT_MODEL, "medium", "default Terra/medium role");
 		for (const target of [
 			{ role: "slow", model: OPENAI_CODEX_SOL_MODEL, effort: "high" },
-			{ role: "smol", model: "openai-codex/gpt-5.6-luna", effort: "low" },
+			{ role: "smol", model: "openai-codex/gpt-6-luna", effort: "low" },
 			{ role: "default", model: OPENAI_CODEX_DEFAULT_MODEL, effort: "medium" },
 		] as const) {
 			outputStart = transcript.length;

@@ -14,15 +14,15 @@ describe("subscription routing profiles", () => {
 	it("defines the reviewed OpenAI Codex role profile and tier pool", () => {
 		const profile = SUBSCRIPTION_ROUTING_PROFILES["openai-codex"];
 		expect(profile?.roles).toEqual({
-			smol: "openai-codex/gpt-5.6-luna:low",
+			smol: "openai-codex/gpt-6-luna:low",
 			default: "openai-codex/gpt-5.6-terra:medium",
-			slow: "openai-codex/gpt-5.6-sol:high",
-			plan: "openai-codex/gpt-5.6-sol:high",
+			slow: "openai-codex/gpt-6-sol:high",
+			plan: "openai-codex/gpt-6-sol:high",
 		});
 		expect(profile?.pool).toMatchObject({
-			id: "openai-codex/gpt-5.6",
+			id: "openai-codex/gpt-6",
 			provider: "openai-codex",
-			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+			tiers: { utility: "gpt-6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-6-sol" },
 		});
 	});
 
@@ -31,12 +31,12 @@ describe("subscription routing profiles", () => {
 		expect(profile?.roles).toEqual({
 			smol: "anthropic/claude-haiku-4-5:low",
 			default: "anthropic/claude-sonnet-5:medium",
-			slow: "anthropic/claude-opus-5:high",
-			plan: "anthropic/claude-opus-5:high",
+			slow: "anthropic/claude-opus-5-5:high",
+			plan: "anthropic/claude-opus-5-5:high",
 		});
 		expect(profile?.pool).toMatchObject({
 			id: "anthropic/claude",
-			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5" },
+			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5-5" },
 			effortPolicy: {
 				byTier: { utility: "low", balanced: "medium", frontier: "high" },
 				frontierEscalation: { effort: "xhigh", minimumComplexityScore: 90 },
@@ -48,14 +48,14 @@ describe("subscription routing profiles", () => {
 		const result = applySubscriptionProfileRoles(
 			"anthropic",
 			{ vision: "google/vision", reviewer: "custom/reviewer" },
-			["anthropic/claude-haiku-4-5-20251001", "anthropic/claude-sonnet-5", "anthropic/claude-opus-5"],
+			["anthropic/claude-haiku-4-5-20251001", "anthropic/claude-sonnet-5", "anthropic/claude-opus-5-5"],
 		);
 		expect(result.applied).toBe(true);
 		expect(result.roles).toMatchObject({
 			smol: "anthropic/claude-haiku-4-5-20251001:low",
 			default: "anthropic/claude-sonnet-5:medium",
-			slow: "anthropic/claude-opus-5:high",
-			plan: "anthropic/claude-opus-5:high",
+			slow: "anthropic/claude-opus-5-5:high",
+			plan: "anthropic/claude-opus-5-5:high",
 			vision: "google/vision",
 			reviewer: "custom/reviewer",
 		});
@@ -88,7 +88,7 @@ describe("subscription routing profiles", () => {
 		const result = applySubscriptionProfileRoles(
 			"openai-codex",
 			{ default: "old/default", vision: "google/vision", custom: "custom/model" },
-			["openai-codex/gpt-5.6-luna", "openai-codex/gpt-5.6-terra", "openai-codex/gpt-5.6-sol"],
+			["openai-codex/gpt-6-luna", "openai-codex/gpt-5.6-terra", "openai-codex/gpt-6-sol"],
 		);
 
 		expect(result.applied).toBe(true);
@@ -103,8 +103,8 @@ describe("subscription routing profiles", () => {
 	it("requires Luna, Terra, and Sol before changing any OpenAI role", () => {
 		const current = { default: "anthropic/claude-sonnet-4-6:high", vision: "google/vision" };
 		const result = applySubscriptionProfileRoles("openai-codex", current, [
-			"openai-codex/gpt-5.6-luna",
-			"openai-codex/gpt-5.6-sol",
+			"openai-codex/gpt-6-luna",
+			"openai-codex/gpt-6-sol",
 		]);
 
 		expect(result.applied).toBe(false);

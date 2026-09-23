@@ -124,8 +124,10 @@ const ANTHROPIC_EXTENDED_EFFORT_MODELS: ReadonlySet<string> = new Set([
 	"fable-5.0",
 	"fable-5.1",
 	"opus-5.0",
+	"opus-5.5",
 	"sonnet-5.0",
 ]);
+const ANTHROPIC_OPUS_55_EFFORTS: readonly Effort[] = [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max];
 
 const GEMINI_3_PRO_EFFORTS: readonly Effort[] = [Effort.Low, Effort.Medium, Effort.High];
 const GEMINI_3_FLASH_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
@@ -404,6 +406,13 @@ function applyGeneratedModelPolicy(model: ApiModel<Api>): void {
 }
 
 function applyAnthropicCatalogPolicy(model: ApiModel<Api>, parsedModel: AnthropicModel): void {
+	if (model.provider === "anthropic" && parsedModel.kind === "opus" && semverEqual(parsedModel.version, "5.5")) {
+		model.name = "Claude Opus 5.5";
+		model.input = ["text", "image"];
+		model.cost = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 };
+		model.contextWindow = 1_000_000;
+		model.maxTokens = 128_000;
+	}
 	// Claude Opus 4.5: models.dev reports 3x the correct cache pricing.
 	if (model.provider === "anthropic" && parsedModel.kind === "opus" && semverEqual(parsedModel.version, "4.5")) {
 		model.cost.cacheRead = 0.5;
@@ -420,12 +429,18 @@ function applyAnthropicCatalogPolicy(model: ApiModel<Api>, parsedModel: Anthropi
 }
 
 function applyOpenAICatalogPolicy(model: ApiModel<Api>, parsedModel: OpenAIModel): void {
-	// The ChatGPT Codex subscription transport deliberately stays in the
-	// short-context tier even when the underlying Astra model advertises its
-	// full direct-API window. Provider overrides remain available to callers.
-	if (model.provider === "openai-codex" && model.id === "gpt-6-astra") {
+	// The ChatGPT Codex subscription transport defaults to the lower-cost
+	// short-context tier. The coding-agent registry can opt Luna and Sol into
+	// their full published window without changing generated catalog defaults.
+	if (model.provider === "openai-codex" && /^gpt-6-(?:astra|luna|sol)$/.test(model.id)) {
 		model.contextWindow = 272000;
 		model.maxTokens = 128000;
+		model.input = ["text", "image"];
+		if (model.id === "gpt-6-luna") {
+			model.cost = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 };
+		} else if (model.id === "gpt-6-sol") {
+			model.cost = { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 };
+		}
 	}
 
 	// LiteLLM's GPT-5.6 Sol route accepts image input, but upstream catalog
@@ -555,6 +570,9 @@ function inferAnthropicSupportedEfforts<TApi extends Api>(
 		(model.api === "anthropic-messages" || model.api === "bedrock-converse-stream") &&
 		semverGte(parsedModel.version, "4.6")
 	) {
+		if (parsedModel.kind === "opus" && semverEqual(parsedModel.version, "5.5")) {
+			return ANTHROPIC_OPUS_55_EFFORTS;
+		}
 		// Only 5.x accepts the extended range. Probed against the live gateway on
 		// 2026-07-30 with a bogus control value (rejected everywhere, so the accepts
 		// mean something) — #2630:
@@ -699,7 +717,11 @@ function parseAnthropicModel(modelId: string): AnthropicModel | null {
 /** Whether the model requires adaptive thinking on every request. */
 export function isAnthropicAlwaysThinkingModel<TApi extends Api>(model: ApiModel<TApi>): boolean {
 	const parsed = parseKnownModel(model.id);
-	return model.api === "anthropic-messages" && parsed.family === "anthropic" && parsed.kind === "fable";
+	return (
+		model.api === "anthropic-messages" &&
+		parsed.family === "anthropic" &&
+		(parsed.kind === "fable" || (parsed.kind === "opus" && semverEqual(parsed.version, "5.5")))
+	);
 }
 
 function parseOpenAIModel(modelId: string): OpenAIModel | null {

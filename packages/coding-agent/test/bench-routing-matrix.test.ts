@@ -90,7 +90,7 @@ describe("routing matrix capability and scenario contract", () => {
 			effortPolicy: { byTier: { utility: "high", balanced: "high", frontier: "high" } },
 		});
 		expect(LANE_CAPABILITIES["openai-codex"]).toMatchObject({
-			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+			tiers: { utility: "gpt-6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-6-sol" },
 			effortPolicy: {
 				byTier: { utility: "low", balanced: "medium", frontier: "high" },
 				frontierEscalation: { effort: "xhigh", minimumComplexityScore: 90 },

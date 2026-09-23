@@ -691,6 +691,7 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 	const registrySettings = await Settings.init({ cwd: getProjectDir() });
 	const modelRegistry = new ModelRegistry(authStorage, undefined, {
 		getProviderOrder: () => registrySettings.get("modelProviderOrder"),
+		getOpenAICodexMaxContext: () => registrySettings.get("providers.openaiCodexMaxContext"),
 	});
 	// Explicit CLI selectors and scopes must see providers loaded during bootstrap.
 	// Keep their declarations queued for the SDK's source reconciliation and reload.
