@@ -138,6 +138,8 @@ export interface ExecutorOptions {
 	/** Parent task recursion depth (0 = top-level, 1 = first child, etc.) */
 	taskDepth?: number;
 	enableLsp?: boolean;
+	/** Resolved parent MCP policy. Omitted preserves legacy embedder behavior. */
+	enableMCP?: boolean;
 	signal?: AbortSignal;
 	onProgress?: (progress: AgentProgress) => void;
 	sessionFile?: string | null;
@@ -455,6 +457,27 @@ function createMCPProxyTools(mcpManager: MCPManager): CustomTool<TSchema>[] {
 			},
 		};
 	});
+}
+
+function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcpManager">): {
+	enableMCP: boolean;
+	mcpProxyTools: CustomTool<TSchema>[];
+} {
+	// Explicit disablement is authoritative, even when an embedder supplied a
+	// manager. A manager is a connection cache, not permission to expose MCP.
+	if (options.enableMCP === false) {
+		return { enableMCP: false, mcpProxyTools: [] };
+	}
+
+	// Enabled parents reuse their existing connections. Child discovery would
+	// start duplicate processes and can produce a different tool surface.
+	if (options.mcpManager) {
+		return { enableMCP: false, mcpProxyTools: createMCPProxyTools(options.mcpManager) };
+	}
+
+	// Keep the historical embedding contract when the policy was omitted: a
+	// child without a manager discovers directly. Explicit true follows it too.
+	return { enableMCP: true, mcpProxyTools: [] };
 }
 
 function createSubagentSettings(baseSettings: Settings): Settings {
@@ -974,8 +997,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				? await SessionManager.open(sessionFile)
 				: SessionManager.inMemory(worktree ?? cwd);
 
-			const mcpProxyTools = options.mcpManager ? createMCPProxyTools(options.mcpManager) : [];
-			const enableMCP = !options.mcpManager;
+			const { enableMCP, mcpProxyTools } = resolveChildMcpPolicy(options);
 
 			const { normalized: normalizedOutputSchema } = normalizeOutputSchema(outputSchema);
 
@@ -1011,7 +1033,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				enableLsp: lspEnabled,
 				skipPythonPreflight,
 				enableMCP,
-				customTools: mcpProxyTools.length > 0 ? mcpProxyTools : undefined,
+				customTools: mcpProxyTools,
 			});
 
 			activeSession = session;
