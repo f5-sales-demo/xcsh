@@ -6870,7 +6870,7 @@ export class AgentSession {
 
 	#isTransientEnvelopeErrorMessage(errorMessage: string): boolean {
 		// A terminal-envelope failure is a discarded attempt; the provider never returns its partial content as a completed message.
-		return /anthropic stream envelope error:/i.test(errorMessage);
+		return /anthropic stream envelope error:|litellm\.MidStreamFallbackError/i.test(errorMessage);
 	}
 
 	#isTransientTransportErrorMessage(errorMessage: string): boolean {

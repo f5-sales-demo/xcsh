@@ -311,6 +311,121 @@ describe("AgentSession retry fallback", () => {
 		expect(lastAssistant.content).toContainEqual({ type: "text", text: "Recovered after OpenAI timeout" });
 	});
 
+	it("auto-retries LiteLLM mid-stream fallback errors", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini");
+		if (!model) {
+			throw new Error("Expected bundled OpenAI test model to exist");
+		}
+
+		const midStreamFallbackError = "BadRequestError: litellm.MidStreamFallbackError: Server had an error. (HTTP 400)";
+		const requestedModels: string[] = [];
+		let attemptCount = 0;
+
+		const agent = new Agent({
+			getApiKey: provider => `${provider}-test-key`,
+			initialState: {
+				model,
+				systemPrompt: "Test",
+				tools: [],
+				messages: [],
+			},
+			streamFn: requestedModel => {
+				requestedModels.push(`${requestedModel.provider}/${requestedModel.id}`);
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					attemptCount += 1;
+					if (attemptCount === 1) {
+						const message = createAssistantMessage(requestedModel, {
+							stopReason: "error",
+							errorMessage: midStreamFallbackError,
+						});
+						stream.push({ type: "start", partial: message });
+						stream.push({ type: "error", reason: "error", error: message });
+						return;
+					}
+					const message = createAssistantMessage(requestedModel, {
+						text: "Recovered after LiteLLM mid-stream fallback",
+						stopReason: "stop",
+					});
+					stream.push({ type: "start", partial: createAssistantMessage(requestedModel, { stopReason: "stop" }) });
+					stream.push({ type: "done", reason: "stop", message });
+				});
+				return stream;
+			},
+		});
+
+		const settings = Settings.isolated({
+			"compaction.enabled": false,
+			"retry.baseDelayMs": 5,
+			"retry.maxRetries": 1,
+		});
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const { retryStartEvents, retryEndEvents } = trackRetryEvents(session);
+
+		await session.prompt("Retry LiteLLM mid-stream fallback");
+		await session.waitForIdle();
+
+		expect(requestedModels).toEqual([`${model.provider}/${model.id}`, `${model.provider}/${model.id}`]);
+		expect(retryStartEvents).toHaveLength(1);
+		expect(retryStartEvents[0]).toMatchObject({
+			attempt: 1,
+			maxAttempts: 1,
+			errorMessage: midStreamFallbackError,
+		});
+		expect(retryEndEvents).toHaveLength(1);
+		expect(retryEndEvents[0]).toMatchObject({ success: true, attempt: 1 });
+		expect(getLastAssistantMessage(session).content).toContainEqual({
+			type: "text",
+			text: "Recovered after LiteLLM mid-stream fallback",
+		});
+	});
+
+	it("does not retry ordinary LiteLLM HTTP 400 validation errors", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini");
+		if (!model) {
+			throw new Error("Expected bundled OpenAI test model to exist");
+		}
+
+		const validationError =
+			"BadRequestError: HTTP 400 - {'error': {'message': 'messages[0].content is required', 'type': 'invalid_request_error'}}";
+		let requestCount = 0;
+		const agent = new Agent({
+			getApiKey: provider => `${provider}-test-key`,
+			initialState: { model, systemPrompt: "Test", tools: [], messages: [] },
+			streamFn: requestedModel => {
+				requestCount += 1;
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					const message = createAssistantMessage(requestedModel, {
+						stopReason: "error",
+						errorMessage: validationError,
+					});
+					stream.push({ type: "start", partial: message });
+					stream.push({ type: "error", reason: "error", error: message });
+				});
+				return stream;
+			},
+		});
+
+		const settings = Settings.isolated({
+			"compaction.enabled": false,
+			"retry.baseDelayMs": 5,
+			"retry.maxRetries": 1,
+		});
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const { retryStartEvents, retryEndEvents } = trackRetryEvents(session);
+
+		await session.prompt("Do not retry LiteLLM validation failure");
+		await session.waitForIdle();
+
+		expect(requestCount).toBe(1);
+		expect(retryStartEvents).toHaveLength(0);
+		expect(retryEndEvents).toHaveLength(0);
+		expect(getLastAssistantMessage(session).errorMessage).toBe(validationError);
+	});
+
 	it("auto-retries Anthropic stream-envelope failures before message_start", async () => {
 		const model = getBundledModel("anthropic", "claude-sonnet-4-5");
 		if (!model) {
