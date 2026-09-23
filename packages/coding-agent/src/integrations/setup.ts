@@ -17,10 +17,20 @@ export interface SetupStepRunnerOptions {
 	readonly nonInteractiveOutput?: "inherit" | "ignore";
 }
 
+export function describeIntegrationSetupNextAction(
+	handle: Pick<IntegrationHandle<unknown>, "id" | "plugin" | "setupPlan">,
+): string {
+	const target = handle.plugin ?? handle.id;
+	return handle.setupPlan?.guidedAction?.kind === "context_wizard"
+		? `Open xcsh interactively and run /plugin setup ${target}`
+		: `xcsh plugin setup ${target}`;
+}
+
 export function describeInstallSetupOutcome(
 	plugin: string,
 	status: Pick<IntegrationSnapshot<unknown>, "state" | "reason">,
 	dependencyPlan: readonly { readonly pluginId: string }[],
+	handles: readonly Pick<IntegrationHandle<unknown>, "id" | "plugin" | "setupPlan">[] = [],
 ): string {
 	const summary = `${plugin}: ${status.state}${status.reason ? ` (${status.reason})` : ""}`;
 	if (status.state === "ready") return summary;
@@ -28,7 +38,12 @@ export function describeInstallSetupOutcome(
 		status.reason === "dependency_missing"
 			? dependencyPlan.find(item => item.pluginId.split("@")[0] !== plugin)?.pluginId.split("@")[0]
 			: undefined;
-	return `${summary}\nnext: xcsh plugin setup ${blockingDependency ?? plugin}`;
+	const target = blockingDependency ?? plugin;
+	const handle = handles.find(
+		candidate => candidate.id === target || candidate.plugin === target || candidate.plugin?.split("@")[0] === target,
+	);
+	const nextAction = handle ? describeIntegrationSetupNextAction(handle) : `xcsh plugin setup ${target}`;
+	return `${summary}\nnext: ${nextAction}`;
 }
 
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
@@ -39,11 +54,17 @@ export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 		`Plugin dependencies: ${plan.pluginDependencies.join(", ") || "none"}`,
 		`Required environment names: ${plan.requiredEnvironment.join(", ") || "none"}`,
 		`Person-profile categories: ${plan.profileFields.join(", ") || "none"}`,
-		"Commands:",
-		...plan.steps.map(step => `  ${step.kind}: ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
-		"Verification:",
-		...plan.verification.map(step => `  ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
 	];
+	if (plan.guidedAction?.kind === "context_wizard") {
+		lines.push("Guided action: native xcsh context wizard");
+	} else {
+		lines.push(
+			"Commands:",
+			...plan.steps.map(step => `  ${step.kind}: ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
+			"Verification:",
+			...plan.verification.map(step => `  ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
+		);
+	}
 	return lines.join("\n");
 }
 
@@ -86,6 +107,7 @@ export async function executeReviewedSetup<T>(
 	signal?: AbortSignal,
 ): Promise<IntegrationSnapshot<T>> {
 	if (reviewedPlan !== handle.setupPlan) throw new Error("Setup requires the current reviewed setup plan");
+	if (reviewedPlan.guidedAction) throw new Error("Guided setup must run through its native interactive action");
 	for (const step of reviewedPlan.steps) {
 		if (signal?.aborted) throw new Error("Integration setup cancelled");
 		if ((await run(step, signal)) !== 0) throw new Error(`Integration ${step.kind} step failed`);

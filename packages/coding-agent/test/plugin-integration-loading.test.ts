@@ -2,17 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { loadIntegrationHandles } from "../src/cli/plugin-cli";
-import { clearXcshPluginRootsCache } from "../src/discovery/helpers";
-import { integrationRegistry } from "../src/integrations/registry";
 
 describe("plugin CLI integration loading", () => {
 	let tempHome = "";
 	let tempProject = "";
 
 	afterEach(async () => {
-		integrationRegistry.clear();
-		clearXcshPluginRootsCache();
 		if (tempHome) await fs.rm(tempHome, { recursive: true, force: true });
 		if (tempProject) await fs.rm(tempProject, { recursive: true, force: true });
 	});
@@ -57,9 +52,24 @@ describe("plugin CLI integration loading", () => {
 			}),
 		);
 
-		const handles = await loadIntegrationHandles(tempHome, tempProject);
+		const child = Bun.spawn(
+			[process.execPath, new URL("../src/cli.ts", import.meta.url).pathname, "plugin", "status", "xorg", "--json"],
+			{
+				cwd: tempProject,
+				env: { ...process.env, HOME: tempHome },
+				stdout: "pipe",
+				stderr: "pipe",
+			},
+		);
+		const [exitCode, stdout, stderr] = await Promise.all([
+			child.exited,
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
+		]);
 
-		expect(handles.map(handle => handle.id)).toContain("xorg");
-		expect((await handles.find(handle => handle.id === "xorg")?.get())?.state).toBe("ready");
+		expect(exitCode, stderr).toBe(0);
+		expect(JSON.parse(stdout)).toMatchObject({
+			integrations: [{ id: "xorg", plugin: "xorg@test-marketplace", state: "ready" }],
+		});
 	});
 });

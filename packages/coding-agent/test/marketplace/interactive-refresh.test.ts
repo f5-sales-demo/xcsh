@@ -90,9 +90,6 @@ describe("interactive marketplace refresh surfaces", () => {
     name: "Hello readiness",
     plugin: "hello-plugin",
     kind: "local",
-    setup: {
-      pluginDependencies: [], requiredEnvironment: [], profileFields: [], steps: [], verification: [],
-    },
     async probe() { return { state: "ready", value: true }; },
   });
 }`;
