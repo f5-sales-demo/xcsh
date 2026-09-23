@@ -212,7 +212,7 @@ export async function loadIntegrationHandles(
 	cwd: string = process.cwd(),
 ): Promise<IntegrationHandle<unknown>[]> {
 	await preloadPluginRoots(home, cwd);
-	const loaded = await discoverAndLoadExtensions([], cwd);
+	const loaded = await discoverAndLoadExtensions([], cwd, undefined, [], home);
 	if (loaded.errors.length) throw new Error(`Unable to load ${loaded.errors.length} plugin extension(s)`);
 	return loaded.extensions.flatMap(extension => [...extension.integrations.values()]);
 }

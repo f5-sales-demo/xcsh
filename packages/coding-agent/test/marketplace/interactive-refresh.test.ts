@@ -82,6 +82,51 @@ afterEach(() => {
 describe("interactive marketplace refresh surfaces", () => {
 	// Tests below launch up to four fresh CLI processes. Each child has a 10s deadline;
 	// the 60s outer budget lets the helper stop/reap it before afterEach removes fixtures.
+	it("discovers integrations immediately after an in-process marketplace install", async () => {
+		const { home, source } = makeEnvironment();
+		const extensionSource = `export default async function (pi) {
+  pi.integrations.register({
+    id: "hello_ready",
+    name: "Hello readiness",
+    plugin: "hello-plugin",
+    kind: "local",
+    setup: {
+      pluginDependencies: [], requiredEnvironment: [], profileFields: [], steps: [], verification: [],
+    },
+    async probe() { return { state: "ready", value: true }; },
+  });
+}`;
+		const result = await runScript(
+			`${ADD_MARKETPLACE}
+			 import { invalidate as invalidateFsCache } from "./src/capability/fs";
+			 import { getPreloadedPluginRoots, preloadPluginRoots } from "./src/discovery/helpers";
+			 import { discoverAndLoadExtensions } from "./src/extensibility/extensions/loader";
+			 const pluginRoot = process.env.TEST_MARKETPLACE_SOURCE + "/plugins/hello-plugin";
+			 await Bun.write(pluginRoot + "/package.json", JSON.stringify({
+			   name: "hello-plugin",
+			   version: "1.0.0",
+			   xcsh: { extensions: ["src/index.ts"] },
+			 }));
+			 await Bun.write(pluginRoot + "/src/index.ts", ${JSON.stringify(extensionSource)});
+			 await preloadPluginRoots(process.env.HOME, process.cwd());
+			 await manager.installPlugin("hello-plugin", "test-marketplace");
+			 invalidateFsCache(process.env.HOME + "/.xcsh/plugins/installed_plugins.json");
+			 const loaded = await discoverAndLoadExtensions([], process.cwd());
+			 const integrations = loaded.extensions.flatMap(extension => [...extension.integrations.keys()]);
+			 if (!integrations.includes("hello_ready")) {
+			   throw new Error("freshly installed integration was not discovered: " + JSON.stringify({
+			     integrations,
+			     roots: getPreloadedPluginRoots(),
+			     registry: await Bun.file(process.env.HOME + "/.xcsh/plugins/installed_plugins.json").text(),
+			     errors: loaded.errors,
+			   }));
+			 }`,
+			home,
+			source,
+		);
+		if (result.code !== 0) throw new Error(result.stderr || result.stdout);
+	}, 60_000);
+
 	it("reaps a stalled fixture subprocess before reporting its deadline", async () => {
 		const { home, source } = makeEnvironment();
 		await expect(runScript("await Bun.sleep(60_000);", home, source, 50)).rejects.toThrow("exceeded 50ms");

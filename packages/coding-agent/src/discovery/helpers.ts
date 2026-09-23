@@ -1031,14 +1031,14 @@ export async function listXcshPluginSummaries(
 /**
  * Clear the plugin roots cache (useful for testing or when plugins change).
  */
-export function clearXcshPluginRootsCache(): void {
+export function clearXcshPluginRootsCache(options: { rewarm?: boolean } = {}): void {
 	pluginCacheGeneration += 1;
 	pluginRootsCache.clear();
 	pluginSummariesCache.clear();
 	pluginSummariesInFlight.clear();
 	preloadedPluginRoots = [...injectedPluginDirRoots];
 	// Re-warm preloaded roots asynchronously so sync LSP config reads stay valid
-	if (lastPreloadHome) {
+	if (options.rewarm !== false && lastPreloadHome) {
 		void preloadPluginRoots(lastPreloadHome, getProjectDir());
 	}
 }
