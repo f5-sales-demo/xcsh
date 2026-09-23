@@ -53,6 +53,9 @@
 
 ### Fixed
 
+- Routed Platform plugin setup through the native interactive context wizard, rejected empty or
+  mixed setup plans, and made generated API catalogs enforce the `XCSH_*`-only environment contract
+  ([#4234](https://github.com/f5-sales-demo/xcsh/issues/4234)).
 - Added Herdr protocol 26 native-interaction compatibility and bounded idempotent retry for
   ambiguously acknowledged semantic reports without exposing interaction content
   ([#4161](https://github.com/f5-sales-demo/xcsh/issues/4161)).

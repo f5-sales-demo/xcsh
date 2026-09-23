@@ -65,10 +65,10 @@ describe("plugin extension discovery", () => {
 	});
 
 	it("loads installed plugin extensions declared in package.json", async () => {
-		const result = await discoverAndLoadExtensions([], projectDir.path());
+		const result = await discoverAndLoadExtensions([], projectDir.path(), undefined, [], tempXdgDataHome);
 		const extension = result.extensions.find(ext => ext.path.endsWith(path.join("dist", "extension.ts")));
 
-		expect(result.errors).toHaveLength(0);
+		expect(result.errors).toEqual([]);
 		expect(extension).toBeDefined();
 		expect(extension?.commands.has("plugin-ext")).toBe(true);
 	});
