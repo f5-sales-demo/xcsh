@@ -58,14 +58,18 @@ function isHiddenContextMessage(message: AgentMessage): boolean {
 	return (message.role === "custom" || message.role === "hookMessage") && message.display === false;
 }
 
+function isJsonVisibleMessage(message: AgentMessage): boolean {
+	return (
+		!isHiddenContextMessage(message) || (message.role === "custom" && message.customType === "api-catalog-preflight")
+	);
+}
+
 export function buildJsonAgentEventLine(event: AgentSessionEvent): string | undefined {
-	if ((event.type === "message_start" || event.type === "message_end") && isHiddenContextMessage(event.message)) {
+	if ((event.type === "message_start" || event.type === "message_end") && !isJsonVisibleMessage(event.message)) {
 		return undefined;
 	}
 	const publicEvent =
-		event.type === "agent_end"
-			? { ...event, messages: event.messages.filter(message => !isHiddenContextMessage(message)) }
-			: event;
+		event.type === "agent_end" ? { ...event, messages: event.messages.filter(isJsonVisibleMessage) } : event;
 	return `${JSON.stringify(publicEvent)}\n`;
 }
 

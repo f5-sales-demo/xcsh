@@ -62,6 +62,9 @@ describe("model scenario library", () => {
 			"api-catalog-answer-validate-cloud-user-account",
 			"api-catalog-answer-import-bind-dns-zone",
 			"api-catalog-answer-no-match",
+			"api-first-http-route-limit",
+			"api-first-origin-pool-required",
+			"api-first-dns-zone-create",
 			"api-catalog-exact-resource",
 			"api-catalog-direct-category",
 			"api-spec-resource-schema",
@@ -92,6 +95,56 @@ describe("model scenario library", () => {
 });
 
 describe("model scenario event contracts", () => {
+	it("requires preflight to be the first knowledge event before exact internal reads", () => {
+		const scenario = {
+			...readScenario,
+			contract: {
+				requiredKnowledgeSequence: [
+					{ type: "api-catalog-preflight", query: "http load balancer" },
+					{ type: "read", path: "xcsh://api-catalog/http-loadbalancers" },
+					{ type: "read", path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
+				],
+				knowledgeSequenceStartsAtFirst: true,
+			},
+		} as any;
+		const input = {
+			target,
+			scenario,
+			round: 1,
+			warmup: false,
+			startedAt: "2026-09-22T00:00:00.000Z",
+			processDurationMs: 100,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: [],
+			events: [
+				{ elapsedMs: 1, event: { type: "message_start", message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["http load balancer"] } } } },
+				{ elapsedMs: 2, event: { type: "message_start", message: { role: "user" } } },
+				{ elapsedMs: 3, event: { type: "tool_execution_start", toolCallId: "a", toolName: "read", args: { path: "xcsh://api-catalog/http-loadbalancers" } } },
+				{ elapsedMs: 4, event: { type: "tool_execution_end", toolCallId: "a", toolName: "read" } },
+				{ elapsedMs: 5, event: { type: "tool_execution_start", toolCallId: "b", toolName: "read", args: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } } },
+				{ elapsedMs: 6, event: { type: "tool_execution_end", toolCallId: "b", toolName: "read" } },
+				{ elapsedMs: 7, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "256" } } },
+				{ elapsedMs: 8, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
+			],
+		};
+		const passing = buildScenarioBenchmarkSample(input);
+		expect(passing.contractPassed).toBe(true);
+		expect(passing.knowledgeEvents.map((event: any) => event.type)).toEqual([
+			"api-catalog-preflight",
+			"read",
+			"read",
+		]);
+
+		const reordered = buildScenarioBenchmarkSample({
+			...input,
+			events: [input.events[2], input.events[0], ...input.events.slice(1, 2), ...input.events.slice(3)],
+		});
+		expect(reordered.contractPassed).toBe(false);
+		expect(reordered.contractFailures).toContain("first knowledge event was read, expected api-catalog-preflight");
+	});
+
 	it("measures the tool boundary and passes an exact tool-use contract", () => {
 		const sample = buildScenarioBenchmarkSample({
 			target,
@@ -407,6 +460,37 @@ describe("model scenario event contracts", () => {
 
 		expect(sample.contractFailures).toContain("tool call count was 2, expected exactly 1");
 		expect(sample.quality.score).toBe(0);
+	});
+
+	it("allows bounded continuation reads of an already-authorized internal resource", () => {
+		const scenario = MODEL_BENCHMARK_SCENARIOS.find(candidate => candidate.id === "api-first-dns-zone-create")!;
+		const sample = buildScenarioBenchmarkSample({
+			target,
+			scenario,
+			round: 1,
+			warmup: false,
+			startedAt: "2026-09-22T00:00:00.000Z",
+			processDurationMs: 100,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: [],
+			events: [
+				{ elapsedMs: 1, event: { type: "message_start", message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["dns zone"] } } } },
+				{ elapsedMs: 2, event: { type: "message_start", message: { role: "user" } } },
+				{ elapsedMs: 3, event: { type: "tool_execution_start", toolCallId: "catalog", toolName: "read", args: { path: "xcsh://api-catalog/?resource=dns_zone&compact=true" } } },
+				{ elapsedMs: 4, event: { type: "tool_execution_end", toolCallId: "catalog", toolName: "read" } },
+				{ elapsedMs: 5, event: { type: "tool_execution_start", toolCallId: "spec", toolName: "read", args: { path: "xcsh://api-spec/dns?resource=dns_zone" } } },
+				{ elapsedMs: 6, event: { type: "tool_execution_end", toolCallId: "spec", toolName: "read" } },
+				{ elapsedMs: 7, event: { type: "tool_execution_start", toolCallId: "continuation", toolName: "read", args: { path: "xcsh://api-spec/dns?resource=dns_zone", sel: "L438-L700" } } },
+				{ elapsedMs: 8, event: { type: "tool_execution_end", toolCallId: "continuation", toolName: "read" } },
+				{ elapsedMs: 9, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "POST /api/config/dns/namespaces/{namespace}/dns_zones. No cURL or Terraform was used." } } },
+				{ elapsedMs: 10, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
+			],
+		});
+
+		expect(sample.contractFailures).toEqual([]);
+		expect(sample.contractPassed).toBe(true);
 	});
 
 	it("grades the actual open-ended response against the published rubric", () => {
