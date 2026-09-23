@@ -653,6 +653,8 @@
       "sourceAuthority": [
         "packages/coding-agent/src/modes/components/selector-frame.ts",
         "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+        "packages/coding-agent/src/modes/components/question-transcript.ts",
+        "packages/coding-agent/src/modes/components/request-user-input.ts",
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts"
       ],
       "evidence": [
@@ -681,6 +683,15 @@
           "text": "How should input and navigation behave?",
           "readerQuestion": "How do search, navigation, confirmation, and Escape work?",
           "purpose": "Define predictable keyboard and input editing behavior without shortcut collisions.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do question-and-answer flows work?",
+          "readerQuestion": "How should blocking and asynchronous questions render and preserve their behavior?",
+          "purpose": "Define framed question interaction, private answer summaries, and responsive state presentation.",
           "evidence": [
             "source-authority"
           ],
