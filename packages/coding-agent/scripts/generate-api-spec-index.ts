@@ -23,7 +23,6 @@ import {
 	sanitizeAcmePlaceholders,
 	sanitizeAzureSubscriptionIds,
 	sanitizeIdentityExamples,
-	sanitizeLegacyEnvironmentNames,
 	sanitizePublicIpv4Examples,
 	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
@@ -683,12 +682,10 @@ if (catalog) assertCatalogIntegrity(catalogCategories, [authoritativeSpec]);
 
 await Bun.write(
 	outputPath,
-	sanitizeLegacyEnvironmentNames(
-		sanitizeAzureSubscriptionIds(
-			sanitizeIdentityExamples(
-				sanitizeSyntheticNamespaceExamples(
-					sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output))),
-				),
+	sanitizeAzureSubscriptionIds(
+		sanitizeIdentityExamples(
+			sanitizeSyntheticNamespaceExamples(
+				sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output))),
 			),
 		),
 	),
@@ -701,12 +698,8 @@ console.log(
 if (catalogOutput) {
 	await Bun.write(
 		catalogOutputPath,
-		sanitizeLegacyEnvironmentNames(
-			sanitizeAzureSubscriptionIds(
-				sanitizeIdentityExamples(
-					sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(catalogOutput))),
-				),
-			),
+		sanitizeAzureSubscriptionIds(
+			sanitizeIdentityExamples(sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(catalogOutput)))),
 		),
 	);
 	const catalogSize = (Buffer.byteLength(catalogOutput) / 1024 / 1024).toFixed(1);

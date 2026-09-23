@@ -4,19 +4,37 @@ import {
 	sanitizeAcmePlaceholders,
 	sanitizeAzureSubscriptionIds,
 	sanitizeIdentityExamples,
-	sanitizeLegacyEnvironmentNames,
 	sanitizePublicIpv4Examples,
 	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
 } from "../../scripts/sanitize-generated-content";
 
 describe("generated-content sanitization", () => {
-	it("normalizes discontinued F5XC environment names to the XCSH contract", () => {
+	it("does not retain a retired environment rewrite path", async () => {
+		const sanitizerSource = await Bun.file(
+			new URL("../../scripts/sanitize-generated-content.ts", import.meta.url),
+		).text();
+		const generatorSource = await Bun.file(
+			new URL("../../scripts/generate-api-spec-index.ts", import.meta.url),
+		).text();
+		const retiredRewrite = ["sanitize", "Legacy", "Environment", "Names"].join("");
+
+		expect(sanitizerSource).not.toContain(`function ${retiredRewrite}`);
+		expect(generatorSource).not.toContain(retiredRewrite);
+	});
+
+	it("publishes only the XCSH environment contract in generated API catalogs", async () => {
 		const retiredPrefix = ["F5", "XC_"].join("");
-		const source = `${retiredPrefix}API_URL ${retiredPrefix}API_TOKEN $${retiredPrefix}NAMESPACE $${retiredPrefix}TENANT`;
-		const normalized = sanitizeLegacyEnvironmentNames(source);
-		expect(normalized).toBe("XCSH_API_URL XCSH_API_TOKEN $XCSH_NAMESPACE $XCSH_TENANT");
-		expect(normalized).not.toContain(retiredPrefix);
+		const generatedFiles = [
+			"../../src/internal-urls/api-catalog-index.generated.ts",
+			"../../src/internal-urls/api-spec-index.generated.ts",
+			"../../src/internal-urls/api-catalog-qmd-index.generated.ts",
+		];
+
+		for (const relativePath of generatedFiles) {
+			const contents = await Bun.file(new URL(relativePath, import.meta.url)).text();
+			expect(contents).not.toContain(retiredPrefix);
+		}
 	});
 
 	it("serializes generated data with compact structural line boundaries", () => {

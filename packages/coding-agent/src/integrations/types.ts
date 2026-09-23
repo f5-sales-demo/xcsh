@@ -34,12 +34,17 @@ export interface IntegrationVerificationStep {
 	readonly timeoutMs: number;
 }
 
+export interface IntegrationGuidedSetupAction {
+	readonly kind: "context_wizard";
+}
+
 export interface IntegrationSetupPlan {
 	readonly pluginDependencies: readonly string[];
 	readonly requiredEnvironment: readonly string[];
 	readonly profileFields: readonly string[];
 	readonly steps: readonly IntegrationSetupStep[];
 	readonly verification: readonly IntegrationVerificationStep[];
+	readonly guidedAction?: IntegrationGuidedSetupAction;
 }
 
 export interface IntegrationDefinition<T> {
