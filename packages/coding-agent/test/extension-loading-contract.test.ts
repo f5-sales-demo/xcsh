@@ -3,6 +3,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getProjectAgentDir, TempDir } from "@f5-sales-demo/pi-utils";
 import { discoverAndLoadExtensions, loadExtensions } from "../src/extensibility/extensions/loader";
+import { integrationRegistry } from "../src/integrations/registry";
+import { personProfileService } from "../src/person-profile/service";
 import { filterUserExtensionErrors, filterUserExtensions } from "./utils/filter-user-extensions";
 
 /**
@@ -132,6 +134,33 @@ describe("extension loading contract", () => {
 		expect(result.errors).toHaveLength(1);
 		expect(path.basename(result.errors[0].path)).toBe("boom.ts");
 		expect(result.errors[0].error).toMatch(/kaboom/);
+	});
+
+	it("removes partial integration and profile registrations when extension initialization fails", async () => {
+		const failingPath = writeExt(
+			"partial-registration.ts",
+			`
+				export default function (pi) {
+					pi.integrations.register({
+						id: "partial_registration_fixture",
+						name: "Partial fixture",
+						kind: "local",
+						probe: async () => ({ state: "ready", value: { ok: true } }),
+						profile: () => ({ facts: {}, observations: [] }),
+					});
+					throw new Error("failed after registration");
+				}
+			`,
+		);
+
+		const result = await loadExtensions([failingPath], tempDir.path());
+
+		expect(result.extensions).toHaveLength(0);
+		expect(result.errors).toHaveLength(1);
+		expect(integrationRegistry.get("partial_registration_fixture")).toBeUndefined();
+		expect(
+			personProfileService.listCollectors().some(collector => collector.id === "partial_registration_fixture"),
+		).toBe(false);
 	});
 
 	it("captures a non-function export as an error without blocking the others", async () => {

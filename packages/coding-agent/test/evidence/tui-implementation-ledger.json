@@ -13462,7 +13462,7 @@
         "packages/coding-agent/test/evidence/terminal-plan-mode-final-v1/visual-review.md · pass-actual-terminal",
         "packages/coding-agent/test/evidence/component-boundaries-v1/visual-review.md · pass-deterministic-component"
       ],
-      "fingerprint": "5f5606841dd94c623b095563dfc7ae308d14df447494b4bb6e31a04fc08b0879",
+      "fingerprint": "f1762b782144ed53c4877d5170c7efa6be8704ce08180c56e9a42e8b2c0ca1bc",
       "notes": [
         "Individually classified from current source SHA-256 4cd58a35519451a6de0c9280810763e2c7919e6ce1fbda0966024d1913ef18c0.",
         "Ownership: read-only-renderer; domain: core; direct tests: 1.",
@@ -13600,7 +13600,7 @@
         "packages/coding-agent/test/evidence/terminal-plan-mode-final-v1/visual-review.md · pass-actual-terminal",
         "packages/coding-agent/test/evidence/component-boundaries-v1/visual-review.md · pass-deterministic-component"
       ],
-      "fingerprint": "edc50bdd2b33d1eed2994ad3aec987a71b76624cfef88a7380bb9de6318dd568",
+      "fingerprint": "95dbe76ba0dcd11ec544d3976cc250810338c326ff41617ce5dcbaeb0037f146",
       "notes": [
         "Individually classified from current source SHA-256 d2ba9f34f2b4cdbdc4dabe5d99f3835906d065dba1c2f5c16a89529834ce2ff6.",
         "Ownership: caller-owned-draft; domain: core; direct tests: 5.",
@@ -15692,7 +15692,7 @@
         "packages/coding-agent/test/evidence/terminal-route-mode-final-v1/visual-review.md · pass-actual-terminal",
         "packages/coding-agent/test/evidence/terminal-plan-mode-final-v1/visual-review.md · pass-actual-terminal"
       ],
-      "fingerprint": "1db4549728e60a2fcac53e6d8dab4e4d6a4ae53e046e64154a2511c23a4dc1af",
+      "fingerprint": "18c7e84e626e2913300934efb1a7dad04ee2152b1aa505e32c690a8fca329b4d",
       "notes": [
         "Individually classified from current source SHA-256 cd6a33252a91c4272b1b0512d1651a82fd0ae930ceaf45b6348a1611c43d7b13.",
         "Ownership: runtime-lifecycle; domain: core; direct tests: 6.",
@@ -17603,7 +17603,7 @@
         "packages/coding-agent/test/evidence/terminal-route-mode-final-v1/visual-review.md · pass-actual-terminal",
         "packages/coding-agent/test/evidence/terminal-plan-mode-final-v1/visual-review.md · pass-actual-terminal"
       ],
-      "fingerprint": "ea6cd0b4b706c3185ebc0cf50379ebe7fad87ab7214b8e0b4a9bf72072620449",
+      "fingerprint": "67a26765fe8056587b03898ede77f0a9cdbceeb7da09c3cd8dde048bacc92c04",
       "notes": [
         "Individually classified from current source SHA-256 c77c909fa619e4ee8e2140b5cab7f78f258e27f6f9b9165da81405e76492670f.",
         "Ownership: runtime-lifecycle; domain: core; direct tests: 4.",

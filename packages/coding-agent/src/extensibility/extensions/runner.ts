@@ -6,8 +6,10 @@ import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import type { KeyId } from "@f5-sales-demo/pi-tui";
 import { logger } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../../config/model-registry";
+import { integrationRegistry } from "../../integrations/registry";
 import type { IntegrationHandle } from "../../integrations/types";
 import { type Theme, theme } from "../../modes/theme/theme";
+import { personProfileService } from "../../person-profile/service";
 import type { SessionManager } from "../../session/session-manager";
 import type {
 	BeforeAgentStartEvent,
@@ -188,10 +190,18 @@ export class ExtensionRunner {
 	#shutdownHandler: ShutdownHandler = () => {};
 	#commandDiagnostics: Array<{ type: string; message: string; path: string }> = [];
 	#advisoriesByOwner = new Map<string, Map<string, RegisteredToolAdvisory>>();
+	#initialization:
+		| {
+				actions: ExtensionActions;
+				contextActions: ExtensionContextActions;
+				commandContextActions?: ExtensionCommandContextActions;
+				uiContext?: ExtensionUIContext;
+		  }
+		| undefined;
 
 	constructor(
-		private readonly extensions: Extension[],
-		private readonly runtime: ExtensionRuntime,
+		private extensions: Extension[],
+		private runtime: ExtensionRuntime,
 		private readonly cwd: string,
 		private readonly sessionManager: SessionManager,
 		private readonly modelRegistry: ModelRegistry,
@@ -207,6 +217,7 @@ export class ExtensionRunner {
 		commandContextActions?: ExtensionCommandContextActions,
 		uiContext?: ExtensionUIContext,
 	): void {
+		this.#initialization = { actions, contextActions, commandContextActions, uiContext };
 		// Copy actions into the shared runtime (all extension APIs reference this)
 		this.runtime.sendMessage = actions.sendMessage;
 		this.runtime.sendUserMessage = actions.sendUserMessage;
@@ -242,6 +253,23 @@ export class ExtensionRunner {
 		}
 
 		this.#uiContext = uiContext ?? noOpUIContext;
+	}
+
+	/** Replace every registration surface after marketplace state changes. */
+	reloadExtensions(extensions: readonly Extension[], runtime: ExtensionRuntime): void {
+		const activeOwners = new Set(extensions.map(extension => extension.resolvedPath));
+		for (const extension of this.extensions) {
+			if (activeOwners.has(extension.resolvedPath)) continue;
+			integrationRegistry.unregisterOwner(extension.resolvedPath);
+			personProfileService.unregisterProfileCollectorsByRegistrant(extension.resolvedPath);
+		}
+		this.extensions = [...extensions];
+		this.runtime = runtime;
+		this.reloadAdvisories(extensions);
+		if (this.#initialization) {
+			const { actions, contextActions, commandContextActions, uiContext } = this.#initialization;
+			this.initialize(actions, contextActions, commandContextActions, uiContext);
+		}
 	}
 
 	getUIContext(): ExtensionUIContext {

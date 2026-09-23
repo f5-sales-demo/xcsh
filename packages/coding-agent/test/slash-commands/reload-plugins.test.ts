@@ -45,15 +45,15 @@ describe("/reload-plugins", () => {
 		await waitFor(() => refresh.mock.calls.length === 1);
 		expect(h.setText).toHaveBeenCalledWith("");
 		expect(h.showStatus).toHaveBeenCalledWith(
-			"Refreshing plugin metadata and advisory registrations… Running plugin processes will not be restarted.",
+			"Refreshing plugin metadata and extension registrations… Running plugin processes will not be restarted.",
 		);
-		expect(refresh).toHaveBeenCalledWith(undefined, { reloadAdvisories: true });
+		expect(refresh).toHaveBeenCalledWith(undefined, { reloadExtensions: true });
 		expect(h.showStatus).not.toHaveBeenCalledWith(expect.stringContaining("metadata refreshed"));
 
 		finish();
 		expect(await pending).toBe(true);
 		expect(h.showStatus).toHaveBeenLastCalledWith(
-			"Plugin metadata and advisory registrations refreshed. Commands, skills, hooks, tools, agents, and MCP metadata now use the latest discovered files. Running plugin processes were not restarted.",
+			"Plugin metadata and extension registrations refreshed. Commands, integrations, profile collectors, hooks, tools, skills, agents, advisories, and MCP metadata now use the latest discovered files. Running plugin processes were not restarted.",
 		);
 		expect(h.showError).not.toHaveBeenCalled();
 	});
@@ -78,7 +78,7 @@ describe("/reload-plugins", () => {
 
 		finish();
 		await first;
-		expect(h.showStatus).toHaveBeenLastCalledWith(expect.stringContaining("advisory registrations refreshed"));
+		expect(h.showStatus).toHaveBeenLastCalledWith(expect.stringContaining("extension registrations refreshed"));
 	});
 
 	it("keeps failure distinct from completion and permits a later retry", async () => {
@@ -96,6 +96,6 @@ describe("/reload-plugins", () => {
 
 		expect(await executeBuiltinSlashCommand("/reload-plugins", h.runtime)).toBe(true);
 		expect(refresh).toHaveBeenCalledTimes(2);
-		expect(h.showStatus).toHaveBeenLastCalledWith(expect.stringContaining("advisory registrations refreshed"));
+		expect(h.showStatus).toHaveBeenLastCalledWith(expect.stringContaining("extension registrations refreshed"));
 	});
 });
