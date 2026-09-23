@@ -121,6 +121,55 @@ test("the vanilla remote catalog exposes one active terminal and only its dynami
 		result: { data: [{ id: "fixture-secondary" }] },
 	});
 });
+
+test("a published hidden session delivers questions registered after its async item lifecycle", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0", undefined, "primary");
+	const events: any[] = [];
+	router.notify = (_client, event) => events.push(event);
+	const endpoint = (id: string, requests: any[] = []) => ({
+		thread: { id, name: id, model: "gpt-6-astra", modelProvider: "openai-codex", cwd: "/tmp", turns: [] },
+		requests,
+		call: async () => ({}),
+	});
+	router.registerSession("primary", endpoint("primary"));
+	router.registerSession("secondary", endpoint("secondary"));
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	router.publish({
+		method: "item/started",
+		params: {
+			threadId: "secondary",
+			turnId: "secondary-turn-1",
+			item: { id: "ask", type: "agentMessage", delivery: "async", questions: [] },
+		},
+	});
+	events.length = 0;
+	router.registerSession(
+		"secondary",
+		endpoint("secondary", [
+			{
+				id: "ask-request",
+				method: "item/tool/requestUserInput",
+				params: {
+					threadId: "secondary",
+					turnId: "secondary-turn-1",
+					itemId: "ask",
+					questions: [],
+					isBlocking: false,
+				},
+			},
+		]),
+	);
+	expect(events).toContainEqual({
+		id: "ask-request",
+		method: "item/tool/requestUserInput",
+		params: expect.objectContaining({ threadId: "secondary", isBlocking: false }),
+	});
+});
+
 test("malformed and experimental unsupported operations are explicit errors", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	let calls = 0;
