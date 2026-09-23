@@ -22,6 +22,7 @@ import {
 import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fetcher";
 import {
 	createSetupStepRunner,
+	describeInstallSetupOutcome,
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
@@ -1521,7 +1522,15 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								run: activeContextSetupRunner(runtime),
 							});
 							if (setupResult) await personProfileService.reconcileFromCollectors(undefined, 0);
-							showPluginStatus(t("commands.plugin.installed", { name, marketplace }));
+							const installed = t("commands.plugin.installed", { name, marketplace });
+							if (setupResult) {
+								const dependencyPlan = JSON.parse(prepared.target.dependencyPlanRevision) as Array<{
+									pluginId: string;
+								}>;
+								showPluginStatus(
+									`${installed}\n${describeInstallSetupOutcome(name, setupResult, dependencyPlan)}`,
+								);
+							} else showPluginStatus(installed);
 						} else if (outcome === "unresolved")
 							runtime.ctx.showError("Plugin installation remains unresolved; retry from a fresh review.");
 						break;

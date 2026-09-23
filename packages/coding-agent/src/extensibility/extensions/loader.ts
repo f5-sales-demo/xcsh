@@ -3,6 +3,7 @@
  */
 import type * as fs1 from "node:fs";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { ImageContent, Model, TextContent } from "@f5-sales-demo/pi-ai";
@@ -12,7 +13,12 @@ import type { TSchema } from "@sinclair/typebox";
 import * as TypeBox from "@sinclair/typebox";
 import { type ExtensionModule, extensionModuleCapability } from "../../capability/extension-module";
 import { loadCapability } from "../../discovery";
-import { getExtensionNameFromPath, getPreloadedPluginRoots } from "../../discovery/helpers";
+import {
+	clearXcshPluginRootsCache,
+	getExtensionNameFromPath,
+	getPreloadedPluginRoots,
+	preloadPluginRoots,
+} from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
 import { integrationRegistry } from "../../integrations/registry";
@@ -631,7 +637,13 @@ export async function discoverAndLoadExtensions(
 	cwd: string,
 	eventBus?: EventBus,
 	disabledExtensionIds: string[] = [],
+	pluginHome: string = os.homedir(),
 ): Promise<LoadExtensionsResult> {
+	// Plugin lifecycle operations can change the registry while this process is
+	// running. Rebuild the synchronous plugin-root view before consuming it so
+	// an install, enable, or reload is visible immediately in the same session.
+	clearXcshPluginRootsCache({ rewarm: false });
+	await preloadPluginRoots(pluginHome, cwd);
 	const allPaths: string[] = [];
 	const seen = new Set<string>();
 	const disabled = new Set(disabledExtensionIds);

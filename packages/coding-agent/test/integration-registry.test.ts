@@ -3,6 +3,7 @@ import { reviewAndExecuteIntegrationSetup, selectSetupIntegration } from "../src
 import { IntegrationRegistry } from "../src/integrations/registry";
 import {
 	createSetupStepRunner,
+	describeInstallSetupOutcome,
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
@@ -344,6 +345,66 @@ describe("IntegrationRegistry", () => {
 		});
 		expect(result?.state).toBe("ready");
 		expect(executions).toBe(1);
+	});
+
+	test("install authorization leaves dependency-blocked setup pending without executing it", async () => {
+		let executions = 0;
+		const plan = {
+			pluginDependencies: ["platform"],
+			requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
+			profileFields: [],
+			steps: [{ kind: "install" as const, argv: ["kvm-smsv2ctl", "setup", "apply"], timeoutMs: 1_000 }],
+			verification: [],
+		};
+		const blocked = {
+			id: "kvm",
+			name: "KVM SMSv2",
+			state: "unavailable" as const,
+			reason: "dependency_missing" as const,
+			checkedAt: 1,
+			durationMs: 0,
+		};
+		const result = await executeInstallAuthorizedSetup({
+			plugin: "kvm",
+			lifecycle: { setupRequired: true, setupAuthorization: "install" },
+			trigger: "direct-install",
+			handles: [
+				{
+					id: "kvm",
+					name: "KVM SMSv2",
+					plugin: "kvm",
+					setupPlan: plan,
+					get: async () => blocked,
+					invalidate() {},
+					verifyAfterSetup: async () => {
+						throw new Error("dependency-blocked setup must not run verification");
+					},
+				},
+			],
+			run: async () => {
+				executions++;
+				return 0;
+			},
+		});
+		expect(result).toEqual(blocked);
+		expect(executions).toBe(0);
+	});
+
+	test("dependency-blocked install outcome names the blocking dependency and next action", () => {
+		expect(
+			describeInstallSetupOutcome(
+				"kvm",
+				{
+					id: "kvm",
+					name: "KVM SMSv2",
+					state: "unavailable",
+					reason: "dependency_missing",
+					checkedAt: 1,
+					durationMs: 0,
+				},
+				[{ pluginId: "platform@f5-sales-demo-marketplace" }, { pluginId: "kvm@f5-sales-demo-marketplace" }],
+			),
+		).toBe("kvm: unavailable (dependency_missing)\nnext: xcsh plugin setup platform");
 	});
 
 	test.each(["bulk-install", "upgrade", "cache-refresh", "dependency-install"] as const)(
