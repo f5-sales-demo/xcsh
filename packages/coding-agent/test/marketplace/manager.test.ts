@@ -11,6 +11,7 @@ import {
 	MarketplaceManager,
 	readInstalledPluginsRegistry,
 } from "../../src/extensibility/plugins/marketplace";
+import { executeInstallAuthorizedSetup } from "../../src/integrations/setup";
 
 // Fixture: the valid-marketplace directory used across all tests.
 const FIXTURE_DIR = path.join(import.meta.dir, "fixtures", "valid-marketplace");
@@ -322,6 +323,85 @@ describe("MarketplaceManager", () => {
 
 		const installed = await ctx.manager.listInstalledPlugins();
 		expect(installed).toHaveLength(1);
+	});
+
+	it("local force reinstall publishes a new immutable snapshot and preserves the running snapshot", async () => {
+		const fixture = writeDependencyMarketplace(ctx.tmpDir, "live-marketplace", [{ name: "hello-plugin" }]);
+		await ctx.manager.addMarketplace(fixture);
+		const first = await ctx.manager.installPlugin("hello-plugin", "live-marketplace");
+		fs.writeFileSync(path.join(fixture, "plugins", "hello-plugin", "README.md"), "changed");
+
+		const second = await ctx.manager.installPlugin("hello-plugin", "live-marketplace", { force: true });
+
+		expect(second.installPath).not.toBe(first.installPath);
+		expect(fs.readFileSync(path.join(first.installPath, "README.md"), "utf8")).toBe("hello-plugin");
+		expect(fs.readFileSync(path.join(second.installPath, "README.md"), "utf8")).toBe("changed");
+	});
+
+	it("keeps a local snapshot alive through refresh, setup, and post-setup verification", async () => {
+		const fixture = writeDependencyMarketplace(ctx.tmpDir, "live-marketplace", [{ name: "kvm" }]);
+		const sourceReadme = path.join(fixture, "plugins", "kvm", "README.md");
+		await ctx.manager.addMarketplace(fixture);
+		const active = await ctx.manager.installPlugin("kvm", "live-marketplace");
+		const activeReadme = path.join(active.installPath, "README.md");
+		const plan = {
+			pluginDependencies: [],
+			requiredEnvironment: [],
+			profileFields: [],
+			steps: [{ kind: "install" as const, argv: ["controller", "setup"], timeoutMs: 1_000 }],
+			verification: [],
+		};
+		const activeHandle = {
+			id: "kvm",
+			name: "KVM",
+			plugin: "kvm@live-marketplace",
+			setupPlan: plan,
+			get: async () => ({
+				id: "kvm",
+				name: "KVM",
+				plugin: "kvm@live-marketplace",
+				state: "setup_required" as const,
+				checkedAt: 1,
+				durationMs: 0,
+			}),
+			invalidate() {},
+			verifyAfterSetup: async () =>
+				fs.existsSync(activeReadme)
+					? {
+							id: "kvm",
+							name: "KVM",
+							plugin: "kvm@live-marketplace",
+							state: "ready" as const,
+							value: fs.readFileSync(activeReadme, "utf8"),
+							checkedAt: 2,
+							durationMs: 0,
+						}
+					: {
+							id: "kvm",
+							name: "KVM",
+							plugin: "kvm@live-marketplace",
+							state: "setup_required" as const,
+							reason: "dependency_missing" as const,
+							checkedAt: 2,
+							durationMs: 0,
+						},
+		};
+
+		fs.writeFileSync(sourceReadme, "refreshed");
+		const refreshed = await ctx.manager.installPlugin("kvm", "live-marketplace", { force: true });
+		expect(refreshed.installPath).not.toBe(active.installPath);
+
+		const result = await executeInstallAuthorizedSetup({
+			plugin: "kvm",
+			lifecycle: { setupRequired: true, setupAuthorization: "install" },
+			trigger: "direct-install",
+			handles: [activeHandle],
+			run: async () => 0,
+		});
+
+		expect(result).toMatchObject({ state: "ready", value: "kvm" });
+		expect(fs.readFileSync(activeReadme, "utf8")).toBe("kvm");
+		expect(fs.readFileSync(path.join(refreshed.installPath, "README.md"), "utf8")).toBe("refreshed");
 	});
 
 	it("installPlugin with nonexistent marketplace → clear error", async () => {

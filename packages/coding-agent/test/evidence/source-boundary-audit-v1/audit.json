@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "9555056413f5eca7fd2bb64907b8dcafaee2ae6c",
-  "fingerprint": "ba4534443f402b9749e66e04c09d9d3a38d91d34683670f0bcf15a666b84b3b1",
+  "revision": "b48c7f3ead666cacb9a77d70d94f23dcff9deec3",
+  "fingerprint": "69be69283887db0df97b48c84d34b4cb48988da08362ca9ca54796f19ebed876",
   "counts": {
     "total": 241,
     "components": 96,
@@ -525,14 +525,14 @@
         "packages/coding-agent/test/extensions-runner.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/input-controller-escape.test.ts",
+        "packages/coding-agent/test/integration-registry.test.ts",
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
         "packages/coding-agent/test/person-extension-contract.test.ts",
         "packages/coding-agent/test/person-profile-source-contract.test.ts",
-        "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
-        "packages/coding-agent/test/sandbox-enforce.test.ts",
-        "packages/coding-agent/test/sandbox-isolation.test.ts"
+        "packages/coding-agent/test/plugin-extensions-discovery.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -574,10 +574,10 @@
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
         "packages/coding-agent/test/extensions-runner.test.ts",
         "packages/coding-agent/test/fable-uat.test.ts",
+        "packages/coding-agent/test/integration-registry.test.ts",
         "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
         "packages/coding-agent/test/manager.int.test.ts",
-        "packages/coding-agent/test/mermaid-renderer.test.ts",
-        "packages/coding-agent/test/registered-tool-renderer.test.ts"
+        "packages/coding-agent/test/mermaid-renderer.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/runner.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2088,7 +2088,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "81436ef9125c278b6cda356171df922061460eb2021aa319132273e73415e777",
+      "sha256": "4b5e4fc06331155d5ed44a026e9697a313dd5ea60b8e26740f93fde63695b038",
       "exports": [
         "PluginDashboard"
       ],
@@ -2109,7 +2109,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "ac6fe50722c8041be5d6081d70edd2b1730f82941d3fc08278dd3109991a3e8a",
+      "sha256": "8f9538f457c5785061b73ab18eb0fc7b2f0117c1af242742aa5f8497f0b1edd3",
       "exports": [
         "applySearch",
         "buildTabs",
@@ -3301,7 +3301,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "c6e0e45cf6c71e86cb04a6e98343546508ae43d61cfd2a39ff480ef93d853068",
+      "sha256": "56ab42a4c3fd027592404da2814e08ef85211d38ca40009b38ad5f8acee9e6ff",
       "exports": [
         "ExtensionUiController"
       ],
@@ -3547,11 +3547,15 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "c38700ef5fec6a17382fc3a845e072c414cff57302c2fa6845a0f0d956a8171a",
+      "sha256": "e0aa954f7c9a5dc53b42636b5011468720eac8cec1c61cfb6b82b956f7948c73",
       "exports": [
-        "SelectorController"
+        "SelectorController",
+        "runInstallAuthorizedPluginSetup",
+        "runInstallAuthorizedPluginSetupInForeground",
+        "submitPluginSetupFromDashboard"
       ],
       "interactionSignals": [
+        "keyboard-input",
         "cancellation-callback",
         "terminal-control"
       ],
@@ -3568,6 +3572,7 @@
         "packages/coding-agent/test/modes/controllers/selector-controller-copy.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-model-review.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-resume.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-session-delete.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-tree.test.ts",
@@ -4543,7 +4548,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "071120423862c788f4cc3d2e6500293dadded74a23c8bb9a1bbcc9d04a7ae759",
+      "sha256": "d611dee0aa10c118bd4db5941aee2e9b6a7f1169f2c04aa6a4daafda9b95ab16",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -5102,6 +5107,7 @@
         "packages/coding-agent/test/args.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/acquire-helpers.test.ts",
+        "packages/coding-agent/test/clean-break-prefix.test.ts",
         "packages/coding-agent/test/core/python-prelude.test.ts",
         "packages/coding-agent/test/discovery/agent-fields.test.ts",
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
@@ -5117,8 +5123,7 @@
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts",
-        "packages/coding-agent/test/scripts/homebrew-formula.test.ts",
-        "packages/coding-agent/test/session/messages-repair.test.ts"
+        "packages/coding-agent/test/scripts/homebrew-formula.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/grep.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6151,14 +6156,14 @@
         "packages/coding-agent/test/input-controller-background.test.ts",
         "packages/coding-agent/test/input-controller-escape.test.ts",
         "packages/coding-agent/test/input-controller-keybindings.test.ts",
+        "packages/coding-agent/test/integration-registry.test.ts",
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
         "packages/coding-agent/test/person-extension-contract.test.ts",
         "packages/coding-agent/test/person-profile-source-contract.test.ts",
-        "packages/coding-agent/test/plugin-extensions-discovery.test.ts",
-        "packages/coding-agent/test/sandbox-enforce.test.ts",
-        "packages/coding-agent/test/sandbox-isolation.test.ts"
+        "packages/coding-agent/test/plugin-extensions-discovery.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

@@ -180,16 +180,22 @@ export function filterByTab(plugins: DashboardPlugin[], tabId: PluginTabId): Das
 export function applySearch(plugins: DashboardPlugin[], query: string): DashboardPlugin[] {
 	if (!query) return plugins;
 	const q = query.toLowerCase();
-	return plugins.filter(p => {
-		if (p.name.toLowerCase().includes(q)) return true;
-		if (p.displayName?.toLowerCase().includes(q)) return true;
-		if (p.description?.toLowerCase().includes(q)) return true;
-		if (p.marketplace?.toLowerCase().includes(q)) return true;
-		if (p.category?.toLowerCase().includes(q)) return true;
-		if (p.tags?.some(t => t.toLowerCase().includes(q))) return true;
-		if (p.author?.toLowerCase().includes(q)) return true;
-		return false;
-	});
+	const relevance = (plugin: DashboardPlugin): number | undefined => {
+		const names = [plugin.name, plugin.displayName]
+			.filter((value): value is string => !!value)
+			.map(value => value.toLowerCase());
+		if (names.some(value => value === q)) return 0;
+		if (names.some(value => value.includes(q))) return 1;
+		if (plugin.tags?.some(tag => tag.toLowerCase().includes(q))) return 2;
+		if (plugin.category?.toLowerCase().includes(q) || plugin.description?.toLowerCase().includes(q)) return 3;
+		if (plugin.author?.toLowerCase().includes(q) || plugin.marketplace?.toLowerCase().includes(q)) return 4;
+		return undefined;
+	};
+	return plugins
+		.map((plugin, index) => ({ plugin, index, relevance: relevance(plugin) }))
+		.filter((item): item is typeof item & { relevance: number } => item.relevance !== undefined)
+		.sort((left, right) => left.relevance - right.relevance || left.index - right.index)
+		.map(item => item.plugin);
 }
 
 export async function createInitialState(
