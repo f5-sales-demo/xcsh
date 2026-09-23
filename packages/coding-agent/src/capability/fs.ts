@@ -8,40 +8,47 @@ function resolvePath(filePath: string): string {
 	return path.resolve(filePath);
 }
 
-export async function readFile(filePath: string): Promise<string | null> {
+export async function readFile(filePath: string, signal?: AbortSignal): Promise<string | null> {
 	const abs = resolvePath(filePath);
 	if (contentCache.has(abs)) {
 		return contentCache.get(abs) ?? null;
 	}
 
 	try {
-		const content = await Bun.file(abs).text();
+		signal?.throwIfAborted();
+		const stat = await fs.promises.stat(abs);
+		if (!stat.isFile()) return null;
+		const content = await fs.promises.readFile(abs, { encoding: "utf8", signal });
 		contentCache.set(abs, content);
 		return content;
-	} catch {
+	} catch (error) {
+		if (signal?.aborted) throw error;
 		contentCache.set(abs, null);
 		return null;
 	}
 }
 
-export async function readDirEntries(dirPath: string): Promise<fs.Dirent[]> {
+export async function readDirEntries(dirPath: string, signal?: AbortSignal): Promise<fs.Dirent[]> {
 	const abs = resolvePath(dirPath);
 	if (dirCache.has(abs)) {
 		return dirCache.get(abs) ?? [];
 	}
 
 	try {
+		signal?.throwIfAborted();
 		const entries = await fs.promises.readdir(abs, { withFileTypes: true });
+		signal?.throwIfAborted();
 		dirCache.set(abs, entries);
 		return entries;
-	} catch {
+	} catch (error) {
+		if (signal?.aborted) throw error;
 		dirCache.set(abs, []);
 		return [];
 	}
 }
 
-export async function readDir(dirPath: string): Promise<string[]> {
-	const entries = await readDirEntries(dirPath);
+export async function readDir(dirPath: string, signal?: AbortSignal): Promise<string[]> {
+	const entries = await readDirEntries(dirPath, signal);
 	return entries.map(entry => entry.name);
 }
 
@@ -49,12 +56,14 @@ export async function walkUp(
 	startDir: string,
 	name: string,
 	opts: { file?: boolean; dir?: boolean } = {},
+	signal?: AbortSignal,
 ): Promise<string | null> {
 	const { file = true, dir = true } = opts;
 	let current = resolvePath(startDir);
 
 	while (true) {
-		const entries = await readDirEntries(current);
+		signal?.throwIfAborted();
+		const entries = await readDirEntries(current, signal);
 		const entry = entries.find(e => e.name === name);
 		if (entry) {
 			if (file && entry.isFile()) return path.join(current, name);
@@ -71,10 +80,11 @@ export async function walkUp(
  * Returns the directory containing `.git` (the repo root), or null if not in a git repo.
  * Results are based on the cached readDirEntries, so repeated calls are cheap.
  */
-export async function findRepoRoot(startDir: string): Promise<string | null> {
+export async function findRepoRoot(startDir: string, signal?: AbortSignal): Promise<string | null> {
 	let current = resolvePath(startDir);
 	while (true) {
-		const entries = await readDirEntries(current);
+		signal?.throwIfAborted();
+		const entries = await readDirEntries(current, signal);
 		if (entries.some(e => e.name === ".git")) {
 			return current;
 		}

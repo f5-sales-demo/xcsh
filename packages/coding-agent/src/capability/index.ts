@@ -114,6 +114,7 @@ async function loadImpl<T>(
 	const results = await Promise.all(
 		providers.map(async provider => {
 			try {
+				ctx.signal?.throwIfAborted();
 				const result = await logger.time(
 					`capability:${capability.id}:${provider.id}`,
 					provider.load.bind(provider),
@@ -121,6 +122,7 @@ async function loadImpl<T>(
 				);
 				return { provider, result };
 			} catch (error) {
+				if (ctx.signal?.aborted) throw error;
 				logger.debug(`capability:${capability.id}:${provider.id}:error`);
 				return { provider, error };
 			}
@@ -235,8 +237,9 @@ export async function loadCapability<T>(capabilityId: string, options: LoadOptio
 
 	const cwd = options.cwd ?? getProjectDir();
 	const home = os.homedir();
-	const repoRoot = await findRepoRoot(cwd);
-	const ctx: LoadContext = { cwd, home, repoRoot };
+	options.signal?.throwIfAborted();
+	const repoRoot = await findRepoRoot(cwd, options.signal);
+	const ctx: LoadContext = { cwd, home, repoRoot, signal: options.signal };
 	const providers = filterProviders(capability, options);
 
 	return await loadImpl(capability, providers, ctx, options);

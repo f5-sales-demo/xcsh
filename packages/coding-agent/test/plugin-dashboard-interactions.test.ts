@@ -120,6 +120,55 @@ describe("PluginDashboard interaction contract", () => {
 		expect(text(dashboard)).toContain("Review installation");
 	});
 
+	it("distinguishes duplicate catalog names by marketplace source", () => {
+		const dashboard = create([
+			plugin({ id: "kvm@first-catalog", name: "kvm", marketplace: "first-catalog" }),
+			plugin({ id: "kvm@second-catalog", name: "kvm", marketplace: "second-catalog" }),
+		]);
+		const rendered = text(dashboard);
+		expect(rendered).toContain("kvm · first-catalog");
+		expect(rendered).toContain("kvm · second-catalog");
+	});
+
+	it("exposes setup-managed state and prepares setup from installed details", () => {
+		const dashboard = create(
+			[
+				plugin({
+					id: "kvm@catalog",
+					name: "kvm",
+					installed: true,
+					enabled: true,
+					scope: "user",
+					lifecycle: {
+						mode: "integrated",
+						integrations: ["kvm"],
+						requirements: [],
+						setupRequired: true,
+						collectedData: [],
+						pluginDependencies: ["platform"],
+					},
+				}),
+			],
+			"installed",
+		);
+		const prepareSetup = vi.fn();
+		dashboard.onPrepareSetup = prepareSetup;
+		expect(text(dashboard)).toContain("Enabled · setup managed");
+		dashboard.handleInput("\r");
+		expect(text(dashboard)).toContain("Check readiness / setup");
+		expect(text(dashboard)).toContain("Status: Enabled · setup managed");
+		dashboard.handleInput("\r");
+		expect(prepareSetup).toHaveBeenCalledWith("kvm");
+	});
+
+	it("omits empty catalog scope segments from installation targets", () => {
+		const dashboard = create([plugin({ id: "alpha@catalog", name: "alpha" })]);
+		dashboard.handleInput("\r");
+		dashboard.handleInput("\r");
+		expect(text(dashboard)).toContain("Target: marketplace · alpha@catalog · user");
+		expect(text(dashboard)).not.toContain("alpha@catalog ·  ·");
+	});
+
 	it("shows the complete dependency plan in details and installation review", () => {
 		const dashboard = create([
 			plugin({
@@ -135,6 +184,67 @@ describe("PluginDashboard interaction contract", () => {
 		expect(text(dashboard)).toContain("Dependency install order: xorg@catalog@1.0.1 → zoom@catalog@1.0.1");
 		dashboard.handleInput("\r");
 		expect(text(dashboard)).toContain("Dependency install order: None → xorg@catalog@1.0.1 → zoom@catalog@1.0.1");
+	});
+
+	it("states when reviewed setup runs automatically during installation", () => {
+		const dashboard = create([
+			plugin({
+				id: "kvm@catalog",
+				name: "kvm",
+				lifecycle: {
+					mode: "integrated",
+					integrations: ["kvm"],
+					requirements: ["Terraform CLI"],
+					setupRequired: true,
+					setupAuthorization: "install",
+					collectedData: [],
+					pluginDependencies: [],
+				},
+			}),
+		]);
+		dashboard.handleInput("\r");
+		dashboard.handleInput("\r");
+		expect(text(dashboard)).toContain("setup runs automatically");
+		expect(text(dashboard)).toContain("after installation confirmation");
+		expect(text(dashboard)).not.toContain("next: xcsh plugin setup kvm");
+	});
+
+	it("starts install-authorized setup after a successful interactive installation", async () => {
+		const available = plugin({
+			id: "kvm@catalog",
+			name: "kvm",
+			catalogVersion: "2.0.0",
+			lifecycle: {
+				mode: "integrated",
+				integrations: ["kvm"],
+				requirements: ["Terraform CLI"],
+				setupRequired: true,
+				setupAuthorization: "install",
+				collectedData: [],
+				pluginDependencies: [],
+			},
+		});
+		const install = vi.fn(async () => {});
+		const load = vi
+			.fn<() => Promise<DashboardPlugin[]>>()
+			.mockResolvedValueOnce([available])
+			.mockResolvedValue([{ ...available, installed: true, enabled: true, scope: "user", version: "2.0.0" }]);
+		const dashboard = create([available], "discover", {
+			install,
+			load,
+		});
+		const prepareSetup = vi.fn();
+		dashboard.onInstallAuthorizedSetup = prepareSetup;
+
+		dashboard.handleInput("\r");
+		dashboard.handleInput("\r");
+		dashboard.handleInput("\x1b[B");
+		dashboard.handleInput("\r");
+		await Bun.sleep(0);
+
+		expect(install).toHaveBeenCalledTimes(1);
+		expect(prepareSetup).toHaveBeenCalledTimes(1);
+		expect(prepareSetup).toHaveBeenCalledWith("kvm", available.lifecycle);
 	});
 
 	it("includes dependency plans in recommended bulk review", () => {

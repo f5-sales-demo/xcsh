@@ -6,6 +6,7 @@ import * as path from "node:path";
 
 import {
 	cachePlugin,
+	cachePluginSnapshot,
 	cleanOrphanedCache,
 	getCachedPluginPath,
 	isCached,
@@ -154,6 +155,15 @@ describe("cachePlugin, isCached, removeCachedPlugin", () => {
 		await cachePlugin(sourcePath, cacheDir, "my-market", "my-plugin", "1.0.0");
 		expect(fs.existsSync(staleFile)).toBe(false);
 		expect(fs.existsSync(path.join(cacheDir, "my-market___my-plugin___1.0.0", "plugin.json"))).toBe(true);
+	});
+
+	it("concurrent immutable snapshots converge without replacing their shared path", async () => {
+		const sourcePath = await mkSourcePlugin(sourceDir, "my-plugin");
+		const snapshots = await Promise.all(
+			Array.from({ length: 4 }, () => cachePluginSnapshot(sourcePath, cacheDir, "my-market", "my-plugin", "1.0.0")),
+		);
+		expect(new Set(snapshots).size).toBe(1);
+		expect(await fsp.readFile(path.join(snapshots[0]!, "plugin.json"), "utf8")).toBe('{"name":"my-plugin"}');
 	});
 
 	it("removeCachedPlugin deletes the directory", async () => {

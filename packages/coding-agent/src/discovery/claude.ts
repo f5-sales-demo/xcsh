@@ -132,7 +132,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	const userBase = getUserClaude(ctx);
 	const userClaudeMd = path.join(userBase, "CLAUDE.md");
 
-	const userContent = await readFile(userClaudeMd);
+	const userContent = await readFile(userClaudeMd, ctx.signal);
 	if (userContent !== null) {
 		items.push({
 			path: userClaudeMd,
@@ -144,7 +144,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 
 	const projectBase = getProjectClaude(ctx);
 	const projectClaudeMd = path.join(projectBase, "CLAUDE.md");
-	const projectContent = await readFile(projectClaudeMd);
+	const projectContent = await readFile(projectClaudeMd, ctx.signal);
 	if (projectContent !== null) {
 		const depth = calculateDepth(ctx.cwd, path.dirname(projectBase), path.sep);
 		items.push({
@@ -175,6 +175,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 				dir: path.join(current, CONFIG_DIR, "skills"),
 				providerId: PROVIDER_ID,
 				level: "project",
+				signal: ctx.signal,
 			}),
 		);
 		if (current === (ctx.repoRoot ?? ctx.home)) break;
@@ -184,7 +185,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 	}
 
 	const [userResult, ...projectResults] = await Promise.allSettled([
-		scanSkillsFromDir(ctx, { dir: userSkillsDir, providerId: PROVIDER_ID, level: "user" }),
+		scanSkillsFromDir(ctx, { dir: userSkillsDir, providerId: PROVIDER_ID, level: "user", signal: ctx.signal }),
 		...projectScans,
 	]);
 
@@ -407,7 +408,7 @@ async function loadSystemPrompts(ctx: LoadContext): Promise<LoadResult<SystemPro
 	const userBase = getUserClaude(ctx);
 	const userSystemMd = path.join(userBase, "SYSTEM.md");
 
-	const content = await readFile(userSystemMd);
+	const content = await readFile(userSystemMd, ctx.signal);
 	if (content !== null) {
 		items.push({
 			path: userSystemMd,

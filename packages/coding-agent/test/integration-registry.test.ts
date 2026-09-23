@@ -1,9 +1,53 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test, vi } from "bun:test";
 import { reviewAndExecuteIntegrationSetup, selectSetupIntegration } from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
-import { describeSetupPlan, executeReviewedSetup } from "../src/integrations/setup";
+import {
+	createSetupStepRunner,
+	describeInstallSetupOutcome,
+	describeSetupPlan,
+	executeInstallAuthorizedSetup,
+	executeReviewedSetup,
+} from "../src/integrations/setup";
 
 const ready = <T>(value: T) => ({ state: "ready" as const, value });
+
+test("setup runner injects only declared active-context values", async () => {
+	const run = createSetupStepRunner(
+		name => ({ XCSH_API_URL: "https://tenant.example.test", XCSH_API_TOKEN: "secret" })[name],
+	);
+	const exitCode = await run({
+		kind: "install",
+		argv: [
+			process.execPath,
+			"-e",
+			"process.exit(process.env.XCSH_API_URL && process.env.XCSH_API_TOKEN && !process.env.XCSH_UNDECLARED ? 0 : 1)",
+		],
+		timeoutMs: 1_000,
+		environment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
+	});
+	expect(exitCode).toBe(0);
+});
+
+test("setup runner can suppress non-interactive child output for an interactive loader", async () => {
+	const spawn = vi.spyOn(Bun, "spawn").mockReturnValue({ exited: Promise.resolve(0) } as ReturnType<typeof Bun.spawn>);
+	try {
+		const run = createSetupStepRunner(() => undefined, { nonInteractiveOutput: "ignore" });
+		await run({
+			kind: "install",
+			argv: ["controller", "setup", "apply"],
+			timeoutMs: 1_000,
+			stdin: "inherit",
+		});
+
+		const [argv, options] = spawn.mock.calls[0]!;
+		expect(argv).toEqual(["controller", "setup", "apply"]);
+		expect(options?.stdin).toBe("inherit");
+		expect(options?.stdout).toBe("ignore");
+		expect(options?.stderr).toBe("ignore");
+	} finally {
+		spawn.mockRestore();
+	}
+});
 
 describe("IntegrationRegistry", () => {
 	let registry: IntegrationRegistry;
@@ -147,6 +191,25 @@ describe("IntegrationRegistry", () => {
 		expect(() => handle.verifyAfterSetup(structuredClone(plan))).toThrow("reviewed setup plan");
 	});
 
+	test("accepts bounded two-hour infrastructure setup steps", () => {
+		registry = new IntegrationRegistry();
+		const handle = registry.register("plugin:kvm", {
+			id: "kvm",
+			name: "KVM",
+			kind: "local",
+			setup: {
+				pluginDependencies: ["platform"],
+				requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
+				profileFields: [],
+				steps: [{ kind: "install", argv: ["kvm-smsv2ctl", "setup", "apply"], timeoutMs: 7_200_000 }],
+				verification: [{ argv: ["kvm-smsv2ctl", "setup", "status"], timeoutMs: 60_000 }],
+			},
+			probe: async () => ready(undefined),
+		});
+
+		expect(handle.setupPlan?.steps[0]?.timeoutMs).toBe(7_200_000);
+	});
+
 	test("owner cleanup removes all registrations", () => {
 		registry = new IntegrationRegistry();
 		registry.register("plugin:a", { id: "one", name: "One", kind: "local", probe: async () => ready(1) });
@@ -238,4 +301,124 @@ describe("IntegrationRegistry", () => {
 		});
 		expect(result.state).toBe("ready");
 	});
+
+	test("install authorization executes setup once without a second confirmation", async () => {
+		let executions = 0;
+		const plan = {
+			pluginDependencies: [],
+			requiredEnvironment: [],
+			profileFields: [],
+			steps: [{ kind: "install" as const, argv: ["controller", "setup", "apply"], timeoutMs: 1_000 }],
+			verification: [],
+		};
+		const result = await executeInstallAuthorizedSetup({
+			plugin: "kvm",
+			lifecycle: { setupRequired: true, setupAuthorization: "install" },
+			trigger: "direct-install",
+			handles: [
+				{
+					id: "kvm_smsv2",
+					name: "KVM SMSv2",
+					plugin: "kvm@f5-sales-demo",
+					setupPlan: plan,
+					get: async () => ({
+						id: "kvm_smsv2",
+						name: "KVM SMSv2",
+						state: "setup_required",
+						checkedAt: 1,
+						durationMs: 0,
+					}),
+					invalidate() {},
+					verifyAfterSetup: async () => ({
+						id: "kvm_smsv2",
+						name: "KVM SMSv2",
+						state: "ready",
+						checkedAt: 2,
+						durationMs: 0,
+					}),
+				},
+			],
+			run: async () => {
+				executions++;
+				return 0;
+			},
+		});
+		expect(result?.state).toBe("ready");
+		expect(executions).toBe(1);
+	});
+
+	test("install authorization leaves dependency-blocked setup pending without executing it", async () => {
+		let executions = 0;
+		const plan = {
+			pluginDependencies: ["platform"],
+			requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
+			profileFields: [],
+			steps: [{ kind: "install" as const, argv: ["kvm-smsv2ctl", "setup", "apply"], timeoutMs: 1_000 }],
+			verification: [],
+		};
+		const blocked = {
+			id: "kvm",
+			name: "KVM SMSv2",
+			state: "unavailable" as const,
+			reason: "dependency_missing" as const,
+			checkedAt: 1,
+			durationMs: 0,
+		};
+		const result = await executeInstallAuthorizedSetup({
+			plugin: "kvm",
+			lifecycle: { setupRequired: true, setupAuthorization: "install" },
+			trigger: "direct-install",
+			handles: [
+				{
+					id: "kvm",
+					name: "KVM SMSv2",
+					plugin: "kvm",
+					setupPlan: plan,
+					get: async () => blocked,
+					invalidate() {},
+					verifyAfterSetup: async () => {
+						throw new Error("dependency-blocked setup must not run verification");
+					},
+				},
+			],
+			run: async () => {
+				executions++;
+				return 0;
+			},
+		});
+		expect(result).toEqual(blocked);
+		expect(executions).toBe(0);
+	});
+
+	test("dependency-blocked install outcome names the blocking dependency and next action", () => {
+		expect(
+			describeInstallSetupOutcome(
+				"kvm",
+				{
+					state: "unavailable",
+					reason: "dependency_missing",
+				},
+				[{ pluginId: "platform@f5-sales-demo-marketplace" }, { pluginId: "kvm@f5-sales-demo-marketplace" }],
+			),
+		).toBe("kvm: unavailable (dependency_missing)\nnext: xcsh plugin setup platform");
+	});
+
+	test.each(["bulk-install", "upgrade", "cache-refresh", "dependency-install"] as const)(
+		"%s never consumes install-scoped setup authorization",
+		async trigger => {
+			let executions = 0;
+			const result = await executeInstallAuthorizedSetup({
+				plugin: "kvm",
+				lifecycle: { setupRequired: true, setupAuthorization: "install" },
+				trigger,
+				handles: [],
+				run: async () => {
+					executions++;
+					return 0;
+				},
+			});
+			expect(result).toBeUndefined();
+			expect(executions).toBe(0);
+		},
+	);
 });

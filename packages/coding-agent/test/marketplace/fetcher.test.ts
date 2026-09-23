@@ -159,6 +159,35 @@ describe("parseMarketplaceCatalog", () => {
 		expect(() => parseMarketplaceCatalog(content, "/f.json")).toThrow("plugins[0].lifecycle");
 	});
 
+	it("accepts only explicit install or separate setup authorization", () => {
+		const withAuthorization = (setupAuthorization: unknown) =>
+			JSON.stringify({
+				name: "my-market",
+				owner: { name: "x" },
+				plugins: [
+					{
+						name: "p1",
+						source: "./p1",
+						lifecycle: { ...CONTENT_LIFECYCLE, mode: "integrated", setupRequired: true, setupAuthorization },
+					},
+				],
+			});
+		expect(
+			parseMarketplaceCatalog(withAuthorization("install"), "/f.json").plugins[0].lifecycle.setupAuthorization,
+		).toBe("install");
+		expect(
+			parseMarketplaceCatalog(withAuthorization("separate"), "/f.json").plugins[0].lifecycle.setupAuthorization,
+		).toBe("separate");
+		expect(() => parseMarketplaceCatalog(withAuthorization("always"), "/f.json")).toThrow(
+			"plugins[0].lifecycle.setupAuthorization",
+		);
+	});
+
+	it("keeps omitted setup authorization compatible as a separate setup", () => {
+		const catalog = parseMarketplaceCatalog(VALID, "/f.json");
+		expect(catalog.plugins[0].lifecycle.setupAuthorization).toBeUndefined();
+	});
+
 	it("throws on invalid JSON", () => {
 		expect(() => parseMarketplaceCatalog("{not json", "/f.json")).toThrow(
 			"Failed to parse marketplace catalog at /f.json",

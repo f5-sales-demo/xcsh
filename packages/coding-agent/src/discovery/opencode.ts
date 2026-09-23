@@ -69,7 +69,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	// User-level only: ~/.config/opencode/AGENTS.md
 	const userAgentsMd = getUserPath(ctx, "opencode", "AGENTS.md");
 	if (userAgentsMd) {
-		const content = await readFile(userAgentsMd);
+		const content = await readFile(userAgentsMd, ctx.signal);
 		if (content) {
 			items.push({
 				path: userAgentsMd,
@@ -193,6 +193,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 				dir: userSkillsDir,
 				providerId: PROVIDER_ID,
 				level: "user",
+				signal: ctx.signal,
 			}),
 		);
 	}
@@ -203,6 +204,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 				dir: projectSkillsDir,
 				providerId: PROVIDER_ID,
 				level: "project",
+				signal: ctx.signal,
 			}),
 		);
 	}

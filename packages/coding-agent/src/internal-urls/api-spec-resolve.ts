@@ -76,6 +76,7 @@ export function createApiSpecResolver(
 			}
 
 			const resourceName = url.searchParams.get("resource");
+			const field = url.searchParams.get("field");
 
 			// Resolve the domain entry. When a resource is named against a wrong or
 			// omitted domain (e.g. `config?resource=http_loadbalancer`), fall back to
@@ -111,6 +112,12 @@ export function createApiSpecResolver(
 					const matchingPaths = filterPathsByResource(spec, resourceName, entry);
 					if (Object.keys(matchingPaths).length === 0) {
 						return makeResource(url, withNote(renderUnknownResource(resourceName, entry, spec)));
+					}
+					if (field) {
+						return makeResource(
+							url,
+							withNote(renderResourceFieldProjection(domain, resourceName, field, matchingPaths, spec)),
+						);
 					}
 					return makeResource(
 						url,
@@ -626,6 +633,155 @@ function renderResourceSpec(
 	}
 
 	return sections.join("\n");
+}
+
+interface ProjectedField {
+	path: string;
+	type: string;
+	required: Set<string>;
+	constraints: Set<string>;
+	operations: Set<string>;
+}
+
+function exactFieldConstraints(prop: Record<string, unknown>): string {
+	const extension = (prop["x-f5xc-constraints"] as Record<string, unknown> | undefined) ?? {};
+	return formatFieldConstraints({
+		"x-f5xc-constraints": {
+			pattern: prop.pattern ?? extension.pattern,
+			minLength: prop.minLength ?? extension.minLength,
+			maxLength: prop.maxLength ?? extension.maxLength,
+			minimum: prop.minimum ?? extension.minimum,
+			maximum: prop.maximum ?? extension.maximum,
+			minItems: prop.minItems ?? extension.minItems,
+			maxItems: prop.maxItems ?? extension.maxItems,
+			format: prop.format ?? extension.format,
+			enum: prop.enum ?? extension.enum,
+			ranges: extension.ranges,
+			metadata: extension.metadata,
+		},
+	});
+}
+
+function collectProjectedFields(
+	schema: Record<string, unknown>,
+	spec: OpenAPISpec,
+	operation: string,
+	result: Map<string, ProjectedField>,
+	prefix = "",
+	depth = 0,
+	visited = new Set<string>(),
+): void {
+	if (depth > 16) return;
+	const schemaName = extractSchemaName(schema);
+	if (schemaName && visited.has(schemaName)) return;
+	const nextVisited = new Set(visited);
+	if (schemaName) nextVisited.add(schemaName);
+	const resolved = resolveSchemaRef(schema, spec);
+	const properties = resolved.properties as Record<string, Record<string, unknown>> | undefined;
+	if (!properties) return;
+	const required = new Set((resolved.required as string[] | undefined) ?? []);
+	for (const [name, rawProperty] of Object.entries(properties)) {
+		const property = resolveSchemaRef(rawProperty, spec);
+		const fieldPath = prefix ? `${prefix}.${name}` : name;
+		const type = (property.type as string | undefined) ?? (Array.isArray(property.oneOf) ? "oneOf" : "object");
+		const requiredFor = property["x-f5xc-required-for"] as Record<string, boolean> | undefined;
+		const requiredLabels = required.has(name)
+			? ["yes"]
+			: Object.entries(requiredFor ?? {})
+					.filter(([, enabled]) => enabled)
+					.map(([label]) => label);
+		const constraints = exactFieldConstraints(property);
+		const current = result.get(fieldPath) ?? {
+			path: fieldPath,
+			type,
+			required: new Set<string>(),
+			constraints: new Set<string>(),
+			operations: new Set<string>(),
+		};
+		for (const label of requiredLabels.length > 0 ? requiredLabels : ["no"]) current.required.add(label);
+		if (constraints) current.constraints.add(constraints);
+		current.operations.add(operation);
+		result.set(fieldPath, current);
+
+		if (type === "array" && property.items && typeof property.items === "object") {
+			collectProjectedFields(
+				property.items as Record<string, unknown>,
+				spec,
+				operation,
+				result,
+				`${fieldPath}[]`,
+				depth + 1,
+				nextVisited,
+			);
+		} else if (type === "object") {
+			collectProjectedFields(rawProperty, spec, operation, result, fieldPath, depth + 1, nextVisited);
+		} else if (Array.isArray(property.oneOf)) {
+			for (const variant of property.oneOf) {
+				if (variant && typeof variant === "object") {
+					collectProjectedFields(
+						variant as Record<string, unknown>,
+						spec,
+						operation,
+						result,
+						fieldPath,
+						depth + 1,
+						nextVisited,
+					);
+				}
+			}
+		}
+	}
+}
+
+function renderResourceFieldProjection(
+	domain: string,
+	resource: string,
+	requestedField: string,
+	matchingPaths: Record<string, Record<string, OpenAPIPathOperation>>,
+	spec: OpenAPISpec,
+): string {
+	const fields = new Map<string, ProjectedField>();
+	for (const [pathKey, methods] of Object.entries(matchingPaths)) {
+		for (const [method, operation] of Object.entries(methods)) {
+			if (!operation || typeof operation !== "object") continue;
+			const content = operation.requestBody?.content as Record<string, Record<string, unknown>> | undefined;
+			const schema = content?.["application/json"]?.schema;
+			if (!schema || typeof schema !== "object") continue;
+			collectProjectedFields(schema as Record<string, unknown>, spec, `${method.toUpperCase()} ${pathKey}`, fields);
+		}
+	}
+
+	const normalized = requestedField.trim().replace(/^\.+|\.+$/g, "");
+	const all = [...fields.values()].sort((left, right) => left.path.localeCompare(right.path));
+	const exact = all.filter(field => field.path === normalized);
+	const candidates = exact.length > 0 ? exact : all.filter(field => field.path.split(".").at(-1) === normalized);
+	if (candidates.length !== 1) {
+		const bounded = (candidates.length > 0 ? candidates : all.filter(field => field.path.includes(normalized))).slice(
+			0,
+			20,
+		);
+		return [
+			`# ${candidates.length > 1 ? "Ambiguous field" : "Field not found"}: ${requestedField}`,
+			"",
+			bounded.length > 0 ? "Candidate paths:" : "No matching field paths were found.",
+			"",
+			...bounded.map(
+				field =>
+					`- \`${field.path}\` — \`xcsh://api-spec/${domain}?resource=${encodeURIComponent(resource)}&field=${encodeURIComponent(field.path)}\``,
+			),
+			"",
+		].join("\n");
+	}
+
+	const field = candidates[0];
+	return [
+		`# ${resource} — Field projection`,
+		"",
+		"| Field | Type | Required | Constraints | Relevant operations |",
+		"|-------|------|----------|-------------|---------------------|",
+		`| ${field.path} | ${field.type} | ${[...field.required].join(", ")} | ${[...field.constraints].join("; ") || "--"} | ${[...field.operations].join("; ")} |`,
+		"",
+	].join("\n");
 }
 
 function renderPathSpec(_domain: string, pathKey: string, spec: OpenAPISpec): string {

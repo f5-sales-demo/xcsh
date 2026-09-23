@@ -6,8 +6,10 @@ import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import type { KeyId } from "@f5-sales-demo/pi-tui";
 import { logger } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../../config/model-registry";
+import { integrationRegistry } from "../../integrations/registry";
 import type { IntegrationHandle } from "../../integrations/types";
 import { type Theme, theme } from "../../modes/theme/theme";
+import { personProfileService } from "../../person-profile/service";
 import type { SessionManager } from "../../session/session-manager";
 import type {
 	BeforeAgentStartEvent,
@@ -35,6 +37,7 @@ import type {
 	MessageRenderer,
 	RegisteredCommand,
 	RegisteredTool,
+	RegisteredToolAdvisory,
 	ResourcesDiscoverEvent,
 	ResourcesDiscoverResult,
 	SessionBeforeBranchResult,
@@ -42,6 +45,7 @@ import type {
 	SessionBeforeSwitchResult,
 	SessionBeforeTreeResult,
 	SessionCompactingResult,
+	ToolAdvisoryEvaluation,
 	ToolCallEvent,
 	ToolCallEventResult,
 	ToolResultEvent,
@@ -185,16 +189,26 @@ export class ExtensionRunner {
 	#reloadHandler: () => Promise<void> = async () => {};
 	#shutdownHandler: ShutdownHandler = () => {};
 	#commandDiagnostics: Array<{ type: string; message: string; path: string }> = [];
+	#advisoriesByOwner = new Map<string, Map<string, RegisteredToolAdvisory>>();
+	#initialization:
+		| {
+				actions: ExtensionActions;
+				contextActions: ExtensionContextActions;
+				commandContextActions?: ExtensionCommandContextActions;
+				uiContext?: ExtensionUIContext;
+		  }
+		| undefined;
 
 	constructor(
-		private readonly extensions: Extension[],
-		private readonly runtime: ExtensionRuntime,
+		private extensions: Extension[],
+		private runtime: ExtensionRuntime,
 		private readonly cwd: string,
 		private readonly sessionManager: SessionManager,
 		private readonly modelRegistry: ModelRegistry,
 		private readonly settings?: ExtensionContext["settings"],
 	) {
 		this.#uiContext = noOpUIContext;
+		this.reloadAdvisories(extensions);
 	}
 
 	initialize(
@@ -203,6 +217,7 @@ export class ExtensionRunner {
 		commandContextActions?: ExtensionCommandContextActions,
 		uiContext?: ExtensionUIContext,
 	): void {
+		this.#initialization = { actions, contextActions, commandContextActions, uiContext };
 		// Copy actions into the shared runtime (all extension APIs reference this)
 		this.runtime.sendMessage = actions.sendMessage;
 		this.runtime.sendUserMessage = actions.sendUserMessage;
@@ -238,6 +253,23 @@ export class ExtensionRunner {
 		}
 
 		this.#uiContext = uiContext ?? noOpUIContext;
+	}
+
+	/** Replace every registration surface after marketplace state changes. */
+	reloadExtensions(extensions: readonly Extension[], runtime: ExtensionRuntime): void {
+		const activeOwners = new Set(extensions.map(extension => extension.resolvedPath));
+		for (const extension of this.extensions) {
+			if (activeOwners.has(extension.resolvedPath)) continue;
+			integrationRegistry.unregisterOwner(extension.resolvedPath);
+			personProfileService.unregisterProfileCollectorsByRegistrant(extension.resolvedPath);
+		}
+		this.extensions = [...extensions];
+		this.runtime = runtime;
+		this.reloadAdvisories(extensions);
+		if (this.#initialization) {
+			const { actions, contextActions, commandContextActions, uiContext } = this.#initialization;
+			this.initialize(actions, contextActions, commandContextActions, uiContext);
+		}
 	}
 
 	getUIContext(): ExtensionUIContext {
@@ -425,6 +457,69 @@ export class ExtensionRunner {
 			}
 		}
 		return undefined;
+	}
+
+	/** Evaluate all advisory registrations scoped to this exact tool capability. */
+	async evaluateAdvisories(event: ToolCallEvent): Promise<ToolAdvisoryEvaluation> {
+		const advisories: ToolAdvisoryEvaluation["advisories"] = [];
+		const diagnostics: ToolAdvisoryEvaluation["diagnostics"] = [];
+		const ctx = this.createContext();
+
+		for (const registrations of this.#advisoriesByOwner.values()) {
+			for (const registration of registrations.values()) {
+				if (!registration.capabilities.includes(event.toolName)) continue;
+				try {
+					const matched = await registration.match(event, ctx);
+					const findings = matched ? (Array.isArray(matched) ? matched : [matched]) : [];
+					for (const finding of findings) {
+						if (!finding || typeof finding.code !== "string" || typeof finding.message !== "string") continue;
+						advisories.push({
+							code: finding.code,
+							message: finding.message,
+							severity: finding.severity ?? "warning",
+							provenance: {
+								owner: registration.owner,
+								registrationId: registration.id,
+								capability: event.toolName,
+							},
+						});
+					}
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					diagnostics.push({
+						code: "advisory_matcher_failed",
+						message,
+						owner: registration.owner,
+						registrationId: registration.id,
+						capability: event.toolName,
+					});
+					this.emitError({
+						extensionPath: registration.owner,
+						event: "advisory",
+						error: message,
+					});
+				}
+			}
+		}
+		return { advisories, diagnostics };
+	}
+
+	/** Remove all advisory registrations owned by an extension during lifecycle refresh. */
+	removeAdvisoryOwner(owner: string): number {
+		const registrations = this.#advisoriesByOwner.get(owner);
+		if (!registrations) return 0;
+		this.#advisoriesByOwner.delete(owner);
+		return registrations.size;
+	}
+
+	/** Atomically replace advisory registrations after plugin discovery changes. */
+	reloadAdvisories(extensions: readonly Extension[]): void {
+		const next = new Map<string, Map<string, RegisteredToolAdvisory>>();
+		for (const extension of extensions) {
+			if (extension.advisories.size === 0) continue;
+			next.set(extension.resolvedPath, new Map(extension.advisories));
+		}
+		this.#advisoriesByOwner = next;
 	}
 
 	createContext(): ExtensionContext {

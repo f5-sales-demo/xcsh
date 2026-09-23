@@ -13,6 +13,9 @@ import apiCatalogAnswerWafPrompt from "./prompts/api-catalog-answer-waf.md" with
 import apiCatalogAnswerCloneDnsZonePrompt from "./prompts/api-catalog-answer-clone-dns-zone.md" with { type: "text" };
 import apiCatalogAnswerImportBindDnsZonePrompt from "./prompts/api-catalog-answer-import-bind-dns-zone.md" with { type: "text" };
 import apiCatalogAnswerValidateCloudUserAccountPrompt from "./prompts/api-catalog-answer-validate-cloud-user-account.md" with { type: "text" };
+import apiFirstDnsZoneCreatePrompt from "./prompts/api-first-dns-zone-create.md" with { type: "text" };
+import apiFirstHttpRouteLimitPrompt from "./prompts/api-first-http-route-limit.md" with { type: "text" };
+import apiFirstOriginPoolRequiredPrompt from "./prompts/api-first-origin-pool-required.md" with { type: "text" };
 import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { type: "text" };
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
 import modelPingPrompt from "./prompts/model-ping.md" with { type: "text" };
@@ -35,6 +38,13 @@ export interface ModelScenarioResponsePattern {
 	pattern: RegExp;
 }
 
+export interface ModelScenarioKnowledgeExpectation {
+	type: "api-catalog-preflight" | "read";
+	query?: string;
+	path?: string;
+	pathPattern?: RegExp;
+}
+
 export interface ModelScenarioQualityCriterion {
 	id: string;
 	label: string;
@@ -53,6 +63,12 @@ export interface ModelScenarioContract {
 	requiredTools?: ModelScenarioToolExpectation[];
 	/** Ordered evidence reads; additional non-error reads remain permitted. */
 	requiredToolSequence?: ModelScenarioToolExpectation[];
+	/** Ordered knowledge events, including deterministic preflight before model-selected reads. */
+	requiredKnowledgeSequence?: ModelScenarioKnowledgeExpectation[];
+	/** Require the first observed knowledge event to be the first required event. */
+	knowledgeSequenceStartsAtFirst?: boolean;
+	/** Permit read calls with `sel` to continue an already-authorized required resource. */
+	allowReadContinuations?: boolean;
 	exclusiveTools?: boolean;
 }
 
@@ -453,6 +469,85 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "no-match", label: "Clearly reports that no supported match was found", weight: 35, responsePattern: /\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i },
 			{ id: "no-invention", label: "Does not invent an API method or path", weight: 25, forbiddenResponsePattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i },
 		],
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-first-http-route-limit",
+		label: "API-first HTTP load balancer route limit",
+		suite: "tools",
+		tier: 2,
+		prompt: apiFirstHttpRouteLimitPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
+			],
+			requiredKnowledgeSequence: [
+				{ type: "api-catalog-preflight", query: "http load balancer" },
+				{ type: "read", path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
+				{ type: "read", path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
+			],
+			knowledgeSequenceStartsAtFirst: true,
+			allowReadContinuations: true,
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-first-origin-pool-required",
+		label: "API-first origin pool required fields",
+		suite: "tools",
+		tier: 2,
+		prompt: apiFirstOriginPoolRequiredPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=origin_pool&compact=true" } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=origin_pool" } },
+			],
+			requiredKnowledgeSequence: [
+				{ type: "api-catalog-preflight", query: "origin pool" },
+				{ type: "read", path: "xcsh://api-catalog/?resource=origin_pool&compact=true" },
+				{ type: "read", path: "xcsh://api-spec/virtual?resource=origin_pool" },
+			],
+			knowledgeSequenceStartsAtFirst: true,
+			allowReadContinuations: true,
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "states create metadata requirements", pattern: /metadata\.name[\s\S]{0,200}metadata\.namespace/i },
+				{ label: "states origin server requirement", pattern: /spec\.origin_servers/i },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-first-dns-zone-create",
+		label: "API-first DNS zone create endpoint",
+		suite: "tools",
+		tier: 2,
+		prompt: apiFirstDnsZoneCreatePrompt.trim(),
+		contract: {
+			requiredTools: [
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=dns_zone&compact=true" } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/dns?resource=dns_zone" } },
+			],
+			requiredKnowledgeSequence: [
+				{ type: "api-catalog-preflight", query: "dns zone" },
+				{ type: "read", path: "xcsh://api-catalog/?resource=dns_zone&compact=true" },
+				{ type: "read", path: "xcsh://api-spec/dns?resource=dns_zone" },
+			],
+			knowledgeSequenceStartsAtFirst: true,
+			allowReadContinuations: true,
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "states create method and path", pattern: /POST[\s\S]{0,160}\/api\/config\/dns\/namespaces\/\{(?:metadata\.)?namespace\}\/dns_zones/i },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{

@@ -35,7 +35,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 
 	const copilotInstructionsPath = getProjectPath(ctx, "github", "copilot-instructions.md");
 	if (copilotInstructionsPath) {
-		const content = await readFile(copilotInstructionsPath);
+		const content = await readFile(copilotInstructionsPath, ctx.signal);
 		if (content) {
 			const fileDir = path.dirname(copilotInstructionsPath);
 			const depth = calculateDepth(ctx.cwd, fileDir, path.sep);

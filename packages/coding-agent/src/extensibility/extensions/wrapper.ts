@@ -14,7 +14,38 @@ import type { Theme } from "../../modes/theme/theme";
 import { withToolInteraction } from "../../session/user-interactions";
 import { applyToolProxy } from "../tool-proxy";
 import type { ExtensionRunner } from "./runner";
-import type { RegisteredTool, ToolCallEventResult } from "./types";
+import type { RegisteredTool, ToolAdvisoryEvaluation, ToolCallEventResult } from "./types";
+
+function attachAdvisories<TDetails>(
+	result: { content: (TextContent | ImageContent)[]; details?: TDetails },
+	evaluation: ToolAdvisoryEvaluation,
+): { content: (TextContent | ImageContent)[]; details?: TDetails } {
+	if (evaluation.advisories.length === 0 && evaluation.diagnostics.length === 0) return result;
+	const notices: TextContent[] = [
+		...evaluation.advisories.map(advisory => ({
+			type: "text" as const,
+			text: `Advisory [${advisory.code}] (${advisory.provenance.owner}): ${advisory.message}`,
+		})),
+		...evaluation.diagnostics.map(diagnostic => ({
+			type: "text" as const,
+			text: `Advisory diagnostic [${diagnostic.code}] (${diagnostic.owner}): ${diagnostic.message}`,
+		})),
+	];
+	const originalDetails =
+		result.details && typeof result.details === "object" && !Array.isArray(result.details)
+			? (result.details as Record<string, unknown>)
+			: result.details === undefined
+				? {}
+				: { resultDetails: result.details };
+	return {
+		content: [...result.content, ...notices],
+		details: {
+			...originalDetails,
+			advisories: evaluation.advisories,
+			advisoryDiagnostics: evaluation.diagnostics,
+		} as TDetails,
+	};
+}
 
 /**
  * Adapts a RegisteredTool into an AgentTool.
@@ -119,6 +150,13 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 		onUpdate?: AgentToolUpdateCallback<TDetails, TParameters>,
 		context?: AgentToolContext,
 	) {
+		const advisoryEvaluation = await this.runner.evaluateAdvisories({
+			type: "tool_call",
+			toolName: this.tool.name,
+			toolCallId,
+			input: params as Record<string, unknown>,
+		});
+
 		// Emit tool_call event - extensions can block execution
 		if (this.runner.hasHandlers("tool_call")) {
 			try {
@@ -185,7 +223,7 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 				}
 				if (resultResult.isError === false && executionError) {
 					// Extension clears the error - return success
-					return { content: modifiedContent, details: modifiedDetails };
+					return attachAdvisories({ content: modifiedContent, details: modifiedDetails }, advisoryEvaluation);
 				}
 
 				// Error status unchanged, but content/details may be modified
@@ -197,7 +235,7 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 						});
 					throw executionError;
 				}
-				return { content: modifiedContent, details: modifiedDetails };
+				return attachAdvisories({ content: modifiedContent, details: modifiedDetails }, advisoryEvaluation);
 			}
 		}
 
@@ -205,6 +243,6 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 		if (executionError) {
 			throw executionError;
 		}
-		return result;
+		return attachAdvisories(result, advisoryEvaluation);
 	}
 }

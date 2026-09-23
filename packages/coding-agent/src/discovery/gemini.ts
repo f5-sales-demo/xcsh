@@ -129,7 +129,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	// User-level: ~/.gemini/GEMINI.md
 	const userGeminiMd = getUserPath(ctx, "gemini", "GEMINI.md");
 	if (userGeminiMd) {
-		const content = await readFile(userGeminiMd);
+		const content = await readFile(userGeminiMd, ctx.signal);
 		if (content) {
 			items.push({
 				path: userGeminiMd,
@@ -143,7 +143,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	// Project-level: .gemini/GEMINI.md
 	const projectGeminiMd = getProjectPath(ctx, "gemini", "GEMINI.md");
 	if (projectGeminiMd) {
-		const content = await readFile(projectGeminiMd);
+		const content = await readFile(projectGeminiMd, ctx.signal);
 		if (content) {
 			const projectBase = getProjectPath(ctx, "gemini", "");
 			const depth = projectBase ? calculateDepth(ctx.cwd, projectBase, path.sep) : 0;
@@ -335,7 +335,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 	// User-level: ~/.gemini/system.md
 	const userSystemMd = getUserPath(ctx, "gemini", "system.md");
 	if (userSystemMd) {
-		const content = await readFile(userSystemMd);
+		const content = await readFile(userSystemMd, ctx.signal);
 		if (content) {
 			items.push({
 				path: userSystemMd,
@@ -349,7 +349,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 	// Project-level: .gemini/system.md
 	const projectSystemMd = getProjectPath(ctx, "gemini", "system.md");
 	if (projectSystemMd) {
-		const content = await readFile(projectSystemMd);
+		const content = await readFile(projectSystemMd, ctx.signal);
 		if (content) {
 			items.push({
 				path: projectSystemMd,

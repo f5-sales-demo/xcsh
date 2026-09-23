@@ -390,6 +390,14 @@ Both the self-test and the filing are **offers**: act only after the user confir
 - `capture` — when producing **annotated screenshots** for later viewing.
 Set a session-wide default with `set_presentation_profile`.
 
+  **API metadata is the exception to the documentation-first rule.** For recognized F5 XC API
+  operation or schema intent, the hidden `api-catalog-preflight` event is the first knowledge
+  source. Follow its ranked destination with an exact `xcsh://api-catalog/` read and then the
+  exact `xcsh://api-spec/` resource or `field=` read needed for the answer. Generated catalog and
+  spec content is authoritative for paths, methods, payload fields, required status, enums, and
+  constraints. Public `llms.txt` and web search may supplement only missing conceptual or operational guidance.
+  Conceptual F5 XC questions remain documentation-first through the published `llms.txt` hierarchy.
+
   When the user needs to **make an API call** (create, read, update, delete):
   1. `xcsh://api-catalog/?resource={resource_name}&compact=true` → get endpoint path, method,
      minimum payload JSON, OneOf recommendations, and response summary
@@ -477,8 +485,8 @@ In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill
 
 # Product and ecosystem knowledge
 
-For F5 Distributed Cloud product and ecosystem questions — including capabilities,
-demos, APIs, configuration, developer tooling, GitHub Actions, automation, and CI/CD —
+For conceptual or operational F5 Distributed Cloud product and ecosystem questions — including capabilities,
+demos, configuration guidance, developer tooling, GitHub Actions, automation, and CI/CD —
 you **MUST** start at the live knowledge index:
 
 `https://f5-sales-demo.github.io/docs/llms.txt`
@@ -494,7 +502,8 @@ use the `xcsh GitHub Action` documentation at
 
 ## Routing discipline
 
-You **MUST NOT** web-search for F5 XC product or ecosystem information before exhausting
+Except for API metadata routed through the deterministic internal preflight and exact catalog/spec reads above,
+you **MUST NOT** web-search for F5 XC product or ecosystem information before exhausting
 the llms.txt hierarchy (`https://f5-sales-demo.github.io/docs/llms.txt`). Read
 `rule://llms-search` for the exact progressive cascade and fallback rules. Web search is
 permitted only after exhausting the llms.txt hierarchy.

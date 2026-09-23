@@ -50,6 +50,17 @@ async function setVersion(source: string, version: string): Promise<void> {
 	await Bun.write(file, `${JSON.stringify(catalog, null, 2)}\n`);
 }
 
+async function setSetupAuthorization(source: string, setupAuthorization: "install" | "separate"): Promise<void> {
+	const file = path.join(source, ".xcsh-plugin", "marketplace.json");
+	const catalog = (await Bun.file(file).json()) as {
+		plugins: Array<{ lifecycle: { mode: string; setupRequired: boolean; setupAuthorization?: string } }>;
+	};
+	catalog.plugins[0]!.lifecycle.mode = "integrated";
+	catalog.plugins[0]!.lifecycle.setupRequired = true;
+	catalog.plugins[0]!.lifecycle.setupAuthorization = setupAuthorization;
+	await Bun.write(file, `${JSON.stringify(catalog, null, 2)}\n`);
+}
+
 async function cloneMarketplace(
 	root: string,
 	directory: string,
@@ -117,6 +128,15 @@ test("reviewed plugin lifecycle persists install, disable, upgrade, and removal 
 	expect(await f.manager().listInstalledPlugins()).toHaveLength(1);
 	await f.manager().uninstallPlugin(removal.target.pluginId, removal.target.scope);
 	expect(await f.manager().listInstalledPlugins()).toEqual([]);
+});
+
+test("direct install review binds install-scoped setup authorization", async () => {
+	const f = await fixture();
+	await setSetupAuthorization(f.source, "install");
+	await f.manager().addMarketplace(f.source);
+	const prepared = await preparePluginInstall(f.manager(), "hello-plugin", "test-marketplace", "user", false);
+	expect(prepared.target.setupAuthorization).toBe("install");
+	expect(prepared.review.consequence).toContain("authorizes its declared setup plan");
 });
 
 test("catalog drift invalidates an installation review before any plugin registry write", async () => {

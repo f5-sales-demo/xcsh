@@ -6,6 +6,9 @@
 
 ### Added
 
+- Added owner-scoped, capability-filtered plugin advisories that render machine-readable provenance,
+  fail open on matcher errors, and refresh with plugin lifecycle changes
+  ([#4175](https://github.com/f5-sales-demo/xcsh/issues/4175)).
 - Added deterministic `fable` and `anthropic/fable` model aliases, Fable 5/5.1 model-picker
   support, and a source/installed OAuth/API-key UAT runner.
 - Added capability-aware terminal hyperlinks, automatic local Vertex sign-in launch with durable

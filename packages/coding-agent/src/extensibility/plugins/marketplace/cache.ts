@@ -10,6 +10,7 @@
  * This ensures cache paths cannot be crafted to escape the cache directory.
  */
 
+import { createHash, randomUUID } from "node:crypto";
 import * as nodeFs from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -74,7 +75,7 @@ export async function cachePlugin(
 
 	// Copy to a staging directory first, then atomically rename into place.
 	// This prevents destroying an active install if fs.cp fails mid-copy.
-	const stagingPath = `${targetPath}.staging-${Date.now()}`;
+	const stagingPath = `${targetPath}.staging-${process.pid}-${randomUUID()}`;
 	try {
 		await fs.cp(sourcePath, stagingPath, { recursive: true });
 		await fs.rm(targetPath, { recursive: true, force: true });
@@ -85,6 +86,82 @@ export async function cachePlugin(
 		throw err;
 	}
 
+	return targetPath;
+}
+
+async function pluginTreeDigest(root: string): Promise<string> {
+	const hash = createHash("sha256");
+	const visit = async (directory: string, prefix = ""): Promise<void> => {
+		const entries = await fs.readdir(directory, { withFileTypes: true });
+		entries.sort((left, right) => left.name.localeCompare(right.name));
+		for (const entry of entries) {
+			const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+			const absolute = path.join(directory, entry.name);
+			const stat = await fs.lstat(absolute);
+			hash
+				.update(relative)
+				.update("\0")
+				.update((stat.mode & 0o777).toString(8))
+				.update("\0");
+			if (entry.isDirectory()) {
+				hash.update("directory\0");
+				await visit(absolute, relative);
+			} else if (entry.isFile()) {
+				hash
+					.update("file\0")
+					.update(await fs.readFile(absolute))
+					.update("\0");
+			} else if (entry.isSymbolicLink()) {
+				hash
+					.update("symlink\0")
+					.update(await fs.readlink(absolute))
+					.update("\0");
+			} else {
+				throw new Error(`Unsupported plugin source entry: ${relative}`);
+			}
+		}
+	};
+	await visit(root);
+	return hash.digest("hex");
+}
+
+/** Cache a local development source without ever replacing a path an active process may still use. */
+export async function cachePluginSnapshot(
+	sourcePath: string,
+	cacheDir: string,
+	marketplace: string,
+	pluginName: string,
+	version: string,
+): Promise<string> {
+	const sourceDigest = await pluginTreeDigest(sourcePath);
+	const snapshotVersion = `${version}+snapshot.${sourceDigest.slice(0, 16)}`;
+	const targetPath = getCachedPluginPath(cacheDir, marketplace, pluginName, snapshotVersion);
+	try {
+		if ((await pluginTreeDigest(targetPath)) === sourceDigest) return targetPath;
+		throw new Error(`Plugin cache snapshot collision: ${targetPath}`);
+	} catch (error) {
+		if (!isEnoent(error)) throw error;
+	}
+
+	await fs.mkdir(cacheDir, { recursive: true });
+	const stagingPath = `${targetPath}.staging-${process.pid}-${randomUUID()}`;
+	try {
+		await fs.cp(sourcePath, stagingPath, { recursive: true });
+		if ((await pluginTreeDigest(stagingPath)) !== sourceDigest) {
+			throw new Error("Plugin source changed while its immutable cache snapshot was being created");
+		}
+		try {
+			await fs.rename(stagingPath, targetPath);
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code;
+			if (code !== "EEXIST" && code !== "ENOTEMPTY") throw error;
+			if ((await pluginTreeDigest(targetPath)) !== sourceDigest) {
+				throw new Error(`Plugin cache snapshot collision: ${targetPath}`);
+			}
+		}
+	} finally {
+		await fs.rm(stagingPath, { recursive: true, force: true }).catch(() => {});
+	}
 	return targetPath;
 }
 

@@ -20,7 +20,7 @@ import {
 	MarketplaceManager,
 	resolvePluginDependencyPlan,
 } from "../extensibility/plugins/marketplace/index.js";
-import { describeSetupPlan, executeReviewedSetup } from "../integrations/setup";
+import { describeSetupPlan, executeInstallAuthorizedSetup, executeReviewedSetup } from "../integrations/setup";
 import type { IntegrationHandle } from "../integrations/types";
 import { theme } from "../modes/theme/theme";
 import { personProfileService } from "../person-profile/service";
@@ -212,7 +212,7 @@ export async function loadIntegrationHandles(
 	cwd: string = process.cwd(),
 ): Promise<IntegrationHandle<unknown>[]> {
 	await preloadPluginRoots(home, cwd);
-	const loaded = await discoverAndLoadExtensions([], cwd);
+	const loaded = await discoverAndLoadExtensions([], cwd, undefined, [], home);
 	if (loaded.errors.length) throw new Error(`Unable to load ${loaded.errors.length} plugin extension(s)`);
 	return loaded.extensions.flatMap(extension => [...extension.integrations.values()]);
 }
@@ -302,16 +302,29 @@ async function handleIntegrationSetup(args: string[], flags: { json?: boolean })
 async function reportMarketplaceInstallation(
 	plugin: string,
 	marketplace: string,
-	entry: { version: string; scope: string; setupRequired: boolean },
+	entry: {
+		version: string;
+		scope: string;
+		setupRequired: boolean;
+		setupAuthorization?: "separate" | "install";
+	},
 	flags: { json?: boolean },
 	dependencyPlan: ReturnType<typeof resolvePluginDependencyPlan>,
 ): Promise<void> {
 	let handles: IntegrationHandle<unknown>[] = [];
 	try {
 		handles = (await loadIntegrationHandles()).filter(handle => matchesIntegration(handle, plugin));
-	} catch {
+	} catch (error) {
 		// Installation remains successful even when extension loading cannot establish readiness.
+		if (entry.setupRequired && entry.setupAuthorization === "install") throw error;
 	}
+	const installSetup = await executeInstallAuthorizedSetup({
+		plugin,
+		lifecycle: entry,
+		trigger: "direct-install",
+		handles,
+	});
+	if (installSetup) await personProfileService.reconcileFromCollectors(undefined, 0);
 	const statuses = await Promise.all(
 		handles.map(async handle => {
 			const { value: _, ...status } = await handle.get();
@@ -693,7 +706,11 @@ async function handleInstall(
 				await reportMarketplaceInstallation(
 					target.name,
 					target.marketplace,
-					{ ...entry, setupRequired: catalogEntry?.lifecycle.setupRequired ?? false },
+					{
+						...entry,
+						setupRequired: catalogEntry?.lifecycle.setupRequired ?? false,
+						setupAuthorization: catalogEntry?.lifecycle.setupAuthorization,
+					},
 					flags,
 					dependencyPlan,
 				);
@@ -753,9 +770,11 @@ async function handleUninstall(
 	// This works even if the marketplace entry was later removed from marketplaces.json.
 	const mktMgr = await makeMarketplaceManager();
 	const installedPlugins = new Set((await mktMgr.listInstalledPlugins()).map(p => p.id));
+	const knownMarketplaces = new Set((await mktMgr.listMarketplaces()).map(marketplace => marketplace.name));
 
 	for (const name of packages) {
-		if (installedPlugins.has(name)) {
+		const target = classifyInstallTarget(name, knownMarketplaces);
+		if (installedPlugins.has(name) || target.type === "marketplace") {
 			// Exact match against installed marketplace plugin IDs (name@marketplace)
 			try {
 				await mktMgr.uninstallPlugin(name, flags.scope);

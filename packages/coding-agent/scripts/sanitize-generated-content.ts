@@ -12,8 +12,14 @@ const AZURE_SUBSCRIPTION_ID_RE =
 const AZURE_SUBSCRIPTION_PLACEHOLDER = "<subscription-id>";
 const HEX_ENCODED_VALUE_RE = /\b((?:[0-9a-f]{2}){16,})(:[0-9a-f]{64})\b/gi;
 const GENERATED_IDENTITY_RE = /("(namespace|tenant|first_name|last_name)"\s*:\s*)"([^"\n]*)"/g;
-const SAFE_GENERATED_NAMESPACES = new Set(["*", "$F5XC_NAMESPACE", "demo-app", "shared", "system"]);
-const SAFE_GENERATED_TENANTS = new Set(["$F5XC_TENANT", "example-corp"]);
+const SAFE_GENERATED_NAMESPACES = new Set(["*", "$XCSH_NAMESPACE", "demo-app", "shared", "system"]);
+const SAFE_GENERATED_TENANTS = new Set(["$XCSH_TENANT", "example-corp"]);
+const LEGACY_ENVIRONMENT_PREFIX_RE = new RegExp(["F5", "XC_"].join(""), "g");
+
+/** Normalize generated API documentation to xcsh's sole supported environment contract. */
+export function sanitizeLegacyEnvironmentNames(text: string): string {
+	return text.replace(LEGACY_ENVIRONMENT_PREFIX_RE, "XCSH_");
+}
 
 type Ipv4Address = readonly [number, number, number, number];
 type Ipv4Range = readonly [Ipv4Address, number];

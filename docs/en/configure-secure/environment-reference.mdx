@@ -27,8 +27,7 @@ A flag beats the variable: `--smol` overrides `PI_SMOL_MODEL` for that invocatio
 | `XCSH_API_TOKEN` | Tenant API credential for that endpoint |
 | `XCSH_TENANT` | Tenant identifier reported in context status |
 | `XCSH_CONTEXT_NAME` | Name of the context the session binds to |
-| `XCSH_NAMESPACE` | Namespace applied when a command does not pass `-n` |
-| `F5XC_NAMESPACE` | Namespace source recorded in resource operation records |
+| `XCSH_NAMESPACE` | Namespace applied when a command does not pass `-n` and recorded in resource operation records |
 
 Treat every value in this group as a secret. Supply them through the runtime environment or a named context, never through a committed file or a command argument that reaches shell history.
 

@@ -26,8 +26,9 @@ async function loadAgentsMd(ctx: LoadContext): Promise<LoadResult<ContextFile>> 
 	let current = ctx.cwd;
 
 	while (true) {
+		ctx.signal?.throwIfAborted();
 		const candidate = path.join(current, "XCSH.md");
-		const content = await readFile(candidate);
+		const content = await readFile(candidate, ctx.signal);
 
 		if (content !== null) {
 			const parent = path.dirname(candidate);

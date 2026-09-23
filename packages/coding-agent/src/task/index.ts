@@ -799,6 +799,7 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						contextFiles,
 						skills: availableSkills,
 						promptTemplates,
+						preparedSystemPromptInputs: this.session.preparedSystemPromptInputs,
 					});
 				}
 
