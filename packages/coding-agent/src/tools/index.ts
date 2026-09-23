@@ -134,6 +134,8 @@ export interface ToolSession {
 	skills?: Skill[];
 	/** Pre-loaded prompt templates */
 	promptTemplates?: PromptTemplate[];
+	/** Immutable workspace prompt inputs shared with non-isolated child sessions. */
+	readonly preparedSystemPromptInputs?: import("../system-prompt").PreparedSystemPromptInputs;
 	/** Whether LSP integrations are enabled */
 	enableLsp?: boolean;
 	/** Whether an edit-capable tool is available in this session (controls hashline output) */

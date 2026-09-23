@@ -17,16 +17,15 @@ import {
 	prompt,
 	withTimeout,
 } from "@f5-sales-demo/pi-utils";
-import { $ } from "bun";
 import { contextFileCapability } from "./capability/context-file";
 import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
 import type { ContextComponentProfile } from "./context/profile";
 import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
-import { listXcshPluginSummaries, type XcshPluginSummary } from "./discovery/helpers";
+import { getXcshPluginCacheGeneration, loadXcshPluginSummaries, type XcshPluginSummary } from "./discovery/helpers";
 import { defaultStartFolderDeps, resolveStartFolder, type StartFolder } from "./discovery/start-folder";
-import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
+import { isApplicableToContext, loadSkills, type Skill, type SkillWarning } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import progressiveSystemPromptTemplate from "./prompts/system/progressive-system-prompt.md" with { type: "text" };
 import startFolderTemplate from "./prompts/system/start-folder.md" with { type: "text" };
@@ -138,12 +137,15 @@ const START_FOLDER_TIMEOUT_MS = 1500;
  * `plain`, which withholds GitHub scope — the safe direction, since the cost of being wrong
  * that way is a missing suggestion rather than a secret pushed to a hosted repository.
  */
-async function resolveStartFolderBounded(cwd: string): Promise<StartFolder> {
+async function resolveStartFolderBounded(cwd: string, signal?: AbortSignal): Promise<StartFolder> {
 	// `withTimeout` only rejects its own wrapper, so without this the git subprocesses keep
 	// running after the fallback — and the prompt is rebuilt many times per session, so they
 	// would accumulate. Aborting on expiry lets the git layer tear its child down.
 	const controller = new AbortController();
+	const abortFromCaller = () => controller.abort(signal?.reason);
+	signal?.addEventListener("abort", abortFromCaller, { once: true });
 	try {
+		signal?.throwIfAborted();
 		return await withTimeout(
 			resolveStartFolder(cwd, defaultStartFolderDeps, controller.signal),
 			START_FOLDER_TIMEOUT_MS,
@@ -151,7 +153,10 @@ async function resolveStartFolderBounded(cwd: string): Promise<StartFolder> {
 		);
 	} catch {
 		controller.abort();
+		if (signal?.aborted) throw signal.reason;
 		return { kind: "plain" };
+	} finally {
+		signal?.removeEventListener("abort", abortFromCaller);
 	}
 }
 // The walk's `limit` caps DISCOVERED files, not directories VISITED — so a dir
@@ -179,6 +184,7 @@ interface WalkContext {
 	readonly maxDirs: number;
 	readonly deadline: number;
 	readonly readdir: ReaddirFn;
+	readonly signal?: AbortSignal;
 	dirsVisited: number;
 }
 
@@ -199,12 +205,27 @@ interface WalkContext {
  * never returning.
  */
 async function readdirWithinBudget(dir: string, ctx: WalkContext): Promise<fs.Dirent[] | null> {
+	ctx.signal?.throwIfAborted();
 	const remaining = ctx.deadline - Date.now();
 	if (remaining <= 0) return null;
 	// `withTimeout` rejects on expiry and clears its own timer; here expiry is an
 	// ordinary outcome, so both it and a real read failure collapse to null — the
 	// caller treats either as "nothing here".
-	return await withTimeout(ctx.readdir(dir), remaining, `readdir exceeded the walk budget: ${dir}`).catch(() => null);
+	const read = withTimeout(ctx.readdir(dir), remaining, `readdir exceeded the walk budget: ${dir}`);
+	if (!ctx.signal) return await read.catch(() => null);
+	let abortHandler: (() => void) | undefined;
+	const aborted = new Promise<never>((_resolve, reject) => {
+		abortHandler = () => reject(ctx.signal?.reason);
+		ctx.signal?.addEventListener("abort", abortHandler, { once: true });
+	});
+	try {
+		return await Promise.race([read, aborted]).catch(error => {
+			if (ctx.signal?.aborted) throw error;
+			return null;
+		});
+	} finally {
+		if (abortHandler) ctx.signal.removeEventListener("abort", abortHandler);
+	}
 }
 
 function normalizePath(value: string): string {
@@ -283,6 +304,8 @@ export interface DiscoverAgentsMdOptions {
 	/** Directory reader; defaults to `fs.promises.readdir`. A test seam for
 	 *  simulating a filesystem that never answers. */
 	readdir?: ReaddirFn;
+	/** Cancellation for prompt preparation. */
+	signal?: AbortSignal;
 }
 
 /**
@@ -303,19 +326,21 @@ export async function discoverAgentsMdFiles(
 		maxDirs: opts.maxDirs ?? AGENTS_MD_MAX_DIRS,
 		deadline: Date.now() + (opts.budgetMs ?? AGENTS_MD_WALK_BUDGET_MS),
 		readdir: opts.readdir ?? ((dir: string) => fs.promises.readdir(dir, { withFileTypes: true })),
+		signal: opts.signal,
 		dirsVisited: 0,
 	};
 	try {
 		const discovered = new Set<string>();
 		await collectAgentsMdFiles(root, root, 0, limit, maxDepth, discovered, ctx);
 		return { files: Array.from(discovered).sort().slice(0, limit), dirsVisited: ctx.dirsVisited };
-	} catch {
+	} catch (error) {
+		if (opts.signal?.aborted) throw error;
 		return { files: [], dirsVisited: ctx.dirsVisited };
 	}
 }
 
-export async function buildAgentsMdSearch(cwd: string): Promise<AgentsMdSearch> {
-	const { files } = await discoverAgentsMdFiles(cwd);
+export async function buildAgentsMdSearch(cwd: string, signal?: AbortSignal): Promise<AgentsMdSearch> {
+	const { files } = await discoverAgentsMdFiles(cwd, { signal });
 	return {
 		scopePath: ".",
 		limit: AGENTS_MD_LIMIT,
@@ -324,20 +349,33 @@ export async function buildAgentsMdSearch(cwd: string): Promise<AgentsMdSearch> 
 	};
 }
 
-async function getGpuModel(): Promise<string | null> {
+async function runGpuProbe(command: string[], signal?: AbortSignal): Promise<string | null> {
+	signal?.throwIfAborted();
+	try {
+		const child = Bun.spawn(command, {
+			signal,
+			killSignal: "SIGKILL",
+			stdin: "ignore",
+			stdout: "pipe",
+			stderr: "ignore",
+		});
+		const [output, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+		signal?.throwIfAborted();
+		return exitCode === 0 ? output : null;
+	} catch (error) {
+		if (signal?.aborted) throw signal.reason ?? error;
+		return null;
+	}
+}
+
+async function getGpuModel(signal?: AbortSignal): Promise<string | null> {
 	switch (process.platform) {
 		case "win32": {
-			const output = await $`wmic path win32_VideoController get name`
-				.quiet()
-				.text()
-				.catch(() => null);
+			const output = await runGpuProbe(["wmic", "path", "win32_VideoController", "get", "name"], signal);
 			return output ? parseWmicTable(output, "Name") : null;
 		}
 		case "linux": {
-			const output = await $`lspci`
-				.quiet()
-				.text()
-				.catch(() => null);
+			const output = await runGpuProbe(["lspci"], signal);
 			if (!output) return null;
 			const gpus: Array<{ name: string; priority: number }> = [];
 			for (const line of output.split("\n")) {
@@ -396,36 +434,38 @@ function getSystemInfoCachePath(): string {
 	return getGpuCachePath();
 }
 
-async function loadGpuCache(): Promise<GpuCache | null> {
+async function loadGpuCache(signal?: AbortSignal): Promise<GpuCache | null> {
 	try {
 		const cachePath = getSystemInfoCachePath();
-		const content = await Bun.file(cachePath).json();
-		return content as GpuCache;
-	} catch {
+		const content = await fs.promises.readFile(cachePath, { encoding: "utf8", signal });
+		return JSON.parse(content) as GpuCache;
+	} catch (error) {
+		if (signal?.aborted) throw signal.reason ?? error;
 		return null;
 	}
 }
 
-async function saveGpuCache(info: GpuCache): Promise<void> {
+async function saveGpuCache(info: GpuCache, signal?: AbortSignal): Promise<void> {
 	try {
 		const cachePath = getSystemInfoCachePath();
-		await Bun.write(cachePath, JSON.stringify(info, null, "\t"));
-	} catch {
+		await fs.promises.writeFile(cachePath, JSON.stringify(info, null, "\t"), { signal });
+	} catch (error) {
+		if (signal?.aborted) throw signal.reason ?? error;
 		// Silently ignore cache write failures
 	}
 }
 
-async function getCachedGpu(): Promise<string | undefined> {
-	const cached = await logger.time("getCachedGpu:loadGpuCache", loadGpuCache);
+async function getCachedGpu(signal?: AbortSignal): Promise<string | undefined> {
+	const cached = await logger.time("getCachedGpu:loadGpuCache", loadGpuCache, signal);
 	if (cached) return cached.gpu;
-	const gpu = await logger.time("getCachedGpu:getGpuModel", getGpuModel);
+	const gpu = await logger.time("getCachedGpu:getGpuModel", getGpuModel, signal);
 	if (gpu) {
-		await logger.time("getCachedGpu:saveGpuCache", saveGpuCache, { gpu });
+		await logger.time("getCachedGpu:saveGpuCache", saveGpuCache, { gpu }, signal);
 	}
 	return gpu ?? undefined;
 }
-async function getEnvironmentInfo(): Promise<Array<{ label: string; value: string }>> {
-	const gpu = await getCachedGpu();
+async function getEnvironmentInfo(signal?: AbortSignal): Promise<Array<{ label: string; value: string }>> {
+	const gpu = await getCachedGpu(signal);
 	const cpus = os.cpus();
 	const build = getBuildMeta();
 	const entries: Array<{ label: string; value: string | undefined }> = [
@@ -442,7 +482,11 @@ async function getEnvironmentInfo(): Promise<Array<{ label: string; value: strin
 }
 
 /** Resolve input as file path or literal string */
-export async function resolvePromptInput(input: string | undefined, description: string): Promise<string | undefined> {
+export async function resolvePromptInput(
+	input: string | undefined,
+	description: string,
+	signal?: AbortSignal,
+): Promise<string | undefined> {
 	if (!input) {
 		return undefined;
 	} else if (input.includes("\n")) {
@@ -450,10 +494,14 @@ export async function resolvePromptInput(input: string | undefined, description:
 	}
 
 	try {
-		return await Bun.file(input).text();
+		signal?.throwIfAborted();
+		const stat = await fs.promises.stat(input);
+		if (!stat.isFile()) throw new Error(`${description} source is not a regular file`);
+		return await fs.promises.readFile(input, { encoding: "utf8", signal });
 	} catch (error) {
+		if (signal?.aborted) throw error;
 		if (!hasFsCode(error, "ENAMETOOLONG") && !isEnoent(error)) {
-			logger.warn(`Could not read ${description} file`, { path: input, error: String(error) });
+			throw error;
 		}
 		return input;
 	}
@@ -467,6 +515,8 @@ export interface LoadContextFilesOptions {
 	 * Pass `[]` to force discovery independent of any process-wide settings state.
 	 */
 	disabledExtensions?: string[];
+	/** Cancellation for bounded prompt preparation. */
+	signal?: AbortSignal;
 }
 
 function dedupeExactContextFiles(
@@ -494,6 +544,7 @@ export async function loadProjectContextFiles(
 	const result = await loadCapability(contextFileCapability.id, {
 		cwd: resolvedCwd,
 		disabledExtensions: options.disabledExtensions,
+		signal: options.signal,
 	});
 
 	// Convert ContextFile items and preserve depth info
@@ -524,7 +575,10 @@ export async function loadProjectContextFiles(
 export async function loadSystemPromptFiles(options: LoadContextFilesOptions = {}): Promise<string | null> {
 	const resolvedCwd = options.cwd ?? getProjectDir();
 
-	const result = await loadCapability<SystemPromptFile>(systemPromptCapability.id, { cwd: resolvedCwd });
+	const result = await loadCapability<SystemPromptFile>(systemPromptCapability.id, {
+		cwd: resolvedCwd,
+		signal: options.signal,
+	});
 
 	if (result.items.length === 0) return null;
 
@@ -627,25 +681,373 @@ export interface BuildSystemPromptOptions {
 	onProfileComponents?: (components: ContextComponentProfile[]) => void;
 }
 
-/** Build the system prompt with tools, guidelines, and context */
-export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}): Promise<string> {
-	if ($env.NULL_PROMPT === "true") {
-		return "";
+export type SystemPromptPreparationOutcome = "completed" | "provided" | "cached" | "failed" | "timed_out" | "aborted";
+
+export type SystemPromptPreparationStageName =
+	| "custom_prompt"
+	| "append_prompt"
+	| "system_prompt"
+	| "context_files"
+	| "agents_index"
+	| "skills"
+	| "plugin_summaries"
+	| "environment"
+	| "start_folder";
+
+export interface SystemPromptPreparationStage {
+	readonly name: SystemPromptPreparationStageName;
+	readonly outcome: SystemPromptPreparationOutcome;
+	readonly durationMs: number;
+}
+
+export interface SystemPromptPreparationDiagnostic {
+	readonly timeoutMs: number;
+	readonly elapsedMs: number;
+	readonly stages: readonly SystemPromptPreparationStage[];
+}
+
+export interface PreparedSystemPromptInputs {
+	readonly cwd: string;
+	readonly resolvedCustomPrompt?: string;
+	readonly resolvedAppendPrompt?: string;
+	readonly systemPromptCustomization: string | null;
+	readonly contextFiles: ReadonlyArray<{ path: string; content: string; depth?: number }>;
+	readonly agentsMdSearch: Readonly<Omit<AgentsMdSearch, "files"> & { files: readonly string[] }>;
+	readonly skills: readonly Skill[];
+	readonly skillWarnings: readonly SkillWarning[];
+	readonly pluginSummaries: readonly XcshPluginSummary[];
+	readonly pluginCacheGeneration: number;
+	readonly environment: ReadonlyArray<{ label: string; value: string }>;
+	readonly startFolder: StartFolder;
+	readonly stages: readonly SystemPromptPreparationStage[];
+}
+
+export interface PrepareSystemPromptInputsOptions
+	extends Pick<
+		BuildSystemPromptOptions,
+		| "customPrompt"
+		| "appendSystemPrompt"
+		| "skillsSettings"
+		| "cwd"
+		| "contextFiles"
+		| "agentsMdSearch"
+		| "startFolder"
+		| "disabledExtensions"
+		| "skills"
+		| "contextSkillDirs"
+		| "contextIncludeSkills"
+		| "contextExcludeSkills"
+	> {
+	timeoutMs?: number;
+	signal?: AbortSignal;
+	onDiagnostic?: (diagnostic: SystemPromptPreparationDiagnostic) => void;
+}
+
+export interface SystemPromptPreparationDependencies {
+	resolvePromptInput: (
+		input: string | undefined,
+		description: string,
+		signal: AbortSignal,
+	) => Promise<string | undefined>;
+	loadSystemPromptFiles: (signal: AbortSignal) => Promise<string | null>;
+	loadProjectContextFiles: (signal: AbortSignal) => Promise<Array<{ path: string; content: string; depth?: number }>>;
+	buildAgentsMdSearch: (signal: AbortSignal) => Promise<AgentsMdSearch>;
+	loadSkills: (signal: AbortSignal) => Promise<{ skills: Skill[]; warnings: SkillWarning[] }>;
+	loadPluginSummaries: (
+		signal: AbortSignal,
+	) => Promise<{ summaries: XcshPluginSummary[]; cacheStatus: "completed" | "cached"; generation?: number }>;
+	getEnvironmentInfo: (signal: AbortSignal) => Promise<Array<{ label: string; value: string }>>;
+	resolveStartFolder: (signal: AbortSignal) => Promise<StartFolder>;
+}
+
+function durationSince(startedAt: number): number {
+	return Math.round((performance.now() - startedAt) * 100) / 100;
+}
+
+/** Collect immutable prompt inputs once while retaining independently completed stages. */
+export async function prepareSystemPromptInputs(
+	options: PrepareSystemPromptInputsOptions = {},
+	dependencyOverrides: Partial<SystemPromptPreparationDependencies> = {},
+): Promise<PreparedSystemPromptInputs> {
+	const resolvedCwd = path.resolve(options.cwd ?? getProjectDir());
+	const timeoutMs = options.timeoutMs ?? SYSTEM_PROMPT_PREP_TIMEOUT_MS;
+	const mergedSkillsSettings = {
+		...options.skillsSettings,
+		customDirectories: [...(options.skillsSettings?.customDirectories ?? []), ...(options.contextSkillDirs ?? [])],
+		includeSkills: [...(options.skillsSettings?.includeSkills ?? []), ...(options.contextIncludeSkills ?? [])],
+		ignoredSkills: [...(options.skillsSettings?.ignoredSkills ?? []), ...(options.contextExcludeSkills ?? [])],
+	};
+	const dependencies: SystemPromptPreparationDependencies = {
+		resolvePromptInput,
+		loadSystemPromptFiles: signal => loadSystemPromptFiles({ cwd: resolvedCwd, signal }),
+		loadProjectContextFiles: signal =>
+			loadProjectContextFiles({ cwd: resolvedCwd, disabledExtensions: options.disabledExtensions, signal }),
+		buildAgentsMdSearch: signal => buildAgentsMdSearch(resolvedCwd, signal),
+		loadSkills: signal =>
+			mergedSkillsSettings.enabled === false
+				? Promise.resolve({ skills: [], warnings: [] })
+				: loadSkills({ ...mergedSkillsSettings, cwd: resolvedCwd, signal }),
+		loadPluginSummaries: signal => loadXcshPluginSummaries(os.homedir(), resolvedCwd, signal),
+		getEnvironmentInfo,
+		resolveStartFolder: signal => resolveStartFolderBounded(resolvedCwd, signal),
+		...dependencyOverrides,
+	};
+
+	const controller = new AbortController();
+	const values: {
+		resolvedCustomPrompt?: string;
+		resolvedAppendPrompt?: string;
+		systemPromptCustomization: string | null;
+		contextFiles: Array<{ path: string; content: string; depth?: number }>;
+		agentsMdSearch: AgentsMdSearch;
+		skills: Skill[];
+		skillWarnings: SkillWarning[];
+		pluginSummaries: XcshPluginSummary[];
+		pluginCacheGeneration: number;
+		environment: Array<{ label: string; value: string }>;
+		startFolder: StartFolder;
+	} = {
+		systemPromptCustomization: null,
+		contextFiles: dedupeExactContextFiles(options.contextFiles ?? []),
+		agentsMdSearch: options.agentsMdSearch ?? {
+			scopePath: ".",
+			limit: AGENTS_MD_LIMIT,
+			pattern: `XCSH.md depth ${AGENTS_MD_MIN_DEPTH}-${AGENTS_MD_MAX_DEPTH}`,
+			files: [],
+		},
+		skills: options.skills ?? [],
+		skillWarnings: [],
+		pluginSummaries: [],
+		pluginCacheGeneration: getXcshPluginCacheGeneration(),
+		environment: [],
+		startFolder: options.startFolder ?? { kind: "plain" },
+	};
+	const stageOrder: SystemPromptPreparationStageName[] = [
+		"custom_prompt",
+		"append_prompt",
+		"system_prompt",
+		"context_files",
+		"agents_index",
+		"skills",
+		"plugin_summaries",
+		"environment",
+		"start_folder",
+	];
+	const stageStates = new Map<
+		SystemPromptPreparationStageName,
+		{ startedAt: number; outcome?: SystemPromptPreparationOutcome; durationMs?: number }
+	>();
+	for (const name of stageOrder) stageStates.set(name, { startedAt: performance.now() });
+	const finishStage = (
+		name: SystemPromptPreparationStageName,
+		outcome: SystemPromptPreparationOutcome,
+		startedAt: number,
+	): boolean => {
+		const current = stageStates.get(name);
+		if (!current || current.outcome) return false;
+		current.outcome = outcome;
+		current.durationMs = durationSince(startedAt);
+		return true;
+	};
+	const run = <T>(
+		name: SystemPromptPreparationStageName,
+		loader: () => Promise<T>,
+		apply: (value: T) => void,
+		provided = false,
+		outcome: (value: T) => SystemPromptPreparationOutcome = () => (provided ? "provided" : "completed"),
+	): Promise<void> => {
+		const startedAt = performance.now();
+		stageStates.set(name, { startedAt });
+		return loader().then(
+			value => {
+				if (!finishStage(name, outcome(value), startedAt)) return;
+				apply(value);
+			},
+			() => {
+				finishStage(name, controller.signal.aborted ? "aborted" : "failed", startedAt);
+			},
+		);
+	};
+
+	const work = [
+		run(
+			"custom_prompt",
+			() => dependencies.resolvePromptInput(options.customPrompt, "system prompt", controller.signal),
+			value => {
+				values.resolvedCustomPrompt = value;
+			},
+		),
+		run(
+			"append_prompt",
+			() => dependencies.resolvePromptInput(options.appendSystemPrompt, "append system prompt", controller.signal),
+			value => {
+				values.resolvedAppendPrompt = value;
+			},
+		),
+		run(
+			"system_prompt",
+			() => dependencies.loadSystemPromptFiles(controller.signal),
+			value => {
+				values.systemPromptCustomization = value;
+			},
+		),
+		run(
+			"context_files",
+			() =>
+				options.contextFiles !== undefined
+					? Promise.resolve(options.contextFiles)
+					: dependencies.loadProjectContextFiles(controller.signal),
+			value => {
+				values.contextFiles = dedupeExactContextFiles(value);
+			},
+			options.contextFiles !== undefined,
+		),
+		run(
+			"agents_index",
+			() =>
+				options.agentsMdSearch !== undefined
+					? Promise.resolve(options.agentsMdSearch)
+					: dependencies.buildAgentsMdSearch(controller.signal),
+			value => {
+				values.agentsMdSearch = value;
+			},
+			options.agentsMdSearch !== undefined,
+		),
+		run(
+			"skills",
+			() =>
+				options.skills !== undefined
+					? Promise.resolve({ skills: options.skills, warnings: [] })
+					: dependencies.loadSkills(controller.signal),
+			value => {
+				values.skills = value.skills;
+				values.skillWarnings = value.warnings;
+			},
+			options.skills !== undefined,
+		),
+		run(
+			"plugin_summaries",
+			() => dependencies.loadPluginSummaries(controller.signal),
+			value => {
+				values.pluginSummaries = value.summaries;
+				values.pluginCacheGeneration = value.generation ?? 0;
+			},
+			false,
+			value => value.cacheStatus,
+		),
+		run(
+			"environment",
+			() => dependencies.getEnvironmentInfo(controller.signal),
+			value => {
+				values.environment = value;
+			},
+		),
+		run(
+			"start_folder",
+			() =>
+				options.startFolder !== undefined
+					? Promise.resolve(options.startFolder)
+					: dependencies.resolveStartFolder(controller.signal),
+			value => {
+				values.startFolder = value;
+			},
+			options.startFolder !== undefined,
+		),
+	];
+
+	const startedAt = performance.now();
+	let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+	let externalAbortHandler: (() => void) | undefined;
+	const cutoff = new Promise<"timed_out" | "aborted">(resolve => {
+		timeoutHandle = setTimeout(() => resolve("timed_out"), timeoutMs);
+		if (options.signal) {
+			externalAbortHandler = () => resolve("aborted");
+			if (options.signal.aborted) externalAbortHandler();
+			else options.signal.addEventListener("abort", externalAbortHandler, { once: true });
+		}
+	});
+	const settled = await Promise.race([Promise.all(work).then(() => "completed" as const), cutoff]);
+	if (settled !== "completed") {
+		for (const stage of stageStates.values()) {
+			if (!stage.outcome) {
+				stage.outcome = settled;
+				stage.durationMs = durationSince(stage.startedAt);
+			}
+		}
+		controller.abort(options.signal?.reason ?? new Error("System prompt preparation deadline reached"));
+	}
+	if (timeoutHandle) clearTimeout(timeoutHandle);
+	if (options.signal && externalAbortHandler) options.signal.removeEventListener("abort", externalAbortHandler);
+
+	const stages = Object.freeze(
+		stageOrder.map(name => {
+			const state = stageStates.get(name)!;
+			return Object.freeze({ name, outcome: state.outcome ?? "failed", durationMs: state.durationMs ?? 0 });
+		}),
+	);
+	const diagnostic: SystemPromptPreparationDiagnostic = Object.freeze({
+		timeoutMs,
+		elapsedMs: durationSince(startedAt),
+		stages,
+	});
+	options.onDiagnostic?.(diagnostic);
+	const unfinished = stages.filter(stage => stage.outcome === "timed_out" || stage.outcome === "aborted");
+	const failed = stages.filter(stage => stage.outcome === "failed");
+	if (unfinished.length > 0 || failed.length > 0) {
+		const incompleteStages = [...unfinished, ...failed].map(stage => stage.name).join(", ");
+		logger.warn(
+			`System prompt preparation incomplete for stages ${incompleteStages}; completed context was retained`,
+			{ ...diagnostic },
+		);
+	} else {
+		logger.debug("System prompt preparation completed", { ...diagnostic });
 	}
 
+	return Object.freeze({
+		cwd: resolvedCwd,
+		resolvedCustomPrompt: values.resolvedCustomPrompt,
+		resolvedAppendPrompt: values.resolvedAppendPrompt,
+		systemPromptCustomization: values.systemPromptCustomization,
+		contextFiles: Object.freeze([...values.contextFiles]),
+		agentsMdSearch: Object.freeze({
+			...values.agentsMdSearch,
+			files: Object.freeze([...values.agentsMdSearch.files]),
+		}),
+		skills: Object.freeze([...values.skills]),
+		skillWarnings: Object.freeze([...values.skillWarnings]),
+		pluginSummaries: Object.freeze([...values.pluginSummaries]),
+		pluginCacheGeneration: values.pluginCacheGeneration,
+		environment: Object.freeze([...values.environment]),
+		startFolder: Object.freeze({ ...values.startFolder }),
+		stages,
+	});
+}
+
+export function assertPreparedSystemPromptCwd(snapshot: PreparedSystemPromptInputs, cwd: string): void {
+	if (path.resolve(snapshot.cwd) !== path.resolve(cwd)) {
+		throw new Error("Prepared system prompt inputs belong to a different working directory");
+	}
+}
+
+export interface RenderSystemPromptOptions extends BuildSystemPromptOptions {
+	/** Already resolved dynamic source. Presence overrides the prepared value, including with undefined. */
+	resolvedCustomPrompt?: string;
+	/** Already resolved dynamic append text. Presence overrides the prepared value, including with undefined. */
+	resolvedAppendPrompt?: string;
+}
+
+/** Render a system prompt exclusively from a prepared snapshot and caller-provided dynamic values. */
+export function renderSystemPrompt(
+	prepared: PreparedSystemPromptInputs,
+	options: RenderSystemPromptOptions = {},
+): string {
+	if ($env.NULL_PROMPT === "true") return "";
+	assertPreparedSystemPromptCwd(prepared, options.cwd ?? prepared.cwd);
 	const {
 		loadingMode = "eager",
-		customPrompt,
 		tools,
-		appendSystemPrompt,
 		repeatToolDescriptions = false,
-		skillsSettings,
 		toolNames: providedToolNames,
-		cwd,
-		contextFiles: providedContextFiles,
-		agentsMdSearch: providedAgentsMdSearch,
-		startFolder: providedStartFolder,
-		skills: providedSkills,
 		rules,
 		alwaysApplyRules,
 		intentField,
@@ -656,119 +1058,18 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		context,
 		transformPrompt,
 	} = options;
-	const resolvedCwd = cwd ?? getProjectDir();
-
-	const prepPromise = (() => {
-		const systemPromptCustomizationPromise = logger.time("loadSystemPromptFiles", loadSystemPromptFiles, {
-			cwd: resolvedCwd,
-		});
-		const contextFilesPromise = providedContextFiles
-			? Promise.resolve(providedContextFiles)
-			: logger.time("loadProjectContextFiles", loadProjectContextFiles, {
-					cwd: resolvedCwd,
-					disabledExtensions: options.disabledExtensions,
-				});
-		const agentsMdSearchPromise = providedAgentsMdSearch
-			? Promise.resolve(providedAgentsMdSearch)
-			: logger.time("buildAgentsMdSearch", buildAgentsMdSearch, resolvedCwd);
-		const mergedSkillsSettings = {
-			...skillsSettings,
-			customDirectories: [...(skillsSettings?.customDirectories ?? []), ...(options.contextSkillDirs ?? [])],
-			includeSkills: [...(skillsSettings?.includeSkills ?? []), ...(options.contextIncludeSkills ?? [])],
-			// XCSHContext uses "excludeSkills"; SkillsSettings uses "ignoredSkills" — same semantics, different name.
-			ignoredSkills: [...(skillsSettings?.ignoredSkills ?? []), ...(options.contextExcludeSkills ?? [])],
-		};
-		const skillsPromise: Promise<Skill[]> =
-			providedSkills !== undefined
-				? Promise.resolve(providedSkills)
-				: mergedSkillsSettings?.enabled !== false
-					? loadSkills({ ...mergedSkillsSettings, cwd: resolvedCwd }).then(result => result.skills)
-					: Promise.resolve([]);
-
-		// Installed-plugins capability index: enumerate installed plugins (name + own-manifest
-		// description + xcsh://plugin/<name> pointer) so the agent reliably consults them. Discovery
-		// is cached; fails safe to [] (no block) on error.
-		const pluginSummariesPromise: Promise<XcshPluginSummary[]> = listXcshPluginSummaries(
-			os.homedir(),
-			resolvedCwd,
-		).catch(() => []);
-
-		return Promise.all([
-			resolvePromptInput(customPrompt, "system prompt"),
-			resolvePromptInput(appendSystemPrompt, "append system prompt"),
-			systemPromptCustomizationPromise,
-			contextFilesPromise,
-			agentsMdSearchPromise,
-			skillsPromise,
-			pluginSummariesPromise,
-		]).then(
-			([
-				resolvedCustomPrompt,
-				resolvedAppendPrompt,
-				systemPromptCustomization,
-				contextFiles,
-				agentsMdSearch,
-				skills,
-				pluginSummaries,
-			]) => ({
-				resolvedCustomPrompt,
-				resolvedAppendPrompt,
-				systemPromptCustomization,
-				contextFiles,
-				agentsMdSearch,
-				skills,
-				pluginSummaries,
-			}),
-		);
-	})();
-
-	const prepResult = await Promise.race([
-		prepPromise
-			.then(value => ({ type: "ready" as const, value }))
-			.catch(error => ({ type: "error" as const, error })),
-		Bun.sleep(SYSTEM_PROMPT_PREP_TIMEOUT_MS).then(() => ({ type: "timeout" as const })),
-	]);
-
-	let resolvedCustomPrompt: string | undefined;
-	let resolvedAppendPrompt: string | undefined;
-	let systemPromptCustomization: string | null = null;
-	let contextFiles: Array<{ path: string; content: string; depth?: number }> = dedupeExactContextFiles(
-		providedContextFiles ?? [],
-	);
-	let agentsMdSearch: AgentsMdSearch = {
-		scopePath: ".",
-		limit: AGENTS_MD_LIMIT,
-		pattern: `XCSH.md depth ${AGENTS_MD_MIN_DEPTH}-${AGENTS_MD_MAX_DEPTH}`,
-		files: [],
-	};
-	let skills: Skill[] = providedSkills ?? [];
-	let pluginSummaries: XcshPluginSummary[] = [];
-
-	if (prepResult.type === "timeout") {
-		logger.warn("System prompt preparation timed out; using minimal startup context", {
-			cwd: resolvedCwd,
-			timeoutMs: SYSTEM_PROMPT_PREP_TIMEOUT_MS,
-		});
-		process.stderr.write(
-			`Warning: system prompt preparation timed out after ${SYSTEM_PROMPT_PREP_TIMEOUT_MS}ms; using minimal startup context.\n`,
-		);
-	} else if (prepResult.type === "error") {
-		logger.warn("System prompt preparation failed; using minimal startup context", {
-			cwd: resolvedCwd,
-			error: String(prepResult.error),
-		});
-		process.stderr.write("Warning: system prompt preparation failed; using minimal startup context.\n");
-	} else {
-		resolvedCustomPrompt = prepResult.value.resolvedCustomPrompt;
-		resolvedAppendPrompt = prepResult.value.resolvedAppendPrompt;
-		systemPromptCustomization = prepResult.value.systemPromptCustomization;
-		contextFiles = dedupeExactContextFiles(prepResult.value.contextFiles);
-		agentsMdSearch = prepResult.value.agentsMdSearch;
-		skills = prepResult.value.skills;
-		pluginSummaries = prepResult.value.pluginSummaries;
-	}
-
-	const plugins = pluginSummaries;
+	const resolvedCwd = prepared.cwd;
+	const resolvedCustomPrompt = Object.hasOwn(options, "resolvedCustomPrompt")
+		? options.resolvedCustomPrompt
+		: prepared.resolvedCustomPrompt;
+	const resolvedAppendPrompt = Object.hasOwn(options, "resolvedAppendPrompt")
+		? options.resolvedAppendPrompt
+		: prepared.resolvedAppendPrompt;
+	const systemPromptCustomization = prepared.systemPromptCustomization;
+	const contextFiles = prepared.contextFiles;
+	const agentsMdSearch = prepared.agentsMdSearch;
+	const skills = prepared.skills;
+	const plugins = prepared.pluginSummaries;
 	const hasPlugins = plugins.length > 0;
 
 	const date = new Date().toISOString().slice(0, 10);
@@ -840,9 +1141,8 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	const promptSources = [effectiveSystemPromptCustomization, resolvedCustomPrompt, resolvedAppendPrompt];
 	const injectedAlwaysApplyRules = dedupeAlwaysApplyRules(alwaysApplyRules, promptSources);
 
-	const environment = await logger.time("getEnvironmentInfo", getEnvironmentInfo);
-	const startFolder =
-		providedStartFolder ?? (await logger.time("resolveStartFolder", resolveStartFolderBounded, resolvedCwd));
+	const environment = prepared.environment;
+	const startFolder = prepared.startFolder;
 	const data = {
 		systemPromptCustomization: effectiveSystemPromptCustomization,
 		customPrompt: resolvedCustomPrompt,
@@ -916,4 +1216,11 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	}
 
 	return rendered;
+}
+
+/** Prepare immutable inputs once, then render the system prompt once. */
+export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}): Promise<string> {
+	if ($env.NULL_PROMPT === "true") return "";
+	const prepared = await prepareSystemPromptInputs(options);
+	return renderSystemPrompt(prepared, options);
 }

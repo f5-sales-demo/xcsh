@@ -56,7 +56,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 
 	// User level only: ~/.codex/AGENTS.md
 	const agentsMd = path.join(ctx.home, SOURCE_PATHS.codex.userBase, "AGENTS.md");
-	const agentsContent = await readFile(agentsMd);
+	const agentsContent = await readFile(agentsMd, ctx.signal);
 	if (agentsContent) {
 		items.push({
 			path: agentsMd,
@@ -221,11 +221,13 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 			dir: userSkillsDir,
 			providerId: PROVIDER_ID,
 			level: "user",
+			signal: ctx.signal,
 		}),
 		scanSkillsFromDir(ctx, {
 			dir: projectSkillsDir,
 			providerId: PROVIDER_ID,
 			level: "project",
+			signal: ctx.signal,
 		}),
 	]);
 

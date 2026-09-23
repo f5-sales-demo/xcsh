@@ -23,6 +23,7 @@ import { createAgentSession, discoverAuthStorage } from "../sdk";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import type { AuthStorage } from "../session/auth-storage";
 import { SessionManager } from "../session/session-manager";
+import type { PreparedSystemPromptInputs } from "../system-prompt";
 import { type ContextFileEntry, truncateTail } from "../tools";
 import { jtdToJsonSchema } from "../tools/jtd-to-json-schema";
 import { ToolAbortError } from "../tools/tool-errors";
@@ -148,6 +149,7 @@ export interface ExecutorOptions {
 	contextFiles?: ContextFileEntry[];
 	skills?: Skill[];
 	promptTemplates?: PromptTemplate[];
+	preparedSystemPromptInputs?: PreparedSystemPromptInputs;
 	mcpManager?: MCPManager;
 	authStorage?: AuthStorage;
 	modelRegistry?: ModelRegistry;
@@ -986,11 +988,13 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				model,
 				thinkingLevel: effectiveThinkingLevel,
 				toolNames,
+				excludedToolNames: ["todo_write"],
 				outputSchema,
 				requireSubmitResultTool: true,
 				contextFiles: options.contextFiles,
 				skills: options.skills,
 				promptTemplates: options.promptTemplates,
+				preparedSystemPromptInputs: options.preparedSystemPromptInputs,
 				systemPrompt: defaultPrompt =>
 					prompt.render(subagentSystemPromptTemplate, {
 						base: defaultPrompt,
@@ -1011,6 +1015,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 			});
 
 			activeSession = session;
+			const parentOwnedToolNames = new Set(["todo_write"]);
 
 			// Emit lifecycle start event
 			if (options.eventBus) {
@@ -1023,13 +1028,6 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 					sessionFile: subtaskSessionFile,
 					index,
 				});
-			}
-
-			const subagentToolNames = session.getActiveToolNames();
-			const parentOwnedToolNames = new Set(["todo_write"]);
-			const filteredSubagentTools = subagentToolNames.filter(name => !parentOwnedToolNames.has(name));
-			if (filteredSubagentTools.length !== subagentToolNames.length) {
-				await session.setActiveToolsByName(filteredSubagentTools);
 			}
 
 			// Surface tools the agent declared but that are unavailable this session,
