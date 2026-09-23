@@ -577,7 +577,7 @@ export class SelectorController {
 		this.showSelector(done => {
 			dashboard.onClose = () => {
 				done();
-				void this.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
+				void this.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
 				this.ctx.ui.requestRender();
 			};
 			dashboard.onRequestRender = () => {
@@ -594,10 +594,18 @@ export class SelectorController {
 			initialTab,
 		);
 		this.showSelector(done => {
-			dashboard.onClose = () => {
+			const close = (setupPlugin?: string) => {
 				done();
-				this.ctx.ui.requestRender();
+				void this.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true }).finally(() => {
+					if (setupPlugin) this.ctx.editor.setText(`/plugin setup ${setupPlugin}`);
+					this.ctx.ui.setFocus(this.ctx.editor);
+					this.ctx.ui.requestRender();
+				});
 			};
+			dashboard.onClose = () => {
+				close();
+			};
+			dashboard.onPrepareSetup = pluginName => close(pluginName);
 			dashboard.onRequestRender = () => {
 				this.ctx.ui.requestRender();
 			};

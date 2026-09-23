@@ -491,13 +491,14 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	/** Reload slash commands and autocomplete for the provided working directory. */
-	async refreshSlashCommandState(cwd?: string, options?: { reloadAdvisories?: boolean }): Promise<void> {
+	async refreshSlashCommandState(cwd?: string, options?: { reloadExtensions?: boolean }): Promise<void> {
 		const basePath = cwd ?? this.sessionManager.getCwd();
-		if (options?.reloadAdvisories && this.session.extensionRunner) {
+		if (options?.reloadExtensions && this.session.extensionRunner) {
 			const result = await discoverAndLoadExtensions([], basePath);
-			this.session.extensionRunner.reloadAdvisories(result.extensions);
+			this.session.extensionRunner.reloadExtensions(result.extensions, result.runtime);
+			await this.session.refreshExtensionTools();
 			for (const error of result.errors) {
-				logger.warn("Plugin advisory reload skipped an extension", error);
+				logger.warn("Plugin extension reload skipped an extension", error);
 			}
 		}
 		const fileCommands = await loadSlashCommands({ cwd: basePath });
