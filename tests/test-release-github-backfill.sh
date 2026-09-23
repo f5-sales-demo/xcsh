@@ -25,6 +25,14 @@ if grep -Fq 'runs-on: xcsh-socketless' "$workflow"; then
 fi
 create_release=$(sed -n '/^  create-release:/,/^  update-homebrew:/p' "$ci_workflow")
 grep -Fq 'runs-on: macos-14' <<<"$create_release" || fail "immutable release publisher must run on macOS"
+grep -Fq 'bash scripts/ci-release-github-backfill.sh \' <<<"$create_release" ||
+  fail "primary release workflow must use the verified draft uploader"
+grep -Fq '"$GITHUB_REPOSITORY"' <<<"$create_release" || fail "primary release publisher repository is not wired"
+grep -Fq '"$REF_NAME"' <<<"$create_release" || fail "primary release publisher tag is not wired"
+grep -Fq '"packages/coding-agent/binaries"' <<<"$create_release" || fail "primary release asset directory is not wired"
+if grep -Fq 'gh release create "$REF_NAME" packages/coding-agent/binaries/*' <<<"$create_release"; then
+  fail "primary release workflow must not publish before verifying every asset"
+fi
 update_homebrew=$(sed -n '/^  update-homebrew:/,/^  verify-homebrew-install:/p' "$ci_workflow")
 grep -Fq 'runs-on: macos-14' <<<"$update_homebrew" || fail "Homebrew publisher must run on macOS"
 grep -Fq 'environment: release' "$workflow" || fail "backfill must use the release environment"
