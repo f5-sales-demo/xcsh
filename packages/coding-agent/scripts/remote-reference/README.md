@@ -7,26 +7,6 @@ agent. Codex 0.154.0 at peeled commit
 Codex 0.153.4 at `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`
 remains available for the existing versioned fixtures.
 
-## Completed-output source fixtures
-
-`completed-output.ts` regenerates the completed voice-output budget fixtures by
-compiling the original pinned Rust string truncator and realtime-context budget
-loop. It validates both source files against their pinned SHA-256 values and
-accepts an extracted source archive or checkout. It does not run Codex or contact
-the service. Rust is required only to regenerate these fixtures; ordinary tests
-read the checked-in byte counts and hashes. The same generator also compiles the
-original `realtime_backend_item` from `realtime_conversation.rs` and verifies its
-source hash. Five response-item fixtures exercise the response budget followed by
-prefix insertion and a second budget, including empty and long Unicode prefixes.
-
-```sh
-bun packages/coding-agent/scripts/remote-reference/completed-output.ts /path/to/pinned-codex-source
-```
-
-Set `TMPDIR` to choose where the temporary reference executable is compiled. The
-generator removes its temporary directory after completion. This is source-contract
-evidence and does not replace recorded phone conversations.
-
 ## Timeline presentation source fixtures
 
 `timeline-presentation.ts` compiles the original pinned Rust

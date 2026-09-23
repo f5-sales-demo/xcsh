@@ -138,6 +138,8 @@ export interface ToolSession {
 	readonly preparedSystemPromptInputs?: import("../system-prompt").PreparedSystemPromptInputs;
 	/** Whether LSP integrations are enabled */
 	enableLsp?: boolean;
+	/** Resolved MCP policy for this session. */
+	enableMCP?: boolean;
 	/** Whether an edit-capable tool is available in this session (controls hashline output) */
 	hasEditTool?: boolean;
 	/** Event bus for tool/extension communication */

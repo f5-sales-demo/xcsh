@@ -326,8 +326,48 @@ describe("openai-codex streaming", () => {
 		const result = await streamOpenAICodexResponses(model, context, { apiKey: token }).result();
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(result.stopReason).toBe("error");
+		expect(result.providerFailureCode).toBe("rate_limit_exceeded");
 		expect((result.errorMessage ?? "").toLowerCase()).toContain("rate limit");
 		expect(result.errorMessage).not.toContain("Body already used");
+	});
+
+	it("preserves a sanitized nested SSE provider failure code", async () => {
+		const payload = Buffer.from(
+			JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "acc_test" } }),
+			"utf8",
+		).toBase64();
+		const token = `aaa.${payload}.bbb`;
+		const model: Model<"openai-codex-responses"> = {
+			id: "gpt-6-astra",
+			name: "GPT-6 Astra",
+			api: "openai-codex-responses",
+			provider: "openai-codex",
+			baseUrl: "https://chatgpt.com/backend-api",
+			reasoning: true,
+			input: ["text"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 400000,
+			maxTokens: 128000,
+		};
+		const context: Context = {
+			systemPrompt: "Fixture",
+			messages: [{ role: "user", content: "Fixture", timestamp: Date.now() }],
+		};
+		for (const [code, expected] of [
+			["misalignment_policy_violation", "misalignment_policy_violation"],
+			[`unsafe ${"x".repeat(256)}`, undefined],
+		] as const) {
+			const failure = `${`data: ${JSON.stringify({
+				type: "response.failed",
+				response: { status: "failed", error: { code, message: "private provider detail" } },
+			})}`}\n\n`;
+			global.fetch = vi.fn(
+				async () => new Response(failure, { status: 200, headers: { "content-type": "text/event-stream" } }),
+			) as unknown as typeof fetch;
+			const result = await streamOpenAICodexResponses(model, context, { apiKey: token }).result();
+			expect(result.stopReason).toBe("error");
+			expect(result.providerFailureCode).toBe(expected);
+		}
 	});
 
 	it("retries transient model_error SSE events before surfacing an error", async () => {

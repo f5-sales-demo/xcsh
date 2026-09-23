@@ -5,25 +5,19 @@ import { prompt } from "@f5-sales-demo/pi-utils";
 
 export interface VoicePersonaTool {
 	name: string;
-	description?: string;
 }
 export interface VoicePersonaSnapshot {
-	systemPrompt: string;
 	tools: readonly VoicePersonaTool[];
 	history: string;
 }
 export interface VoicePersonaDiagnostics {
 	bytes: {
-		systemPrompt: number;
-		userKnowledge: number;
 		capabilities: number;
 		preferences: number;
 		history: number;
 		instructions: number;
 	};
 	truncated: {
-		systemPrompt: boolean;
-		userKnowledge: boolean;
 		capabilities: boolean;
 		preferences: boolean;
 		history: boolean;
@@ -71,7 +65,7 @@ export function boundedText(value: string, limit: number, suffixBytes = 0): { te
 	}
 	return { text: `${prefix}${marker}${suffix}`, truncated: true };
 }
-/** GPT-Live owns speech; the attached agent retains procedures and full tool descriptions. */
+/** GPT-Live owns speech; the attached agent retains procedures and exposes capability names only. */
 export function voicePersonaInstructions(
 	params: Record<string, unknown>,
 	snapshot: VoicePersonaSnapshot,
@@ -95,16 +89,12 @@ export function voicePersonaInstructions(
 		instructions,
 		diagnostics: {
 			bytes: {
-				systemPrompt: 0,
-				userKnowledge: 0,
 				capabilities: bytes(capabilities),
 				preferences: bytes(preferences.text),
 				history: bytes(history.text),
 				instructions: bytes(instructions),
 			},
 			truncated: {
-				systemPrompt: false,
-				userKnowledge: false,
 				capabilities: capabilitiesTruncated,
 				preferences: preferences.truncated,
 				history: history.truncated,

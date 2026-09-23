@@ -115,6 +115,88 @@ describe("runSubprocess submit_result reminders", () => {
 		enableLsp: false,
 	};
 
+	it.each([
+		{
+			name: "explicitly disabled without a parent manager",
+			enableMCP: false,
+			hasManager: false,
+			childEnableMCP: false,
+			proxies: 0,
+		},
+		{
+			name: "explicitly disabled with a parent manager",
+			enableMCP: false,
+			hasManager: true,
+			childEnableMCP: false,
+			proxies: 0,
+		},
+		{
+			name: "explicitly enabled without a parent manager",
+			enableMCP: true,
+			hasManager: false,
+			childEnableMCP: true,
+			proxies: 0,
+		},
+		{
+			name: "explicitly enabled with a parent manager",
+			enableMCP: true,
+			hasManager: true,
+			childEnableMCP: false,
+			proxies: 1,
+		},
+		{
+			name: "an omitted policy without a parent manager",
+			enableMCP: undefined,
+			hasManager: false,
+			childEnableMCP: true,
+			proxies: 0,
+		},
+		{
+			name: "an omitted policy with a parent manager",
+			enableMCP: undefined,
+			hasManager: true,
+			childEnableMCP: false,
+			proxies: 1,
+		},
+	])("resolves MCP policy for $name", async ({ enableMCP, hasManager, childEnableMCP, proxies }) => {
+		const session = createMockSession(({ emit }) => {
+			emit({
+				type: "tool_execution_end",
+				toolCallId: "tool-mcp-policy",
+				toolName: "submit_result",
+				result: {
+					content: [{ type: "text", text: "Result submitted." }],
+					details: { status: "success", data: { ok: true } },
+				},
+				isError: false,
+			});
+		});
+		const createAgentSessionSpy = mockCreateAgentSession(session);
+		const mcpManager = hasManager
+			? {
+					getTools: () => [
+						{
+							name: "parent_mcp_tool",
+							parameters: {},
+							mcpServerName: "parent",
+							mcpToolName: "tool",
+						},
+					],
+				}
+			: undefined;
+
+		await runSubprocess({
+			...baseOptions,
+			id: `mcp-policy-${enableMCP}-${hasManager}`,
+			enableMCP,
+			mcpManager: mcpManager as never,
+		});
+
+		const createdOptions = createAgentSessionSpy.mock.calls[0]?.[0];
+		expect(createdOptions?.enableMCP).toBe(childEnableMCP);
+		expect(createdOptions?.customTools).toHaveLength(proxies);
+	});
+
 	it("sends reminder prompt when subagent stops without submit_result", async () => {
 		const prompts: string[] = [];
 		const promptOptions: Array<PromptOptions | undefined> = [];

@@ -180,6 +180,91 @@ test("handoff notification retains active speech once and appends missing reques
 	await f.voice.stop();
 });
 
+test("v3 transcript reconciliation follows the latest matching speaker across interleaved deltas", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.receive({ type: "output_transcript.added", item: { text: "I can " } });
+	f.receive({ type: "input_transcript.added", item: { text: "please " } });
+	f.receive({ type: "output_transcript.added", item: { text: "help" } });
+	f.receive({ type: "input_transcript.added", item: { text: "check" } });
+	f.receive({ type: "turn.done", turn: { id: "assistant-1", role: "assistant", transcript: "I can help." } });
+	f.receive({ type: "turn.done", turn: { id: "user-1", role: "user", transcript: "please check" } });
+	f.receive({ ...delegation, item: { ...delegation.item, content: [{ type: "input_text", text: "please check" }] } });
+	await Bun.sleep(0);
+	const handoff = f.events.find(event => event.method === "thread/realtime/itemAdded")?.params.item as any;
+	expect(handoff?.active_transcript).toEqual([
+		{ role: "assistant", text: "I can help." },
+		{ role: "user", text: "please check" },
+	]);
+	f.finish("Done.");
+	await f.voice.stop();
+});
+
+test("v3 transcript boundaries preserve delayed finals and repeated or final-only utterances", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.receive({ type: "input_transcript.added", item: { text: "first" } });
+	f.receive({ type: "input_audio_buffer.speech_started", item_id: "user-2" });
+	f.receive({ type: "input_transcript.added", item: { text: "second" } });
+	f.receive({ type: "turn.done", turn: { id: "user-1", role: "user", transcript: "first final" } });
+	f.receive({ type: "turn.done", turn: { id: "user-3", role: "user", transcript: "yes" } });
+	f.receive({ type: "turn.done", turn: { id: "user-4", role: "user", transcript: "yes" } });
+	f.receive({ type: "response.created", response: { id: "assistant-1" } });
+	f.receive({ type: "output_transcript.added", item: { text: "answer" } });
+	f.receive({ type: "response.created", response: { id: "assistant-2" } });
+	f.receive({ type: "output_transcript.added", item: { text: "answer" } });
+	f.receive({
+		...delegation,
+		item: { ...delegation.item, content: [{ type: "input_text", text: "delegate" }] },
+	});
+	await Bun.sleep(0);
+	const handoff = f.events.find(event => event.method === "thread/realtime/itemAdded")?.params.item as any;
+	expect(handoff?.active_transcript).toEqual([
+		{ role: "user", text: "first" },
+		{ role: "user", text: "second" },
+		{ role: "user", text: "yes" },
+		{ role: "user", text: "yes" },
+		{ role: "assistant", text: "answer" },
+		{ role: "assistant", text: "answer" },
+		{ role: "user", text: "delegate" },
+	]);
+	f.finish("Done.");
+	await f.voice.stop();
+});
+
+test("misalignment retires later handoffs while unrelated provider failures remain admissible", async () => {
+	for (const providerFailure of ["misalignmentPolicyViolation", "otherProviderFailure"] as const) {
+		const f = fixture();
+		const delegated: string[] = [];
+		f.deps.delegate = async id => {
+			delegated.push(id);
+			if (delegated.length === 1) {
+				const error = new Error("sanitized backing failure") as Error & { codexErrorInfo?: string };
+				error.codexErrorInfo = providerFailure;
+				throw error;
+			}
+			return "Recovered.";
+		};
+		await f.voice.start(start);
+		f.receive(delegation);
+		f.receive({ ...delegation, item: { ...delegation.item, id: "d2" } });
+		await Bun.sleep(0);
+		expect(delegated).toEqual(
+			providerFailure === "misalignmentPolicyViolation"
+				? [expect.any(String)]
+				: [expect.any(String), expect.any(String)],
+		);
+		expect(f.voice.active).toBe(true);
+		expect(f.events.filter(event => event.method === "thread/realtime/error")).toEqual([
+			{
+				method: "thread/realtime/error",
+				params: { message: "The backing agent could not complete the voice request" },
+			},
+		]);
+		await f.voice.stop();
+	}
+});
+
 test("pinned existing-call URL encodes one path segment and retains client-owned configuration", () => {
 	expect(existingCallConfig(start)).toMatchObject({ url: "wss://api.openai.com/v1/live/fixture-call" });
 	expect(existingCallConfig({ ...start, transport: { type: "existingCall", callId: "../../admin" } }).url).toContain(
@@ -693,18 +778,13 @@ test("WebRTC uses on-demand person routing without startup person values", async
 });
 test("a pending persona snapshot fences concurrent starts and respects stop", async () => {
 	const f = fixture();
-	const snapshot = Promise.withResolvers<{
-		systemPrompt: string;
-		userKnowledge: string;
-		tools: [];
-		history: string;
-	}>();
+	const snapshot = Promise.withResolvers<{ tools: []; history: string }>();
 	f.deps.persona = () => snapshot.promise;
 	const opening = f.voice.start(start);
 	await Bun.sleep(0);
 	await expect(f.voice.start(start)).rejects.toThrow("new attachment");
 	await f.voice.stop();
-	snapshot.resolve({ systemPrompt: "xcsh", userKnowledge: "fixture", tools: [], history: "" });
+	snapshot.resolve({ tools: [], history: "" });
 	await expect(opening).rejects.toThrow("Voice stopped during persona snapshot");
 });
 test("WebRTC service rejection persists sanitized gate evidence and never opens a sideband", async () => {

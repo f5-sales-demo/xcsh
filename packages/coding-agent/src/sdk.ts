@@ -1098,6 +1098,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const pythonKernelOwnerId = `agent-session:${Snowflake.next()}`;
 
 	try {
+		// Resolve this once so child task sessions inherit the caller's policy rather
+		// than inferring it from whether this session happened to create a manager.
+		const enableMCP = options.enableMCP ?? true;
 		const getActiveModelString = (): string | undefined => {
 			const activeModel = agent?.state.model;
 			if (activeModel) return formatModelString(activeModel);
@@ -1118,6 +1121,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			cwd,
 			hasUI: options.hasUI ?? false,
 			enableLsp,
+			enableMCP,
 			get hasEditTool() {
 				const requestedToolNames = options.toolNames
 					? [...new Set(options.toolNames.map(name => name.toLowerCase()))]
@@ -1284,7 +1288,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		// Discover MCP tools from .mcp.json files
 		let mcpManager: MCPManager | undefined;
-		const enableMCP = options.enableMCP ?? true;
 		const customTools: CustomTool[] = [];
 		if (enableMCP) {
 			const mcpResult = await logger.time("discoverAndLoadMCPTools", discoverAndLoadMCPTools, cwd, {

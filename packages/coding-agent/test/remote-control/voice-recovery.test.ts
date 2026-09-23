@@ -112,6 +112,28 @@ test("v3 sideband reattaches the same call with refreshed auth and ignores stale
 		f.voice.stop();
 	}
 });
+test("v3 transcript state survives reconnect and reconciles the later final", async () => {
+	const f = fixture();
+	try {
+		await f.voice.start(start);
+		f.connections[0].handlers.message(
+			JSON.stringify({ type: "input_transcript.added", item: { text: "continue after " } }),
+		);
+		f.connections[0].handlers.closed();
+		await reconnected(f);
+		f.connections[1].handlers.message(
+			JSON.stringify({
+				type: "turn.done",
+				turn: { id: "user-1", role: "user", transcript: "continue after reconnect" },
+			}),
+		);
+		f.connections[1].handlers.message(JSON.stringify(delegation));
+		await Bun.sleep(0);
+		expect(f.delegated).toEqual([voiceDelegation("work", "user: continue after reconnect\nuser: work")]);
+	} finally {
+		await f.voice.stop();
+	}
+});
 test("failed outbound context survives reconnect while successful chunks are not replayed", async () => {
 	const f = fixture();
 	try {

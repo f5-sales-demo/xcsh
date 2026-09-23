@@ -12,7 +12,7 @@ const params = {
 	initialItems: [{ role: "assistant", text: "fixture context" }],
 };
 const auth = { accessToken: "fixture-secret", accountId: "example-voice-account" };
-const persona = { systemPrompt: "fixture system prompt", tools: [], history: "" };
+const persona = { tools: [], history: "" };
 
 test("native WebRTC v3 uses the pinned subscription call route, session shape and Location identity", async () => {
 	const config = voiceCallConfig(params, persona);

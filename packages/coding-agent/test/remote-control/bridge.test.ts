@@ -245,7 +245,10 @@ test("a hidden session publishes its async item lifecycle in order", async () =>
 			),
 		);
 		secondaryEvent({ type: "async_user_input", item, questionIds: ["ask:0"] });
-		await Bun.sleep(30);
+		const requestDeadline = Date.now() + 1_000;
+		while (!events.some(event => event.method === "item/tool/requestUserInput") && Date.now() < requestDeadline) {
+			await Bun.sleep(10);
+		}
 		const lifecycle = events.filter(event =>
 			["thread/started", "item/started", "item/completed"].includes(event.method),
 		);

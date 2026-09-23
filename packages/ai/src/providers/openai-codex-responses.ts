@@ -401,6 +401,7 @@ function resetOutputState(output: AssistantMessage): void {
 	output.content.length = 0;
 	output.usage = createEmptyUsage();
 	output.stopReason = "stop";
+	delete output.providerFailureCode;
 }
 
 function removeTransientBlockIndices(output: AssistantMessage): void {
@@ -1325,6 +1326,11 @@ async function handleCodexStreamFailure(
 	}
 	output.stopReason = context.options?.signal?.aborted ? "aborted" : "error";
 	output.errorMessage = await finalizeErrorMessage(error, context.requestContext.rawRequestDump);
+	output.providerFailureCode = sanitizeProviderFailureCode(
+		error instanceof CodexProviderStreamError
+			? error.code
+			: (error as { providerFailureCode?: unknown } | null)?.providerFailureCode,
+	);
 	output.duration = Date.now() - context.startTime;
 	if (context.firstTokenTime) {
 		output.ttft = context.firstTokenTime - context.startTime;
@@ -1937,8 +1943,10 @@ async function openCodexSseEventStream(
 	if (!response.ok) {
 		const info = await parseCodexError(response);
 		const error = new Error(info.friendlyMessage || info.message);
-		(error as { headers?: Headers; status?: number }).headers = response.headers;
-		(error as { headers?: Headers; status?: number }).status = response.status;
+		const details = error as { headers?: Headers; status?: number; providerFailureCode?: string };
+		details.headers = response.headers;
+		details.status = response.status;
+		details.providerFailureCode = sanitizeProviderFailureCode(info.code);
 		throw error;
 	}
 	if (!response.body) {
@@ -2301,6 +2309,10 @@ function getString(value: unknown): string | undefined {
 	return typeof value === "string" ? value : undefined;
 }
 
+function sanitizeProviderFailureCode(value: unknown): string | undefined {
+	return typeof value === "string" && value.length <= 128 && /^[A-Za-z0-9._-]+$/.test(value) ? value : undefined;
+}
+
 class CodexProviderStreamError extends Error {
 	readonly retryable: boolean;
 	readonly code?: string;
@@ -2309,7 +2321,7 @@ class CodexProviderStreamError extends Error {
 		super(message);
 		this.name = "CodexProviderStreamError";
 		this.retryable = retryable;
-		this.code = code;
+		this.code = sanitizeProviderFailureCode(code);
 	}
 }
 
@@ -2325,7 +2337,9 @@ function isRetryableCodexFailureEvent(rawEvent: Record<string, unknown>): boolea
 }
 
 function createCodexProviderStreamError(rawEvent: Record<string, unknown>): CodexProviderStreamError {
-	const code = getString(rawEvent.code) ?? "";
+	const response = asRecord(rawEvent.response);
+	const providerError = asRecord(rawEvent.error) ?? (response ? asRecord(response.error) : null);
+	const code = getString(providerError?.code) ?? getString(providerError?.type) ?? getString(rawEvent.code) ?? "";
 	const message = getString(rawEvent.message) ?? "";
 	const formattedMessage =
 		typeof rawEvent.type === "string" && rawEvent.type === "error"

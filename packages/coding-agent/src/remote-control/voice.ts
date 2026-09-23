@@ -69,6 +69,7 @@ export class NativeVoice {
 	#openingInputs: string[] = [];
 	#openingBytes = 0;
 	#tail: { role: "user" | "assistant"; text: string; done: boolean }[] = [];
+	#newTranscriptEntry: Record<"user" | "assistant", boolean> = { user: false, assistant: false };
 	#promotedFinal = new Map<string, string>();
 	#flushTail = false;
 	#abort = new AbortController();
@@ -92,7 +93,8 @@ export class NativeVoice {
 	#pendingDelegations = 0;
 	#awaitingSession = false;
 	#sessionReady?: { resolve: () => void; reject: (error: Error) => void };
-	#persona: VoicePersonaSnapshot = { systemPrompt: "", tools: [], history: "" };
+	#persona: VoicePersonaSnapshot = { tools: [], history: "" };
+	#handoffsRetired = false;
 	constructor(private readonly deps: VoiceDependencies) {}
 	get active(): boolean {
 		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
@@ -535,13 +537,18 @@ export class NativeVoice {
 	#trackTranscript(event: Extract<VoiceEvent, { kind: "transcript" }>): void {
 		if (event.done && this.#promotedFinal.get(event.role) === event.text) return;
 		if (!event.done) this.#promotedFinal.delete(event.role);
-		const last = this.#tail.at(-1);
-		if (!last || last.role !== event.role || last.done)
-			this.#tail.push({ role: event.role, text: event.text, done: event.done });
-		else {
-			last.text = event.done ? event.text : last.text + event.text;
-			last.done = event.done;
+		if (!event.text) return;
+		const forceNew = this.#newTranscriptEntry[event.role];
+		const last = forceNew ? undefined : this.#tail.findLast(entry => entry.role === event.role);
+		if (!last) this.#tail.push({ role: event.role, text: event.text, done: event.done });
+		else if (event.done) {
+			if (event.text.startsWith(last.text)) last.text = event.text;
+			last.done = true;
+		} else {
+			last.text += event.text;
+			last.done = false;
 		}
+		this.#newTranscriptEntry[event.role] = event.done;
 		while (this.#tail.length > 128 || Buffer.byteLength(JSON.stringify(this.#tail)) > 65536) {
 			if (this.#tail.length === 1) {
 				this.#tail[0].text = this.#tail[0].text.slice(-8192);
@@ -594,6 +601,10 @@ export class NativeVoice {
 			return;
 		}
 		if (event.kind === "sessionUpdated") return;
+		if (event.kind === "transcriptBoundary") {
+			this.#newTranscriptEntry[event.role] = true;
+			return;
+		}
 		if (event.kind === "transcript") {
 			if (event.done) {
 				const key = this.#key("transcript", event.id ?? randomUUID());
@@ -637,6 +648,7 @@ export class NativeVoice {
 			activeTranscript.push({ role: "user", text: input });
 		for (const entry of activeTranscript) this.#promotedFinal.set(entry.role, entry.text);
 		this.#tail = [];
+		this.#newTranscriptEntry = { user: true, assistant: true };
 		// Persist before submission: recovery suppresses repeats, including ambiguous
 		// interrupted submissions. This is at-most-once; crash-gap reconciliation remains a gate.
 		await this.deps.record({
@@ -656,6 +668,7 @@ export class NativeVoice {
 					active_transcript: activeTranscript,
 				},
 			});
+		if (this.#handoffsRetired) return;
 		this.#pendingDelegations++;
 		this.#handoff?.close();
 		const handoff = this.#createHandoff(event.id);
@@ -680,7 +693,16 @@ export class NativeVoice {
 				if (this.#config?.clientManagedHandoffs || !this.active) return;
 				handoff?.finish(text);
 			})
-			.catch(() => this.#fail("The backing agent could not complete the voice request"))
+			.catch((error: unknown) => {
+				const details = error as { codexErrorInfo?: unknown; voiceHandoffRetired?: unknown } | null;
+				if (details?.voiceHandoffRetired === true) return;
+				handoff?.close();
+				if (details?.codexErrorInfo === "misalignmentPolicyViolation") this.#handoffsRetired = true;
+				if (this.active)
+					this.deps.emit("thread/realtime/error", {
+						message: "The backing agent could not complete the voice request",
+					});
+			})
 			.finally(() => {
 				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
 				this.#pendingDelegations--;

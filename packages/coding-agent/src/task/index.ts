@@ -784,6 +784,7 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						artifactsDir: effectiveArtifactsDir,
 						contextFile: contextFilePath,
 						enableLsp: false,
+						enableMCP: this.session.enableMCP,
 						signal,
 						eventBus: this.session.eventBus,
 						onProgress: progress => {
@@ -838,6 +839,7 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						artifactsDir: effectiveArtifactsDir,
 						contextFile: contextFilePath,
 						enableLsp: false,
+						enableMCP: this.session.enableMCP,
 						signal,
 						eventBus: this.session.eventBus,
 						onProgress: progress => {
@@ -853,6 +855,7 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						contextFiles,
 						skills: availableSkills,
 						promptTemplates,
+						preparedSystemPromptInputs: this.session.preparedSystemPromptInputs,
 					});
 					if (mergeMode === "branch" && result.exitCode === 0) {
 						try {
