@@ -12,6 +12,8 @@ const NETWORK_TTL_MS = 30 * 60_000;
 const FAILURE_INITIAL_MS = 5 * 60_000;
 const FAILURE_MAX_MS = 2 * 60 * 60_000;
 const RATE_LIMIT_MINIMUM_MS = 60 * 60_000;
+const SETUP_STEP_MAX_MS = 2 * 60 * 60_000;
+const VERIFICATION_STEP_MAX_MS = 120_000;
 const ID = /^[a-z][a-z0-9_-]{0,63}$/;
 const ENVIRONMENT_NAME = /^[A-Z_][A-Z0-9_]*$/;
 
@@ -71,7 +73,7 @@ function validatePlan(plan: IntegrationSetupPlan | undefined): void {
 				!validateArgv(step.argv) ||
 				!Number.isInteger(step.timeoutMs) ||
 				step.timeoutMs < 1_000 ||
-				step.timeoutMs > 900_000 ||
+				step.timeoutMs > SETUP_STEP_MAX_MS ||
 				(step.environment?.some((name: string) => !ENVIRONMENT_NAME.test(name)) ?? false),
 		) ||
 		plan.verification.some(
@@ -80,7 +82,7 @@ function validatePlan(plan: IntegrationSetupPlan | undefined): void {
 				!validateArgv(step.argv) ||
 				!Number.isInteger(step.timeoutMs) ||
 				step.timeoutMs < 1_000 ||
-				step.timeoutMs > 120_000,
+				step.timeoutMs > VERIFICATION_STEP_MAX_MS,
 		)
 	)
 		throw new Error("Invalid integration setup plan");
