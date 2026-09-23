@@ -18,7 +18,7 @@ import {
 	getBuiltinMarketplaceSnapshot,
 	isBuiltinMarketplaceSource,
 } from "./builtin";
-import { cachePlugin } from "./cache";
+import { cachePlugin, cachePluginSnapshot } from "./cache";
 import { classifySource, fetchMarketplace, parseMarketplaceCatalog, promoteCloneToCache } from "./fetcher";
 import {
 	addInstalledPlugin,
@@ -485,6 +485,7 @@ export class MarketplaceManager {
 		if (!entry) throw new Error(`Marketplace "${marketplace}" not found`);
 		const catalog = await this.#readCatalog(entry);
 		const plan = resolvePluginDependencyNames(catalog, name);
+		const retainReplacedCache = entry.sourceType === "local";
 		const registryPath = this.#registryPath(scope);
 		const before = await readInstalledPluginsRegistry(registryPath);
 		const staged: InstalledPluginEntry[] = [];
@@ -519,7 +520,7 @@ export class MarketplaceManager {
 		for (const pluginName of plan) {
 			const pluginId = buildPluginId(pluginName, marketplace);
 			for (const previous of before.plugins[pluginId] ?? []) {
-				if (!referenced.has(previous.installPath)) {
+				if (!retainReplacedCache && !referenced.has(previous.installPath)) {
 					await fs.rm(previous.installPath, { recursive: true, force: true });
 				}
 			}
@@ -600,7 +601,13 @@ export class MarketplaceManager {
 		let cachePath!: string;
 		try {
 			version = await this.#resolvePluginVersion(pluginEntry, sourcePath);
-			cachePath = await cachePlugin(sourcePath, this.#opts.pluginsCacheDir, marketplace, name, version);
+			cachePath = await (mktEntry.sourceType === "local" ? cachePluginSnapshot : cachePlugin)(
+				sourcePath,
+				this.#opts.pluginsCacheDir,
+				marketplace,
+				name,
+				version,
+			);
 		} finally {
 			// Clean up temp clone dirs created by resolvePluginSource; leave user-supplied local dirs alone
 			if (tempCloneRoot) {

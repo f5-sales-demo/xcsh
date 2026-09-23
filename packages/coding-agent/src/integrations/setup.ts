@@ -12,6 +12,10 @@ export interface InstallAuthorizedSetupOptions {
 }
 
 export type SetupStepRunner = (step: IntegrationSetupStep, signal?: AbortSignal) => Promise<number>;
+export type SetupEnvironmentResolver = (name: string) => string | undefined;
+export interface SetupStepRunnerOptions {
+	readonly nonInteractiveOutput?: "inherit" | "ignore";
+}
 
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 	const plan = handle.setupPlan;
@@ -29,21 +33,37 @@ export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 	return lines.join("\n");
 }
 
-export const runSetupStep: SetupStepRunner = async (step, signal) => {
-	const timeout = AbortSignal.timeout(step.timeoutMs);
-	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-	try {
-		const child = Bun.spawn([...step.argv], {
-			stdin: step.stdin === "inherit" || step.kind === "login" ? "inherit" : "ignore",
-			stdout: "inherit",
-			stderr: "inherit",
-			signal: combined,
-		});
-		return await child.exited;
-	} catch {
-		return -1;
-	}
-};
+export function createSetupStepRunner(
+	resolveEnvironment: SetupEnvironmentResolver,
+	options: SetupStepRunnerOptions = {},
+): SetupStepRunner {
+	return async (step, signal) => {
+		const environment = { ...process.env };
+		for (const name of step.environment ?? []) {
+			const value = resolveEnvironment(name);
+			if (value === undefined) delete environment[name];
+			else environment[name] = value;
+		}
+		const timeout = AbortSignal.timeout(step.timeoutMs);
+		const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+		const interactiveInput = step.stdin === "inherit" || step.kind === "login";
+		const output = step.kind === "login" ? "inherit" : (options.nonInteractiveOutput ?? "inherit");
+		try {
+			const child = Bun.spawn([...step.argv], {
+				env: environment,
+				stdin: interactiveInput ? "inherit" : "ignore",
+				stdout: output,
+				stderr: output,
+				signal: combined,
+			});
+			return await child.exited;
+		} catch {
+			return -1;
+		}
+	};
+}
+
+export const runSetupStep = createSetupStepRunner(name => process.env[name]);
 
 export async function executeReviewedSetup<T>(
 	handle: IntegrationHandle<T>,

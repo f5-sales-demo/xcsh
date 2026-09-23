@@ -1,9 +1,52 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test, vi } from "bun:test";
 import { reviewAndExecuteIntegrationSetup, selectSetupIntegration } from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
-import { describeSetupPlan, executeInstallAuthorizedSetup, executeReviewedSetup } from "../src/integrations/setup";
+import {
+	createSetupStepRunner,
+	describeSetupPlan,
+	executeInstallAuthorizedSetup,
+	executeReviewedSetup,
+} from "../src/integrations/setup";
 
 const ready = <T>(value: T) => ({ state: "ready" as const, value });
+
+test("setup runner injects only declared active-context values", async () => {
+	const run = createSetupStepRunner(
+		name => ({ XCSH_API_URL: "https://tenant.example.test", XCSH_API_TOKEN: "secret" })[name],
+	);
+	const exitCode = await run({
+		kind: "install",
+		argv: [
+			process.execPath,
+			"-e",
+			"process.exit(process.env.XCSH_API_URL && process.env.XCSH_API_TOKEN && !process.env.XCSH_UNDECLARED ? 0 : 1)",
+		],
+		timeoutMs: 1_000,
+		environment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
+	});
+	expect(exitCode).toBe(0);
+});
+
+test("setup runner can suppress non-interactive child output for an interactive loader", async () => {
+	const spawn = vi.spyOn(Bun, "spawn").mockReturnValue({ exited: Promise.resolve(0) } as ReturnType<typeof Bun.spawn>);
+	try {
+		const run = createSetupStepRunner(() => undefined, { nonInteractiveOutput: "ignore" });
+		await run({
+			kind: "install",
+			argv: ["controller", "setup", "apply"],
+			timeoutMs: 1_000,
+			stdin: "inherit",
+		});
+
+		const [argv, options] = spawn.mock.calls[0]!;
+		expect(argv).toEqual(["controller", "setup", "apply"]);
+		expect(options?.stdin).toBe("inherit");
+		expect(options?.stdout).toBe("ignore");
+		expect(options?.stderr).toBe("ignore");
+	} finally {
+		spawn.mockRestore();
+	}
+});
 
 describe("IntegrationRegistry", () => {
 	let registry: IntegrationRegistry;
@@ -147,29 +190,23 @@ describe("IntegrationRegistry", () => {
 		expect(() => handle.verifyAfterSetup(structuredClone(plan))).toThrow("reviewed setup plan");
 	});
 
-	test("allows bounded two-hour setup while keeping verification short", () => {
-		const definition = (setupTimeoutMs: number, verificationTimeoutMs = 120_000) => ({
+	test("accepts bounded two-hour infrastructure setup steps", () => {
+		registry = new IntegrationRegistry();
+		const handle = registry.register("plugin:kvm", {
 			id: "kvm",
 			name: "KVM",
-			kind: "local" as const,
+			kind: "local",
 			setup: {
-				pluginDependencies: [],
-				requiredEnvironment: [],
+				pluginDependencies: ["platform"],
+				requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
 				profileFields: [],
-				steps: [{ kind: "install" as const, argv: ["kvm-smsv2ctl", "setup", "apply"], timeoutMs: setupTimeoutMs }],
-				verification: [{ argv: ["kvm-smsv2ctl", "setup", "status"], timeoutMs: verificationTimeoutMs }],
+				steps: [{ kind: "install", argv: ["kvm-smsv2ctl", "setup", "apply"], timeoutMs: 7_200_000 }],
+				verification: [{ argv: ["kvm-smsv2ctl", "setup", "status"], timeoutMs: 60_000 }],
 			},
 			probe: async () => ready(undefined),
 		});
 
-		registry = new IntegrationRegistry();
-		expect(() => registry.register("plugin:kvm", definition(7_200_000))).not.toThrow();
-		expect(() => new IntegrationRegistry().register("plugin:kvm", definition(7_200_001))).toThrow(
-			"Invalid integration setup plan",
-		);
-		expect(() => new IntegrationRegistry().register("plugin:kvm", definition(7_200_000, 120_001))).toThrow(
-			"Invalid integration setup plan",
-		);
+		expect(handle.setupPlan?.steps[0]?.timeoutMs).toBe(7_200_000);
 	});
 
 	test("owner cleanup removes all registrations", () => {

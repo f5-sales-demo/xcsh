@@ -1,3 +1,10 @@
 export { IntegrationRegistry, integrationRegistry } from "./registry";
-export { describeSetupPlan, executeReviewedSetup, runSetupStep } from "./setup";
+export type { SetupStepRunner } from "./setup";
+export {
+	createSetupStepRunner,
+	describeSetupPlan,
+	executeInstallAuthorizedSetup,
+	executeReviewedSetup,
+	runSetupStep,
+} from "./setup";
 export type * from "./types";

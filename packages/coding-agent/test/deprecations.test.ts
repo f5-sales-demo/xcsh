@@ -24,7 +24,7 @@ describe("isDisallowedCliCommand", () => {
 	});
 
 	test("flags a curl against the F5 XC API", () => {
-		expect(isDisallowedCliCommand("curl $F5XC_API_URL/api/config/namespaces/default/http_loadbalancers")).toBe(true);
+		expect(isDisallowedCliCommand("curl $XCSH_API_URL/api/config/namespaces/default/http_loadbalancers")).toBe(true);
 	});
 
 	test("allows a normal non-F5XC command", () => {

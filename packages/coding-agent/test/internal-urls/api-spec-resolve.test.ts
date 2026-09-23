@@ -412,7 +412,7 @@ describe("API Spec Resolver", () => {
 						...testIndex.domains[0],
 						cliMetadata: {
 							quickStart: {
-								command: "curl $F5XC_API_URL/api/config/namespaces/default/dns_domains",
+								command: "curl $XCSH_API_URL/api/config/namespaces/default/dns_domains",
 								description: "List all zones",
 								expectedOutput: "zone list",
 							},

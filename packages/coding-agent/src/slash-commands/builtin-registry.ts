@@ -20,7 +20,12 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fetcher";
-import { describeSetupPlan, executeInstallAuthorizedSetup, executeReviewedSetup } from "../integrations/setup";
+import {
+	createSetupStepRunner,
+	describeSetupPlan,
+	executeInstallAuthorizedSetup,
+	executeReviewedSetup,
+} from "../integrations/setup";
 import type { IntegrationHandle } from "../integrations/types";
 import { BorderedLoader } from "../modes/components/bordered-loader";
 import type { ActionReview } from "../modes/components/reviewed-action";
@@ -30,6 +35,7 @@ import { theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
 import { personProfileService } from "../person-profile/service";
 import { resolveRemoteThreadId } from "../remote-control/thread-identity";
+import { createContextEnv } from "../services/context-env";
 import { ContextService } from "../services/xcsh-context";
 import { handleFastCommand } from "./fast-command";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
@@ -140,6 +146,11 @@ interface BuiltinSlashCommandSpec extends BuiltinSlashCommand {
 export interface BuiltinSlashCommandRuntime {
 	ctx: InteractiveModeContext;
 	handleBackgroundCommand: () => void;
+}
+
+function activeContextSetupRunner(runtime: BuiltinSlashCommandRuntime) {
+	const contextEnv = createContextEnv(runtime.ctx.settings);
+	return createSetupStepRunner(name => contextEnv.get(name) ?? process.env[name]);
 }
 
 function parseBuiltinSlashCommand(text: string): ParsedBuiltinSlashCommand | null {
@@ -1507,6 +1518,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								lifecycle: prepared.target,
 								trigger: "direct-install",
 								handles: runtime.ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [],
+								run: activeContextSetupRunner(runtime),
 							});
 							if (setupResult) await personProfileService.reconcileFromCollectors(undefined, 0);
 							showPluginStatus(t("commands.plugin.installed", { name, marketplace }));
@@ -1769,7 +1781,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							review,
 							resolve: async () => ({ review, target: { handle, plan } }),
 							execute: async target => {
-								result = await executeReviewedSetup(target.handle, target.plan);
+								result = await executeReviewedSetup(
+									target.handle,
+									target.plan,
+									activeContextSetupRunner(runtime),
+								);
 								await personProfileService.reconcileFromCollectors(undefined, 0);
 							},
 						});

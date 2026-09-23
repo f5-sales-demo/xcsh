@@ -1022,7 +1022,7 @@ export class ExtensionUiController {
 				attempt(() => this.ctx.editorContainer.addChild(this.ctx.editor));
 				attempt(() => this.ctx.editor.setText(savedText));
 			}
-			if (component && !options?.fullscreen) attempt(() => this.ctx.ui.setFocus(this.ctx.editor));
+			if (component) attempt(() => this.ctx.ui.setFocus(this.ctx.editor));
 			attempt(() => this.ctx.ui.requestRender());
 			if ("error" in outcome) reject(outcome.error);
 			else resolve(outcome.value);
@@ -1048,6 +1048,8 @@ export class ExtensionUiController {
 									margin: 0,
 								},
 					);
+					this.ctx.ui.setFocus(component);
+					this.ctx.ui.requestRender();
 					return;
 				}
 				embedded = true;
