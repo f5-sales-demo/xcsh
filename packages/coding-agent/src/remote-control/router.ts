@@ -464,9 +464,8 @@ export class RemoteRouter {
 			(current.asyncInteractions?.length ?? 0) > 0
 		)
 			this.#publishInteractionThread(threadId);
-		if (this.#isCurrent(threadId))
-			for (const request of current.requests ?? [])
-				for (const client of this.#clients.keys()) this.#deliver(client, request);
+		for (const request of current.requests ?? [])
+			for (const client of this.#clients.keys()) this.#deliver(client, request);
 	}
 	registerManagedSession(threadId: string, endpoint: SessionEndpoint): void {
 		const previous = this.sessions.get(threadId);
