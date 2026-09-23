@@ -399,6 +399,21 @@ describe("interactive marketplace refresh surfaces", () => {
 		expect(offline.stdout).toContain('"disabled":"hello-plugin@test-marketplace"');
 	}, 60_000);
 
+	it("explicit missing marketplace uninstall never falls through to npm", async () => {
+		const { home, source } = makeEnvironment();
+		expect((await runScript(ADD_MARKETPLACE, home, source)).code).toBe(0);
+
+		const result = await runScript(
+			`import { runPluginCommand } from "./src/cli/plugin-cli";
+			 await runPluginCommand({ action: "uninstall", args: ["ghost-plugin@test-marketplace"], flags: {} });`,
+			home,
+			source,
+		);
+		expect(result.code).toBe(1);
+		expect(result.stderr).toContain('Plugin "ghost-plugin@test-marketplace" is not installed');
+		expect(result.stderr).not.toContain("npm uninstall failed");
+	}, 60_000);
+
 	it("argument-free plugin commands route through the dashboard at the intended tab", async () => {
 		const { home, source } = makeEnvironment();
 		const result = await runScript(
