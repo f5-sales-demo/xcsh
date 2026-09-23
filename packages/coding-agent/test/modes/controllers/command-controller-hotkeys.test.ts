@@ -10,13 +10,12 @@ describe("buildHotkeysMarkdown", () => {
 		const displayStrings: Record<string, string> = {
 			"app.clipboard.copyLine": "Alt+Shift+L",
 			"app.clipboard.copyPrompt": "Ctrl+Shift+P",
-			"app.plan.toggle": "Alt+M",
+			"app.thinking.cycle": "Alt+.",
 			"app.tools.expand": "Ctrl+O",
 			"app.interrupt": "Esc",
 			"app.clear": "Ctrl+C",
 			"app.exit": "Ctrl+D",
 			"app.suspend": "Ctrl+Z",
-			"app.thinking.cycle": "Shift+Tab",
 			"app.model.cycleForward": "Ctrl+P",
 			"app.model.cycleBackward": "Shift+Ctrl+P",
 			"app.model.selectTemporary": "Ctrl+Shift+L",
@@ -40,7 +39,8 @@ describe("buildHotkeysMarkdown", () => {
 		expect(markdown).toContain("| `Ctrl+Shift+P` | Copy whole prompt |");
 		expect(markdown).toContain("| `Ctrl+Shift+L` | Select model (temporary) |");
 		expect(markdown).toContain("| `Ctrl+L` | Select model (set roles) |");
-		expect(markdown).toContain("| `Alt+M` | Toggle plan mode |");
+		expect(markdown).toContain("| `Shift+Tab` | Change mode |");
+		expect(markdown).toContain("| `Alt+.` | Cycle thinking level |");
 		expect(markdown).toContain("| `#` | Open prompt actions |");
 		for (const line of lines) {
 			if (line.length === 0) continue;

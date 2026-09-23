@@ -1,4 +1,4 @@
-import { Editor, type KeyId, matchesKey, parseKittySequence } from "@f5-sales-demo/pi-tui";
+import { Editor, isKeyRepeat, type KeyId, matchesKey, parseKittySequence } from "@f5-sales-demo/pi-tui";
 import type { AppKeybinding } from "../../config/keybindings";
 
 type ConfigurableEditorAction = Extract<
@@ -26,7 +26,7 @@ const DEFAULT_ACTION_KEYS: Record<ConfigurableEditorAction, KeyId[]> = {
 	"app.clear": ["ctrl+c"],
 	"app.exit": ["ctrl+d"],
 	"app.suspend": ["ctrl+z"],
-	"app.thinking.cycle": ["shift+tab"],
+	"app.thinking.cycle": ["alt+."],
 	"app.model.cycleForward": ["ctrl+p"],
 	"app.model.cycleBackward": ["shift+ctrl+p"],
 	"app.model.select": ["ctrl+l"],
@@ -50,6 +50,8 @@ export class CustomEditor extends Editor {
 	onClear?: () => void;
 	onExit?: () => void;
 	onCycleThinkingLevel?: () => void;
+	/** Called by the fixed Shift+Tab Plan mode shortcut. */
+	onCyclePlanMode?: () => void;
 	onCycleModelForward?: () => void;
 	onCycleModelBackward?: () => void;
 	onSelectModel?: () => void;
@@ -110,6 +112,17 @@ export class CustomEditor extends Editor {
 	}
 
 	handleInput(data: string): void {
+		// Fixed and handled before configurable editor actions. Ignore Kitty repeats.
+		if (
+			matchesKey(data, "shift+tab") &&
+			!isKeyRepeat(data) &&
+			!this.isShowingAutocomplete() &&
+			this.onCyclePlanMode
+		) {
+			this.onCyclePlanMode();
+			return;
+		}
+
 		const parsed = parseKittySequence(data);
 		if (parsed && (parsed.modifier & 64) !== 0 && this.onCapsLock) {
 			// Caps Lock is modifier bit 64

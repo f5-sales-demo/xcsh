@@ -170,6 +170,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#planModeHasEntered = false;
+	#planTransition: Promise<void> = Promise.resolve();
 	lspServers?: import("../tools").LspStartupServerInfo[];
 	mcpManager?: import("../mcp").MCPManager;
 	readonly #toolUiContextSetter: (uiContext: ExtensionUIContext, hasUI: boolean) => void;
@@ -845,10 +846,18 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
+	#enqueuePlanTransition(operation: () => Promise<void>): Promise<void> {
+		const transition = this.#planTransition.then(operation);
+		this.#planTransition = transition.catch(() => undefined);
+		return transition;
+	}
+
 	async handlePlanModeCommand(initialPrompt?: string): Promise<void> {
-		if (this.planModeEnabled) await this.#exitPlanMode();
-		else await this.#enterPlanMode();
-		if (initialPrompt?.trim()) await this.session.prompt(initialPrompt, { streamingBehavior: "followUp" });
+		await this.#enqueuePlanTransition(async () => {
+			if (this.planModeEnabled) await this.#exitPlanMode();
+			else await this.#enterPlanMode();
+			if (initialPrompt?.trim()) await this.session.prompt(initialPrompt, { streamingBehavior: "followUp" });
+		});
 	}
 
 	getRemoteCollaborationMode(): "plan" | "default" {
