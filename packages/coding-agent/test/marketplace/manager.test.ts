@@ -124,17 +124,30 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
-			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("fb46bd5d3c1690a9f18f80c53594c87477684b9e");
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("c56f8835a6a4279c3910780eb2c62a1ade6483ca");
+			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "github")).toMatchObject({
+				version: "3.0.0",
+			});
+			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "cloudstatus")).toMatchObject({
+				version: "1.7.0",
+			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "xorg")).toMatchObject({
-				version: "1.0.8",
+				version: "1.0.9",
 				lifecycle: { pluginDependencies: [] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "zoom")).toMatchObject({
 				version: "1.0.5",
 				lifecycle: { pluginDependencies: ["xorg"] },
 			});
+			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "herdr")).toMatchObject({
+				version: "1.1.2",
+				lifecycle: {
+					integrations: ["herdr"],
+					setupRequired: true,
+				},
+			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"55507e6f386be8dfe3bce35a7640932fcea4cd7f6c63275bd8d76abad9d2e5b3",
+				"92b3ba2adc6f7ddec3344d2eb25e415e8343c153a676488aedb72094318c1524",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
