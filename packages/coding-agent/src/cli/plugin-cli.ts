@@ -770,9 +770,11 @@ async function handleUninstall(
 	// This works even if the marketplace entry was later removed from marketplaces.json.
 	const mktMgr = await makeMarketplaceManager();
 	const installedPlugins = new Set((await mktMgr.listInstalledPlugins()).map(p => p.id));
+	const knownMarketplaces = new Set((await mktMgr.listMarketplaces()).map(marketplace => marketplace.name));
 
 	for (const name of packages) {
-		if (installedPlugins.has(name)) {
+		const target = classifyInstallTarget(name, knownMarketplaces);
+		if (installedPlugins.has(name) || target.type === "marketplace") {
 			// Exact match against installed marketplace plugin IDs (name@marketplace)
 			try {
 				await mktMgr.uninstallPlugin(name, flags.scope);

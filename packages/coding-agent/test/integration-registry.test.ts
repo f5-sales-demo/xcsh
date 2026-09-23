@@ -395,12 +395,8 @@ describe("IntegrationRegistry", () => {
 			describeInstallSetupOutcome(
 				"kvm",
 				{
-					id: "kvm",
-					name: "KVM SMSv2",
 					state: "unavailable",
 					reason: "dependency_missing",
-					checkedAt: 1,
-					durationMs: 0,
 				},
 				[{ pluginId: "platform@f5-sales-demo-marketplace" }, { pluginId: "kvm@f5-sales-demo-marketplace" }],
 			),
