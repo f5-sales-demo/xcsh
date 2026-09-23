@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "aff94d86512af759a3e4f84697d47549be32b3e5",
-  "fingerprint": "d6805165afaea8c1351fad78a74695ccd015bdaa5a45484137579e1747875758",
+  "revision": "6e69e1e09e4b96bb3f89349a208fed8ebfb92b3e",
+  "fingerprint": "5943572eb05c3c1f79a49c4e96e2354cac0a92cdb30201121ab5c27e0cae2041",
   "counts": {
     "total": 241,
     "components": 96,
@@ -203,7 +203,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "settings",
-      "sha256": "8ecddee95459863de0b7952b7de8208a7d761e618e6d043386411d149d7bb52d",
+      "sha256": "b6c8798a7647d11f3ac497fc4113ef0246edc798b414f2b3727b73e720d13ccc",
       "exports": [
         "AppKeybinding",
         "KEYBINDINGS",
@@ -1367,7 +1367,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "reports",
-      "sha256": "478b3e6c42e2ae33cb66543d5edb86612f2b18da114dc211a4b25a26190d92e8",
+      "sha256": "8d04b44bd837039396391211cc6716b05423d924058ba12fd9213c1461921cb9",
       "exports": [
         "CustomEditor"
       ],
@@ -3328,7 +3328,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "b3360c1c4ae98e9989530801ec29c491d0b602d26906fe93684a2877c0a26bf8",
+      "sha256": "11a85ae34904e9260d1817b7a6c92175fd284be3f8bc5530405560d6cdbedc17",
       "exports": [
         "InputController"
       ],
@@ -3725,7 +3725,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "941406ae3951fb2a90914bfe00da1089aa4465fe8c8b3296070d85e99f82bc7b",
+      "sha256": "f0ed15d3f54ab6c156d58362fe1728729994c24ce737423ed829c2aaf7e64df9",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4257,7 +4257,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "57f7e514d0b9eac9294ac50330cb031db4b975442c3d513bc900753e97e622a8",
+      "sha256": "287c1af8a966e93157acb6d7331aed5bb2da35569c0cc763c28b26bf610c2280",
       "exports": [
         "HotkeysMarkdownBindings",
         "buildHotkeysMarkdown"

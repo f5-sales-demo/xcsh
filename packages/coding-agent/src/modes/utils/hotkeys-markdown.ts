@@ -43,7 +43,7 @@ export function buildHotkeysMarkdown(bindings: HotkeysMarkdownBindings): string 
 		`| \`${appKey(bindings, "app.model.cycleBackward")}\` | ${t("hotkeys.other.cycleModelsBackward")} |`,
 		`| \`${appKey(bindings, "app.model.selectTemporary")}\` | ${t("hotkeys.other.selectModelTemp")} |`,
 		`| \`${appKey(bindings, "app.model.select")}\` | ${t("hotkeys.other.selectModel")} |`,
-		`| \`${appKey(bindings, "app.plan.toggle")}\` | ${t("hotkeys.other.togglePlan")} |`,
+		"| `Shift+Tab` | Change mode |",
 		`| \`${appKey(bindings, "app.history.search")}\` | ${t("hotkeys.other.searchHistory")} |`,
 		`| \`${appKey(bindings, "app.tools.expand")}\` | ${t("hotkeys.other.toggleToolExpand")} |`,
 		`| \`${appKey(bindings, "app.thinking.toggle")}\` | ${t("hotkeys.other.toggleThinking")} |`,
