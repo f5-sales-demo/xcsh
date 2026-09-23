@@ -147,6 +147,31 @@ describe("IntegrationRegistry", () => {
 		expect(() => handle.verifyAfterSetup(structuredClone(plan))).toThrow("reviewed setup plan");
 	});
 
+	test("allows bounded two-hour setup while keeping verification short", () => {
+		const definition = (setupTimeoutMs: number, verificationTimeoutMs = 120_000) => ({
+			id: "kvm",
+			name: "KVM",
+			kind: "local" as const,
+			setup: {
+				pluginDependencies: [],
+				requiredEnvironment: [],
+				profileFields: [],
+				steps: [{ kind: "install" as const, argv: ["kvm-smsv2ctl", "setup", "apply"], timeoutMs: setupTimeoutMs }],
+				verification: [{ argv: ["kvm-smsv2ctl", "setup", "status"], timeoutMs: verificationTimeoutMs }],
+			},
+			probe: async () => ready(undefined),
+		});
+
+		registry = new IntegrationRegistry();
+		expect(() => registry.register("plugin:kvm", definition(7_200_000))).not.toThrow();
+		expect(() => new IntegrationRegistry().register("plugin:kvm", definition(7_200_001))).toThrow(
+			"Invalid integration setup plan",
+		);
+		expect(() => new IntegrationRegistry().register("plugin:kvm", definition(7_200_000, 120_001))).toThrow(
+			"Invalid integration setup plan",
+		);
+	});
+
 	test("owner cleanup removes all registrations", () => {
 		registry = new IntegrationRegistry();
 		registry.register("plugin:a", { id: "one", name: "One", kind: "local", probe: async () => ready(1) });
