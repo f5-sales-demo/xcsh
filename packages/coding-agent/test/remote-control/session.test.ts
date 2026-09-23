@@ -551,7 +551,13 @@ test("provider failure becomes a failed remote turn and a readable history error
 		prompt: async () => {
 			messages.push(
 				{ role: "user", content: "fixture" },
-				{ role: "assistant", content: [], stopReason: "error", errorMessage: "private backend detail" },
+				{
+					role: "assistant",
+					content: [],
+					stopReason: "error",
+					errorMessage: "private backend detail",
+					providerFailureCode: "misalignment_policy_violation",
+				},
 			);
 			listener({ type: "agent_end" });
 		},
@@ -563,11 +569,17 @@ test("provider failure becomes a failed remote turn and a readable history error
 	await Bun.sleep(0);
 	expect(events.find(e => e.method === "turn/completed")?.params.turn).toMatchObject({
 		status: "failed",
-		error: { message: "The selected model could not complete this turn. Check the terminal for details." },
+		error: {
+			message: "The selected model could not complete this turn. Check the terminal for details.",
+			codexErrorInfo: "misalignmentPolicyViolation",
+		},
 	});
 	expect(remote.history()[0]).toMatchObject({
 		status: "failed",
-		error: { message: "The selected model could not complete this turn. Check the terminal for details." },
+		error: {
+			message: "The selected model could not complete this turn. Check the terminal for details.",
+			codexErrorInfo: "misalignmentPolicyViolation",
+		},
 	});
 	expect(JSON.stringify(events)).not.toContain("private backend detail");
 	remote.dispose();

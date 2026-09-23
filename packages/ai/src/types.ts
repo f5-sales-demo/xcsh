@@ -393,6 +393,8 @@ export interface AssistantMessage {
 	usage: Usage;
 	stopReason: StopReason;
 	errorMessage?: string;
+	/** Sanitized provider error identifier used for internal lifecycle classification. */
+	providerFailureCode?: string;
 	/** Provider-native completion reason retained for diagnostics and transport-specific recovery. */
 	rawStopReason?: string;
 	/** Provider-specific opaque payload used to reconstruct transport-native history. */

@@ -1,4 +1,4 @@
-/** Ported from Codex rust-v0.153.4 realtime protocols. See NOTICE.md and LICENSE. */
+/** Ported from the pinned Codex realtime protocols. See NOTICE.md and LICENSE. */
 import { ProtocolError } from "./session";
 import { handoffOptions } from "./voice-handoff";
 export const voices = ["juniper", "maple", "spruce", "ember", "vale", "breeze", "arbor", "sol", "cove"];
@@ -85,6 +85,7 @@ export function contextChunks(text: string): string[] {
 }
 export type VoiceEvent =
 	| { kind: "transcript"; done: boolean; role: "user" | "assistant"; text: string; id?: string }
+	| { kind: "transcriptBoundary"; role: "user" | "assistant" }
 	| { kind: "delegation"; id: string; text: string }
 	| { kind: "sessionUpdated"; id: string }
 	| {
@@ -105,6 +106,8 @@ export function decodeVoiceEvent(input: unknown): VoiceEvent | null {
 		const session = object(p.session);
 		return typeof session?.id === "string" ? { kind: "sessionUpdated", id: session.id } : null;
 	}
+	if (p.type === "input_audio_buffer.speech_started") return { kind: "transcriptBoundary", role: "user" };
+	if (p.type === "response.created") return { kind: "transcriptBoundary", role: "assistant" };
 	const item = object(p.item),
 		turn = object(p.turn);
 	if (["input_transcript.added", "output_transcript.added"].includes(p.type) && typeof item?.text === "string")

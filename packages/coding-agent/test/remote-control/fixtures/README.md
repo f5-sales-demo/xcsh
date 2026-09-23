@@ -17,7 +17,6 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadStartedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Start,Fork,Archive,Unarchive,Delete,CompactStart,Revert}{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Archived,Unarchived,Deleted,Reverted}Notification.json`
-- `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtime{Started,Closed,Error,TranscriptDelta,TranscriptDone}Notification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtimeItem{Started,Completed,TranscriptDelta}Notification.json`
 
 Copyright 2025 OpenAI. Apache-2.0; license and port notices are in
