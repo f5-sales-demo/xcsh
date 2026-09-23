@@ -17,6 +17,20 @@ export interface SetupStepRunnerOptions {
 	readonly nonInteractiveOutput?: "inherit" | "ignore";
 }
 
+export function describeInstallSetupOutcome(
+	plugin: string,
+	status: Pick<IntegrationSnapshot<unknown>, "state" | "reason">,
+	dependencyPlan: readonly { readonly pluginId: string }[],
+): string {
+	const summary = `${plugin}: ${status.state}${status.reason ? ` (${status.reason})` : ""}`;
+	if (status.state === "ready") return summary;
+	const blockingDependency =
+		status.reason === "dependency_missing"
+			? dependencyPlan.find(item => item.pluginId.split("@")[0] !== plugin)?.pluginId.split("@")[0]
+			: undefined;
+	return `${summary}\nnext: xcsh plugin setup ${blockingDependency ?? plugin}`;
+}
+
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 	const plan = handle.setupPlan;
 	if (!plan) return `${handle.name}: no setup is declared.`;
@@ -108,6 +122,6 @@ export async function executeInstallAuthorizedSetup(
 	}
 	const handle = matches[0];
 	const current = await handle.get(options.signal);
-	if (current.state === "ready") return current;
+	if (current.state !== "setup_required" && current.state !== "degraded") return current;
 	return executeReviewedSetup(handle, handle.setupPlan!, options.run, options.signal);
 }
