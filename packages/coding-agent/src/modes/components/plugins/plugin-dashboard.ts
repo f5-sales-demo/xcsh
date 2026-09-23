@@ -92,6 +92,12 @@ function pluginStatus(plugin: DashboardPlugin): string {
 	return plugin.enabled ? "Enabled" : "Disabled";
 }
 
+function pluginInstallationStatus(plugin: DashboardPlugin): string {
+	if (!plugin.installed) return pluginStatus(plugin);
+	if (plugin.enabled && plugin.lifecycle?.setupRequired) return "Enabled · setup managed";
+	return plugin.enabled ? "Enabled" : "Disabled";
+}
+
 function reviewIdentity(identity: string): string {
 	return identity.split("\0").filter(Boolean).join(" · ");
 }
@@ -136,6 +142,7 @@ export class PluginDashboard extends Container {
 
 	onClose?: () => void;
 	onPrepareSetup?: (pluginName: string) => void;
+	onInstallAuthorizedSetup?: (pluginName: string, lifecycle: NonNullable<DashboardPlugin["lifecycle"]>) => void;
 	onRequestRender?: () => void;
 
 	private constructor(
@@ -459,7 +466,12 @@ export class PluginDashboard extends Container {
 		this.#feedback = undefined;
 	}
 
-	async #runOperation(label: string, operation: () => Promise<void>, mutate?: () => void): Promise<void> {
+	async #runOperation(
+		label: string,
+		operation: () => Promise<void>,
+		mutate?: () => void,
+		afterSuccess?: () => void,
+	): Promise<void> {
 		if (this.#operationInFlight) return;
 		const target = this.#selectedPlugin();
 		const scope =
@@ -503,6 +515,7 @@ export class PluginDashboard extends Container {
 					message: `${label} completed. ${identity}. Status refresh failed; Ctrl+R: retry.`,
 				};
 			}
+			afterSuccess?.();
 		} catch (error) {
 			if (error instanceof StaleActionReviewError) {
 				this.#view = "details";
@@ -606,6 +619,11 @@ export class PluginDashboard extends Container {
 	}
 
 	#reviewInstall(plugin: DashboardPlugin, scope: "user" | "project"): ActionReview {
+		const setupConsequence = !plugin.lifecycle?.setupRequired
+			? " No setup is required."
+			: plugin.lifecycle.setupAuthorization === "install"
+				? " The reviewed integration setup runs automatically after installation confirmation and may modify the declared host and external resources."
+				: ` Authentication is not launched by installation; next: ${APP_NAME} plugin setup ${marketplacePluginName(plugin)}.`;
 		return {
 			identity: `${pluginSelectionKey(plugin)}\0${scope}`,
 			scope: `${scope} plugin registry`,
@@ -619,7 +637,7 @@ export class PluginDashboard extends Container {
 				{ field: "Destination", before: "Absent", after: `${scope} scope` },
 				{ field: "Dependency install order", before: "None", after: dependencyPlanText(plugin) },
 			],
-			consequence: `Lifecycle: ${plugin.lifecycle?.mode ?? "unknown"}. Requirements: ${plugin.lifecycle?.requirements.join(", ") || "none"}. ${plugin.dependencyPlanError ? `Dependency plan error: ${plugin.dependencyPlanError}. ` : ""}The selected scoped registry and versioned cache are written only after confirmation.${plugin.lifecycle?.setupRequired ? ` Authentication is not launched by installation; next: ${APP_NAME} plugin setup ${marketplacePluginName(plugin)}.` : " No setup is required."}`,
+			consequence: `Lifecycle: ${plugin.lifecycle?.mode ?? "unknown"}. Requirements: ${plugin.lifecycle?.requirements.join(", ") || "none"}. ${plugin.dependencyPlanError ? `Dependency plan error: ${plugin.dependencyPlanError}. ` : ""}The selected scoped registry and versioned cache are written only after confirmation.${setupConsequence}`,
 		};
 	}
 
@@ -700,7 +718,7 @@ export class PluginDashboard extends Container {
 		return [
 			`Identifier: ${plugin.id}`,
 			`Source: ${plugin.source}${plugin.marketplace ? ` · ${plugin.marketplace}` : ""}`,
-			`Status: ${plugin.installed ? (plugin.enabled ? "Enabled" : "Disabled") : pluginStatus(plugin)}`,
+			`Status: ${pluginInstallationStatus(plugin)}`,
 			`Scope: ${pluginScope(plugin)}`,
 			...(plugin.installed && plugin.version ? [`Installed version: ${plugin.version}`] : []),
 			...(plugin.catalogVersion ? [`Catalog version: ${plugin.catalogVersion}`] : []),
@@ -1134,6 +1152,13 @@ export class PluginDashboard extends Container {
 							plugin.enabled = true;
 							plugin.scope = scope;
 						},
+						plugin.lifecycle?.setupRequired && plugin.lifecycle.setupAuthorization === "install"
+							? () => {
+									if (!this.onInstallAuthorizedSetup) return;
+									this.#closed = true;
+									this.onInstallAuthorizedSetup(marketplacePluginName(plugin), plugin.lifecycle!);
+								}
+							: undefined,
 					);
 				}
 			} else if (this.#view === "update-review") {

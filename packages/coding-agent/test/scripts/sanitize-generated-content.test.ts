@@ -4,12 +4,21 @@ import {
 	sanitizeAcmePlaceholders,
 	sanitizeAzureSubscriptionIds,
 	sanitizeIdentityExamples,
+	sanitizeLegacyEnvironmentNames,
 	sanitizePublicIpv4Examples,
 	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
 } from "../../scripts/sanitize-generated-content";
 
 describe("generated-content sanitization", () => {
+	it("normalizes discontinued F5XC environment names to the XCSH contract", () => {
+		const retiredPrefix = ["F5", "XC_"].join("");
+		const source = `${retiredPrefix}API_URL ${retiredPrefix}API_TOKEN $${retiredPrefix}NAMESPACE $${retiredPrefix}TENANT`;
+		const normalized = sanitizeLegacyEnvironmentNames(source);
+		expect(normalized).toBe("XCSH_API_URL XCSH_API_TOKEN $XCSH_NAMESPACE $XCSH_TENANT");
+		expect(normalized).not.toContain(retiredPrefix);
+	});
+
 	it("serializes generated data with compact structural line boundaries", () => {
 		const value = { first: "one", nested: { second: "two" }, list: ["three", "four"] };
 		const serialized = serializeGeneratedValue(value);
@@ -95,7 +104,7 @@ describe("generated-content sanitization", () => {
 	it("preserves identity sentinels and configured namespace sources", () => {
 		const source = [
 			'{"namespace": "*"}',
-			'{"namespace": "$F5XC_NAMESPACE"}',
+			'{"namespace": "$XCSH_NAMESPACE"}',
 			'{"namespace": "system"}',
 			'{"tenant": "example-corp"}',
 		].join("\n");

@@ -134,12 +134,13 @@ test("failed review presentation releases the execution guard for another attemp
 test("shared reviews use a fullscreen overlay without replacing the draft or transcript", async () => {
 	let component: Component | undefined;
 	const hide = vi.fn();
+	const setFocus = vi.fn();
 	const showOverlay = vi.fn((value: Component) => {
 		component = value;
 		return { hide };
 	});
 	const ctx = {
-		ui: { terminal: { rows: 24 }, showOverlay, requestRender() {}, setFocus: vi.fn() },
+		ui: { terminal: { rows: 24 }, showOverlay, requestRender() {}, setFocus },
 		editor: { getText: () => "retained draft", setText: vi.fn() },
 		editorContainer: { clear: vi.fn(), addChild: vi.fn() },
 	} as unknown as InteractiveModeContext;
@@ -151,6 +152,7 @@ test("shared reviews use a fullscreen overlay without replacing the draft or tra
 		execute: async () => {},
 	});
 	for (let i = 0; i < 100 && !component; i++) await Bun.sleep(1);
+	expect(setFocus).toHaveBeenCalledWith(component);
 	// Settle even when an implementation incorrectly embeds the review instead of opening an overlay.
 	const rendered =
 		component ??
@@ -161,7 +163,7 @@ test("shared reviews use a fullscreen overlay without replacing the draft or tra
 	expect(hide).toHaveBeenCalledTimes(1);
 	expect(ctx.editorContainer.clear).not.toHaveBeenCalled();
 	expect(ctx.editor.setText).not.toHaveBeenCalled();
-	expect(ctx.ui.setFocus).not.toHaveBeenCalled();
+	expect(setFocus).toHaveBeenLastCalledWith(ctx.editor);
 });
 test("internal revision snapshots are never rendered as user-facing review content", () => {
 	const privateReview = { ...review, revision: JSON.stringify({ internal: "SYNTHETIC_PRIVATE_SNAPSHOT" }) };

@@ -282,6 +282,7 @@ export interface ScanSkillsFromDirOptions {
 	providerId: string;
 	level: "user" | "project";
 	requireDescription?: boolean;
+	signal?: AbortSignal;
 }
 
 // Stable ordering used for skill lists in prompts: name (case-insensitive), then name, then path.
@@ -304,8 +305,11 @@ export async function scanSkillsFromDir(
 
 	let entries: fs.Dirent[];
 	try {
+		options.signal?.throwIfAborted();
 		entries = await fs.promises.readdir(dir, { withFileTypes: true });
+		options.signal?.throwIfAborted();
 	} catch (error) {
+		if (options.signal?.aborted) throw error;
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
 			warnings.push(`Failed to read skills directory: ${dir} (${String(error)})`);
 		}
@@ -313,7 +317,7 @@ export async function scanSkillsFromDir(
 	}
 	const loadSkill = async (skillPath: string) => {
 		try {
-			const content = await readFile(skillPath);
+			const content = await readFile(skillPath, options.signal);
 			if (!content) return;
 			const { frontmatter, body } = parseFrontmatter(content, { source: skillPath });
 			if (frontmatter.enabled === false) {
@@ -333,13 +337,15 @@ export async function scanSkillsFromDir(
 				level,
 				_source: createSourceMeta(providerId, skillPath, level),
 			});
-		} catch {
+		} catch (error) {
+			if (options.signal?.aborted) throw error;
 			warnings.push(`Failed to read skill file: ${skillPath}`);
 		}
 	};
 
 	const work = [];
 	for (const entry of entries) {
+		options.signal?.throwIfAborted();
 		if (entry.name.startsWith(".")) continue;
 		if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 		const skillPath = path.join(dir, entry.name, "SKILL.md");
@@ -679,12 +685,13 @@ export function parseXcshPluginsRegistry(content: string): XcshPluginsRegistry |
  * This is the single source of truth for "active project root" used by install,
  * uninstall, list, upgrade, discovery, and doctor. Deterministic for a given `cwd`.
  */
-export async function resolveActiveProjectRegistryPath(cwd: string): Promise<string | null> {
+export async function resolveActiveProjectRegistryPath(cwd: string, signal?: AbortSignal): Promise<string | null> {
 	// Pass 1: walk up looking for an existing .xcsh/ directory (nearest wins).
 	// Stop before os.homedir() — ~/.xcsh/ is the user-level config dir, not a project root.
 	const homeDir = os.homedir();
 	let dir = path.resolve(cwd);
 	while (dir !== homeDir) {
+		signal?.throwIfAborted();
 		try {
 			const stat = await fs.promises.stat(path.join(dir, CONFIG_DIR_NAME));
 			if (stat.isDirectory()) {
@@ -701,6 +708,7 @@ export async function resolveActiveProjectRegistryPath(cwd: string): Promise<str
 	// Pass 2: walk up looking for .git as a fallback anchor.
 	dir = path.resolve(cwd);
 	while (dir !== homeDir) {
+		signal?.throwIfAborted();
 		try {
 			await fs.promises.stat(path.join(dir, ".git"));
 			return path.join(dir, CONFIG_DIR_NAME, "plugins", "installed_plugins.json");
@@ -737,6 +745,9 @@ export async function resolveOrDefaultProjectRegistryPath(cwd: string): Promise<
 }
 
 const pluginRootsCache = new Map<string, { roots: XcshPluginRoot[]; warnings: string[] }>();
+const pluginSummariesCache = new Map<string, XcshPluginSummary[]>();
+const pluginSummariesInFlight = new Map<string, Promise<{ summaries: XcshPluginSummary[]; generation: number }>>();
+let pluginCacheGeneration = 0;
 
 /**
  * List all installed marketplace plugin roots from the plugin cache.
@@ -748,8 +759,10 @@ const pluginRootsCache = new Map<string, { roots: XcshPluginRoot[]; warnings: st
 export async function listXcshPluginRoots(
 	home: string,
 	cwd?: string,
+	signal?: AbortSignal,
 ): Promise<{ roots: XcshPluginRoot[]; warnings: string[] }> {
-	const resolvedProjectPath = cwd ? await resolveActiveProjectRegistryPath(cwd) : null;
+	signal?.throwIfAborted();
+	const resolvedProjectPath = cwd ? await resolveActiveProjectRegistryPath(cwd, signal) : null;
 	const cacheKey = `${home}:${resolvedProjectPath ?? ""}`;
 	const cached = pluginRootsCache.get(cacheKey);
 	if (cached) return cached;
@@ -758,7 +771,7 @@ export async function listXcshPluginRoots(
 	const warnings: string[] = [];
 	const projectRoots: XcshPluginRoot[] = [];
 	const marketplaceStates = new Map<string, MarketplaceRegistryEntry>();
-	const marketplacesContent = await readFile(path.join(home, getConfigDirName(), "marketplaces.json"));
+	const marketplacesContent = await readFile(path.join(home, getConfigDirName(), "marketplaces.json"), signal);
 	if (marketplacesContent) {
 		const marketplacesRegistry = tryParseJson<{ marketplaces?: MarketplaceRegistryEntry[] }>(marketplacesContent);
 		for (const marketplace of marketplacesRegistry?.marketplaces ?? []) {
@@ -769,7 +782,7 @@ export async function listXcshPluginRoots(
 	// ── Installed plugins registry ───────────────────────────────────────────
 	// Path derived from `home` (not os.homedir()) so test isolation works when home is overridden.
 	const registryPath = path.join(home, getConfigDirName(), "plugins", "installed_plugins.json");
-	const content = await readFile(registryPath);
+	const content = await readFile(registryPath, signal);
 	if (content) {
 		const registry = parseXcshPluginsRegistry(content);
 		if (registry) {
@@ -812,7 +825,7 @@ export async function listXcshPluginRoots(
 	// Project entries take precedence over user entries for the same plugin ID.
 	// Skip if the project registry is the same file as the user registry (home === cwd).
 	if (resolvedProjectPath && resolvedProjectPath !== registryPath) {
-		const projectContent = await readFile(resolvedProjectPath);
+		const projectContent = await readFile(resolvedProjectPath, signal);
 		if (projectContent) {
 			const projectRegistry = parseXcshPluginsRegistry(projectContent);
 			if (projectRegistry) {
@@ -890,6 +903,22 @@ export interface XcshPluginSummary {
 	description: string;
 }
 
+export interface XcshPluginSummaryLoadDependencies {
+	resolveProjectRegistryPath: (cwd: string, signal?: AbortSignal) => Promise<string | null>;
+	loadRoots: (
+		home: string,
+		cwd?: string,
+		signal?: AbortSignal,
+	) => Promise<{ roots: XcshPluginRoot[]; warnings: string[] }>;
+	loadSummary: (root: { plugin: string; path: string }, signal?: AbortSignal) => Promise<XcshPluginSummary>;
+}
+
+export interface XcshPluginSummaryLoadResult {
+	summaries: XcshPluginSummary[];
+	cacheStatus: "completed" | "cached";
+	generation: number;
+}
+
 /**
  * Sanitize a manifest/package description for single-line rendering in the system prompt.
  * Collapses whitespace runs to single spaces, trims, and caps length (appending "…" if truncated).
@@ -903,7 +932,10 @@ function sanitizePluginDescription(description: unknown): string {
 }
 
 /** Read a plugin's human name+description from its own manifest. Fail-safe: never throws. */
-export async function readPluginSummary(root: { plugin: string; path: string }): Promise<XcshPluginSummary> {
+export async function readPluginSummary(
+	root: { plugin: string; path: string },
+	signal?: AbortSignal,
+): Promise<XcshPluginSummary> {
 	// Precedence mirrors MarketplaceManager#resolvePluginVersion.
 	const candidates: Array<{ rel: string; pick: (m: any) => { name?: string; description?: string } }> = [
 		{ rel: ".xcsh-plugin/plugin.json", pick: m => ({ name: m?.name, description: m?.description }) },
@@ -913,32 +945,85 @@ export async function readPluginSummary(root: { plugin: string; path: string }):
 		},
 	];
 	for (const c of candidates) {
+		signal?.throwIfAborted();
 		try {
-			const m = await Bun.file(path.join(root.path, c.rel)).json();
+			const manifestPath = path.join(root.path, c.rel);
+			const stat = await fs.promises.stat(manifestPath);
+			if (!stat.isFile()) continue;
+			const content = await fs.promises.readFile(manifestPath, { encoding: "utf8", signal });
+			const m = JSON.parse(content);
 			const { name, description } = c.pick(m);
 			if (name || description) {
 				return { id: root.plugin, name: name ?? root.plugin, description: sanitizePluginDescription(description) };
 			}
-		} catch {
+		} catch (error) {
+			if (signal?.aborted) throw error;
 			// try next candidate
 		}
 	}
 	return { id: root.plugin, name: root.plugin, description: "" };
 }
 
-/** All installed plugins as {name, description}, sorted by name, deduped by plugin id. */
-export async function listXcshPluginSummaries(home: string, cwd?: string): Promise<XcshPluginSummary[]> {
-	try {
-		const { roots } = await listXcshPluginRoots(home, cwd);
+const defaultPluginSummaryLoadDependencies: XcshPluginSummaryLoadDependencies = {
+	resolveProjectRegistryPath: resolveActiveProjectRegistryPath,
+	loadRoots: listXcshPluginRoots,
+	loadSummary: readPluginSummary,
+};
+
+/** Load the installed-plugin summary snapshot, deduplicating concurrent discovery by home/project scope. */
+export async function loadXcshPluginSummaries(
+	home: string,
+	cwd?: string,
+	signal?: AbortSignal,
+	dependencies: XcshPluginSummaryLoadDependencies = defaultPluginSummaryLoadDependencies,
+): Promise<XcshPluginSummaryLoadResult> {
+	signal?.throwIfAborted();
+	const resolvedProjectPath = cwd ? await dependencies.resolveProjectRegistryPath(cwd, signal) : null;
+	const cacheKey = `${home}:${resolvedProjectPath ?? ""}`;
+	const cached = pluginSummariesCache.get(cacheKey);
+	if (cached) return { summaries: cached, cacheStatus: "cached", generation: pluginCacheGeneration };
+
+	const existing = pluginSummariesInFlight.get(cacheKey);
+	if (existing) {
+		const result = await existing;
+		return { ...result, cacheStatus: "cached" };
+	}
+
+	const generation = pluginCacheGeneration;
+	const load = (async () => {
+		signal?.throwIfAborted();
+		const { roots } = await dependencies.loadRoots(home, cwd, signal);
 		const seen = new Set<string>();
 		const out: XcshPluginSummary[] = [];
 		for (const r of roots) {
+			signal?.throwIfAborted();
 			if (seen.has(r.plugin)) continue;
 			seen.add(r.plugin);
-			out.push(await readPluginSummary(r));
+			out.push(await dependencies.loadSummary(r, signal));
 		}
-		return out.sort((a, b) => a.name.localeCompare(b.name));
-	} catch {
+		const summaries = out.sort((a, b) => a.name.localeCompare(b.name));
+		if (generation === pluginCacheGeneration) pluginSummariesCache.set(cacheKey, summaries);
+		return { summaries, generation };
+	})();
+	pluginSummariesInFlight.set(cacheKey, load);
+	try {
+		return { ...(await load), cacheStatus: "completed" };
+	} finally {
+		if (pluginSummariesInFlight.get(cacheKey) === load) pluginSummariesInFlight.delete(cacheKey);
+	}
+}
+
+/** All installed plugins as {name, description}, sorted by name, deduped by plugin id. */
+export async function listXcshPluginSummaries(
+	home: string,
+	cwd?: string,
+	signal?: AbortSignal,
+	dependencies?: XcshPluginSummaryLoadDependencies,
+): Promise<XcshPluginSummary[]> {
+	try {
+		return (await loadXcshPluginSummaries(home, cwd, signal, dependencies)).summaries;
+	} catch (error) {
+		if (signal?.aborted) throw error;
 		return [];
 	}
 }
@@ -946,13 +1031,21 @@ export async function listXcshPluginSummaries(home: string, cwd?: string): Promi
 /**
  * Clear the plugin roots cache (useful for testing or when plugins change).
  */
-export function clearXcshPluginRootsCache(): void {
+export function clearXcshPluginRootsCache(options: { rewarm?: boolean } = {}): void {
+	pluginCacheGeneration += 1;
 	pluginRootsCache.clear();
+	pluginSummariesCache.clear();
+	pluginSummariesInFlight.clear();
 	preloadedPluginRoots = [...injectedPluginDirRoots];
 	// Re-warm preloaded roots asynchronously so sync LSP config reads stay valid
-	if (lastPreloadHome) {
+	if (options.rewarm !== false && lastPreloadHome) {
 		void preloadPluginRoots(lastPreloadHome, getProjectDir());
 	}
+}
+
+/** Monotonic generation used by session snapshots to detect explicit plugin invalidation. */
+export function getXcshPluginCacheGeneration(): number {
+	return pluginCacheGeneration;
 }
 
 // ── Preloaded plugin roots (for sync consumers like LSP config) ─────────────

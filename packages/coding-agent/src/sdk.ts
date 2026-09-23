@@ -51,7 +51,7 @@ import { type PersonProfileService, personProfileService } from "./person-profil
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
 import { initializeWithSettings } from "./discovery";
-import { listXcshPluginRoots } from "./discovery/helpers";
+import { getXcshPluginCacheGeneration, listXcshPluginRoots } from "./discovery/helpers";
 import { TtsrManager } from "./export/ttsr";
 import {
 	type CustomCommandsLoadResult,
@@ -122,10 +122,13 @@ import { SessionManager } from "./session/session-manager";
 import { closeAllConnections } from "./ssh/connection-manager";
 import { unmountAll } from "./ssh/sshfs-mount";
 import {
-	buildAgentsMdSearch,
+	assertPreparedSystemPromptCwd,
 	buildSystemPrompt as buildSystemPromptInternal,
 	buildSystemPromptToolMetadata,
 	loadProjectContextFiles as loadContextFilesInternal,
+	type PreparedSystemPromptInputs,
+	prepareSystemPromptInputs,
+	renderSystemPrompt,
 } from "./system-prompt";
 import { AgentOutputManager } from "./task/output-manager";
 import { parseThinkingLevel, resolveThinkingLevelForModel, toReasoningEffort } from "./thinking";
@@ -248,6 +251,10 @@ export interface CreateAgentSessionOptions {
 
 	/** Tool names explicitly requested (enables disabled-by-default tools) */
 	toolNames?: string[];
+	/** Tool names removed before the initial prompt and tool selection are constructed. */
+	excludedToolNames?: string[];
+	/** Immutable workspace prompt inputs shared by a parent session. */
+	preparedSystemPromptInputs?: PreparedSystemPromptInputs;
 
 	/** Output schema for structured completion (subagents) */
 	outputSchema?: unknown;
@@ -690,6 +697,9 @@ function buildMCPPromptCommands(manager: MCPManager): LoadedCustomCommand[] {
  */
 export async function createAgentSession(options: CreateAgentSessionOptions = {}): Promise<CreateAgentSessionResult> {
 	const cwd = options.cwd ?? getProjectDir();
+	if (options.preparedSystemPromptInputs) {
+		assertPreparedSystemPromptCwd(options.preparedSystemPromptInputs, cwd);
+	}
 	const agentDir = options.agentDir ?? getDefaultAgentDir();
 	const eventBus = options.eventBus ?? new EventBus();
 
@@ -718,11 +728,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 	const skillsSettings = settings.getGroup("skills");
 	const disabledExtensionIds = settings.get("disabledExtensions") ?? [];
-	const discoveredSkillsPromise =
-		options.skills === undefined
-			? discoverSkills(cwd, agentDir, { ...skillsSettings, disabledExtensions: disabledExtensionIds })
-			: undefined;
-
 	// Initialize provider preferences from settings
 	const webSearchProvider = settings.get("providers.webSearch");
 	if (typeof webSearchProvider === "string" && isSearchProviderPreference(webSearchProvider)) {
@@ -739,6 +744,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		logger.time("sessionManager", () =>
 			SessionManager.create(cwd, SessionManager.getDefaultSessionDir(cwd, agentDir)),
 		);
+	const initialSessionManagerCwd = sessionManager.getCwd();
+	const getEffectivePromptCwd = (): string => {
+		const managerCwd = sessionManager.getCwd();
+		return path.resolve(managerCwd) === path.resolve(initialSessionManagerCwd) ? cwd : managerCwd;
+	};
 	const providerSessionId = options.providerSessionId ?? sessionManager.getSessionId();
 	const modelApiKeyAvailability = new Map<string, boolean>();
 	const getModelAvailabilityKey = (candidate: Model): string =>
@@ -976,19 +986,18 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		},
 	});
 
-	let skills: Skill[];
-	let skillWarnings: SkillWarning[];
-	if (options.skills !== undefined) {
-		skills = options.skills;
-		skillWarnings = [];
-	} else {
-		const discovered = await logger.time(
-			"discoverSkills",
-			() => discoveredSkillsPromise ?? Promise.resolve({ skills: [], warnings: [] }),
-		);
-		skills = discovered.skills;
-		skillWarnings = discovered.warnings;
-	}
+	let preparedSystemPromptInputs =
+		options.preparedSystemPromptInputs ??
+		(await logger.time("prepareSystemPromptInputs", prepareSystemPromptInputs, {
+			cwd,
+			customPrompt: typeof options.systemPrompt === "string" ? options.systemPrompt : undefined,
+			skills: options.skills,
+			contextFiles: options.contextFiles,
+			skillsSettings,
+			disabledExtensions: disabledExtensionIds,
+		}));
+	const skills: Skill[] = [...preparedSystemPromptInputs.skills];
+	const skillWarnings: SkillWarning[] = [...preparedSystemPromptInputs.skillWarnings];
 
 	// Discover rules and bucket them in one pass to avoid repeated scans over large rule sets.
 	const { ttsrManager, rulebookRules, alwaysApplyRules } = await logger.time("discoverTtsrRules", async () => {
@@ -1019,15 +1028,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		return { ttsrManager, rulebookRules, alwaysApplyRules };
 	});
 
-	const contextFiles = await logger.time(
-		"discoverContextFiles",
-		async () => options.contextFiles ?? (await discoverContextFiles(cwd, agentDir)),
-	);
-
-	// Walk the CWD for nested XCSH.md ONCE per session — the walk is bounded but not
-	// free, so hoisting it here keeps every tool-refresh prompt rebuild off the tree
-	// (a large cwd like $HOME must never re-stall on set_host_tools). #2245.
-	const agentsMdSearch = await logger.time("buildAgentsMdSearch", buildAgentsMdSearch, cwd);
+	const contextFiles = [...preparedSystemPromptInputs.contextFiles];
 
 	let agent: Agent;
 	let session!: AgentSession;
@@ -1127,6 +1128,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			forcePythonWarmup: options.forcePythonWarmup,
 			contextFiles,
 			skills,
+			get preparedSystemPromptInputs() {
+				return preparedSystemPromptInputs;
+			},
 			eventBus,
 			outputSchema: options.outputSchema,
 			requireSubmitResultTool: options.requireSubmitResultTool,
@@ -1583,6 +1587,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		if (model?.provider === "cursor") {
 			toolRegistry.delete("edit");
 		}
+		for (const excludedToolName of options.excludedToolNames ?? []) {
+			toolRegistry.delete(excludedToolName.toLowerCase());
+		}
 
 		const hasDeferrableTools = Array.from(toolRegistry.values()).some(tool => tool.deferrable === true);
 		if (!hasDeferrableTools) {
@@ -1606,6 +1613,23 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const contextProfileCollector = new ContextProfileCollector(contextLoadingMode);
 		const eagerTasks = settings.get("task.eager");
 		const intentField = settings.get("tools.intentTracing") || $flag("PI_INTENT_TRACING") ? INTENT_FIELD : undefined;
+		let hasRenderedSystemPrompt = false;
+		const prepareCurrentSystemPromptInputs = async (): Promise<PreparedSystemPromptInputs> => {
+			const currentCwd = getEffectivePromptCwd();
+			const relocated = path.resolve(preparedSystemPromptInputs.cwd) !== path.resolve(currentCwd);
+			preparedSystemPromptInputs = await prepareSystemPromptInputs({
+				cwd: currentCwd,
+				customPrompt: typeof options.systemPrompt === "string" ? options.systemPrompt : undefined,
+				skills: relocated ? undefined : options.skills,
+				contextFiles: relocated ? undefined : options.contextFiles,
+				skillsSettings: settings.getGroup("skills"),
+				disabledExtensions: settings.get("disabledExtensions") ?? [],
+			});
+			skills.splice(0, skills.length, ...preparedSystemPromptInputs.skills);
+			skillWarnings.splice(0, skillWarnings.length, ...preparedSystemPromptInputs.skillWarnings);
+			contextFiles.splice(0, contextFiles.length, ...preparedSystemPromptInputs.contextFiles);
+			return preparedSystemPromptInputs;
+		};
 		const rebuildSystemPrompt = async (toolNames: string[], tools: Map<string, AgentTool>): Promise<string> => {
 			toolContextStore.setToolNames(toolNames);
 			const discoverableMCPTools = mcpDiscoveryEnabled ? collectDiscoverableMCPTools(tools.values()) : [];
@@ -1620,7 +1644,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const memoryInstructions = await buildMemoryToolDeveloperInstructions(
 				agentDir,
 				settings,
-				sessionManager.getCwd(),
+				getEffectivePromptCwd(),
 			);
 
 			// Resolve F5 XC context for the prompt. Read fresh each rebuild so tool-triggered
@@ -1718,19 +1742,28 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const localeName = currentLocale !== "en" ? getLocaleDisplayName(currentLocale) : undefined;
 			const localeForPrompt = localeName ? { code: currentLocale, name: localeName } : undefined;
 
-			const defaultPrompt = await buildSystemPromptInternal({
+			const currentCwd = getEffectivePromptCwd();
+			let prepared = preparedSystemPromptInputs;
+			if (!prepared) prepared = await prepareCurrentSystemPromptInputs();
+			if (
+				hasRenderedSystemPrompt &&
+				(path.resolve(prepared.cwd) !== path.resolve(currentCwd) ||
+					prepared.pluginCacheGeneration !== getXcshPluginCacheGeneration())
+			) {
+				prepared = await prepareCurrentSystemPromptInputs();
+			}
+			hasRenderedSystemPrompt = true;
+			const defaultPrompt = renderSystemPrompt(prepared, {
 				loadingMode: contextLoadingMode,
 				onProfileComponents: components => contextProfileCollector.setAttributedComponents(components),
-				cwd,
-				skills,
-				contextFiles,
-				agentsMdSearch,
+				cwd: currentCwd,
 				tools: promptTools,
 				toolNames,
 				rules: rulebookRules,
 				alwaysApplyRules,
 				skillsSettings: settings.getGroup("skills"),
-				appendSystemPrompt: appendPrompt,
+				resolvedCustomPrompt: undefined,
+				resolvedAppendPrompt: appendPrompt,
 				repeatToolDescriptions,
 				intentField,
 				mcpDiscoveryMode: hasDiscoverableMCPTools,
@@ -1749,20 +1782,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			if (options.systemPrompt === undefined || typeof options.systemPrompt === "function") {
 				return defaultPrompt;
 			}
-			return await buildSystemPromptInternal({
+			return renderSystemPrompt(prepared, {
 				loadingMode: contextLoadingMode,
 				onProfileComponents: components => contextProfileCollector.setAttributedComponents(components),
-				cwd,
-				skills,
-				contextFiles,
-				agentsMdSearch,
+				cwd: currentCwd,
 				tools: promptTools,
 				toolNames,
 				rules: rulebookRules,
 				alwaysApplyRules,
 				skillsSettings: settings.getGroup("skills"),
-				customPrompt: options.systemPrompt,
-				appendSystemPrompt: appendPrompt,
+				resolvedCustomPrompt: prepared.resolvedCustomPrompt,
+				resolvedAppendPrompt: appendPrompt,
 				repeatToolDescriptions,
 				intentField,
 				mcpDiscoveryMode: hasDiscoverableMCPTools,

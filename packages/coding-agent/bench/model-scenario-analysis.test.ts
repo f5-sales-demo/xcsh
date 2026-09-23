@@ -45,6 +45,7 @@ function sample(
 		responseDurationMs: 200,
 		processDurationMs: 220,
 		...overrides,
+		knowledgeEvents: overrides.knowledgeEvents ?? [],
 	};
 }
 

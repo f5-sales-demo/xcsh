@@ -90,6 +90,8 @@ export async function loadSkillsFromDir(options: LoadSkillsFromDirOptions): Prom
 export interface LoadSkillsOptions extends SkillsSettings {
 	/** Working directory for project-local skills. Default: getProjectDir() */
 	cwd?: string;
+	/** Cancellation for bounded prompt preparation. */
+	signal?: AbortSignal;
 }
 
 /**
@@ -129,6 +131,7 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 		ignoredSkills = [],
 		includeSkills = [],
 		disabledExtensions = [],
+		signal,
 	} = options;
 
 	// Early return if skills are disabled
@@ -151,7 +154,7 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 	}
 
 	// Use capability API to load all skills
-	const result = await loadCapability<CapabilitySkill>(skillCapability.id, { cwd, disabledExtensions });
+	const result = await loadCapability<CapabilitySkill>(skillCapability.id, { cwd, disabledExtensions, signal });
 
 	const skillMap = new Map<string, Skill>();
 	const realPathSet = new Set<string>();
@@ -185,8 +188,10 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 	const realPaths = await Promise.all(
 		filteredSkills.map(async capSkill => {
 			try {
+				signal?.throwIfAborted();
 				return await fs.realpath(capSkill.path);
-			} catch {
+			} catch (error) {
+				if (signal?.aborted) throw error;
 				return capSkill.path;
 			}
 		}),
@@ -226,6 +231,7 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 
 	const customDirectoryResults = await Promise.all(
 		customDirectories.map(async dir => {
+			signal?.throwIfAborted();
 			const expandedDir = expandTilde(dir);
 			const scanResult = await scanSkillsFromDir(
 				{ cwd, home: os.homedir(), repoRoot: null },
@@ -234,6 +240,7 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 					providerId: "custom",
 					level: "user",
 					requireDescription: true,
+					signal,
 				},
 			);
 			return { expandedDir, scanResult };
@@ -268,8 +275,10 @@ export async function loadSkills(options: LoadSkillsOptions = {}): Promise<LoadS
 	const customRealPaths = await Promise.all(
 		allCustomSkills.map(async ({ path }) => {
 			try {
+				signal?.throwIfAborted();
 				return await fs.realpath(path);
-			} catch {
+			} catch (error) {
+				if (signal?.aborted) throw error;
 				return path;
 			}
 		}),

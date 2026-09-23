@@ -17,9 +17,9 @@ interface DeprecationEntry {
 const DEPRECATIONS = BRANDING_DEPRECATIONS as unknown as Record<string, DeprecationEntry>;
 
 /** Markers that identify a command as targeting the F5 XC API. */
-const F5XC_API_MARKERS = [
-	"f5xc_api_url",
-	"f5xc_api_token",
+const XCSH_API_MARKERS = [
+	"xcsh_api_url",
+	"xcsh_api_token",
 	"apitoken",
 	".volterra.io",
 	".volterra.us",
@@ -57,7 +57,7 @@ export function isDisallowedCliCommand(command: string): boolean {
 	if (!lower) return false;
 	const leadingToken = lower.split(/\s+/)[0] ?? "";
 	if (getDeprecatedClis().includes(leadingToken)) return true;
-	if (leadingToken === "curl" && F5XC_API_MARKERS.some(marker => lower.includes(marker))) return true;
+	if (leadingToken === "curl" && XCSH_API_MARKERS.some(marker => lower.includes(marker))) return true;
 	return false;
 }
 

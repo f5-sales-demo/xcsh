@@ -24,6 +24,8 @@ import {
 import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
 import type { UserPromptKind } from "../../extensibility/extensions/types";
+import type { MarketplacePluginLifecycle } from "../../extensibility/plugins/marketplace/types";
+import { createSetupStepRunner, executeInstallAuthorizedSetup, type SetupStepRunner } from "../../integrations";
 import {
 	getAvailableThemes,
 	previewTheme,
@@ -33,6 +35,7 @@ import {
 	theme,
 } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
+import { createContextEnv } from "../../services/context-env";
 import { type SessionInfo, SessionManager } from "../../session/session-manager";
 import { FileSessionStorage } from "../../session/session-storage";
 import { isSearchProviderPreference, setPreferredImageProvider, setPreferredSearchProvider } from "../../tools";
@@ -41,6 +44,7 @@ import { setSessionTerminalTitle } from "../../utils/title-generator";
 import { AgentDashboard } from "../components/agent-dashboard";
 import { AssistantMessageComponent } from "../components/assistant-message";
 import { presentAuthLink, presentDeviceCode } from "../components/auth-link-presenter";
+import { BorderedLoader } from "../components/bordered-loader";
 import { CopySelectorComponent } from "../components/copy-selector";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
@@ -90,6 +94,73 @@ const MANUAL_LOGIN_TIP = "Tip: You can complete pairing with /login <redirect UR
 const VERTEX_MANUAL_LOGIN_TIP = "Tip: After browser sign-in, complete pairing with /login <authorization code>.";
 
 class LoginPromptCancelled extends Error {}
+
+export function submitPluginSetupFromDashboard(
+	ctx: Pick<InteractiveModeContext, "editor" | "ui">,
+	pluginName: string,
+): void {
+	ctx.editor.setText(`/plugin setup ${pluginName}`);
+	ctx.ui.setFocus(ctx.editor);
+	ctx.editor.handleInput("\r");
+	ctx.ui.requestRender();
+}
+
+export async function runInstallAuthorizedPluginSetup(
+	ctx: Pick<InteractiveModeContext, "settings" | "session">,
+	pluginName: string,
+	lifecycle: Pick<MarketplacePluginLifecycle, "setupRequired" | "setupAuthorization">,
+	run?: SetupStepRunner,
+) {
+	const contextEnv = createContextEnv(ctx.settings);
+	return executeInstallAuthorizedSetup({
+		plugin: pluginName,
+		lifecycle,
+		trigger: "direct-install",
+		handles: ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? [],
+		run: run ?? createSetupStepRunner(name => contextEnv.get(name) ?? process.env[name]),
+	});
+}
+
+export async function runInstallAuthorizedPluginSetupInForeground(
+	ctx: Pick<
+		InteractiveModeContext,
+		"settings" | "session" | "ui" | "editorContainer" | "editor" | "showStatus" | "showError"
+	>,
+	pluginName: string,
+	lifecycle: Pick<MarketplacePluginLifecycle, "setupRequired" | "setupAuthorization">,
+	run?: SetupStepRunner,
+): Promise<void> {
+	const loader = new BorderedLoader(ctx.ui, theme, `Running reviewed setup for ${pluginName}`, false);
+	ctx.editorContainer.clear();
+	ctx.editorContainer.addChild(loader);
+	ctx.ui.setFocus(loader);
+	ctx.ui.requestRender();
+	try {
+		const contextEnv = createContextEnv(ctx.settings);
+		const result = await runInstallAuthorizedPluginSetup(
+			ctx,
+			pluginName,
+			lifecycle,
+			run ??
+				createSetupStepRunner(name => contextEnv.get(name) ?? process.env[name], {
+					nonInteractiveOutput: "ignore",
+				}),
+		);
+		ctx.showStatus(
+			result?.state === "ready"
+				? `Plugin setup completed: ${pluginName}.`
+				: `Plugin setup did not complete: ${pluginName}.`,
+		);
+	} catch (error) {
+		ctx.showError(`Plugin setup failed for ${pluginName}: ${error instanceof Error ? error.message : String(error)}`);
+	} finally {
+		loader.dispose();
+		ctx.editorContainer.clear();
+		ctx.editorContainer.addChild(ctx.editor);
+		ctx.ui.setFocus(ctx.editor);
+		ctx.ui.requestRender();
+	}
+}
 
 export class SelectorController {
 	#returnFromProviderSetup?: () => void;
@@ -597,7 +668,10 @@ export class SelectorController {
 			const close = (setupPlugin?: string) => {
 				done();
 				void this.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true }).finally(() => {
-					if (setupPlugin) this.ctx.editor.setText(`/plugin setup ${setupPlugin}`);
+					if (setupPlugin) {
+						submitPluginSetupFromDashboard(this.ctx, setupPlugin);
+						return;
+					}
 					this.ctx.ui.setFocus(this.ctx.editor);
 					this.ctx.ui.requestRender();
 				});
@@ -606,6 +680,17 @@ export class SelectorController {
 				close();
 			};
 			dashboard.onPrepareSetup = pluginName => close(pluginName);
+			dashboard.onInstallAuthorizedSetup = (pluginName, lifecycle) => {
+				done();
+				void this.ctx
+					.refreshSlashCommandState(undefined, { reloadExtensions: true })
+					.then(() => runInstallAuthorizedPluginSetupInForeground(this.ctx, pluginName, lifecycle))
+					.catch(error => {
+						this.ctx.showError(
+							`Plugin setup failed for ${pluginName}: ${error instanceof Error ? error.message : String(error)}`,
+						);
+					});
+			};
 			dashboard.onRequestRender = () => {
 				this.ctx.ui.requestRender();
 			};

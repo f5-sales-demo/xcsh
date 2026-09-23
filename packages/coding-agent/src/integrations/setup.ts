@@ -12,6 +12,24 @@ export interface InstallAuthorizedSetupOptions {
 }
 
 export type SetupStepRunner = (step: IntegrationSetupStep, signal?: AbortSignal) => Promise<number>;
+export type SetupEnvironmentResolver = (name: string) => string | undefined;
+export interface SetupStepRunnerOptions {
+	readonly nonInteractiveOutput?: "inherit" | "ignore";
+}
+
+export function describeInstallSetupOutcome(
+	plugin: string,
+	status: Pick<IntegrationSnapshot<unknown>, "state" | "reason">,
+	dependencyPlan: readonly { readonly pluginId: string }[],
+): string {
+	const summary = `${plugin}: ${status.state}${status.reason ? ` (${status.reason})` : ""}`;
+	if (status.state === "ready") return summary;
+	const blockingDependency =
+		status.reason === "dependency_missing"
+			? dependencyPlan.find(item => item.pluginId.split("@")[0] !== plugin)?.pluginId.split("@")[0]
+			: undefined;
+	return `${summary}\nnext: xcsh plugin setup ${blockingDependency ?? plugin}`;
+}
 
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 	const plan = handle.setupPlan;
@@ -29,21 +47,37 @@ export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 	return lines.join("\n");
 }
 
-export const runSetupStep: SetupStepRunner = async (step, signal) => {
-	const timeout = AbortSignal.timeout(step.timeoutMs);
-	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-	try {
-		const child = Bun.spawn([...step.argv], {
-			stdin: step.stdin === "inherit" || step.kind === "login" ? "inherit" : "ignore",
-			stdout: "inherit",
-			stderr: "inherit",
-			signal: combined,
-		});
-		return await child.exited;
-	} catch {
-		return -1;
-	}
-};
+export function createSetupStepRunner(
+	resolveEnvironment: SetupEnvironmentResolver,
+	options: SetupStepRunnerOptions = {},
+): SetupStepRunner {
+	return async (step, signal) => {
+		const environment = { ...process.env };
+		for (const name of step.environment ?? []) {
+			const value = resolveEnvironment(name);
+			if (value === undefined) delete environment[name];
+			else environment[name] = value;
+		}
+		const timeout = AbortSignal.timeout(step.timeoutMs);
+		const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+		const interactiveInput = step.stdin === "inherit" || step.kind === "login";
+		const output = step.kind === "login" ? "inherit" : (options.nonInteractiveOutput ?? "inherit");
+		try {
+			const child = Bun.spawn([...step.argv], {
+				env: environment,
+				stdin: interactiveInput ? "inherit" : "ignore",
+				stdout: output,
+				stderr: output,
+				signal: combined,
+			});
+			return await child.exited;
+		} catch {
+			return -1;
+		}
+	};
+}
+
+export const runSetupStep = createSetupStepRunner(name => process.env[name]);
 
 export async function executeReviewedSetup<T>(
 	handle: IntegrationHandle<T>,
@@ -88,6 +122,6 @@ export async function executeInstallAuthorizedSetup(
 	}
 	const handle = matches[0];
 	const current = await handle.get(options.signal);
-	if (current.state === "ready") return current;
+	if (current.state !== "setup_required" && current.state !== "degraded") return current;
 	return executeReviewedSetup(handle, handle.setupPlan!, options.run, options.signal);
 }

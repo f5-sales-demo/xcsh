@@ -1,6 +1,7 @@
 # Documentation Lookup Hierarchy (llms.txt Cascade)
 
-Use this progressive cascade for F5 XC product, API, developer-tool, automation, lab, and documentation-platform questions:
+Use this progressive cascade for conceptual and operational F5 XC product, developer-tool, automation, lab, and documentation-platform questions.
+For API paths, methods, payload fields, required status, enums, and constraints, use the deterministic `api-catalog-preflight` result followed by exact `xcsh://api-catalog/` and `xcsh://api-spec/` reads first. Use this cascade only to supplement missing conceptual or operational guidance:
 
 1. **Federation index** — Read `https://f5-sales-demo.github.io/docs/llms.txt` and select the relevant categorized site.
 2. **Site index** — Read that site's `llms.txt`; use its Documentation Sets, Sections, and Translations links as published.
