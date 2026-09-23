@@ -20,7 +20,7 @@ import {
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
 import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fetcher";
-import { describeSetupPlan, executeReviewedSetup } from "../integrations/setup";
+import { describeSetupPlan, executeInstallAuthorizedSetup, executeReviewedSetup } from "../integrations/setup";
 import type { IntegrationHandle } from "../integrations/types";
 import { BorderedLoader } from "../modes/components/bordered-loader";
 import type { ActionReview } from "../modes/components/reviewed-action";
@@ -1502,6 +1502,13 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded") {
 							await runtime.ctx.refreshSlashCommandState(undefined, { reloadAdvisories: true });
+							const setupResult = await executeInstallAuthorizedSetup({
+								plugin: name,
+								lifecycle: prepared.target,
+								trigger: "direct-install",
+								handles: runtime.ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? [],
+							});
+							if (setupResult) await personProfileService.reconcileFromCollectors(undefined, 0);
 							showPluginStatus(t("commands.plugin.installed", { name, marketplace }));
 						} else if (outcome === "unresolved")
 							runtime.ctx.showError("Plugin installation remains unresolved; retry from a fresh review.");

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { reviewAndExecuteIntegrationSetup, selectSetupIntegration } from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
-import { describeSetupPlan, executeReviewedSetup } from "../src/integrations/setup";
+import { describeSetupPlan, executeInstallAuthorizedSetup, executeReviewedSetup } from "../src/integrations/setup";
 
 const ready = <T>(value: T) => ({ state: "ready" as const, value });
 
@@ -238,4 +238,68 @@ describe("IntegrationRegistry", () => {
 		});
 		expect(result.state).toBe("ready");
 	});
+
+	test("install authorization executes setup once without a second confirmation", async () => {
+		let executions = 0;
+		const plan = {
+			pluginDependencies: [],
+			requiredEnvironment: [],
+			profileFields: [],
+			steps: [{ kind: "install" as const, argv: ["controller", "setup", "apply"], timeoutMs: 1_000 }],
+			verification: [],
+		};
+		const result = await executeInstallAuthorizedSetup({
+			plugin: "kvm",
+			lifecycle: { setupRequired: true, setupAuthorization: "install" },
+			trigger: "direct-install",
+			handles: [
+				{
+					id: "kvm_smsv2",
+					name: "KVM SMSv2",
+					plugin: "kvm@f5-sales-demo",
+					setupPlan: plan,
+					get: async () => ({
+						id: "kvm_smsv2",
+						name: "KVM SMSv2",
+						state: "setup_required",
+						checkedAt: 1,
+						durationMs: 0,
+					}),
+					invalidate() {},
+					verifyAfterSetup: async () => ({
+						id: "kvm_smsv2",
+						name: "KVM SMSv2",
+						state: "ready",
+						checkedAt: 2,
+						durationMs: 0,
+					}),
+				},
+			],
+			run: async () => {
+				executions++;
+				return 0;
+			},
+		});
+		expect(result?.state).toBe("ready");
+		expect(executions).toBe(1);
+	});
+
+	test.each(["bulk-install", "upgrade", "cache-refresh", "dependency-install"] as const)(
+		"%s never consumes install-scoped setup authorization",
+		async trigger => {
+			let executions = 0;
+			const result = await executeInstallAuthorizedSetup({
+				plugin: "kvm",
+				lifecycle: { setupRequired: true, setupAuthorization: "install" },
+				trigger,
+				handles: [],
+				run: async () => {
+					executions++;
+					return 0;
+				},
+			});
+			expect(result).toBeUndefined();
+			expect(executions).toBe(0);
+		},
+	);
 });

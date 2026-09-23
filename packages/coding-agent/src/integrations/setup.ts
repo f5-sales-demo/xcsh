@@ -1,5 +1,16 @@
 import type { IntegrationHandle, IntegrationSetupPlan, IntegrationSetupStep, IntegrationSnapshot } from "./types";
 
+export type PluginSetupTrigger = "direct-install" | "bulk-install" | "upgrade" | "cache-refresh" | "dependency-install";
+
+export interface InstallAuthorizedSetupOptions {
+	readonly plugin: string;
+	readonly lifecycle: { readonly setupRequired: boolean; readonly setupAuthorization?: "separate" | "install" };
+	readonly trigger: PluginSetupTrigger;
+	readonly handles: readonly IntegrationHandle<unknown>[];
+	readonly run?: SetupStepRunner;
+	readonly signal?: AbortSignal;
+}
+
 export type SetupStepRunner = (step: IntegrationSetupStep, signal?: AbortSignal) => Promise<number>;
 
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
@@ -46,4 +57,37 @@ export async function executeReviewedSetup<T>(
 		if ((await run(step, signal)) !== 0) throw new Error(`Integration ${step.kind} step failed`);
 	}
 	return handle.verifyAfterSetup(reviewedPlan, signal);
+}
+
+/**
+ * Consume install-scoped setup authorization only for the reviewed root plugin.
+ * Indirect installation surfaces deliberately return without inspecting handles.
+ */
+export async function executeInstallAuthorizedSetup(
+	options: InstallAuthorizedSetupOptions,
+): Promise<IntegrationSnapshot<unknown> | undefined> {
+	if (
+		options.trigger !== "direct-install" ||
+		!options.lifecycle.setupRequired ||
+		(options.lifecycle.setupAuthorization ?? "separate") !== "install"
+	)
+		return undefined;
+	const matches = options.handles.filter(
+		handle =>
+			(handle.id === options.plugin ||
+				handle.plugin === options.plugin ||
+				handle.plugin?.split("@")[0] === options.plugin) &&
+			handle.setupPlan !== undefined,
+	);
+	if (matches.length !== 1) {
+		throw new Error(
+			matches.length
+				? `Plugin ${options.plugin} registers multiple setup plans; use an explicit plugin setup command.`
+				: `Plugin ${options.plugin} authorized setup during install but no setup plan is registered.`,
+		);
+	}
+	const handle = matches[0];
+	const current = await handle.get(options.signal);
+	if (current.state === "ready") return current;
+	return executeReviewedSetup(handle, handle.setupPlan!, options.run, options.signal);
 }

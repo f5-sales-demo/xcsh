@@ -28,6 +28,8 @@ export interface PreparedPluginInstall {
 		force: boolean;
 		catalogRevision: string;
 		dependencyPlanRevision: string;
+		setupRequired: boolean;
+		setupAuthorization: "separate" | "install";
 	};
 	warnings: string[];
 }
@@ -211,10 +213,27 @@ export async function preparePluginInstall(
 					before: "None",
 					after: dependencyPlan.map(item => `${item.pluginId}@${item.version}`).join(" -> "),
 				},
+				{
+					field: "Setup authorization",
+					before: "Not granted",
+					after:
+						catalog.lifecycle.setupAuthorization === "install"
+							? "Run the installed plugin's declared setup plan"
+							: "Require a separate setup review",
+				},
 			],
-			consequence: `${force ? "Reinstalls" : "Installs"} this exact catalog entry and writes the ${scope} registry. Lifecycle: ${catalog.lifecycle.mode}; setup ${catalog.lifecycle.setupRequired ? "required" : "not required"}. ${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "The catalog preview is current."} --force controls replacement only; this review is still required.`,
+			consequence: `${force ? "Reinstalls" : "Installs"} this exact catalog entry and writes the ${scope} registry. Lifecycle: ${catalog.lifecycle.mode}; setup ${catalog.lifecycle.setupRequired ? "required" : "not required"}. ${catalog.lifecycle.setupRequired && catalog.lifecycle.setupAuthorization === "install" ? "Confirming this direct install authorizes its declared setup plan without a second prompt. " : ""}${preview.failed.length ? `The preview used last-known data for ${preview.failed.join(", ")}; confirmation will require a fresh catalog.` : "The catalog preview is current."} --force controls replacement only; this review is still required.`,
 		},
-		target: { name, marketplace, scope, force, catalogRevision, dependencyPlanRevision },
+		target: {
+			name,
+			marketplace,
+			scope,
+			force,
+			catalogRevision,
+			dependencyPlanRevision,
+			setupRequired: catalog.lifecycle.setupRequired,
+			setupAuthorization: catalog.lifecycle.setupAuthorization ?? "separate",
+		},
 		warnings: preview.failed.map(source => `Using last-known catalog data for ${source}.`),
 	};
 }

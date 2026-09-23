@@ -174,6 +174,13 @@ export function parseMarketplaceCatalog(content: string, filePath: string): Mark
 			`plugins[${i}].lifecycle.setupRequired`,
 			filePath,
 		);
+		if (lifecycleRecord.setupAuthorization !== undefined) {
+			assertField(
+				lifecycleRecord.setupAuthorization === "separate" || lifecycleRecord.setupAuthorization === "install",
+				`plugins[${i}].lifecycle.setupAuthorization`,
+				filePath,
+			);
+		}
 		if (lifecycleRecord.mode === "content") {
 			assertField(
 				(lifecycleRecord.integrations as unknown[]).length === 0 &&

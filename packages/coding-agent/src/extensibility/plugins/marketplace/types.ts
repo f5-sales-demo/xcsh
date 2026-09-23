@@ -75,12 +75,15 @@ export interface MarketplacePluginAuthor {
 }
 
 export type PluginLifecycleMode = "content" | "on_demand" | "integrated";
+export type PluginSetupAuthorization = "separate" | "install";
 
 export interface MarketplacePluginLifecycle {
 	mode: PluginLifecycleMode;
 	integrations: string[];
 	requirements: string[];
 	setupRequired: boolean;
+	/** Omitted is the compatibility-safe `separate` policy. */
+	setupAuthorization?: PluginSetupAuthorization;
 	collectedData: string[];
 	pluginDependencies: string[];
 }
