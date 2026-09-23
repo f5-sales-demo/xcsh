@@ -1506,7 +1506,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								plugin: name,
 								lifecycle: prepared.target,
 								trigger: "direct-install",
-								handles: runtime.ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? [],
+								handles: runtime.ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [],
 							});
 							if (setupResult) await personProfileService.reconcileFromCollectors(undefined, 0);
 							showPluginStatus(t("commands.plugin.installed", { name, marketplace }));
