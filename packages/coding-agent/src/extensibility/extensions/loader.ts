@@ -388,6 +388,8 @@ async function loadExtension(
 
 		return { extension, error: null };
 	} catch (err) {
+		integrationRegistry.unregisterOwner(resolvedPath);
+		personProfileService.unregisterProfileCollectorsByRegistrant(resolvedPath);
 		const message = err instanceof Error ? err.message : String(err);
 		return { extension: null, error: `Failed to load extension: ${message}` };
 	}

@@ -1,6 +1,7 @@
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-ai";
 import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
+import type { AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { settings } from "../../config/settings";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
@@ -16,6 +17,11 @@ import {
 } from "../../modes/components/gutter-block";
 import { MediaMessageComponent } from "../../modes/components/media-message";
 import { PythonExecutionComponent } from "../../modes/components/python-execution";
+import {
+	parseAsyncInputReply,
+	QuestionTranscriptComponent,
+	resolveAsyncQuestionReplyFromItem,
+} from "../../modes/components/question-transcript";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
 import { SkillMessageComponent } from "../../modes/components/skill-message";
 import { ToolExecutionComponent } from "../../modes/components/tool-execution";
@@ -35,6 +41,7 @@ type QueuedMessages = {
 };
 
 export class UiHelpers {
+	#asyncQuestionBatches = new Map<string, { item: AsyncQuestionItem; questionIds: string[] }>();
 	constructor(private ctx: InteractiveModeContext) {}
 
 	/** Extract text content from a user message */
@@ -108,7 +115,24 @@ export class UiHelpers {
 			}
 			case "hookMessage":
 			case "custom": {
+				if (message.customType === "async-user-input") {
+					const details = message.details as { item?: AsyncQuestionItem; questionIds?: unknown[] } | undefined;
+					if (details?.item && details.questionIds?.every(id => typeof id === "string"))
+						this.#asyncQuestionBatches.set(details.item.id, {
+							item: details.item,
+							questionIds: details.questionIds as string[],
+						});
+				}
 				if (message.display) {
+					if (message.customType === "async-user-input") {
+						const details = message.details as { item?: AsyncQuestionItem } | undefined;
+						if (details?.item) {
+							this.ctx.chatContainer.addChild(
+								createSystemGutter(this.ctx.ui, QuestionTranscriptComponent.pending(details.item)),
+							);
+							break;
+						}
+					}
 					if (message.customType === "async-result") {
 						const details = (
 							message as CustomMessage<{
@@ -187,6 +211,16 @@ export class UiHelpers {
 			case "developer": {
 				const textContent = this.ctx.getUserMessageText(message);
 				if (textContent) {
+					const reply = message.role === "user" ? parseAsyncInputReply(textContent) : undefined;
+					const batch = reply ? this.#asyncQuestionBatches.get(reply.itemId) : undefined;
+					const resolved =
+						reply && batch ? resolveAsyncQuestionReplyFromItem(batch.item, batch.questionIds, reply) : undefined;
+					if (resolved) {
+						this.ctx.chatContainer.addChild(
+							createSystemGutter(this.ctx.ui, QuestionTranscriptComponent.answered(resolved)),
+						);
+						break;
+					}
 					const isSynthetic = message.role === "developer" ? true : (message.synthetic ?? false);
 					const userComponent = new UserMessageComponent(textContent, isSynthetic);
 					this.ctx.chatContainer.addChild(userComponent);
@@ -235,6 +269,7 @@ export class UiHelpers {
 		options: { updateFooter?: boolean; populateHistory?: boolean } = {},
 	): void {
 		this.ctx.optimisticUserMessageSignature = undefined;
+		this.#asyncQuestionBatches.clear();
 		this.ctx.pendingTools.clear();
 
 		if (options.updateFooter) {

@@ -88,7 +88,12 @@ function emptyState(initialTab: PluginTabId): PluginDashboardState {
 function pluginStatus(plugin: DashboardPlugin): string {
 	if (!plugin.installed) return plugin.recommended ? "Recommended" : "Available";
 	if (plugin.hasUpdate) return plugin.updateVersion ? `Update ${plugin.updateVersion}` : "Update available";
+	if (plugin.enabled && plugin.lifecycle?.setupRequired) return "Enabled · setup managed";
 	return plugin.enabled ? "Enabled" : "Disabled";
+}
+
+function reviewIdentity(identity: string): string {
+	return identity.split("\0").filter(Boolean).join(" · ");
 }
 
 function pluginScope(plugin: DashboardPlugin): string {
@@ -130,6 +135,7 @@ export class PluginDashboard extends Container {
 	#projectScopeAvailable: boolean;
 
 	onClose?: () => void;
+	onPrepareSetup?: (pluginName: string) => void;
 	onRequestRender?: () => void;
 
 	private constructor(
@@ -430,6 +436,9 @@ export class PluginDashboard extends Container {
 	#detailsActions(plugin: DashboardPlugin): string[] {
 		if (!plugin.installed) return ["Review installation"];
 		return [
+			...(plugin.enabled && plugin.source === "marketplace" && plugin.lifecycle?.setupRequired
+				? ["Check readiness / setup"]
+				: []),
 			plugin.enabled ? "Disable plugin" : "Enable plugin",
 			"Refresh plugin status",
 			...(plugin.hasUpdate && plugin.source === "marketplace" ? ["Upgrade plugin"] : []),
@@ -561,6 +570,9 @@ export class PluginDashboard extends Container {
 		if (action === "Review installation") {
 			this.#view = "install-review";
 			this.#actionIndex = 0;
+		} else if (action === "Check readiness / setup") {
+			this.#closed = true;
+			this.onPrepareSetup?.(marketplacePluginName(plugin));
 		} else if (action === "Remove plugin") {
 			this.#view = "remove-confirm";
 			this.#actionIndex = 0;
@@ -758,13 +770,17 @@ export class PluginDashboard extends Container {
 		if (wide) body.push(selectorRow(["Plugin", "Status", "Scope"], [inner - 33, 18, 9], false, "muted"));
 		for (let index = 0; index < this.#state.searchFiltered.length; index++) {
 			const plugin = this.#state.searchFiltered[index]!;
+			const baseName = plugin.displayName || plugin.name;
+			const duplicateName = this.#state.searchFiltered.some(
+				(candidate, candidateIndex) =>
+					candidateIndex !== index && (candidate.displayName || candidate.name) === baseName,
+			);
+			const listName = duplicateName && plugin.marketplace ? `${baseName} · ${plugin.marketplace}` : baseName;
 			const selected = index === this.#state.selectedIndex;
 			if (selected) selectedBodyIndex = body.length;
 			body.push(
 				selectorRow(
-					wide
-						? [plugin.displayName || plugin.name, pluginStatus(plugin), pluginScope(plugin)]
-						: [plugin.displayName || plugin.name],
+					wide ? [listName, pluginStatus(plugin), pluginScope(plugin)] : [listName],
 					wide ? [inner - 33, 18, 9] : [inner - 2],
 					selected,
 					plugin.installed && !plugin.enabled ? "muted" : "text",
@@ -928,7 +944,7 @@ export class PluginDashboard extends Container {
 					selectorRow([action], [inner - 2], index === this.#actionIndex),
 				),
 				[
-					`Target: ${review.identity.replaceAll("\0", " · ")}`,
+					`Target: ${reviewIdentity(review.identity)}`,
 					`Scope: ${review.scope}`,
 					...review.changes.map(change => `${change.field}: ${change.before} → ${change.after}`),
 					review.consequence,
@@ -954,7 +970,7 @@ export class PluginDashboard extends Container {
 				[],
 				actions.map((action, index) => selectorRow([action], [inner - 2], index === this.#actionIndex)),
 				[
-					`Target: ${review.identity.replaceAll("\0", " · ")}`,
+					`Target: ${reviewIdentity(review.identity)}`,
 					`Destination: ${this.#actionIndex === 2 ? "project scope" : this.#actionIndex === 1 ? "user scope" : "user scope (Cancel selected)"}`,
 					...review.changes.map(change => `${change.field}: ${change.before} → ${change.after}`),
 					review.consequence,
@@ -977,7 +993,7 @@ export class PluginDashboard extends Container {
 				[],
 				actions.map((action, index) => selectorRow([action], [inner - 2], index === this.#actionIndex)),
 				[
-					`Target: ${review.identity.replaceAll("\0", " · ")}`,
+					`Target: ${reviewIdentity(review.identity)}`,
 					`Scope: ${review.scope}`,
 					...review.changes.map(change => `${change.field}: ${change.before} → ${change.after}`),
 					review.consequence,

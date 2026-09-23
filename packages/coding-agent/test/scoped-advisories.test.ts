@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import type { AgentTool } from "@f5-sales-demo/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { ModelRegistry } from "../src/config/model-registry";
-import { loadExtensionFromFactory } from "../src/extensibility/extensions/loader";
+import { ExtensionRuntime, loadExtensionFromFactory } from "../src/extensibility/extensions/loader";
 import { ExtensionRunner } from "../src/extensibility/extensions/runner";
 import { ExtensionToolWrapper } from "../src/extensibility/extensions/wrapper";
+import { integrationRegistry } from "../src/integrations/registry";
+import { personProfileService } from "../src/person-profile/service";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
 import { EventBus } from "../src/utils/event-bus";
@@ -184,5 +186,93 @@ describe("scoped tool advisories", () => {
 			input: {},
 		});
 		expect(result.advisories.map(item => item.code)).toEqual(["new"]);
+	});
+
+	it("replaces every live registration and removes owners absent after plugin refresh", async () => {
+		const oldRuntime = new ExtensionRuntime();
+		const oldExtension = await loadExtensionFromFactory(
+			pi => {
+				pi.integrations.register({
+					id: "fresh_install_old",
+					name: "Old integration",
+					plugin: "old-plugin",
+					kind: "local",
+					setup: {
+						pluginDependencies: [],
+						requiredEnvironment: [],
+						profileFields: ["accounts"],
+						steps: [{ kind: "install", argv: ["old-setup"], timeoutMs: 1_000 }],
+						verification: [{ argv: ["old-status"], timeoutMs: 1_000 }],
+					},
+					probe: async () => ({ state: "ready", value: { id: "fixture" } }),
+					profile: () => ({ facts: {}, observations: [] }),
+				});
+				pi.registerTool({
+					name: "old_plugin_tool",
+					label: "Old",
+					description: "old",
+					parameters: Type.Object({}),
+					execute: async () => ({ content: [{ type: "text", text: "old" }] }),
+				});
+				pi.advisories.register({
+					id: "old-advisory",
+					capabilities: ["old_plugin_tool"],
+					match: () => ({ code: "old", message: "old" }),
+				});
+			},
+			"/tmp/advisory-test",
+			new EventBus(),
+			oldRuntime,
+			"plugin:old",
+		);
+		const runner = new ExtensionRunner(
+			[oldExtension],
+			oldRuntime,
+			"/tmp/advisory-test",
+			SessionManager.inMemory(),
+			modelRegistry,
+		);
+
+		const replacementRuntime = new ExtensionRuntime();
+		const replacement = await loadExtensionFromFactory(
+			pi => {
+				pi.integrations.register({
+					id: "fresh_install_new",
+					name: "New integration",
+					plugin: "new-plugin",
+					kind: "local",
+					probe: async () => ({ state: "ready" }),
+				});
+				pi.registerTool({
+					name: "new_plugin_tool",
+					label: "New",
+					description: "new",
+					parameters: Type.Object({}),
+					execute: async () => ({ content: [{ type: "text", text: "new" }] }),
+				});
+			},
+			"/tmp/advisory-test",
+			new EventBus(),
+			replacementRuntime,
+			"plugin:new",
+		);
+
+		runner.reloadExtensions([replacement], replacementRuntime);
+
+		expect(runner.getAllRegisteredIntegrations().map(handle => handle.id)).toEqual(["fresh_install_new"]);
+		expect(runner.getAllRegisteredTools().map(tool => tool.definition.name)).toEqual(["new_plugin_tool"]);
+		expect(integrationRegistry.get("fresh_install_old")).toBeUndefined();
+		expect(personProfileService.listCollectors().some(collector => collector.id === "fresh_install_old")).toBe(false);
+		expect(
+			await runner.evaluateAdvisories({
+				type: "tool_call",
+				toolName: "old_plugin_tool",
+				toolCallId: "after-reload",
+				input: {},
+			}),
+		).toEqual({ advisories: [], diagnostics: [] });
+
+		integrationRegistry.unregisterOwner("plugin:new");
+		personProfileService.unregisterProfileCollectorsByRegistrant("plugin:new");
 	});
 });

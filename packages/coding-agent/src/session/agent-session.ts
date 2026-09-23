@@ -112,7 +112,7 @@ import type {
 	UserPromptKind,
 } from "../extensibility/extensions";
 import type { CompactOptions, ContextUsage } from "../extensibility/extensions/types";
-import { ExtensionToolWrapper } from "../extensibility/extensions/wrapper";
+import { ExtensionToolWrapper, wrapRegisteredTools } from "../extensibility/extensions/wrapper";
 import type { HookCommandContext } from "../extensibility/hooks/types";
 import type { Skill, SkillWarning } from "../extensibility/skills";
 import { expandSlashCommand, type FileSlashCommand } from "../extensibility/slash-commands";
@@ -675,6 +675,7 @@ export class AgentSession {
 	#discoverableToolSearchIndex: DiscoverableMCPSearchIndex | null = null;
 	#selectedMCPToolNames = new Set<string>();
 	#rpcHostToolNames = new Set<string>();
+	#extensionToolNames = new Set<string>();
 	#defaultSelectedMCPServerNames = new Set<string>();
 	#defaultSelectedMCPToolNames = new Set<string>();
 	#sessionDefaultSelectedMCPToolNames = new Map<string, string[]>();
@@ -749,6 +750,9 @@ export class AgentSession {
 		this.#promptTemplates = config.promptTemplates ?? [];
 		this.#slashCommands = config.slashCommands ?? [];
 		this.#extensionRunner = config.extensionRunner;
+		this.#extensionToolNames = new Set(
+			config.extensionRunner?.getAllRegisteredTools?.().map(tool => tool.definition.name) ?? [],
+		);
 		this.#skills = config.skills ?? [];
 		this.#skillWarnings = config.skillWarnings ?? [];
 		this.#customCommands = config.customCommands ?? [];
@@ -3246,6 +3250,29 @@ export class AgentSession {
 
 		const nextActive = [...this.#getActiveNonMCPToolNames(), ...this.getSelectedMCPToolNames()];
 		await this.#applyActiveToolsByName(nextActive, { previousSelectedMCPToolNames });
+	}
+
+	/** Replace extension-owned tools after plugin installation, upgrade, disablement, or removal. */
+	async refreshExtensionTools(): Promise<void> {
+		if (!this.#extensionRunner) return;
+		const previousActiveToolNames = this.getActiveToolNames();
+		const previousExtensionToolNames = new Set(this.#extensionToolNames);
+		for (const name of this.#extensionToolNames) this.#toolRegistry.delete(name);
+
+		const wrapped = wrapRegisteredTools(this.#extensionRunner.getAllRegisteredTools(), this.#extensionRunner).map(
+			tool => new ExtensionToolWrapper(tool, this.#extensionRunner!) as AgentTool,
+		);
+		this.#extensionToolNames = new Set(wrapped.map(tool => tool.name));
+		for (const tool of wrapped) this.#toolRegistry.set(tool.name, tool);
+
+		this.#setDiscoverableTools();
+		const preserved = previousActiveToolNames.filter(
+			name => !previousExtensionToolNames.has(name) || this.#extensionToolNames.has(name),
+		);
+		const newlyAvailable = wrapped
+			.filter(tool => !tool.hidden && !previousActiveToolNames.includes(tool.name))
+			.map(tool => tool.name);
+		await this.#applyActiveToolsByName([...new Set([...preserved, ...newlyAvailable])]);
 	}
 
 	/**
