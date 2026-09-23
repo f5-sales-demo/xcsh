@@ -11,6 +11,11 @@ import {
 	createToolGutter,
 	type GutterBlock,
 } from "../../modes/components/gutter-block";
+import {
+	parseAsyncInputReply,
+	QuestionTranscriptComponent,
+	resolveAsyncQuestionReplyFromItem,
+} from "../../modes/components/question-transcript";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
 import { TodoReminderComponent } from "../../modes/components/todo-reminder";
 import { ToolExecutionComponent } from "../../modes/components/tool-execution";
@@ -36,6 +41,10 @@ export class EventController {
 	#backgroundCompletionPending = false;
 	#pendingGutters = new Map<string, GutterBlock<any>>();
 	#readGroupAggregator = new ReadGroupOutcomeAggregator();
+	#asyncQuestionBatches = new Map<
+		string,
+		{ item: Extract<AgentSessionEvent, { type: "async_user_input" }>["item"]; questionIds: string[] }
+	>();
 	// streamingAssistantGutter is stored on ctx for cross-controller access (e.g. thinking toggle)
 	constructor(private ctx: InteractiveModeContext) {}
 
@@ -147,7 +156,11 @@ export class EventController {
 				if (!this.ctx.session.getPlanModeState()?.enabled) await this.ctx.setRemoteCollaborationMode("default");
 				break;
 			case "async_user_input":
-				this.ctx.showStatus(`${event.item.text}\nUse /questions to answer while work continues.`);
+				this.#asyncQuestionBatches.set(event.item.id, { item: event.item, questionIds: event.questionIds });
+				this.ctx.chatContainer.addChild(
+					createSystemGutter(this.ctx.ui, QuestionTranscriptComponent.pending(event.item)),
+				);
+				this.ctx.ui.requestRender();
 				break;
 			case "plan_available": {
 				void this.ctx
@@ -222,6 +235,10 @@ export class EventController {
 					this.ctx.ui.requestRender();
 				} else if (event.message.role === "user") {
 					const textContent = this.ctx.getUserMessageText(event.message);
+					const reply = parseAsyncInputReply(textContent);
+					const batch = reply ? this.#asyncQuestionBatches.get(reply.itemId) : undefined;
+					const resolved =
+						reply && batch ? resolveAsyncQuestionReplyFromItem(batch.item, batch.questionIds, reply) : undefined;
 					const imageCount =
 						typeof event.message.content === "string"
 							? 0
@@ -230,7 +247,11 @@ export class EventController {
 
 					this.#resetReadGroup();
 					if (this.ctx.optimisticUserMessageSignature !== signature) {
-						this.ctx.addMessageToChat(event.message);
+						if (resolved) {
+							this.ctx.chatContainer.addChild(
+								createSystemGutter(this.ctx.ui, QuestionTranscriptComponent.answered(resolved)),
+							);
+						} else this.ctx.addMessageToChat(event.message);
 					}
 					this.ctx.optimisticUserMessageSignature = undefined;
 

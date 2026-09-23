@@ -132,6 +132,30 @@ step? If none applies, remove it. If a conventional interaction needs a paragrap
 first repair the label, grouping, focus, or navigation behavior. Do not use explanatory copy to
 compensate for an inconsistent menu.
 
+## How do question-and-answer flows work?
+
+Blocking and asynchronous questions use the same framed, theme-aware presentation as other
+first-party selectors. Show one question at a time with its position and unanswered count. The
+highlight spans the full choice row, while checkbox state distinguishes a highlighted draft from a
+committed answer without relying on color. Numbered shortcuts submit their matching choice. Omit a
+description row when the option has no description.
+
+Keep notes and free-text answers inside the question frame. Secret input is masked by grapheme in
+every render, including resize, and the visible transcript must never disclose the secret. Preserve
+the current question and draft when the terminal resizes. Keep the highlighted choice visible when
+height is constrained and show scrolling guidance only when content actually overflows.
+
+Unanswered confirmation uses the same frame and keeps `Proceed` as the existing default. Escape
+returns to the first unanswered question. Hints are contextual and derived from the active selector
+and interrupt bindings; hardcoded hints are limited to controls that are not configurable.
+
+Asynchronous announcements are compact question summaries with a visible `/questions` action.
+Completed replies remain the exact structured `user_input_reply` payload in model context and
+session persistence, but the terminal correlates that payload with the preceding question item and
+renders a friendly answer summary. Correlation IDs and transport envelopes are never visible. A
+message that does not correlate to an existing async question is rendered normally rather than
+being mistaken for an internal reply.
+
 Read the screen without its keyboard footer. Its title should identify the current task or object;
 highlighting should identify the active choice; action labels should identify what happens next;
 grouping should distinguish navigation, actions, facts, and outcomes. Use the same words and order
@@ -228,7 +252,7 @@ P2 improves discovery and presentation. “Next” means proposed work, not comp
 | Command | Surface and enhancement opportunity | Priority / adoption |
 | --- | --- | --- |
 | `/settings` | Tabbed settings and nested editors: shared Escape default and concise hints applied; next, shared frame, retained submenu context, and saved-value feedback. | P1 / partial |
-| `/questions` | Opens pending asynchronous questions through the shared session interaction owner. | Focused interaction tests pass; actual terminal qualification is outstanding. |
+| `/questions` | Opens pending asynchronous questions through the shared session interaction owner; announcements, framed answers, automatic handoff, and correlated transcript summaries share the question presentation. | Focused protocol, interaction, renderer, privacy, and 16-variant terminal tests pass. |
 | `/plan` | Enable, pause, typed prompts, and approval use session-qualified Cancel-first review, fresh plan and destination validation, veto-before-mutation, same-identity save retry, and truthful queued or completed outcomes. | Focused tests and the 16-variant terminal matrix pass. |
 | `/model` | Browse with stable tabs, editable search, exact identity, explicit scope, and reasoning steps. Mutations use Cancel-first review, fresh catalog resolution, persistence-before-success, and exact no-op handling; `/models` shares this path. | Focused tests and the 16-variant terminal matrix pass. |
 | `/fast` | Offer Cancel, Enable, and Disable. Typed `on`, `off`, and `toggle` use the same session-scoped review; `status` is read-only. Persist before success; cancellation, status, and unchanged requests do not write. | Focused tests and the 16-variant terminal matrix pass. |
