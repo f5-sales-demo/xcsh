@@ -78,7 +78,7 @@ describe("SDK MCP runtime opt-in", () => {
 		try {
 			await result.mcpRuntime!.setEnabled(true);
 			expect(result.mcpManager?.getConnectedServers()).toEqual(["synthetic"]);
-			expect(result.session.getAllToolNames()).toContain("mcp_synthetic_synthetic_read");
+			expect(result.session.getAllToolNames()).toContain("mcp_synthetic_read");
 			expect(
 				result.session.customCommands.some(command => command.command.name === "synthetic:synthetic_prompt"),
 			).toBe(true);
