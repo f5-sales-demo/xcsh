@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "f06c9aad91b9aeb39a995c9cad5dc1a4f9a53457",
-  "fingerprint": "77f47404d271c27318ea2d759938b043e880e571c41f738cc5b522ca12330a4e",
+  "revision": "2493f311295a3861004a7711c4acf7480bc543d0",
+  "fingerprint": "95d983cf89c3dbb7263cb1807333d0ff1fc4bf7afcaf525a3e30851a11027c64",
   "counts": {
     "total": 241,
     "components": 96,
@@ -513,6 +513,7 @@
         "settings-mutation"
       ],
       "directTests": [
+        "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
@@ -531,8 +532,7 @@
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts",
-        "packages/coding-agent/test/person-profile-source-contract.test.ts"
+        "packages/coding-agent/test/person-extension-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1035,7 +1035,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "ff4642cc3a563cd2de83d8b6e6545e67ddf196b02fa7f864474a6ce8af92a72e",
+      "sha256": "9ae1c74151eb1d246b1e47359a424caa4256e8737a109c8f9abec07b527d0a0b",
       "exports": [
         "AcpAgent"
       ],
@@ -2527,7 +2527,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "86dbd6b9911b762d299be67a2a39c0981c2fdb48409b2706e739c9ac475c162f",
+      "sha256": "b374a53033d961e30f193980636d4c66069430458817ebe5e681c0e6d3bcd4ee",
       "exports": [
         "SettingsCallbacks",
         "SettingsRuntimeContext",
@@ -3466,7 +3466,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "connections",
-      "sha256": "aff9ef6fd4c2b3da120f2daf6e7d483e98c3de2c04a15ae54c9a7c157da10e2d",
+      "sha256": "cf24c0d411d93278490acde90ee4bc238f68fa7da08b45025f98f59a0750c4ab",
       "exports": [
         "MCPCommandController",
         "MCPCommandDependencies",
@@ -3548,7 +3548,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "27bfc063102b2bd912e2cf967481f532dbd2f84016f9694aa832f35009c4103e",
+      "sha256": "cbce9454372c6d9479bd41fb59bc869ac736b42dcc363bab1d5af2ac768bec3d",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -3725,7 +3725,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "f0ed15d3f54ab6c156d58362fe1728729994c24ce737423ed829c2aaf7e64df9",
+      "sha256": "5d38c487aa367acdabc5d394183c2e0e6d415250a148b26c94245db49ce3da67",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4172,7 +4172,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "83cf00d3cf65148c491d2f27524571dbc1bd61aa29259cca4ce959d4da350377",
+      "sha256": "53444ca9a1a78bea9a06c84afcdab925ee42812ea43c1856cd5141ffdb96be0b",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",
@@ -4382,7 +4382,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "eeb0af4a926dfba17247dd5cde4806b75240b1cfe0ca0b7bf391951866bde376",
+      "sha256": "150a9c87bb54f07fe27500c35f0c69d5d1a4a7e8b9839dd964919ca05973dfe2",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -6150,6 +6150,7 @@
       ],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
@@ -6168,8 +6169,7 @@
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts",
-        "packages/coding-agent/test/person-profile-source-contract.test.ts"
+        "packages/coding-agent/test/person-extension-contract.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6421,8 +6421,8 @@
         "packages/coding-agent/test/interaction-parity.test.ts",
         "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
         "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
-        "packages/coding-agent/test/modes/print-mode-json-events.test.ts"
+        "packages/coding-agent/test/mcp-runtime-controller.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts"
       ],
       "classification": "packages/tui/src/events.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
