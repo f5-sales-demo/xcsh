@@ -24,7 +24,7 @@ function digest(root: string): string {
 	return hash.digest("hex");
 }
 
-describe("plugin install dry-run", () => {
+describe("plugin dry-run", () => {
 	it("includes the dependency plan in a successful JSON install result", () => {
 		const root = mkdtempSync(join(tmpdir(), "xcsh-plugin-result-plan-"));
 		roots.push(root);
@@ -94,6 +94,63 @@ describe("plugin install dry-run", () => {
 		});
 		expect(digest(join(root, ".xcsh"))).toBe(before);
 		expect(existsSync(join(root, ".xcsh/plugins/installed_plugins.json"))).toBe(false);
+	});
+
+	it("previews marketplace uninstall without mutation and keeps actual JSON machine-readable", () => {
+		const root = mkdtempSync(join(tmpdir(), "xcsh-plugin-uninstall-dry-run-"));
+		roots.push(root);
+		const repository = resolve(import.meta.dir, "../../../..");
+		const cli = join(repository, "packages/coding-agent/src/cli.ts");
+		const fixture = join(repository, "packages/coding-agent/test/marketplace/fixtures/valid-marketplace");
+		const environment = { ...process.env, HOME: root };
+		expect(
+			Bun.spawnSync(["bun", cli, "plugin", "marketplace", "add", fixture], { cwd: repository, env: environment })
+				.exitCode,
+		).toBe(0);
+		expect(
+			Bun.spawnSync(["bun", cli, "plugin", "install", "hello-plugin@test-marketplace"], {
+				cwd: repository,
+				env: environment,
+			}).exitCode,
+		).toBe(0);
+		const pluginsRoot = join(root, ".xcsh", "plugins");
+		const before = digest(pluginsRoot);
+		const registryPath = join(pluginsRoot, "installed_plugins.json");
+		const registryBefore = readFileSync(registryPath, "utf8");
+
+		const preview = Bun.spawnSync(
+			["bun", cli, "plugin", "uninstall", "hello-plugin@test-marketplace", "--dry-run", "--json"],
+			{ cwd: repository, env: environment, stdout: "pipe", stderr: "pipe" },
+		);
+
+		expect(preview.exitCode).toBe(0);
+		expect(JSON.parse(new TextDecoder().decode(preview.stdout))).toMatchObject({
+			action: "uninstall",
+			target: "hello-plugin@test-marketplace",
+			scope: "user",
+			dryRun: true,
+		});
+		expect(digest(pluginsRoot)).toBe(before);
+		expect(readFileSync(registryPath, "utf8")).toBe(registryBefore);
+
+		const removed = Bun.spawnSync(["bun", cli, "plugin", "uninstall", "hello-plugin@test-marketplace", "--json"], {
+			cwd: repository,
+			env: environment,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		expect(removed.exitCode).toBe(0);
+		expect(JSON.parse(new TextDecoder().decode(removed.stdout))).toEqual({
+			uninstalled: "hello-plugin@test-marketplace",
+		});
+		const listed = Bun.spawnSync(["bun", cli, "plugin", "list", "--json"], {
+			cwd: repository,
+			env: environment,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		expect(listed.exitCode).toBe(0);
+		expect(JSON.parse(new TextDecoder().decode(listed.stdout)).marketplace).toEqual([]);
 	});
 
 	it("shows dependency order for upgrade previews without mutation", () => {

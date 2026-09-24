@@ -773,7 +773,7 @@ async function handleInstall(
 async function handleUninstall(
 	manager: PluginManager,
 	packages: string[],
-	flags: { json?: boolean; scope?: "user" | "project" },
+	flags: { json?: boolean; dryRun?: boolean; scope?: "user" | "project" },
 ): Promise<void> {
 	if (packages.length === 0) {
 		console.error(chalk.red(`Usage: ${APP_NAME} plugin uninstall <package> ...`));
@@ -791,8 +791,30 @@ async function handleUninstall(
 		if (installedPlugins.has(name) || target.type === "marketplace") {
 			// Exact match against installed marketplace plugin IDs (name@marketplace)
 			try {
+				if (flags.dryRun) {
+					const preview = await mktMgr.previewUninstallPlugin(name, flags.scope);
+					if (flags.json) {
+						console.log(
+							JSON.stringify(
+								{
+									action: "uninstall",
+									target: preview.pluginId,
+									scope: preview.scope,
+									dryRun: true,
+									installPaths: preview.installPaths,
+								},
+								null,
+								2,
+							),
+						);
+					} else {
+						console.log(chalk.dim(`[dry-run] Would uninstall ${preview.pluginId} (${preview.scope})`));
+					}
+					continue;
+				}
 				await mktMgr.uninstallPlugin(name, flags.scope);
-				console.log(chalk.green(`${theme.status.success} Uninstalled ${name}`));
+				if (flags.json) console.log(JSON.stringify({ uninstalled: name }));
+				else console.log(chalk.green(`${theme.status.success} Uninstalled ${name}`));
 			} catch (err) {
 				console.error(chalk.red(`${theme.status.error} Failed to uninstall ${name}: ${err}`));
 				process.exit(1);
@@ -1306,8 +1328,8 @@ ${chalk.bold("Options:")}
   --json           Output as JSON
   --fix            Attempt automatic fixes (doctor)
   --force          Overwrite without prompting (install)
-  --scope <scope>  Install scope: user (default) or project (install name@marketplace)
-  --dry-run        Preview changes without applying (install)
+  --scope <scope>  Marketplace install/uninstall scope: user (default) or project
+  --dry-run        Preview supported install, uninstall, or upgrade changes
   -l, --local      Use project-local overrides
 
 ${chalk.bold("Examples:")}
