@@ -11,6 +11,7 @@ import {
 } from "../../../../scripts/ci-release-publish";
 
 const root = path.resolve(import.meta.dir, "../../../..");
+const ciWorkflowPath = path.join(root, ".github/workflows/ci.yml");
 const workflowPath = path.join(root, ".github/workflows/release-npm-backfill.yml");
 const sourceJobsPath = path.join(root, "scripts/ci-release-source-jobs.jq");
 
@@ -53,6 +54,46 @@ describe("release npm backfill publish semantics", () => {
 		expect(isExactRegistryVersion('"20.22.3"', "21.0.0")).toBe(false);
 		expect(isExactRegistryVersion("not-json", "21.0.0")).toBe(false);
 		expect(isExactRegistryVersion('{"version":"21.0.0"}', "21.0.0")).toBe(false);
+	});
+
+	it("skips publishing an exact version that is already visible", async () => {
+		let publishes = 0;
+		let visibilityChecks = 0;
+		const attempt = await publishWithVisibility("@f5-sales-demo/pi-utils", "21.43.3", {
+			lookupExisting: async () => '"21.43.3"',
+			publish: async () => {
+				publishes++;
+				return { exitCode: 1, output: "must not publish" };
+			},
+			waitForVisibility: async () => {
+				visibilityChecks++;
+			},
+		});
+
+		expect(attempt).toBe(0);
+		expect(publishes).toBe(0);
+		expect(visibilityChecks).toBe(0);
+	});
+
+	it("publishes when the exact version is not visible during preflight", async () => {
+		for (const existing of [null, '"21.43.2"']) {
+			let publishes = 0;
+			let visibilityChecks = 0;
+			const attempt = await publishWithVisibility("@f5-sales-demo/pi-utils", "21.43.3", {
+				lookupExisting: async () => existing,
+				publish: async () => {
+					publishes++;
+					return { exitCode: 0, output: "package accepted" };
+				},
+				waitForVisibility: async () => {
+					visibilityChecks++;
+				},
+			});
+
+			expect(attempt).toBe(1);
+			expect(publishes).toBe(1);
+			expect(visibilityChecks).toBe(1);
+		}
 	});
 
 	it("waits for exact registry visibility before returning", async () => {
@@ -160,6 +201,17 @@ describe("release npm backfill publish semantics", () => {
 });
 
 describe("release npm backfill workflow contract", () => {
+	it("gives the normal npm release enough runner lifetime", async () => {
+		const workflow = await fs.readFile(ciWorkflowPath, "utf8");
+		const jobStart = workflow.indexOf("  publish-npm:");
+		const jobEnd = workflow.indexOf("\n  verify-npm-install:", jobStart);
+		expect(jobStart).toBeGreaterThan(-1);
+		expect(jobEnd).toBeGreaterThan(jobStart);
+		const publishJob = workflow.slice(jobStart, jobEnd);
+		expect(publishJob).toContain("runs-on: ubuntu-22.04");
+		expect(publishJob).toContain("timeout-minutes: 90");
+	});
+
 	it("binds a manual backfill to an immutable tag and original run", async () => {
 		const workflow = await fs.readFile(workflowPath, "utf8");
 		expect(workflow).toContain("workflow_dispatch:");
