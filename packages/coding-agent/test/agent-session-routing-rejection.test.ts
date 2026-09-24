@@ -295,21 +295,30 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			display: true,
 		};
 
-		let appendedContent: any;
-		session.agent.prompt = async (messages: any) => {
-			console.log("agent.prompt called");
-			const lastMessage = messages[messages.length - 1];
-			appendedContent = lastMessage.content;
-			return Promise.resolve();
-		};
+		const originalChildPrompt = AgentSession.prototype.prompt;
+		const originalChildContext = AgentSession.prototype.buildDisplaySessionContext;
+		(AgentSession.prototype as any).prompt = async () => {};
+		(AgentSession.prototype as any).buildDisplaySessionContext = () => ({
+			messages: [{ role: "assistant", content: [{ type: "text", text: "delegated result" }] }],
+			usedTokens: 1,
+		});
 
-		console.log("TEST: Triggering sendCustomMessage 2");
-		await session.sendCustomMessage(message, { triggerTurn: true });
-		console.log("TEST: Finished sendCustomMessage 2");
+		try {
+			let appendedContent: any;
+			session.agent.prompt = async (messages: any) => {
+				const lastMessage = messages[messages.length - 1];
+				appendedContent = lastMessage.content;
+			};
 
-		const textBlock = appendedContent.find((c: any) => c.type === "text");
-		expect(textBlock).toBeDefined();
-		expect(textBlock.text).toContain("<delegation_results>");
+			await session.sendCustomMessage(message, { triggerTurn: true });
+
+			const textBlock = appendedContent.find((c: any) => c.type === "text");
+			expect(textBlock).toBeDefined();
+			expect(textBlock.text).toContain("<delegation_results>");
+		} finally {
+			AgentSession.prototype.prompt = originalChildPrompt;
+			AgentSession.prototype.buildDisplaySessionContext = originalChildContext;
+		}
 	});
 
 	it("should apply routing.internalOpenAiUrl to LiteLLM GPT models in setModelRoutingSwitch", async () => {

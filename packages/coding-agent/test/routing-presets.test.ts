@@ -43,7 +43,14 @@ describe("Routing Presets (R03)", () => {
 
 		for (const pool of Object.values(BUILTIN_ROUTING_PRESETS)) {
 			// Provider-discovered and subscription models intentionally need not exist in the static bundle.
-			if (pool.provider === "openai" || pool.provider === "openai-codex" || pool.provider === "litellm") continue;
+			if (
+				pool.provider === "openai" ||
+				pool.provider === "openai-codex" ||
+				pool.provider === "anthropic" ||
+				pool.provider === "litellm"
+			) {
+				continue;
+			}
 			const p = pool.provider ? `${pool.provider}/` : "";
 			expect(available).toContain(`${p}${pool.tiers.utility}`);
 			expect(available).toContain(`${p}${pool.tiers.balanced}`);

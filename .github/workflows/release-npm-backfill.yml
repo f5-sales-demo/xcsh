@@ -26,7 +26,7 @@ jobs:
   backfill:
     name: Backfill npm release
     environment: release
-    runs-on: xcsh-socketless
+    runs-on: ubuntu-22.04
     timeout-minutes: 90
     permissions:
       actions: read # Required to inspect the source run and download its artifacts.
@@ -51,6 +51,18 @@ jobs:
         with:
           no-cache: true
           bun-version: "1.4.2"
+
+      - name: Setup Node.js 22.14.0 for npm trusted publishing
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.14.0"
+          package-manager-cache: false
+
+      - name: Install pinned npm with OIDC support
+        run: npm install --global npm@11.19.1
+
+      - name: Verify npm trusted-publishing toolchain
+        run: node --version && npm --version
 
       - name: Validate immutable tag, source run, and release
         env:
@@ -132,15 +144,9 @@ jobs:
 
       - name: Publish missing versions without moving latest
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           XCSH_RELEASE_SOURCE_ROOT: ${{ github.workspace }}/.release-source
         run: |
           set -euo pipefail
-          umask 077
-          npmrc="$RUNNER_TEMP/npmrc"
-          trap 'rm -f "$npmrc"' EXIT
-          printf '//registry.npmjs.org/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > "$npmrc"
-          export NPM_CONFIG_USERCONFIG="$npmrc"
           bun scripts/ci-release-publish.ts --tag backfill
 
       - name: Verify every package and preserve latest

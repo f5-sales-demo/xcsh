@@ -35,6 +35,7 @@ const CREDENTIAL_BEARING = [
 	"api-spec-update.yml",
 	"console-catalog-drift.yml",
 	"console-catalog-update.yml",
+	"github-pages-deploy.yml",
 	"tag-on-version-bump.yml",
 ];
 
@@ -59,15 +60,17 @@ describe("third-party actions in credential-bearing workflows are pinned (#2498)
 		});
 	}
 
-	it("the credential-bearing list still matches which workflows reference secrets", async () => {
+	it("the credential-bearing list still matches workflows with release credentials or OIDC", async () => {
 		// Guards the premise rather than the conclusion: if a workflow starts using a release
-		// secret, it joins the list above. Without this, the list silently goes stale and the
-		// pinning rule stops covering the thing it was written for.
+		// secret or requests an OIDC identity token, it joins the list above. Without this, the
+		// list silently goes stale and the pinning rule stops covering the thing it was written for.
 		const files = (await fs.readdir(WORKFLOW_DIR)).filter(f => f.endsWith(".yml"));
 		const withSecrets: string[] = [];
 		for (const file of files) {
 			const src = await fs.readFile(path.join(WORKFLOW_DIR, file), "utf8");
-			if (/secrets\.(?:RELEASE_TOKEN|NPM_TOKEN|GH_PAT|HOMEBREW\w*)/.test(src)) withSecrets.push(file);
+			if (/secrets\.(?:RELEASE_TOKEN|NPM_TOKEN|GH_PAT|HOMEBREW\w*)|id-token:\s*write/.test(src)) {
+				withSecrets.push(file);
+			}
 		}
 		expect(withSecrets.sort()).toEqual([...CREDENTIAL_BEARING].sort());
 	});
