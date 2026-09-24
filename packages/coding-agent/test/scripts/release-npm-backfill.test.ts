@@ -16,6 +16,7 @@ const root = path.resolve(import.meta.dir, "../../../..");
 const nativesPackageRoot = path.join(root, "packages/natives");
 const ciWorkflowPath = path.join(root, ".github/workflows/ci.yml");
 const workflowPath = path.join(root, ".github/workflows/release-npm-backfill.yml");
+const runnerPolicyPath = path.join(root, ".github/config/self-hosted-runner-policy.json");
 const sourceJobsPath = path.join(root, "scripts/ci-release-source-jobs.jq");
 
 describe("release npm backfill publish semantics", () => {
@@ -70,8 +71,16 @@ describe("release npm backfill publish semantics", () => {
 	});
 
 	it("adds an explicit non-latest dist-tag for backfills", () => {
-		expect(npmPublishArgs()).toEqual(["npm", "publish", "--access", "public"]);
-		expect(npmPublishArgs("backfill")).toEqual(["npm", "publish", "--access", "public", "--tag", "backfill"]);
+		expect(npmPublishArgs()).toEqual(["npm", "publish", "--access", "public", "--provenance"]);
+		expect(npmPublishArgs("backfill")).toEqual([
+			"npm",
+			"publish",
+			"--access",
+			"public",
+			"--provenance",
+			"--tag",
+			"backfill",
+		]);
 	});
 
 	it("rejects malformed or latest backfill tags", () => {
@@ -234,19 +243,38 @@ describe("release npm backfill publish semantics", () => {
 });
 
 describe("release npm backfill workflow contract", () => {
-	it("uses the authorized npm runner with bounded lifetime", async () => {
+	it("uses hosted OIDC publishing with a supported pinned Node and npm", async () => {
 		const workflow = await fs.readFile(ciWorkflowPath, "utf8");
 		const jobStart = workflow.indexOf("  publish-npm:");
 		const jobEnd = workflow.indexOf("\n  verify-npm-install:", jobStart);
 		expect(jobStart).toBeGreaterThan(-1);
 		expect(jobEnd).toBeGreaterThan(jobStart);
 		const publishJob = workflow.slice(jobStart, jobEnd);
-		expect(publishJob).toContain("runs-on: xcsh-socketless");
+		expect(publishJob).toContain("runs-on: ubuntu-22.04");
 		expect(publishJob).toContain("timeout-minutes: 90");
+		expect(publishJob).toContain("id-token: write");
+		expect(publishJob).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
+		expect(publishJob).toContain('node-version: "22.14.0"');
+		expect(publishJob).toContain("npm install --global npm@11.19.1");
+		expect(publishJob).not.toContain("NPM_TOKEN");
+		expect(publishJob).not.toContain("NODE_AUTH_TOKEN");
+		expect(publishJob).not.toContain("_authToken");
 
 		const backfillWorkflow = await fs.readFile(workflowPath, "utf8");
-		expect(backfillWorkflow).toContain("runs-on: xcsh-socketless");
+		expect(backfillWorkflow).toContain("runs-on: ubuntu-22.04");
 		expect(backfillWorkflow).toContain("timeout-minutes: 90");
+		expect(backfillWorkflow).toContain("id-token: write");
+		expect(backfillWorkflow).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
+		expect(backfillWorkflow).toContain('node-version: "22.14.0"');
+		expect(backfillWorkflow).toContain("npm install --global npm@11.19.1");
+		expect(backfillWorkflow).not.toContain("NPM_TOKEN");
+		expect(backfillWorkflow).not.toContain("NODE_AUTH_TOKEN");
+		expect(backfillWorkflow).not.toContain("_authToken");
+
+		const runnerPolicy = JSON.parse(await fs.readFile(runnerPolicyPath, "utf8"));
+		const xcshHosted = runnerPolicy.hosted_exceptions["f5-sales-demo/xcsh"];
+		expect(xcshHosted[".github/workflows/ci.yml"]["publish-npm"].runs_on).toBe("ubuntu-22.04");
+		expect(xcshHosted[".github/workflows/release-npm-backfill.yml"].backfill.runs_on).toBe("ubuntu-22.04");
 	});
 
 	it("binds a manual backfill to an immutable tag and original run", async () => {
@@ -273,7 +301,7 @@ describe("release npm backfill workflow contract", () => {
 		expect(workflow).toContain("path: .release-source");
 		expect(workflow).toContain("XCSH_RELEASE_SOURCE_ROOT:");
 		expect(workflow).toContain("bun scripts/ci-release-publish.ts --tag backfill");
-		expect(workflow).toContain("NPM_TOKEN");
+		expect(workflow).not.toContain("NPM_TOKEN");
 		expect(workflow).toContain("dist-tags.latest");
 		expect(workflow).toContain("LATEST_BEFORE");
 		expect(workflow).toContain("@f5-sales-demo/xcsh@");

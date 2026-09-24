@@ -33,7 +33,7 @@ function readOption(args: string[], name: string): string | undefined {
 }
 
 export function npmPublishArgs(distTag?: string): string[] {
-	const args = ["npm", "publish", "--access", "public"];
+	const args = ["npm", "publish", "--access", "public", "--provenance"];
 	if (distTag === undefined) return args;
 	if (distTag === "latest") throw new Error("An explicit latest dist-tag is not allowed for release backfills");
 	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(distTag)) {
