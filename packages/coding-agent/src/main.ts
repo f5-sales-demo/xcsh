@@ -1024,8 +1024,6 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 		];
 	}
 
-	// YAGNI: skip MCP server discovery (500-3000ms) — not used in our workflow.
-	sessionOptions.enableMCP = false;
 	// Trusted process configuration can disable automatic discovery (for isolated CLI tests or embedding).
 	sessionOptions.profileDiscovery = process.env.XCSH_PROFILE_DISCOVERY !== "0";
 
