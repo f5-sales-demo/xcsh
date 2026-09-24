@@ -11,9 +11,15 @@ describe("MCPRuntimeController", () => {
 				calls.push("start");
 				return { id: 1 };
 			},
-			activate: async runtime => calls.push(`activate:${runtime.id}`),
-			deactivate: async runtime => calls.push(`deactivate:${runtime.id}`),
-			stop: async runtime => calls.push(`stop:${runtime.id}`),
+			activate: async runtime => {
+				calls.push(`activate:${runtime.id}`);
+			},
+			deactivate: async runtime => {
+				calls.push(`deactivate:${runtime.id}`);
+			},
+			stop: async runtime => {
+				calls.push(`stop:${runtime.id}`);
+			},
 		});
 
 		await Promise.all([controller.setEnabled(true), controller.setEnabled(true)]);
@@ -32,9 +38,15 @@ describe("MCPRuntimeController", () => {
 				await gate.promise;
 				return { id: 1 };
 			},
-			activate: async runtime => calls.push(`activate:${runtime.id}`),
-			deactivate: async runtime => calls.push(`deactivate:${runtime.id}`),
-			stop: async runtime => calls.push(`stop:${runtime.id}`),
+			activate: async runtime => {
+				calls.push(`activate:${runtime.id}`);
+			},
+			deactivate: async runtime => {
+				calls.push(`deactivate:${runtime.id}`);
+			},
+			stop: async runtime => {
+				calls.push(`stop:${runtime.id}`);
+			},
 		});
 
 		const enabling = controller.setEnabled(true);
@@ -63,5 +75,57 @@ describe("MCPRuntimeController", () => {
 		expect(stops).toBe(1);
 		expect(controller.enabled).toBe(false);
 		await expect(controller.setEnabled(true)).rejects.toThrow("disposed");
+	});
+
+	test("stops a started runtime when activation fails", async () => {
+		const calls: string[] = [];
+		const controller = new MCPRuntimeController<Runtime>({
+			start: async () => ({ id: 1 }),
+			activate: async () => {
+				calls.push("activate");
+				throw new Error("activation failed");
+			},
+			deactivate: async () => calls.push("deactivate"),
+			stop: async () => calls.push("stop"),
+		});
+
+		await expect(controller.setEnabled(true)).rejects.toThrow("activation failed");
+		expect(controller.enabled).toBe(false);
+		expect(calls).toEqual(["activate", "deactivate", "stop"]);
+	});
+
+	test("still stops the runtime when deactivation cleanup fails", async () => {
+		const calls: string[] = [];
+		const controller = new MCPRuntimeController<Runtime>({
+			start: async () => ({ id: 1 }),
+			activate: async () => {},
+			deactivate: async () => {
+				calls.push("deactivate");
+				throw new Error("detach failed");
+			},
+			stop: async () => calls.push("stop"),
+		});
+
+		await controller.setEnabled(true);
+		await expect(controller.setEnabled(false)).rejects.toThrow("detach failed");
+		expect(controller.enabled).toBe(false);
+		expect(calls).toEqual(["deactivate", "stop"]);
+	});
+
+	test("replace disconnects the previous runtime before publishing its replacement", async () => {
+		const calls: string[] = [];
+		let nextId = 1;
+		const controller = new MCPRuntimeController<Runtime>({
+			start: async () => ({ id: nextId++ }),
+			activate: async runtime => calls.push(`activate:${runtime.id}`),
+			deactivate: async runtime => calls.push(`deactivate:${runtime.id}`),
+			stop: async runtime => calls.push(`stop:${runtime.id}`),
+		});
+
+		await controller.setEnabled(true);
+		await controller.replace(async () => ({ id: 9 }));
+
+		expect(controller.current).toEqual({ id: 9 });
+		expect(calls).toEqual(["activate:1", "deactivate:1", "stop:1", "activate:9"]);
 	});
 });
