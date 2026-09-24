@@ -53,6 +53,8 @@
 
 ### Fixed
 
+- Made marketplace plugin uninstall dry-runs return a deterministic preview without changing the
+  installed registry or cache ([#4251](https://github.com/f5-sales-demo/xcsh/issues/4251)).
 - Routed Platform plugin setup through the native interactive context wizard, rejected empty or
   mixed setup plans, and made generated API catalogs enforce the `XCSH_*`-only environment contract
   ([#4234](https://github.com/f5-sales-demo/xcsh/issues/4234)).

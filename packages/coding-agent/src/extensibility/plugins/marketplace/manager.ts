@@ -88,6 +88,12 @@ export interface PluginDependencyPlanItem {
 	dependency: boolean;
 }
 
+export interface PluginUninstallPreview {
+	pluginId: string;
+	scope: "user" | "project";
+	installPaths: string[];
+}
+
 function resolvePluginDependencyNames(catalog: MarketplaceCatalog, root: string): string[] {
 	const plugins = new Map(catalog.plugins.map(plugin => [plugin.name, plugin]));
 	const state = new Map<string, "visiting" | "visited">();
@@ -691,7 +697,7 @@ export class MarketplaceManager {
 		return "0.0.0";
 	}
 
-	async uninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<void> {
+	async #resolvePluginUninstall(pluginId: string, scope?: "user" | "project") {
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID format: "${pluginId}". Expected "name@marketplace".`);
@@ -731,6 +737,23 @@ export class MarketplaceManager {
 		const targetReg = targetScope === "project" ? projectReg : userReg;
 		const registryPath = this.#registryPath(targetScope);
 		await this.#assertNoInstalledDependents(pluginId, targetReg);
+		return { targetEntries, targetReg, targetScope, registryPath };
+	}
+
+	async previewUninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<PluginUninstallPreview> {
+		const { targetEntries, targetScope } = await this.#resolvePluginUninstall(pluginId, scope);
+		return {
+			pluginId,
+			scope: targetScope,
+			installPaths: targetEntries.map(entry => entry.installPath),
+		};
+	}
+
+	async uninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<void> {
+		const { targetEntries, targetReg, targetScope, registryPath } = await this.#resolvePluginUninstall(
+			pluginId,
+			scope,
+		);
 
 		const updatedReg = removeInstalledPlugin(targetReg, pluginId);
 		await writeInstalledPluginsRegistry(registryPath, updatedReg);
