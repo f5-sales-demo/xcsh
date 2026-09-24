@@ -53,6 +53,8 @@
 
 ### Fixed
 
+- Added the exact `/plugin setup <plugin>` next action after interactive installation of plugins
+  that require separately authorized setup ([#4253](https://github.com/f5-sales-demo/xcsh/issues/4253)).
 - Made marketplace plugin uninstall dry-runs return a deterministic preview without changing the
   installed registry or cache ([#4251](https://github.com/f5-sales-demo/xcsh/issues/4251)).
 - Routed Platform plugin setup through the native interactive context wizard, rejected empty or

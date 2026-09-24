@@ -8,12 +8,34 @@ import { IntegrationRegistry } from "../src/integrations/registry";
 import {
 	createSetupStepRunner,
 	describeInstallSetupOutcome,
+	describeInteractiveInstallSetupNextAction,
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
 } from "../src/integrations/setup";
 
 const ready = <T>(value: T) => ({ state: "ready" as const, value });
+
+test("interactive install gives separate-setup plugins an exact slash-command next action", () => {
+	expect(
+		describeInteractiveInstallSetupNextAction("herdr", {
+			setupRequired: true,
+			setupAuthorization: "separate",
+		}),
+	).toBe("/plugin setup herdr");
+	expect(
+		describeInteractiveInstallSetupNextAction("herdr", {
+			setupRequired: false,
+			setupAuthorization: "separate",
+		}),
+	).toBeUndefined();
+	expect(
+		describeInteractiveInstallSetupNextAction("kvm", {
+			setupRequired: true,
+			setupAuthorization: "install",
+		}),
+	).toBeUndefined();
+});
 
 test("setup runner injects only declared active-context values", async () => {
 	const run = createSetupStepRunner(
