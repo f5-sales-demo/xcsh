@@ -603,15 +603,15 @@ describe("AgentSession retry fallback", () => {
 		expect(JSON.stringify(session.messages)).not.toContain("partial assistant content that must not persist");
 	});
 
-	it("retries a discarded post-content tool envelope without executing its partial tool", async () => {
-		const model = getBundledModel("anthropic", "claude-sonnet-4-5");
+	it("retries a discarded LiteLLM tool envelope without exposing its placeholder", async () => {
+		const model = getBundledModel("litellm", "gpt-5.6-sol");
 		if (!model) {
-			throw new Error("Expected bundled Anthropic test model to exist");
+			throw new Error("Expected bundled LiteLLM test model to exist");
 		}
 
-		const envelopeError =
-			"Anthropic stream envelope error: stream ended before terminal stop signal (provider=anthropic, model=claude-sonnet-4-5, api=anthropic-messages, responseId=msg_partial_tool, lastEvent=content_block_stop)";
+		const envelopeError = "BadRequestError: litellm.MidStreamFallbackError: Server had an error. (HTTP 400)";
 		const requestedModels: string[] = [];
+		const modelCallContexts: string[] = [];
 		let attemptCount = 0;
 		let toolExecutions = 0;
 		const toolStartEvents: Array<Extract<AgentSessionEvent, { type: "tool_execution_start" }>> = [];
@@ -634,8 +634,9 @@ describe("AgentSession retry fallback", () => {
 				tools: [partialTool],
 				messages: [],
 			},
-			streamFn: requestedModel => {
+			streamFn: (requestedModel, context) => {
 				requestedModels.push(`${requestedModel.provider}/${requestedModel.id}`);
+				modelCallContexts.push(JSON.stringify(context.messages));
 				const stream = new MockAssistantStream();
 				queueMicrotask(() => {
 					attemptCount += 1;
@@ -665,7 +666,8 @@ describe("AgentSession retry fallback", () => {
 			"retry.maxRetries": 1,
 		});
 		settings.setModelRole("default", `${model.provider}/${model.id}`);
-		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const sessionManager = SessionManager.inMemory();
+		session = new AgentSession({ agent, sessionManager, settings, modelRegistry });
 		const { retryStartEvents, retryEndEvents } = trackRetryEvents(session);
 		session.subscribe(event => {
 			if (event.type === "tool_execution_start") {
@@ -679,8 +681,21 @@ describe("AgentSession retry fallback", () => {
 		expect(requestedModels).toEqual([`${model.provider}/${model.id}`, `${model.provider}/${model.id}`]);
 		expect(retryStartEvents).toHaveLength(1);
 		expect(retryEndEvents).toHaveLength(1);
-		expect(toolStartEvents).toHaveLength(1); // Placeholder pairing is emitted; the handler itself must not run.
+		expect(toolStartEvents).toHaveLength(0);
 		expect(toolExecutions).toBe(0);
+		expect(JSON.stringify(session.messages)).not.toContain("tool_partial");
+		expect(modelCallContexts).toHaveLength(2);
+		expect(modelCallContexts[1]).not.toContain("tool_partial");
+		expect(
+			sessionManager
+				.getEntries()
+				.some(
+					entry =>
+						entry.type === "message" &&
+						entry.message.role === "toolResult" &&
+						entry.message.toolCallId === "tool_partial",
+				),
+		).toBe(false);
 		expect(getLastAssistantMessage(session).content).toContainEqual({
 			type: "text",
 			text: "Recovered without running the partial tool",
