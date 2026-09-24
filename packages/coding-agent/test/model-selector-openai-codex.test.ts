@@ -19,17 +19,17 @@ beforeAll(() => initTheme());
 describe("default ChatGPT subscription model picker presentation", () => {
 	it("keeps every ChatGPT tier and Astra as exact selections", () => {
 		const presented = presentModelsForDefaultPicker([
-			model("openai-codex", "gpt-5.6-luna"),
+			model("openai-codex", "gpt-6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
-			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-sol"),
 			model("openai-codex", "gpt-6-astra"),
 			model("anthropic", "claude-sonnet-4-6"),
 		]);
 
 		expect(presented.map(item => item.displaySelector)).toEqual([
-			"openai-codex/gpt-5.6-luna",
+			"openai-codex/gpt-6-luna",
 			"openai-codex/gpt-5.6-terra",
-			"openai-codex/gpt-5.6-sol",
+			"openai-codex/gpt-6-sol",
 			"openai-codex/gpt-6-astra",
 			"anthropic/claude-sonnet-4-6",
 		]);
@@ -38,24 +38,24 @@ describe("default ChatGPT subscription model picker presentation", () => {
 
 	it("preserves explicit --models scoped access to every raw tier", () => {
 		const tiers = [
-			model("openai-codex", "gpt-5.6-luna"),
+			model("openai-codex", "gpt-6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
-			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-sol"),
 			model("openai-codex", "gpt-6-astra"),
 		];
 		expect(presentModelsForDefaultPicker(tiers, true).map(item => item.displaySelector)).toEqual([
-			"openai-codex/gpt-5.6-luna",
+			"openai-codex/gpt-6-luna",
 			"openai-codex/gpt-5.6-terra",
-			"openai-codex/gpt-5.6-sol",
+			"openai-codex/gpt-6-sol",
 			"openai-codex/gpt-6-astra",
 		]);
 	});
 
 	it("renders all tiers and unassigned Astra in the ChatGPT provider tab without a synthetic alias", async () => {
 		const tiers = [
-			model("openai-codex", "gpt-5.6-luna"),
+			model("openai-codex", "gpt-6-luna", { name: "GPT-6 Luna" }),
 			model("openai-codex", "gpt-5.6-terra"),
-			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-sol", { name: "GPT-6 Sol" }),
 			model("openai-codex", "gpt-6-astra", { name: "GPT-6 Astra" }),
 		];
 		const byId = new Map(tiers.map(item => [item.id, item]));
@@ -87,11 +87,11 @@ describe("default ChatGPT subscription model picker presentation", () => {
 		const allModels = Bun.stripANSI(selector.render(180).join("\n"));
 		const normalizedModels = allModels.replace(/\s+/g, " ");
 		expect(allModels).toContain("ChatGPT");
-		expect(normalizedModels).toContain("GPT-5.6 Luna");
+		expect(normalizedModels).toContain("GPT-6 Luna");
 		expect(normalizedModels).toContain("GPT-5.6 Terra");
-		expect(normalizedModels).toContain("GPT-5.6 Sol");
+		expect(normalizedModels).toContain("GPT-6 Sol");
 		expect(normalizedModels).toContain("GPT-6 Astra");
-		for (const id of ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"]) {
+		for (const id of ["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"]) {
 			selector.getSearchInput().setValue("");
 			for (const character of id) selector.handleInput(character);
 			const detail = Bun.stripANSI(selector.render(120).join("\n"));
@@ -103,7 +103,7 @@ describe("default ChatGPT subscription model picker presentation", () => {
 
 	it("passes the exact chosen effort through temporary selection", async () => {
 		const tier = {
-			...model("openai-codex", "gpt-5.6-sol"),
+			...model("openai-codex", "gpt-6-sol"),
 			reasoning: true,
 			thinking: createThinkingConfig([
 				ReasoningEffort.None,
@@ -144,7 +144,7 @@ describe("default ChatGPT subscription model picker presentation", () => {
 			model: tier,
 			scope: "conversation",
 			thinkingLevel: Effort.Low,
-			selector: "openai-codex/gpt-5.6-sol",
+			selector: "openai-codex/gpt-6-sol",
 		});
 	});
 

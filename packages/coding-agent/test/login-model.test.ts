@@ -318,13 +318,13 @@ describe("applyOAuthLoginModel", () => {
 			models: [
 				M("claude-haiku-4-5-20251001", "anthropic"),
 				M("claude-sonnet-5", "anthropic"),
-				M("claude-opus-5", "anthropic"),
+				M("claude-opus-5-5", "anthropic"),
 			],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
 			status: "ok",
 			stale: false,
-			models: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5"],
+			models: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5-5"],
 		});
 
 		const applied = await applyOAuthLoginModel(session as never, "anthropic");
@@ -341,8 +341,8 @@ describe("applyOAuthLoginModel", () => {
 		expect(getModelRoles()).toMatchObject({
 			smol: "anthropic/claude-haiku-4-5-20251001:low",
 			default: "anthropic/claude-sonnet-5:medium",
-			slow: "anthropic/claude-opus-5:high",
-			plan: "anthropic/claude-opus-5:high",
+			slow: "anthropic/claude-opus-5-5:high",
+			plan: "anthropic/claude-opus-5-5:high",
 			vision: "google/vision",
 		});
 		expect(getRoutingProfile()).toBe("anthropic");
@@ -371,11 +371,7 @@ describe("applyOAuthLoginModel", () => {
 	it("applies the complete OpenAI Codex subscription profile", async () => {
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: undefined,
-			models: [
-				M("gpt-5.6-luna", "openai-codex"),
-				M("gpt-5.6-terra", "openai-codex"),
-				M("gpt-5.6-sol", "openai-codex"),
-			],
+			models: [M("gpt-6-luna", "openai-codex"), M("gpt-5.6-terra", "openai-codex"), M("gpt-6-sol", "openai-codex")],
 		});
 
 		const applied = await applyOAuthLoginModel(session as never, "openai-codex");
@@ -391,10 +387,10 @@ describe("applyOAuthLoginModel", () => {
 			thinkingLevel: ThinkingLevel.Medium,
 		});
 		expect(getModelRoles()).toMatchObject({
-			smol: "openai-codex/gpt-5.6-luna:low",
+			smol: "openai-codex/gpt-6-luna:low",
 			default: "openai-codex/gpt-5.6-terra:medium",
-			slow: "openai-codex/gpt-5.6-sol:high",
-			plan: "openai-codex/gpt-5.6-sol:high",
+			slow: "openai-codex/gpt-6-sol:high",
+			plan: "openai-codex/gpt-6-sol:high",
 		});
 		expect(getRoutingProfile()).toBe("openai-codex");
 		expect(getRoutingMode()).toBe("off");
@@ -404,7 +400,7 @@ describe("applyOAuthLoginModel", () => {
 		const previousModel = M("existing", "anthropic");
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: previousModel,
-			models: [M("gpt-5.6-luna", "openai-codex"), M("gpt-5.6-sol", "openai-codex")],
+			models: [M("gpt-6-luna", "openai-codex"), M("gpt-6-sol", "openai-codex")],
 		});
 
 		await expect(applyOAuthLoginModel(session as never, "openai-codex")).resolves.toBeUndefined();
@@ -419,11 +415,7 @@ describe("applyOAuthLoginModel", () => {
 		const previousModel = M("existing", "anthropic");
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: previousModel,
-			models: [
-				M("gpt-5.6-luna", "openai-codex"),
-				M("gpt-5.6-terra", "openai-codex"),
-				M("gpt-5.6-sol", "openai-codex"),
-			],
+			models: [M("gpt-6-luna", "openai-codex"), M("gpt-5.6-terra", "openai-codex"), M("gpt-6-sol", "openai-codex")],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({ status: "cached", stale: true });
 
@@ -442,9 +434,9 @@ describe("applyOAuthLoginModel", () => {
 				model: previousModel,
 				thinkingLevel: ThinkingLevel.Low,
 				models: [
-					M("gpt-5.6-luna", "openai-codex"),
+					M("gpt-6-luna", "openai-codex"),
 					M("gpt-5.6-terra", "openai-codex"),
-					M("gpt-5.6-sol", "openai-codex"),
+					M("gpt-6-sol", "openai-codex"),
 				],
 			});
 		(session as any).setModel = vi.fn(async (model: { id: string; provider: string }) => {
@@ -470,13 +462,13 @@ describe("applyOAuthLoginModel", () => {
 			models: [
 				M("claude-haiku-4-5", "anthropic"),
 				M("claude-sonnet-5", "anthropic"),
-				M("claude-opus-5", "anthropic"),
+				M("claude-opus-5-5", "anthropic"),
 			],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
 			status: "ok",
 			stale: false,
-			models: ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5"],
+			models: ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5"],
 		});
 		const persist = session.settings.set;
 		let failed = false;

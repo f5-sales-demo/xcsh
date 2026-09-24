@@ -712,7 +712,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const authStorage = options.authStorage ?? (await logger.time("discoverModels", discoverAuthStorage, agentDir));
 	const modelRegistry =
 		options.modelRegistry ??
-		new ModelRegistry(authStorage, undefined, { getProviderOrder: () => settings.get("modelProviderOrder") });
+		new ModelRegistry(authStorage, undefined, {
+			getProviderOrder: () => settings.get("modelProviderOrder"),
+			getOpenAICodexMaxContext: () => settings.get("providers.openaiCodexMaxContext"),
+		});
 
 	const configuredContextLoadingMode = settings.get("context.loadingMode");
 	const resolveContextLoadingMode = (candidate: Model | undefined): "eager" | "progressive" =>

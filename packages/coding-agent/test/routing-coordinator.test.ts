@@ -97,7 +97,7 @@ describe("Routing Coordinator (I01)", () => {
 	});
 
 	it("selects the Codex tier effort and escalates frontier reasoning independently", async () => {
-		const availableCodex = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
+		const availableCodex = ["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol"];
 		const normal = await new RoutingCoordinator().evaluateTurn({
 			anchorModel: "openai-codex/gpt-5.6-terra",
 			mode: "auto",
@@ -115,7 +115,7 @@ describe("Routing Coordinator (I01)", () => {
 			priorRejection: true,
 			availableModels: availableCodex,
 		});
-		expect(rejected.selectedModel).toBe("openai-codex/gpt-5.6-sol");
+		expect(rejected.selectedModel).toBe("openai-codex/gpt-6-sol");
 		expect(rejected.selectedEffort).toBe("xhigh");
 		expect(rejected.effortReason).toBe("rejection_escalation");
 	});

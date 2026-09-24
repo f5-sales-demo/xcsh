@@ -6,20 +6,20 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 	"openai/gpt-5.6": {
 		id: "openai/gpt-5.6",
 		provider: "openai",
-		tiers: { ...OPENAI_CODEX_ROUTING_POOL.tiers },
+		tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
 		effortPolicy: OPENAI_CODEX_ROUTING_POOL.effortPolicy,
 	},
 	[ANTHROPIC_ROUTING_POOL.id]: ANTHROPIC_ROUTING_POOL,
 	"litellm/openai": {
 		id: "litellm/openai",
 		provider: "litellm",
-		tiers: { ...OPENAI_CODEX_ROUTING_POOL.tiers },
+		tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
 		effortPolicy: OPENAI_CODEX_ROUTING_POOL.effortPolicy,
 	},
 	"litellm/anthropic": {
 		id: "litellm/anthropic",
 		provider: "litellm",
-		tiers: { ...ANTHROPIC_ROUTING_POOL.tiers },
+		tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5" },
 		effortPolicy: ANTHROPIC_ROUTING_POOL.effortPolicy,
 	},
 };

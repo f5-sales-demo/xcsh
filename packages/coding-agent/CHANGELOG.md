@@ -6,6 +6,10 @@
 
 ### Added
 
+- Added current ChatGPT subscription roles for GPT-6 Luna/Sol, Claude Opus 5.5 selection, and an
+  opt-in Providers setting for the GPT-6 1.05M-token context window. The default remains 272K to
+  make long-context pricing explicit; LiteLLM retains its existing catalog
+  ([#4240](https://github.com/f5-sales-demo/xcsh/issues/4240)).
 - Added owner-scoped, capability-filtered plugin advisories that render machine-readable provenance,
   fail open on matcher errors, and refresh with plugin lifecycle changes
   ([#4175](https://github.com/f5-sales-demo/xcsh/issues/4175)).

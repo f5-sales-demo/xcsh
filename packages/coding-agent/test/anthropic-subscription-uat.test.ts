@@ -10,7 +10,7 @@ describe("Anthropic subscription UAT harness", () => {
 	it("targets the requested Claude tiers", () => {
 		expect(ANTHROPIC_HAIKU_MODEL).toBe("anthropic/claude-haiku-4-5");
 		expect(ANTHROPIC_DEFAULT_MODEL).toBe("anthropic/claude-sonnet-5");
-		expect(ANTHROPIC_OPUS_MODEL).toBe("anthropic/claude-opus-5");
+		expect(ANTHROPIC_OPUS_MODEL).toBe("anthropic/claude-opus-5-5");
 	});
 
 	it("redacts authorization URLs, OAuth artifacts, and bearer credentials", () => {

@@ -36,6 +36,60 @@ import { getOAuthApiKey } from "../src/utils/oauth";
 import type { OAuthCredentials, OAuthProvider } from "../src/utils/oauth/types";
 
 const packageRoot = path.join(import.meta.dir, "..");
+const SUBSCRIPTION_CONTEXT_WINDOW = 272_000;
+const SUBSCRIPTION_MAX_TOKENS = 128_000;
+
+const CURRENT_SUBSCRIPTION_MODELS: readonly Model[] = [
+	{
+		id: "claude-opus-5-5",
+		name: "Claude Opus 5.5",
+		api: "anthropic-messages",
+		provider: "anthropic",
+		baseUrl: "https://api.anthropic.com",
+		reasoning: true,
+		input: ["text", "image"],
+		cost: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
+		contextWindow: 1_000_000,
+		maxTokens: 128_000,
+	},
+	{
+		id: "gpt-6-luna",
+		name: "GPT-6 Luna",
+		api: "openai-codex-responses",
+		provider: "openai-codex",
+		baseUrl: "https://chatgpt.com/backend-api",
+		reasoning: true,
+		input: ["text", "image"],
+		cost: { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
+		contextWindow: SUBSCRIPTION_CONTEXT_WINDOW,
+		maxTokens: SUBSCRIPTION_MAX_TOKENS,
+		preferWebsockets: true,
+	},
+	{
+		id: "gpt-6-sol",
+		name: "GPT-6 Sol",
+		api: "openai-codex-responses",
+		provider: "openai-codex",
+		baseUrl: "https://chatgpt.com/backend-api",
+		reasoning: true,
+		input: ["text", "image"],
+		cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+		contextWindow: SUBSCRIPTION_CONTEXT_WINDOW,
+		maxTokens: SUBSCRIPTION_MAX_TOKENS,
+		preferWebsockets: true,
+	},
+] as const;
+
+function upsertCurrentSubscriptionModels(models: Model[]): void {
+	for (const current of CURRENT_SUBSCRIPTION_MODELS) {
+		const index = models.findIndex(model => model.provider === current.provider && model.id === current.id);
+		if (index === -1) {
+			models.push({ ...current });
+		} else {
+			models[index] = { ...models[index], ...current };
+		}
+	}
+}
 
 async function resolveProviderApiKey(providerId: string, catalog: CatalogDiscoveryConfig): Promise<string | undefined> {
 	for (const envVar of catalog.envVars) {
@@ -325,6 +379,7 @@ async function generateModels() {
 
 	allModels = applyGlobalModelsDevFallback(allModels, modelsDevModels);
 	allModels = applyPremiumMultiplierOverrides(allModels);
+	upsertCurrentSubscriptionModels(allModels);
 	applyGeneratedModelPolicies(allModels);
 	linkSparkPromotionTargets(allModels);
 
