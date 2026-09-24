@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6e69e1e09e4b96bb3f89349a208fed8ebfb92b3e",
-  "fingerprint": "5943572eb05c3c1f79a49c4e96e2354cac0a92cdb30201121ab5c27e0cae2041",
+  "revision": "a8d75a0481a2f1965546af337d8a277c0ad72fe5",
+  "fingerprint": "1f71f47b565e62fced8178a67a3ee24ed898eccf340bbbb8b72e12a72f1cdfd9",
   "counts": {
     "total": 241,
     "components": 96,
@@ -4549,7 +4549,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "da86ae328f4a0d75dad21dd050deb61d9fa5fd0037e6a86afd6ecfb55a104594",
+      "sha256": "fe8ab5daf3f979d3722b5c11797d96e757f3e0ec00acce6ed7ffab80214a944c",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",

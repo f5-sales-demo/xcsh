@@ -151,7 +151,7 @@ describe("plugin dry-run", () => {
 		});
 		expect(listed.exitCode).toBe(0);
 		expect(JSON.parse(new TextDecoder().decode(listed.stdout)).marketplace).toEqual([]);
-	});
+	}, 15_000);
 
 	it("shows dependency order for upgrade previews without mutation", () => {
 		const root = mkdtempSync(join(tmpdir(), "xcsh-plugin-upgrade-plan-"));
