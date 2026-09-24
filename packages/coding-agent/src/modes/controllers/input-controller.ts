@@ -166,6 +166,21 @@ export class InputController {
 		this.ctx.editor.onSuspend = () => this.handleCtrlZ();
 		this.ctx.editor.setActionKeys("app.thinking.cycle", this.ctx.keybindings.getKeys("app.thinking.cycle"));
 		this.ctx.editor.onCycleThinkingLevel = () => this.cycleThinkingLevel();
+		this.ctx.editor.onCyclePlanMode = () => {
+			if (
+				this.ctx.session.isStreaming ||
+				this.ctx.session.isCompacting ||
+				this.ctx.session.isGeneratingHandoff ||
+				this.ctx.session.isBashRunning ||
+				this.ctx.session.isPythonRunning ||
+				this.ctx.loadingAnimation ||
+				this.ctx.autoCompactionLoader ||
+				this.ctx.retryLoader ||
+				this.ctx.hasActiveBtw()
+			)
+				return;
+			void this.ctx.handlePlanModeCommand();
+		};
 		this.ctx.editor.setActionKeys("app.model.cycleForward", this.ctx.keybindings.getKeys("app.model.cycleForward"));
 		this.ctx.editor.onCycleModelForward = () => this.cycleRoleModel();
 		this.ctx.editor.setActionKeys("app.model.cycleBackward", this.ctx.keybindings.getKeys("app.model.cycleBackward"));
@@ -205,11 +220,6 @@ export class InputController {
 		this.ctx.editor.clearCustomKeyHandlers();
 		// Wire up extension shortcuts
 		this.registerExtensionShortcuts();
-
-		const planModeKeys = this.ctx.keybindings.getKeys("app.plan.toggle");
-		for (const key of planModeKeys) {
-			this.ctx.editor.setCustomKeyHandler(key, () => void this.ctx.handlePlanModeCommand());
-		}
 
 		for (const key of this.ctx.keybindings.getKeys("app.session.new")) {
 			this.ctx.editor.setCustomKeyHandler(key, () => this.ctx.handleClearCommand());

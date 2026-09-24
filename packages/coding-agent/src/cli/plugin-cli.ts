@@ -20,7 +20,12 @@ import {
 	MarketplaceManager,
 	resolvePluginDependencyPlan,
 } from "../extensibility/plugins/marketplace/index.js";
-import { describeSetupPlan, executeInstallAuthorizedSetup, executeReviewedSetup } from "../integrations/setup";
+import {
+	describeIntegrationSetupNextAction,
+	describeSetupPlan,
+	executeInstallAuthorizedSetup,
+	executeReviewedSetup,
+} from "../integrations/setup";
 import type { IntegrationHandle } from "../integrations/types";
 import { theme } from "../modes/theme/theme";
 import { personProfileService } from "../person-profile/service";
@@ -221,6 +226,8 @@ function matchesIntegration(handle: IntegrationHandle<unknown>, target: string):
 	return handle.id === target || handle.plugin === target || handle.plugin?.split("@")[0] === target;
 }
 
+export { describeIntegrationSetupNextAction } from "../integrations/setup";
+
 export function selectSetupIntegration(
 	handles: readonly IntegrationHandle<unknown>[],
 	target: string,
@@ -244,8 +251,7 @@ async function handleIntegrationStatus(args: string[], flags: { json?: boolean }
 			const { value: _, ...status } = await handle.get();
 			return {
 				...status,
-				nextAction:
-					status.state === "setup_required" ? `${APP_NAME} plugin setup ${handle.plugin ?? handle.id}` : undefined,
+				nextAction: status.state === "setup_required" ? describeIntegrationSetupNextAction(handle) : undefined,
 			};
 		}),
 	);
@@ -270,6 +276,10 @@ export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle
 	if (!plan) throw new Error(`Integration ${handle.id} does not declare setup`);
 	const current = await handle.get();
 	if (current.state === "ready") return current;
+	if (plan.guidedAction?.kind === "context_wizard")
+		throw new Error(
+			`Plugin ${handle.plugin ?? handle.id} setup requires interactive xcsh; run /plugin setup ${handle.plugin ?? handle.id} in the xcsh TUI.`,
+		);
 	process.stdout.write(`${describeSetupPlan(handle)}\n`);
 	const prompt = createInterface({ input: process.stdin, output: process.stdout });
 	try {
@@ -335,7 +345,11 @@ async function reportMarketplaceInstallation(
 	const setupHandle = setupHandles.length === 1 ? setupHandles[0] : undefined;
 	const setupStatus = setupHandle ? statuses.find(status => status.id === setupHandle.id) : undefined;
 	const nextAction =
-		entry.setupRequired && setupStatus?.state !== "ready" ? `${APP_NAME} plugin setup ${plugin}` : undefined;
+		entry.setupRequired && setupStatus?.state !== "ready"
+			? setupHandle
+				? describeIntegrationSetupNextAction(setupHandle)
+				: `${APP_NAME} plugin setup ${plugin}`
+			: undefined;
 	if (flags.json || !process.stdin.isTTY || !process.stdout.isTTY) {
 		const result = {
 			installation: { state: "installed", plugin, marketplace, version: entry.version, scope: entry.scope },
@@ -759,7 +773,7 @@ async function handleInstall(
 async function handleUninstall(
 	manager: PluginManager,
 	packages: string[],
-	flags: { json?: boolean; scope?: "user" | "project" },
+	flags: { json?: boolean; dryRun?: boolean; scope?: "user" | "project" },
 ): Promise<void> {
 	if (packages.length === 0) {
 		console.error(chalk.red(`Usage: ${APP_NAME} plugin uninstall <package> ...`));
@@ -777,8 +791,30 @@ async function handleUninstall(
 		if (installedPlugins.has(name) || target.type === "marketplace") {
 			// Exact match against installed marketplace plugin IDs (name@marketplace)
 			try {
+				if (flags.dryRun) {
+					const preview = await mktMgr.previewUninstallPlugin(name, flags.scope);
+					if (flags.json) {
+						console.log(
+							JSON.stringify(
+								{
+									action: "uninstall",
+									target: preview.pluginId,
+									scope: preview.scope,
+									dryRun: true,
+									installPaths: preview.installPaths,
+								},
+								null,
+								2,
+							),
+						);
+					} else {
+						console.log(chalk.dim(`[dry-run] Would uninstall ${preview.pluginId} (${preview.scope})`));
+					}
+					continue;
+				}
 				await mktMgr.uninstallPlugin(name, flags.scope);
-				console.log(chalk.green(`${theme.status.success} Uninstalled ${name}`));
+				if (flags.json) console.log(JSON.stringify({ uninstalled: name }));
+				else console.log(chalk.green(`${theme.status.success} Uninstalled ${name}`));
 			} catch (err) {
 				console.error(chalk.red(`${theme.status.error} Failed to uninstall ${name}: ${err}`));
 				process.exit(1);
@@ -1292,8 +1328,8 @@ ${chalk.bold("Options:")}
   --json           Output as JSON
   --fix            Attempt automatic fixes (doctor)
   --force          Overwrite without prompting (install)
-  --scope <scope>  Install scope: user (default) or project (install name@marketplace)
-  --dry-run        Preview changes without applying (install)
+  --scope <scope>  Marketplace install/uninstall scope: user (default) or project
+  --dry-run        Preview supported install, uninstall, or upgrade changes
   -l, --local      Use project-local overrides
 
 ${chalk.bold("Examples:")}

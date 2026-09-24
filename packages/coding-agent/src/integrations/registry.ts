@@ -48,6 +48,7 @@ function freezePlan(plan: IntegrationSetupPlan | undefined): IntegrationSetupPla
 		verification: Object.freeze(
 			plan.verification.map(step => Object.freeze({ ...step, argv: freezeStrings(step.argv) })),
 		),
+		...(plan.guidedAction ? { guidedAction: Object.freeze({ kind: plan.guidedAction.kind }) } : {}),
 	};
 	return Object.freeze(frozen);
 }
@@ -58,6 +59,16 @@ function validateArgv(argv: readonly string[]): boolean {
 
 function validatePlan(plan: IntegrationSetupPlan | undefined): void {
 	if (!plan) return;
+	const guidedActionValid =
+		plan.guidedAction === undefined ||
+		(typeof plan.guidedAction === "object" &&
+			plan.guidedAction !== null &&
+			plan.guidedAction.kind === "context_wizard" &&
+			Object.keys(plan.guidedAction).length === 1);
+	const hasExecutablePlan =
+		Array.isArray(plan.steps) &&
+		Array.isArray(plan.verification) &&
+		(plan.steps.length > 0 || plan.verification.length > 0);
 	if (
 		!Array.isArray(plan.pluginDependencies) ||
 		!Array.isArray(plan.requiredEnvironment) ||
@@ -65,6 +76,9 @@ function validatePlan(plan: IntegrationSetupPlan | undefined): void {
 		!Array.isArray(plan.profileFields) ||
 		!Array.isArray(plan.steps) ||
 		!Array.isArray(plan.verification) ||
+		!guidedActionValid ||
+		(!plan.guidedAction && !hasExecutablePlan) ||
+		(plan.guidedAction !== undefined && hasExecutablePlan) ||
 		plan.steps.some(
 			step =>
 				!step ||

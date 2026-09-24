@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "118ccef8cb69cc64d86991f6405485863944a358",
-  "fingerprint": "fc7b21b0ab625bfc29c7a8133c082e57645c524041d26df31615a82d34c4aa4c",
+  "revision": "daee5854069e3e989829704cf44e939ef3997851",
+  "fingerprint": "4d15b32a96df8563d06ee85469202dced228e4a5974485e28f37aaef6416c93a",
   "counts": {
     "total": 241,
     "components": 96,
@@ -203,7 +203,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "settings",
-      "sha256": "8ecddee95459863de0b7952b7de8208a7d761e618e6d043386411d149d7bb52d",
+      "sha256": "b6c8798a7647d11f3ac497fc4113ef0246edc798b414f2b3727b73e720d13ccc",
       "exports": [
         "AppKeybinding",
         "KEYBINDINGS",
@@ -1315,7 +1315,8 @@
       ],
       "directTests": [
         "packages/coding-agent/test/context-add-wizard.test.ts",
-        "packages/coding-agent/test/keybindings-escape-components.test.ts"
+        "packages/coding-agent/test/keybindings-escape-components.test.ts",
+        "packages/coding-agent/test/slash-commands/plugin-setup.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/context-add-wizard.ts is individually classified as caller-owned-draft in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1366,7 +1367,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "reports",
-      "sha256": "478b3e6c42e2ae33cb66543d5edb86612f2b18da114dc211a4b25a26190d92e8",
+      "sha256": "8d04b44bd837039396391211cc6716b05423d924058ba12fd9213c1461921cb9",
       "exports": [
         "CustomEditor"
       ],
@@ -3327,7 +3328,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "b3360c1c4ae98e9989530801ec29c491d0b602d26906fe93684a2877c0a26bf8",
+      "sha256": "11a85ae34904e9260d1817b7a6c92175fd284be3f8bc5530405560d6cdbedc17",
       "exports": [
         "InputController"
       ],
@@ -3724,7 +3725,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "941406ae3951fb2a90914bfe00da1089aa4465fe8c8b3296070d85e99f82bc7b",
+      "sha256": "f0ed15d3f54ab6c156d58362fe1728729994c24ce737423ed829c2aaf7e64df9",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4256,7 +4257,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "57f7e514d0b9eac9294ac50330cb031db4b975442c3d513bc900753e97e622a8",
+      "sha256": "287c1af8a966e93157acb6d7331aed5bb2da35569c0cc763c28b26bf610c2280",
       "exports": [
         "HotkeysMarkdownBindings",
         "buildHotkeysMarkdown"
@@ -4548,7 +4549,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "db9010140bcb7b324086ac28f1991a8d50d2b8583ea509723d8320003f8b9531",
+      "sha256": "fe8ab5daf3f979d3722b5c11797d96e757f3e0ec00acce6ed7ffab80214a944c",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4576,6 +4577,7 @@
         "packages/coding-agent/test/slash-commands/exit.test.ts",
         "packages/coding-agent/test/slash-commands/force.test.ts",
         "packages/coding-agent/test/slash-commands/login.test.ts",
+        "packages/coding-agent/test/slash-commands/plugin-setup.test.ts",
         "packages/coding-agent/test/slash-commands/reload-plugins.test.ts",
         "packages/coding-agent/test/slash-commands/route.test.ts",
         "packages/coding-agent/test/slash-commands/session.test.ts"
@@ -5879,9 +5881,9 @@
         "packages/coding-agent/test/slash-commands/exit.test.ts",
         "packages/coding-agent/test/slash-commands/force.test.ts",
         "packages/coding-agent/test/slash-commands/login.test.ts",
+        "packages/coding-agent/test/slash-commands/plugin-setup.test.ts",
         "packages/coding-agent/test/slash-commands/reload-plugins.test.ts",
-        "packages/coding-agent/test/slash-commands/route.test.ts",
-        "packages/coding-agent/test/slash-commands/session.test.ts"
+        "packages/coding-agent/test/slash-commands/route.test.ts"
       ],
       "classification": "packages/tui/src/autocomplete.ts is individually classified as runtime-lifecycle in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

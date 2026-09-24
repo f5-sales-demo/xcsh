@@ -1,15 +1,41 @@
 import { afterEach, describe, expect, test, vi } from "bun:test";
-import { reviewAndExecuteIntegrationSetup, selectSetupIntegration } from "../src/cli/plugin-cli";
+import {
+	describeIntegrationSetupNextAction,
+	reviewAndExecuteIntegrationSetup,
+	selectSetupIntegration,
+} from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
 import {
 	createSetupStepRunner,
 	describeInstallSetupOutcome,
+	describeInteractiveInstallSetupNextAction,
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
 } from "../src/integrations/setup";
 
 const ready = <T>(value: T) => ({ state: "ready" as const, value });
+
+test("interactive install gives separate-setup plugins an exact slash-command next action", () => {
+	expect(
+		describeInteractiveInstallSetupNextAction("herdr", {
+			setupRequired: true,
+			setupAuthorization: "separate",
+		}),
+	).toBe("/plugin setup herdr");
+	expect(
+		describeInteractiveInstallSetupNextAction("herdr", {
+			setupRequired: false,
+			setupAuthorization: "separate",
+		}),
+	).toBeUndefined();
+	expect(
+		describeInteractiveInstallSetupNextAction("kvm", {
+			setupRequired: true,
+			setupAuthorization: "install",
+		}),
+	).toBeUndefined();
+});
 
 test("setup runner injects only declared active-context values", async () => {
 	const run = createSetupStepRunner(
@@ -47,6 +73,72 @@ test("setup runner can suppress non-interactive child output for an interactive 
 	} finally {
 		spawn.mockRestore();
 	}
+});
+
+test("preserves an explicit native context-wizard setup action without an executable no-op plan", () => {
+	const registry = new IntegrationRegistry();
+	const handle = registry.register("plugin:platform", {
+		id: "platform",
+		name: "F5 Distributed Cloud Platform",
+		plugin: "platform",
+		kind: "local",
+		setup: {
+			pluginDependencies: [],
+			requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN", "XCSH_TENANT"],
+			profileFields: [],
+			steps: [],
+			verification: [],
+			guidedAction: { kind: "context_wizard" },
+		},
+		probe: async () => ({ state: "setup_required", reason: "not_authenticated" }),
+	});
+
+	expect(handle.setupPlan?.guidedAction).toEqual({ kind: "context_wizard" });
+	expect(Object.isFrozen(handle.setupPlan?.guidedAction)).toBe(true);
+	expect(describeSetupPlan(handle)).toContain("Guided action: native xcsh context wizard");
+	expect(describeSetupPlan(handle)).not.toContain("Commands:\nVerification:");
+});
+
+test("rejects empty and mixed guided setup plans", () => {
+	const register = (setup: unknown) =>
+		new IntegrationRegistry().register("plugin:platform", {
+			id: "platform",
+			name: "F5 Distributed Cloud Platform",
+			kind: "local",
+			setup,
+			probe: async () => ({ state: "setup_required" as const }),
+		} as never);
+	const base = { pluginDependencies: [], requiredEnvironment: [], profileFields: [], steps: [], verification: [] };
+
+	expect(() => register(base)).toThrow("Invalid integration setup plan");
+	expect(() =>
+		register({
+			...base,
+			guidedAction: { kind: "context_wizard" },
+			steps: [{ kind: "login", argv: ["never"], timeoutMs: 1_000 }],
+		}),
+	).toThrow("Invalid integration setup plan");
+	expect(() => register({ ...base, guidedAction: { kind: "unknown" } })).toThrow("Invalid integration setup plan");
+});
+
+test("does not execute a guided setup plan as an empty command plan", async () => {
+	const registry = new IntegrationRegistry();
+	const handle = registry.register("plugin:platform", {
+		id: "platform",
+		name: "F5 Distributed Cloud Platform",
+		kind: "local",
+		setup: {
+			pluginDependencies: [],
+			requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN", "XCSH_TENANT"],
+			profileFields: [],
+			steps: [],
+			verification: [],
+			guidedAction: { kind: "context_wizard" },
+		},
+		probe: async () => ({ state: "setup_required", reason: "not_authenticated" }),
+	});
+
+	await expect(executeReviewedSetup(handle, handle.setupPlan!)).rejects.toThrow("native interactive action");
 });
 
 describe("IntegrationRegistry", () => {
@@ -302,6 +394,77 @@ describe("IntegrationRegistry", () => {
 		expect(result.state).toBe("ready");
 	});
 
+	test("direct CLI setup directs guided actions to the interactive xcsh TUI", async () => {
+		const plan = {
+			pluginDependencies: [],
+			requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN", "XCSH_TENANT"],
+			profileFields: [],
+			steps: [],
+			verification: [],
+			guidedAction: { kind: "context_wizard" as const },
+		};
+		await expect(
+			reviewAndExecuteIntegrationSetup({
+				id: "platform",
+				name: "F5 Distributed Cloud Platform",
+				plugin: "platform",
+				setupPlan: plan,
+				get: async () => ({
+					id: "platform",
+					name: "F5 Distributed Cloud Platform",
+					plugin: "platform",
+					state: "setup_required" as const,
+					checkedAt: 1,
+					durationMs: 0,
+				}),
+				invalidate() {},
+				verifyAfterSetup: vi.fn(),
+			}),
+		).rejects.toThrow("run /plugin setup platform in the xcsh TUI");
+	});
+
+	test("setup next actions distinguish native guided setup from executable CLI setup", () => {
+		const base = {
+			id: "platform",
+			name: "F5 Distributed Cloud Platform",
+			plugin: "platform",
+			get: async () => ({
+				id: "platform",
+				name: "F5 Distributed Cloud Platform",
+				state: "setup_required" as const,
+				checkedAt: 1,
+				durationMs: 0,
+			}),
+			invalidate() {},
+			verifyAfterSetup: vi.fn(),
+		};
+		expect(
+			describeIntegrationSetupNextAction({
+				...base,
+				setupPlan: {
+					pluginDependencies: [],
+					requiredEnvironment: [],
+					profileFields: [],
+					steps: [],
+					verification: [],
+					guidedAction: { kind: "context_wizard" },
+				},
+			}),
+		).toBe("Open xcsh interactively and run /plugin setup platform");
+		expect(
+			describeIntegrationSetupNextAction({
+				...base,
+				setupPlan: {
+					pluginDependencies: [],
+					requiredEnvironment: [],
+					profileFields: [],
+					steps: [{ kind: "login", argv: ["example"], timeoutMs: 1_000 }],
+					verification: [],
+				},
+			}),
+		).toBe("xcsh plugin setup platform");
+	});
+
 	test("install authorization executes setup once without a second confirmation", async () => {
 		let executions = 0;
 		const plan = {
@@ -399,8 +562,22 @@ describe("IntegrationRegistry", () => {
 					reason: "dependency_missing",
 				},
 				[{ pluginId: "platform@f5-sales-demo-marketplace" }, { pluginId: "kvm@f5-sales-demo-marketplace" }],
+				[
+					{
+						id: "platform",
+						plugin: "platform",
+						setupPlan: {
+							pluginDependencies: [],
+							requiredEnvironment: [],
+							profileFields: [],
+							steps: [],
+							verification: [],
+							guidedAction: { kind: "context_wizard" },
+						},
+					},
+				],
 			),
-		).toBe("kvm: unavailable (dependency_missing)\nnext: xcsh plugin setup platform");
+		).toBe("kvm: unavailable (dependency_missing)\nnext: Open xcsh interactively and run /plugin setup platform");
 	});
 
 	test.each(["bulk-install", "upgrade", "cache-refresh", "dependency-install"] as const)(

@@ -42,6 +42,14 @@ describe("CustomEditor temporary model selector keybinding", () => {
 		expect(onSelectModelTemporary).toHaveBeenCalledTimes(1);
 	});
 
+	it("reserves Shift+Tab for Plan mode", () => {
+		const editor = createEditor();
+		const plan = vi.fn();
+		editor.onCyclePlanMode = plan;
+		editor.handleInput("\x1b[Z");
+		expect(plan).toHaveBeenCalledTimes(1);
+	});
+
 	it("removes the default Alt+P shortcut when the action is disabled", () => {
 		const editor = createEditor();
 		const onSelectModelTemporary = vi.fn();

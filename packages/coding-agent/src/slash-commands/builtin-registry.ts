@@ -23,6 +23,7 @@ import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fe
 import {
 	createSetupStepRunner,
 	describeInstallSetupOutcome,
+	describeInteractiveInstallSetupNextAction,
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
@@ -1514,11 +1515,12 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded") {
 							await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
+							const handles = runtime.ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [];
 							const setupResult = await executeInstallAuthorizedSetup({
 								plugin: name,
 								lifecycle: prepared.target,
 								trigger: "direct-install",
-								handles: runtime.ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [],
+								handles,
 								run: activeContextSetupRunner(runtime),
 							});
 							if (setupResult) await personProfileService.reconcileFromCollectors(undefined, 0);
@@ -1528,9 +1530,12 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									pluginId: string;
 								}>;
 								showPluginStatus(
-									`${installed}\n${describeInstallSetupOutcome(name, setupResult, dependencyPlan)}`,
+									`${installed}\n${describeInstallSetupOutcome(name, setupResult, dependencyPlan, handles)}`,
 								);
-							} else showPluginStatus(installed);
+							} else {
+								const nextAction = describeInteractiveInstallSetupNextAction(name, prepared.target);
+								showPluginStatus(nextAction ? `${installed}\nnext: ${nextAction}` : installed);
+							}
 						} else if (outcome === "unresolved")
 							runtime.ctx.showError("Plugin installation remains unresolved; retry from a fresh review.");
 						break;
@@ -1772,6 +1777,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const current = await handle.get();
 						if (current.state === "ready") {
 							showPluginStatus(`${handle.plugin ?? handle.id}: ready (setup is not required)`);
+							break;
+						}
+						if (plan.guidedAction?.kind === "context_wizard") {
+							const { ContextCommandController } = await import(
+								"../modes/controllers/context-command-controller"
+							);
+							const controller = new ContextCommandController(runtime.ctx);
+							await controller.handle({ name: "context", args: "wizard", text: "/context wizard" });
 							break;
 						}
 						let result: Awaited<ReturnType<typeof executeReviewedSetup>> | undefined;
