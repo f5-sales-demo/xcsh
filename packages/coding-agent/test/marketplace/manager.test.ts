@@ -125,7 +125,7 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
-			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("5add7641ac535908b89effe57fa65e6246629a3f");
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("93a8ff9f87f31cfc747b28820220cb0f38c2cb0e");
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
 				version: "2.0.2",
 				lifecycle: { pluginDependencies: ["platform"] },
@@ -140,7 +140,7 @@ describe("MarketplaceManager", () => {
 				version: "1.7.0",
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "xorg")).toMatchObject({
-				version: "1.1.1",
+				version: "1.1.2",
 				lifecycle: { pluginDependencies: [] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
@@ -159,7 +159,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"d329e33c0b455df4229fb605e3593027afcf8c998c0b9654d6fe81da131a7389",
+				"f51806bb643707f2f73dfb1cefe4e78005676a7e260aae21307cb4ff8ee34a2b",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
