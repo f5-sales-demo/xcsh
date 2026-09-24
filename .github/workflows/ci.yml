@@ -1176,7 +1176,7 @@ jobs:
     name: Publish npm packages
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.skip_npm
     needs: [create-release]
-    runs-on: ubuntu-22.04
+    runs-on: xcsh-socketless
     timeout-minutes: 90
     env:
       XCSH_BUILD_BRANCH: main

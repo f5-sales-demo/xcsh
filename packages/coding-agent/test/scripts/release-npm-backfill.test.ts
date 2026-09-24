@@ -6,8 +6,9 @@ import {
 	isAlreadyPublished,
 	isExactRegistryVersion,
 	npmPublishArgs,
-	publishWithVisibility,
+	publishWithRetry,
 	resolveReleaseSourceRoot,
+	waitForPublishedPackages,
 	waitForRegistryVisibility,
 } from "../../../../scripts/ci-release-publish";
 
@@ -93,7 +94,7 @@ describe("release npm backfill publish semantics", () => {
 	it("skips publishing an exact version that is already visible", async () => {
 		let publishes = 0;
 		let visibilityChecks = 0;
-		const attempt = await publishWithVisibility("@f5-sales-demo/pi-utils", "21.43.3", {
+		const attempt = await publishWithRetry("@f5-sales-demo/pi-utils", "21.43.3", {
 			lookupExisting: async () => '"21.43.3"',
 			publish: async () => {
 				publishes++;
@@ -109,11 +110,11 @@ describe("release npm backfill publish semantics", () => {
 		expect(visibilityChecks).toBe(0);
 	});
 
-	it("publishes when the exact version is not visible during preflight", async () => {
+	it("continues immediately after npm accepts a missing exact version", async () => {
 		for (const existing of [null, '"21.43.2"']) {
 			let publishes = 0;
 			let visibilityChecks = 0;
-			const attempt = await publishWithVisibility("@f5-sales-demo/pi-utils", "21.43.3", {
+			const attempt = await publishWithRetry("@f5-sales-demo/pi-utils", "21.43.3", {
 				lookupExisting: async () => existing,
 				publish: async () => {
 					publishes++;
@@ -126,7 +127,7 @@ describe("release npm backfill publish semantics", () => {
 
 			expect(attempt).toBe(1);
 			expect(publishes).toBe(1);
-			expect(visibilityChecks).toBe(1);
+			expect(visibilityChecks).toBe(0);
 		}
 	});
 
@@ -170,16 +171,14 @@ describe("release npm backfill publish semantics", () => {
 		).rejects.toThrow("@f5-sales-demo/pi-agent-core@21.0.0");
 	});
 
-	it("retries accepted publication and visibility as one operation", async () => {
+	it("retries an exact staged-version conflict until it is visible", async () => {
 		let publishes = 0;
 		let visibilityChecks = 0;
 		const sleeps: number[] = [];
-		const attempt = await publishWithVisibility("@f5-sales-demo/pi-natives-linux-arm64-gnu", "21.11.1", {
+		const attempt = await publishWithRetry("@f5-sales-demo/pi-natives-linux-arm64-gnu", "21.11.1", {
 			publish: async () => {
 				publishes++;
-				return publishes === 1
-					? { exitCode: 0, output: "package accepted and processing" }
-					: { exitCode: 1, output: 'Cannot publish over previously staged version "21.11.1".' };
+				return { exitCode: 1, output: 'Cannot publish over previously staged version "21.11.1".' };
 			},
 			waitForVisibility: async () => {
 				visibilityChecks++;
@@ -201,7 +200,7 @@ describe("release npm backfill publish semantics", () => {
 	it("bounds repeated publish failures", async () => {
 		const sleeps: number[] = [];
 		await expect(
-			publishWithVisibility("@f5-sales-demo/pi-utils", "21.11.1", {
+			publishWithRetry("@f5-sales-demo/pi-utils", "21.11.1", {
 				publish: async () => ({ exitCode: 1, output: "temporary registry failure" }),
 				waitForVisibility: async () => {
 					throw new Error("must not run");
@@ -217,33 +216,37 @@ describe("release npm backfill publish semantics", () => {
 		expect(sleeps).toEqual([5, 10]);
 	});
 
-	it("bounds accepted publications that remain invisible", async () => {
-		let visibilityChecks = 0;
-		await expect(
-			publishWithVisibility("@f5-sales-demo/pi-natives-linux-arm64-gnu", "21.11.1", {
-				publish: async () => ({ exitCode: 0, output: "package accepted and processing" }),
-				waitForVisibility: async () => {
-					visibilityChecks++;
-					throw new Error("not visible");
-				},
-				sleep: async () => {},
-				maxAttempts: 2,
-			}),
-		).rejects.toThrow("after 2 attempts");
-		expect(visibilityChecks).toBe(2);
+	it("waits for every accepted package at one final visibility barrier", async () => {
+		const checked: string[] = [];
+		await waitForPublishedPackages(
+			[
+				{ name: "@f5-sales-demo/pi-natives-linux-arm64-gnu", version: "21.11.1" },
+				{ name: "@f5-sales-demo/pi-utils", version: "21.11.1" },
+			],
+			async (packageName, version) => {
+				checked.push(`${packageName}@${version}`);
+				return 1;
+			},
+		);
+
+		expect(checked).toEqual(["@f5-sales-demo/pi-natives-linux-arm64-gnu@21.11.1", "@f5-sales-demo/pi-utils@21.11.1"]);
 	});
 });
 
 describe("release npm backfill workflow contract", () => {
-	it("gives the normal npm release enough runner lifetime", async () => {
+	it("uses the authorized npm runner with bounded lifetime", async () => {
 		const workflow = await fs.readFile(ciWorkflowPath, "utf8");
 		const jobStart = workflow.indexOf("  publish-npm:");
 		const jobEnd = workflow.indexOf("\n  verify-npm-install:", jobStart);
 		expect(jobStart).toBeGreaterThan(-1);
 		expect(jobEnd).toBeGreaterThan(jobStart);
 		const publishJob = workflow.slice(jobStart, jobEnd);
-		expect(publishJob).toContain("runs-on: ubuntu-22.04");
+		expect(publishJob).toContain("runs-on: xcsh-socketless");
 		expect(publishJob).toContain("timeout-minutes: 90");
+
+		const backfillWorkflow = await fs.readFile(workflowPath, "utf8");
+		expect(backfillWorkflow).toContain("runs-on: xcsh-socketless");
+		expect(backfillWorkflow).toContain("timeout-minutes: 90");
 	});
 
 	it("binds a manual backfill to an immutable tag and original run", async () => {
