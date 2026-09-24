@@ -182,7 +182,10 @@ test("MCP removal preserves the saved outcome while reporting credential cleanup
 	});
 	h.ctx.mcpManager = {
 		getConnection: vi.fn(() => undefined),
-		disconnectAll: vi.fn(async () => {
+	} as never;
+	h.ctx.mcpRuntime = {
+		enabled: true,
+		replace: vi.fn(async () => {
 			throw new Error("synthetic runtime refresh failure");
 		}),
 	} as never;

@@ -93,10 +93,13 @@ interface UiMetadata {
 	condition?: string;
 }
 
+type SettingScope = "user";
+
 interface BooleanDef {
 	type: "boolean";
 	default: boolean;
 	ui?: UiMetadata;
+	scope?: SettingScope;
 }
 
 interface StringDef {
@@ -1761,6 +1764,13 @@ export const SETTINGS_SCHEMA = {
 	},
 
 	// MCP
+	"mcp.enabled": {
+		type: "boolean",
+		default: false,
+		scope: "user",
+		ui: { tab: "tools", label: "MCP", description: "Enable MCP servers for new sessions" },
+	},
+
 	"mcp.enableProjectConfig": {
 		type: "boolean",
 		default: true,

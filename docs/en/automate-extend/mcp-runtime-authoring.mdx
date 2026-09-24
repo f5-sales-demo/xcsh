@@ -11,7 +11,10 @@ head:
       .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
-xcsh keeps Model Context Protocol (MCP) transport concerns below capability discovery. A connected server contributes normalized tools; the agent loop invokes those tools through the same result boundary used for built-in and extension tools.
+xcsh keeps Model Context Protocol (MCP) transport concerns below capability discovery. MCP is off by
+default; configuration alone never starts discovery. After an explicit opt-in, a connected server
+contributes normalized tools and the agent loop invokes those tools through the same result boundary
+used for built-in and extension tools.
 
 ```text
 manager                      transport                server
@@ -31,7 +34,16 @@ The manager resolves configuration, establishes one connection per active server
 
 ## How do reload and teardown work?
 
-A refresh compares the normalized server set, closes removed or changed connections, and preserves reusable connections. Session shutdown closes transports and child processes. Server implementations must also handle client cancellation and EOF so local processes do not outlive xcsh.
+One session-owned runtime controller serializes enable, disable, and reload operations. Enabling
+discovers and connects once, then publishes tools, prompts, resources, notifications, and server
+instructions together. Disabling first removes those capabilities and child access, rebuilds the
+system prompt, and then closes every transport and child process. A reload is available only while
+the runtime is enabled. Session shutdown performs the same teardown. Server implementations must
+also handle client cancellation and EOF so local processes do not outlive xcsh.
+
+Child tasks inherit the parent's explicit policy. An enabled parent shares its live connections with
+children through proxies; children do not rediscover or start duplicate servers. Disabled or omitted
+child policy exposes no MCP proxies and performs no discovery.
 
 ## What makes a tool server compatible?
 

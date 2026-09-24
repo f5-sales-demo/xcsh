@@ -475,9 +475,11 @@ function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcp
 		return { enableMCP: false, mcpProxyTools: createMCPProxyTools(options.mcpManager) };
 	}
 
-	// Keep the historical embedding contract when the policy was omitted: a
-	// child without a manager discovers directly. Explicit true follows it too.
-	return { enableMCP: true, mcpProxyTools: [] };
+	if (options.enableMCP === true) {
+		return { enableMCP: true, mcpProxyTools: [] };
+	}
+
+	return { enableMCP: false, mcpProxyTools: [] };
 }
 
 function createSubagentSettings(baseSettings: Settings): Settings {

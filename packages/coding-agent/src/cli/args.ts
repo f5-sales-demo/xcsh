@@ -3,6 +3,7 @@
  */
 import { type Effort, THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
 import { APP_NAME, CONFIG_DIR_NAME, logger } from "@f5-sales-demo/pi-utils";
+import { CliUsageError } from "@f5-sales-demo/pi-utils/cli";
 import chalk from "chalk";
 import { parseEffort } from "../thinking";
 import {
@@ -49,6 +50,7 @@ export interface Args {
 	models?: string[];
 	tools?: string[];
 	noTools?: boolean;
+	mcp?: boolean;
 	noMcp?: boolean;
 	noLsp?: boolean;
 	noPty?: boolean;
@@ -158,6 +160,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	},
 	"no-tools": r => {
 		r.noTools = true;
+	},
+	mcp: r => {
+		r.mcp = true;
 	},
 	"no-mcp": r => {
 		r.noMcp = true;
@@ -399,6 +404,8 @@ export function parseArgs(args: string[], extensionFlags?: ExtensionFlagRegistry
 		result.unrecognizedFlags.push({ token, name: name ?? token.replace(/^-+/, "") });
 	}
 
+	if (result.mcp && result.noMcp) throw new CliUsageError("--mcp cannot be combined with --no-mcp");
+	if (result.mcp && result.noTools) throw new CliUsageError("--mcp cannot be combined with --no-tools");
 	return result;
 }
 

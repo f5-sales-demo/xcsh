@@ -79,6 +79,7 @@ export const LAUNCH_FLAGS = defineFlags({
 	"provider-session-id": { arity: "value", description: "Resume a provider-side session", hidden: true },
 	models: { arity: "value", description: "Comma-separated model patterns for Ctrl+P cycling" },
 	"no-tools": { arity: "boolean", description: "Disable all built-in tools" },
+	mcp: { arity: "boolean", description: "Enable MCP servers for this run" },
 	"no-mcp": { arity: "boolean", description: "Disable MCP server discovery and tools" },
 	"no-lsp": { arity: "boolean", description: "Disable LSP tools, formatting, and diagnostics" },
 	"no-pty": { arity: "boolean", description: "Disable PTY-based interactive bash execution" },

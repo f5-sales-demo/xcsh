@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -6,6 +6,9 @@ import type { PromptRequest, SessionNotification } from "@agentclientprotocol/sd
 import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
+import type { MCPToolsLoadResult } from "../src/mcp/loader";
+import type { MCPManager } from "../src/mcp/manager";
+import { MCPRuntimeController } from "../src/mcp/runtime-controller";
 import { AcpAgent } from "../src/modes/acp/acp-agent";
 import type { AgentSession, AgentSessionEvent } from "../src/session/agent-session";
 import { SessionManager } from "../src/session/session-manager";
@@ -75,6 +78,8 @@ class FakeAgentSession {
 	queuedMessageCount = 0;
 	systemPrompt = "system";
 	disposed = false;
+	mcpRuntime: MCPRuntimeController<MCPToolsLoadResult>;
+	mcpToolSnapshots: unknown[][] = [];
 	#listeners = new Set<(event: AgentSessionEvent) => void>();
 
 	constructor(
@@ -88,6 +93,14 @@ class FakeAgentSession {
 			waitForIdle: async () => {},
 		};
 		this.model = models[0];
+		this.mcpRuntime = new MCPRuntimeController<MCPToolsLoadResult>({
+			start: async () => {
+				throw new Error("ambient MCP discovery must not run in ACP");
+			},
+			activate: async result => this.refreshMCPTools(result.tools.map(tool => tool.tool)),
+			deactivate: async () => this.refreshMCPTools([]),
+			stop: async result => result.manager.disconnectAll(),
+		});
 	}
 
 	get sessionName(): string {
@@ -148,7 +161,9 @@ class FakeAgentSession {
 		this.isStreaming = false;
 	}
 
-	async refreshMCPTools(_tools: unknown[]): Promise<void> {}
+	async refreshMCPTools(tools: unknown[]): Promise<void> {
+		this.mcpToolSnapshots.push(tools);
+	}
 
 	getContextUsage(): undefined {
 		return undefined;
@@ -163,6 +178,7 @@ class FakeAgentSession {
 
 	async dispose(): Promise<void> {
 		this.disposed = true;
+		await this.mcpRuntime.dispose();
 		await this.sessionManager.close();
 	}
 
@@ -243,7 +259,7 @@ afterEach(async () => {
 	}
 });
 
-async function createHarness(): Promise<AgentHarness> {
+async function createHarness(options?: { createMcpManager?: (cwd: string) => MCPManager }): Promise<AgentHarness> {
 	const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "xcsh-acp-test-"));
 	cleanupRoots.push(root);
 	const agentDir = path.join(root, "agent");
@@ -274,7 +290,7 @@ async function createHarness(): Promise<AgentHarness> {
 	};
 
 	return {
-		agent: new AcpAgent(connection, initialSession as unknown as AgentSession, factory),
+		agent: new AcpAgent(connection, initialSession as unknown as AgentSession, factory, options),
 		updates,
 		abortController,
 		sessions,
@@ -285,6 +301,48 @@ async function createHarness(): Promise<AgentHarness> {
 }
 
 describe("ACP agent", () => {
+	it("uses only explicit client MCP descriptors and disables them when descriptors are empty", async () => {
+		const connections: Array<{ configs: unknown; sources: unknown }> = [];
+		let disconnects = 0;
+		const manager = {
+			connectServers: vi.fn(async (configs: unknown, sources: unknown) => {
+				connections.push({ configs, sources });
+				return { tools: [], errors: new Map() };
+			}),
+			getConnectedServers: vi.fn(() => ["explicit"]),
+			disconnectAll: vi.fn(async () => {
+				disconnects += 1;
+			}),
+		} as unknown as MCPManager;
+		const harness = await createHarness({ createMcpManager: () => manager });
+
+		const created = await harness.agent.newSession({
+			cwd: harness.cwdA,
+			mcpServers: [{ name: "explicit", command: "synthetic", args: ["--ok"], env: [] }],
+		});
+		const session = harness.findSession(created.sessionId)!;
+
+		expect(session.mcpRuntime.current?.manager).toBe(manager);
+		expect(connections).toEqual([
+			{
+				configs: { explicit: { type: "stdio", command: "synthetic", args: ["--ok"], env: {} } },
+				sources: {
+					explicit: {
+						provider: "acp",
+						providerName: "ACP Client",
+						path: "acp://explicit",
+						level: "project",
+					},
+				},
+			},
+		]);
+
+		await harness.agent.loadSession({ sessionId: created.sessionId, cwd: harness.cwdA, mcpServers: [] });
+		expect(session.mcpRuntime.enabled).toBe(false);
+		expect(disconnects).toBe(1);
+		expect(session.mcpToolSnapshots.at(-1)).toEqual([]);
+	});
+
 	it("supports multiple live ACP sessions with model and lifecycle handlers", async () => {
 		const harness = await createHarness();
 		const first = await harness.agent.newSession({ cwd: harness.cwdA, mcpServers: [] });

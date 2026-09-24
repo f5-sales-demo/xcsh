@@ -85,8 +85,12 @@ describe("MCPRuntimeController", () => {
 				calls.push("activate");
 				throw new Error("activation failed");
 			},
-			deactivate: async () => calls.push("deactivate"),
-			stop: async () => calls.push("stop"),
+			deactivate: async () => {
+				calls.push("deactivate");
+			},
+			stop: async () => {
+				calls.push("stop");
+			},
 		});
 
 		await expect(controller.setEnabled(true)).rejects.toThrow("activation failed");
@@ -103,7 +107,9 @@ describe("MCPRuntimeController", () => {
 				calls.push("deactivate");
 				throw new Error("detach failed");
 			},
-			stop: async () => calls.push("stop"),
+			stop: async () => {
+				calls.push("stop");
+			},
 		});
 
 		await controller.setEnabled(true);
@@ -117,9 +123,15 @@ describe("MCPRuntimeController", () => {
 		let nextId = 1;
 		const controller = new MCPRuntimeController<Runtime>({
 			start: async () => ({ id: nextId++ }),
-			activate: async runtime => calls.push(`activate:${runtime.id}`),
-			deactivate: async runtime => calls.push(`deactivate:${runtime.id}`),
-			stop: async runtime => calls.push(`stop:${runtime.id}`),
+			activate: async runtime => {
+				calls.push(`activate:${runtime.id}`);
+			},
+			deactivate: async runtime => {
+				calls.push(`deactivate:${runtime.id}`);
+			},
+			stop: async runtime => {
+				calls.push(`stop:${runtime.id}`);
+			},
 		});
 
 		await controller.setEnabled(true);
