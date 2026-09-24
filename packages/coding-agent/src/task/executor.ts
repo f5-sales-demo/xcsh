@@ -463,9 +463,9 @@ function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcp
 	enableMCP: boolean;
 	mcpProxyTools: CustomTool<TSchema>[];
 } {
-	// Explicit disablement is authoritative, even when an embedder supplied a
-	// manager. A manager is a connection cache, not permission to expose MCP.
-	if (options.enableMCP === false) {
+	// Only explicit enablement grants child access, even when an embedder
+	// supplied a manager. A manager is a connection cache, not permission.
+	if (options.enableMCP !== true) {
 		return { enableMCP: false, mcpProxyTools: [] };
 	}
 
@@ -475,11 +475,7 @@ function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcp
 		return { enableMCP: false, mcpProxyTools: createMCPProxyTools(options.mcpManager) };
 	}
 
-	if (options.enableMCP === true) {
-		return { enableMCP: true, mcpProxyTools: [] };
-	}
-
-	return { enableMCP: false, mcpProxyTools: [] };
+	return { enableMCP: true, mcpProxyTools: [] };
 }
 
 function createSubagentSettings(baseSettings: Settings): Settings {

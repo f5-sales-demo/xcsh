@@ -24,8 +24,9 @@ describe("SDK MCP runtime opt-in", () => {
 	beforeEach(async () => {
 		cwd = await fs.promises.mkdtemp(path.join(os.tmpdir(), "xcsh-sdk-mcp-runtime-"));
 		eventsPath = path.join(cwd, "mcp-events.log");
+		await fs.promises.mkdir(path.join(cwd, ".xcsh"));
 		await fs.promises.writeFile(
-			path.join(cwd, "mcp.json"),
+			path.join(cwd, ".xcsh", "mcp.json"),
 			JSON.stringify({
 				mcpServers: {
 					synthetic: {
