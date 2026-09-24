@@ -2,11 +2,37 @@
  * Hierarchical tree list rendering helper.
  */
 
-import { replaceTabs } from "@f5-sales-demo/pi-tui";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { replaceTabs, sliceWithWidth, visibleWidth, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import type { Theme } from "../modes/theme/theme";
 import { formatMoreItems } from "../tools/render-utils";
 import type { TreeContext } from "./types";
 import { getTreeBranch, getTreeContinuePrefix } from "./utils";
+
+/** Wrap a structured transcript row while keeping its tree rail on every line. */
+export function renderStructuredRow(
+	content: string,
+	firstPrefix: string,
+	continuationPrefix: string,
+	width: number,
+): string[] {
+	const normalized = replaceTabs(content);
+	const firstWidth = visibleWidth(firstPrefix);
+	const continuationWidth = visibleWidth(continuationPrefix);
+	const available = Math.max(1, width - Math.max(firstWidth, continuationWidth));
+	const wrapped = normalized ? wrapTextWithAnsi(normalized, available) : [""];
+	return wrapped.map((line, index) => `${index === 0 ? firstPrefix : continuationPrefix}${line}`);
+}
+
+/** Wrap an existing tree row without discarding ANSI styling in its prefix. */
+export function renderStructuredTreeLine(line: string, width: number): string[] {
+	const prefix = sanitizeText(line).match(/^[ │├└╰─]*/)?.[0] ?? "";
+	const prefixWidth = prefix.length;
+	const firstPrefix = sliceWithWidth(line, 0, prefixWidth, true).text;
+	const content = sliceWithWidth(line, prefixWidth, Math.max(0, visibleWidth(line) - prefixWidth), true).text;
+	const continuationPrefix = prefix.replaceAll("├", "│").replaceAll(/[└╰─]/g, " ");
+	return renderStructuredRow(content, firstPrefix, continuationPrefix, width);
+}
 
 export interface TreeListOptions<T> {
 	items: T[];
@@ -17,13 +43,23 @@ export interface TreeListOptions<T> {
 	 */
 	maxCollapsedLines?: number;
 	itemType?: string;
+	/** Available terminal columns when list rows should wrap with their tree rails. */
+	viewportWidth?: number;
 	/** Called once per item with `isLast: false` during budget calculation;
 	 *  line count MUST NOT vary based on `isLast`. */
 	renderItem: (item: T, context: TreeContext) => string | string[];
 }
 
 export function renderTreeList<T>(options: TreeListOptions<T>, theme: Theme): string[] {
-	const { items, expanded = false, maxCollapsed = 8, maxCollapsedLines, itemType = "item", renderItem } = options;
+	const {
+		items,
+		expanded = false,
+		maxCollapsed = 8,
+		maxCollapsedLines,
+		itemType = "item",
+		renderItem,
+		viewportWidth,
+	} = options;
 	const maxItems = expanded ? items.length : Math.min(items.length, maxCollapsed);
 	const linesBudget = !expanded && maxCollapsedLines !== undefined ? maxCollapsedLines : Infinity;
 
@@ -49,7 +85,13 @@ export function renderTreeList<T>(options: TreeListOptions<T>, theme: Theme): st
 	if (linesBudget !== Infinity) {
 		fittingCount = 0;
 		for (let i = 0; i < maxItems; i++) {
-			const count = preRendered[i]!.length;
+			const count =
+				viewportWidth === undefined
+					? preRendered[i]!.length
+					: preRendered[i]!.reduce(
+							(total, line) => total + renderStructuredRow(line, "├─ ", "│  ", viewportWidth).length,
+							0,
+						);
 			const remainingAfter = items.length - (i + 1);
 			const reservedSummaryLines = remainingAfter > 0 ? 1 : 0;
 			if (fittedLineCount + count + reservedSummaryLines > linesBudget) break;
@@ -70,9 +112,11 @@ export function renderTreeList<T>(options: TreeListOptions<T>, theme: Theme): st
 		const continuePrefix = `${theme.fg("dim", getTreeContinuePrefix(isLast, theme))}`;
 		const itemLines = preRendered[i]!;
 		if (itemLines.length === 0) continue;
-		lines.push(`${prefix}${replaceTabs(itemLines[0]!)}`);
+		if (viewportWidth === undefined) lines.push(`${prefix}${replaceTabs(itemLines[0]!)}`);
+		else lines.push(...renderStructuredRow(itemLines[0]!, prefix, continuePrefix, viewportWidth));
 		for (let j = 1; j < itemLines.length; j++) {
-			lines.push(`${continuePrefix}${replaceTabs(itemLines[j]!)}`);
+			if (viewportWidth === undefined) lines.push(`${continuePrefix}${replaceTabs(itemLines[j]!)}`);
+			else lines.push(...renderStructuredRow(itemLines[j]!, continuePrefix, continuePrefix, viewportWidth));
 		}
 	}
 

@@ -216,6 +216,7 @@ export function renderSearchResult(
 			const sourceTree = renderTreeList(
 				{
 					items: sources,
+					viewportWidth: Math.max(1, width - 3),
 					expanded,
 					maxCollapsed: MAX_COLLAPSED_ITEMS,
 					itemType: "source",
@@ -226,7 +227,7 @@ export function renderSearchResult(
 								: typeof src.url === "string" && src.url.trim()
 									? src.url
 									: "Untitled";
-						const title = truncateToWidth(titleText, width);
+						const title = titleText;
 						const url = typeof src.url === "string" ? src.url : "";
 						const domain = url ? getDomain(url) : "";
 						const age =
@@ -240,9 +241,7 @@ export function renderSearchResult(
 						if (age) metaParts.push(theme.fg("muted", age));
 						const metaSep = theme.fg("dim", theme.sep.dot);
 						const metaSuffix = metaParts.length > 0 ? ` ${metaParts.join(metaSep)}` : "";
-						const srcLines: string[] = [
-							truncateToWidth(`${theme.fg("contentAccent", title)}${metaSuffix}`, width),
-						];
+						const srcLines: string[] = [`${theme.fg("contentAccent", title)}${metaSuffix}`];
 						const snippetText = typeof src.snippet === "string" ? src.snippet : "";
 						if (snippetText.trim()) {
 							const snippetLines = getPreviewLines(snippetText, MAX_SNIPPET_LINES, width);
@@ -250,7 +249,7 @@ export function renderSearchResult(
 								srcLines.push(theme.fg("muted", `${theme.format.dash} ${snippetLine}`));
 							}
 						}
-						if (url) srcLines.push(theme.fg("mdLinkUrl", truncateToWidth(url, width)));
+						if (url) srcLines.push(theme.fg("mdLinkUrl", url));
 						return srcLines;
 					},
 				},
@@ -268,6 +267,7 @@ export function renderSearchResult(
 			const answerTree = renderTreeList(
 				{
 					items: answerTreeLines,
+					viewportWidth: Math.max(1, contentWidth),
 					expanded: true,
 					maxCollapsed: answerTreeLines.length,
 					itemType: "line",
@@ -303,10 +303,12 @@ export function renderSearchResult(
 						{
 							label: theme.fg("toolTitle", "Answer"),
 							lines: answerTree,
+							structured: true,
 						},
 						{
 							label: theme.fg("toolTitle", "Sources"),
 							lines: sourceTree.length > 0 ? sourceTree : [theme.fg("muted", "No sources returned")],
+							structured: true,
 						},
 						{ label: theme.fg("toolTitle", "Metadata"), lines: allMetaLines },
 					],

@@ -13,17 +13,19 @@ export interface FileEntry {
 
 export interface FileListOptions {
 	files: FileEntry[];
+	viewportWidth?: number;
 	expanded?: boolean;
 	maxCollapsed?: number;
 	showIcons?: boolean;
 }
 
 export function renderFileList(options: FileListOptions, theme: Theme): string[] {
-	const { files, expanded = false, maxCollapsed = 8, showIcons = true } = options;
+	const { files, expanded = false, maxCollapsed = 8, showIcons = true, viewportWidth } = options;
 
 	return renderTreeList(
 		{
 			items: files,
+			viewportWidth,
 			expanded,
 			maxCollapsed,
 			itemType: "file",

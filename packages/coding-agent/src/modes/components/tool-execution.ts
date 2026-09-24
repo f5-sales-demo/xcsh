@@ -33,6 +33,7 @@ import { PYTHON_DEFAULT_PREVIEW_LINES } from "../../tools/python";
 import { formatExpandHint, replaceTabs, resolveImageOptions, truncateToWidth } from "../../tools/render-utils";
 import { toolRenderers } from "../../tools/renderers";
 import { renderStatusLine } from "../../tui";
+import { renderStructuredRow, renderStructuredTreeLine } from "../../tui/tree-list";
 import { convertToPng } from "../../utils/image-convert";
 import { sanitizeWithImagePassthrough } from "../../utils/image-passthrough";
 import { renderDiff } from "./diff";
@@ -699,6 +700,7 @@ export class ToolExecutionComponent extends Container {
 	 */
 	#formatToolExecution(width = 80): string {
 		const lines: string[] = [];
+		const contentWidth = Math.max(1, width - 2); // Text has one cell of padding on each side.
 		const icon = this.#isPartial ? "pending" : undefined;
 		lines.push(renderStatusLine({ icon, title: this.#toolLabel }, theme));
 
@@ -706,7 +708,14 @@ export class ToolExecutionComponent extends Container {
 		if (!this.#expanded && argsObject && Object.keys(argsObject).length > 0) {
 			const preview = formatArgsInline(argsObject, Math.max(20, width - 10));
 			if (preview) {
-				lines.push(` ${theme.fg("dim", theme.tree.last)} ${theme.fg("dim", preview)}`);
+				lines.push(
+					...renderStructuredRow(
+						theme.fg("dim", preview),
+						` ${theme.fg("dim", theme.tree.last)} `,
+						"    ",
+						contentWidth,
+					),
+				);
 			}
 		}
 
@@ -722,7 +731,7 @@ export class ToolExecutionComponent extends Container {
 				JSON_TREE_MAX_LINES_EXPANDED,
 				JSON_TREE_SCALAR_LEN_EXPANDED,
 			);
-			lines.push(...tree.lines);
+			lines.push(...tree.lines.flatMap(line => renderStructuredTreeLine(line, contentWidth)));
 			if (tree.truncated) {
 				lines.push(theme.fg("dim", "…"));
 			}
@@ -748,7 +757,7 @@ export class ToolExecutionComponent extends Container {
 				const tree = renderJsonTreeLines(parsed, theme, maxDepth, maxLines, maxScalarLen);
 
 				if (tree.lines.length > 0) {
-					lines.push(...tree.lines);
+					lines.push(...tree.lines.flatMap(line => renderStructuredTreeLine(line, contentWidth)));
 					if (!this.#expanded) {
 						lines.push(formatExpandHint(theme, this.#expanded, true));
 					} else if (tree.truncated) {

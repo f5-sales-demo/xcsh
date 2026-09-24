@@ -523,6 +523,7 @@ export const calculatorToolRenderer = {
 				const treeLines = renderTreeList(
 					{
 						items: outputs,
+						viewportWidth: width,
 						expanded,
 						maxCollapsed: COLLAPSED_LIST_LIMIT,
 						itemType: "result",
@@ -530,7 +531,7 @@ export const calculatorToolRenderer = {
 					},
 					uiTheme,
 				);
-				const lines = [header, ...treeLines].map(l => truncateToWidth(l, width, Ellipsis.Omit));
+				const lines = [truncateToWidth(header, width, Ellipsis.Omit), ...treeLines];
 				cached = { key, lines };
 				return lines;
 			},
