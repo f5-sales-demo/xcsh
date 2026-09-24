@@ -7,6 +7,7 @@
 import * as os from "node:os";
 import { createInterface } from "node:readline/promises";
 import { APP_NAME, getProjectDir } from "@f5-sales-demo/pi-utils";
+import { CliUsageError } from "@f5-sales-demo/pi-utils/cli";
 import chalk from "chalk";
 import { preloadPluginRoots, resolveOrDefaultProjectRegistryPath } from "../discovery/helpers";
 import { discoverAndLoadExtensions } from "../extensibility/extensions";
@@ -294,7 +295,7 @@ export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle
 }
 
 async function handleIntegrationSetup(args: string[], flags: { json?: boolean }): Promise<void> {
-	if (flags.json) throw new Error("plugin setup is human-only and does not accept --json");
+	if (flags.json) throw new CliUsageError("plugin setup is human-only and does not accept --json");
 	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin>`);
 	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
 	const handle = selectSetupIntegration(await loadIntegrationHandles(), args[0]);

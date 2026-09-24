@@ -577,7 +577,7 @@ describe("IntegrationRegistry", () => {
 					},
 				],
 			),
-		).toBe("kvm: unavailable (dependency_missing)\nnext: Open xcsh interactively and run /plugin setup platform");
+		).toBe("kvm: unavailable (dependency_missing)\nnext: /plugin setup platform");
 	});
 
 	test.each(["bulk-install", "upgrade", "cache-refresh", "dependency-install"] as const)(

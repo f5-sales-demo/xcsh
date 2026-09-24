@@ -50,7 +50,8 @@ export function describeInstallSetupOutcome(
 	const handle = handles.find(
 		candidate => candidate.id === target || candidate.plugin === target || candidate.plugin?.split("@")[0] === target,
 	);
-	const nextAction = handle ? describeIntegrationSetupNextAction(handle) : `xcsh plugin setup ${target}`;
+	const nextTarget = handle?.plugin?.split("@")[0] ?? handle?.id ?? target;
+	const nextAction = `/plugin setup ${nextTarget}`;
 	return `${summary}\nnext: ${nextAction}`;
 }
 

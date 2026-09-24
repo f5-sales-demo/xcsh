@@ -26,6 +26,7 @@ import { disableProvider, enableProvider } from "../../discovery";
 import type { UserPromptKind } from "../../extensibility/extensions/types";
 import type { MarketplacePluginLifecycle } from "../../extensibility/plugins/marketplace/types";
 import { createSetupStepRunner, executeInstallAuthorizedSetup, type SetupStepRunner } from "../../integrations";
+import { describeInstallSetupOutcome } from "../../integrations/setup";
 import {
 	getAvailableThemes,
 	previewTheme,
@@ -137,6 +138,7 @@ export async function runInstallAuthorizedPluginSetupInForeground(
 	ctx.ui.requestRender();
 	try {
 		const contextEnv = createContextEnv(ctx.settings);
+		const handles = ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? [];
 		const result = await runInstallAuthorizedPluginSetup(
 			ctx,
 			pluginName,
@@ -149,7 +151,16 @@ export async function runInstallAuthorizedPluginSetupInForeground(
 		ctx.showStatus(
 			result?.state === "ready"
 				? `Plugin setup completed: ${pluginName}.`
-				: `Plugin setup did not complete: ${pluginName}.`,
+				: result
+					? `Plugin setup did not complete.\n${describeInstallSetupOutcome(
+							pluginName,
+							result,
+							handles
+								.find(handle => handle.id === pluginName || handle.plugin?.split("@")[0] === pluginName)
+								?.setupPlan?.pluginDependencies.map(pluginId => ({ pluginId })) ?? [],
+							handles,
+						)}`
+					: `Plugin setup did not complete: ${pluginName}.`,
 		);
 	} catch (error) {
 		ctx.showError(`Plugin setup failed for ${pluginName}: ${error instanceof Error ? error.message : String(error)}`);
