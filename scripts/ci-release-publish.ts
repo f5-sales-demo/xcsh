@@ -132,12 +132,24 @@ export async function waitForRegistryVisibility(
 	throw new Error(`${packageName}@${version} was not readable from npm after ${maxAttempts} checks`);
 }
 
+export interface PublishedPackage {
+	name: string;
+	version: string;
+}
+
+export async function waitForPublishedPackages(
+	packages: PublishedPackage[],
+	wait: (packageName: string, version: string) => Promise<unknown> = waitForRegistryVisibility,
+): Promise<void> {
+	await Promise.all(packages.map(pkg => wait(pkg.name, pkg.version)));
+}
+
 interface PublishAttemptResult {
 	exitCode: number;
 	output: string;
 }
 
-export interface PublishAndVisibilityOptions {
+export interface PublishWithRetryOptions {
 	lookupExisting?: () => Promise<string | null>;
 	publish: () => Promise<PublishAttemptResult>;
 	waitForVisibility: () => Promise<unknown>;
@@ -148,17 +160,17 @@ export interface PublishAndVisibilityOptions {
 }
 
 /**
- * Retries publication and its visibility check as one bounded operation.
+ * Retries publication until npm accepts the write or reports the exact version
+ * as already staged.
  *
- * npm can accept a large package into staging while its read API continues to
- * return 404. A subsequent publish then reports the exact version as staged.
- * Both responses mean the write was accepted, so keep checking visibility and
- * safely retry the complete operation instead of stranding later packages.
+ * An accepted write must not serialize publication behind registry propagation;
+ * the caller verifies all package versions together after every write is accepted.
+ * A staged-version response still requires exact visibility before it is accepted.
  */
-export async function publishWithVisibility(
+export async function publishWithRetry(
 	packageName: string,
 	version: string,
-	options: PublishAndVisibilityOptions,
+	options: PublishWithRetryOptions,
 ): Promise<number> {
 	const sleep = options.sleep ?? Bun.sleep;
 	const maxAttempts = options.maxAttempts ?? 7;
@@ -180,9 +192,13 @@ export async function publishWithVisibility(
 		const result = await options.publish();
 		if (result.output) console.log(result.output);
 
-		const accepted = result.exitCode === 0 || isAlreadyPublished(result.output, version);
-		if (accepted) {
-			if (result.exitCode !== 0) console.log("Exact version already published or staged; checking visibility");
+		if (result.exitCode === 0) {
+			console.log(`  Publication accepted for ${packageName}@${version}`);
+			return attempt;
+		}
+
+		if (isAlreadyPublished(result.output, version)) {
+			console.log("Exact version already published or staged; checking visibility");
 			try {
 				await options.waitForVisibility();
 				return attempt;
@@ -271,12 +287,12 @@ function findWorkspacePackage(name: string): string | null {
 	return null;
 }
 
-async function publishPackage(pkg: PublishPackage): Promise<void> {
+async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | null> {
 	const packageJson = await readPackageJson(pkg.dir);
 	const packageName = path.basename(pkg.dir);
 	if (packageJson.private) {
 		console.log(`Skipping ${packageName} (private)`);
-		return;
+		return null;
 	}
 	if (packageJson.name === undefined || packageJson.version === undefined) {
 		throw new Error(`${pkg.dir}/package.json must declare name and version before publication`);
@@ -286,7 +302,7 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 
 	if (isDryRun) {
 		console.log(`DRY RUN ${npmPublishArgs(publishTag).join(" ")} (${pkg.dir})`);
-		return;
+		return null;
 	}
 
 	const pkgJsonPath = path.join(repoRoot, pkg.dir, "package.json");
@@ -294,7 +310,7 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 	if (restore) console.log(`  Prepared publish dependencies for ${packageName}`);
 
 	try {
-		await publishWithVisibility(publishedName, publishedVersion, {
+		await publishWithRetry(publishedName, publishedVersion, {
 			lookupExisting: () => lookupRegistryVersion(publishedName, publishedVersion),
 			publish: async () => {
 				const publishArgs = npmPublishArgs(publishTag);
@@ -307,19 +323,28 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 	} finally {
 		restore?.();
 	}
+	return { name: publishedName, version: publishedVersion };
 }
 
 async function main(): Promise<void> {
+	const publishedPackages: PublishedPackage[] = [];
 	// Publish platform-specific native addon packages first
 	// so that optionalDependencies in @f5-sales-demo/pi-natives resolve
 	console.log("=== Publishing platform-specific native addon packages ===");
 	for (const pkg of platformPackageDirs) {
-		await publishPackage(pkg);
+		const published = await publishPackage(pkg);
+		if (published) publishedPackages.push(published);
 	}
 
 	console.log("\n=== Publishing main packages ===");
 	for (const pkg of packageDirs) {
-		await publishPackage(pkg);
+		const published = await publishPackage(pkg);
+		if (published) publishedPackages.push(published);
+	}
+
+	if (publishedPackages.length > 0) {
+		console.log("\n=== Verifying final registry visibility ===");
+		await waitForPublishedPackages(publishedPackages);
 	}
 }
 
