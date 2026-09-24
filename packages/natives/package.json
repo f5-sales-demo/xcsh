@@ -63,7 +63,9 @@
 		"@f5-sales-demo/pi-natives-win32-x64-msvc": "21.10.1"
 	},
 	"files": [
-		"native",
+		"native/*.js",
+		"native/*.d.ts",
+		"native/*.json",
 		"README.md"
 	],
 	"exports": {
