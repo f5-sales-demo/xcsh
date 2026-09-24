@@ -134,6 +134,15 @@ describe("Settings", () => {
 		expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
 	});
 
+	it("keeps MCP disabled by default and ignores project attempts to enable it", async () => {
+		await Bun.write(path.join(projectDir, ".xcsh", "settings.json"), JSON.stringify({ mcp: { enabled: true } }));
+
+		const settings = await Settings.init({ cwd: projectDir, agentDir });
+
+		expect(settings.get("mcp.enabled")).toBe(false);
+		expect(settings.inspectScopes("mcp.enabled").projectValue).toBe(true);
+	});
+
 	describe.skipIf(process.platform === "win32")("config file permissions", () => {
 		it("restores owner-only permissions when rewriting config.yml", async () => {
 			fs.writeFileSync(getConfigPath(), "modelRoles:\n  default: anthropic/claude-opus-5\n", { mode: 0o644 });

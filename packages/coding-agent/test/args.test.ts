@@ -237,6 +237,16 @@ describe("parseArgs", () => {
 	});
 
 	describe("--no-mcp flag", () => {
+		test("parses --mcp as an explicit one-run opt-in", () => {
+			const result = parseArgs(["--mcp"]);
+			expect(result.mcp).toBe(true);
+		});
+
+		test("rejects contradictory MCP flags", () => {
+			expect(() => parseArgs(["--mcp", "--no-mcp"])).toThrow(/cannot be combined/i);
+			expect(() => parseArgs(["--mcp", "--no-tools"])).toThrow(/cannot be combined/i);
+		});
+
 		test("parses --no-mcp flag", () => {
 			const result = parseArgs(["--no-mcp"]);
 			expect(result.noMcp).toBe(true);
