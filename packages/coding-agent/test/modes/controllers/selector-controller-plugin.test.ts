@@ -121,3 +121,61 @@ it("keeps install-authorized setup in a foreground loader and restores the edito
 	expect(ctx.showStatus).toHaveBeenCalledWith("Plugin setup completed: kvm.");
 	expect(ctx.showError).not.toHaveBeenCalled();
 });
+
+it("reports a dependency-blocked install setup with its actionable dependency", async () => {
+	const ctx = {
+		settings: { get: vi.fn(() => undefined) },
+		session: {
+			extensionRunner: {
+				getAllRegisteredIntegrations: () => [
+					{
+						id: "platform",
+						name: "F5 Distributed Cloud Platform",
+						plugin: "platform",
+						setupPlan: {
+							pluginDependencies: [],
+							requiredEnvironment: [],
+							profileFields: [],
+							steps: [],
+							verification: [],
+							guidedAction: { kind: "context_wizard" as const },
+						},
+						get: async () => ({ state: "setup_required" as const, reason: "not_authenticated" }),
+						invalidate() {},
+						verifyAfterSetup: async () => ({ state: "ready" as const }),
+					},
+					{
+						id: "kvm",
+						name: "KVM",
+						plugin: "kvm",
+						setupPlan: {
+							pluginDependencies: ["platform"],
+							requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN"],
+							profileFields: [],
+							steps: [],
+							verification: [],
+						},
+						get: async () => ({ state: "unavailable" as const, reason: "dependency_missing" }),
+						invalidate() {},
+						verifyAfterSetup: async () => ({ state: "ready" as const }),
+					},
+				],
+			},
+		},
+		ui: { setFocus: vi.fn(), requestRender: vi.fn() },
+		editorContainer: { clear: vi.fn(), addChild: vi.fn() },
+		editor: { handleInput: vi.fn() },
+		showStatus: vi.fn(),
+		showError: vi.fn(),
+	};
+
+	await runInstallAuthorizedPluginSetupInForeground(ctx as unknown as InteractiveModeContext, "kvm", {
+		setupRequired: true,
+		setupAuthorization: "install",
+	});
+
+	expect(ctx.showStatus).toHaveBeenCalledWith(
+		"Plugin setup did not complete.\nkvm: unavailable (dependency_missing)\nnext: /plugin setup platform",
+	);
+	expect(ctx.showError).not.toHaveBeenCalled();
+});

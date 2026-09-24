@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "49476c087743a58b6b271dc961f71d0e6c95df61",
-  "fingerprint": "69971fc6408f387b5e4aae42da5580d5019ff27e02b3799e3ef7ce372038faea",
+  "revision": "f06c9aad91b9aeb39a995c9cad5dc1a4f9a53457",
+  "fingerprint": "77f47404d271c27318ea2d759938b043e880e571c41f738cc5b522ca12330a4e",
   "counts": {
     "total": 241,
     "components": 96,
@@ -3548,7 +3548,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "f0ac84e48ca3e51f3eb34d878c8d1773531674ddeadaffd0b156460ddf687da1",
+      "sha256": "27bfc063102b2bd912e2cf967481f532dbd2f84016f9694aa832f35009c4103e",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
