@@ -26,6 +26,14 @@ export function describeIntegrationSetupNextAction(
 		: `xcsh plugin setup ${target}`;
 }
 
+export function describeInteractiveInstallSetupNextAction(
+	plugin: string,
+	lifecycle: { readonly setupRequired: boolean; readonly setupAuthorization?: "separate" | "install" },
+): string | undefined {
+	if (!lifecycle.setupRequired || (lifecycle.setupAuthorization ?? "separate") === "install") return undefined;
+	return `/plugin setup ${plugin}`;
+}
+
 export function describeInstallSetupOutcome(
 	plugin: string,
 	status: Pick<IntegrationSnapshot<unknown>, "state" | "reason">,

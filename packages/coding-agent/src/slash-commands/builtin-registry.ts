@@ -23,6 +23,7 @@ import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fe
 import {
 	createSetupStepRunner,
 	describeInstallSetupOutcome,
+	describeInteractiveInstallSetupNextAction,
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
@@ -1531,7 +1532,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								showPluginStatus(
 									`${installed}\n${describeInstallSetupOutcome(name, setupResult, dependencyPlan, handles)}`,
 								);
-							} else showPluginStatus(installed);
+							} else {
+								const nextAction = describeInteractiveInstallSetupNextAction(name, prepared.target);
+								showPluginStatus(nextAction ? `${installed}\nnext: ${nextAction}` : installed);
+							}
 						} else if (outcome === "unresolved")
 							runtime.ctx.showError("Plugin installation remains unresolved; retry from a fresh review.");
 						break;
