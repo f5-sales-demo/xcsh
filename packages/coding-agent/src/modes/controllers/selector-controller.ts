@@ -714,7 +714,7 @@ export class SelectorController {
 	 * Most settings are saved directly via SettingsManager in the definitions.
 	 * This handles side effects and session-specific settings.
 	 */
-	handleSettingChange(id: string, value: unknown): void {
+	async handleSettingChange(id: string, value: unknown): Promise<void> {
 		// Discovery provider toggles
 		if (id.startsWith("discovery.")) {
 			const providerId = id.replace("discovery.", "");
@@ -894,6 +894,9 @@ export class SelectorController {
 			// MCP update injection - live subscribe/unsubscribe
 			case "mcp.notifications":
 				this.ctx.mcpManager?.setNotificationsEnabled(value as boolean);
+				break;
+			case "mcp.enabled":
+				await this.ctx.mcpRuntime?.setEnabled(value === true);
 				break;
 
 			// All other settings are handled by the definitions (get/set on SettingsManager)

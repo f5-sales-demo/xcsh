@@ -303,6 +303,7 @@ export class MCPCommandController {
 			theme.bold("MCP Server Management"),
 			"",
 			"Manage Model Context Protocol (MCP) servers for external tool integrations.",
+			"MCP runtime access is optional and off by default. Enable it in /settings or launch with --mcp.",
 			"",
 			theme.fg("contentAccent", "Commands:"),
 			"  /mcp add              Add a new MCP server (interactive wizard)",
@@ -797,7 +798,11 @@ export class MCPCommandController {
 		}
 
 		const connection = await connectToServer(testName, resolvedConfig);
-		await disconnectServer(connection);
+		try {
+			await listTools(connection);
+		} finally {
+			await disconnectServer(connection);
+		}
 	}
 
 	async #findConfiguredServer(
@@ -1085,6 +1090,13 @@ export class MCPCommandController {
 					"Saved configuration, discovery source, enabled state, and runtime connectivity",
 					[
 						"",
+						this.ctx.mcpManager
+							? theme.fg("success", "MCP runtime is enabled.")
+							: theme.fg("warning", "MCP runtime is disabled."),
+						...(this.ctx.mcpManager
+							? []
+							: [theme.fg("muted", "Enable MCP in /settings or launch a new process with --mcp to connect.")]),
+						"",
 						theme.fg("muted", "No MCP servers configured."),
 						"",
 						`Use ${theme.fg("contentAccent", "/mcp add")} to add a server.`,
@@ -1094,7 +1106,16 @@ export class MCPCommandController {
 				return;
 			}
 
-			const lines: string[] = ["", theme.bold("Configured MCP Servers"), ""];
+			const runtimeStatus = this.ctx.mcpManager ? theme.fg("success", "enabled") : theme.fg("warning", "disabled");
+			const lines: string[] = [
+				"",
+				theme.bold("Configured MCP Servers"),
+				`Runtime: ${runtimeStatus}`,
+				...(this.ctx.mcpManager
+					? []
+					: [theme.fg("muted", "Enable MCP in /settings or launch a new process with --mcp to connect.")]),
+				"",
+			];
 
 			// Show user-level servers
 			if (userServers.length > 0) {
@@ -1402,8 +1423,7 @@ export class MCPCommandController {
 			this.ctx.ui.setFocus(this.ctx.editor);
 			this.ctx.ui.requestRender();
 			if (connection) {
-				// Best-effort: don't block UI on cleanup.
-				void disconnectServer(connection);
+				await disconnectServer(connection);
 			}
 			activeMcpRuntimeOperations.delete(this.ctx);
 		}
@@ -1805,6 +1825,10 @@ export class MCPCommandController {
 	}
 
 	async #handleReload(): Promise<void> {
+		if (!this.ctx.mcpRuntime?.enabled) {
+			this.#showRuntimeDisabled("reload MCP servers");
+			return;
+		}
 		if (activeMcpRuntimeOperations.has(this.ctx)) {
 			this.ctx.showStatus("An MCP runtime operation is already running; duplicate request ignored.");
 			return;
@@ -1842,7 +1866,7 @@ export class MCPCommandController {
 			return;
 		}
 		if (!this.ctx.mcpManager) {
-			this.ctx.showError(t("mcp.errors.noManager"));
+			this.#showRuntimeDisabled(`reconnect "${name}"`);
 			return;
 		}
 		if (activeMcpRuntimeOperations.has(this.ctx)) {
@@ -1889,26 +1913,14 @@ export class MCPCommandController {
 	 * Reload MCP manager with new configs
 	 */
 	async #reloadMCP(): Promise<void> {
-		if (!this.ctx.mcpManager) {
-			return;
-		}
+		if (!this.ctx.mcpRuntime?.enabled) return;
+		await this.ctx.mcpRuntime.replace();
+	}
 
-		// Disconnect all existing servers
-		await this.ctx.mcpManager.disconnectAll();
-
-		// Rediscover and connect
-		const result = await this.ctx.mcpManager.discoverAndConnect();
-		await this.ctx.session.refreshMCPTools(this.ctx.mcpManager.getTools());
-
-		// Show any connection errors
-		if (result.errors.size > 0) {
-			const errorLines = ["", theme.fg("warning", "Some servers failed to connect:"), ""];
-			for (const [serverName, error] of result.errors.entries()) {
-				errorLines.push(`  ${serverName}: ${error}`);
-			}
-			errorLines.push("");
-			this.#showMessage(errorLines.join("\n"));
-		}
+	#showRuntimeDisabled(action: string): void {
+		this.ctx.showError(
+			`MCP is disabled, so xcsh cannot ${action}. Enable MCP in /settings or launch a new process with --mcp.`,
+		);
 	}
 
 	/**
@@ -1916,7 +1928,7 @@ export class MCPCommandController {
 	 */
 	async #handleResources(): Promise<void> {
 		if (!this.ctx.mcpManager) {
-			this.ctx.showError(t("mcp.errors.noManager"));
+			this.#showRuntimeDisabled("list runtime resources");
 			return;
 		}
 
@@ -1959,7 +1971,7 @@ export class MCPCommandController {
 	 */
 	async #handlePrompts(): Promise<void> {
 		if (!this.ctx.mcpManager) {
-			this.ctx.showError(t("mcp.errors.noManager"));
+			this.#showRuntimeDisabled("list runtime prompts");
 			return;
 		}
 
@@ -2004,7 +2016,7 @@ export class MCPCommandController {
 	 */
 	async #handleNotifications(): Promise<void> {
 		if (!this.ctx.mcpManager) {
-			this.ctx.showError(t("mcp.errors.noManager"));
+			this.#showRuntimeDisabled("inspect runtime notifications");
 			return;
 		}
 

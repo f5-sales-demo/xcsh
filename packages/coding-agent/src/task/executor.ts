@@ -463,9 +463,9 @@ function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcp
 	enableMCP: boolean;
 	mcpProxyTools: CustomTool<TSchema>[];
 } {
-	// Explicit disablement is authoritative, even when an embedder supplied a
-	// manager. A manager is a connection cache, not permission to expose MCP.
-	if (options.enableMCP === false) {
+	// Only explicit enablement grants child access, even when an embedder
+	// supplied a manager. A manager is a connection cache, not permission.
+	if (options.enableMCP !== true) {
 		return { enableMCP: false, mcpProxyTools: [] };
 	}
 
@@ -475,8 +475,6 @@ function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcp
 		return { enableMCP: false, mcpProxyTools: createMCPProxyTools(options.mcpManager) };
 	}
 
-	// Keep the historical embedding contract when the policy was omitted: a
-	// child without a manager discovers directly. Explicit true follows it too.
 	return { enableMCP: true, mcpProxyTools: [] };
 }
 

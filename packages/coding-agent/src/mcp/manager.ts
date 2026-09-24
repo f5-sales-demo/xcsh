@@ -146,29 +146,30 @@ export class MCPManager {
 	/**
 	 * Set a callback to receive all server notifications.
 	 */
-	setOnNotification(handler: (serverName: string, method: string, params: unknown) => void): void {
+	setOnNotification(handler?: (serverName: string, method: string, params: unknown) => void): void {
 		this.#onNotification = handler;
 	}
 
 	/**
 	 * Set a callback to fire when any server's tools change.
 	 */
-	setOnToolsChanged(handler: (tools: CustomTool<TSchema, MCPToolDetails>[]) => void): void {
+	setOnToolsChanged(handler?: (tools: CustomTool<TSchema, MCPToolDetails>[]) => void): void {
 		this.#onToolsChanged = handler;
 	}
 
 	/**
 	 * Set a callback to fire when any server's resources change.
 	 */
-	setOnResourcesChanged(handler: (serverName: string, uri: string) => void): void {
+	setOnResourcesChanged(handler?: (serverName: string, uri: string) => void): void {
 		this.#onResourcesChanged = handler;
 	}
 
 	/**
 	 * Set a callback to fire when any server's prompts change.
 	 */
-	setOnPromptsChanged(handler: (serverName: string) => void): void {
+	setOnPromptsChanged(handler?: (serverName: string) => void): void {
 		this.#onPromptsChanged = handler;
+		if (!handler) return;
 		// Fire immediately for servers that already have prompts loaded
 		for (const [name, connection] of this.#connections) {
 			if (connection.prompts?.length) {

@@ -132,6 +132,8 @@ import {
 	searchDiscoverableMCPTools,
 	selectDiscoverableMCPToolNamesByServer,
 } from "../mcp/discoverable-tool-metadata";
+import type { MCPToolsLoadResult } from "../mcp/loader";
+import type { MCPRuntimeController } from "../mcp/runtime-controller";
 import { getCurrentThemeName, theme } from "../modes/theme/theme";
 import type { PlanModeState } from "../plan-mode/state";
 import autoHandoffThresholdFocusPrompt from "../prompts/system/auto-handoff-threshold-focus.md" with { type: "text" };
@@ -558,6 +560,8 @@ export class AgentSession {
 	readonly agent: Agent;
 	readonly sessionManager: SessionManager;
 	readonly settings: Settings;
+	/** Session-owned MCP lifecycle. Consumers must use this instead of retaining manager snapshots. */
+	mcpRuntime?: MCPRuntimeController<MCPToolsLoadResult>;
 
 	#powerAssertion: PowerAssertion | undefined;
 
@@ -3207,7 +3211,7 @@ export class AgentSession {
 	 * Replace MCP tools in the registry and recompute the visible MCP tool set immediately.
 	 * This allows /mcp add/remove/reauth to take effect without restarting the session.
 	 */
-	async refreshMCPTools(mcpTools: CustomTool[]): Promise<void> {
+	async refreshMCPTools(mcpTools: CustomTool[], options?: { activateAll?: boolean }): Promise<void> {
 		const previousSelectedMCPToolNames = this.getSelectedMCPToolNames();
 		const existingNames = Array.from(this.#toolRegistry.keys());
 		for (const name of existingNames) {
@@ -3248,7 +3252,10 @@ export class AgentSession {
 			this.#getConfiguredDefaultSelectedMCPToolNames(),
 		);
 
-		const nextActive = [...this.#getActiveNonMCPToolNames(), ...this.getSelectedMCPToolNames()];
+		const selectedMCPToolNames = options?.activateAll
+			? mcpTools.map(tool => tool.name)
+			: this.getSelectedMCPToolNames();
+		const nextActive = [...this.#getActiveNonMCPToolNames(), ...selectedMCPToolNames];
 		await this.#applyActiveToolsByName(nextActive, { previousSelectedMCPToolNames });
 	}
 

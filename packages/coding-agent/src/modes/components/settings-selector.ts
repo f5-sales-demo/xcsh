@@ -92,7 +92,7 @@ export interface StatusLinePreviewSettings {
 
 export interface SettingsCallbacks {
 	/** Called when any setting value changes */
-	onChange: (path: SettingPath, newValue: unknown) => void;
+	onChange: (path: SettingPath, newValue: unknown) => void | Promise<void>;
 	/** Called for theme preview while browsing */
 	onThemePreview?: (theme: string) => void | Promise<void>;
 	/** Called for status line preview while configuring */
@@ -194,7 +194,7 @@ export class SettingsSelectorComponent extends Container implements MouseRoutabl
 			}
 			await this.#store.flush({ throwOnError: true });
 			for (const [path, draft] of this.#drafts) {
-				this.callbacks.onChange(path, draft.after);
+				await this.callbacks.onChange(path, draft.after);
 				this.#drafts.delete(path);
 			}
 			if (this.#pluginDrafts.size) {

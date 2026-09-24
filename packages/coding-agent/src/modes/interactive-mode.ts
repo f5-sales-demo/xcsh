@@ -23,6 +23,8 @@ import type {
 import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
+import type { MCPToolsLoadResult } from "../mcp/loader";
+import type { MCPRuntimeController } from "../mcp/runtime-controller";
 import { startSessionBridge } from "../remote-control/bridge";
 import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
@@ -172,7 +174,10 @@ export class InteractiveMode implements InteractiveModeContext {
 	#planModeHasEntered = false;
 	#planTransition: Promise<void> = Promise.resolve();
 	lspServers?: import("../tools").LspStartupServerInfo[];
-	mcpManager?: import("../mcp").MCPManager;
+	readonly mcpRuntime?: MCPRuntimeController<MCPToolsLoadResult>;
+	get mcpManager(): import("../mcp").MCPManager | undefined {
+		return this.mcpRuntime?.current?.manager;
+	}
 	readonly #toolUiContextSetter: (uiContext: ExtensionUIContext, hasUI: boolean) => void;
 
 	readonly #btwController: BtwController;
@@ -199,7 +204,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		version: string,
 		setToolUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void = () => {},
 		lspServers?: import("../tools").LspStartupServerInfo[],
-		mcpManager?: import("../mcp").MCPManager,
+		mcpRuntime?: MCPRuntimeController<MCPToolsLoadResult>,
 		eventBus?: EventBus,
 	) {
 		this.session = session;
@@ -210,7 +215,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#version = version;
 		this.#toolUiContextSetter = setToolUIContext;
 		this.lspServers = lspServers;
-		this.mcpManager = mcpManager;
+		this.mcpRuntime = mcpRuntime;
 		this.#eventBus = eventBus;
 		if (eventBus) {
 			this.#eventBusUnsubscribers.push(

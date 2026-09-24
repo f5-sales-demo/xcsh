@@ -11,6 +11,8 @@ import type {
 } from "../extensibility/extensions";
 import type { CompactOptions } from "../extensibility/extensions/types";
 import type { MCPManager } from "../mcp";
+import type { MCPToolsLoadResult } from "../mcp/loader";
+import type { MCPRuntimeController } from "../mcp/runtime-controller";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import type { HistoryStorage } from "../session/history-storage";
 import type { NewSessionOptions, SessionContext, SessionManager } from "../session/session-manager";
@@ -78,6 +80,7 @@ export interface InteractiveModeContext {
 	agent: AgentSession["agent"];
 	historyStorage?: HistoryStorage;
 	mcpManager?: MCPManager;
+	mcpRuntime?: MCPRuntimeController<MCPToolsLoadResult>;
 	lspServers?: LspStartupServerInfo[];
 
 	// State

@@ -6,7 +6,19 @@ sidebar:
   label: "MCP configuration"
 ---
 
-Model Context Protocol (MCP) configuration is discovered from user and project roots and normalized before any connection starts. Use `xcsh mcp list` to see the effective server set instead of inferring it from one file.
+Model Context Protocol (MCP) is optional and off by default. Saved server configuration does not
+grant consent to discover, connect to, or start a server. Use `xcsh mcp list` to inspect saved
+configuration without enabling the runtime.
+
+Enable MCP persistently for your user with `xcsh config set mcp.enabled true`, enable it for one run
+with `xcsh --mcp`, or use the MCP toggle in `/settings`. `--no-mcp` always disables MCP for that run.
+The `mcp.enabled` setting is user-only: a repository's project settings cannot enable MCP. An
+external `xcsh config set` command affects new processes; the `/settings` toggle updates the current
+interactive session before the settings panel closes.
+
+SDK callers must pass the literal option `enableMCP: true`. Agent Client Protocol (ACP) sessions
+ignore ambient configuration and enable only non-empty `mcpServers` descriptors supplied by the ACP
+client.
 
 ## Which transport and lifecycle should I declare?
 
@@ -21,7 +33,7 @@ Configuration values can reference environment-backed variables. Credential reso
 Add its normalized identifier to `disabledServers` when a higher-precedence discovery source should remain visible but inactive. Validate the resulting set with `xcsh mcp list`, then use the MCP management commands to reconnect or reload after a file change.
 
 For a first connection, configure one local stdio server with an absolute executable path and no
-credentials, then run `xcsh mcp list`. Add required environment references only after discovery
-succeeds. Starting xcsh may launch the configured child process; listing configuration alone must
-not turn an invalid entry into an active server. After testing, remove the entry, reload MCP, and
-confirm the server and its tools disappear.
+credentials, then run `xcsh mcp list`. Add required environment references only after the explicit
+opt-in succeeds. Starting xcsh without an opt-in and listing configuration never launch the server.
+`/mcp test` may make one temporary connection and disconnects it afterward without enabling the
+runtime. After testing, remove the entry and confirm the saved server disappears.

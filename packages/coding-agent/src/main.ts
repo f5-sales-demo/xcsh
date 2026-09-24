@@ -55,7 +55,9 @@ import {
 	getPluginsCacheDir,
 	MarketplaceManager,
 } from "./extensibility/plugins/marketplace";
-import type { MCPManager } from "./mcp";
+import type { MCPToolsLoadResult } from "./mcp";
+import { resolveCliMCPEnabled } from "./mcp/policy";
+import type { MCPRuntimeController } from "./mcp/runtime-controller";
 import { InteractiveMode, runAcpMode, runPrintMode, runRpcMode } from "./modes";
 import { initTheme, stopThemeWatcher } from "./modes/theme/theme";
 import type { SubmittedUserInput } from "./modes/types";
@@ -163,14 +165,14 @@ async function runInteractiveMode(
 	initialMessages: string[],
 	setExtensionUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void,
 	lspServers: LspStartupServerInfo[] | undefined,
-	mcpManager: MCPManager | undefined,
+	mcpRuntime: MCPRuntimeController<MCPToolsLoadResult> | undefined,
 	eventBus?: EventBus,
 	initialMessage?: string,
 	initialImages?: ImageContent[],
 ): Promise<void> {
 	profileMark("interactive: enter runInteractiveMode");
 
-	const mode = new InteractiveMode(session, version, setExtensionUIContext, lspServers, mcpManager, eventBus);
+	const mode = new InteractiveMode(session, version, setExtensionUIContext, lspServers, mcpRuntime, eventBus);
 
 	await mode.init();
 	profileMark("interactive: mode.init() done");
@@ -536,9 +538,12 @@ async function buildSessionOptions(
 		options.toolNames = parsed.tools;
 	}
 
-	if (parsed.noTools || parsed.noMcp) {
-		options.enableMCP = false;
-	}
+	options.enableMCP = resolveCliMCPEnabled({
+		mcp: parsed.mcp,
+		noMcp: parsed.noMcp,
+		noTools: parsed.noTools,
+		userEnabled: settings.inspectScopes("mcp.enabled").userValue,
+	});
 
 	if (parsed.noLsp) {
 		options.enableLsp = false;
@@ -913,6 +918,9 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 		sessionManager,
 		modelRegistry,
 	);
+	// ACP consent comes only from each session's client-supplied mcpServers descriptors.
+	// User settings and CLI flags must not trigger ambient discovery in the ACP bootstrap session.
+	if (mode === "acp") sessionOptions.enableMCP = false;
 	sessionOptions.authStorage = authStorage;
 	sessionOptions.modelRegistry = modelRegistry;
 	sessionOptions.hasUI = isInteractive;
@@ -1027,7 +1035,7 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 	// Trusted process configuration can disable automatic discovery (for isolated CLI tests or embedding).
 	sessionOptions.profileDiscovery = process.env.XCSH_PROFILE_DISCOVERY !== "0";
 
-	const { session, setToolUIContext, modelFallbackMessage, lspServers, mcpManager, eventBus } = await logger.time(
+	const { session, setToolUIContext, modelFallbackMessage, lspServers, mcpRuntime, eventBus } = await logger.time(
 		"createAgentSession",
 		createAgentSession,
 		sessionOptions,
@@ -1068,6 +1076,7 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 		delete nextSessionOptions.eventBus;
 		const { session: nextSession } = await createAgentSession({
 			...nextSessionOptions,
+			enableMCP: false,
 			cwd,
 			sessionManager: nextSessionManager,
 			settings: nextSettings,
@@ -1132,7 +1141,7 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 			parsedArgs.messages,
 			setToolUIContext,
 			lspServers,
-			mcpManager,
+			mcpRuntime,
 			eventBus,
 			initialMessage,
 			initialImages,

@@ -662,8 +662,23 @@ export class Settings {
 	// ─────────────────────────────────────────────────────────────────────────
 
 	#rebuildMerged(): void {
-		this.#merged = this.#deepMerge(this.#deepMerge({}, this.#global), this.#project);
+		const trustedProject = structuredClone(this.#project);
+		for (const [settingPath, definition] of Object.entries(SETTINGS_SCHEMA)) {
+			if (!("scope" in definition) || definition.scope !== "user") continue;
+			this.#deleteByPath(trustedProject, settingPath.split("."));
+		}
+		this.#merged = this.#deepMerge(this.#deepMerge({}, this.#global), trustedProject);
 		this.#merged = this.#deepMerge(this.#merged, this.#overrides);
+	}
+
+	#deleteByPath(obj: RawSettings, segments: string[]): void {
+		let current = obj;
+		for (let i = 0; i < segments.length - 1; i++) {
+			const next = current[segments[i]];
+			if (!next || typeof next !== "object" || Array.isArray(next)) return;
+			current = next as RawSettings;
+		}
+		Reflect.deleteProperty(current, segments[segments.length - 1]);
 	}
 
 	#fireAllHooks(): void {

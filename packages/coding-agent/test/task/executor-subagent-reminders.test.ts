@@ -148,7 +148,7 @@ describe("runSubprocess submit_result reminders", () => {
 			name: "an omitted policy without a parent manager",
 			enableMCP: undefined,
 			hasManager: false,
-			childEnableMCP: true,
+			childEnableMCP: false,
 			proxies: 0,
 		},
 		{
@@ -156,7 +156,7 @@ describe("runSubprocess submit_result reminders", () => {
 			enableMCP: undefined,
 			hasManager: true,
 			childEnableMCP: false,
-			proxies: 1,
+			proxies: 0,
 		},
 	])("resolves MCP policy for $name", async ({ enableMCP, hasManager, childEnableMCP, proxies }) => {
 		const session = createMockSession(({ emit }) => {

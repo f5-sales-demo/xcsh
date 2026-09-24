@@ -39,7 +39,9 @@ import type { Model } from "@f5-sales-demo/pi-ai";
 import { logger, VERSION } from "@f5-sales-demo/pi-utils";
 import type { ExtensionUIContext } from "../../extensibility/extensions";
 import { loadSlashCommands } from "../../extensibility/slash-commands";
+import type { MCPToolsLoadResult } from "../../mcp/loader";
 import { MCPManager } from "../../mcp/manager";
+import { resolveACPMCPEnabled } from "../../mcp/policy";
 import type { MCPServerConfig } from "../../mcp/types";
 import { listMediaDescriptors, readMediaAssetChunk } from "../../media/transport";
 import { theme } from "../../modes/theme/theme";
@@ -77,7 +79,6 @@ type PromptTurnState = {
 
 type ManagedSessionRecord = {
 	session: AgentSession;
-	mcpManager: MCPManager | undefined;
 	promptTurn: PromptTurnState | undefined;
 	liveMessageIds: WeakMap<object, string>;
 	extensionsConfigured: boolean;
@@ -109,6 +110,14 @@ type MCPSourceMap = {
 };
 
 type CreateAcpSession = (cwd: string) => Promise<AgentSession>;
+
+type AcpAgentDependencies = {
+	createMcpManager: (cwd: string) => MCPManager;
+};
+
+const defaultAcpAgentDependencies: AcpAgentDependencies = {
+	createMcpManager: cwd => new MCPManager(cwd),
+};
 
 const acpExtensionUiContext: ExtensionUIContext = {
 	select: async () => undefined,
@@ -144,14 +153,21 @@ export class AcpAgent implements Agent {
 	#connection: AgentSideConnection;
 	#initialSession: AgentSession | undefined;
 	#createSession: CreateAcpSession;
+	#dependencies: AcpAgentDependencies;
 	#sessions = new Map<string, ManagedSessionRecord>();
 	#disposePromise: Promise<void> | undefined;
 	#cleanupRegistered = false;
 
-	constructor(connection: AgentSideConnection, initialSession: AgentSession, createSession: CreateAcpSession) {
+	constructor(
+		connection: AgentSideConnection,
+		initialSession: AgentSession,
+		createSession: CreateAcpSession,
+		dependencies: Partial<AcpAgentDependencies> = {},
+	) {
 		this.#connection = connection;
 		this.#initialSession = initialSession;
 		this.#createSession = createSession;
+		this.#dependencies = { ...defaultAcpAgentDependencies, ...dependencies };
 	}
 
 	async initialize(_params: InitializeRequest): Promise<InitializeResponse> {
@@ -500,7 +516,6 @@ export class AcpAgent implements Agent {
 	#createManagedSessionRecord(session: AgentSession): ManagedSessionRecord {
 		return {
 			session,
-			mcpManager: undefined,
 			promptTurn: undefined,
 			liveMessageIds: new WeakMap<object, string>(),
 			extensionsConfigured: false,
@@ -1191,16 +1206,13 @@ export class AcpAgent implements Agent {
 	}
 
 	async #configureMcpServers(record: ManagedSessionRecord, servers: McpServer[]): Promise<void> {
-		if (record.mcpManager) {
-			await record.mcpManager.disconnectAll();
-		}
-		if (servers.length === 0) {
-			record.mcpManager = undefined;
-			await record.session.refreshMCPTools([]);
+		const runtime = record.session.mcpRuntime;
+		if (!resolveACPMCPEnabled(servers)) {
+			await runtime?.setEnabled(false);
 			return;
 		}
+		if (!runtime) throw new Error("ACP MCP descriptors require a session-owned MCP runtime");
 
-		const manager = new MCPManager(record.session.sessionManager.getCwd());
 		const configs: MCPConfigMap = {};
 		const sources: MCPSourceMap = {};
 		for (const server of servers) {
@@ -1213,17 +1225,29 @@ export class AcpAgent implements Agent {
 			};
 		}
 
-		const result = await manager.connectServers(configs, sources);
-		if (result.errors.size > 0) {
-			throw new Error(
-				Array.from(result.errors.entries())
-					.map(([name, message]) => `${name}: ${message}`)
-					.join("; "),
-			);
-		}
-
-		record.mcpManager = manager;
-		await record.session.refreshMCPTools(result.tools);
+		await runtime.replace(async (): Promise<MCPToolsLoadResult> => {
+			const manager = this.#dependencies.createMcpManager(record.session.sessionManager.getCwd());
+			const result = await manager.connectServers(configs, sources);
+			if (result.errors.size > 0) {
+				await manager.disconnectAll();
+				throw new Error(
+					Array.from(result.errors.entries())
+						.map(([name, message]) => `${name}: ${message}`)
+						.join("; "),
+				);
+			}
+			return {
+				manager,
+				tools: result.tools.map(tool => ({
+					path: `mcp:${tool.name}`,
+					resolvedPath: `mcp:${tool.name}`,
+					tool,
+				})),
+				errors: [],
+				connectedServers: manager.getConnectedServers(),
+				exaApiKeys: [],
+			};
+		});
 	}
 
 	#toMcpConfig(server: McpServer): MCPServerConfig {
@@ -1292,14 +1316,6 @@ export class AcpAgent implements Agent {
 	}
 
 	async #disposeSessionRecord(record: ManagedSessionRecord): Promise<void> {
-		if (record.mcpManager) {
-			try {
-				await record.mcpManager.disconnectAll();
-			} catch (error) {
-				logger.warn("Failed to disconnect ACP MCP servers", { error });
-			}
-			record.mcpManager = undefined;
-		}
 		try {
 			await record.session.dispose();
 		} catch (error) {
