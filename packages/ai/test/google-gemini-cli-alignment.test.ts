@@ -3,6 +3,7 @@ import { hookFetch } from "@f5-sales-demo/pi-utils";
 import type { TSchema } from "@sinclair/typebox";
 import {
 	buildRequest,
+	getGeminiCliUserAgent,
 	parseGeminiCliCredentials,
 	shouldRefreshGeminiCliCredentials,
 	streamGoogleGeminiCli,
@@ -37,6 +38,20 @@ function createContext(): Context {
 }
 
 describe("Google Gemini CLI alignment", () => {
+	it("uses Gemini CLI 0.61.0 in the default user agent", () => {
+		const previousVersion = process.env.PI_AI_GEMINI_CLI_VERSION;
+		process.env.PI_AI_GEMINI_CLI_VERSION = "";
+		try {
+			expect(getGeminiCliUserAgent()).toContain("GeminiCLI/0.61.0/");
+		} finally {
+			if (previousVersion === undefined) {
+				delete process.env.PI_AI_GEMINI_CLI_VERSION;
+			} else {
+				process.env.PI_AI_GEMINI_CLI_VERSION = previousVersion;
+			}
+		}
+	});
+
 	it("encodes enriched OAuth JSON while preserving token + projectId", async () => {
 		const expiresAt = Date.now() + 60 * 60 * 1000;
 		const result = await getOAuthApiKey("google-gemini-cli", {
