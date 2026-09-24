@@ -138,6 +138,7 @@ interface PublishAttemptResult {
 }
 
 export interface PublishAndVisibilityOptions {
+	lookupExisting?: () => Promise<string | null>;
 	publish: () => Promise<PublishAttemptResult>;
 	waitForVisibility: () => Promise<unknown>;
 	sleep?: (delayMs: number) => Promise<void>;
@@ -166,6 +167,12 @@ export async function publishWithVisibility(
 
 	if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new Error("maxAttempts must be a positive integer");
 	if (delayMs < 0 || maxDelayMs < 0) throw new Error("publish retry delays must be non-negative");
+
+	const existing = await options.lookupExisting?.();
+	if (existing !== undefined && existing !== null && isExactRegistryVersion(existing, version)) {
+		console.log(`Skipping ${packageName}@${version}; exact version is already visible`);
+		return 0;
+	}
 
 	let lastFailure: unknown;
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -288,6 +295,7 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 
 	try {
 		await publishWithVisibility(publishedName, publishedVersion, {
+			lookupExisting: () => lookupRegistryVersion(publishedName, publishedVersion),
 			publish: async () => {
 				const publishArgs = npmPublishArgs(publishTag);
 				const result = await $`${publishArgs}`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
