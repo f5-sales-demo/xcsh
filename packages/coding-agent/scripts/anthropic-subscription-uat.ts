@@ -10,7 +10,7 @@ interface UatTarget {
 
 export const ANTHROPIC_HAIKU_MODEL = "anthropic/claude-haiku-4-5";
 export const ANTHROPIC_DEFAULT_MODEL = "anthropic/claude-sonnet-5";
-export const ANTHROPIC_OPUS_MODEL = "anthropic/claude-opus-5";
+export const ANTHROPIC_OPUS_MODEL = "anthropic/claude-opus-5-5";
 
 const ROOT_DIR = path.resolve(import.meta.dir, "../../..");
 const REQUIRED_MARKERS = ["HAIKU_READY", "437", "OPUS_TOOL_READY"] as const;

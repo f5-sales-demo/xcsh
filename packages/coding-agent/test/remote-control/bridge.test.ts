@@ -39,8 +39,8 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 					},
 				},
 				{
-					id: "gpt-5.6-sol",
-					name: "GPT-5.6 Sol",
+					id: "gpt-6-sol",
+					name: "GPT-6 Sol",
 					description: "Deep reasoning",
 					provider: "openai-codex",
 					input: ["text", "image"],
@@ -140,8 +140,8 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 				data: [
 					{ id: "gpt-6-astra", displayName: "GPT-6 Astra" },
 					{
-						id: "gpt-5.6-sol",
-						displayName: "GPT-5.6 Sol",
+						id: "gpt-6-sol",
+						displayName: "GPT-6 Sol",
 						defaultReasoningEffort: "medium",
 						supportedReasoningEfforts: [
 							{ reasoningEffort: "medium", description: "Medium" },
@@ -157,15 +157,15 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 				method: "thread/settings/update",
 				params: {
 					threadId: "fixture",
-					model: "gpt-5.6-sol",
+					model: "gpt-6-sol",
 					effort: "high",
 					serviceTier: null,
 					multiAgentMode: "explicitRequestOnly",
 				},
 			}),
 		).toEqual({ id: 4, result: {} });
-		expect(target.model?.id).toBe("gpt-5.6-sol");
-		expect(host.router.sessions.get("fixture")?.thread.model).toBe("gpt-5.6-sol");
+		expect(target.model?.id).toBe("gpt-6-sol");
+		expect(host.router.sessions.get("fixture")?.thread.model).toBe("gpt-6-sol");
 		stop();
 		await Bun.sleep(20);
 		expect(host.router.sessions.has("fixture")).toBe(false);

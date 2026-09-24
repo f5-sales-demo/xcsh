@@ -874,6 +874,11 @@ export class SelectorController {
 					setPreferredImageProvider(value);
 				}
 				break;
+			case "providers.openaiCodexMaxContext":
+				this.ctx.session.modelRegistry.setOpenAICodexMaxContext(value === true);
+				this.ctx.statusLine.invalidate();
+				this.ctx.ui.requestRender();
+				break;
 
 			// MCP update injection - live subscribe/unsubscribe
 			case "mcp.notifications":

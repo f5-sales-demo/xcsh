@@ -447,8 +447,8 @@ describe("ModelRegistry", () => {
 
 			const registry = new ModelRegistry(authStorage, modelsJsonPath);
 			// claude-opus-latest collapses to the newest opus family id in the bundled
-			// catalog — currently claude-opus-5 (update when a newer opus ships).
-			const opusVariants = registry.getCanonicalVariants("claude-opus-5");
+			// catalog — currently claude-opus-5-5 (update when a newer opus ships).
+			const opusVariants = registry.getCanonicalVariants("claude-opus-5-5");
 			const haikuVariants = registry.getCanonicalVariants("claude-haiku-4-5");
 
 			expect(opusVariants.some(variant => variant.selector === "demo/anthropic/claude-opus-latest")).toBe(true);

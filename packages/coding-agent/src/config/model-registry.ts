@@ -50,6 +50,10 @@ export type { CanonicalModelIndex, CanonicalModelRecord, CanonicalModelVariant, 
 
 export const kNoAuth = NO_AUTH_API_KEY;
 
+const OPENAI_CODEX_STANDARD_CONTEXT_WINDOW = 272_000;
+const OPENAI_CODEX_MAX_CONTEXT_WINDOW = 1_050_000;
+const OPENAI_CODEX_MAX_CONTEXT_MODEL_IDS = new Set(["gpt-6-luna", "gpt-6-sol"]);
+
 export function isAuthenticated(apiKey: string | undefined | null): apiKey is string {
 	return Boolean(apiKey) && apiKey !== kNoAuth;
 }
@@ -871,6 +875,7 @@ export class ModelRegistry {
 	#lastDiscoveryWarnings: Map<string, string> = new Map();
 	#hasProbed = false;
 	#refreshQueue: Promise<void> = Promise.resolve();
+	#openAICodexMaxContext = false;
 
 	#enqueueRefresh(operation: () => Promise<void>): Promise<void> {
 		const pending = this.#refreshQueue.then(operation);
@@ -890,7 +895,10 @@ export class ModelRegistry {
 	constructor(
 		readonly authStorage: AuthStorage,
 		modelsPath?: string,
-		private readonly options: { getProviderOrder?: () => readonly string[] } = {},
+		private readonly options: {
+			getProviderOrder?: () => readonly string[];
+			getOpenAICodexMaxContext?: () => boolean;
+		} = {},
 	) {
 		this.#modelsConfigFile = ModelsConfigFile.relocate(modelsPath);
 		this.#cacheDbPath = modelsPath ? path.join(path.dirname(modelsPath), "models.db") : undefined;
@@ -1042,6 +1050,7 @@ export class ModelRegistry {
 	}
 
 	#loadModels() {
+		this.#openAICodexMaxContext = this.options.getOpenAICodexMaxContext?.() ?? this.#openAICodexMaxContext;
 		// Load custom models from models.json first (to know which providers to override)
 		const {
 			models: customModels = [],
@@ -1075,6 +1084,25 @@ export class ModelRegistry {
 		const combined = this.#mergeCustomModels(withConfigModels, this.#runtimeModelOverlays);
 
 		this.#models = this.#applyProviderModelAllowlists(this.#applyModelOverrides(combined, this.#modelOverrides));
+		this.#applyOpenAICodexContextWindow();
+		this.#rebuildCanonicalIndex();
+	}
+
+	#applyOpenAICodexContextWindow(): void {
+		const contextWindow = this.#openAICodexMaxContext
+			? OPENAI_CODEX_MAX_CONTEXT_WINDOW
+			: OPENAI_CODEX_STANDARD_CONTEXT_WINDOW;
+		for (const model of this.#models) {
+			if (model.provider === "openai-codex" && OPENAI_CODEX_MAX_CONTEXT_MODEL_IDS.has(model.id)) {
+				model.contextWindow = contextWindow;
+			}
+		}
+	}
+
+	/** Update GPT-6 subscription context limits without rebuilding the registry. */
+	setOpenAICodexMaxContext(enabled: boolean): void {
+		this.#openAICodexMaxContext = enabled;
+		this.#applyOpenAICodexContextWindow();
 		this.#rebuildCanonicalIndex();
 	}
 

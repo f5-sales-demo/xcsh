@@ -10,12 +10,12 @@ export interface SubscriptionRoutingProfile {
 }
 
 const OPENAI_CODEX_POOL: RoutingPoolConfig = {
-	id: "openai-codex/gpt-5.6",
+	id: "openai-codex/gpt-6",
 	provider: "openai-codex",
 	tiers: {
-		utility: "gpt-5.6-luna",
+		utility: "gpt-6-luna",
 		balanced: "gpt-5.6-terra",
-		frontier: "gpt-5.6-sol",
+		frontier: "gpt-6-sol",
 	},
 	effortPolicy: {
 		byTier: { utility: "low", balanced: "medium", frontier: "high" },
@@ -29,7 +29,7 @@ const ANTHROPIC_POOL: RoutingPoolConfig = {
 	tiers: {
 		utility: "claude-haiku-4-5",
 		balanced: "claude-sonnet-5",
-		frontier: "claude-opus-5",
+		frontier: "claude-opus-5-5",
 	},
 	effortPolicy: {
 		byTier: { utility: "low", balanced: "medium", frontier: "high" },
@@ -44,8 +44,8 @@ export const SUBSCRIPTION_ROUTING_PROFILES: Readonly<Record<SubscriptionProfileI
 		roles: {
 			smol: "anthropic/claude-haiku-4-5:low",
 			default: "anthropic/claude-sonnet-5:medium",
-			slow: "anthropic/claude-opus-5:high",
-			plan: "anthropic/claude-opus-5:high",
+			slow: "anthropic/claude-opus-5-5:high",
+			plan: "anthropic/claude-opus-5-5:high",
 		},
 		pool: ANTHROPIC_POOL,
 	},
@@ -63,10 +63,10 @@ export const SUBSCRIPTION_ROUTING_PROFILES: Readonly<Record<SubscriptionProfileI
 		id: "openai-codex",
 		provider: "openai-codex",
 		roles: {
-			smol: "openai-codex/gpt-5.6-luna:low",
+			smol: "openai-codex/gpt-6-luna:low",
 			default: "openai-codex/gpt-5.6-terra:medium",
-			slow: "openai-codex/gpt-5.6-sol:high",
-			plan: "openai-codex/gpt-5.6-sol:high",
+			slow: "openai-codex/gpt-6-sol:high",
+			plan: "openai-codex/gpt-6-sol:high",
 		},
 		pool: OPENAI_CODEX_POOL,
 	},

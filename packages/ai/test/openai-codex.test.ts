@@ -7,6 +7,7 @@ import {
 import { parseCodexError } from "@f5-sales-demo/pi-ai/providers/openai-codex/response-handler";
 import { mapOptionsForApi } from "@f5-sales-demo/pi-ai/stream";
 import type { Model } from "@f5-sales-demo/pi-ai/types";
+import { getBundledModel } from "../src/models";
 
 const DEFAULT_PROMPT_PREFIX =
 	"You are an expert coding assistant. You help users with coding tasks by reading files, executing commands";
@@ -27,6 +28,22 @@ function createCodexModel(id: string): Model<"openai-codex-responses"> {
 }
 
 describe("openai-codex request transformer", () => {
+	it.each(["gpt-6-luna", "gpt-6-sol"])("preserves tools, developer messages, and max effort for %s", async id => {
+		const model = getBundledModel("openai-codex", id) as Model<"openai-codex-responses">;
+		const transformed = await transformRequestBody(
+			{
+				model: id,
+				input: [{ type: "message", role: "developer", content: [{ type: "input_text", text: "system" }] }],
+				tools: [{ type: "function", name: "probe", description: "probe", parameters: {} }],
+			},
+			model,
+			{ reasoningEffort: "max" },
+		);
+		expect(transformed.input?.[0]).toMatchObject({ type: "message", role: "developer" });
+		expect(transformed.tools).toEqual([{ type: "function", name: "probe", description: "probe", parameters: {} }]);
+		expect(transformed.reasoning).toEqual({ effort: "max", summary: "detailed" });
+	});
+
 	it("preserves explicit none and max through generic stream option mapping", () => {
 		const model = createCodexModel("gpt-5.6-sol");
 		const mappedNone = mapOptionsForApi(model, { reasoning: "none" as never }) as unknown as { reasoning?: string };

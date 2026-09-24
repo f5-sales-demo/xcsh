@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "cb567e1c472ce8da1f93fbab838686e4348526e3",
-  "fingerprint": "1f71f47b565e62fced8178a67a3ee24ed898eccf340bbbb8b72e12a72f1cdfd9",
+  "revision": "daee5854069e3e989829704cf44e939ef3997851",
+  "fingerprint": "4d15b32a96df8563d06ee85469202dced228e4a5974485e28f37aaef6416c93a",
   "counts": {
     "total": 241,
     "components": 96,
@@ -3404,7 +3404,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "foundation",
-      "sha256": "d8015fca3bae420ab5a25f664ba1e2fa1a6e7094da4159d80d6e2cf6c0e9f3af",
+      "sha256": "60bdd490d4ead9119f5d9d1f6890cc2180c1a1a469777c8a5262b0eefcb07a3d",
       "exports": [
         "ANTHROPIC_LOGIN_MODEL_CHOICE",
         "GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE",
@@ -3548,7 +3548,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "e0aa954f7c9a5dc53b42636b5011468720eac8cec1c61cfb6b82b956f7948c73",
+      "sha256": "f0ac84e48ca3e51f3eb34d878c8d1773531674ddeadaffd0b156460ddf687da1",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -4382,7 +4382,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "4feb6552cdc1af3a14f47f442951b391bb5ea32100a3ea1d3f743b4e9997612e",
+      "sha256": "eeb0af4a926dfba17247dd5cde4806b75240b1cfe0ca0b7bf391951866bde376",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",

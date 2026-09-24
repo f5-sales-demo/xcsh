@@ -6,6 +6,9 @@
 
 ### Added
 
+- Added Claude Opus 5.5 and OpenAI Codex GPT-6 Luna/Sol model metadata, including current
+  reasoning controls, tool capabilities, pricing, and published 1M/1.05M context and 128K output
+  limits ([#4240](https://github.com/f5-sales-demo/xcsh/issues/4240)).
 - Added native Anthropic Claude Fable 5 and 5.1 catalog and transport support, including always-on
   adaptive thinking, accurate limits and pricing, strict-tool compatibility, and permanent
   entitlement/client-version error handling.

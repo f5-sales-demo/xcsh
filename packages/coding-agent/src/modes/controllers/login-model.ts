@@ -2,11 +2,7 @@ import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { canonicalizeOAuthProviderId, type Model, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import type { Settings } from "../../config/settings";
 import type { VllmDiscoveredModel } from "../../config/vllm-config";
-import {
-	applySubscriptionProfileRoles,
-	SUBSCRIPTION_ROUTING_PROFILES,
-	type SubscriptionProfileId,
-} from "../../routing/subscription-profiles";
+import { applySubscriptionProfileRoles, type SubscriptionProfileId } from "../../routing/subscription-profiles";
 
 export interface LoginModelChoice {
 	label: string;
@@ -83,14 +79,20 @@ export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly
  * that policy onto the provider namespace used by the LiteLLM configuration.
  */
 export function getLiteLLMLoginModelRoles(choice: LiteLLMLoginModelChoice): Record<string, string> {
-	const profileId: SubscriptionProfileId = choice.modelId === "claude-opus-5" ? "anthropic" : "openai-codex";
-	const profile = SUBSCRIPTION_ROUTING_PROFILES[profileId];
-	return Object.fromEntries(
-		Object.entries(profile.roles).map(([role, selector]) => {
-			const slash = selector.indexOf("/");
-			return [role, `${choice.provider}/${selector.slice(slash + 1)}`];
-		}),
-	);
+	if (choice.modelId === "claude-opus-5") {
+		return {
+			smol: `${choice.provider}/claude-haiku-4-5:low`,
+			default: `${choice.provider}/claude-sonnet-5:medium`,
+			slow: `${choice.provider}/claude-opus-5:high`,
+			plan: `${choice.provider}/claude-opus-5:high`,
+		};
+	}
+	return {
+		smol: `${choice.provider}/gpt-5.6-luna:low`,
+		default: `${choice.provider}/gpt-5.6-terra:medium`,
+		slow: `${choice.provider}/gpt-5.6-sol:high`,
+		plan: `${choice.provider}/gpt-5.6-sol:high`,
+	};
 }
 
 export function getVllmLoginModelChoices(models: readonly VllmDiscoveredModel[]): LoginModelChoice[] {

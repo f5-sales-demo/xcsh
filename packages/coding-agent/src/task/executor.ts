@@ -980,7 +980,10 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 			checkAbort();
 			const modelRegistry =
 				options.modelRegistry ??
-				new ModelRegistry(authStorage, undefined, { getProviderOrder: () => settings.get("modelProviderOrder") });
+				new ModelRegistry(authStorage, undefined, {
+					getProviderOrder: () => settings.get("modelProviderOrder"),
+					getOpenAICodexMaxContext: () => settings.get("providers.openaiCodexMaxContext"),
+				});
 			await modelRegistry.refresh();
 			checkAbort();
 

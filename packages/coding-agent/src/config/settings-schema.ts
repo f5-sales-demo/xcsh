@@ -2102,6 +2102,17 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"providers.openaiCodexMaxContext": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "providers",
+			label: "OpenAI Codex Maximum Context",
+			description:
+				"Use the 1.05M-token context window for GPT-6 Luna and Sol (long-context pricing applies above 272K)",
+		},
+	},
+
 	"providers.parallelFetch": {
 		type: "boolean",
 		default: true,

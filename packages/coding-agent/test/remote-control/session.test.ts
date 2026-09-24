@@ -671,8 +671,8 @@ test("phone model and effort buttons apply one exact session selection and publi
 		getAvailable: () => [
 			(a.remote.target as any).model,
 			{
-				id: "gpt-5.6-sol",
-				name: "GPT-5.6 Sol",
+				id: "gpt-6-sol",
+				name: "GPT-6 Sol",
 				description: "Deep reasoning",
 				provider: "openai-codex",
 				input: ["text", "image"],
@@ -686,14 +686,14 @@ test("phone model and effort buttons apply one exact session selection and publi
 	expect(
 		await a.remote.call("model", "thread/settings/update", {
 			threadId: "a",
-			model: "gpt-5.6-sol",
+			model: "gpt-6-sol",
 			effort: "high",
 			serviceTier: null,
 		}),
 	).toEqual({});
-	expect(selected).toEqual([{ id: "gpt-5.6-sol", effort: "high" }]);
+	expect(selected).toEqual([{ id: "gpt-6-sol", effort: "high" }]);
 	expect(a.remote.thread()).toMatchObject({
-		model: "gpt-5.6-sol",
+		model: "gpt-6-sol",
 		modelProvider: "openai-codex",
 		reasoningEffort: "high",
 		supportedReasoningEfforts: levels.map(level => ({
@@ -703,7 +703,7 @@ test("phone model and effort buttons apply one exact session selection and publi
 	});
 	expect(events.at(-1)).toMatchObject({
 		method: "thread/settings/updated",
-		params: { threadSettings: { model: "gpt-5.6-sol", effort: "high" } },
+		params: { threadSettings: { model: "gpt-6-sol", effort: "high" } },
 	});
 	a.remote.dispose();
 });
@@ -719,7 +719,7 @@ test("phone model changes validate the target effort before changing session sta
 		getAvailable: () => [
 			(a.remote.target as any).model,
 			{
-				id: "gpt-5.6-luna",
+				id: "gpt-6-luna",
 				provider: "openai-codex",
 				thinking: {
 					supportedLevels: [{ effort: "low", description: "Low" }],
@@ -733,7 +733,7 @@ test("phone model changes validate the target effort before changing session sta
 	await expect(
 		a.remote.call("bad-effort", "thread/settings/update", {
 			threadId: "a",
-			model: "gpt-5.6-luna",
+			model: "gpt-6-luna",
 			effort: "high",
 		}),
 	).rejects.toMatchObject({ code: -32602 });
@@ -769,7 +769,7 @@ test("phone model changes cannot race an active turn", async () => {
 		},
 	});
 	(a.remote.target as any).modelRegistry = {
-		getAvailable: () => [(a.remote.target as any).model, { id: "gpt-5.6-sol", provider: "openai-codex" }],
+		getAvailable: () => [(a.remote.target as any).model, { id: "gpt-6-sol", provider: "openai-codex" }],
 	};
 	await a.remote.call("turn", "turn/start", {
 		threadId: "a",
@@ -778,7 +778,7 @@ test("phone model changes cannot race an active turn", async () => {
 	await expect(
 		a.remote.call("model-during-turn", "thread/settings/update", {
 			threadId: "a",
-			model: "gpt-5.6-sol",
+			model: "gpt-6-sol",
 		}),
 	).rejects.toMatchObject({ code: -32000 });
 	expect(changed).toBe(false);
@@ -800,7 +800,7 @@ test("an immediate prompt waits for the phone model tap to finish", async () => 
 		getAvailable: () => [
 			(a.remote.target as any).model,
 			{
-				id: "gpt-5.6-sol",
+				id: "gpt-6-sol",
 				provider: "openai-codex",
 				thinking: {
 					supportedLevels: [{ effort: "high", description: "High" }],
@@ -814,12 +814,12 @@ test("an immediate prompt waits for the phone model tap to finish", async () => 
 	};
 	const settings = a.remote.call("model", "thread/settings/update", {
 		threadId: "a",
-		model: "gpt-5.6-sol",
+		model: "gpt-6-sol",
 		effort: "high",
 	});
 	const turn = a.remote.call("turn", "turn/start", {
 		threadId: "a",
-		model: "gpt-5.6-sol",
+		model: "gpt-6-sol",
 		effort: "high",
 		input: [{ type: "text", text: "use the selected model" }],
 	});
@@ -828,7 +828,7 @@ test("an immediate prompt waits for the phone model tap to finish", async () => 
 	release.resolve();
 	await settings;
 	await turn;
-	expect(a.remote.target.model?.id).toBe("gpt-5.6-sol");
+	expect(a.remote.target.model?.id).toBe("gpt-6-sol");
 	expect(a.prompts).toEqual(["use the selected model"]);
 	a.finish();
 	a.remote.dispose();
@@ -840,10 +840,10 @@ test("the phone catalog excludes a historical active model", () => {
 	(a.remote.target as any).modelRegistry = {
 		getAvailable: () => [
 			(a.remote.target as any).model,
-			{ id: "gpt-5.6-luna", provider: "openai-codex", input: ["text"] },
+			{ id: "gpt-6-luna", provider: "openai-codex", input: ["text"] },
 		],
 	};
-	expect(a.remote.models().map(model => model.id)).toEqual(["gpt-5.6-luna"]);
+	expect(a.remote.models().map(model => model.id)).toEqual(["gpt-6-luna"]);
 	a.remote.dispose();
 });
 test("phone collaboration modes validate before applying and precede turn execution", async () => {

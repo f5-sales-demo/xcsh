@@ -11,7 +11,7 @@ function compareVersions(left: string, right: string): number {
 }
 
 /** Keep historical catalogs available while presenting only current user-facing families. */
-const DEFAULT_OPENAI_CODEX_MODEL_IDS = new Set(["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"]);
+const DEFAULT_OPENAI_CODEX_MODEL_IDS = new Set(["gpt-5.6-terra", "gpt-6-astra", "gpt-6-luna", "gpt-6-sol"]);
 
 /** Shared catalog boundary for the TUI and attached human interfaces. */
 export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
