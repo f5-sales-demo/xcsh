@@ -224,7 +224,8 @@ export async function loadIntegrationHandles(
 }
 
 function matchesIntegration(handle: IntegrationHandle<unknown>, target: string): boolean {
-	return handle.id === target || handle.plugin === target || handle.plugin?.split("@")[0] === target;
+	const pluginName = target.split("@")[0];
+	return handle.id === target || handle.plugin === target || handle.plugin?.split("@")[0] === pluginName;
 }
 
 export { describeIntegrationSetupNextAction } from "../integrations/setup";

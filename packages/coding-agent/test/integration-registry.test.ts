@@ -366,6 +366,25 @@ describe("IntegrationRegistry", () => {
 		expect(selectSetupIntegration(registry.list(), "github")).toBe(account);
 	});
 
+	test("accepts a fully qualified marketplace plugin id for setup", () => {
+		registry = new IntegrationRegistry();
+		const integration = registry.register("plugin:xorg", {
+			id: "xorg",
+			name: "Xorg desktop",
+			plugin: "xorg",
+			kind: "local",
+			setup: {
+				pluginDependencies: [],
+				requiredEnvironment: [],
+				profileFields: [],
+				steps: [{ kind: "install", argv: ["xorgctl", "setup", "apply"], timeoutMs: 10_000 }],
+				verification: [],
+			},
+			probe: async () => ready(undefined),
+		});
+		expect(selectSetupIntegration(registry.list(), "xorg@f5-sales-demo-marketplace")).toBe(integration);
+	});
+
 	test("does not execute setup or verification when the integration is already ready", async () => {
 		const get = async () => ({
 			id: "github",

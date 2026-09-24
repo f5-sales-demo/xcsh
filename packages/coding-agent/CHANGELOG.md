@@ -57,6 +57,8 @@
 
 ### Fixed
 
+- Accepted fully qualified marketplace plugin identifiers in `plugin setup`, matching install,
+  upgrade, uninstall, and doctor behavior ([#4288](https://github.com/f5-sales-demo/xcsh/issues/4288)).
 - Added the exact `/plugin setup <plugin>` next action after interactive installation of plugins
   that require separately authorized setup ([#4253](https://github.com/f5-sales-demo/xcsh/issues/4253)).
 - Made marketplace plugin uninstall dry-runs return a deterministic preview without changing the
