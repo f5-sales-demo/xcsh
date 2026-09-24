@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import {
 	isAlreadyPublished,
@@ -11,11 +12,44 @@ import {
 } from "../../../../scripts/ci-release-publish";
 
 const root = path.resolve(import.meta.dir, "../../../..");
+const nativesPackageRoot = path.join(root, "packages/natives");
 const ciWorkflowPath = path.join(root, ".github/workflows/ci.yml");
 const workflowPath = path.join(root, ".github/workflows/release-npm-backfill.yml");
 const sourceJobsPath = path.join(root, "scripts/ci-release-source-jobs.jq");
 
 describe("release npm backfill publish semantics", () => {
+	it("keeps platform binaries out of the umbrella native package", async () => {
+		const packRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-native-pack-"));
+		try {
+			await fs.mkdir(path.join(packRoot, "native"));
+			await fs.copyFile(path.join(nativesPackageRoot, "package.json"), path.join(packRoot, "package.json"));
+			await fs.copyFile(path.join(nativesPackageRoot, "README.md"), path.join(packRoot, "README.md"));
+			for (const filename of ["embedded-addon.js", "index.d.ts", "index.js"]) {
+				await fs.copyFile(
+					path.join(nativesPackageRoot, "native", filename),
+					path.join(packRoot, "native", filename),
+				);
+			}
+			await fs.writeFile(path.join(packRoot, "native", "native-manifest.json"), "{}\n");
+			await fs.writeFile(path.join(packRoot, "native", "pi_natives.linux-x64-modern.node"), "native addon");
+
+			const packed = Bun.spawnSync(["npm", "pack", "--dry-run", "--json"], {
+				cwd: packRoot,
+				stdout: "pipe",
+				stderr: "pipe",
+			});
+			expect(packed.exitCode).toBe(0);
+			const [manifest] = JSON.parse(packed.stdout.toString()) as Array<{ files: Array<{ path: string }> }>;
+			const files = manifest.files.map(file => file.path);
+			expect(files).toContain("native/index.js");
+			expect(files).toContain("native/index.d.ts");
+			expect(files).toContain("native/native-manifest.json");
+			expect(files.some(file => file.endsWith(".node"))).toBe(false);
+		} finally {
+			await fs.rm(packRoot, { recursive: true, force: true });
+		}
+	});
+
 	it("does not misclassify a lower-than-latest dist-tag rejection as already published", () => {
 		const output =
 			'npm error Cannot implicitly apply the "latest" tag because previously published version 20.19.3 is higher than the new version 20.13.1. You must specify a tag using --tag.';
