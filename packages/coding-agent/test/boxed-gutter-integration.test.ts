@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Box, type Component, Text, type TUI } from "@f5-sales-demo/pi-tui";
+import { Box, type Component, Text, type TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { renderExaResult } from "../src/exa/render";
 import { lspToolRenderer } from "../src/lsp/render";
 import { GutterBlock } from "../src/modes/components/gutter-block";
@@ -103,6 +103,29 @@ describe("ToolExecutionComponent generic fallback — no terminal status glyph (
 	// #updateDisplay() falls through to the #formatToolExecution() path at
 	// line ~688 — the exact code this task modifies.
 	const MYSTERY_TOOL = "mystery_tool";
+
+	it("keeps JSON tree rails inside the generic result box at narrow widths", () => {
+		const component = new ToolExecutionComponent(MYSTERY_TOOL, { query: "hello" }, {}, undefined, mockTUI());
+		component.setExpanded(true);
+		component.updateResult(
+			{
+				content: [
+					{
+						type: "text",
+						text: JSON.stringify({
+							first: "A long structured value that wraps under its tree rail in a narrow tool result",
+							second: "next",
+						}),
+					},
+				],
+			},
+			false,
+		);
+		const lines = component.render(42);
+		const plain = lines.map(sanitizeText);
+		expect(lines.every(line => visibleWidth(line) <= 42)).toBe(true);
+		expect(plain.some(line => line.includes("│") && line.includes("tree rail"))).toBe(true);
+	});
 
 	function renderGenericFallback(result: { isError: boolean }): string {
 		const ui = mockTUI();

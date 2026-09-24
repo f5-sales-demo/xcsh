@@ -292,19 +292,23 @@ export const searchToolBm25Renderer = {
 			return new Text(`${header}\n${uiTheme.fg("muted", emptyMessage)}`, 0, 0);
 		}
 
-		const lines = [header];
-		const treeLines = renderTreeList(
-			{
-				items: details.tools,
-				expanded: options.expanded,
-				maxCollapsed: COLLAPSED_MATCH_LIMIT,
-				itemType: "tool",
-				renderItem: match => renderMatchLines(match, uiTheme),
+		return {
+			render(width) {
+				const treeLines = renderTreeList(
+					{
+						items: details.tools,
+						viewportWidth: width,
+						expanded: options.expanded,
+						maxCollapsed: COLLAPSED_MATCH_LIMIT,
+						itemType: "tool",
+						renderItem: match => renderMatchLines(match, uiTheme),
+					},
+					uiTheme,
+				);
+				return [header, ...treeLines];
 			},
-			uiTheme,
-		);
-		lines.push(...treeLines);
-		return new Text(lines.join("\n"), 0, 0);
+			invalidate() {},
+		};
 	},
 
 	mergeCallAndResult: true,

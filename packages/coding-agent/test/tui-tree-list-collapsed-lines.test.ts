@@ -11,6 +11,22 @@ function expectWithinBudget(lines: string[], budget: number) {
 }
 
 describe("renderTreeList maxCollapsedLines", () => {
+	it("wraps a long item with its rail and counts physical rows in the preview budget", () => {
+		const lines = renderTreeList(
+			{
+				items: ["first item has a long value that must wrap under its text", "second item"],
+				viewportWidth: 24,
+				maxCollapsedLines: 4,
+				renderItem: item => item,
+			},
+			stubTheme,
+		);
+		expect(lines.every(line => line.length <= 24)).toBe(true);
+		expect(lines[0]?.startsWith("├ ")).toBe(true);
+		expect(lines[1]?.startsWith("│  ")).toBe(true);
+		expect(lines.join(" ")).toContain("text");
+		expect(lines.length).toBeLessThanOrEqual(4);
+	});
 	it("skips oversized first item instead of rendering broken fragments", () => {
 		const largeGroup = Array.from({ length: 15 }, (_, i) => `line-${i}`);
 		const smallGroup = ["a", "b"];

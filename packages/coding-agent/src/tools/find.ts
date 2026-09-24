@@ -366,6 +366,7 @@ export const findToolRenderer = {
 					const listLines = renderTreeList(
 						{
 							items: lines,
+							viewportWidth: width,
 							expanded,
 							maxCollapsed: COLLAPSED_LIST_LIMIT,
 							itemType: "file",
@@ -373,7 +374,7 @@ export const findToolRenderer = {
 						},
 						uiTheme,
 					);
-					const result = [header, ...listLines].map(l => truncateToWidth(l, width, Ellipsis.Omit));
+					const result = [truncateToWidth(header, width, Ellipsis.Omit), ...listLines];
 					cached = { key, lines: result };
 					return result;
 				},
@@ -419,12 +420,17 @@ export const findToolRenderer = {
 				const fileLines = renderFileList(
 					{
 						files: files.map(entry => ({ path: entry, isDirectory: entry.endsWith("/") })),
+						viewportWidth: width,
 						expanded,
 						maxCollapsed: COLLAPSED_LIST_LIMIT,
 					},
 					uiTheme,
 				);
-				const result = [header, ...fileLines, ...extraLines].map(l => truncateToWidth(l, width, Ellipsis.Omit));
+				const result = [
+					truncateToWidth(header, width, Ellipsis.Omit),
+					...fileLines,
+					...extraLines.map(l => truncateToWidth(l, width, Ellipsis.Omit)),
+				];
 				cached = { key, lines: result };
 				return result;
 			},

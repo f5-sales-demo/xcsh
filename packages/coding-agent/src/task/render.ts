@@ -26,7 +26,8 @@ import {
 	type ReportFindingDetails,
 	type SubmitReviewDetails,
 } from "../tools/review";
-import { Ellipsis, Hasher, type RenderCache, renderStatusLine } from "../tui";
+import { Hasher, type RenderCache, renderStatusLine } from "../tui";
+import { renderStructuredRow, renderStructuredTreeLine } from "../tui/tree-list";
 import { subprocessToolRegistry } from "./subprocess-tool-registry";
 import type { AgentProgress, SingleResult, TaskParams, TaskToolDetails } from "./types";
 
@@ -404,7 +405,7 @@ function renderTaskSection(
 	lines.push(`${continuePrefix}${theme.fg("dim", "Task")}`);
 	const taskLines = trimmed.split("\n");
 	for (const line of taskLines.slice(0, maxExpanded)) {
-		lines.push(`${continuePrefix}  ${theme.fg("dim", truncateToWidth(replaceTabs(line), 70))}`);
+		lines.push(`${continuePrefix}  ${theme.fg("dim", replaceTabs(line))}`);
 	}
 	if (taskLines.length > maxExpanded) {
 		lines.push(`${continuePrefix}  ${theme.fg("dim", formatMoreItems(taskLines.length - maxExpanded, "line"))}`);
@@ -476,9 +477,6 @@ function formatOutputInline(data: unknown, theme: Theme, maxWidth = 80): string 
  * Render the tool call arguments.
  */
 export function renderCall(args: TaskParams, _options: RenderResultOptions, theme: Theme): Component {
-	const lines: string[] = [];
-	lines.push(renderStatusLine({ icon: "pending", title: "Task", description: args.agent }, theme));
-
 	const contextTemplate = args.context ?? "";
 	const context = contextTemplate.trim();
 	const hasContext = context.length > 0;
@@ -487,26 +485,50 @@ export function renderCall(args: TaskParams, _options: RenderResultOptions, them
 	const vertical = theme.fg("dim", theme.tree.vertical);
 	const showIsolated = "isolated" in args && args.isolated === true;
 
-	if (hasContext) {
-		lines.push(` ${branch} ${theme.fg("dim", "Context")}`);
-		for (const line of context.split("\n")) {
-			const content = line ? theme.fg("muted", replaceTabs(line)) : "";
-			lines.push(` ${vertical}  ${content}`);
-		}
-		const taskPrefix = showIsolated ? branch : last;
-		lines.push(` ${taskPrefix} ${theme.fg("dim", "Tasks")}: ${theme.fg("muted", `${args.tasks.length} agents`)}`);
-		if (showIsolated) {
-			lines.push(` ${last} ${theme.fg("dim", "Isolated")}: ${theme.fg("muted", "true")}`);
-		}
-		return new Text(lines.join("\n"), 0, 0);
-	}
-
-	lines.push(`${theme.fg("dim", "Tasks")}: ${theme.fg("muted", `${args.tasks.length} agents`)}`);
-	if (showIsolated) {
-		lines.push(`${theme.fg("dim", "Isolated")}: ${theme.fg("muted", "true")}`);
-	}
-
-	return new Text(lines.join("\n"), 0, 0);
+	return {
+		render(width) {
+			const lines = [renderStatusLine({ icon: "pending", title: "Task", description: args.agent }, theme)];
+			if (hasContext) {
+				lines.push(...renderStructuredRow(theme.fg("dim", "Context"), ` ${branch} `, ` ${vertical} `, width));
+				for (const line of context.split("\n")) {
+					lines.push(...renderStructuredRow(theme.fg("muted", line), ` ${vertical}  `, ` ${vertical}  `, width));
+				}
+				const taskPrefix = showIsolated ? branch : last;
+				lines.push(
+					...renderStructuredRow(
+						`${theme.fg("dim", "Tasks")}: ${theme.fg("muted", `${args.tasks.length} agents`)}`,
+						` ${taskPrefix} `,
+						` ${showIsolated ? vertical : " "}  `,
+						width,
+					),
+				);
+				if (showIsolated)
+					lines.push(
+						...renderStructuredRow(
+							`${theme.fg("dim", "Isolated")}: ${theme.fg("muted", "true")}`,
+							` ${last} `,
+							"    ",
+							width,
+						),
+					);
+			} else {
+				lines.push(
+					...renderStructuredRow(
+						`${theme.fg("dim", "Tasks")}: ${theme.fg("muted", `${args.tasks.length} agents`)}`,
+						"",
+						"",
+						width,
+					),
+				);
+				if (showIsolated)
+					lines.push(
+						...renderStructuredRow(`${theme.fg("dim", "Isolated")}: ${theme.fg("muted", "true")}`, "", "", width),
+					);
+			}
+			return lines;
+		},
+		invalidate() {},
+	};
 }
 
 /**
@@ -996,8 +1018,8 @@ export function renderResult(
 				}
 			}
 
-			const indented = lines.map(line =>
-				line.length > 0 ? truncateToWidth(`   ${line}`, width, Ellipsis.Omit) : "",
+			const indented = lines.flatMap(line =>
+				line.length > 0 ? renderStructuredTreeLine(line, Math.max(1, width - 3)).map(row => `   ${row}`) : [""],
 			);
 			cached = { key, lines: indented };
 			return indented;

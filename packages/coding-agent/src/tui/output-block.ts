@@ -4,6 +4,7 @@
 import { ImageProtocol, padding, TERMINAL, visibleWidth, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import type { Theme, ThemeColor } from "../modes/theme/theme";
 import { getImageLineMask } from "../utils/image-passthrough";
+import { renderStructuredTreeLine } from "./tree-list";
 import type { State } from "./types";
 import type { RenderCache } from "./utils";
 import { Ellipsis, getStateBgColor, Hasher, padToWidth, truncateToWidth } from "./utils";
@@ -18,7 +19,7 @@ export interface OutputBlockOptions {
 	header?: string;
 	headerMeta?: string;
 	state?: State;
-	sections?: Array<{ label?: string; lines: string[] }>;
+	sections?: Array<{ label?: string; lines: string[]; structured?: boolean }>;
 	width: number;
 	applyBg?: boolean;
 	/** Override the state-derived border color. Always takes precedence, including on error. Use for branded core tools. */
@@ -108,7 +109,9 @@ export function renderOutputBlock(options: OutputBlockOptions, theme: Theme): st
 				continue;
 			}
 			const wrappedLines = wrapContent
-				? wrapTextWithAnsi(line.trimEnd(), contentWidth)
+				? section.structured
+					? renderStructuredTreeLine(line.trimEnd(), contentWidth)
+					: wrapTextWithAnsi(line.trimEnd(), contentWidth)
 				: // Clip cleanly with no trailing ellipsis — a column of "…" down the
 					// right edge of a clipped diagram is clutter, not information.
 					[truncateToWidth(line.trimEnd(), contentWidth, Ellipsis.Omit)];
@@ -165,6 +168,7 @@ export class CachedOutputBlock {
 		if (options.sections) {
 			for (const s of options.sections) {
 				h.optional(s.label);
+				h.bool(s.structured ?? false);
 				for (const line of s.lines) {
 					h.str(line);
 				}

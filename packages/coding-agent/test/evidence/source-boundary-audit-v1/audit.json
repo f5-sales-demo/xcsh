@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "daee5854069e3e989829704cf44e939ef3997851",
-  "fingerprint": "4d15b32a96df8563d06ee85469202dced228e4a5974485e28f37aaef6416c93a",
+  "revision": "49476c087743a58b6b271dc961f71d0e6c95df61",
+  "fingerprint": "69971fc6408f387b5e4aae42da5580d5019ff27e02b3799e3ef7ce372038faea",
   "counts": {
     "total": 241,
     "components": 96,
@@ -2903,7 +2903,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "31ec14ab6776885500206dbcc63e83a3715a020e3054b967c028f4a845b6c83a",
+      "sha256": "f11419a10528e599b0483d56c8933d68543355bac2d78af29a1f7d4cd81df80f",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -4705,7 +4705,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "b1d22ead1c9e62459f42cdae249d7d02c613101a2b94762846f23f7d331eb16e",
+      "sha256": "f395a34f58461e6e9ad34d79a9ea5415f9c72696395c5cc127b4682a3e368f93",
       "exports": [
         "renderCall",
         "renderResult",
@@ -4919,7 +4919,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "a0c5b2b56d06aa5596273d19182922f5a944df1603bb75ff8319f2d76b7a2c98",
+      "sha256": "eab664e80515f315b4c0c3bcef8ced04461ab434c105a788d15d65a4fc5721a8",
       "exports": [
         "CalculatorTool",
         "CalculatorToolDetails",
@@ -5048,7 +5048,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "47f9d0d6bbc01e4bdba04b6ef69b7137197c4c985b258b3de6b56358f590f102",
+      "sha256": "3456812d3b01fc0bc3b99ae9750cde78fe32093622cf566aa11717ae30d1b9e8",
       "exports": [
         "FindOperations",
         "FindTool",
@@ -5476,7 +5476,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "bc7062cac6c1d342e024270540000ade1159e4e74436c97f80759f0cca52ebe6",
+      "sha256": "0d09af5ca593c3c863a532566030c70f48c8d27793d9aa29c5a5771b176d4d11",
       "exports": [
         "SearchToolBm25Details",
         "SearchToolBm25Tool",
@@ -5536,7 +5536,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "8fbb64f906f1c317e9e7b47f5ae7d5ad336f23c1e82d1385585cc583996a9406",
+      "sha256": "ebb2827fd0eb5f1e1360eada550683908792d8223cbef5e20c174a2ca175cefc",
       "exports": [
         "TodoItem",
         "TodoPhase",
@@ -5676,6 +5676,7 @@
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
         "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
+        "packages/coding-agent/test/task/task-renderer.test.ts",
         "packages/coding-agent/test/tui/hyperlink.test.ts",
         "packages/tui/test/issue-2045-repro.test.ts",
         "packages/tui/test/markdown.test.ts",
@@ -5690,7 +5691,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "664b7e2161b47b7eaef75df57c03a4b405071f1797c951d881fceddf321f39d6",
+      "sha256": "8f107436e84a3423ab2b1d5bb2aa30d6fcbf0712d51aec1a2f0476962ad37863",
       "exports": [
         "CachedOutputBlock",
         "F5_TOOL_BORDER_COLOR",
@@ -5712,14 +5713,17 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "09f24c69e893f960a8b849626a9bad479a66dbcac2826898816387c12629d5f7",
+      "sha256": "9925acfafe7a3353451efa9bd91b8f33eaee2efee241f180952f4a4cf464ab39",
       "exports": [
         "TreeListOptions",
+        "renderStructuredRow",
+        "renderStructuredTreeLine",
         "renderTreeList"
       ],
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/task/task-renderer.test.ts",
         "packages/coding-agent/test/tui-tree-list-collapsed-lines.test.ts"
       ],
       "classification": "packages/coding-agent/src/tui/tree-list.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -5812,7 +5816,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "tools",
-      "sha256": "b6d1e15a78ae3f70582c4f8d5edd3f898c974070cb928c130b93a3accc72534d",
+      "sha256": "65cf2bacdbe8c5b0a5df51153ef595e81cdc76458f2e591b9addbf642d07bd83",
       "exports": [
         "SearchRenderDetails",
         "renderSearchCall",

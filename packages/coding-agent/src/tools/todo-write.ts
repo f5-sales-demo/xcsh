@@ -412,29 +412,33 @@ export const todoWriteToolRenderer = {
 		}
 
 		const { expanded } = options;
-		const lines: string[] = [header];
 		const indent = phases.length > 1 ? "  " : "";
-		for (const phase of phases) {
-			if (phases.length > 1) {
-				lines.push(uiTheme.fg("contentAccent", `${indent}${uiTheme.tree.hook} ${phase.name}`));
-			}
-			const treeLines = renderTreeList(
-				{
-					items: phase.tasks,
-					expanded,
-					maxCollapsed: PREVIEW_LIMITS.COLLAPSED_ITEMS,
-					itemType: "todo",
-					renderItem: todo => formatTodoLine(todo, uiTheme, ""),
-				},
-				uiTheme,
-			);
-			for (const line of treeLines) lines.push(`${indent}${line}`);
-		}
-
-		const summary = renderTodoSummary(allTasks, uiTheme);
-		if (summary !== null) lines.push(`${indent}${summary}`);
-
-		return new Text(lines.join("\n"), 0, 0);
+		return {
+			render(width) {
+				const lines: string[] = [header];
+				for (const phase of phases) {
+					if (phases.length > 1) {
+						lines.push(uiTheme.fg("contentAccent", `${indent}${uiTheme.tree.hook} ${phase.name}`));
+					}
+					const treeLines = renderTreeList(
+						{
+							items: phase.tasks,
+							viewportWidth: Math.max(1, width - indent.length),
+							expanded,
+							maxCollapsed: PREVIEW_LIMITS.COLLAPSED_ITEMS,
+							itemType: "todo",
+							renderItem: todo => formatTodoLine(todo, uiTheme, ""),
+						},
+						uiTheme,
+					);
+					for (const line of treeLines) lines.push(`${indent}${line}`);
+				}
+				const summary = renderTodoSummary(allTasks, uiTheme);
+				if (summary !== null) lines.push(`${indent}${summary}`);
+				return lines;
+			},
+			invalidate() {},
+		};
 	},
 	mergeCallAndResult: true,
 };
