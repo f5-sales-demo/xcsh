@@ -84,6 +84,7 @@ describe("AgentSession retry fallback", () => {
 		tempDir = TempDir.createSync("@pi-retry-fallback-");
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
 		authStorage.setRuntimeApiKey("anthropic", "anthropic-test-key");
+		authStorage.setRuntimeApiKey("litellm", "litellm-test-key");
 		authStorage.setRuntimeApiKey("openai", "openai-test-key");
 		modelRegistry = new ModelRegistry(authStorage);
 	});
