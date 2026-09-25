@@ -15,6 +15,7 @@ class PreCommitTypeScriptGateContract(unittest.TestCase):
         ci_commands = [command.strip() for command in package["scripts"]["ci:check:full"].split("&&")]
 
         self.assertIn("bun run check:ts", ci_commands)
+        self.assertIn("python3 -m unittest tests.test_pre_commit_ts_gate", ci_commands)
         self.assertIn("bun run check:ts", hook.splitlines())
         self.assertLess(
             hook.index("./node_modules/.bin/lint-staged"),
