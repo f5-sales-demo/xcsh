@@ -109,6 +109,22 @@
       "mergedPr": "baseline in #4339"
     },
     {
+      "id": "sessions-compact-rows",
+      "surface": "/sessions",
+      "source": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "sinks": ["selectorFrame", "selectorRow", "selectorProse", "selectorCompactRow"],
+      "category": "mixed prose and identifiers",
+      "policy": "truncate-with-full-detail",
+      "detailView": true,
+      "reproductionWidth": 40,
+      "fixture": "Synthetic long session title, identifier, path, and first message with café 東京 and ANSI emphasis.",
+      "status": "finding-open",
+      "issue": "#4364",
+      "tests": ["packages/coding-agent/test/modes/components/session-selector-readability.test.ts"],
+      "terminalUat": "pending",
+      "mergedPr": "pending"
+    },
+    {
       "id": "selector-surfaces",
       "surface": "interactive selectors and bounded dialogs",
       "source": "packages/coding-agent/src/modes/components/**",

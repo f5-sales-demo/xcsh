@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "96be242f",
-    "0218e146",
-    "76fe13b0",
-    "45873206",
-    "6a4423e2",
-    "1b9bcf16",
-    "d6ea1bc4",
-    "8634872a"
+    "82597656",
+    "764d4fe0",
+    "51cf1715",
+    "17b85a09",
+    "96faf737",
+    "02644427",
+    "e7149510",
+    "444e94bf"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [
@@ -352,14 +352,14 @@
       "a526aebf"
     ],
     "packages/coding-agent/src/modes/components/session-selector.ts": [
-      "1ffcf95e",
-      "0edf53b1",
-      "dd9d5931",
-      "1dfab857",
-      "dc97a9a5",
-      "a6ae788f",
-      "7520360b",
-      "51276d53"
+      "b4c01025",
+      "90c92d40",
+      "3747aee7",
+      "9bcb8250",
+      "187472b0",
+      "9fd7da49",
+      "5399dee3",
+      "5d63e786"
     ],
     "packages/coding-agent/src/modes/components/settings-browser.ts": [
       "88faab48",
@@ -1781,51 +1781,45 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 112,
+      "line": 109,
       "sink": "selectorCompactRow",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 117,
+      "line": 114,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 133,
+      "line": 130,
       "sink": "selectorRow",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 141,
-      "sink": "selectorProse",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 146,
+      "line": 139,
       "sink": "selectorCompactRow",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 256,
+      "line": 313,
       "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 262,
+      "line": 319,
       "sink": "selectorRow",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 280,
+      "line": 344,
       "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "entry": "sessions-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/settings-browser.ts",
