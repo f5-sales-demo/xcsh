@@ -4,36 +4,37 @@ description: Report a bug or unexpected behavior
 labels: ["bug"]
 ---
 
-## Problem and impact
+## Describe the Bug
 
-Describe what happened, who is affected, and the repository evidence.
+Describe the bug clearly and concisely.
 
-## Steps to reproduce
+## Steps to Reproduce
 
-Give minimal steps, relevant version and platform, and sanitized logs.
+1. Go to '...'
+2. Click on '...'
+3. Scroll down to '...'
+4. See error
 
-## Expected and actual behavior
+## Expected Behavior
 
-State both outcomes clearly.
+Describe the expected behavior clearly and concisely.
 
-## Scope and affected interfaces
+## Actual Behavior
 
-Name affected commands, packages, APIs, plugins, configuration, or workflows, and state the boundaries.
+Describe the actual behavior clearly and concisely.
 
-## Constraints and dependencies
+## Environment
 
-Record platform, compatibility, security, privacy, performance, release, and external-service constraints. Link related issues or specifications.
+- OS: [e.g., macOS 14.0, Ubuntu 22.04]
+- Browser: [e.g., Chrome 120, Firefox 121]
+- Version/Commit: [e.g., commit SHA or tag]
 
-## Objective acceptance criteria
+## Acceptance Criteria
 
-List observable conditions and expected results, including important failure behavior.
+Provide a checklist of specific, objectively verifiable conditions that demonstrate the work is complete. Each item must be testable, ideally a failing test that turns green.
 
 - [ ]
 
-## Verification and traceability
+## Additional Context
 
-Map each criterion to a reproducer, test, UAT, or CI check. Link related requirements and the eventual PR.
-
-## Additional context
-
-Provide other relevant context without credentials or user data.
+Provide any other context, references, or log output about the issue here.
