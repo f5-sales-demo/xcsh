@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "b5c9013a01006956a1d2668ba2a05b1772870308",
-  "fingerprint": "9fd62d5759b32f6b98fe6a5e975f17410dfa8858d72c811bc470b41e1ea2df31",
+  "revision": "6771c700f9c699ce348b488b2705dbc594af52fa",
+  "fingerprint": "e1ffbc5b9b06a69142e024cd2f56145cc3ef6a3cb06ced464a59e1793e5042f8",
   "counts": {
-    "total": 241,
-    "components": 96,
+    "total": 242,
+    "components": 97,
     "integrations": 145
   },
   "audits": [
@@ -586,7 +586,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "f63c362b259d64041329473b87670e9414a26e74a47593ce0c550bbeac8bda80",
+      "sha256": "bff0ba25b27d5ffaf88050e39185854da5a65f750fe207ad5446155b72aac7a5",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -650,6 +650,7 @@
         "ProviderModelConfig",
         "ReadToolCallEvent",
         "ReadToolResultEvent",
+        "RecapCreatedEvent",
         "RegisteredCommand",
         "RegisteredTool",
         "RegisteredToolAdvisory",
@@ -2285,6 +2286,24 @@
       "classification": "packages/coding-agent/src/modes/components/read-tool-group.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
+      "source": "packages/coding-agent/src/modes/components/recap-message.ts",
+      "kind": "component",
+      "ownership": "read-only-renderer",
+      "domain": "core",
+      "sha256": "21e5e087b32f7afa60c7b6e2df709e9ee3ad7a344675f6da3bd8d7e18dcf8e2b",
+      "exports": [
+        "RecapMessageComponent"
+      ],
+      "interactionSignals": [
+        "render"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/recap-message.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/components/recap-message.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
       "source": "packages/coding-agent/src/modes/components/request-user-input.ts",
       "kind": "component",
       "ownership": "caller-owned-draft",
@@ -3286,7 +3305,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "cd6a33252a91c4272b1b0512d1651a82fd0ae930ceaf45b6348a1611c43d7b13",
+      "sha256": "6720c00953d7b1f5feba04502f422b28f5dd230808b93643ccd9815666124269",
       "exports": [
         "EventController"
       ],
@@ -3557,7 +3576,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "79f63ef23d7e2ac1f04ccda22ff8e15f266e93ffc90165efbdb675f0031c0411",
+      "sha256": "70cb71b4f5728636bf1298a1518ba4e58afb2b74b779d3a90c4870407f613529",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -3734,7 +3753,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "8af2126ee08cebb72c0024036aa019d7cd035cf224c0250ec2ca9c69de8e2db5",
+      "sha256": "6564f2f8b62acc63fa2e86480208e74b93532eb353e87c84946fbeeb2cd8ac87",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4372,7 +4391,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "c77c909fa619e4ee8e2140b5cab7f78f258e27f6f9b9165da81405e76492670f",
+      "sha256": "6055993ce7b97f6b12c002efbb4f55ce49373c631e32b73ffdc9c96bebce7e84",
       "exports": [
         "UiHelpers"
       ],
@@ -4560,7 +4579,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "14e64ca0d060c935590505f22b1de1b2ee0340dbdde3ddbd5bf3ddf58bbef1f0",
+      "sha256": "b0d52a7f5d30c0066636ee1ea80f68849b8bd333fe4a6d9bcd07c7ad69c81097",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -6875,7 +6894,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "ace8bb86b87284c2a0f7e133e92e511e276f5465f74da83bb4c9fa310f5f8f5e",
+      "sha256": "8f5976b36f88229c3e2002ac45ac5259e602a2967f7e06d35dd29279b65a74c1",
       "exports": [
         "ProcessTerminal",
         "Terminal",

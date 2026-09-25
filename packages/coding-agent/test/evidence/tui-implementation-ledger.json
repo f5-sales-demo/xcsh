@@ -7922,6 +7922,25 @@
     },
     {
       "surface": {
+        "id": "/recap",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "command"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Feature-level tests and task-owned terminal exercise exist; complete-candidate TUI evidence remains to be classified."
+      ]
+    },
+    {
+      "surface": {
         "id": "/reload-plugins",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"
@@ -13635,6 +13654,25 @@
         "Individually classified from current source SHA-256 2ebf47054a45feb689659b94a343ab39781d443e7b9247881535cb556d16fc88.",
         "Ownership: read-only-renderer; domain: core; direct tests: 2.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/recap-message.ts",
+        "source": "packages/coding-agent/src/modes/components/recap-message.ts",
+        "kind": "component"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Feature-level tests and task-owned terminal exercise exist; complete-candidate TUI evidence remains to be classified."
       ]
     },
     {

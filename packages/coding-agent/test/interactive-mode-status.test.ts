@@ -83,6 +83,7 @@ describe("InteractiveMode.showStatus", () => {
 			chatContainer: new Container(),
 			pendingTools: new Map(),
 			ui: { requestRender: vi.fn() },
+			sessionManager: { getBranch: () => [] },
 			optimisticUserMessageSignature: "hello\u00001",
 		} as unknown as InteractiveModeContext;
 		const helpers = new UiHelpers(ctx);
