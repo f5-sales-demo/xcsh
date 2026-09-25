@@ -491,8 +491,9 @@ class HerdrDispatch:
                 f"Missing fields: {json.dumps(assessment.get('missing', []))}."
             )
         return preface + (
-            "This is a delivery session in an isolated issue worktree. Confirm or create a "
-            "linked PR, implement the complete issue, run relevant tests, repair CI and "
+            "This is a delivery session in an isolated issue worktree. Look for an existing "
+            "linked PR first and continue its branch; create a PR only if none exists. "
+            "Implement the complete issue, run relevant tests, repair CI and "
             "branch state, merge under repository policy, then clean up the worktree. "
             "Use objective issue, PR, and test evidence to establish completion."
         )
