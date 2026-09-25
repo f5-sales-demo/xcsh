@@ -41,23 +41,20 @@ class SessionList implements Component {
 	#searchInput = new Input();
 	#hitRows: (number | undefined)[] = [];
 	#capacity = 4;
-	#showCwd = false;
 	onSelect?: (sessionPath: string) => void;
 	onCancel?: () => void;
 	onExit: () => void = () => {};
 	onDeleteRequest?: (session: SessionInfo) => void;
 
-	constructor(sessions: SessionInfo[], showCwd = false) {
+	constructor(sessions: SessionInfo[]) {
 		this.#sessions = sessions;
 		this.#filteredSessions = sessions;
-		this.#showCwd = showCwd;
 		this.#searchInput.onEscape = () => {};
 	}
 
-	setSessions(sessions: SessionInfo[], showCwd: boolean, query: string): void {
+	setSessions(sessions: SessionInfo[], query: string): void {
 		const identity = this.selected()?.path;
 		this.#sessions = sessions;
-		this.#showCwd = showCwd;
 		this.#searchInput.setValue(query);
 		this.#filterSessions(query);
 		if (identity) {
@@ -136,10 +133,6 @@ class SessionList implements Component {
 					index === this.#selectedIndex,
 				),
 			);
-			if (index === this.#selectedIndex) {
-				const summary = `${this.#showCwd ? `${session.cwd} · ` : ""}${session.firstMessage.replace(/\s+/g, " ").trim()}`;
-				lines.push(...wrapTextWithAnsi(theme.fg("muted", summary), width).map(line => selectorProse(line)));
-			}
 		}
 		if (start > 0 || end < this.#filteredSessions.length)
 			lines.push(
@@ -201,6 +194,10 @@ export class SessionSelectorComponent extends Container implements MouseRoutable
 	#onRequestRender?: () => void;
 	#listLineOffset = 0;
 	#detailActionRows: number[] = [];
+	#detailOffset = 0;
+	#detailCapacity = 1;
+	#detailLength = 0;
+	#detailWidth = 0;
 	#scope: "current" | "all" = "current";
 	#queries = { current: "", all: "" };
 	readonly #getTerminalRows: () => number;
@@ -225,6 +222,7 @@ export class SessionSelectorComponent extends Container implements MouseRoutable
 		this.#sessionList.onSelect = path => {
 			this.#detail = this.#allSessions.find(session => session.path === path);
 			this.#detailAction = 0;
+			this.#resetDetailPage();
 			this.#onRequestRender?.();
 		};
 		this.#sessionList.onCancel = this.onCancel;
@@ -240,61 +238,133 @@ export class SessionSelectorComponent extends Container implements MouseRoutable
 		if (next === this.#scope) return;
 		this.#queries[this.#scope] = this.#sessionList.getQuery();
 		this.#scope = next;
+		this.#resetDetailPage();
 		this.#sessionList.setSessions(
 			next === "current" ? this.#currentSessions : this.#allSessions,
-			next === "all",
 			this.#queries[next],
 		);
+	}
+
+	#resetDetailPage(): void {
+		this.#detailOffset = 0;
+		this.#detailLength = 0;
+	}
+
+	#pagedDetails(
+		values: string[],
+		width: number,
+		height: number,
+		reservedRows: number,
+	): {
+		details: string[];
+		minimumRows: number;
+		hint?: string;
+	} {
+		const wrapped = values.flatMap(value => wrapTextWithAnsi(value, width));
+		if (this.#detailWidth !== width) this.#resetDetailPage();
+		this.#detailWidth = width;
+		this.#detailCapacity = Math.max(1, height - reservedRows);
+		this.#detailLength = wrapped.length;
+		const lastPageOffset =
+			Math.max(0, Math.ceil(this.#detailLength / this.#detailCapacity) - 1) * this.#detailCapacity;
+		this.#detailOffset = Math.min(this.#detailOffset, lastPageOffset);
+		const details = wrapped.slice(this.#detailOffset, this.#detailOffset + this.#detailCapacity);
+		if (this.#detailLength <= this.#detailCapacity) return { details, minimumRows: details.length };
+		const first = this.#detailOffset + 1;
+		const last = Math.min(this.#detailLength, this.#detailOffset + this.#detailCapacity);
+		return {
+			details,
+			minimumRows: this.#detailCapacity,
+			hint: `${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: details ${first}–${last} of ${this.#detailLength}`,
+		};
+	}
+
+	#pageDetails(direction: -1 | 1): boolean {
+		if (this.#detailLength <= this.#detailCapacity) return false;
+		const lastPageOffset =
+			Math.max(0, Math.ceil(this.#detailLength / this.#detailCapacity) - 1) * this.#detailCapacity;
+		this.#detailOffset = Math.max(0, Math.min(lastPageOffset, this.#detailOffset + direction * this.#detailCapacity));
+		this.#onRequestRender?.();
+		return true;
 	}
 
 	override render(width: number): string[] {
 		if (this.#confirmationDialog) return this.#confirmationDialog.render(width);
 		const inner = selectorFrameContentWidth(width);
+		const height = this.#getTerminalRows();
 		if (this.#detail) {
 			const session = this.#detail;
 			const actions = ["Resume this session", "Delete this session"];
-			const lines = selectorFrame(
-				width,
-				this.#getTerminalRows(),
-				"Session details",
-				`${session.title || "Untitled session"} · ${session.id}`,
-				[],
-				actions.map((label, index) => selectorRow([label], [inner - 2], index === this.#detailAction)),
+			const page = this.#pagedDetails(
 				[
+					`Title: ${session.title || "Untitled session"}`,
 					`Identity: ${session.id}`,
 					`Working directory: ${session.cwd || "Unknown"}`,
 					`Session file: ${session.path}`,
 					`Parent: ${session.parentSessionPath ?? "None"}`,
 					`Modified: ${session.modified.toISOString()}`,
 					`Messages: ${session.messageCount}`,
-					...wrapTextWithAnsi(`First message: ${session.firstMessage}`, inner),
+					`First message: ${session.firstMessage || "No message text"}`,
 				],
-				[selectorCancelHint("back")],
-				{ selectedBodyIndex: this.#detailAction },
+				inner,
+				height,
+				12,
+			);
+			const lines = selectorFrame(
+				width,
+				height,
+				"Session details",
+				"Review the complete saved-session details before choosing an action.",
+				[],
+				actions.map((label, index) => selectorRow([label], [inner - 2], index === this.#detailAction)),
+				page.details,
+				[...(page.hint ? [page.hint] : []), selectorCancelHint("back")],
+				{ minimumDetailRows: page.minimumRows, selectedBodyIndex: this.#detailAction },
 			);
 			this.#detailActionRows = actions.map(label => lines.findIndex(line => Bun.stripANSI(line).includes(label)));
 			return lines;
 		}
 		const list = this.#sessionList.renderFrameLines(inner);
+		const selected = this.#sessionList.selected();
+		const page = this.#pagedDetails(
+			selected
+				? [
+						`Title: ${selected.title || "Untitled session"}`,
+						`Identity: ${selected.id}`,
+						`Working directory: ${selected.cwd || "Unknown"}`,
+						`Session file: ${selected.path}`,
+						`First message: ${selected.firstMessage || "No message text"}`,
+					]
+				: [],
+			inner,
+			height,
+			15,
+		);
 		const tabs = `[${this.#scope === "current" ? "Current" : "current"} (${this.#currentSessions.length})]  [${this.#scope === "all" ? "All" : "all"} (${this.#allSessions.length})]`;
 		const lines = selectorFrame(
 			width,
-			this.#getTerminalRows(),
+			height,
 			"Sessions",
 			this.#scope === "current"
 				? `Current directory · ${this.#currentCwd || "unknown"}`
 				: "All saved session directories",
 			[theme.fg("muted", tabs)],
 			list,
-			[],
+			page.details,
 			[
 				"Tab/Shift+Tab: scope",
 				"Del: review deletion",
 				selectorCancelHint("back"),
-				...(list.length >= Math.max(1, this.#getTerminalRows() - 10)
-					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: page`]
-					: []),
+				...(page.hint
+					? [page.hint]
+					: list.length >= Math.max(1, height - 10)
+						? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: page`]
+						: []),
 			],
+			{
+				minimumDetailRows: page.minimumRows,
+				selectedDetail: "provided",
+			},
 		);
 		this.#listLineOffset = lines.findIndex(line => Bun.stripANSI(line).includes("Search:"));
 		return lines;
@@ -343,8 +413,12 @@ export class SessionSelectorComponent extends Container implements MouseRoutable
 			return;
 		}
 		if (this.#detail) {
-			if (matchesSelectorKey(data, "cancel")) this.#detail = undefined;
-			else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down"))
+			if (matchesSelectorKey(data, "pageUp") && this.#pageDetails(-1)) return;
+			if (matchesSelectorKey(data, "pageDown") && this.#pageDetails(1)) return;
+			if (matchesSelectorKey(data, "cancel")) {
+				this.#detail = undefined;
+				this.#resetDetailPage();
+			} else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down"))
 				this.#detailAction = 1 - this.#detailAction;
 			else if (matchesSelectorKey(data, "confirm")) {
 				if (this.#detailAction === 0) this.onResume(this.#detail.path);
@@ -356,7 +430,11 @@ export class SessionSelectorComponent extends Container implements MouseRoutable
 			this.#switchScope(this.#scope === "current" ? "all" : "current");
 			return;
 		}
+		if (matchesSelectorKey(data, "pageUp") && this.#pageDetails(-1)) return;
+		if (matchesSelectorKey(data, "pageDown") && this.#pageDetails(1)) return;
+		const selectedPath = this.#sessionList.selected()?.path;
 		this.#sessionList.handleInput(data);
+		if (this.#sessionList.selected()?.path !== selectedPath) this.#resetDetailPage();
 	}
 
 	routeMouse(event: SgrMouseEvent, _line: number, _col: number): void {
