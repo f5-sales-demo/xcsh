@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import * as path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import type { ExtensionAPI, ExtensionContext, UserPromptKind } from "@f5-sales-demo/xcsh";
-import { HerdrClient } from "../../../herdr/client";
+import { HERDR_PROTOCOL_MAX_VERSION, HerdrClient } from "../../../herdr/client";
 import { requestHerdrIdempotent } from "../../../herdr/retry";
 import { HERDR_SEMANTIC_REPORT_TIMEOUT_MS, requestSemanticReport } from "../../../herdr/semantic-report";
 import { finalAnswerText } from "../../../session/final-answer";
@@ -176,7 +176,7 @@ function nativeCapability(): string | undefined {
 
 /** Protocol 23 adds a workspace receipt without changing native action semantics. */
 function supportsNativeLifecycle(protocol: number | undefined): boolean {
-	return protocol !== undefined && protocol >= 22 && protocol <= 26;
+	return protocol !== undefined && protocol >= 22 && protocol <= HERDR_PROTOCOL_MAX_VERSION;
 }
 
 function persistedTurns(ctx: ExtensionContext): PersistedTurn[] {
@@ -727,13 +727,26 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		}
 	};
 
-	const report = (state: "idle" | "working" | "blocked", message?: string): Promise<void> =>
+	const sessionRefFromContext = (ctx: ExtensionContext): Record<string, unknown> | undefined => {
+		try {
+			const file = ctx.sessionManager?.getSessionFile?.();
+			if (typeof file === "string" && path.isAbsolute(file)) return { agent_session_path: file };
+			const id = ctx.sessionManager?.getSessionId?.();
+			if (typeof id === "string" && id.length > 0) return { agent_session_id: id };
+		} catch (err) {
+			onError(err);
+		}
+		return undefined;
+	};
+
+	const report = (state: "idle" | "working" | "blocked", message?: string, ctx?: ExtensionContext): Promise<void> =>
 		send(REPORT_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			state,
 			...(message === undefined ? {} : { message }),
+			...(ctx === undefined ? {} : sessionRefFromContext(ctx)),
 			seq: seq++,
 		});
 
@@ -819,21 +832,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			return Promise.resolve();
 		}
 		if (sessionStartSource !== undefined) pendingSessionStartSource = sessionStartSource;
-		let sessionRef: Record<string, unknown> | undefined;
-		try {
-			const file = ctx.sessionManager?.getSessionFile?.();
-			if (typeof file === "string" && path.isAbsolute(file)) {
-				sessionRef = { agent_session_path: file };
-			} else {
-				const id = ctx.sessionManager?.getSessionId?.();
-				if (typeof id === "string" && id.length > 0) {
-					sessionRef = { agent_session_id: id };
-				}
-			}
-		} catch (err) {
-			onError(err);
-			return Promise.resolve();
-		}
+		const sessionRef = sessionRefFromContext(ctx);
 		if (!sessionRef) {
 			return Promise.resolve();
 		}
@@ -876,6 +875,12 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		startHeartbeat();
 		await report("idle");
 		await reportSession(ctx);
+		// Protocol 27 recap reports require an authoritative state frame carrying
+		// the session ref. The first state frame can precede session anchoring.
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (socketPath && getHerdrClient(socketPath).capabilityVersion("agent_recaps") === 1) {
+			await report("idle", undefined, ctx);
+		}
 		// An argv prompt can enter before_agent_start while the asynchronous
 		// session_start extension callback is still draining.  In that case the
 		// reporter has already appended this process's revision-0/starting entries;
