@@ -1,4 +1,4 @@
-const USAGE = "Usage: /plugin install [--force] [--scope user|project] <name@marketplace>";
+const USAGE = "Usage: /plugin install [--force] [--scope user|project] <name[@marketplace]>";
 
 export interface MarketplaceInstallArgs {
 	force: boolean;
@@ -16,7 +16,8 @@ export interface MarketplaceInstallArgs {
  *   --force                 Force-reinstall even if already installed
  *   --scope user|project    Installation scope (default: user)
  *
- * Exactly one positional argument is required: `name@marketplace`.
+ * Exactly one positional argument is required. A bare plugin name is resolved
+ * only when it is unique across the enabled marketplaces.
  */
 export function parseMarketplaceInstallArgs(rest: string): MarketplaceInstallArgs | { error: string } {
 	const tokens = rest.split(/\s+/).filter(Boolean);
@@ -47,11 +48,45 @@ export function parseMarketplaceInstallArgs(rest: string): MarketplaceInstallArg
 		}
 	}
 
-	if (!installSpec.includes("@")) {
+	if (!installSpec) {
 		return { error: USAGE };
 	}
 
 	return { force, scope, installSpec };
+}
+
+export interface MarketplaceInstallCandidate {
+	name: string;
+	marketplace: string;
+}
+
+export function resolveMarketplaceInstallSpec(
+	installSpec: string,
+	candidates: readonly MarketplaceInstallCandidate[],
+): MarketplaceInstallCandidate | { error: string } {
+	const firstAt = installSpec.indexOf("@");
+	const lastAt = installSpec.lastIndexOf("@");
+	if (lastAt >= 0) {
+		const name = installSpec.slice(0, lastAt);
+		const marketplace = installSpec.slice(lastAt + 1);
+		if (!name || !marketplace || firstAt !== lastAt) return { error: USAGE };
+		return { name, marketplace };
+	}
+
+	const marketplaces = [
+		...new Set(
+			candidates.filter(candidate => candidate.name === installSpec).map(candidate => candidate.marketplace),
+		),
+	].sort();
+	if (marketplaces.length === 0) {
+		return { error: `Plugin "${installSpec}" was not found in any enabled marketplace.` };
+	}
+	if (marketplaces.length > 1) {
+		return {
+			error: `Plugin "${installSpec}" is available from multiple marketplaces (${marketplaces.join(", ")}). Use ${installSpec}@marketplace.`,
+		};
+	}
+	return { name: installSpec, marketplace: marketplaces[0]! };
 }
 
 // ── Shared scope+id parser for uninstall / upgrade / enable / disable ───────

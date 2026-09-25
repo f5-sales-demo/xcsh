@@ -257,7 +257,7 @@ describe("scoped tool advisories", () => {
 			"plugin:new",
 		);
 
-		runner.reloadExtensions([replacement], replacementRuntime);
+		await runner.reloadExtensions([replacement], replacementRuntime);
 
 		expect(runner.getAllRegisteredIntegrations().map(handle => handle.id)).toEqual(["fresh_install_new"]);
 		expect(runner.getAllRegisteredTools().map(tool => tool.definition.name)).toEqual(["new_plugin_tool"]);

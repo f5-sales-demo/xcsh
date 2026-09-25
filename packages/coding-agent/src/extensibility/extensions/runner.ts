@@ -256,7 +256,7 @@ export class ExtensionRunner {
 	}
 
 	/** Replace every registration surface after marketplace state changes. */
-	reloadExtensions(extensions: readonly Extension[], runtime: ExtensionRuntime): void {
+	async reloadExtensions(extensions: readonly Extension[], runtime: ExtensionRuntime): Promise<void> {
 		const activeOwners = new Set(extensions.map(extension => extension.resolvedPath));
 		for (const extension of this.extensions) {
 			if (activeOwners.has(extension.resolvedPath)) continue;
@@ -269,6 +269,7 @@ export class ExtensionRunner {
 		if (this.#initialization) {
 			const { actions, contextActions, commandContextActions, uiContext } = this.#initialization;
 			this.initialize(actions, contextActions, commandContextActions, uiContext);
+			await this.emit({ type: "session_start" });
 		}
 	}
 

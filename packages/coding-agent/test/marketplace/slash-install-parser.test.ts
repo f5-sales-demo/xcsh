@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "../../src/slash-commands/marketplace-install-parser";
+import {
+	parseMarketplaceInstallArgs,
+	parsePluginScopeArgs,
+	resolveMarketplaceInstallSpec,
+} from "../../src/slash-commands/marketplace-install-parser";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -20,6 +24,10 @@ function err(rest: string) {
 describe("parseMarketplaceInstallArgs — success", () => {
 	it("bare spec → defaults force=false scope=user", () => {
 		expect(ok("hello@market")).toEqual({ force: false, scope: "user", installSpec: "hello@market" });
+	});
+
+	it("unqualified name → defers marketplace resolution", () => {
+		expect(ok("hello-world")).toEqual({ force: false, scope: "user", installSpec: "hello-world" });
 	});
 
 	it("--force flag", () => {
@@ -70,10 +78,6 @@ describe("parseMarketplaceInstallArgs — errors", () => {
 		expect(err("")).toMatch(/Usage:/);
 	});
 
-	it("spec without @ → usage", () => {
-		expect(err("hello-world")).toMatch(/Usage:/);
-	});
-
 	it("unknown flag → Unknown flag message", () => {
 		expect(err("--froce hello@market")).toMatch(/Unknown flag.*--froce/);
 	});
@@ -100,6 +104,35 @@ describe("parseMarketplaceInstallArgs — errors", () => {
 
 	it("flags only, no positional → usage", () => {
 		expect(err("--force")).toMatch(/Usage:/);
+	});
+});
+
+describe("resolveMarketplaceInstallSpec", () => {
+	it("resolves a bare name only when one enabled marketplace provides it", () => {
+		expect(
+			resolveMarketplaceInstallSpec("hello", [
+				{ name: "other", marketplace: "first" },
+				{ name: "hello", marketplace: "second" },
+			]),
+		).toEqual({ name: "hello", marketplace: "second" });
+	});
+
+	it("rejects an ambiguous bare name with deterministic qualification guidance", () => {
+		expect(
+			resolveMarketplaceInstallSpec("hello", [
+				{ name: "hello", marketplace: "z-market" },
+				{ name: "hello", marketplace: "a-market" },
+			]),
+		).toEqual({
+			error: 'Plugin "hello" is available from multiple marketplaces (a-market, z-market). Use hello@marketplace.',
+		});
+	});
+
+	it("preserves an explicit qualified target without guessing", () => {
+		expect(resolveMarketplaceInstallSpec("hello@chosen", [])).toEqual({
+			name: "hello",
+			marketplace: "chosen",
+		});
 	});
 });
 

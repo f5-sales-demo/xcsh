@@ -501,7 +501,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		const basePath = cwd ?? this.sessionManager.getCwd();
 		if (options?.reloadExtensions && this.session.extensionRunner) {
 			const result = await discoverAndLoadExtensions([], basePath);
-			this.session.extensionRunner.reloadExtensions(result.extensions, result.runtime);
+			await this.session.extensionRunner.reloadExtensions(result.extensions, result.runtime);
 			await this.session.refreshExtensionTools();
 			for (const error of result.errors) {
 				logger.warn("Plugin extension reload skipped an extension", error);
