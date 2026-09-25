@@ -251,7 +251,10 @@ describe("herdr-reporter extension", () => {
 
 	it("reports recaps through the ordered queue only when the server advertises agent_recaps", async () => {
 		for (const capabilities of [undefined, { agent_recaps: 1 }]) {
-			const herdr = await startFakeHerdr({ capabilities });
+			const herdr = await startFakeHerdr({
+				protocol: capabilities ? 27 : 26,
+				capabilities: capabilities ? { ...capabilities, xcsh_semantic_tracking: 1 } : undefined,
+			});
 			try {
 				process.env.HERDR_PANE_ID = "w1:p1";
 				process.env.HERDR_SOCKET_PATH = herdr.socketPath;
@@ -276,6 +279,17 @@ describe("herdr-reporter extension", () => {
 				const reports = herdr.received.filter(frame => frame.method === "agent.recap.report");
 				expect(reports).toHaveLength(capabilities ? 1 : 0);
 				if (capabilities) {
+					const state = herdr.received.find(frame => frame.method === "pane.report_agent");
+					const session = herdr.received.find(frame => frame.method === "pane.report_agent_session");
+					const stateAfterSession = herdr.received.find(
+						frame => frame.method === "pane.report_agent" && frame.order > (session?.order ?? Infinity),
+					);
+					expect(state).toBeDefined();
+					expect(session).toBeDefined();
+					expect(state!.order).toBeLessThan(session!.order);
+					expect(stateAfterSession).toBeDefined();
+					expect(stateAfterSession!.params.agent_session_path).toBe("/tmp/recap-session.jsonl");
+					expect(stateAfterSession!.order).toBeLessThan(reports[0]!.order);
 					expect(reports[0]!.params).toMatchObject({
 						pane_id: "w1:p1",
 						source: "herdr:xcsh",
@@ -284,13 +298,62 @@ describe("herdr-reporter extension", () => {
 						summary: "A completed recap",
 						completed_turn_count: 3,
 					});
-					expect(reports[0]!.order).toBeGreaterThan(
-						herdr.received.find(frame => frame.method === "pane.report_agent_session")!.order,
-					);
+					expect(reports[0]!.order).toBeGreaterThan(session!.order);
 				}
 			} finally {
 				await herdr.close();
 			}
+		}
+	});
+
+	it("reanchors recap authority after an xcsh session switch", async () => {
+		const herdr = await startFakeHerdr({ protocol: 27, capabilities: { agent_recaps: 1 } });
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+			let sessionId = "session-a";
+			const ctx = {
+				isIdle: () => true,
+				sessionManager: {
+					getSessionId: () => sessionId,
+					getSessionFile: () => `/tmp/${sessionId}.jsonl`,
+				},
+			} as unknown as ExtensionContext;
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, ctx);
+			sessionId = "session-b";
+			await handlers.get("session_switch")?.({ reason: "new" }, ctx);
+			await handlers.get("recap_created")?.(
+				{
+					type: "recap_created",
+					recap: {
+						id: "recap-b",
+						sessionId,
+						trigger: "manual",
+						summary: "Session B recap",
+						completedTurnCount: 3,
+						createdAt: "2026-09-25T00:00:00.000Z",
+					},
+				},
+				ctx,
+			);
+			const session = herdr.received.find(
+				frame =>
+					frame.method === "pane.report_agent_session" &&
+					frame.params.agent_session_path === "/tmp/session-b.jsonl",
+			);
+			const state = herdr.received.find(
+				frame => frame.method === "pane.report_agent" && frame.params.agent_session_path === "/tmp/session-b.jsonl",
+			);
+			const recap = herdr.received.find(frame => frame.method === "agent.recap.report");
+			expect(session).toBeDefined();
+			expect(state).toBeDefined();
+			expect(recap).toBeDefined();
+			expect(session!.order).toBeLessThan(state!.order);
+			expect(state!.order).toBeLessThan(recap!.order);
+		} finally {
+			await herdr.close();
 		}
 	});
 
@@ -493,10 +556,11 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
-	it("publishes semantic results to a future protocol with the named capability", async () => {
+	it("publishes semantic results to protocol 27 with the named capability", async () => {
 		const herdr = await startFakeHerdr({
 			protocol: 27,
 			capabilities: { xcsh_semantic_tracking: 1 },
+			respond: request => (request.method === "agent.turn.report" ? { type: "agent_turn" } : {}),
 		});
 		try {
 			process.env.HERDR_PANE_ID = "w1:p1";
@@ -527,6 +591,7 @@ describe("herdr-reporter extension", () => {
 			await handlers.get("turn_phase")?.({ type: "turn_phase", phase: "idle", turnId: 1 }, ctx);
 
 			await waitFor(() => herdr.received.filter(frame => frame.method === "agent.turn.report").length === 3);
+			await waitFor(() => (entries.at(-1)?.data as { delivered?: boolean } | undefined)?.delivered === true);
 			const turns = herdr.received.filter(frame => frame.method === "agent.turn.report").map(frame => frame.params);
 			expect(turns.map(turn => turn.state)).toEqual(["starting", "working", "completed"]);
 			expect(turns.map(turn => turn.event_revision)).toEqual([1, 2, 3]);
