@@ -476,6 +476,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.ui.terminal.onAppearanceChange(mode => {
 			onTerminalAppearanceChange(mode);
 		});
+		this.ui.terminal.onFocusChange?.(focused => this.session.setTerminalFocused(focused));
 
 		// Set up git branch watcher
 		this.statusLine.watchBranch(() => {

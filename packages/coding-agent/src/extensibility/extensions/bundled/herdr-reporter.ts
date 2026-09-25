@@ -69,6 +69,7 @@ const SESSION_METHOD = "pane.report_agent_session";
 const HEARTBEAT_METHOD = "pane.report_agent_heartbeat";
 const RELEASE_METHOD = "pane.release_agent";
 const TURN_REPORT_METHOD = "agent.turn.report";
+const RECAP_REPORT_METHOD = "agent.recap.report";
 const TURN_ACTION_GET_METHOD = "agent.turn.action.get";
 const TURN_ACTION_ACK_METHOD = "agent.turn.action.ack";
 const SOCKET_TIMEOUT_MS = 2000;
@@ -917,6 +918,34 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			semanticRevision = last.eventRevision ?? 0;
 			await finishSemanticTurn("interrupted", { reason: "xcsh restarted before semantic settlement" });
 		}
+	});
+
+	pi.on("recap_created", async (event, ctx) => {
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (!socketPath) return;
+		await reportSession(ctx);
+		const sessionFile = ctx.sessionManager?.getSessionFile?.();
+		const sessionRef =
+			typeof sessionFile === "string" && path.isAbsolute(sessionFile)
+				? sessionFile
+				: ctx.sessionManager?.getSessionId?.();
+		if (!sessionRef || event.recap.sessionId !== ctx.sessionManager?.getSessionId?.()) return;
+		await enqueue(async () => {
+			const client = getHerdrClient(socketPath);
+			await client.ensureSemanticProtocol();
+			if (client.capabilityVersion("agent_recaps") !== 1) return;
+			await requestHerdrIdempotent(client, RECAP_REPORT_METHOD, {
+				pane_id: paneId,
+				source: HERDR_SOURCE,
+				session_id: sessionRef,
+				id: event.recap.id,
+				trigger: event.recap.trigger,
+				summary: event.recap.summary,
+				...(event.recap.nextAction ? { next_action: event.recap.nextAction } : {}),
+				completed_turn_count: event.recap.completedTurnCount,
+				created_at: event.recap.createdAt,
+			});
+		});
 	});
 
 	pi.on("before_agent_start", async (_event, ctx) => {
