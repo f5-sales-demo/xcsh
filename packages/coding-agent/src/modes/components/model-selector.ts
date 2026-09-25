@@ -8,7 +8,6 @@ import {
 	type Tab,
 	TabBar,
 	type TUI,
-	truncateToWidth,
 	wrapTextWithAnsi,
 } from "@f5-sales-demo/pi-tui";
 import { filterCurrentBrowserModels } from "../../config/model-catalog";
@@ -351,6 +350,10 @@ export class ModelSelectorComponent extends Container {
 	#spinnerFrame = 0;
 	#spinnerTimer?: ReturnType<typeof setInterval>;
 	#pendingRefreshes = 0;
+	#detailOffset = 0;
+	#detailCapacity = 1;
+	#detailLength = 0;
+	#detailWidth = 0;
 
 	#disposed = false;
 	#initialProvider?: string;
@@ -384,7 +387,7 @@ export class ModelSelectorComponent extends Container {
 		let selectedBodyIndex: number | undefined;
 		let stickyBodyRows = 0;
 		let minimumDetailRows = 0;
-		const details: string[] = selected ? wrapTextWithAnsi(selected.selector, inner) : [];
+		const details: string[] = [];
 		let navigation: string[] = [];
 		let title = "Choose a model";
 		let purpose = "";
@@ -393,6 +396,7 @@ export class ModelSelectorComponent extends Container {
 			`Ctrl+R: refresh${this.#onLogin ? " · Ctrl+L: providers" : ""} · ${selectorCancelHint(searching ? "clear search" : "back")}`,
 		];
 		if (this.#isMenuOpen && selected) {
+			details.push(...wrapTextWithAnsi(selected.selector, inner));
 			title = getModelDisplayName(selected.model);
 			const labels =
 				this.#menuStep === "scope"
@@ -430,25 +434,42 @@ export class ModelSelectorComponent extends Container {
 				...this.#searchInput.render(inner),
 			];
 			if (this.#scopedModels.length) purpose = "Showing models from --models scope";
-			const status = this.#renderProviderStatus(inner)
-				.filter(line => line.trim())
-				.slice(0, 1);
 			if (selected) {
-				details.push(...wrapTextWithAnsi(assignments(selected.model, true), inner));
-				if (this.#isItemDisabled(selected) && !this.#refreshingProvider) {
-					details.push("Unavailable · reconnect or refresh this provider.");
-				} else if (selected.model.description) details.push(...wrapTextWithAnsi(selected.model.description, inner));
+				const providerRowLabel = getProviderDisplayName(selected.model.provider);
+				const providerLabel =
+					this.#modelRegistry.getProviderPickerMetadata?.(selected.model.provider)?.groupLabel ?? providerRowLabel;
+				const detailValues = [
+					`Model: ${getModelDisplayName(selected.model)}`,
+					`Provider: ${providerLabel}`,
+					...(providerRowLabel !== providerLabel ? [`Provider row label: ${providerRowLabel}`] : []),
+					`Selector: ${selected.selector}`,
+					`Assignments: ${assignments(selected.model, true)}`,
+					...(this.#isItemDisabled(selected) && !this.#refreshingProvider
+						? ["Status: Unavailable · reconnect or refresh this provider."]
+						: []),
+					...(selected.model.description ? [`Description: ${selected.model.description}`] : []),
+					...this.#renderProviderStatus().filter(line => line.trim()),
+					...(this.#errorMessage ? [`Error: ${String(this.#errorMessage)}`] : []),
+				];
+				const wrappedDetails = detailValues.flatMap(value => wrapTextWithAnsi(value, inner));
+				if (this.#detailWidth !== inner) this.#detailOffset = 0;
+				this.#detailWidth = inner;
+				this.#detailCapacity = Math.max(1, height - 15);
+				this.#detailLength = wrappedDetails.length;
+				const lastPageOffset =
+					Math.max(0, Math.ceil(this.#detailLength / this.#detailCapacity) - 1) * this.#detailCapacity;
+				this.#detailOffset = Math.min(this.#detailOffset, lastPageOffset);
+				details.push(...wrappedDetails.slice(this.#detailOffset, this.#detailOffset + this.#detailCapacity));
 			}
-			// Two live-status rows are intentional reserved space; spinner/error updates must not shift the table.
-			minimumDetailRows = details.length + 2;
-			const selectedStatus = selected
-				? this.#renderProviderStatus(inner).find(line =>
-						line.includes(`${getProviderDisplayName(selected.model.provider)}:`),
-					)
-				: undefined;
-			if (status[0]) details.push(status[0]);
-			if (selectedStatus && selectedStatus !== status[0]) details.push(selectedStatus);
-			if (this.#errorMessage) details.push(String(this.#errorMessage));
+			// Keep the selected compact row stable while status and detail pages change.
+			minimumDetailRows = this.#detailCapacity;
+			if (this.#detailLength > this.#detailCapacity) {
+				const first = this.#detailOffset + 1;
+				const last = Math.min(this.#detailLength, this.#detailOffset + this.#detailCapacity);
+				footer.push(
+					`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: details ${first}–${last} of ${this.#detailLength}`,
+				);
+			}
 			const showProvider = searching;
 			const widths = showProvider ? [inner - 42, 18, 18] : [inner - 24, 20];
 			if (wide) {
@@ -484,6 +505,7 @@ export class ModelSelectorComponent extends Container {
 		return selectorFrame(width, height, title, purpose, navigation, body, details, footer, {
 			minimumDetailRows,
 			selectedBodyIndex,
+			selectedDetail: this.#isMenuOpen ? "automatic" : "provided",
 			stickyBodyRows,
 		});
 	}
@@ -498,7 +520,7 @@ export class ModelSelectorComponent extends Container {
 		this.#stopSpinner();
 	}
 
-	#renderProviderStatus(width: number): string[] {
+	#renderProviderStatus(): string[] {
 		if (this.#isMenuOpen) return [];
 		const group = this.#providerGroups[this.#activeTabIndex];
 		// Reserve the same status area for every provider. Updating status never moves the catalog.
@@ -546,7 +568,11 @@ export class ModelSelectorComponent extends Container {
 				message = `${label}: empty catalog · Ctrl+R: refresh`;
 			rows[index + 1] = theme.fg(color, message);
 		}
-		return rows.map(row => truncateToWidth(row, width));
+		return rows;
+	}
+
+	#resetDetailPage(): void {
+		this.#detailOffset = 0;
 	}
 
 	#menuRoleActions: MenuRoleAction[] = [];
@@ -1096,6 +1122,7 @@ export class ModelSelectorComponent extends Container {
 		const retainedIndex = this.#filteredModels.findIndex(item => item.selector === selectedSelector);
 		this.#selectedIndex =
 			retainedIndex >= 0 ? retainedIndex : Math.min(this.#selectedIndex, Math.max(0, visibleCount - 1));
+		this.#resetDetailPage();
 		this.#updateList();
 	}
 
@@ -1181,6 +1208,7 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#openMenu(): void {
+		this.#resetDetailPage();
 		this.#menuItem = this.#getSelectedItem();
 		if (!this.#menuItem || this.#isItemDisabled(this.#menuItem)) return;
 		this.#isMenuOpen = true;
@@ -1203,6 +1231,7 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#closeMenu(): void {
+		this.#resetDetailPage();
 		this.#isMenuOpen = false;
 		this.#menuStep = "role";
 		this.#menuSelectedRole = null;
@@ -1233,6 +1262,7 @@ export class ModelSelectorComponent extends Container {
 		}
 
 		if (matchesKey(keyData, "ctrl+r")) {
+			this.#resetDetailPage();
 			void this.#refreshSelectedProvider().catch(error => {
 				this.#errorMessage = error instanceof Error ? error.message : String(error);
 				this.#updateList();
@@ -1241,11 +1271,26 @@ export class ModelSelectorComponent extends Container {
 			return;
 		}
 
+		if (matchesSelectorKey(keyData, "pageDown")) {
+			const lastPageOffset =
+				Math.max(0, Math.ceil(this.#detailLength / this.#detailCapacity) - 1) * this.#detailCapacity;
+			this.#detailOffset = Math.min(lastPageOffset, this.#detailOffset + this.#detailCapacity);
+			this.#updateList();
+			return;
+		}
+
+		if (matchesSelectorKey(keyData, "pageUp")) {
+			this.#detailOffset = Math.max(0, this.#detailOffset - this.#detailCapacity);
+			this.#updateList();
+			return;
+		}
+
 		// Up arrow - navigate list (wrap to bottom when at top)
 		if (matchesSelectorKey(keyData, "up")) {
 			const itemCount = this.#isCanonicalTab() ? this.#filteredCanonicalModels.length : this.#filteredModels.length;
 			if (itemCount === 0) return;
 			this.#selectedIndex = this.#selectedIndex === 0 ? itemCount - 1 : this.#selectedIndex - 1;
+			this.#resetDetailPage();
 			this.#updateList();
 			return;
 		}
@@ -1255,6 +1300,7 @@ export class ModelSelectorComponent extends Container {
 			const itemCount = this.#isCanonicalTab() ? this.#filteredCanonicalModels.length : this.#filteredModels.length;
 			if (itemCount === 0) return;
 			this.#selectedIndex = this.#selectedIndex === itemCount - 1 ? 0 : this.#selectedIndex + 1;
+			this.#resetDetailPage();
 			this.#updateList();
 			return;
 		}

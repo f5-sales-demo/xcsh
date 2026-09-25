@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { createThinkingConfig, Effort, type Model, ReasoningEffort } from "@f5-sales-demo/pi-ai";
-import type { TUI } from "@f5-sales-demo/pi-tui";
+import { type TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
 import type { ModelRegistry, ProviderDiscoveryState } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
 import {
@@ -291,6 +291,67 @@ function selectorHarness(
 }
 
 describe("provider-tab model selector", () => {
+	for (const width of [40, 100]) {
+		it(`pages complete selected-model details and provider errors at width ${width}`, async () => {
+			const provider = "synthetic-provider-with-a-long-identifier";
+			const providerLabel = "Synthetic Provider With A Deliberately Long Display Name";
+			const selectorValue = `${provider}/model-with-a-long-café-東京-selector`;
+			const description =
+				"This ANSI café 東京 model description must remain complete across every narrow terminal detail page. DESCRIPTION-END";
+			const providerError =
+				"Synthetic provider status explains every recovery action without dropping words. STATUS-END";
+			const selectedModel = model(provider, "model-with-a-long-café-東京-selector", {
+				name: "Synthetic Model With A Deliberately Long Café 東京 Display Name",
+				description: `\u001b[33m${description}\u001b[39m`,
+			});
+			const registry = {
+				getAll: () => [selectedModel],
+				getAvailable: () => [selectedModel],
+				getError: () => undefined,
+				getProviderInventory: () => [provider],
+				getProviderPickerMetadata: () => ({ groupId: provider, groupLabel: providerLabel }),
+				getProviderDiscoveryState: () => ({
+					...state(provider, "unavailable", true),
+					error: providerError,
+					models: [selectedModel.id],
+				}),
+			} as unknown as ModelRegistry;
+			const selector = new ModelSelectorComponent(
+				{ requestRender: vi.fn(), terminal: { rows: 18 } } as unknown as TUI,
+				selectedModel,
+				Settings.isolated(),
+				registry,
+				[],
+				vi.fn(),
+				vi.fn(),
+			);
+			await Bun.sleep(0);
+
+			const pages: string[] = [];
+			const detailLines: string[] = [];
+			for (let page = 0; page < 16; page += 1) {
+				const rendered = selector.render(width);
+				expect(rendered.every(line => visibleWidth(line) === width)).toBe(true);
+				const content = rendered.map(line => Bun.stripANSI(line).slice(1, -1).trim());
+				const plain = content.join("\n");
+				expect(plain).toContain("Synthetic Model");
+				pages.push(plain);
+				const paging = plain.match(/details (\d+)–(\d+) of (\d+)/u);
+				expect(paging).not.toBeNull();
+				const selectedIndex = content.findIndex(line => line.includes("❯"));
+				const footerIndex = content.findIndex(line => line.startsWith("Tab: provider"));
+				detailLines.push(...content.slice(selectedIndex + 1, footerIndex).filter(Boolean));
+				if (paging?.[2] === paging?.[3]) break;
+				selector.handleInput("\x1b[6~");
+			}
+			const reconstructed = detailLines.join("").replace(/\s+/gu, "");
+			for (const expected of [selectorValue, description, providerLabel, providerError]) {
+				expect(reconstructed).toContain(expected.replace(/\s+/gu, ""));
+			}
+			expect(pages.some(page => page.includes("details"))).toBe(true);
+		});
+	}
+
 	it("labels a connected static provider without suggesting an ineffective refresh", async () => {
 		const { selector } = selectorHarness(undefined, {
 			ubuntuProviders: true,
