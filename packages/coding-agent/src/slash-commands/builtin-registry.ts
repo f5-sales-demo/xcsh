@@ -1,7 +1,7 @@
 import * as os from "node:os";
 import * as path from "node:path";
 
-import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
+import { type AutocompleteItem, Text } from "@f5-sales-demo/pi-tui";
 import { getConfigDirName, isEnoent, t } from "@f5-sales-demo/pi-utils";
 import { clearCache as clearCapabilityFsCache, invalidate as invalidateFsCache } from "../capability/fs";
 import { parseModelString } from "../config/model-resolver";
@@ -1104,6 +1104,24 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			const customInstructions = command.args || undefined;
 			runtime.ctx.editor.setText("");
 			await runtime.ctx.handleCompactCommand(customInstructions);
+		},
+	},
+	{
+		name: "recap",
+		description: "Summarize the recent conversation",
+		handle: async (_command, runtime) => {
+			runtime.ctx.editor.setText("");
+			try {
+				runtime.ctx.statusContainer.clear();
+				runtime.ctx.statusContainer.addChild(new Text(theme.fg("dim", "Creating recap…"), 1, 0));
+				runtime.ctx.ui.requestRender();
+				await runtime.ctx.session.generateRecap();
+			} catch (error) {
+				runtime.ctx.showError(`Recap failed: ${error instanceof Error ? error.message : String(error)}`);
+			} finally {
+				runtime.ctx.statusContainer.clear();
+				runtime.ctx.ui.requestRender();
+			}
 		},
 	},
 	{

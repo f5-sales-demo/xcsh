@@ -489,6 +489,7 @@ export class SelectorController {
 							this.ctx.ui.requestRender();
 						},
 						onSaved: (count, kind) => {
+							this.ctx.session.refreshRecapScheduling();
 							const subject =
 								kind === "plugin" ? "plugin settings" : kind === "combined" ? "combined settings" : "settings";
 							this.ctx.showStatus(`Saved ${count} ${subject} ${count === 1 ? "change" : "changes"}.`);

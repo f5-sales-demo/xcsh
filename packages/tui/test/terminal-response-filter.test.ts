@@ -143,6 +143,18 @@ describe("Terminal response filtering — no gibberish in editor", () => {
 	});
 
 	describe("real keystrokes pass through after settling", () => {
+		it("reports focus transitions without forwarding control sequences as input", () => {
+			const { terminal, received, writes } = setupTerminal();
+			const focus: boolean[] = [];
+			terminal.onFocusChange(focused => focus.push(focused));
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b[O\x1b[O\x1b[I");
+			expect(focus).toEqual([false, true]);
+			expect(received).toEqual([]);
+			expect(writes.join("")).toContain("\x1b[?1004h");
+			terminal.stop();
+		});
+
 		it("regular characters reach input handler", () => {
 			const { terminal, received } = setupTerminal();
 
