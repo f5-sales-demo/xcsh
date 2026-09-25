@@ -1,8 +1,5 @@
 [Unit]
 Description=Poll xcsh GitHub issues through paired Herdr Codex CLI sessions
-Wants=network-online.target
-After=network-online.target
-
 [Service]
 Type=oneshot
 WorkingDirectory=/data/robin-GIT/xcsh
