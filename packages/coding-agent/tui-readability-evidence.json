@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "5c1350eb",
-    "c5b4ae81",
-    "43726af4",
-    "a78b32e5",
-    "a637d666",
-    "827029e1",
-    "ca04fc18",
-    "0944b0bc"
+    "96be242f",
+    "0218e146",
+    "76fe13b0",
+    "45873206",
+    "6a4423e2",
+    "1b9bcf16",
+    "d6ea1bc4",
+    "8634872a"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [
@@ -242,14 +242,14 @@
       "e3ed2b14"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
-      "70030975",
-      "eb68ab5b",
-      "647193f9",
-      "71f8e6b7",
-      "b3c08496",
-      "d66c1b43",
-      "af149325",
-      "e2998317"
+      "cc24b3ce",
+      "706bb0c4",
+      "b911d56f",
+      "e5452d35",
+      "7c9d1871",
+      "04d6b2c5",
+      "d335a598",
+      "951c63e2"
     ],
     "packages/coding-agent/src/modes/components/oauth-selector.ts": [
       "4ee12171",
@@ -1367,38 +1367,32 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 409,
+      "line": 413,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 456,
+      "line": 477,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 470,
+      "line": 491,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 482,
+      "line": 503,
       "sink": "selectorProse",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 484,
+      "line": 505,
       "sink": "selectorFrame",
-      "entry": "models-compact-rows"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 549,
-      "sink": "truncateToWidth",
       "entry": "models-compact-rows"
     },
     {
