@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "8ab501cdf1165250da84fee96f680374a4dde55e",
-  "fingerprint": "aac4dbc9f8b461a064e4baad0f92b43b48a0aa17ffb41cc0801cef2da9d81b4f",
+  "revision": "7b51778a9b535d5962dc6f46e07ee877564cb964",
+  "fingerprint": "4fb57cbd3269b1ec301b1cab99398bde5be6e02fbb78634c0c5ff2316654bdf0",
   "counts": {
     "total": 242,
     "components": 97,
@@ -1610,6 +1610,7 @@
         "packages/coding-agent/test/core/hashline.test.ts",
         "packages/coding-agent/test/model-selector-provider-tabs.test.ts",
         "packages/coding-agent/test/modes/components/session-selector-mouse.test.ts",
+        "packages/coding-agent/test/modes/components/session-selector-readability.test.ts",
         "packages/coding-agent/test/python-execution-outcome.test.ts",
         "packages/coding-agent/test/remote-control/trace-assembler.test.ts",
         "packages/coding-agent/test/remote-control/trace.test.ts",
@@ -2461,7 +2462,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "sessions",
-      "sha256": "1ffcf95e0edf53b1dd9d59311dfab857dc97a9a5a6ae788f7520360b51276d53",
+      "sha256": "b4c0102590c92d403747aee79bcb8250187472b09fd7da495399dee35d63e786",
       "exports": [
         "SessionSelectorComponent",
         "SessionSelectorOptions"
@@ -2477,6 +2478,7 @@
       "directTests": [
         "packages/coding-agent/test/keybindings-escape-components.test.ts",
         "packages/coding-agent/test/modes/components/session-selector-mouse.test.ts",
+        "packages/coding-agent/test/modes/components/session-selector-readability.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-session-delete.test.ts",
         "packages/coding-agent/test/modes/controllers/session-selector-delete.test.ts"
       ],
