@@ -130,6 +130,18 @@ test("reviewed plugin lifecycle persists install, disable, upgrade, and removal 
 	expect(await f.manager().listInstalledPlugins()).toEqual([]);
 });
 
+test("reviewed plugin removal resolves a unique installed short name", async () => {
+	const f = await fixture();
+	await f.manager().addMarketplace(f.source);
+	await f.manager().installPlugin("hello-plugin", "test-marketplace");
+
+	const removal = await preparePluginRemoval(f.manager(), "hello-plugin");
+	expect(removal.target).toMatchObject({
+		pluginId: "hello-plugin@test-marketplace",
+		scope: "user",
+	});
+});
+
 test("direct install review binds install-scoped setup authorization", async () => {
 	const f = await fixture();
 	await setSetupAuthorization(f.source, "install");

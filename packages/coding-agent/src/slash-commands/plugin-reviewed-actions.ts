@@ -288,11 +288,12 @@ export async function preparePluginRemoval(
 	pluginId: string,
 	requestedScope?: PluginScope,
 ): Promise<PreparedInstalledPluginAction> {
-	const installed = await installedTarget(manager, pluginId, requestedScope);
+	const resolvedPluginId = await manager.resolveInstalledPluginId(pluginId, requestedScope);
+	const installed = await installedTarget(manager, resolvedPluginId, requestedScope);
 	const scope = installed.summary.scope as PluginScope;
 	return {
 		review: {
-			identity: `plugin:${pluginId}:${scope}`,
+			identity: `plugin:${resolvedPluginId}:${scope}`,
 			scope: `${scope} plugin registry and unreferenced cache`,
 			revision: installedRevision(installed),
 			changes: [
@@ -307,7 +308,7 @@ export async function preparePluginRemoval(
 				"Removes only this scoped registry entry and deletes cache paths no longer referenced by another scope. Other scoped copies remain installed.",
 		},
 		target: {
-			pluginId,
+			pluginId: resolvedPluginId,
 			scope,
 			version: installed.entry.version,
 			enabled: installed.entry.enabled !== false,

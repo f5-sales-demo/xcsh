@@ -48,6 +48,7 @@ afterEach(async () => {
 
 function harness(inputs: string[][]) {
 	const screens: string[] = [];
+	const invalidateIntegration = vi.fn();
 	let current: Component | undefined;
 	const editor = { setText: vi.fn() };
 	const ctx = {
@@ -60,6 +61,11 @@ function harness(inputs: string[][]) {
 		},
 		showStatus: vi.fn(),
 		showError: vi.fn(),
+		session: {
+			extensionRunner: {
+				getAllRegisteredIntegrations: () => [{ invalidate: invalidateIntegration }],
+			},
+		},
 		statusLine: { invalidate: vi.fn() },
 		updateEditorTopBorder: vi.fn(),
 		ui: { terminal: { rows: 24 }, requestRender: vi.fn(), setFocus: vi.fn() },
@@ -74,6 +80,7 @@ function harness(inputs: string[][]) {
 	} as unknown as InteractiveModeContext;
 	return {
 		ctx,
+		invalidateIntegration,
 		screens,
 		controller: new ContextCommandController(ctx),
 		input: (value: string) => current?.handleInput?.(value),
@@ -330,6 +337,7 @@ test("context activation and direct-name switching are Cancel-first before repla
 	expect(confirmed.screens[0]).toContain("context-activation:second");
 	expect(service.getStatus().activeContextName).toBe("second");
 	expect([fs.readFileSync(firstPath, "utf8"), fs.readFileSync(secondPath, "utf8")]).toEqual(before);
+	expect(confirmed.invalidateIntegration).toHaveBeenCalledTimes(1);
 });
 
 test("documented context delete confirmation still requires Cancel-first review", async () => {
@@ -373,4 +381,29 @@ test("context read-only output uses the bounded shared report", async () => {
 	expect(h.screens[0]).toContain("/context list · saved configuration and current runtime state");
 	expect(h.screens[0]).toContain("demo");
 	expect(h.screens[0]).toContain("Esc: close");
+});
+
+test("guided Platform setup offers saved contexts instead of reopening context creation", async () => {
+	const service = ContextService.instance;
+	for (const name of ["zeta", "alpha"])
+		await service.createContext({
+			name,
+			apiUrl: `https://${name}.example.invalid`,
+			apiToken: `${name}-token`,
+			defaultNamespace: `${name}-namespace`,
+		});
+	const h = harness([]);
+
+	await h.controller.handleGuidedSetup();
+
+	expect(h.ctx.showStatus).toHaveBeenCalledWith(
+		[
+			"Platform setup requires an active context for this xcsh session.",
+			"Saved contexts:",
+			"  /context activate alpha",
+			"  /context activate zeta",
+			"Run one command above. To add another context, run /context wizard.",
+		].join("\n"),
+	);
+	expect(h.ctx.editorContainer.addChild).not.toHaveBeenCalled();
 });

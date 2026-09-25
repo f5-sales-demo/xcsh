@@ -95,6 +95,23 @@ export class ContextCommandController {
 		this.#ctx = ctx;
 	}
 
+	async handleGuidedSetup(): Promise<void> {
+		const service = await ContextService.getOrInit(undefined, getProjectDir());
+		const savedNames = (await service.listContexts()).map(context => context.name).sort();
+		if (!service.getStatus().activeContextName && savedNames.length > 0) {
+			this.#ctx.showStatus(
+				[
+					"Platform setup requires an active context for this xcsh session.",
+					"Saved contexts:",
+					...savedNames.map(name => `  /context activate ${name}`),
+					"Run one command above. To add another context, run /context wizard.",
+				].join("\n"),
+			);
+			return;
+		}
+		await this.#handleWizard();
+	}
+
 	async handle(command: { name: string; args: string; text: string }): Promise<void> {
 		const sub = command.args.trim().split(/\s+/)[0];
 		if (sub === "wizard") {
@@ -118,9 +135,15 @@ export class ContextCommandController {
 			resolve: () => this.#prepareMutation(command),
 			execute: async target => handleContextCommand(target.command, this.#ctx),
 		});
-		if (outcome === "busy") this.#ctx.showStatus("Another reviewed action is already open.");
+		if (outcome === "succeeded") this.#invalidateIntegrations();
+		else if (outcome === "busy") this.#ctx.showStatus("Another reviewed action is already open.");
 		else if (outcome === "unresolved")
 			this.#ctx.showError("The context change remains unresolved. Reopen /context to review and retry it.");
+	}
+
+	#invalidateIntegrations(): void {
+		for (const handle of this.#ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [])
+			handle.invalidate();
 	}
 
 	#isReportCommand(args: string): boolean {
@@ -514,6 +537,7 @@ export class ContextCommandController {
 						},
 					});
 					if (outcome === "succeeded") {
+						this.#invalidateIntegrations();
 						this.#ctx.showStatus(
 							renderContextMessage(context.name, shouldActivate ? "Created and activated." : "Created."),
 							{ dim: false },

@@ -9,6 +9,7 @@ import { createInterface } from "node:readline/promises";
 import { APP_NAME, getProjectDir } from "@f5-sales-demo/pi-utils";
 import { CliUsageError } from "@f5-sales-demo/pi-utils/cli";
 import chalk from "chalk";
+import { Settings } from "../config/settings";
 import { preloadPluginRoots, resolveOrDefaultProjectRegistryPath } from "../discovery/helpers";
 import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import { PluginManager, parseSettingValue, validateSetting } from "../extensibility/plugins";
@@ -30,6 +31,16 @@ import {
 import type { IntegrationHandle } from "../integrations/types";
 import { theme } from "../modes/theme/theme";
 import { personProfileService } from "../person-profile/service";
+import { ContextError, ContextService, type XCSHContext } from "../services/xcsh-context";
+import {
+	deriveTenantFromUrl,
+	isInjectableContextEnvKey,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_CONTEXT_NAME,
+	XCSH_NAMESPACE,
+	XCSH_TENANT,
+} from "../services/xcsh-env";
 
 // =============================================================================
 // Types
@@ -64,6 +75,7 @@ export interface PluginCommandArgs {
 		disable?: string;
 		set?: string;
 		scope?: "user" | "project";
+		context?: string;
 	};
 }
 
@@ -145,6 +157,11 @@ export function parsePluginArgs(args: string[]): PluginCommandArgs | undefined {
 			// --scope with no value following
 			console.error(chalk.red(`--scope requires a value: "user" or "project".`));
 			process.exit(1);
+		} else if (arg === "--context" && i + 1 < args.length && !args[i + 1].startsWith("-")) {
+			result.flags.context = args[++i];
+		} else if (arg === "--context") {
+			console.error(chalk.red("--context requires a saved context name."));
+			process.exit(1);
 		} else if (!arg.startsWith("-")) {
 			result.args.push(arg);
 		}
@@ -166,6 +183,8 @@ export { classifyInstallTarget } from "./classify-install-target";
  */
 export async function runPluginCommand(cmd: PluginCommandArgs): Promise<void> {
 	const manager = new PluginManager();
+	if (cmd.flags.context && cmd.action !== "status" && cmd.action !== "setup")
+		throw new CliUsageError("plugin --context is supported only for integration status or setup");
 
 	switch (cmd.action) {
 		case "install":
@@ -243,34 +262,78 @@ export function selectSetupIntegration(
 	return setupMatches[0];
 }
 
-async function handleIntegrationStatus(args: string[], flags: { json?: boolean }): Promise<void> {
-	if (args.length > 1) throw new Error(`Usage: ${APP_NAME} plugin status [plugin] [--json]`);
+function contextEnvironment(context: XCSHContext): Record<string, string> {
+	const environment: Record<string, string> = {
+		[XCSH_API_URL]: context.apiUrl,
+		[XCSH_API_TOKEN]: context.apiToken,
+		[XCSH_NAMESPACE]: context.defaultNamespace,
+		[XCSH_CONTEXT_NAME]: context.name,
+	};
+	const tenant = deriveTenantFromUrl(context.apiUrl);
+	if (tenant) environment[XCSH_TENANT] = tenant;
+	for (const [name, value] of Object.entries(context.env ?? {})) {
+		if (isInjectableContextEnvKey(name) && value) environment[name] = value;
+	}
+	return environment;
+}
+
+async function withPluginContext<T>(name: string | undefined, run: () => Promise<T>): Promise<T> {
+	if (!name) return run();
+	let context: XCSHContext;
+	try {
+		await Settings.init({ cwd: getProjectDir() });
+		const service = await ContextService.getOrInit(undefined, getProjectDir());
+		const review = service.prepareActivation(name);
+		context = await service.activate(name, { revision: review.revision, beforeCommit: () => {} });
+	} catch (error) {
+		if (error instanceof ContextError) throw new CliUsageError(error.message);
+		throw error;
+	}
+	const previous = new Map<string, string | undefined>();
+	for (const [key, value] of Object.entries(contextEnvironment(context))) {
+		previous.set(key, process.env[key]);
+		if (!process.env[key]) process.env[key] = value;
+	}
+	try {
+		return await run();
+	} finally {
+		for (const [key, value] of previous) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	}
+}
+
+async function handleIntegrationStatus(args: string[], flags: { json?: boolean; context?: string }): Promise<void> {
+	if (args.length > 1) throw new Error(`Usage: ${APP_NAME} plugin status [plugin] [--context <name>] [--json]`);
 	const handles = await loadIntegrationHandles();
 	const selected = args[0] ? handles.filter(handle => matchesIntegration(handle, args[0])) : handles;
 	if (args[0] && !selected.length) throw new Error(`No enabled integration is registered for ${args[0]}`);
-	const statuses = await Promise.all(
-		selected.map(async handle => {
-			const { value: _, ...status } = await handle.get();
-			return {
-				...status,
-				nextAction: status.state === "setup_required" ? describeIntegrationSetupNextAction(handle) : undefined,
-			};
-		}),
-	);
-	if (flags.json) {
-		process.stdout.write(`${JSON.stringify({ integrations: statuses })}\n`);
-		return;
-	}
-	if (!statuses.length) {
-		process.stdout.write("No enabled plugin integrations are registered.\n");
-		return;
-	}
-	for (const status of statuses) {
-		process.stdout.write(
-			`${status.plugin ?? status.id}: ${status.state}${status.reason ? ` (${status.reason})` : ""}\n`,
+	await withPluginContext(flags.context, async () => {
+		const statuses = await Promise.all(
+			selected.map(async handle => {
+				const { value: _, ...status } = await handle.get();
+				return {
+					...status,
+					nextAction: status.state === "setup_required" ? describeIntegrationSetupNextAction(handle) : undefined,
+				};
+			}),
 		);
-		if (status.nextAction) process.stdout.write(`  next: ${status.nextAction}\n`);
-	}
+		if (flags.json) {
+			process.stdout.write(`${JSON.stringify({ integrations: statuses })}\n`);
+			return;
+		}
+		if (!statuses.length) {
+			process.stdout.write("No enabled plugin integrations are registered.\n");
+			return;
+		}
+		for (const status of statuses) {
+			process.stdout.write(
+				`${status.plugin ?? status.id}: ${status.state}${status.reason ? ` (${status.reason})` : ""}\n`,
+			);
+			if (status.nextAction) process.stdout.write(`  next: ${status.nextAction}\n`);
+		}
+	});
 }
 
 export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle<unknown>) {
@@ -295,20 +358,23 @@ export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle
 	return result;
 }
 
-async function handleIntegrationSetup(args: string[], flags: { json?: boolean }): Promise<void> {
+async function handleIntegrationSetup(args: string[], flags: { json?: boolean; context?: string }): Promise<void> {
 	if (flags.json) throw new CliUsageError("plugin setup is human-only and does not accept --json");
-	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin>`);
+	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin> [--context <name>]`);
 	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
-	const handle = selectSetupIntegration(await loadIntegrationHandles(), args[0]);
-	const current = await handle.get();
-	if (current.state === "ready") {
-		process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
-		return;
-	}
-	const result = await reviewAndExecuteIntegrationSetup(handle);
-	process.stdout.write(
-		`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
-	);
+	const handles = await loadIntegrationHandles();
+	await withPluginContext(flags.context, async () => {
+		const handle = selectSetupIntegration(handles, args[0]);
+		const current = await handle.get();
+		if (current.state === "ready") {
+			process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
+			return;
+		}
+		const result = await reviewAndExecuteIntegrationSetup(handle);
+		process.stdout.write(
+			`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
+		);
+	});
 }
 
 async function reportMarketplaceInstallation(

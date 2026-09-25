@@ -295,7 +295,7 @@ describe("interactive marketplace refresh surfaces", () => {
 		expect(offline.stderr).toContain("last-known catalog data");
 	}, 60_000);
 
-	it.each(["cli", "slash"] as const)(
+	it.each(["cli", "slash", "slash-bare"] as const)(
 		"CLI and slash direct installs fetch a newly published version (%s)",
 		async command => {
 			const { home, source } = makeEnvironment();
@@ -331,7 +331,7 @@ describe("interactive marketplace refresh surfaces", () => {
 					       });
 					     },
 					   };
-					   await executeBuiltinSlashCommand("/plugin install hello-plugin@test-marketplace", { ctx, handleBackgroundCommand() {} });
+					   await executeBuiltinSlashCommand("/plugin install ${command === "slash-bare" ? "hello-plugin" : "hello-plugin@test-marketplace"}", { ctx, handleBackgroundCommand() {} });
 					   console.log(JSON.stringify(statuses));`;
 			const result = await runScript(code, home, source);
 			if (result.code !== 0) throw new Error(result.stderr || result.stdout);

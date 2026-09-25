@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "2493f311295a3861004a7711c4acf7480bc543d0",
-  "fingerprint": "95d983cf89c3dbb7263cb1807333d0ff1fc4bf7afcaf525a3e30851a11027c64",
+  "revision": "7f27c8350df7d8120996ec9f45f1049f57a3a095",
+  "fingerprint": "f647813f7fb59e4dad4325c4732ebca5d8320afd9e00d2287c132fb836031773",
   "counts": {
     "total": 241,
     "components": 96,
@@ -541,7 +541,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "99e661aa95cf7605f2cd8ac4274669021f485a1624070faf15e13d66266381e0",
+      "sha256": "e17d92ed21643b19964132d6a776a84be36a3c748b18ecba5fedc7d520dbd234",
       "exports": [
         "BranchHandler",
         "ExtensionErrorListener",
@@ -3725,7 +3725,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "5d38c487aa367acdabc5d394183c2e0e6d415250a148b26c94245db49ce3da67",
+      "sha256": "8af2126ee08cebb72c0024036aa019d7cd035cf224c0250ec2ca9c69de8e2db5",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4549,7 +4549,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "fe8ab5daf3f979d3722b5c11797d96e757f3e0ec00acce6ed7ffab80214a944c",
+      "sha256": "aa1a280819c3430bf9f689ab70ec40e6ba233597946c0fe331484b071771d92f",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4628,12 +4628,14 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "eafe6d92ad1ed3d0dad933073d9d2eb4b10736e70379540caa039781eee0727e",
+      "sha256": "bf9ea72e855243a2555bb7209c1801e60bc0c7ade432a3c481b63ba320232be1",
       "exports": [
         "MarketplaceInstallArgs",
+        "MarketplaceInstallCandidate",
         "PluginScopeArgs",
         "parseMarketplaceInstallArgs",
-        "parsePluginScopeArgs"
+        "parsePluginScopeArgs",
+        "resolveMarketplaceInstallSpec"
       ],
       "interactionSignals": [],
       "persistenceSignals": [],
@@ -4647,7 +4649,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "ea4e0dbf5adf57dce7557cee12e9eb6747e4853863c6ece3157749c45a5ab466",
+      "sha256": "edeff20f42521a38595dcc32dd8b0bedfb4ee5b1996eb422ed4e170159a84584",
       "exports": [
         "PluginScope",
         "PluginSetupResult",
@@ -5412,6 +5414,7 @@
         "packages/coding-agent/test/agent-session-auto-compaction-x-initiator.test.ts",
         "packages/coding-agent/test/agent-session-concurrent.test.ts",
         "packages/coding-agent/test/agent-session-configuration-lifecycle.test.ts",
+        "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
@@ -5425,8 +5428,7 @@
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/async-job-cancellation.test.ts",
         "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/auth-profile-rpc-uat.test.ts",
-        "packages/coding-agent/test/auto-config-read.test.ts"
+        "packages/coding-agent/test/auth-profile-rpc-uat.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/resolve.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

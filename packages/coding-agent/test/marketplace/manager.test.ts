@@ -670,12 +670,35 @@ describe("MarketplaceManager", () => {
 		expect(installed).toHaveLength(0);
 	});
 
+	it("uninstallPlugin resolves a unique installed short name", async () => {
+		await ctx.manager.addMarketplace(FIXTURE_DIR);
+		const instEntry = await ctx.manager.installPlugin("hello-plugin", "test-marketplace");
+
+		await ctx.manager.uninstallPlugin("hello-plugin");
+
+		expect(fs.existsSync(instEntry.installPath)).toBe(false);
+		expect(await ctx.manager.listInstalledPlugins()).toHaveLength(0);
+	});
+
+	it("uninstallPlugin rejects an ambiguous installed short name with canonical choices", async () => {
+		const alternate = writeDependencyMarketplace(ctx.tmpDir, "alternate-marketplace", [{ name: "hello-plugin" }]);
+		await ctx.manager.addMarketplace(FIXTURE_DIR);
+		await ctx.manager.addMarketplace(alternate);
+		await ctx.manager.installPlugin("hello-plugin", "test-marketplace");
+		await ctx.manager.installPlugin("hello-plugin", "alternate-marketplace");
+
+		await expect(ctx.manager.uninstallPlugin("hello-plugin")).rejects.toThrow(
+			'Plugin name "hello-plugin" is ambiguous. Use one of: hello-plugin@alternate-marketplace, hello-plugin@test-marketplace',
+		);
+		expect(await ctx.manager.listInstalledPlugins()).toHaveLength(2);
+	});
+
 	it("uninstallPlugin nonexistent → throws", async () => {
 		await expect(ctx.manager.uninstallPlugin("ghost-plugin@nowhere")).rejects.toThrow(/not installed/);
 	});
 
 	it("uninstallPlugin with invalid ID format → throws clear error", async () => {
-		await expect(ctx.manager.uninstallPlugin("no-at-sign")).rejects.toThrow(/Invalid plugin ID format/);
+		await expect(ctx.manager.uninstallPlugin("invalid plugin name")).rejects.toThrow(/Invalid plugin ID format/);
 	});
 
 	it("uninstallPlugin calls clearPluginRootsCache", async () => {

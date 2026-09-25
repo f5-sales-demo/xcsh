@@ -28,7 +28,7 @@ import {
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
 } from "../integrations/setup";
-import type { IntegrationHandle } from "../integrations/types";
+import type { IntegrationHandle, IntegrationSetupPlan } from "../integrations/types";
 import { BorderedLoader } from "../modes/components/bordered-loader";
 import type { ActionReview } from "../modes/components/reviewed-action";
 import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
@@ -40,7 +40,11 @@ import { resolveRemoteThreadId } from "../remote-control/thread-identity";
 import { createContextEnv } from "../services/context-env";
 import { ContextService } from "../services/xcsh-context";
 import { handleFastCommand } from "./fast-command";
-import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
+import {
+	parseMarketplaceInstallArgs,
+	parsePluginScopeArgs,
+	resolveMarketplaceInstallSpec,
+} from "./marketplace-install-parser";
 import {
 	executeMarketplaceAddition,
 	executePluginInstall,
@@ -153,6 +157,11 @@ export interface BuiltinSlashCommandRuntime {
 function activeContextSetupRunner(runtime: BuiltinSlashCommandRuntime) {
 	const contextEnv = createContextEnv(runtime.ctx.settings);
 	return createSetupStepRunner(name => contextEnv.get(name) ?? process.env[name]);
+}
+
+function activeContextSatisfiesSetup(runtime: BuiltinSlashCommandRuntime, plan: IntegrationSetupPlan): boolean {
+	const contextEnv = createContextEnv(runtime.ctx.settings);
+	return plan.requiredEnvironment.every(name => Boolean(contextEnv.get(name) ?? process.env[name]));
 }
 
 function parseBuiltinSlashCommand(text: string): ParsedBuiltinSlashCommand | null {
@@ -1195,7 +1204,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{
 				name: "install",
 				description: t("commands.plugin.sub.install.description"),
-				usage: "[--force] [--scope user|project] <name@marketplace>",
+				usage: "[--force] [--scope user|project] <name[@marketplace]>",
 			},
 			{
 				name: "uninstall",
@@ -1231,6 +1240,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{
 				name: "setup",
 				description: t("commands.plugin.sub.setup.description"),
+			},
+			{
+				name: "doctor",
+				description: "Show CLI plugin health-check guidance",
 			},
 			{ name: "help", description: t("commands.plugin.sub.help.description") },
 		],
@@ -1500,9 +1513,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							runtime.ctx.showStatus(parsed.error);
 							return;
 						}
-						const atIdx = parsed.installSpec.lastIndexOf("@");
-						const name = parsed.installSpec.slice(0, atIdx);
-						const marketplace = parsed.installSpec.slice(atIdx + 1);
+						const preview = parsed.installSpec.includes("@") ? undefined : await mgr.previewMarketplacePlugins();
+						const resolved = resolveMarketplaceInstallSpec(
+							parsed.installSpec,
+							preview?.plugins.map(({ marketplace, plugin }) => ({ marketplace, name: plugin.name })) ?? [],
+						);
+						if ("error" in resolved) {
+							runtime.ctx.showStatus(resolved.error);
+							return;
+						}
+						const { name, marketplace } = resolved;
 						const prepared = await preparePluginInstall(mgr, name, marketplace, parsed.scope, parsed.force);
 						const outcome = await runReviewedAction(runtime.ctx, "plugin installation", {
 							review: prepared.review,
@@ -1544,7 +1564,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					case "uninstall": {
 						const uninstArgs = parsePluginScopeArgs(
 							rest,
-							"Usage: /plugin uninstall [--scope user|project] <name@marketplace>",
+							"Usage: /plugin uninstall [--scope user|project] <name[@marketplace]>",
 						);
 						if ("error" in uninstArgs) {
 							runtime.ctx.showStatus(uninstArgs.error);
@@ -1780,11 +1800,18 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							break;
 						}
 						if (plan.guidedAction?.kind === "context_wizard") {
+							if (activeContextSatisfiesSetup(runtime, plan)) {
+								const refreshed = await handle.verifyAfterSetup(plan);
+								if (refreshed.state === "ready") {
+									showPluginStatus(`${handle.plugin ?? handle.id}: ready (setup is not required)`);
+									break;
+								}
+							}
 							const { ContextCommandController } = await import(
 								"../modes/controllers/context-command-controller"
 							);
 							const controller = new ContextCommandController(runtime.ctx);
-							await controller.handle({ name: "context", args: "wizard", text: "/context wizard" });
+							await controller.handleGuidedSetup();
 							break;
 						}
 						let result: Awaited<ReturnType<typeof executeReviewedSetup>> | undefined;
@@ -1819,6 +1846,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}`,
 							);
 						}
+						break;
+					}
+					case "doctor": {
+						runtime.ctx.showError("Plugin health checks are CLI-only; run xcsh plugin doctor.");
 						break;
 					}
 					// ── Help ──

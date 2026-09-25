@@ -1,14 +1,98 @@
-import { beforeAll, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { registerLocales } from "@f5-sales-demo/pi-utils";
 import { locales } from "../../src/locales/index";
 import { initTheme } from "../../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../../src/modes/types";
+import { ContextService } from "../../src/services/xcsh-context";
 import { executeBuiltinSlashCommand } from "../../src/slash-commands/builtin-registry";
 
 registerLocales(locales);
 beforeAll(() => initTheme());
+let contextDirectory = "";
+
+beforeEach(() => {
+	contextDirectory = mkdtempSync(join(tmpdir(), "xcsh-plugin-setup-context-"));
+	ContextService._resetForTest();
+	ContextService.init(contextDirectory);
+});
+
+afterEach(() => {
+	ContextService._resetForTest();
+	rmSync(contextDirectory, { recursive: true, force: true });
+});
 
 describe("/plugin setup", () => {
+	it("directs slash-command doctor users to the supported CLI instead of showing marketplace inventory", async () => {
+		const showStatus = vi.fn();
+		const showError = vi.fn();
+		const ctx = {
+			editor: { setText: vi.fn() },
+			sessionManager: { getCwd: () => "/tmp" },
+			showStatus,
+			showError,
+		} as unknown as InteractiveModeContext;
+
+		expect(await executeBuiltinSlashCommand("/plugin doctor kvm", { ctx, handleBackgroundCommand() {} })).toBe(true);
+		expect(showError).toHaveBeenCalledWith("Plugin health checks are CLI-only; run xcsh plugin doctor.");
+		expect(showStatus).not.toHaveBeenCalled();
+	});
+
+	it("uses an active session context before opening the guided Platform wizard", async () => {
+		const children: unknown[] = [];
+		const setFocus = vi.fn();
+		const verifyAfterSetup = vi.fn(async () => ({ state: "ready" as const }));
+		const plan = {
+			pluginDependencies: [],
+			requiredEnvironment: ["XCSH_API_URL", "XCSH_API_TOKEN", "XCSH_TENANT"],
+			profileFields: [],
+			steps: [],
+			verification: [],
+			guidedAction: { kind: "context_wizard" as const },
+		};
+		const activeEnvironment = {
+			XCSH_API_URL: "https://tenant.example.com",
+			XCSH_API_TOKEN: "secret-token",
+			XCSH_TENANT: "tenant",
+		};
+		const showStatus = vi.fn();
+		const ctx = {
+			editor: { addToHistory: vi.fn(), setText: vi.fn() },
+			editorContainer: { clear: vi.fn(), addChild: vi.fn((child: unknown) => children.push(child)) },
+			ui: { setFocus, requestRender: vi.fn(), terminal: { rows: 24 } },
+			settings: { get: vi.fn((key: string) => (key === "bash.environment" ? activeEnvironment : undefined)) },
+			sessionManager: { getCwd: () => "/tmp" },
+			session: {
+				extensionRunner: {
+					getAllRegisteredIntegrations: () => [
+						{
+							id: "platform",
+							name: "F5 Distributed Cloud Platform",
+							plugin: "platform",
+							setupPlan: plan,
+							get: async () => ({ state: "setup_required" as const, reason: "not_authenticated" as const }),
+							invalidate: vi.fn(),
+							verifyAfterSetup,
+						},
+					],
+				},
+			},
+			showHookCustom: vi.fn(),
+			showStatus,
+			showError: vi.fn(),
+		} as unknown as InteractiveModeContext;
+
+		expect(await executeBuiltinSlashCommand("/plugin setup platform", { ctx, handleBackgroundCommand() {} })).toBe(
+			true,
+		);
+		expect(verifyAfterSetup).toHaveBeenCalledWith(plan);
+		expect(children).toEqual([]);
+		expect(setFocus).not.toHaveBeenCalled();
+		expect(showStatus).toHaveBeenCalledWith("platform: ready (setup is not required)");
+	});
+
 	it("opens the native context wizard for a guided Platform setup without a no-op review", async () => {
 		const children: unknown[] = [];
 		const setFocus = vi.fn();
