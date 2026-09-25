@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew the xcsh issue intake Herdr lease every five minutes
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+AccuracySec=1min
+Unit=xcsh-issue-intake-lease.service
+
+[Install]
+WantedBy=timers.target

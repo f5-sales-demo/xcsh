@@ -4,28 +4,32 @@ description: Suggest a new feature or improvement
 labels: ["enhancement"]
 ---
 
-## Feature Description
+## Desired capability and problem
 
-Describe the requested feature clearly and concisely.
+Describe who needs the capability, the problem it solves, and the wanted outcome.
 
-## Use Case / Motivation
+## Use case and current behavior
 
-Explain the problem this feature would solve or the value it would provide.
+Give a concrete workflow and current behavior.
 
-## Proposed Solution
+## Scope and affected interfaces
 
-Describe how you'd like this feature to work.
+Name user flows, packages, CLI/API/plugin contracts, configuration, or documentation affected. State boundaries.
 
-## Alternatives Considered
+## Constraints and dependencies
 
-Describe any alternative solutions or features you've considered.
+State compatibility, security, privacy, platform, performance, release, and external-service constraints. Link related issues or specifications.
 
-## Acceptance Criteria
+## Objective acceptance criteria
 
-Provide a checklist of specific, objectively verifiable conditions that demonstrate the work is complete. Each item must be testable, ideally a failing test that turns green.
+List observable conditions and expected results, including important failure behavior.
 
 - [ ]
 
-## Additional Context
+## Verification and traceability
 
-Provide any other context, references, or log output about the issue here.
+Map each criterion to tests, UAT, CI, or documentation evidence. Link related requirements and the eventual PR.
+
+## Proposed solution and alternatives
+
+Describe a possible approach, relevant contracts, and workarounds considered.

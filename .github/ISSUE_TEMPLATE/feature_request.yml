@@ -6,8 +6,8 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: What would you like?
+      label: Desired capability and problem
+      description: Who needs it, what problem does it solve, and what outcome is wanted?
     validations:
       required: true
 
@@ -15,7 +15,7 @@ body:
     id: use-case
     attributes:
       label: Use Case
-      description: Why is this needed? What problem does it solve?
+      description: Give a concrete workflow and current behavior.
     validations:
       required: true
 
@@ -35,6 +35,39 @@ body:
         - Session management
         - Configuration
         - Other
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and affected interfaces
+      description: Name user flows, packages, CLI/API/plugin contracts, configuration, or documentation affected; state boundaries.
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and dependencies
+      description: State compatibility, security, privacy, platform, performance, release, and external-service constraints; link related issues or specs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Objective acceptance criteria
+      description: List observable conditions and expected results, including important failure behavior.
+      placeholder: "- Given ..., when ..., then ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification and traceability
+      description: Map criteria to tests, UAT, CI, or documentation evidence; link related requirements and PRs.
+    validations:
+      required: true
 
   - type: textarea
     id: proposed-solution
