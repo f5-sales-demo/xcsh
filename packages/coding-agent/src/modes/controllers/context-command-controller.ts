@@ -95,6 +95,23 @@ export class ContextCommandController {
 		this.#ctx = ctx;
 	}
 
+	async handleGuidedSetup(): Promise<void> {
+		const service = await ContextService.getOrInit(undefined, getProjectDir());
+		const savedNames = (await service.listContexts()).map(context => context.name).sort();
+		if (!service.getStatus().activeContextName && savedNames.length > 0) {
+			this.#ctx.showStatus(
+				[
+					"Platform setup requires an active context for this xcsh session.",
+					"Saved contexts:",
+					...savedNames.map(name => `  /context activate ${name}`),
+					"Run one command above. To add another context, run /context wizard.",
+				].join("\n"),
+			);
+			return;
+		}
+		await this.#handleWizard();
+	}
+
 	async handle(command: { name: string; args: string; text: string }): Promise<void> {
 		const sub = command.args.trim().split(/\s+/)[0];
 		if (sub === "wizard") {

@@ -1807,7 +1807,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								"../modes/controllers/context-command-controller"
 							);
 							const controller = new ContextCommandController(runtime.ctx);
-							await controller.handle({ name: "context", args: "wizard", text: "/context wizard" });
+							await controller.handleGuidedSetup();
 							break;
 						}
 						let result: Awaited<ReturnType<typeof executeReviewedSetup>> | undefined;

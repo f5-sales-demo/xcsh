@@ -374,3 +374,28 @@ test("context read-only output uses the bounded shared report", async () => {
 	expect(h.screens[0]).toContain("demo");
 	expect(h.screens[0]).toContain("Esc: close");
 });
+
+test("guided Platform setup offers saved contexts instead of reopening context creation", async () => {
+	const service = ContextService.instance;
+	for (const name of ["zeta", "alpha"])
+		await service.createContext({
+			name,
+			apiUrl: `https://${name}.example.invalid`,
+			apiToken: `${name}-token`,
+			defaultNamespace: `${name}-namespace`,
+		});
+	const h = harness([]);
+
+	await h.controller.handleGuidedSetup();
+
+	expect(h.ctx.showStatus).toHaveBeenCalledWith(
+		[
+			"Platform setup requires an active context for this xcsh session.",
+			"Saved contexts:",
+			"  /context activate alpha",
+			"  /context activate zeta",
+			"Run one command above. To add another context, run /context wizard.",
+		].join("\n"),
+	);
+	expect(h.ctx.editorContainer.addChild).not.toHaveBeenCalled();
+});

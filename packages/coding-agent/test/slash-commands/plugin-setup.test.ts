@@ -1,12 +1,28 @@
-import { beforeAll, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { registerLocales } from "@f5-sales-demo/pi-utils";
 import { locales } from "../../src/locales/index";
 import { initTheme } from "../../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../../src/modes/types";
+import { ContextService } from "../../src/services/xcsh-context";
 import { executeBuiltinSlashCommand } from "../../src/slash-commands/builtin-registry";
 
 registerLocales(locales);
 beforeAll(() => initTheme());
+let contextDirectory = "";
+
+beforeEach(() => {
+	contextDirectory = mkdtempSync(join(tmpdir(), "xcsh-plugin-setup-context-"));
+	ContextService._resetForTest();
+	ContextService.init(contextDirectory);
+});
+
+afterEach(() => {
+	ContextService._resetForTest();
+	rmSync(contextDirectory, { recursive: true, force: true });
+});
 
 describe("/plugin setup", () => {
 	it("uses an active session context before opening the guided Platform wizard", async () => {

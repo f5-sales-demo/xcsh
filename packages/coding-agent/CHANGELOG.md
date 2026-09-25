@@ -57,6 +57,9 @@
 
 ### Fixed
 
+- Made Platform plugin setup offer sorted activation commands for saved session contexts and
+  resolved unique short plugin names during reviewed uninstall while rejecting ambiguity
+  ([#4306](https://github.com/f5-sales-demo/xcsh/issues/4306)).
 - Accepted fully qualified marketplace plugin identifiers in `plugin setup`, matching install,
   upgrade, uninstall, and doctor behavior ([#4288](https://github.com/f5-sales-demo/xcsh/issues/4288)).
 - Added the exact `/plugin setup <plugin>` next action after interactive installation of plugins
