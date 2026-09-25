@@ -28,22 +28,31 @@ GitHub writes remain on Ubuntu. The durable ledger is
 5. Manually run `python3 scripts/issue_intake_worker.py` and inspect
    `python3 scripts/issue_intake.py status`. A successful empty run reports
    `{}`; a failed run leaves the issue queued for retry.
-6. Install and start the user timer on Ubuntu:
+6. Install and start the user timers on Ubuntu:
 
 ```sh
 install -d -m 700 ~/.config/systemd/user
 install -m 644 scripts/systemd/xcsh-issue-intake.service ~/.config/systemd/user/
 install -m 644 scripts/systemd/xcsh-issue-intake.timer ~/.config/systemd/user/
+install -m 644 scripts/systemd/xcsh-issue-intake-lease.service ~/.config/systemd/user/
+install -m 644 scripts/systemd/xcsh-issue-intake-lease.timer ~/.config/systemd/user/
 systemctl --user daemon-reload
+systemctl --user enable --now xcsh-issue-intake-lease.timer
 systemctl --user enable --now xcsh-issue-intake.timer
-systemctl --user list-timers xcsh-issue-intake.timer
+systemctl --user list-timers xcsh-issue-intake.timer xcsh-issue-intake-lease.timer
 ```
 
 Verify `loginctl show-user robin -p Linger` reports `yes`, then inspect
-`systemctl --user status xcsh-issue-intake.timer` and
-`journalctl --user -u xcsh-issue-intake.service` after its first tick.
-The timer runs on quarter-hour wall-clock boundaries and `Persistent=true`
-catches up a missed tick.
+`systemctl --user status xcsh-issue-intake.timer xcsh-issue-intake-lease.timer`
+and their service journals after their first ticks. The issue poll runs on
+quarter-hour wall-clock boundaries; lease renewal runs every five minutes.
+`Persistent=true` catches up a missed tick.
+
+Herdr leases expire after 15 minutes without resolution, so the renewal timer
+keeps this one valid during ordinary unattended operation. After a cold Herdr
+restart, revocation, or more than 15 minutes offline, pair a fresh lease from
+the dedicated managed pane and verify `--check` again. Poll failures retain
+queued issues for retry after pairing is restored.
 
 The worker resolves the lease on every run. The watcher takes an exclusive
 lock, so overlapping runs return `already-running`; failed service calls

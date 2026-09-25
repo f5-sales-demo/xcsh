@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew the xcsh issue intake Herdr worker lease
+
+[Service]
+Type=oneshot
+WorkingDirectory=/data/robin-GIT/xcsh
+ExecStart=/usr/bin/python3 /data/robin-GIT/xcsh/scripts/issue_intake_worker.py --check
