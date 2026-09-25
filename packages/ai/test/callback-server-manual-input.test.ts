@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { OAuthCallbackFlow } from "../src/utils/oauth/callback-server";
 import type { OAuthCredentials } from "../src/utils/oauth/types";
 
@@ -14,6 +14,24 @@ class TestCallbackFlow extends OAuthCallbackFlow {
 			expires: Date.now() + 60_000,
 		};
 	}
+}
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
+function createMockCallbackFlow(port: number): TestCallbackFlow {
+	return new TestCallbackFlow(
+		{
+			onAuth: () => {},
+			onManualCodeInput: async () => "manual-code",
+			signal: AbortSignal.timeout(1_000),
+		},
+		{
+			preferredPort: port,
+			redirectUri: `http://localhost:${port}/callback`,
+		},
+	);
 }
 
 describe("OAuthCallbackFlow manual input retries", () => {
@@ -81,6 +99,54 @@ describe("OAuthCallbackFlow manual input retries", () => {
 
 		expect(credentials.access).toBe("access-ipv4-code");
 	});
+
+	for (const errorCode of ["EADDRNOTAVAIL", "EAFNOSUPPORT"]) {
+		it(`keeps the IPv4 listener when the IPv6 loopback fails with ${errorCode}`, async () => {
+			const ipv4Stop = vi.fn();
+			const serve = vi.spyOn(Bun, "serve").mockImplementation(options => {
+				if (options.hostname === "127.0.0.1") {
+					return { port: 14557, stop: ipv4Stop } as unknown as ReturnType<typeof Bun.serve>;
+				}
+				throw Object.assign(new Error("IPv6 loopback unavailable"), { code: errorCode });
+			});
+
+			const credentials = await createMockCallbackFlow(14557).login();
+
+			expect(credentials.access).toBe("access-manual-code");
+			expect(serve).toHaveBeenCalledTimes(2);
+			expect(ipv4Stop).toHaveBeenCalledTimes(1);
+		});
+	}
+
+	it("stops both listeners after a dual-stack callback flow", async () => {
+		const ipv4Stop = vi.fn();
+		const ipv6Stop = vi.fn();
+		const serve = vi.spyOn(Bun, "serve").mockImplementation(options => {
+			const stop = options.hostname === "127.0.0.1" ? ipv4Stop : ipv6Stop;
+			return { port: 14558, stop } as unknown as ReturnType<typeof Bun.serve>;
+		});
+
+		await createMockCallbackFlow(14558).login();
+
+		expect(serve).toHaveBeenCalledTimes(2);
+		expect(ipv4Stop).toHaveBeenCalledTimes(1);
+		expect(ipv6Stop).toHaveBeenCalledTimes(1);
+	});
+
+	for (const errorCode of ["EADDRINUSE", "EPERM"]) {
+		it(`rejects ${errorCode} from the IPv6 listener and cleans up IPv4`, async () => {
+			const ipv4Stop = vi.fn();
+			vi.spyOn(Bun, "serve").mockImplementation(options => {
+				if (options.hostname === "127.0.0.1") {
+					return { port: 14559, stop: ipv4Stop } as unknown as ReturnType<typeof Bun.serve>;
+				}
+				throw Object.assign(new Error("IPv6 bind failed"), { code: errorCode });
+			});
+
+			await expect(createMockCallbackFlow(14559).login()).rejects.toThrow("OAuth callback port 14559 unavailable");
+			expect(ipv4Stop).toHaveBeenCalledTimes(1);
+		});
+	}
 
 	it("retries manual input until a valid callback payload is provided", async () => {
 		const attempts = ["http://localhost/callback?state=missing-code", "http://localhost/callback?code=valid-code"];

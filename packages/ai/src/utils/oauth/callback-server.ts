@@ -36,6 +36,11 @@ interface CallbackServer {
 	stop(closeActiveConnections?: boolean): void;
 }
 
+function isUnavailableIpv6Loopback(error: unknown): boolean {
+	if (typeof error !== "object" || error === null || !("code" in error)) return false;
+	return error.code === "EADDRNOTAVAIL" || error.code === "EAFNOSUPPORT";
+}
+
 export interface OAuthCallbackFlowOptions {
 	preferredPort: number;
 	callbackPath?: string;
@@ -220,6 +225,9 @@ export abstract class OAuthCallbackFlow {
 				},
 			};
 		} catch (error) {
+			if (isUnavailableIpv6Loopback(error)) {
+				return ipv4Server;
+			}
 			ipv4Server.stop();
 			throw error;
 		}

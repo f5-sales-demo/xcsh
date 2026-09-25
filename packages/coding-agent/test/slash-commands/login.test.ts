@@ -1,8 +1,9 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { registerLocales } from "@f5-sales-demo/pi-utils";
 import { locales } from "../../src/locales/index";
 import { OAuthManualInputManager } from "../../src/modes/oauth-manual-input";
 import type { InteractiveModeContext } from "../../src/modes/types";
+import * as clipboardAction from "../../src/modes/utils/clipboard-action";
 import { executeBuiltinSlashCommand } from "../../src/slash-commands/builtin-registry";
 
 registerLocales(locales);
@@ -50,6 +51,29 @@ const createRuntimeHarness = (manualInput: OAuthManualInputManager): RuntimeHarn
 };
 
 describe("/login slash command", () => {
+	it("copies the exact pending sign-in URL without submitting it as a callback", async () => {
+		const manualInput = new OAuthManualInputManager();
+		const url = "https://login.example.test/authorize?state=synthetic-state&code_challenge=synthetic-challenge";
+		manualInput.setAuthorizationUrl("google-vertex", url);
+		const pending = manualInput.waitForInput("google-vertex");
+		const harness = createRuntimeHarness(manualInput);
+		const copy = spyOn(clipboardAction, "reviewClipboardAction").mockImplementation(async (_ctx, action) => {
+			expect(action.current()).toBe(true);
+			expect(action.resolveText()).toBe(url);
+			return "copied";
+		});
+		try {
+			const handled = await executeBuiltinSlashCommand("/login copy", harness.runtime);
+			expect(handled).toBe(true);
+			expect(copy).toHaveBeenCalledTimes(1);
+			expect(manualInput.hasPending()).toBe(true);
+			manualInput.submit("synthetic-code");
+			expect(await pending).toBe("synthetic-code");
+		} finally {
+			copy.mockRestore();
+		}
+	});
+
 	it("submits manual callback URL without opening selector", async () => {
 		const manualInput = new OAuthManualInputManager();
 		const callbackUrl = "http://localhost:1455/auth/callback?code=abc&state=xyz";

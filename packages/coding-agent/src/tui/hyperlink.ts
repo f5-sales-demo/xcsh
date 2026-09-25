@@ -5,6 +5,7 @@ import { settings } from "../config/settings";
 
 const DETECTED_TERMINAL_HYPERLINKS = TERMINAL.hyperlinks;
 let policyGeneration = 0;
+let activeMode: HyperlinkMode = "auto";
 const OSC8_RE = /\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/gu;
 const UNSAFE_RE = /[\x00-\x1f\x7f-\x9f]/u;
 type HyperlinkMode = "off" | "auto" | "always";
@@ -28,6 +29,7 @@ export function isHyperlinkEnabled(): boolean {
 
 export function applyHyperlinkSetting(mode?: unknown): void {
 	const resolved = mode === "off" || mode === "auto" || mode === "always" ? mode : settings.get("tui.hyperlinks");
+	activeMode = resolved;
 	const enabled = resolveHyperlinkMode(resolved);
 	if (TERMINAL.hyperlinks !== enabled) policyGeneration++;
 	setTerminalHyperlinks(enabled);
@@ -62,8 +64,19 @@ export function urlHyperlink(target: string, label: string): string {
 }
 
 export function recoveryUrlHyperlink(target: string, label: string): string {
+	const uri = safeRecoveryUrl(target);
+	// Authentication links must remain actionable in nested terminals whose
+	// capability detection is incomplete. Preserve the explicit user opt-out.
+	if (activeMode === "off" || !uri) return label;
+	return `\x1b]8;;${uri}\x07${label.replace(OSC8_RE, "")}\x1b]8;;\x07`;
+}
+
+export function safeRecoveryUrl(target: string): string | undefined {
 	const normalized = /^www\./iu.test(target) ? `https://${target}` : target;
-	return wrap(normalized, label);
+	const uri = safeAbsoluteUri(normalized);
+	if (!uri) return undefined;
+	const protocol = new URL(uri).protocol;
+	return protocol === "http:" || protocol === "https:" ? uri : undefined;
 }
 
 export function fileHyperlink(target: string, label: string, cwd = process.cwd()): string {
