@@ -243,7 +243,7 @@ describe("release npm backfill publish semantics", () => {
 });
 
 describe("release npm backfill workflow contract", () => {
-	it("uses hosted OIDC publishing with a supported pinned Node and npm", async () => {
+	it("uses token-authenticated provenance publishing with a supported pinned Node and npm", async () => {
 		const workflow = await fs.readFile(ciWorkflowPath, "utf8");
 		const jobStart = workflow.indexOf("  publish-npm:");
 		const jobEnd = workflow.indexOf("\n  verify-npm-install:", jobStart);
@@ -256,9 +256,9 @@ describe("release npm backfill workflow contract", () => {
 		expect(publishJob).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
 		expect(publishJob).toContain('node-version: "22.14.0"');
 		expect(publishJob).toContain("npm install --global npm@11.19.1");
-		expect(publishJob).not.toContain("NPM_TOKEN");
-		expect(publishJob).not.toContain("NODE_AUTH_TOKEN");
-		expect(publishJob).not.toContain("_authToken");
+		expect(publishJob).toContain("NPM_TOKEN");
+		expect(publishJob).toContain("NODE_AUTH_TOKEN");
+		expect(publishJob).toContain("_authToken");
 
 		const backfillWorkflow = await fs.readFile(workflowPath, "utf8");
 		expect(backfillWorkflow).toContain("runs-on: ubuntu-22.04");
@@ -267,9 +267,9 @@ describe("release npm backfill workflow contract", () => {
 		expect(backfillWorkflow).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
 		expect(backfillWorkflow).toContain('node-version: "22.14.0"');
 		expect(backfillWorkflow).toContain("npm install --global npm@11.19.1");
-		expect(backfillWorkflow).not.toContain("NPM_TOKEN");
-		expect(backfillWorkflow).not.toContain("NODE_AUTH_TOKEN");
-		expect(backfillWorkflow).not.toContain("_authToken");
+		expect(backfillWorkflow).toContain("NPM_TOKEN");
+		expect(backfillWorkflow).toContain("NODE_AUTH_TOKEN");
+		expect(backfillWorkflow).toContain("_authToken");
 
 		const runnerPolicy = JSON.parse(await fs.readFile(runnerPolicyPath, "utf8"));
 		const xcshHosted = runnerPolicy.hosted_exceptions["f5-sales-demo/xcsh"];
@@ -301,7 +301,7 @@ describe("release npm backfill workflow contract", () => {
 		expect(workflow).toContain("path: .release-source");
 		expect(workflow).toContain("XCSH_RELEASE_SOURCE_ROOT:");
 		expect(workflow).toContain("bun scripts/ci-release-publish.ts --tag backfill");
-		expect(workflow).not.toContain("NPM_TOKEN");
+		expect(workflow).toContain("NPM_TOKEN");
 		expect(workflow).toContain("dist-tags.latest");
 		expect(workflow).toContain("LATEST_BEFORE");
 		expect(workflow).toContain("@f5-sales-demo/xcsh@");
