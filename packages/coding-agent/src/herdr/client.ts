@@ -16,6 +16,14 @@ export class HerdrProtocolError extends Error {
 	}
 }
 
+/** A request may have reached Herdr even though xcsh did not receive its reply. */
+export function isRetryableHerdrTransportError(error: unknown): error is HerdrProtocolError {
+	return (
+		error instanceof HerdrProtocolError &&
+		["timeout", "eof", "epipe", "connection_reset", "transport_error"].includes(error.code)
+	);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -94,8 +102,19 @@ export class HerdrClient {
 	}
 
 	async request<T extends Record<string, unknown>>(method: string, params: Record<string, unknown>): Promise<T> {
-		await this.ensureProtocol();
-		return this.requestRaw<T>(method, params);
+		try {
+			await this.ensureProtocol();
+			return await this.requestRaw<T>(method, params);
+		} catch (error) {
+			if (isRetryableHerdrTransportError(error)) this.invalidateProtocol();
+			throw error;
+		}
+	}
+
+	private invalidateProtocol(): void {
+		this.protocolChecked = false;
+		this.negotiatedProtocol = undefined;
+		this.capabilities = {};
 	}
 
 	private requestRaw<T>(method: string, params: Record<string, unknown>): Promise<T> {
@@ -103,18 +122,37 @@ export class HerdrClient {
 		return new Promise<T>((resolve, reject) => {
 			let buffer = "";
 			let settled = false;
+			let timeout: ReturnType<typeof setTimeout> | undefined;
 			const socket = connect({ path: this.socketPath });
 			const finish = (error?: unknown, value?: T): void => {
 				if (settled) return;
 				settled = true;
+				if (timeout !== undefined) clearTimeout(timeout);
 				socket.destroy();
 				if (error !== undefined) reject(error);
 				else resolve(value as T);
 			};
+			const startResponseTimeout = (): void => {
+				if (settled) return;
+				timeout = setTimeout(
+					() => finish(new HerdrProtocolError("Herdr request timed out", "timeout")),
+					this.timeoutMs,
+				);
+				(timeout as { unref?: () => void }).unref?.();
+			};
+			const transportError = (error: NodeJS.ErrnoException): HerdrProtocolError => {
+				const code =
+					error.code === "EPIPE" ? "epipe" : error.code === "ECONNRESET" ? "connection_reset" : "transport_error";
+				return new HerdrProtocolError("Herdr transport failed", code);
+			};
 			socket.setEncoding("utf8");
-			socket.setTimeout(this.timeoutMs, () => finish(new HerdrProtocolError("Herdr request timed out", "timeout")));
-			socket.once("error", error => finish(new HerdrProtocolError(error.message, "transport_error")));
-			socket.once("connect", () => socket.write(`${JSON.stringify({ id, method, params })}\n`));
+			socket.once("error", error => finish(transportError(error)));
+			socket.once("connect", () => {
+				socket.write(`${JSON.stringify({ id, method, params })}\n`, error => {
+					if (error) finish(transportError(error));
+					else startResponseTimeout();
+				});
+			});
 			socket.on("data", chunk => {
 				buffer += chunk;
 				if (Buffer.byteLength(buffer) > MAX_RESPONSE_BYTES) {

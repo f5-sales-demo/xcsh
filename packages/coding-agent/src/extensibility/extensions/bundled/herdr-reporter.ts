@@ -3,6 +3,7 @@ import * as path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import type { ExtensionAPI, ExtensionContext, UserPromptKind } from "@f5-sales-demo/xcsh";
 import { HerdrClient } from "../../../herdr/client";
+import { requestHerdrIdempotent } from "../../../herdr/retry";
 import { HERDR_SEMANTIC_REPORT_TIMEOUT_MS, requestSemanticReport } from "../../../herdr/semantic-report";
 import { finalAnswerText } from "../../../session/final-answer";
 import { requestNativeLifecycleCancellation } from "./native-lifecycle-control";
@@ -314,7 +315,7 @@ async function sendToHerdrSocket(
 	onError: (err: unknown) => void,
 ): Promise<void> {
 	try {
-		await getHerdrClient(socketPath).request<Record<string, unknown>>(method, params);
+		await requestHerdrIdempotent(getHerdrClient(socketPath), method, params);
 	} catch (err) {
 		onError(err);
 	}
