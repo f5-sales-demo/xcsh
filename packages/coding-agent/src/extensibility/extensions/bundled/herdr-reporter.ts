@@ -750,6 +750,14 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			seq: seq++,
 		});
 
+	const reportRecapAuthority = (ctx: ExtensionContext): Promise<void> => {
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (!socketPath || getHerdrClient(socketPath).capabilityVersion("agent_recaps") !== 1) {
+			return Promise.resolve();
+		}
+		return report(ctx.isIdle() ? "idle" : "working", undefined, ctx);
+	};
+
 	// Heartbeat is deliberately socket-only. Older Herdr CLIs do not expose this
 	// new typed frame, while an unavailable socket remains nonfatal just like the
 	// lifecycle socket reports above.
@@ -877,10 +885,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		await reportSession(ctx);
 		// Protocol 27 recap reports require an authoritative state frame carrying
 		// the session ref. The first state frame can precede session anchoring.
-		const socketPath = process.env.HERDR_SOCKET_PATH;
-		if (socketPath && getHerdrClient(socketPath).capabilityVersion("agent_recaps") === 1) {
-			await report("idle", undefined, ctx);
-		}
+		await reportRecapAuthority(ctx);
 		// An argv prompt can enter before_agent_start while the asynchronous
 		// session_start extension callback is still draining.  In that case the
 		// reporter has already appended this process's revision-0/starting entries;
@@ -971,6 +976,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		currentTurnId = 0;
 		lastNormalizedEventKey = undefined;
 		await reportSession(ctx, event.reason);
+		await reportRecapAuthority(ctx);
 	});
 
 	pi.on("session_branch", async (_event, ctx) => {

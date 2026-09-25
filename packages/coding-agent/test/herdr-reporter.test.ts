@@ -306,6 +306,57 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
+	it("reanchors recap authority after an xcsh session switch", async () => {
+		const herdr = await startFakeHerdr({ protocol: 27, capabilities: { agent_recaps: 1 } });
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+			let sessionId = "session-a";
+			const ctx = {
+				isIdle: () => true,
+				sessionManager: {
+					getSessionId: () => sessionId,
+					getSessionFile: () => `/tmp/${sessionId}.jsonl`,
+				},
+			} as unknown as ExtensionContext;
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, ctx);
+			sessionId = "session-b";
+			await handlers.get("session_switch")?.({ reason: "new" }, ctx);
+			await handlers.get("recap_created")?.(
+				{
+					type: "recap_created",
+					recap: {
+						id: "recap-b",
+						sessionId,
+						trigger: "manual",
+						summary: "Session B recap",
+						completedTurnCount: 3,
+						createdAt: "2026-09-25T00:00:00.000Z",
+					},
+				},
+				ctx,
+			);
+			const session = herdr.received.find(
+				frame =>
+					frame.method === "pane.report_agent_session" &&
+					frame.params.agent_session_path === "/tmp/session-b.jsonl",
+			);
+			const state = herdr.received.find(
+				frame => frame.method === "pane.report_agent" && frame.params.agent_session_path === "/tmp/session-b.jsonl",
+			);
+			const recap = herdr.received.find(frame => frame.method === "agent.recap.report");
+			expect(session).toBeDefined();
+			expect(state).toBeDefined();
+			expect(recap).toBeDefined();
+			expect(session!.order).toBeLessThan(state!.order);
+			expect(state!.order).toBeLessThan(recap!.order);
+		} finally {
+			await herdr.close();
+		}
+	});
+
 	it("emits state-neutral heartbeats every 10 seconds and cancels them before release", async () => {
 		const herdr = await startFakeHerdr();
 		const intervalCallbacks: Array<() => void> = [];
