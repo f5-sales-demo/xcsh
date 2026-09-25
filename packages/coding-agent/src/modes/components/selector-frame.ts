@@ -455,8 +455,8 @@ export class ConnectionInputComponent extends Container {
 			this.title,
 			"",
 			[],
-			this.content.render(inner).map(content => selectorCompactRow(content)),
-			[...wrapTextWithAnsi(this.purpose, inner).slice(0, 3), ...this.input.render(inner)],
+			this.content.render(inner).map(content => selectorProse(content)),
+			[this.purpose, ...this.input.render(inner)],
 			[selectorNavigationHint("submit"), selectorCancelHint("cancel")],
 		);
 	}

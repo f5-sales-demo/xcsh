@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
+import { visibleWidth } from "@f5-sales-demo/pi-tui";
 import { OAuthSelectorComponent } from "../src/modes/components/oauth-selector";
 import {
 	ADD_PROVIDER_ID,
@@ -34,6 +35,34 @@ function renderText(selector: OAuthSelectorComponent): string {
 }
 
 describe("OAuthSelectorComponent provider search", () => {
+	for (const width of [40, 100]) {
+		it(`wraps the selected provider's full compact value and ANSI Unicode description at width ${width}`, () => {
+			const name = "Synthetic Provider With A Complete Extended Display Name";
+			const description =
+				"Read the ANSI café 東京 provider guidance completely before starting this synthetic authentication flow.";
+			const { selector } = createSelector("login", false, {
+				rows: () => 24,
+				providers: [
+					{
+						id: "synthetic-provider-with-a-complete-identifier",
+						name,
+						description: `\u001b[33m${description}\u001b[39m`,
+						kind: "oauth",
+						available: true,
+					},
+				],
+			});
+			const rendered = selector.render(width);
+			const reconstructed = rendered
+				.map(line => Bun.stripANSI(line).slice(1, -1).trim())
+				.join(" ")
+				.replace(/\s+/g, " ");
+			expect(rendered.every(line => visibleWidth(line) === width)).toBe(true);
+			expect(reconstructed).toContain(name);
+			expect(reconstructed).toContain(description);
+		});
+	}
+
 	it("exposes exactly one canonical ChatGPT provider", () => {
 		expect(getOAuthProviders().filter(provider => provider.id.startsWith("openai-codex"))).toEqual([
 			expect.objectContaining({ id: "openai-codex", name: "ChatGPT Plus/Pro (Codex Subscription)" }),

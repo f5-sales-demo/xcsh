@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "66f2075a",
-    "6ebfee8d",
-    "8ba90308",
-    "359c0621",
-    "4125f9c7",
-    "6e86e866",
-    "8576a72c",
-    "ef3de7e1"
+    "49fb9c8e",
+    "d6334232",
+    "49af97df",
+    "26fa8b72",
+    "d4b7950c",
+    "8798fd5b",
+    "68427cb7",
+    "ce3d0953"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [
@@ -222,14 +222,14 @@
       "10ed7b31"
     ],
     "packages/coding-agent/src/modes/components/login-dialog.ts": [
-      "0413f22e",
-      "5b15d226",
-      "aa1a4e4a",
-      "7b5127ce",
-      "2e4fe02f",
-      "9018ca59",
-      "cefd1475",
-      "6b47b678"
+      "09ef1119",
+      "87a43764",
+      "e6eb16cf",
+      "3ebb29ac",
+      "edff55eb",
+      "a69523ec",
+      "77f63eeb",
+      "7fa4e874"
     ],
     "packages/coding-agent/src/modes/components/mcp-add-wizard.ts": [
       "f57fdf66",
@@ -332,14 +332,14 @@
       "9cc72b8d"
     ],
     "packages/coding-agent/src/modes/components/selector-frame.ts": [
-      "3959b5ba",
-      "654929cd",
-      "ca472784",
-      "6965090c",
-      "4155fcb0",
-      "73f944a4",
-      "973af14d",
-      "c794dcff"
+      "af535b6c",
+      "788981e1",
+      "6b6d2cc0",
+      "b8f83a3f",
+      "c0cc17b9",
+      "8784bc57",
+      "359ed431",
+      "264e33ac"
     ],
     "packages/coding-agent/src/modes/components/session-observer-overlay.ts": [
       "66275459",
@@ -1325,13 +1325,19 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/login-dialog.ts",
-      "line": 75,
+      "line": 87,
       "sink": "selectorFrame",
       "entry": "login-prose"
     },
     {
       "file": "packages/coding-agent/src/modes/components/login-dialog.ts",
-      "line": 81,
+      "line": 94,
+      "sink": "selectorProse",
+      "entry": "login-prose"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/login-dialog.ts",
+      "line": 95,
       "sink": "selectorProse",
       "entry": "login-prose"
     },
@@ -1758,7 +1764,7 @@
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
       "line": 458,
-      "sink": "selectorCompactRow",
+      "sink": "selectorProse",
       "entry": "shared-selector-frame"
     },
     {

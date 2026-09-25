@@ -22,7 +22,11 @@
       "fixture": "Synthetic long authentication guidance with café, 東京, and ANSI emphasis.",
       "status": "finding-open",
       "issue": "#4337",
-      "tests": ["test/login-dialog.test.ts"],
+      "tests": [
+        "packages/coding-agent/test/modes/components/login-dialog.test.ts",
+        "packages/coding-agent/test/oauth-selector-search.test.ts",
+        "packages/coding-agent/test/provider-selector-layout.test.ts"
+      ],
       "terminalUat": "pending",
       "mergedPr": "pending"
     },

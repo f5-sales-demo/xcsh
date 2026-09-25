@@ -1,5 +1,5 @@
 import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
-import { Container, getKeybindings, Input, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
+import { Container, getKeybindings, Input, Spacer, Text, type TUI, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
 import { type OpenHttpUrlResult, openHttpUrl } from "../../utils/open";
 import { appInterruptHint, matchesAppInterrupt } from "../utils/keybinding-matchers";
@@ -17,6 +17,9 @@ interface LoginDialogDependencies {
 	openUrl?: (url: string) => undefined | OpenHttpUrlResult | Promise<OpenHttpUrlResult>;
 	presentLink?: typeof presentAuthLink;
 }
+
+const LOGIN_PRIVACY_NOTICE =
+	"Complete provider authentication; credentials are handled by the provider flow and are never displayed here.";
 
 /**
  * Login dialog component - replaces editor during OAuth login flow
@@ -70,23 +73,29 @@ export class LoginDialogComponent extends Container {
 			.render(inner)
 			.filter(line => !/^\s*(?:Esc: cancel|\(Escape to cancel\))\s*$/u.test(Bun.stripANSI(line)));
 		this.#length = content.length;
-		this.#capacity = Math.max(1, rows - 10);
+		const baseFooter = [appInterruptHint(), selectorCancelHint("cancel login")];
+		const pagingHint = `${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: authentication details`;
+		const fixedRows = (footer: string[]) =>
+			4 +
+			wrapTextWithAnsi(LOGIN_PRIVACY_NOTICE, inner).length +
+			footer.flatMap(value => wrapTextWithAnsi(value, inner)).length;
+		const baseCapacity = Math.max(1, rows - fixedRows(baseFooter));
+		const showPaging = this.#length > baseCapacity;
+		const footer = showPaging ? [pagingHint, ...baseFooter] : baseFooter;
+		this.#capacity = Math.max(1, rows - fixedRows(footer));
 		this.#offset = Math.max(0, Math.min(this.#offset, Math.max(0, this.#length - this.#capacity)));
 		return selectorFrame(
 			width,
 			rows,
 			`Login to ${this.#providerName}`,
-			"Complete provider authentication; credentials are handled by the provider flow and are never displayed here.",
-			[],
-			content.slice(this.#offset, this.#offset + this.#capacity).map(line => selectorProse(line)),
+			"",
 			[],
 			[
-				...(this.#length > this.#capacity
-					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: authentication details`]
-					: []),
-				appInterruptHint(),
-				selectorCancelHint("cancel login"),
+				selectorProse(LOGIN_PRIVACY_NOTICE, "muted"),
+				...content.slice(this.#offset, this.#offset + this.#capacity).map(line => selectorProse(line)),
 			],
+			[],
+			footer,
 		);
 	}
 
