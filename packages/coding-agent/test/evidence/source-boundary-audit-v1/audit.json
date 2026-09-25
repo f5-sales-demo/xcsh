@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "1a7543cf3b387497a063638d4272702fa34615af",
-  "fingerprint": "8712657f15df756d6a7cd5faee1056356136acb4941c5b118f47a919c7bb7cd3",
+  "revision": "3462b348f0e35ddb7a65716a5bbbb611716c5078",
+  "fingerprint": "ea4bf131b690e5ff6cde00a581a1650167654ced9e9b42ff26c054042e7e6139",
   "counts": {
     "total": 241,
     "components": 96,
@@ -1183,13 +1183,15 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "bd5ac986599fa291a295c355d6715e7eb829f54cd9da902a068e493f1b66c54e",
+      "sha256": "630f93f74f87059cd413af2331488fa200a284ca208d3bcd3c54b3a484088a28",
       "exports": [
         "AuthLinkPresenterOptions",
         "presentAuthLink",
         "presentDeviceCode"
       ],
-      "interactionSignals": [],
+      "interactionSignals": [
+        "render"
+      ],
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
@@ -2402,6 +2404,7 @@
       ],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-memory.test.ts",
         "packages/coding-agent/test/provider-selector-layout.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
@@ -3551,7 +3554,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "732e52354c7ab8a9a30e82c9f349d0351917fb8b0111709ae5c1fca93dd138b7",
+      "sha256": "79f63ef23d7e2ac1f04ccda22ff8e15f266e93ffc90165efbdb675f0031c0411",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -3771,7 +3774,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "foundation",
-      "sha256": "fde22021f67375215e2e268e1553bed352258bab92aa86b855692042bd2bf24c",
+      "sha256": "53e12285406d75144f9163c469461b6d8f34144e5a46245a17e1980359917c9a",
       "exports": [
         "OAuthManualInputManager"
       ],
@@ -4227,7 +4230,9 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/modes/controllers/selector-controller-copy.test.ts"
+        "packages/coding-agent/test/modes/controllers/selector-controller-copy.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
+        "packages/coding-agent/test/slash-commands/login.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/utils/clipboard-action.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4552,7 +4557,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "2e2a829473fec5dc72fa3b557876b7d66f132e1ec25a9851988ae9a19f58ee57",
+      "sha256": "14e64ca0d060c935590505f22b1de1b2ee0340dbdde3ddbd5bf3ddf58bbef1f0",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -5666,7 +5671,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "ca9f6da5189ae6fdf5af3545dbc6730eee8fa96dc551b11c990579f5edcf342f",
+      "sha256": "a8bd0f2c03ee7a779d17a4ef37ce63c4155c9e9db46f77a2060b2bded13bdaa9",
       "exports": [
         "applyHyperlinkSetting",
         "fileHyperlink",
@@ -5674,6 +5679,7 @@
         "isHyperlinkEnabled",
         "recoveryUrlHyperlink",
         "resolveHyperlinkMode",
+        "safeRecoveryUrl",
         "urlHyperlink"
       ],
       "interactionSignals": [],
@@ -5681,6 +5687,7 @@
       "directTests": [
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
         "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
         "packages/coding-agent/test/task/task-renderer.test.ts",
         "packages/coding-agent/test/tui/hyperlink.test.ts",
@@ -6828,6 +6835,7 @@
         "packages/coding-agent/test/image-passthrough.test.ts",
         "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
         "packages/coding-agent/test/modes/controllers/event-controller-background.test.ts",
+        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
         "packages/coding-agent/test/output-block.test.ts",
         "packages/coding-agent/test/streaming-output.test.ts",
         "packages/coding-agent/test/tools/bash-renderer.test.ts",
@@ -6838,8 +6846,7 @@
         "packages/tui/test/markdown.test.ts",
         "packages/tui/test/media-playback.test.ts",
         "packages/tui/test/notifications.test.ts",
-        "packages/tui/test/sixel-probe.test.ts",
-        "packages/tui/test/terminal-hyperlinks.test.ts"
+        "packages/tui/test/sixel-probe.test.ts"
       ],
       "classification": "packages/tui/src/terminal-capabilities.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
