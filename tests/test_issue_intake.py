@@ -82,6 +82,12 @@ class FakeDispatch:
         )
 
 
+def ledger_row(ledger, number):
+    result = ledger.get(number)
+    assert result is not None
+    return result
+
+
 class IntakeTests(unittest.TestCase):
     def test_rejection_and_hold_labels(self):
         for label in ("invalid", "duplicate", "wontfix", "status:superseded"):
@@ -143,14 +149,14 @@ class IntakeTests(unittest.TestCase):
             IntakeEngine(
                 ledger, FakeAssessor(), FakeDispatch(), Verifier(False), Path(tmp)
             ).run([closed])
-            self.assertEqual(ledger.get(11)["state"], "closed_unverified")
+            self.assertEqual(ledger_row(ledger, 11)["state"], "closed_unverified")
             self.assertEqual(ledger.delivery_count(), 1)
             IntakeEngine(
                 ledger, FakeAssessor(), FakeDispatch(), Verifier(True), Path(tmp)
             ).run([closed])
-            self.assertEqual(ledger.get(11)["state"], "completed")
+            self.assertEqual(ledger_row(ledger, 11)["state"], "completed")
             self.assertEqual(ledger.delivery_count(), 0)
-            self.assertTrue(json.loads(ledger.get(11)["evidence"])["verified"])
+            self.assertTrue(json.loads(ledger_row(ledger, 11)["evidence"])["verified"])
 
     def test_incomplete_issue_gets_intake_session(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -159,7 +165,7 @@ class IntakeTests(unittest.TestCase):
             dispatch = FakeDispatch()
             IntakeEngine(ledger, FakeAssessor("incomplete"), dispatch).run([issue(11)])
             self.assertEqual(dispatch.calls, [(11, "intake")])
-            self.assertEqual(ledger.get(11)["state"], "intake")
+            self.assertEqual(ledger_row(ledger, 11)["state"], "intake")
 
     def test_two_delivery_limit_and_retry_after_failed_dispatch(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -169,13 +175,13 @@ class IntakeTests(unittest.TestCase):
             dispatch.fail = True
             engine = IntakeEngine(ledger, FakeAssessor(), dispatch)
             engine.run([issue(n) for n in (11, 12, 13)])
-            self.assertEqual(ledger.get(11)["state"], "queued")
+            self.assertEqual(ledger_row(ledger, 11)["state"], "queued")
             dispatch.fail = False
             engine.run([issue(n) for n in (11, 12, 13)])
             self.assertEqual(
                 [n for n, mode in dispatch.calls if mode == "delivery"][-2:], [11, 12]
             )
-            self.assertEqual(ledger.get(13)["state"], "queued")
+            self.assertEqual(ledger_row(ledger, 13)["state"], "queued")
 
     def test_crash_recovery_does_not_duplicate_session(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -185,7 +191,7 @@ class IntakeTests(unittest.TestCase):
             dispatch.live.add(11)
             ledger.upsert(11, "dispatching", "2026-09-25T03:00:00Z", "delivery", "{}")
             IntakeEngine(ledger, FakeAssessor(), dispatch).run([issue(11)])
-            self.assertEqual(ledger.get(11)["state"], "delivery")
+            self.assertEqual(ledger_row(ledger, 11)["state"], "delivery")
             self.assertEqual(dispatch.calls, [])
 
     def test_overlapping_runs_only_one_acquires_lock(self):

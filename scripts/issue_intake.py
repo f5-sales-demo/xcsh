@@ -145,7 +145,7 @@ class Ledger:
         ).fetchone()
         return dict(row) if row else None
 
-    def upsert(
+    def upsert(  # pylint: disable=too-many-arguments
         self,
         number: int,
         state: str,
@@ -514,7 +514,7 @@ class IntakeEngine:
         self.verifier = verifier
         self.repo_dir = repo_dir
 
-    def run(self, issues: list[dict[str, Any]]) -> dict[str, int]:
+    def run(self, issues: list[dict[str, Any]]) -> dict[str, int]:  # pylint: disable=too-many-branches
         with self.ledger.lock():
             checkpoint = self.ledger.checkpoint()
             if checkpoint is None:
@@ -659,9 +659,9 @@ def main(argv: list[str] | None = None) -> int:
     github = GitHub()
     if args.action == "activate":
         with ledger.lock():
-            checkpoint = github.newest_number()
-            ledger.activate(checkpoint)
-        print(json.dumps({"checkpoint": checkpoint, "status": "activated"}))
+            activation_checkpoint = github.newest_number()
+            ledger.activate(activation_checkpoint)
+        print(json.dumps({"checkpoint": activation_checkpoint, "status": "activated"}))
         return 0
     checkpoint = ledger.checkpoint()
     if checkpoint is None:
@@ -686,6 +686,14 @@ if __name__ == "__main__":
     except BlockingIOError:
         print(json.dumps({"status": "already-running"}))
         sys.exit(0)
-    except Exception as exc:  # noqa: BLE001 - scheduled runs must report all failures
+    except (
+        RuntimeError,
+        ValueError,
+        OSError,
+        TypeError,
+        KeyError,
+        sqlite3.Error,
+        subprocess.SubprocessError,
+    ) as exc:
         print(json.dumps({"status": "error", "reason": str(exc)}), file=sys.stderr)
         sys.exit(1)
