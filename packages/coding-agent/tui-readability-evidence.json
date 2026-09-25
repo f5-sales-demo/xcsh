@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "82597656",
-    "764d4fe0",
-    "51cf1715",
-    "17b85a09",
-    "96faf737",
-    "02644427",
-    "e7149510",
-    "444e94bf"
+    "a47b82a9",
+    "66dd0709",
+    "b2a42ece",
+    "2669d47a",
+    "d865dd51",
+    "3e88eed2",
+    "de7c0ee5",
+    "f5b31d71"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [

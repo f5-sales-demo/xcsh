@@ -118,11 +118,11 @@
       "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long session title, identifier, path, and first message with café 東京 and ANSI emphasis.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4364",
       "tests": ["packages/coding-agent/test/modes/components/session-selector-readability.test.ts"],
-      "terminalUat": "pending",
-      "mergedPr": "pending"
+      "terminalUat": "pass: /sessions; width 40; expected complete wrapped ANSI/Unicode selected details with paging; observed selected row/action retained across PgDn/PgUp, FIRST-MESSAGE-END reachable, no detail ellipses; db3cfeb7c3f8a168c0da3d85a1a00f15740cc947; v21.46.1",
+      "mergedPr": "#4366"
     },
     {
       "id": "selector-surfaces",
