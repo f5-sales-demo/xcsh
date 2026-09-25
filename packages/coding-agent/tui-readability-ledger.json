@@ -43,7 +43,7 @@
       "status": "finding-open",
       "issue": "#4338",
       "tests": ["packages/coding-agent/test/model-selector-provider-tabs.test.ts"],
-      "terminalUat": "pass: /models; width 40; expected complete wrapped ANSI/Unicode selected details and status with paging; observed selected row retained across PgDn/PgUp, DESCRIPTION-END and STATUS-END reachable, no detail ellipses; d0ca40b9b81449c115a7678828d4d29021f3fcea; v21.46.0",
+      "terminalUat": "pass: /models; width 40; expected complete wrapped ANSI/Unicode selected details and status with paging; observed selected row retained across PgDn/PgUp, DESCRIPTION-END and STATUS-END reachable, no detail ellipses; 632380bc7356b946c41fe858499a254661ccd1d0; v21.46.0",
       "mergedPr": "pending"
     },
     {
