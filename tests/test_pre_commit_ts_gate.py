@@ -12,10 +12,12 @@ class PreCommitTypeScriptGateContract(unittest.TestCase):
     def test_hook_runs_ci_typescript_command_after_staged_checks(self):
         package = json.loads((ROOT / "package.json").read_text())
         hook = (ROOT / ".githooks/pre-commit").read_text()
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
         ci_commands = [command.strip() for command in package["scripts"]["ci:check:full"].split("&&")]
 
         self.assertIn("bun run check:ts", ci_commands)
-        self.assertIn("python3 -m unittest tests.test_pre_commit_ts_gate", ci_commands)
+        self.assertIn("run: bun run ci:check:full", workflow)
+        self.assertIn("run: python3 -m unittest tests.test_pre_commit_ts_gate", workflow)
         self.assertIn("bun run check:ts", hook.splitlines())
         self.assertLess(
             hook.index("./node_modules/.bin/lint-staged"),
