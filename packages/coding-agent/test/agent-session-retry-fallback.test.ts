@@ -605,9 +605,9 @@ describe("AgentSession retry fallback", () => {
 	});
 
 	it("retries a discarded LiteLLM tool envelope without exposing its placeholder", async () => {
-		const model = getBundledModel("litellm", "gpt-5.6-sol");
+		const model = getBundledModel("openai", "gpt-4o-mini");
 		if (!model) {
-			throw new Error("Expected bundled LiteLLM test model to exist");
+			throw new Error("Expected bundled OpenAI test model to exist");
 		}
 
 		const envelopeError = "BadRequestError: litellm.MidStreamFallbackError: Server had an error. (HTTP 400)";
