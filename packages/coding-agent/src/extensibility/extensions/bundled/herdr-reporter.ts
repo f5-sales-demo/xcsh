@@ -739,16 +739,18 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		return undefined;
 	};
 
-	const report = (state: "idle" | "working" | "blocked", message?: string, ctx?: ExtensionContext): Promise<void> =>
-		send(REPORT_METHOD, {
+	const report = (state: "idle" | "working" | "blocked", message?: string, ctx?: ExtensionContext): Promise<void> => {
+		const sessionCtx = ctx ?? latestContext;
+		return send(REPORT_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			state,
 			...(message === undefined ? {} : { message }),
-			...(ctx === undefined ? {} : sessionRefFromContext(ctx)),
+			...(sessionCtx === undefined ? {} : sessionRefFromContext(sessionCtx)),
 			seq: seq++,
 		});
+	};
 
 	const reportRecapAuthority = (ctx: ExtensionContext): Promise<void> => {
 		const socketPath = process.env.HERDR_SOCKET_PATH;
@@ -934,6 +936,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		const socketPath = process.env.HERDR_SOCKET_PATH;
 		if (!socketPath) return;
 		await reportSession(ctx);
+		await reportRecapAuthority(ctx);
 		const sessionFile = ctx.sessionManager?.getSessionFile?.();
 		const sessionRef =
 			typeof sessionFile === "string" && path.isAbsolute(sessionFile)

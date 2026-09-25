@@ -262,6 +262,9 @@ describe("herdr-reporter extension", () => {
 				herdrReporter(pi);
 				const ctx = sessionCtx("/tmp/recap-session.jsonl", "s1");
 				await handlers.get("session_start")?.({}, ctx);
+				// A normal turn emits later lifecycle state frames. Herdr replaces its
+				// active authority on each one, so they must retain the session ref.
+				await handlers.get("agent_start")?.({}, ctx);
 				await handlers.get("recap_created")?.(
 					{
 						type: "recap_created",
@@ -290,6 +293,13 @@ describe("herdr-reporter extension", () => {
 					expect(stateAfterSession).toBeDefined();
 					expect(stateAfterSession!.params.agent_session_path).toBe("/tmp/recap-session.jsonl");
 					expect(stateAfterSession!.order).toBeLessThan(reports[0]!.order);
+					const lifecycleStates = herdr.received.filter(
+						frame => frame.method === "pane.report_agent" && frame.order > session!.order,
+					);
+					expect(lifecycleStates).not.toHaveLength(0);
+					for (const frame of lifecycleStates) {
+						expect(frame.params.agent_session_path).toBe("/tmp/recap-session.jsonl");
+					}
 					expect(reports[0]!.params).toMatchObject({
 						pane_id: "w1:p1",
 						source: "herdr:xcsh",
