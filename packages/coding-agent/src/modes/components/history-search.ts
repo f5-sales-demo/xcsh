@@ -8,6 +8,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -53,7 +54,7 @@ export class HistorySearchComponent extends Container {
 							start + index === this.#selectedIndex,
 						),
 					)
-				: ["No matching history."],
+				: [selectorProse("No matching history.")],
 			selected
 				? [
 						selected.prompt,

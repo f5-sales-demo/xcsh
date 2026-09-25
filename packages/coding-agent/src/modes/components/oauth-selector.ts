@@ -13,6 +13,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 /**
@@ -329,7 +330,7 @@ export class OAuthSelectorComponent extends Container {
 				const meta = providerPresentation(provider.id);
 				if (this.#catalogMode && !this.#searchInput.getValue() && meta.category !== category) {
 					category = meta.category;
-					body.push(theme.fg("muted", category));
+					body.push(selectorProse(theme.fg("muted", category)));
 				}
 				if (i === this.#selectedIndex) selectedBodyIndex = body.length;
 				body.push(
@@ -346,7 +347,7 @@ export class OAuthSelectorComponent extends Container {
 					),
 				);
 			}
-			if (!this.#filteredProviders.length) body.push("No matching providers");
+			if (!this.#filteredProviders.length) body.push(selectorProse("No matching providers"));
 		}
 		if (this.#statusMessage) details.push(this.#statusMessage);
 		return selectorFrame(

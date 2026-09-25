@@ -29,6 +29,7 @@ import {
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 } from "./selector-frame";
 
 type Mode = "picker" | "viewer";
@@ -120,7 +121,7 @@ export class SessionObserverOverlayComponent extends Container {
 			"Session observer",
 			session ? `Live read-only view · ${session.label} · identity ${session.id}` : "Live session is unavailable.",
 			[],
-			content.slice(this.#viewerOffset, this.#viewerOffset + this.#viewerCapacity),
+			content.slice(this.#viewerOffset, this.#viewerOffset + this.#viewerCapacity).map(line => selectorProse(line)),
 			[],
 			[
 				...(this.#viewerLength > this.#viewerCapacity

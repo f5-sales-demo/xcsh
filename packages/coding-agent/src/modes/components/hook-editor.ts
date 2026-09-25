@@ -12,7 +12,13 @@ import { formatKeyHints } from "../../config/keybindings";
 import { getEditorTheme } from "../../modes/theme/theme";
 import { matchesAppExternalEditor, matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
 import { getEditorCommand, openInEditor } from "../../utils/external-editor";
-import { matchesSelectorKey, selectorCancelHint, selectorFrame, selectorFrameContentWidth } from "./selector-frame";
+import {
+	matchesSelectorKey,
+	selectorCancelHint,
+	selectorCompactRow,
+	selectorFrame,
+	selectorFrameContentWidth,
+} from "./selector-frame";
 
 export interface HookEditorOptions {
 	/** When true, plain Enter submits and modified Enter inserts a newline. */
@@ -81,7 +87,7 @@ export class HookEditorComponent extends Container {
 			"Extension editor",
 			this.title,
 			[],
-			this.#editor.render(inner),
+			this.#editor.render(inner).map(line => selectorCompactRow(line)),
 			details.slice(this.#offset, this.#offset + this.#capacity),
 			[
 				this.#promptStyle ? "Shift+Enter: newline" : "Ctrl+Enter: submit",

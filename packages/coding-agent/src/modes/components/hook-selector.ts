@@ -20,6 +20,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -105,7 +106,7 @@ export class HookSelectorComponent extends Container {
 			[`${filtered.length} of ${this.options.length} options`, ...this.#search.render(inner)],
 			visible.length
 				? visible.map(index => selectorRow([this.options[index]], [inner - 2], index === this.#selected))
-				: [this.options.length ? "No matching options." : "No options available."],
+				: [selectorProse(this.options.length ? "No matching options." : "No options available.")],
 			details.slice(this.#offset, this.#offset + this.#capacity),
 			[
 				...(this.#remaining === undefined ? [] : [`Closes after ${this.#remaining}s idle`]),
@@ -119,7 +120,7 @@ export class HookSelectorComponent extends Container {
 					: []),
 				...(this.opts?.helpText ? [this.opts.helpText] : []),
 			],
-			{ selectedBodyIndex: visible.indexOf(this.#selected) },
+			{ selectedBodyIndex: visible.indexOf(this.#selected), selectedDetail: "provided" },
 		);
 		this.#hitRows.clear();
 		let cursor = 0;

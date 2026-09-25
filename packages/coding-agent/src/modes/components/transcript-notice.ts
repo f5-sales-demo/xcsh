@@ -1,5 +1,5 @@
 import { type Component, Container } from "@f5-sales-demo/pi-tui";
-import { selectorFrame, selectorFrameContentWidth } from "./selector-frame";
+import { selectorCompactRow, selectorFrame, selectorFrameContentWidth, selectorProse } from "./selector-frame";
 
 /** Frame arbitrary static transcript-adjacent content, including OSC links. */
 export class TranscriptComponentFrame extends Container {
@@ -20,7 +20,7 @@ export class TranscriptComponentFrame extends Container {
 			this.title,
 			this.purpose,
 			[],
-			body,
+			body.map(line => selectorCompactRow(line)),
 			[],
 			this.footer,
 			{
@@ -42,8 +42,18 @@ export class TranscriptNoticeComponent extends Container {
 
 	override render(width: number): string[] {
 		const body = this.content.split("\n").filter(line => Bun.stripANSI(line).trim());
-		return selectorFrame(width, body.length + 7, this.title, this.purpose, [], body, [], [], {
-			maxBodyRows: Math.max(1, body.length),
-		});
+		return selectorFrame(
+			width,
+			body.length + 7,
+			this.title,
+			this.purpose,
+			[],
+			body.map(line => selectorProse(line)),
+			[],
+			[],
+			{
+				maxBodyRows: Math.max(1, body.length),
+			},
+		);
 	}
 }

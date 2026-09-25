@@ -23,7 +23,13 @@ import { getCurrentThemeName, theme } from "../../modes/theme/theme";
 import { getTabBarTheme } from "../shared";
 import { PluginSettingsComponent } from "./plugin-settings";
 import { PluginSettingsDrafts, type PluginSettingsStorage, pluginSettingsStorage } from "./plugin-settings-drafts";
-import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
+import {
+	matchesSelectorKey,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorProse,
+	selectorRow,
+} from "./selector-frame";
 import { SettingsBrowser } from "./settings-browser";
 import { getSettingsForTab, type SettingDef } from "./settings-defs";
 import { SettingsChoiceEditor, SettingsTextEditor } from "./settings-editors";
@@ -248,7 +254,7 @@ export class SettingsSelectorComponent extends Container implements MouseRoutabl
 			"Scope: user settings · Applies across future sessions",
 			[],
 			this.#saving
-				? [this.#review === "leave" ? "Restoring settings…" : "Saving settings…"]
+				? [selectorProse(this.#review === "leave" ? "Restoring settings…" : "Saving settings…")]
 				: actions.map((label, i) => selectorRow([label], [inner - 2], i === this.#reviewIndex)),
 			[...changes.slice(this.#reviewOffset, this.#reviewOffset + capacity), this.#saveError],
 			[

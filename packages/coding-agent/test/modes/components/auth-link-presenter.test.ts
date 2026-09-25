@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Container, setTerminalHyperlinks, TERMINAL } from "@f5-sales-demo/pi-tui";
 import { presentAuthLink, presentDeviceCode } from "../../../src/modes/components/auth-link-presenter";
-import { selectorFrame, selectorFrameContentWidth } from "../../../src/modes/components/selector-frame";
+import { selectorFrame, selectorFrameContentWidth, selectorProse } from "../../../src/modes/components/selector-frame";
 import { initTheme } from "../../../src/modes/theme/theme";
 import { applyHyperlinkSetting } from "../../../src/tui/hyperlink";
 
@@ -90,7 +90,7 @@ describe("presentAuthLink", () => {
 				"Sign in",
 				"",
 				[],
-				container.render(selectorFrameContentWidth(44)),
+				container.render(selectorFrameContentWidth(44)).map(line => selectorProse(line)),
 				[],
 				[],
 			);

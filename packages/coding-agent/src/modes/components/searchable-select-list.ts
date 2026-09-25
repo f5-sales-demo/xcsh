@@ -13,6 +13,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -35,7 +36,7 @@ export class SearchableSelectList extends SelectList {
 		private readonly maxVisibleRows: number,
 		theme: SelectListTheme,
 	) {
-		super(sourceItems, maxVisibleRows, theme);
+		super(sourceItems, maxVisibleRows, theme, { presentation: "compact-with-selected-detail" });
 	}
 
 	override setFilter(filter: string): void {
@@ -75,7 +76,7 @@ export class SearchableSelectList extends SelectList {
 					const item = this.sourceItems[index]!;
 					return selectorRow([item.label], [inner - 2], index === this.#selectedIndex);
 				})
-			: [this.sourceItems.length ? "No matching options." : "No options available."];
+			: [selectorProse(this.sourceItems.length ? "No matching options." : "No options available.")];
 		const lines = selectorFrame(
 			width,
 			rows,

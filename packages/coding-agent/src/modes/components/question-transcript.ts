@@ -1,7 +1,7 @@
 import type { Component } from "@f5-sales-demo/pi-tui";
 import type { AsyncInputQuestion, AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { theme } from "../theme/theme";
-import { selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
+import { selectorFrame, selectorFrameContentWidth, selectorProse, selectorRow } from "./selector-frame";
 
 export interface AsyncInputReply {
 	type: "user_input_reply";
@@ -123,7 +123,7 @@ export class QuestionTranscriptComponent implements Component {
 			"Answer recorded",
 			`Question ${position + 1} of ${total}`,
 			[question.title],
-			[{ content: `${theme.symbol("checkbox.checked")} ${answer}`, selected: false }],
+			[selectorProse(`${theme.symbol("checkbox.checked")} ${answer}`)],
 			[],
 			[],
 		);

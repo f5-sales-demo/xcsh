@@ -20,6 +20,7 @@ import {
 	type SelectorFrameLine,
 	selectorFrame,
 	selectorFrameContentWidth,
+	selectorProse,
 	selectorRow,
 } from "../selector-frame";
 import { applySearch, buildTabs, filterByTab, loadAllPlugins, pluginSelectionKey } from "./state-manager";
@@ -818,7 +819,7 @@ export class PluginDashboard extends Container {
 				),
 			);
 		}
-		if (!body.length || (wide && body.length === 1)) body.push(this.#emptyMessage());
+		if (!body.length || (wide && body.length === 1)) body.push(selectorProse(this.#emptyMessage()));
 		return { body, selectedBodyIndex };
 	}
 

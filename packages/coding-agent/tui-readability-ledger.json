@@ -1,13 +1,21 @@
 {
   "version": 1,
   "sourceRoots": ["packages/coding-agent/src", "packages/tui/src"],
-  "sinkNames": ["selectorFrame", "selectorRow", "SelectList", "TruncatedText", "truncateToWidth"],
+  "sinkNames": [
+    "selectorFrame",
+    "selectorRow",
+    "selectorProse",
+    "selectorCompactRow",
+    "SelectList",
+    "TruncatedText",
+    "truncateToWidth"
+  ],
   "entries": [
     {
       "id": "login-prose",
       "surface": "/login",
       "source": "packages/coding-agent/src/modes/components/login-dialog.ts",
-      "sinks": ["selectorFrame"],
+      "sinks": ["selectorFrame", "selectorProse"],
       "category": "prose",
       "policy": "wrap",
       "reproductionWidth": 40,
@@ -22,7 +30,7 @@
       "id": "models-compact-rows",
       "surface": "/models",
       "source": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "sinks": ["selectorFrame", "selectorRow", "truncateToWidth"],
+      "sinks": ["selectorFrame", "selectorRow", "selectorProse", "truncateToWidth"],
       "category": "mixed prose and identifiers",
       "policy": "truncate-with-full-detail",
       "detailView": false,
@@ -38,17 +46,17 @@
       "id": "shared-selector-frame",
       "surface": "shared selector frames",
       "source": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "sinks": ["selectorFrame", "selectorRow", "truncateToWidth"],
+      "sinks": ["selectorFrame", "selectorRow", "selectorProse", "selectorCompactRow", "truncateToWidth"],
       "category": "mixed prose and compact rows",
       "policy": "truncate-with-full-detail",
-      "detailView": false,
+      "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long selected label plus wrapped café 東京 detail text with ANSI emphasis.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4340",
       "tests": ["test/selector-frame-layout.test.ts"],
-      "terminalUat": "pending",
-      "mergedPr": "pending"
+      "terminalUat": "pass: 40-column PTY; complete ANSI/Unicode prose and selected detail; 07baea76cd11d2e30f567708f61b9ed775575a2b; v21.45.1",
+      "mergedPr": "#4353"
     },
     {
       "id": "shared-select-list",
@@ -57,14 +65,14 @@
       "sinks": ["truncateToWidth"],
       "category": "mixed labels and descriptions",
       "policy": "truncate-with-full-detail",
-      "detailView": false,
+      "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long completion label and café 東京 description with ANSI emphasis.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4340",
       "tests": ["packages/tui/test/select-list.test.ts"],
-      "terminalUat": "pending",
-      "mergedPr": "pending"
+      "terminalUat": "pass: 40-column PTY; complete ANSI/Unicode prose and selected detail; 07baea76cd11d2e30f567708f61b9ed775575a2b; v21.45.1",
+      "mergedPr": "#4353"
     },
     {
       "id": "shared-truncated-text",
@@ -100,7 +108,15 @@
       "id": "selector-surfaces",
       "surface": "interactive selectors and bounded dialogs",
       "source": "packages/coding-agent/src/modes/components/**",
-      "sinks": ["selectorFrame", "selectorRow", "SelectList", "TruncatedText", "truncateToWidth"],
+      "sinks": [
+        "selectorFrame",
+        "selectorRow",
+        "selectorProse",
+        "selectorCompactRow",
+        "SelectList",
+        "TruncatedText",
+        "truncateToWidth"
+      ],
       "category": "mixed prose and compact selections",
       "policy": "truncate-with-full-detail",
       "detailView": false,
@@ -131,7 +147,15 @@
       "id": "coding-agent-previews",
       "surface": "remaining coding-agent status and preview renderers",
       "source": "packages/coding-agent/src/**",
-      "sinks": ["selectorFrame", "selectorRow", "SelectList", "TruncatedText", "truncateToWidth"],
+      "sinks": [
+        "selectorFrame",
+        "selectorRow",
+        "selectorProse",
+        "selectorCompactRow",
+        "SelectList",
+        "TruncatedText",
+        "truncateToWidth"
+      ],
       "category": "code, identifiers, status, and collapsed previews",
       "policy": "intentionally-compact",
       "reproductionWidth": 40,

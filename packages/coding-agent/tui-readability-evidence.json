@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "15cb0b07",
-    "34ac6874",
-    "cb6cbf51",
-    "85e022f8",
-    "15b12c5f",
-    "c52bc365",
-    "44810f68",
-    "0db65630"
+    "66f2075a",
+    "6ebfee8d",
+    "8ba90308",
+    "359c0621",
+    "4125f9c7",
+    "6e86e866",
+    "8576a72c",
+    "ef3de7e1"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [
@@ -72,14 +72,14 @@
       "fcd817c6"
     ],
     "packages/coding-agent/src/debug/log-viewer.ts": [
-      "a58d6738",
-      "5efa47d8",
-      "2519a68d",
-      "06cca306",
-      "a8b9daf3",
-      "163b1a16",
-      "50272b56",
-      "a14d3923"
+      "30094850",
+      "3090c061",
+      "0801b59f",
+      "7c9b9100",
+      "f1d0a301",
+      "5f66f438",
+      "bbc67f71",
+      "a40b97b2"
     ],
     "packages/coding-agent/src/edit/renderer.ts": [
       "7404bdd5",
@@ -122,54 +122,54 @@
       "4a792eb9"
     ],
     "packages/coding-agent/src/modes/components/agent-dashboard.ts": [
-      "c8c082fd",
-      "ca3dc519",
-      "340d5366",
-      "952b2981",
-      "6274a7bc",
-      "b22ade84",
-      "b6b3950d",
-      "0694b507"
+      "8d63d03d",
+      "bec1ee13",
+      "196bb30e",
+      "d7216f45",
+      "61c02b72",
+      "6ad7a0f4",
+      "3d1af88e",
+      "618a0893"
     ],
     "packages/coding-agent/src/modes/components/btw-panel.ts": [
-      "c0e54f92",
-      "84ff5f62",
-      "9a24df91",
-      "c464ec6d",
-      "6edff9ee",
-      "c7af2666",
-      "df26e451",
-      "cc3654c5"
+      "f236f593",
+      "5e69061d",
+      "0fcf3a29",
+      "de51acd6",
+      "06979a5f",
+      "2b36cc72",
+      "078faca7",
+      "013820e1"
     ],
     "packages/coding-agent/src/modes/components/context-add-wizard.ts": [
-      "24487513",
-      "d8cd5db2",
-      "c0bc5eb8",
-      "104a7f51",
-      "00c07578",
-      "7b77dacf",
-      "8ed47177",
-      "481e4bdf"
+      "366539a0",
+      "3ab4aa2f",
+      "8374081f",
+      "7c38e7a3",
+      "178d329f",
+      "61b31354",
+      "979ea02f",
+      "e060b4d4"
     ],
     "packages/coding-agent/src/modes/components/copy-selector.ts": [
-      "fdfe788d",
-      "5fb44b4a",
-      "fac7bbae",
-      "ea7d4d64",
-      "acbd2619",
-      "0303ea53",
-      "953df4bd",
-      "83878705"
+      "a6db56bc",
+      "bf1da03f",
+      "6da4fc14",
+      "109a4450",
+      "59c5bd41",
+      "48f58ce4",
+      "323d2274",
+      "7404e8b8"
     ],
     "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts": [
-      "8d0adab5",
-      "ed97560c",
-      "6d33fd7a",
-      "d160a6b8",
-      "196ae326",
-      "91324338",
-      "ebf0218c",
-      "c904f9e2"
+      "37b0ea7c",
+      "f7ee5eda",
+      "4df6de41",
+      "6692bc78",
+      "c88a8cd8",
+      "580c5df0",
+      "efe41d31",
+      "7bb626cb"
     ],
     "packages/coding-agent/src/modes/components/footer.ts": [
       "51943bb9",
@@ -182,214 +182,214 @@
       "ace83e15"
     ],
     "packages/coding-agent/src/modes/components/history-search.ts": [
-      "57e4ab74",
-      "7ca23ed8",
-      "5b390e54",
-      "a2f11a84",
-      "74883fb7",
-      "f3231188",
-      "33a8ba5b",
-      "81847f68"
+      "3c8f9624",
+      "15259b0a",
+      "2bbe0b35",
+      "9571f611",
+      "0ee765a3",
+      "016ad93c",
+      "7c248e5b",
+      "be1df178"
     ],
     "packages/coding-agent/src/modes/components/hook-editor.ts": [
-      "948b7659",
-      "4566f026",
-      "f3daf87b",
-      "40ca1e0b",
-      "4d30b923",
-      "eeb4b899",
-      "ff687ed7",
-      "a3b67027"
+      "e7670a0c",
+      "a28ee400",
+      "b500151e",
+      "4d97b69f",
+      "c437f233",
+      "6ffa9b18",
+      "dc03da4a",
+      "a208dbb7"
     ],
     "packages/coding-agent/src/modes/components/hook-input.ts": [
-      "5d6f0f30",
-      "1668e958",
-      "dd01ba74",
-      "8266b1e4",
-      "c8456fc7",
-      "219e5997",
-      "45ad766f",
-      "faab1547"
+      "a764cbeb",
+      "7c663a38",
+      "433403c3",
+      "c2150efa",
+      "a6d3a67c",
+      "1691777e",
+      "0c54507d",
+      "329d6a33"
     ],
     "packages/coding-agent/src/modes/components/hook-selector.ts": [
-      "f8691128",
-      "7f956e5a",
-      "e2203b9e",
-      "7b235eb8",
-      "9746a38f",
-      "1823f6b6",
-      "8e7198b4",
-      "43f0b74d"
+      "2c509ab1",
+      "6e80e521",
+      "5f0cabb8",
+      "bac0912d",
+      "24716b07",
+      "f900c931",
+      "0ef49193",
+      "10ed7b31"
     ],
     "packages/coding-agent/src/modes/components/login-dialog.ts": [
-      "aa37fc61",
-      "1eaee5f2",
-      "0f104684",
-      "651d1801",
-      "fd7866c7",
-      "eaed4291",
-      "4f3e018c",
-      "7c527a75"
+      "0413f22e",
+      "5b15d226",
+      "aa1a4e4a",
+      "7b5127ce",
+      "2e4fe02f",
+      "9018ca59",
+      "cefd1475",
+      "6b47b678"
     ],
     "packages/coding-agent/src/modes/components/mcp-add-wizard.ts": [
-      "ecd73552",
-      "183d7936",
-      "660e74ea",
-      "a04e6b25",
-      "fa862688",
-      "5e9050c7",
-      "58856ed1",
-      "7bb81c43"
+      "f57fdf66",
+      "f20dd09b",
+      "511d1d10",
+      "0b12a030",
+      "ca30f8c7",
+      "0cddb21e",
+      "8998d332",
+      "e3ed2b14"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
-      "a27fe290",
-      "a94ac12a",
-      "8d48d72a",
-      "e6f43262",
-      "298675a2",
-      "6eeaf9fc",
-      "c753a414",
-      "0aaf8fcf"
+      "70030975",
+      "eb68ab5b",
+      "647193f9",
+      "71f8e6b7",
+      "b3c08496",
+      "d66c1b43",
+      "af149325",
+      "e2998317"
     ],
     "packages/coding-agent/src/modes/components/oauth-selector.ts": [
-      "a855fe32",
-      "2a68855d",
-      "468d04ec",
-      "77c38f6f",
-      "19f98009",
-      "9a0ac6f7",
-      "c674eb94",
-      "9902b38a"
+      "4ee12171",
+      "0660912e",
+      "58c499f8",
+      "23c26970",
+      "74f7bb78",
+      "138310e1",
+      "ebea1d66",
+      "cd1a58c2"
     ],
     "packages/coding-agent/src/modes/components/plan-preview.ts": [
-      "8b18a7a4",
-      "f4753d1e",
-      "184d9411",
-      "83721eb5",
-      "352c53c1",
-      "2bc146d3",
-      "a721ddb1",
-      "0f89b304"
+      "41ca1e4a",
+      "55324ede",
+      "df3671e1",
+      "3522fa2d",
+      "de87411a",
+      "0de4afda",
+      "e488b81a",
+      "b1a233a1"
     ],
     "packages/coding-agent/src/modes/components/plugin-settings.ts": [
-      "afb8789b",
-      "837ba8aa",
-      "81f1443a",
-      "27b09d06",
-      "6f828807",
-      "ea040473",
-      "f87434e9",
-      "1bf71dc0"
+      "76282665",
+      "463d5b60",
+      "555f616c",
+      "0d86e01e",
+      "81601f61",
+      "5c3ee233",
+      "3f87bc47",
+      "b4071fa8"
     ],
     "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts": [
-      "4b5e4fc0",
-      "6331155d",
-      "5ed44a02",
-      "6e9697a3",
-      "13dd5ea6",
-      "0b8e2674",
-      "0f93fde6",
-      "3695b038"
+      "9d1634fc",
+      "2be56099",
+      "8d1862b0",
+      "b9780de1",
+      "5b6d01c4",
+      "178bd3e6",
+      "4e123205",
+      "fafc7cd0"
     ],
     "packages/coding-agent/src/modes/components/question-transcript.ts": [
-      "4cd58a35",
-      "519451a6",
-      "de0c9280",
-      "810763e2",
-      "c7919e6c",
-      "e1fbda09",
-      "66024d19",
-      "13ef18c0"
+      "0183aa76",
+      "89bab363",
+      "285132e8",
+      "10ce9efb",
+      "647206a0",
+      "b1d1679a",
+      "a1a3d623",
+      "9688a17f"
     ],
     "packages/coding-agent/src/modes/components/request-user-input.ts": [
-      "49f98d88",
-      "c45681e4",
-      "4f059933",
-      "29fa40b7",
-      "8a374267",
-      "cadd8277",
-      "7134cff1",
-      "a504dc8d"
+      "37003796",
+      "67f2b8e3",
+      "6e722e65",
+      "cea71cde",
+      "54301f34",
+      "e7f41977",
+      "ea437d20",
+      "7d5ab1f6"
     ],
     "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts": [
-      "243a1c9b",
-      "28fd5cd1",
-      "7295b27d",
-      "80d3cbfb",
-      "a957a8fb",
-      "ddb496df",
-      "1356dc49",
-      "10c77f35"
+      "cb43ee0e",
+      "e36adaf7",
+      "e71cc09d",
+      "edb9b3a0",
+      "1458034c",
+      "69e2bbc6",
+      "9f5839fe",
+      "685d3042"
     ],
     "packages/coding-agent/src/modes/components/searchable-select-list.ts": [
-      "44123bb4",
-      "ab38efbd",
-      "3010b03e",
-      "ae03670e",
-      "aefd2c4a",
-      "3137bbb4",
-      "e2db95d5",
-      "8e6f3dcf"
+      "71290633",
+      "4859f77a",
+      "8654cc31",
+      "39dccff6",
+      "b0775a5f",
+      "2e951175",
+      "e2ca5cae",
+      "9cc72b8d"
     ],
     "packages/coding-agent/src/modes/components/selector-frame.ts": [
-      "036e4127",
-      "7cae7fe6",
-      "06ae7b74",
-      "307389a1",
-      "38726de4",
-      "6f933ae2",
-      "b3bfe7b8",
-      "8baf67dd"
+      "3959b5ba",
+      "654929cd",
+      "ca472784",
+      "6965090c",
+      "4155fcb0",
+      "73f944a4",
+      "973af14d",
+      "c794dcff"
     ],
     "packages/coding-agent/src/modes/components/session-observer-overlay.ts": [
-      "89389df2",
-      "7780cc58",
-      "0c0dfb43",
-      "308a5cbc",
-      "724525e8",
-      "14c7ffa9",
-      "0a320e31",
-      "337dc201"
+      "66275459",
+      "bb888e7b",
+      "9ae73197",
+      "e3a9c31c",
+      "7fc68319",
+      "00016f1a",
+      "b3deaa38",
+      "a526aebf"
     ],
     "packages/coding-agent/src/modes/components/session-selector.ts": [
-      "43fb6f97",
-      "4e8ad46e",
-      "411ddca0",
-      "2d1e8fa5",
-      "582e6332",
-      "f84e3657",
-      "e04fe47e",
-      "65c59aec"
+      "1ffcf95e",
+      "0edf53b1",
+      "dd9d5931",
+      "1dfab857",
+      "dc97a9a5",
+      "a6ae788f",
+      "7520360b",
+      "51276d53"
     ],
     "packages/coding-agent/src/modes/components/settings-browser.ts": [
-      "39cda0b4",
-      "bdeb376e",
-      "653f7c26",
-      "a6a94a2d",
-      "3cbc3172",
-      "41bc19db",
-      "78490109",
-      "6264fb23"
+      "88faab48",
+      "4a252934",
+      "c82c46ce",
+      "79b97598",
+      "7ac54b74",
+      "b51f30de",
+      "903a9625",
+      "26e3771b"
     ],
     "packages/coding-agent/src/modes/components/settings-editors.ts": [
-      "a35b1008",
-      "d9f57aae",
-      "56aa3e6a",
-      "c0967a4b",
-      "739a7c73",
-      "ac70bd28",
-      "2260e202",
-      "79509709"
+      "91b352df",
+      "66a68474",
+      "2bee36f5",
+      "5879b3ec",
+      "a0408285",
+      "aa536168",
+      "0184607b",
+      "2537e4cc"
     ],
     "packages/coding-agent/src/modes/components/settings-selector.ts": [
-      "b374a530",
-      "33d961e3",
-      "0f193980",
-      "636d4c66",
-      "06943045",
-      "8817ebe5",
-      "e681c0e6",
-      "d3bcd4ee"
+      "188c6bc6",
+      "44fa3ec6",
+      "4e961ffe",
+      "326597d4",
+      "94d8d622",
+      "acb525b7",
+      "2fefd04b",
+      "826f8668"
     ],
     "packages/coding-agent/src/modes/components/status-line.ts": [
       "1a6f274f",
@@ -412,44 +412,44 @@
       "d81df80f"
     ],
     "packages/coding-agent/src/modes/components/transcript-notice.ts": [
-      "66f20504",
-      "c03ebf9b",
-      "25057e9a",
-      "80d40a75",
-      "fb3f7cff",
-      "e8a4da49",
-      "8732ea93",
-      "281f2e71"
+      "08252fd8",
+      "b0ba45fa",
+      "40da9200",
+      "c0aae16a",
+      "944c73db",
+      "ec0525e8",
+      "7c7c3ffd",
+      "c49fd887"
     ],
     "packages/coding-agent/src/modes/components/tree-selector.ts": [
-      "df114d25",
-      "4c56d84e",
-      "5859fdbb",
-      "04615f5b",
-      "24d51688",
-      "47da1883",
-      "8113f0d4",
-      "369865b0"
+      "022b3227",
+      "0124197b",
+      "a71b4090",
+      "8dc84ed6",
+      "78b64b9b",
+      "17f5003c",
+      "aabd7891",
+      "34ef7933"
     ],
     "packages/coding-agent/src/modes/components/user-message-selector.ts": [
-      "eb767652",
-      "46adabca",
-      "0f817f53",
-      "c742936d",
-      "1d75d0b9",
-      "1c651de6",
-      "b4e8b0c2",
-      "3affbffb"
+      "82697404",
+      "bf5e6c09",
+      "2b7810c7",
+      "7b3832cb",
+      "51c0ca72",
+      "e055205e",
+      "b718c1a8",
+      "65b86c73"
     ],
     "packages/coding-agent/src/modes/components/welcome.ts": [
-      "8898a838",
-      "c3f3da09",
-      "14e16019",
-      "c0ea07b1",
-      "f5712679",
-      "0163b11d",
-      "57f79081",
-      "21dddf4b"
+      "5b40dcb4",
+      "826c3a0b",
+      "9859c821",
+      "39617fb0",
+      "bd90e1c4",
+      "0c9917dd",
+      "d7dd3024",
+      "5502bf44"
     ],
     "packages/coding-agent/src/modes/utils/sanitize-error-message.ts": [
       "71c7f289",
@@ -662,14 +662,14 @@
       "2d07bd83"
     ],
     "packages/tui/src/components/editor.ts": [
-      "3af1ac7d",
-      "c618a960",
-      "460d7832",
-      "11755440",
-      "c5057e52",
-      "d211bd1d",
-      "7cd11ac1",
-      "8f19013d"
+      "f19a7a73",
+      "908422ba",
+      "d680653d",
+      "20d69eb1",
+      "acc6fefa",
+      "a45e6027",
+      "86ddc536",
+      "9de4321d"
     ],
     "packages/tui/src/components/markdown.ts": [
       "33dbb105",
@@ -682,14 +682,14 @@
       "fe2a8ff2"
     ],
     "packages/tui/src/components/select-list.ts": [
-      "ac74cdb3",
-      "d6d896af",
-      "ac424751",
-      "bcd1a603",
-      "f79ea37c",
-      "2f704428",
-      "35a7acfd",
-      "d0c06b46"
+      "344ef4a0",
+      "8e852c07",
+      "572f350d",
+      "7bcabbb5",
+      "8d7f09f9",
+      "a6118c26",
+      "bb813181",
+      "a1bb321f"
     ],
     "packages/tui/src/components/settings-list.ts": [
       "b4d22b65",
@@ -887,7 +887,7 @@
     },
     {
       "file": "packages/coding-agent/src/debug/log-viewer.ts",
-      "line": 642,
+      "line": 644,
       "sink": "selectorFrame",
       "entry": "coding-agent-previews"
     },
@@ -919,6 +919,18 @@
       "file": "packages/coding-agent/src/debug/log-viewer.ts",
       "line": 839,
       "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 853,
+      "sink": "selectorProse",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 866,
+      "sink": "selectorCompactRow",
       "entry": "coding-agent-previews"
     },
     {
@@ -1061,50 +1073,62 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 657,
+      "line": 663,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 663,
+      "line": 669,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 677,
+      "line": 683,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 716,
-      "sink": "selectorFrame",
+      "line": 689,
+      "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
       "line": 722,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 742,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 745,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 763,
       "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 728,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 748,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 751,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 769,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 778,
+      "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
@@ -1114,75 +1138,111 @@
       "entry": "selector-surfaces"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
+      "line": 79,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
+      "line": 80,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
-      "line": 198,
+      "line": 190,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
+      "line": 191,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
+      "line": 200,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
-      "line": 323,
+      "line": 324,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
-      "line": 330,
+      "line": 331,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
-      "line": 353,
+      "line": 354,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
-      "line": 378,
+      "line": 363,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 381,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
-      "line": 400,
+      "line": 403,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
-      "line": 407,
+      "line": 410,
       "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 406,
-      "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
       "line": 412,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 432,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 435,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 467,
       "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 418,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 438,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 441,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 473,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 482,
+      "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
@@ -1193,121 +1253,181 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/history-search.ts",
-      "line": 42,
+      "line": 43,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/history-search.ts",
-      "line": 50,
+      "line": 51,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/history-search.ts",
-      "line": 76,
+      "line": 57,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/history-search.ts",
+      "line": 77,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/hook-editor.ts",
-      "line": 78,
+      "line": 84,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-editor.ts",
+      "line": 90,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-input.ts",
+      "line": 61,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/hook-input.ts",
-      "line": 60,
+      "line": 67,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
+      "line": 101,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
-      "line": 100,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
-      "line": 107,
+      "line": 108,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
-      "line": 127,
+      "line": 109,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
+      "line": 128,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/login-dialog.ts",
-      "line": 74,
+      "line": 75,
       "sink": "selectorFrame",
       "entry": "login-prose"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/login-dialog.ts",
+      "line": 81,
+      "sink": "selectorProse",
+      "entry": "login-prose"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "line": 74,
+      "line": 76,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "line": 167,
+      "line": 159,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
+      "line": 160,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
+      "line": 169,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 408,
+      "line": 409,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 455,
+      "line": 456,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 469,
+      "line": 470,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
       "line": 482,
+      "sink": "selectorProse",
+      "entry": "models-compact-rows"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
+      "line": 484,
       "sink": "selectorFrame",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 547,
+      "line": 549,
       "sink": "truncateToWidth",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
-      "line": 308,
+      "line": 309,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
-      "line": 323,
+      "line": 324,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
-      "line": 336,
+      "line": 333,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
+      "line": 337,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
-      "line": 352,
+      "line": 350,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
+      "line": 353,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
@@ -1318,110 +1438,128 @@
       "entry": "selector-surfaces"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/plan-preview.ts",
+      "line": 20,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/plugin-settings.ts",
       "line": 372,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/plugin-settings.ts",
+      "line": 378,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 788,
+      "line": 789,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 800,
+      "line": 801,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 812,
+      "line": 813,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 831,
+      "line": 822,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 832,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 859,
+      "line": 860,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 883,
+      "line": 884,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 889,
+      "line": 890,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 917,
+      "line": 918,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 923,
+      "line": 924,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 932,
+      "line": 933,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 939,
+      "line": 940,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 955,
+      "line": 956,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 962,
+      "line": 963,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 983,
+      "line": 984,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 989,
+      "line": 990,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 1006,
+      "line": 1007,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
-      "line": 1012,
+      "line": 1013,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
@@ -1444,27 +1582,51 @@
       "entry": "selector-surfaces"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 126,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 68,
+      "line": 69,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
       "line": 70,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 71,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 73,
+      "line": 72,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 74,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 92,
+      "line": 93,
       "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 102,
+      "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
@@ -1475,151 +1637,265 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts",
-      "line": 62,
+      "line": 63,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts",
+      "line": 71,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts",
+      "line": 80,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
       "line": 77,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
-      "line": 76,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
       "line": 79,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
+      "line": 80,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
-      "line": 101,
+      "line": 102,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 100,
+      "line": 116,
       "sink": "truncateToWidth",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 164,
-      "sink": "selectorFrame",
-      "entry": "shared-selector-frame"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 202,
-      "sink": "truncateToWidth",
-      "entry": "shared-selector-frame"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 295,
-      "sink": "selectorFrame",
-      "entry": "shared-selector-frame"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 351,
-      "sink": "selectorFrame",
-      "entry": "shared-selector-frame"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 357,
+      "line": 152,
       "sink": "selectorRow",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 385,
+      "line": 152,
+      "sink": "selectorProse",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 162,
+      "sink": "selectorRow",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 162,
+      "sink": "selectorProse",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 213,
       "sink": "selectorFrame",
       "entry": "shared-selector-frame"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 269,
+      "sink": "truncateToWidth",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 274,
+      "sink": "selectorCompactRow",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 362,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 368,
+      "sink": "selectorCompactRow",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 418,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 424,
+      "sink": "selectorRow",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 452,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 458,
+      "sink": "selectorCompactRow",
+      "entry": "shared-selector-frame"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/session-observer-overlay.ts",
+      "line": 118,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-observer-overlay.ts",
+      "line": 124,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-observer-overlay.ts",
+      "line": 436,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 112,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
       "line": 117,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/session-observer-overlay.ts",
-      "line": 435,
-      "sink": "truncateToWidth",
+      "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 127,
+      "line": 133,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 248,
+      "line": 141,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 146,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 256,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 254,
+      "line": 262,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "line": 272,
+      "line": 280,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/settings-browser.ts",
-      "line": 72,
+      "line": 78,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/settings-browser.ts",
-      "line": 80,
+      "line": 86,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-browser.ts",
+      "line": 92,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 59,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 65,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 174,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 181,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 184,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
-      "line": 52,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
-      "line": 167,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
-      "line": 177,
-      "sink": "selectorRow",
+      "line": 190,
+      "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/settings-selector.ts",
-      "line": 244,
+      "line": 250,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/settings-selector.ts",
-      "line": 252,
+      "line": 257,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-selector.ts",
+      "line": 258,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
@@ -1643,62 +1919,134 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
+      "line": 23,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
       "line": 45,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
+      "line": 51,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
-      "line": 257,
+      "line": 242,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 246,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 261,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
-      "line": 270,
+      "line": 274,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
-      "line": 298,
-      "sink": "selectorFrame",
+      "line": 281,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 282,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 284,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 285,
+      "sink": "selectorCompactRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
       "line": 304,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 310,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
-      "line": 324,
+      "line": 330,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
-      "line": 55,
+      "line": 57,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
-      "line": 61,
+      "line": 63,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
-      "line": 83,
+      "line": 76,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
+      "line": 79,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
+      "line": 85,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
-      "line": 90,
+      "line": 92,
       "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/welcome.ts",
+      "line": 42,
+      "sink": "selectorCompactRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/welcome.ts",
+      "line": 58,
+      "sink": "selectorCompactRow",
       "entry": "selector-surfaces"
     },
     {
@@ -2291,31 +2639,31 @@
     },
     {
       "file": "packages/tui/src/components/editor.ts",
-      "line": 728,
+      "line": 730,
       "sink": "truncateToWidth",
       "entry": "tui-core-compact"
     },
     {
       "file": "packages/tui/src/components/editor.ts",
-      "line": 809,
+      "line": 811,
       "sink": "truncateToWidth",
       "entry": "tui-core-compact"
     },
     {
       "file": "packages/tui/src/components/editor.ts",
-      "line": 852,
+      "line": 854,
       "sink": "truncateToWidth",
       "entry": "tui-core-compact"
     },
     {
       "file": "packages/tui/src/components/editor.ts",
-      "line": 870,
+      "line": 872,
       "sink": "truncateToWidth",
       "entry": "tui-core-compact"
     },
     {
       "file": "packages/tui/src/components/editor.ts",
-      "line": 2446,
+      "line": 2448,
       "sink": "SelectList",
       "entry": "tui-core-compact"
     },
@@ -2327,25 +2675,25 @@
     },
     {
       "file": "packages/tui/src/components/select-list.ts",
-      "line": 152,
+      "line": 183,
       "sink": "truncateToWidth",
       "entry": "shared-select-list"
     },
     {
       "file": "packages/tui/src/components/select-list.ts",
-      "line": 218,
+      "line": 249,
       "sink": "truncateToWidth",
       "entry": "shared-select-list"
     },
     {
       "file": "packages/tui/src/components/select-list.ts",
-      "line": 268,
+      "line": 324,
       "sink": "truncateToWidth",
       "entry": "shared-select-list"
     },
     {
       "file": "packages/tui/src/components/select-list.ts",
-      "line": 270,
+      "line": 326,
       "sink": "truncateToWidth",
       "entry": "shared-select-list"
     },

@@ -29,7 +29,13 @@ import type { AgentDefinition, AgentSource } from "../../task/types";
 import { theme } from "../theme/theme";
 import type { ActionReview } from "./reviewed-action";
 import { ReviewedActionDialog, type ReviewedActionOutcome } from "./reviewed-action-dialog";
-import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
+import {
+	matchesSelectorKey,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorProse,
+	selectorRow,
+} from "./selector-frame";
 import { SettingsTextEditor } from "./settings-editors";
 
 type SourceTabId = "all" | AgentSource;
@@ -680,7 +686,7 @@ export class AgentDashboard extends Container implements MouseRoutable {
 				"Generating agent specification",
 				`${this.#createScope} scope · No file has been written`,
 				[],
-				["Generation in progress…"],
+				[selectorProse("Generation in progress…")],
 				[this.#createDescription],
 				["This operation cannot be interrupted; waiting for its result."],
 			);
@@ -768,7 +774,11 @@ export class AgentDashboard extends Container implements MouseRoutable {
 			[tabLine, ...this.#search.render(Math.max(1, inner - 8)).map(line => `Search: ${line}`)],
 			rows.length
 				? rows
-				: [this.#all.length ? `No agents match “${this.#search.getValue()}”.` : "No agents are available."],
+				: [
+						selectorProse(
+							this.#all.length ? `No agents match “${this.#search.getValue()}”.` : "No agents are available.",
+						),
+					],
 			[
 				selected ? `${selected.name} · ${selected.source} · ${selected.filePath ?? "bundled"}` : "",
 				this.#notice ? theme.fg(this.#noticeTone, this.#notice) : "",

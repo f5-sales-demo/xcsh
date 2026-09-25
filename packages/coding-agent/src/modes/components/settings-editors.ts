@@ -6,7 +6,14 @@ import {
 	type SgrMouseEvent,
 	wrapTextWithAnsi,
 } from "@f5-sales-demo/pi-tui";
-import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
+import {
+	matchesSelectorKey,
+	selectorCompactRow,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorProse,
+	selectorRow,
+} from "./selector-frame";
 
 export class SettingsTextEditor extends Container {
 	#input = new Input();
@@ -55,7 +62,7 @@ export class SettingsTextEditor extends Container {
 			this.title,
 			this.options.purpose ?? "Edit draft · Clear field to unset",
 			[],
-			this.#input.render(selectorFrameContentWidth(width)),
+			this.#input.render(selectorFrameContentWidth(width)).map(line => selectorCompactRow(line)),
 			details.slice(this.#offset, this.#offset + this.#capacity),
 			details.length > this.#capacity ? ["PgUp/PgDn: details"] : [],
 		);
@@ -171,7 +178,7 @@ export class SettingsChoiceEditor extends Container implements MouseRoutable {
 			"Choose a draft value · Saved only after combined review",
 			this.#search.render(Math.max(1, inner - 8)).map(line => `Search: ${line}`),
 			this.#finishing
-				? ["Finishing preview…"]
+				? [selectorProse("Finishing preview…")]
 				: items.length
 					? items.map(item =>
 							selectorRow(
@@ -180,7 +187,7 @@ export class SettingsChoiceEditor extends Container implements MouseRoutable {
 								item === selected,
 							),
 						)
-					: [this.options.length ? "No matching values" : "No values available"],
+					: [selectorProse(this.options.length ? "No matching values" : "No values available")],
 			details.slice(this.#offset, this.#offset + this.#capacity),
 			[
 				...(selected ? [`Choices ${items.indexOf(selected) + 1}/${items.length}`] : []),

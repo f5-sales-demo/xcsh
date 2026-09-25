@@ -6,7 +6,13 @@ import {
 	type SgrMouseEvent,
 	wrapTextWithAnsi,
 } from "@f5-sales-demo/pi-tui";
-import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
+import {
+	matchesSelectorKey,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorProse,
+	selectorRow,
+} from "./selector-frame";
 
 /** Internal settings navigation; paths, not row offsets, retain selection across searches. */
 export class SettingsBrowser extends Container {
@@ -83,7 +89,7 @@ export class SettingsBrowser extends Container {
 							i === index,
 						),
 					)
-				: [this.items.length ? "No matching settings" : "No settings available"],
+				: [selectorProse(this.items.length ? "No matching settings" : "No settings available")],
 			details.slice(this.#detailOffset, this.#detailOffset + this.#detailCapacity),
 			[
 				...(this.presentation.footer ?? ["Tab/Shift+Tab: section"]),

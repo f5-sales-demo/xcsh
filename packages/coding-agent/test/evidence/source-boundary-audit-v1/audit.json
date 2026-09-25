@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "3462b348f0e35ddb7a65716a5bbbb611716c5078",
-  "fingerprint": "ea4bf131b690e5ff6cde00a581a1650167654ced9e9b42ff26c054042e7e6139",
+  "revision": "b5c9013a01006956a1d2668ba2a05b1772870308",
+  "fingerprint": "9fd62d5759b32f6b98fe6a5e975f17410dfa8858d72c811bc470b41e1ea2df31",
   "counts": {
     "total": 241,
     "components": 96,
@@ -294,7 +294,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "reports",
-      "sha256": "a58d67385efa47d82519a68d06cca306a8b9daf3163b1a1650272b56a14d3923",
+      "sha256": "300948503090c0610801b59f7c9b9100f1d0a3015f66f438bbc67f71a40b97b2",
       "exports": [
         "DebugLogViewerComponent",
         "DebugLogViewerModel",
@@ -1139,7 +1139,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "c8c082fdca3dc519340d5366952b29816274a7bcb22ade84b6b3950d0694b507",
+      "sha256": "8d63d03dbec1ee13196bb30ed7216f4561c02b726ad7a0f43d1af88e618a0893",
       "exports": [
         "AgentDashboard",
         "AgentDashboardDependencies",
@@ -1261,7 +1261,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "reports",
-      "sha256": "c0e54f9284ff5f629a24df91c464ec6d6edff9eec7af2666df26e451cc3654c5",
+      "sha256": "f236f5935e69061d0fcf3a29de51acd606979a5f2b36cc72078faca7013820e1",
       "exports": [
         "BtwPanelComponent"
       ],
@@ -1297,7 +1297,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "connections",
-      "sha256": "24487513d8cd5db2c0bc5eb8104a7f5100c075787b77dacf8ed47177481e4bdf",
+      "sha256": "366539a03ab4aa2f8374081f7c38e7a3178d329f61b31354979ea02fe060b4d4",
       "exports": [
         "ContextAddWizard",
         "buildWizardContext",
@@ -1327,7 +1327,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "fdfe788d5fb44b4afac7bbaeea7d4d64acbd26190303ea53953df4bd83878705",
+      "sha256": "a6db56bcbf1da03f6da4fc14109a445059c5bd4148f58ce4323d22747404e8b8",
       "exports": [
         "CopySelectorComponent",
         "CopySelectorDeps"
@@ -1459,7 +1459,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "8d0adab5ed97560c6d33fd7ad160a6b8196ae32691324338ebf0218cc904f9e2",
+      "sha256": "37b0ea7cf7ee5eda4df6de416692bc78c88a8cd8580c5df0efe41d317bb626cb",
       "exports": [
         "ExtensionDashboard",
         "ExtensionDashboardDependencies"
@@ -1655,7 +1655,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "57e4ab747ca23ed85b390e54a2f11a8474883fb7f323118833a8ba5b81847f68",
+      "sha256": "3c8f962415259b0a2bbe0b359571f6110ee765a3016ad93c7c248e5bbe1df178",
       "exports": [
         "HistorySearchComponent"
       ],
@@ -1677,7 +1677,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "reports",
-      "sha256": "948b76594566f026f3daf87b40ca1e0b4d30b923eeb4b899ff687ed7a3b67027",
+      "sha256": "e7670a0ca28ee400b500151e4d97b69fc437f2336ffa9b18dc03da4aa208dbb7",
       "exports": [
         "HookEditorComponent",
         "HookEditorOptions"
@@ -1699,7 +1699,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "5d6f0f301668e958dd01ba748266b1e4c8456fc7219e599745ad766ffaab1547",
+      "sha256": "a764cbeb7c663a38433403c3c2150efaa6d3a67c1691777e0c54507d329d6a33",
       "exports": [
         "HookInputComponent",
         "HookInputOptions"
@@ -1737,7 +1737,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "f86911287f956e5ae2203b9e7b235eb89746a38f1823f6b68e7198b443f0b74d",
+      "sha256": "2c509ab16e80e5215f0cabb8bac0912d24716b07f900c9310ef4919310ed7b31",
       "exports": [
         "HookSelectorComponent",
         "HookSelectorOptions"
@@ -1832,7 +1832,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "aa37fc611eaee5f20f104684651d1801fd7866c7eaed42914f3e018c7c527a75",
+      "sha256": "0413f22e5b15d226aa1a4e4a7b5127ce2e4fe02f9018ca59cefd14756b47b678",
       "exports": [
         "LoginDialogComponent"
       ],
@@ -1870,7 +1870,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "connections",
-      "sha256": "ecd73552183d7936660e74eaa04e6b25fa8626885e9050c758856ed17bb81c43",
+      "sha256": "f57fdf66f20dd09b511d1d100b12a030ca30f8c70cddb21e8998d332e3ed2b14",
       "exports": [
         "MCPAddWizard"
       ],
@@ -1919,7 +1919,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "a27fe290a94ac12a8d48d72ae6f43262298675a26eeaf9fcc753a4140aaf8fcf",
+      "sha256": "70030975eb68ab5b647193f971f8e6b7b3c08496d66c1b43af149325e2998317",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",
@@ -1964,7 +1964,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "a855fe322a68855d468d04ec77c38f6f19f980099a0ac6f7c674eb949902b38a",
+      "sha256": "4ee121710660912e58c499f823c2697074f7bb78138310e1ebea1d66cd1a58c2",
       "exports": [
         "OAuthSelectorComponent"
       ],
@@ -1989,7 +1989,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "8b18a7a4f4753d1e184d941183721eb5352c53c12bc146d3a721ddb10f89b304",
+      "sha256": "41ca1e4a55324ededf3671e13522fa2dde87411a0de4afdae488b81ab1a233a1",
       "exports": [
         "PlanPreviewComponent"
       ],
@@ -2031,7 +2031,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "afb8789b837ba8aa81f1443a27b09d066f828807ea040473f87434e91bf71dc0",
+      "sha256": "76282665463d5b60555f616c0d86e01e81601f615c3ee2333f87bc47b4071fa8",
       "exports": [
         "PluginDetailCallbacks",
         "PluginDetailComponent",
@@ -2092,7 +2092,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "4b5e4fc06331155d5ed44a026e9697a313dd5ea60b8e26740f93fde63695b038",
+      "sha256": "9d1634fc2be560998d1862b0b9780de15b6d01c4178bd3e64e123205fafc7cd0",
       "exports": [
         "PluginDashboard"
       ],
@@ -2230,7 +2230,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "4cd58a35519451a6de0c9280810763e2c7919e6ce1fbda0966024d1913ef18c0",
+      "sha256": "0183aa7689bab363285132e810ce9efb647206a0b1d1679aa1a3d6239688a17f",
       "exports": [
         "AsyncInputReply",
         "QuestionTranscriptComponent",
@@ -2289,7 +2289,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "49f98d88c45681e44f05993329fa40b78a374267cadd82777134cff1a504dc8d",
+      "sha256": "3700379667f2b8e36e722e65cea71cde54301f34e7f41977ea437d207d5ab1f6",
       "exports": [
         "RequestUserInputComponent"
       ],
@@ -2313,7 +2313,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "243a1c9b28fd5cd17295b27d80d3cbfba957a8fbddb496df1356dc4910c77f35",
+      "sha256": "cb43ee0ee36adaf7e71cc09dedb9b3a01458034c69e2bbc69f5839fe685d3042",
       "exports": [
         "ActionInterruptedError",
         "ReviewedAction",
@@ -2356,7 +2356,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "44123bb4ab38efbd3010b03eae03670eaefd2c4a3137bbb4e2db95d58e6f3dcf",
+      "sha256": "712906334859f77a8654cc3139dccff6b0775a5f2e951175e2ca5cae9cc72b8d",
       "exports": [
         "SearchableSelectList"
       ],
@@ -2378,7 +2378,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "036e41277cae7fe606ae7b74307389a138726de46f933ae2b3bfe7b88baf67dd",
+      "sha256": "3959b5ba654929cdca4727846965090c4155fcb073f944a4973af14dc794dcff",
       "exports": [
         "ConnectionChoiceComponent",
         "ConnectionInputComponent",
@@ -2386,14 +2386,17 @@
         "SelectorChoice",
         "SelectorFrameLine",
         "SelectorFrameOptions",
+        "SelectorFrameProse",
         "SelectorFrameRow",
         "matchesSelectorKey",
         "selectorCancelHint",
+        "selectorCompactRow",
         "selectorFrame",
         "selectorFrameContentWidth",
         "selectorFramePadding",
         "selectorKeys",
         "selectorNavigationHint",
+        "selectorProse",
         "selectorRow"
       ],
       "interactionSignals": [
@@ -2417,7 +2420,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "sessions",
-      "sha256": "89389df27780cc580c0dfb43308a5cbc724525e814c7ffa90a320e31337dc201",
+      "sha256": "66275459bb888e7b9ae73197e3a9c31c7fc6831900016f1ab3deaa38a526aebf",
       "exports": [
         "SessionObserverOverlayComponent"
       ],
@@ -2438,7 +2441,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "sessions",
-      "sha256": "43fb6f974e8ad46e411ddca02d1e8fa5582e6332f84e3657e04fe47e65c59aec",
+      "sha256": "1ffcf95e0edf53b1dd9d59311dfab857dc97a9a5a6ae788f7520360b51276d53",
       "exports": [
         "SessionSelectorComponent",
         "SessionSelectorOptions"
@@ -2464,7 +2467,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "39cda0b4bdeb376e653f7c26a6a94a2d3cbc317241bc19db784901096264fb23",
+      "sha256": "88faab484a252934c82c46ce79b975987ac54b74b51f30de903a962526e3771b",
       "exports": [
         "SettingsBrowser"
       ],
@@ -2508,7 +2511,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "a35b1008d9f57aae56aa3e6ac0967a4b739a7c73ac70bd282260e20279509709",
+      "sha256": "91b352df66a684742bee36f55879b3eca0408285aa5361680184607b2537e4cc",
       "exports": [
         "SettingsChoiceEditor",
         "SettingsTextEditor"
@@ -2531,7 +2534,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "settings",
-      "sha256": "b374a53033d961e30f193980636d4c66069430458817ebe5e681c0e6d3bcd4ee",
+      "sha256": "188c6bc644fa3ec64e961ffe326597d494d8d622acb525b72fefd04b826f8668",
       "exports": [
         "SettingsCallbacks",
         "SettingsRuntimeContext",
@@ -2933,7 +2936,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "66f20504c03ebf9b25057e9a80d40a75fb3f7cffe8a4da498732ea93281f2e71",
+      "sha256": "08252fd8b0ba45fa40da9200c0aae16a944c73dbec0525e87c7c3ffdc49fd887",
       "exports": [
         "TranscriptComponentFrame",
         "TranscriptNoticeComponent"
@@ -2952,7 +2955,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "sessions",
-      "sha256": "df114d254c56d84e5859fdbb04615f5b24d5168847da18838113f0d4369865b0",
+      "sha256": "022b32270124197ba71b40908dc84ed678b64b9b17f5003caabd789134ef7933",
       "exports": [
         "TreeSelectorComponent"
       ],
@@ -2993,7 +2996,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "sessions",
-      "sha256": "eb76765246adabca0f817f53c742936d1d75d0b91c651de6b4e8b0c23affbffb",
+      "sha256": "82697404bf5e6c092b7810c77b3832cb51c0ca72e055205eb718c1a865b86c73",
       "exports": [
         "UserMessageSelectorComponent"
       ],
@@ -3112,7 +3115,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "8898a838c3f3da0914e16019c0ea07b1f57126790163b11d57f7908121dddf4b",
+      "sha256": "5b40dcb4826c3a0b9859c82139617fb0bd90e1c40c9917ddd7dd30245502bf44",
       "exports": [
         "F5_LOGO_ROWS",
         "WelcomeComponent"
@@ -6030,7 +6033,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "3af1ac7dc618a960460d783211755440c5057e52d211bd1d7cd11ac18f19013d",
+      "sha256": "f19a7a73908422bad680653d20d69eb1acc6fefaa45e602786ddc5369de4321d",
       "exports": [
         "Editor",
         "EditorTheme",
@@ -6237,7 +6240,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "ac74cdb3d6d896afac424751bcd1a603f79ea37c2f70442835a7acfdd0c06b46",
+      "sha256": "344ef4a08e852c07572f350d7bcabbb58d7f09f9a6118c26bb813181a1bb321f",
       "exports": [
         "SelectItem",
         "SelectList",

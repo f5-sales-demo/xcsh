@@ -8,6 +8,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -359,9 +360,11 @@ export class CopySelectorComponent implements Component {
 			body.length
 				? body
 				: [
-						this.#targets.length || this.#truncated
-							? "No matching transcript entries"
-							: "No transcript entries available",
+						selectorProse(
+							this.#targets.length || this.#truncated
+								? "No matching transcript entries"
+								: "No transcript entries available",
+						),
 					],
 			details,
 			[

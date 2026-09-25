@@ -1,7 +1,7 @@
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { APP_NAME } from "@f5-sales-demo/pi-utils";
 import { theme } from "../../modes/theme/theme";
-import { selectorFrame, selectorFrameContentWidth } from "./selector-frame";
+import { selectorCompactRow, selectorFrame, selectorFrameContentWidth } from "./selector-frame";
 
 /**
  * Startup splash: the F5 logo under a ` xcsh vX.Y.Z ` title bar. Intentionally
@@ -39,7 +39,7 @@ const FULL_LOGO_MIN_WIDTH = 50;
 const FULL_LOGO_CANVAS_WIDTH = 46;
 // The 46-column artwork fits inside the shared frame's one-column gutters at 50 columns.
 const MAX_FRAME_WIDTH = 50;
-const blankRow = { content: "", selected: false } as const;
+const blankRow = selectorCompactRow("");
 
 export class WelcomeComponent implements Component {
 	constructor(private readonly version: string) {}
@@ -55,7 +55,7 @@ export class WelcomeComponent implements Component {
 			: [this.#centerInCanvas(theme.bold(theme.fg("accent", "F5")), 2, contentWidth)];
 		// The underscore crown already reads as the logo's top spacing. Keep a single
 		// blank row only below the mark so the framed splash does not look top-heavy.
-		const body = [...logo, blankRow];
+		const body = [...logo.map(line => selectorCompactRow(line)), blankRow];
 		return selectorFrame(width, body.length + 4, `${APP_NAME} v${this.version}`, "", [], body, [], []);
 	}
 

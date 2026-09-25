@@ -10,6 +10,7 @@ import {
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 } from "./selector-frame";
 
 interface LoginDialogDependencies {
@@ -77,7 +78,7 @@ export class LoginDialogComponent extends Container {
 			`Login to ${this.#providerName}`,
 			"Complete provider authentication; credentials are handled by the provider flow and are never displayed here.",
 			[],
-			content.slice(this.#offset, this.#offset + this.#capacity),
+			content.slice(this.#offset, this.#offset + this.#capacity).map(line => selectorProse(line)),
 			[],
 			[
 				...(this.#length > this.#capacity

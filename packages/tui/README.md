@@ -346,6 +346,7 @@ const list = new SelectList(
  ],
  5, // maxVisible
  theme, // SelectListTheme
+ { presentation: "compact-with-selected-detail" },
 );
 
 list.onSelect = (item) => console.log("Selected:", item);
@@ -353,6 +354,10 @@ list.onCancel = () => console.log("Cancelled");
 list.onSelectionChange = (item) => console.log("Highlighted:", item);
 list.setFilter("opt"); // Filter items
 ```
+
+Every list chooses a presentation contract. Use `compact-with-selected-detail` for dense one-line rows; when a
+selected label or description does not fit, `SelectList` adds its complete wrapped value below the rows. Use
+`wrapped-prose` when every visible item should wrap instead of truncating.
 
 **Controls:**
 

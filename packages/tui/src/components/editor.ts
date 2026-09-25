@@ -24,9 +24,11 @@ import {
 import { SelectList, type SelectListLayoutOptions, type SelectListTheme } from "./select-list";
 
 const SLASH_COMMAND_SELECT_LIST_LAYOUT: SelectListLayoutOptions = {
+	presentation: "compact-with-selected-detail",
 	minPrimaryColumnWidth: 12,
 	maxPrimaryColumnWidth: 32,
 };
+const FILE_SELECT_LIST_LAYOUT: SelectListLayoutOptions = { presentation: "compact-with-selected-detail" };
 
 function sanitizeLoadedText(text: string): string {
 	return replaceTabs(text.replace(/\r\n/g, "\n").replace(/\r/g, "\n"))
@@ -2442,7 +2444,7 @@ export class Editor implements Component, Focusable {
 		prefix: string,
 		items: Array<{ value: string; label: string; description?: string }>,
 	): SelectList {
-		const layout = prefix.startsWith("/") ? SLASH_COMMAND_SELECT_LIST_LAYOUT : undefined;
+		const layout = prefix.startsWith("/") ? SLASH_COMMAND_SELECT_LIST_LAYOUT : FILE_SELECT_LIST_LAYOUT;
 		return new SelectList(items, this.#autocompleteMaxVisible, this.#theme.selectList, layout);
 	}
 

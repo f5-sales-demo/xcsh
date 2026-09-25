@@ -38,6 +38,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -477,7 +478,8 @@ export class ModelSelectorComponent extends Container {
 					),
 				);
 			}
-			if (!this.#filteredModels.length) body.push(this.#getProviderEmptyStateMessage() ?? "No matching models");
+			if (!this.#filteredModels.length)
+				body.push(selectorProse(this.#getProviderEmptyStateMessage() ?? "No matching models"));
 		}
 		return selectorFrame(width, height, title, purpose, navigation, body, details, footer, {
 			minimumDetailRows,
