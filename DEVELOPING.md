@@ -197,6 +197,10 @@ The codebase uses Biome v2 for formatting and linting:
 | `bun run check:ts` | TypeScript lint and type-check |
 | `bun run check:rs` | Rust cargo check and clippy verification |
 
+The installed Git pre-commit hook runs `bun run check:ts` on every commit, including documentation-only commits.
+It requires Bun from `packageManager`, dependencies matching `bun.lock`, and no non-ignored unstaged or untracked
+files. Run `bun install --frozen-lockfile` after creating a worktree and stage or stash other edits before committing.
+
 ---
 
 ## Testing
