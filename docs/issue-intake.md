@@ -15,10 +15,10 @@ GitHub writes remain on Ubuntu. The durable ledger is
    UAT session untouched.
 2. In a managed pane of the dedicated Herdr session, issue a worker pairing
    with `herdr context issue` and claim it for the worker with
-   `herdr context claim`. Store the lease JSON at
+   `herdr context claim --consumer-id xcsh-issue-intake-ubuntu-worker`.
+   Store the lease JSON at
    `~/.local/share/xcsh-issue-intake/herdr.lease` **on Ubuntu** with mode
-   `0600` and owner `robin`. The current pairing uses consumer ID
-   `xcsh-issue-intake-mac-worker`; retain that ID until the lease is rotated.
+   `0600` and owner `robin`.
    Never put the pairing, lease, or resolved environment in Git or logs.
 3. Run `python3 scripts/issue_intake_worker.py --check` on Ubuntu. It resolves
    the pairing without polling issues.

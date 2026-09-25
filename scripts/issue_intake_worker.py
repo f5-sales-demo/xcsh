@@ -15,7 +15,7 @@ from pathlib import Path
 MAX_LEASE_BYTES = 16384
 LEASE_FILE = Path.home() / ".local/share/xcsh-issue-intake/herdr.lease"
 ENDPOINT = "/home/robin/.config/herdr/sessions/xcsh-issue-intake/herdr.sock"
-CONSUMER = "xcsh-issue-intake-mac-worker"
+CONSUMER = "xcsh-issue-intake-ubuntu-worker"
 ALLOWED_ENV = {
     "HERDR_BIN_PATH",
     "HERDR_ENV",
