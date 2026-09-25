@@ -83,6 +83,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
+      - name: Verify pre-commit TypeScript contract
+        run: python3 -m unittest tests.test_pre_commit_ts_gate
 
   native-linux-x64:
     name: Native build (linux, x64, baseline and modern)

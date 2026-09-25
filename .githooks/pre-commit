@@ -1,6 +1,6 @@
 #!/bin/sh
-# Pre-commit hook: runs lint-staged to check only staged files with Biome,
-# then blocks any staged F5 XC context files (they contain credentials).
+# Pre-commit hook: checks staged files with Biome and runs the full TypeScript
+# gate used by CI. It also blocks staged F5 XC context files (credentials).
 # Installed automatically via `bun install` (prepare script sets core.hooksPath).
 # To bypass in emergencies: git commit --no-verify
 
@@ -26,4 +26,35 @@ elif [ -n "$DOCS_QUALITY_FILES" ]; then
   echo "WARNING: documentation quality check skipped by XCSH_DOCS_QUALITY_CHECK=0" >&2
 fi
 
-bunx lint-staged
+# Full-workspace checks must see only the staged snapshot. lint-staged may
+# temporarily hide unstaged edits, but check:ts would otherwise inspect them.
+UNSTAGED_FILES=$(git diff --name-only --) || exit 1
+UNTRACKED_FILES=$(git ls-files --others --exclude-standard) || exit 1
+if [ -n "$UNSTAGED_FILES" ] || [ -n "$UNTRACKED_FILES" ]; then
+  echo "ERROR: Commit requires a clean non-ignored working tree outside staged changes." >&2
+  echo "Stage, stash, or remove unstaged and untracked files before retrying." >&2
+  exit 1
+fi
+
+EXPECTED_BUN=$(sed -n 's/.*"packageManager": "bun@\([^"]*\)".*/\1/p' package.json)
+if [ -z "$EXPECTED_BUN" ]; then
+  echo "ERROR: Cannot read the Bun version from package.json packageManager." >&2
+  exit 1
+fi
+if ! command -v bun >/dev/null 2>&1; then
+  echo "ERROR: Bun $EXPECTED_BUN is required; install it before committing." >&2
+  exit 1
+fi
+ACTUAL_BUN=$(bun --version) || exit 1
+if [ "$ACTUAL_BUN" != "$EXPECTED_BUN" ]; then
+  echo "ERROR: Bun $EXPECTED_BUN is required by packageManager; found $ACTUAL_BUN." >&2
+  exit 1
+fi
+
+if ! bun run check:dependencies; then
+  echo "ERROR: Dependencies must match bun.lock. Run bun install --frozen-lockfile, then retry." >&2
+  exit 1
+fi
+
+./node_modules/.bin/lint-staged || exit 1
+bun run check:ts
