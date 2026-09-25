@@ -57,6 +57,10 @@
 
 ### Fixed
 
+- Published KVM 3.0.4 through the built-in marketplace snapshot with immutable source provenance,
+  so fresh xcsh installations discover the qualified plugin without a development catalog
+  ([#4321](https://github.com/f5-sales-demo/xcsh/issues/4321),
+   [#4323](https://github.com/f5-sales-demo/xcsh/issues/4323)).
 - Made Platform plugin setup offer sorted activation commands for saved session contexts,
   resolved unique short plugin names during reviewed uninstall while rejecting ambiguity, and
   directed slash-command health checks to the supported `xcsh plugin doctor` CLI. Plugin
