@@ -213,6 +213,8 @@ Choose a provider and follow its sign-in flow. You can also enter `/login PROVID
 GPT-6 Luna and Sol use a 272K-token context window by default for ChatGPT subscription sessions.
 To opt in to their published 1.05M-token window, open `/settings`, select **Providers**, and enable
 **OpenAI Codex Maximum Context**. OpenAI applies higher token pricing to requests above 272K.
+Internal LiteLLM GPT routes use the same 272K default independently; enable **LiteLLM Maximum
+Context** to opt those routes into their verified 1.05M-token window.
 
 After sign-in selects a model, stay in the TUI and send a small first prompt.
 

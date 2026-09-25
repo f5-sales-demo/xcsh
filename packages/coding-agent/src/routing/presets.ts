@@ -13,13 +13,13 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 	"litellm/openai": {
 		id: "litellm/openai",
 		provider: "litellm",
-		tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+		tiers: { utility: "gpt-6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-6-sol" },
 		effortPolicy: OPENAI_CODEX_ROUTING_POOL.effortPolicy,
 	},
 	"litellm/anthropic": {
 		id: "litellm/anthropic",
-		provider: "litellm",
-		tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5" },
+		provider: "anthropic",
+		tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5-5" },
 		effortPolicy: ANTHROPIC_ROUTING_POOL.effortPolicy,
 	},
 };

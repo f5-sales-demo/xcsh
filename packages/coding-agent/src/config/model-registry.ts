@@ -53,6 +53,9 @@ export const kNoAuth = NO_AUTH_API_KEY;
 const OPENAI_CODEX_STANDARD_CONTEXT_WINDOW = 272_000;
 const OPENAI_CODEX_MAX_CONTEXT_WINDOW = 1_050_000;
 const OPENAI_CODEX_MAX_CONTEXT_MODEL_IDS = new Set(["gpt-6-luna", "gpt-6-sol"]);
+const LITELLM_STANDARD_CONTEXT_WINDOW = 272_000;
+const LITELLM_MAX_CONTEXT_WINDOW = 1_050_000;
+const LITELLM_MAX_CONTEXT_MODEL_IDS = new Set(["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"]);
 
 export function isAuthenticated(apiKey: string | undefined | null): apiKey is string {
 	return Boolean(apiKey) && apiKey !== kNoAuth;
@@ -876,6 +879,7 @@ export class ModelRegistry {
 	#hasProbed = false;
 	#refreshQueue: Promise<void> = Promise.resolve();
 	#openAICodexMaxContext = false;
+	#litellmMaxContext = false;
 
 	#enqueueRefresh(operation: () => Promise<void>): Promise<void> {
 		const pending = this.#refreshQueue.then(operation);
@@ -898,6 +902,7 @@ export class ModelRegistry {
 		private readonly options: {
 			getProviderOrder?: () => readonly string[];
 			getOpenAICodexMaxContext?: () => boolean;
+			getLiteLLMMaxContext?: () => boolean;
 		} = {},
 	) {
 		this.#modelsConfigFile = ModelsConfigFile.relocate(modelsPath);
@@ -1051,6 +1056,7 @@ export class ModelRegistry {
 
 	#loadModels() {
 		this.#openAICodexMaxContext = this.options.getOpenAICodexMaxContext?.() ?? this.#openAICodexMaxContext;
+		this.#litellmMaxContext = this.options.getLiteLLMMaxContext?.() ?? this.#litellmMaxContext;
 		// Load custom models from models.json first (to know which providers to override)
 		const {
 			models: customModels = [],
@@ -1085,6 +1091,7 @@ export class ModelRegistry {
 
 		this.#models = this.#applyProviderModelAllowlists(this.#applyModelOverrides(combined, this.#modelOverrides));
 		this.#applyOpenAICodexContextWindow();
+		this.#applyLiteLLMContextWindow();
 		this.#rebuildCanonicalIndex();
 	}
 
@@ -1103,6 +1110,22 @@ export class ModelRegistry {
 	setOpenAICodexMaxContext(enabled: boolean): void {
 		this.#openAICodexMaxContext = enabled;
 		this.#applyOpenAICodexContextWindow();
+		this.#rebuildCanonicalIndex();
+	}
+
+	#applyLiteLLMContextWindow(): void {
+		const contextWindow = this.#litellmMaxContext ? LITELLM_MAX_CONTEXT_WINDOW : LITELLM_STANDARD_CONTEXT_WINDOW;
+		for (const model of this.#models) {
+			if (model.provider === "litellm" && LITELLM_MAX_CONTEXT_MODEL_IDS.has(model.id)) {
+				model.contextWindow = contextWindow;
+			}
+		}
+	}
+
+	/** Update current internal OpenAI context limits without changing subscription models. */
+	setLiteLLMMaxContext(enabled: boolean): void {
+		this.#litellmMaxContext = enabled;
+		this.#applyLiteLLMContextWindow();
 		this.#rebuildCanonicalIndex();
 	}
 
@@ -1433,6 +1456,8 @@ export class ModelRegistry {
 		// Merge runtime extension models so they survive online discovery completion
 		const combined = this.#mergeCustomModels(withConfigModels, this.#runtimeModelOverlays);
 		this.#models = this.#applyProviderModelAllowlists(this.#applyModelOverrides(combined, this.#modelOverrides));
+		this.#applyOpenAICodexContextWindow();
+		this.#applyLiteLLMContextWindow();
 		this.#rebuildCanonicalIndex();
 	}
 

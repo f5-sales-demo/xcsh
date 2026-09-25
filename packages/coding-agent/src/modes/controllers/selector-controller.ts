@@ -890,6 +890,11 @@ export class SelectorController {
 				this.ctx.statusLine.invalidate();
 				this.ctx.ui.requestRender();
 				break;
+			case "providers.litellmMaxContext":
+				this.ctx.session.modelRegistry.setLiteLLMMaxContext(value === true);
+				this.ctx.statusLine.invalidate();
+				this.ctx.ui.requestRender();
+				break;
 
 			// MCP update injection - live subscribe/unsubscribe
 			case "mcp.notifications":

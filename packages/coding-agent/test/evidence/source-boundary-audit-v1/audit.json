@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "05201f729f6a420628d17667bd60c28b2c4bcfae",
-  "fingerprint": "516a39ed34a846f74bfccd3e2fe0db0c09fa12f56e3b943f90d5cc19707fbcb9",
+  "revision": "2f989565970160a4f920b7f450250c64a8c8ed82",
+  "fingerprint": "767cd38032306e5d4452b4da208be563c90e9e5957d8cf12a545c0bcc555169b",
   "counts": {
     "total": 241,
     "components": 96,
@@ -1944,6 +1944,7 @@
       "directTests": [
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/keybindings-escape-components.test.ts",
+        "packages/coding-agent/test/litellm-current-models.test.ts",
         "packages/coding-agent/test/model-selection-scope.test.ts",
         "packages/coding-agent/test/model-selection-session.test.ts",
         "packages/coding-agent/test/model-selector-openai-codex.test.ts",
@@ -2722,6 +2723,7 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/litellm-current-models.test.ts",
         "packages/coding-agent/test/regression-guard.test.ts",
         "packages/coding-agent/test/routing-presets.test.ts",
         "packages/coding-agent/test/status-line-truncation.test.ts"
@@ -3404,7 +3406,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "foundation",
-      "sha256": "60bdd490d4ead9119f5d9d1f6890cc2180c1a1a469777c8a5262b0eefcb07a3d",
+      "sha256": "da25e886073ae3a903cb655b6363f2d3eb25190d5812389356a9eea52e9392a9",
       "exports": [
         "ANTHROPIC_LOGIN_MODEL_CHOICE",
         "GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE",
@@ -3429,6 +3431,7 @@
       ],
       "directTests": [
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/litellm-current-models.test.ts",
         "packages/coding-agent/test/litellm-login-flow.test.ts",
         "packages/coding-agent/test/litellm-login-transaction.test.ts",
         "packages/coding-agent/test/login-model.test.ts",
@@ -3548,7 +3551,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "cbce9454372c6d9479bd41fb59bc869ac736b42dcc363bab1d5af2ac768bec3d",
+      "sha256": "732e52354c7ab8a9a30e82c9f349d0351917fb8b0111709ae5c1fca93dd138b7",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -4382,7 +4385,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "150a9c87bb54f07fe27500c35f0c69d5d1a4a7e8b9839dd964919ca05973dfe2",
+      "sha256": "c103594c1dc5f117d219d20076c9f847c9be510de3ab0712ed97d88da6fb3357",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",

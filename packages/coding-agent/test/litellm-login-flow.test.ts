@@ -11,10 +11,10 @@ const CREDENTIALS: LiteLLMLoginCredentials = {
 	baseUrl: "https://litellm.example.test",
 	apiKey: "sk-test",
 };
-const GPT = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-5.6-sol")!;
+const GPT = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-6-sol")!;
 const SUCCESS: ProbeResult = {
 	reachable: true,
-	models: ["claude-opus-5", "unrelated", "gpt-5.6-sol"],
+	models: ["claude-opus-5-5", "unrelated", "gpt-6-sol"],
 	apiBasePath: "/v1",
 };
 

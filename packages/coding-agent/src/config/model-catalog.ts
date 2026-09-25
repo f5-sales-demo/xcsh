@@ -12,6 +12,7 @@ function compareVersions(left: string, right: string): number {
 
 /** Keep historical catalogs available while presenting only current user-facing families. */
 const DEFAULT_OPENAI_CODEX_MODEL_IDS = new Set(["gpt-5.6-terra", "gpt-6-astra", "gpt-6-luna", "gpt-6-sol"]);
+const CURRENT_LITELLM_OPENAI_MODEL_IDS = new Set(["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"]);
 
 /** Shared catalog boundary for the TUI and attached human interfaces. */
 export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
@@ -40,6 +41,7 @@ export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
 		if (gpt?.[1]) {
 			if (compareVersions(gpt[1], "5.6") < 0) return false;
 			if (model.provider === "openai-codex") return DEFAULT_OPENAI_CODEX_MODEL_IDS.has(model.id.toLowerCase());
+			if (model.provider === "litellm") return CURRENT_LITELLM_OPENAI_MODEL_IDS.has(model.id.toLowerCase());
 		}
 		const claude = model.id.match(/^claude-(opus|sonnet|haiku)-(\d+)(?:[.-](\d+))?(?:-|$)/i);
 		if (claude?.[1] && claude[2]) {

@@ -161,21 +161,22 @@ const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs
  * NO `~/.xcsh/agent/config.yml` — `/login` only supplies the (PII) proxy URL + key.
- * GPT-5.6 Sol High is the vision-capable production default through the OpenAI
+ * GPT-5.6 Terra Medium is the current general-purpose default through the OpenAI
  * Chat Completions route on LiteLLM. Keep the effort explicit in the role so returning
  * from a lower-effort role cannot inherit that role's effort.
  */
-export const DEFAULT_MODEL_ROLE = "litellm/gpt-5.6-sol:high";
+export const DEFAULT_MODEL_ROLE = "litellm/gpt-5.6-terra:medium";
 /** Fast role for lightweight work (commit messages, titles, memory summaries). */
-const SMOL_MODEL_ROLE = "litellm/gpt-5.6-sol:low";
+const SMOL_MODEL_ROLE = "litellm/gpt-6-luna:low";
 /**
- * Baked role map. `smol` keeps GPT-5.6 Sol at low effort for latency-sensitive
- * work; both `default` and `slow` restore vision-capable GPT-5.6 Sol High.
+ * Baked role map for the current internal LiteLLM catalog. Sol handles slow and
+ * planning work, while Luna and Terra cover lightweight and default work.
  */
 const DEFAULT_MODEL_ROLES: Record<string, string> = {
 	default: DEFAULT_MODEL_ROLE,
 	smol: SMOL_MODEL_ROLE,
-	slow: DEFAULT_MODEL_ROLE,
+	slow: "litellm/gpt-6-sol:high",
+	plan: "litellm/gpt-6-sol:high",
 };
 const EMPTY_MODEL_TAGS_RECORD: ModelTagsSettings = {};
 export const DEFAULT_BASH_INTERCEPTOR_RULES: BashInterceptorRule[] = [
@@ -2120,6 +2121,16 @@ export const SETTINGS_SCHEMA = {
 			label: "OpenAI Codex Maximum Context",
 			description:
 				"Use the 1.05M-token context window for GPT-6 Luna and Sol (long-context pricing applies above 272K)",
+		},
+	},
+
+	"providers.litellmMaxContext": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "providers",
+			label: "LiteLLM Maximum Context",
+			description: "Use the verified 1.05M-token context window for current internal OpenAI models",
 		},
 	},
 

@@ -1559,11 +1559,13 @@ function buildParams(
 ): MessageCreateParamsStreaming {
 	const { cacheControl } = getCacheControl(baseUrl, options?.cacheRetention);
 	const alwaysThinking = isAnthropicAlwaysThinkingModel(model);
+	const requestedToolChoice = model.compat?.supportsToolChoice === false ? undefined : options?.toolChoice;
 	const toolChoice =
 		alwaysThinking &&
-		(options?.toolChoice === "any" || (typeof options?.toolChoice === "object" && options.toolChoice.type === "tool"))
+		(requestedToolChoice === "any" ||
+			(typeof requestedToolChoice === "object" && requestedToolChoice.type === "tool"))
 			? "auto"
-			: options?.toolChoice;
+			: requestedToolChoice;
 	const params: AnthropicSamplingParams = {
 		model: model.id,
 		messages: convertAnthropicMessages(context.messages, model, isOAuthToken),
@@ -1585,9 +1587,9 @@ function buildParams(
 		const forcedToolName =
 			model.provider === "anthropic" &&
 			supportsAnthropicStrictToolUse(model.id) &&
-			typeof options?.toolChoice === "object" &&
-			options.toolChoice.type === "tool"
-				? options.toolChoice.name
+			typeof requestedToolChoice === "object" &&
+			requestedToolChoice.type === "tool"
+				? requestedToolChoice.name
 				: undefined;
 		params.tools = convertTools(context.tools, isOAuthToken, forcedToolName);
 	}

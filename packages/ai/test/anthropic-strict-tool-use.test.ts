@@ -9,18 +9,23 @@ type RequestParams = {
 	tool_choice?: { type: string; name?: string };
 };
 
-function model(id = "claude-sonnet-5"): Model<"anthropic-messages"> {
+function model(
+	id = "claude-sonnet-5",
+	supportsToolChoice?: boolean,
+	baseUrl = "https://api.anthropic.com",
+): Model<"anthropic-messages"> {
 	return {
 		id,
 		name: id,
 		api: "anthropic-messages",
 		provider: "anthropic",
-		baseUrl: "https://api.anthropic.com",
+		baseUrl,
 		reasoning: true,
 		input: ["text"],
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 200_000,
 		maxTokens: 8_192,
+		compat: supportsToolChoice === undefined ? undefined : { supportsToolChoice },
 	};
 }
 
@@ -74,6 +79,8 @@ async function captureRequest(options: {
 	tools?: Tool[];
 	toolChoice?: "auto" | { type: "tool"; name: string };
 	oauth?: boolean;
+	supportsToolChoice?: boolean;
+	baseUrl?: string;
 }): Promise<RequestParams> {
 	let captured: RequestParams | undefined;
 	vi.spyOn(Messages.prototype, "create").mockImplementation(params => {
@@ -96,7 +103,7 @@ async function captureRequest(options: {
 		messages: [{ role: "user", content: "Plan this", timestamp: Date.now() }],
 		tools: options.tools ?? [strictTool, nonStrictTool],
 	};
-	const stream = streamAnthropic(model(options.modelId), context, {
+	const stream = streamAnthropic(model(options.modelId, options.supportsToolChoice, options.baseUrl), context, {
 		apiKey: options.oauth ? "sk-ant-oat-test" : "sk-ant-test",
 		toolChoice: options.toolChoice,
 	});
@@ -141,6 +148,17 @@ describe("Anthropic strict tool use", () => {
 	it("leaves tools non-strict for automatic selection", async () => {
 		const request = await captureRequest({ toolChoice: "auto" });
 
+		expect(request.tools?.every(tool => tool.strict === undefined)).toBe(true);
+	});
+
+	it("omits forced tool_choice when a native proxy rejects it", async () => {
+		const request = await captureRequest({
+			toolChoice: { type: "tool", name: "todo_write" },
+			supportsToolChoice: false,
+			baseUrl: "https://proxy.example.com/anthropic",
+		});
+
+		expect(request.tool_choice).toBeUndefined();
 		expect(request.tools?.every(tool => tool.strict === undefined)).toBe(true);
 	});
 
