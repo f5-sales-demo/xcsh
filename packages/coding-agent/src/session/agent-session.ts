@@ -1157,9 +1157,30 @@ export class AgentSession {
 
 	// Track last assistant message for auto-compaction check
 	#lastAssistantMessage: AssistantMessage | undefined = undefined;
+	// A terminal envelope is discarded, but the core still pairs its partial tool
+	// calls with aborted placeholders. Keep those placeholders out of session state.
+	readonly #discardedTerminalToolCallIds = new Set<string>();
 
 	/** Internal handler for agent events - shared by subscribe and reconnect */
 	#handleAgentEvent = async (event: AgentEvent): Promise<void> => {
+		const quarantinedToolCallId =
+			event.type === "tool_execution_start" || event.type === "tool_execution_end"
+				? event.toolCallId
+				: event.type === "message_start" || event.type === "message_end"
+					? event.message.role === "toolResult"
+						? event.message.toolCallId
+						: undefined
+					: undefined;
+		if (quarantinedToolCallId && this.#discardedTerminalToolCallIds.has(quarantinedToolCallId)) {
+			if (event.type === "message_end") {
+				this.agent.replaceMessages(
+					this.agent.state.messages.filter(
+						message => message.role !== "toolResult" || message.toolCallId !== quarantinedToolCallId,
+					),
+				);
+			}
+			return;
+		}
 		if (event.type === "message_start" && event.message.role === "assistant")
 			this.#planMessageId = `${this.sessionId}:${crypto.randomUUID()}`;
 		if (
@@ -1267,6 +1288,9 @@ export class AgentSession {
 			event.message.stopReason === "error" &&
 			this.#isTransientEnvelopeErrorMessage(event.message.errorMessage ?? "")
 		) {
+			for (const content of event.message.content) {
+				if (content.type === "toolCall") this.#discardedTerminalToolCallIds.add(content.id);
+			}
 			const discardedMessage: AssistantMessage = { ...event.message, content: [] };
 			event = { ...event, message: discardedMessage };
 			const messages = this.agent.state.messages;
@@ -1596,6 +1620,7 @@ export class AgentSession {
 				.find((message): message is AssistantMessage => message.role === "assistant");
 			const msg = this.#lastAssistantMessage ?? fallbackAssistant;
 			this.#lastAssistantMessage = undefined;
+			this.#discardedTerminalToolCallIds.clear();
 			if (!msg) return;
 
 			// Invalidate GitHub Copilot credentials on auth failure so stale tokens

@@ -566,18 +566,18 @@ describe("convertToLlm message type conversions", () => {
 		expect((result[0] as any).content).toHaveLength(2);
 	});
 
-	it("preserves orphaned toolResult without matching assistant", () => {
-		// A toolResult with no corresponding tool_use — should not crash
+	it("drops orphaned toolResult without matching assistant", () => {
+		// A prior terminal-envelope failure can leave an aborted placeholder result
+		// without its discarded assistant tool call. Providers reject that request.
 		const messages: AgentMessage[] = [
 			userMessage("start"),
 			toolResult("tc-orphan", "read", "orphaned result"),
 			userMessage("end"),
 		];
 		const result = convertToLlm(messages);
-		// Should pass through without error
-		const tr = result.find(m => m.role === "toolResult") as ToolResultMessage;
-		expect(tr).toBeDefined();
-		expect(tr.toolCallId).toBe("tc-orphan");
+		expect(result).toHaveLength(1);
+		expect(result[0].role).toBe("user");
+		expect(result.some(message => message.role === "toolResult")).toBe(false);
 	});
 
 	it("converts custom message with array content", () => {

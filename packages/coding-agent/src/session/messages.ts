@@ -564,7 +564,21 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 			}
 		})
 		.filter(m => m !== undefined);
-	const repaired = repairToolResultOrdering(converted);
+	// A discarded terminal envelope can leave a core-generated aborted tool result
+	// behind after its assistant tool call was removed. Providers reject that orphan.
+	const toolCallIds = new Set(
+		converted.flatMap(message =>
+			message.role === "assistant"
+				? (message as AssistantMessage).content
+						.filter((content): content is ToolCall => content.type === "toolCall")
+						.map(call => call.id)
+				: [],
+		),
+	);
+	const withoutOrphanedToolResults = converted.filter(
+		message => message.role !== "toolResult" || toolCallIds.has((message as ToolResultMessage).toolCallId),
+	);
+	const repaired = repairToolResultOrdering(withoutOrphanedToolResults);
 	return mergeConsecutiveUserTextMessages(repaired);
 }
 
