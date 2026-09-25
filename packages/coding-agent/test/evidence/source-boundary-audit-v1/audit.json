@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "d5a20e5ff647f12b17f5ea9b40a0dcdaebef4084",
-  "fingerprint": "fae7bb1baa4a49cae3ed41e7d34796443116c51549877f1b46d031a73a96329f",
+  "revision": "7f27c8350df7d8120996ec9f45f1049f57a3a095",
+  "fingerprint": "f647813f7fb59e4dad4325c4732ebca5d8320afd9e00d2287c132fb836031773",
   "counts": {
     "total": 241,
     "components": 96,
@@ -4549,7 +4549,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "e6f0a4f9ee6233af6c2113ec96fb6f2dd28b75131b272d1ec1dc1fb8dca52376",
+      "sha256": "aa1a280819c3430bf9f689ab70ec40e6ba233597946c0fe331484b071771d92f",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4649,7 +4649,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "ea4e0dbf5adf57dce7557cee12e9eb6747e4853863c6ece3157749c45a5ab466",
+      "sha256": "edeff20f42521a38595dcc32dd8b0bedfb4ee5b1996eb422ed4e170159a84584",
       "exports": [
         "PluginScope",
         "PluginSetupResult",

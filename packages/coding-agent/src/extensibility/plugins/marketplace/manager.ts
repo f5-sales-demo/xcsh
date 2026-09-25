@@ -42,7 +42,7 @@ import type {
 	MarketplacePluginEntry,
 	MarketplaceRegistryEntry,
 } from "./types";
-import { buildPluginId, isInstalledPluginEffectivelyEnabled, parsePluginId } from "./types";
+import { buildPluginId, isInstalledPluginEffectivelyEnabled, isValidNameSegment, parsePluginId } from "./types";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
@@ -697,19 +697,38 @@ export class MarketplaceManager {
 		return "0.0.0";
 	}
 
-	async #resolvePluginUninstall(pluginId: string, scope?: "user" | "project") {
-		const parsed = parsePluginId(pluginId);
-		if (!parsed) {
-			throw new Error(`Invalid plugin ID format: "${pluginId}". Expected "name@marketplace".`);
+	async resolveInstalledPluginId(pluginId: string, scope?: "user" | "project"): Promise<string> {
+		if (parsePluginId(pluginId)) return pluginId;
+		if (!isValidNameSegment(pluginId)) {
+			throw new Error(`Invalid plugin ID format: "${pluginId}". Expected "name" or "name@marketplace".`);
 		}
 
-		const { userEntries, projectEntries, userReg, projectReg } = await this.#findInBothRegistries(pluginId);
+		const { userReg, projectReg } = await this.#findInBothRegistries(pluginId);
+		const registries = scope === "user" ? [userReg] : scope === "project" ? [projectReg] : [userReg, projectReg];
+		const matches = new Set<string>();
+		for (const registry of registries) {
+			for (const [installedId, entries] of Object.entries(registry.plugins)) {
+				if (entries.length > 0 && parsePluginId(installedId)?.name === pluginId) matches.add(installedId);
+			}
+		}
+		const candidates = [...matches].sort();
+		if (candidates.length === 0) throw new Error(`Plugin "${pluginId}" is not installed`);
+		if (candidates.length > 1) {
+			throw new Error(`Plugin name "${pluginId}" is ambiguous. Use one of: ${candidates.join(", ")}`);
+		}
+		return candidates[0]!;
+	}
+
+	async #resolvePluginUninstall(pluginId: string, scope?: "user" | "project") {
+		const resolvedPluginId = await this.resolveInstalledPluginId(pluginId, scope);
+
+		const { userEntries, projectEntries, userReg, projectReg } = await this.#findInBothRegistries(resolvedPluginId);
 
 		const inUser = userEntries && userEntries.length > 0;
 		const inProject = projectEntries && projectEntries.length > 0;
 
 		if (!inUser && !inProject) {
-			throw new Error(`Plugin "${pluginId}" is not installed`);
+			throw new Error(`Plugin "${resolvedPluginId}" is not installed`);
 		}
 
 		// Disambiguation: if installed in both scopes and no explicit scope, require one.
@@ -736,26 +755,33 @@ export class MarketplaceManager {
 		const targetEntries = targetScope === "project" ? projectEntries! : userEntries!;
 		const targetReg = targetScope === "project" ? projectReg : userReg;
 		const registryPath = this.#registryPath(targetScope);
-		await this.#assertNoInstalledDependents(pluginId, targetReg);
-		return { targetEntries, targetReg, targetScope, registryPath };
+		await this.#assertNoInstalledDependents(resolvedPluginId, targetReg);
+		return { pluginId: resolvedPluginId, targetEntries, targetReg, targetScope, registryPath };
 	}
 
 	async previewUninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<PluginUninstallPreview> {
-		const { targetEntries, targetScope } = await this.#resolvePluginUninstall(pluginId, scope);
+		const {
+			pluginId: resolvedPluginId,
+			targetEntries,
+			targetScope,
+		} = await this.#resolvePluginUninstall(pluginId, scope);
 		return {
-			pluginId,
+			pluginId: resolvedPluginId,
 			scope: targetScope,
 			installPaths: targetEntries.map(entry => entry.installPath),
 		};
 	}
 
 	async uninstallPlugin(pluginId: string, scope?: "user" | "project"): Promise<void> {
-		const { targetEntries, targetReg, targetScope, registryPath } = await this.#resolvePluginUninstall(
-			pluginId,
-			scope,
-		);
+		const {
+			pluginId: resolvedPluginId,
+			targetEntries,
+			targetReg,
+			targetScope,
+			registryPath,
+		} = await this.#resolvePluginUninstall(pluginId, scope);
 
-		const updatedReg = removeInstalledPlugin(targetReg, pluginId);
+		const updatedReg = removeInstalledPlugin(targetReg, resolvedPluginId);
 		await writeInstalledPluginsRegistry(registryPath, updatedReg);
 
 		// Read both registries AFTER removal — only delete paths no longer referenced by either.
@@ -778,7 +804,7 @@ export class MarketplaceManager {
 
 		this.#clearCache();
 
-		logger.debug("Plugin uninstalled", { pluginId, scope: targetScope });
+		logger.debug("Plugin uninstalled", { pluginId: resolvedPluginId, scope: targetScope });
 	}
 
 	// ── Plugin state ──────────────────────────────────────────────────────────

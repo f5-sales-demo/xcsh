@@ -1560,7 +1560,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					case "uninstall": {
 						const uninstArgs = parsePluginScopeArgs(
 							rest,
-							"Usage: /plugin uninstall [--scope user|project] <name@marketplace>",
+							"Usage: /plugin uninstall [--scope user|project] <name[@marketplace]>",
 						);
 						if ("error" in uninstArgs) {
 							runtime.ctx.showStatus(uninstArgs.error);
