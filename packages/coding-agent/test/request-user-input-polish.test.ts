@@ -132,6 +132,32 @@ describe("question TUI polish", () => {
 		expect(done).toHaveBeenCalledWith(undefined);
 	});
 
+	test("wraps question prompts and option descriptions rather than truncating them", async () => {
+		await setSymbolPreset("unicode");
+		const prompt =
+			"After the X-Content-Type-Options canary proves Compromised, what should happen if a later header is missing?";
+		const description =
+			"Restore the canonical cohort, record the header as not triggered within its window, and continue the remaining checks.";
+		const component = new RequestUserInputComponent(
+			tui(60, 24),
+			[
+				{
+					id: "suite-failures",
+					header: "Suite failures",
+					question: prompt,
+					options: [{ label: "Continue and record", description }],
+				},
+			],
+			vi.fn(),
+			new AbortController().signal,
+		);
+		const rendered = Bun.stripANSI(component.render(60).join("\n"))
+			.replace(/[╭─╮│├┤╰╯]/g, "")
+			.replace(/\s+/g, " ");
+		expect(rendered).toContain("what should happen if a later header is missing?");
+		expect(rendered).toContain("record the header as not triggered within its window");
+		expect(rendered).toContain("continue the remaining checks.");
+	});
 	test("keeps notes and masked secrets inside the frame", async () => {
 		await setSymbolPreset("unicode");
 		const done = vi.fn();
