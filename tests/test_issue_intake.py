@@ -144,10 +144,12 @@ class IntakeTests(unittest.TestCase):
                 ledger, FakeAssessor(), FakeDispatch(), Verifier(False), Path(tmp)
             ).run([closed])
             self.assertEqual(ledger.get(11)["state"], "closed_unverified")
+            self.assertEqual(ledger.delivery_count(), 1)
             IntakeEngine(
                 ledger, FakeAssessor(), FakeDispatch(), Verifier(True), Path(tmp)
             ).run([closed])
             self.assertEqual(ledger.get(11)["state"], "completed")
+            self.assertEqual(ledger.delivery_count(), 0)
             self.assertTrue(json.loads(ledger.get(11)["evidence"])["verified"])
 
     def test_incomplete_issue_gets_intake_session(self):

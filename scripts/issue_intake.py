@@ -170,7 +170,7 @@ class Ledger:
 
     def delivery_count(self) -> int:
         return self.db.execute(
-            "SELECT COUNT(*) FROM issues WHERE state IN ('delivery','dispatching') AND mode='delivery'"
+            "SELECT COUNT(*) FROM issues WHERE state IN ('delivery','dispatching','closed_unverified') AND mode='delivery'"
         ).fetchone()[0]
 
     def summary(self) -> dict[str, int]:
@@ -528,8 +528,13 @@ class IntakeEngine:
                 if classification == "pull_request":
                     continue
                 if classification == "rejected":
+                    rejected_labels = {
+                        str(label.get("name", "")).casefold()
+                        for label in item.get("labels", [])
+                    } & REJECT_LABELS
                     if (
                         item.get("state") == "closed"
+                        and not rejected_labels
                         and old
                         and old["mode"] == "delivery"
                     ):
