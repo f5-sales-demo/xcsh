@@ -23,6 +23,10 @@ function maskedEditorLines(text: string, width: number): string[] {
 	return masked.split("\n").flatMap(line => wrapTextWithAnsi(line, Math.max(1, width)));
 }
 
+function readOnlyTextLines(text: string, width: number): string[] {
+	return text.split("\n").flatMap(line => wrapTextWithAnsi(line, Math.max(1, width)));
+}
+
 /** Uses the ordinary multiline composer; form state stays local until explicit submission. */
 export class RequestUserInputComponent implements Component {
 	readonly form: QuestionForm;
@@ -92,7 +96,12 @@ export class RequestUserInputComponent implements Component {
 				),
 			);
 			if (option.description.trim())
-				body.push({ content: theme.fg("muted", `   ${option.description}`), selected: false });
+				body.push(
+					...readOnlyTextLines(option.description, inner - 3).map(content => ({
+						content: theme.fg("muted", `   ${content}`),
+						selected: false,
+					})),
+				);
 		}
 		const details: string[] = [];
 		if (this.form.notesVisible) {
@@ -123,7 +132,10 @@ export class RequestUserInputComponent implements Component {
 			height,
 			"Answer questions",
 			`Question ${this.form.index + 1} of ${this.form.questions.length} · ${this.form.unanswered} unanswered`,
-			[theme.fg("contentAccent", this.form.question.header), this.form.question.question],
+			[
+				...readOnlyTextLines(this.form.question.header, inner).map(line => theme.fg("contentAccent", line)),
+				...readOnlyTextLines(this.form.question.question, inner),
+			],
 			body,
 			details,
 			footer,
