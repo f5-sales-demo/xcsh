@@ -40,6 +40,7 @@ import { hardenAgentConfigFile, writeAgentConfigFile } from "./agent-config-file
 import { withFileLock } from "./file-lock";
 import {
 	type BashInterceptorRule,
+	DEFAULT_MODEL_ROLES,
 	type GroupPrefix,
 	type GroupTypeMap,
 	getDefault,
@@ -77,6 +78,12 @@ export interface SettingsOptions {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const UNSAFE_PATH_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+const LEGACY_GENERATED_LITELLM_MODEL_ROLES: Record<string, string> = {
+	smol: "litellm/gpt-5.6-luna:low",
+	default: "litellm/gpt-5.6-sol:medium",
+	slow: "litellm/gpt-5.6-sol:high",
+	plan: "litellm/gpt-5.6-sol:high",
+};
 
 function hasUnsafePathSegment(segments: string[]): boolean {
 	return segments.some(segment => segment.length === 0 || UNSAFE_PATH_SEGMENTS.has(segment));
@@ -478,6 +485,14 @@ export class Settings {
 
 			// Load global settings from config.yml
 			this.#global = await this.#loadYaml(this.#configPath!);
+			if (this.#migrateGeneratedLiteLLMModelRoles(this.#global)) {
+				try {
+					await writeAgentConfigFile(this.#configPath!, YAML.stringify(this.#global, null, 2));
+					logger.debug("Settings: migrated generated LiteLLM model roles", { path: this.#configPath });
+				} catch (error) {
+					logger.warn("Settings: failed to persist migrated LiteLLM model roles", { error: String(error) });
+				}
+			}
 		}
 
 		// Load project settings
@@ -517,6 +532,22 @@ export class Settings {
 		} catch {
 			return {};
 		}
+	}
+
+	#migrateGeneratedLiteLLMModelRoles(raw: RawSettings): boolean {
+		const roles = raw.modelRoles;
+		if (!roles || typeof roles !== "object" || Array.isArray(roles)) return false;
+
+		const entries = Object.entries(roles);
+		if (
+			entries.length !== Object.keys(LEGACY_GENERATED_LITELLM_MODEL_ROLES).length ||
+			entries.some(([role, model]) => LEGACY_GENERATED_LITELLM_MODEL_ROLES[role] !== model)
+		) {
+			return false;
+		}
+
+		raw.modelRoles = { ...DEFAULT_MODEL_ROLES };
+		return true;
 	}
 
 	async #migrateFromLegacy(): Promise<void> {
