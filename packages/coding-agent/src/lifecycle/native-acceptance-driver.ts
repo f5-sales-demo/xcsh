@@ -144,7 +144,7 @@ async function startReporterTransport(
 				if (request.method === "ping") {
 					handshakeComplete = true;
 					socket.end(
-						`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 26, version: "native-lifecycle", capabilities: { agent_turn_journal: true } } })}\n`,
+						`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 27, version: "native-lifecycle", capabilities: { agent_turn_journal: true } } })}\n`,
 					);
 					continue;
 				}
@@ -408,7 +408,7 @@ export async function runNativeLifecycleAcceptance(
 			const working = await withTimeout(transport.waitFor(stateIs("working")), timeoutMs, "working");
 			control.workingOrdinal = working.ordinal;
 			transport.requestCancel();
-			control.cancellation = "protocol26_cooperative_working_action";
+			control.cancellation = "protocol27_cooperative_working_action";
 		}
 
 		if (
@@ -428,7 +428,7 @@ export async function runNativeLifecycleAcceptance(
 				control.cancellation = "pty_process_group_sigint";
 			} else {
 				transport.requestCancel();
-				control.cancellation = "protocol26_cooperative_action";
+				control.cancellation = "protocol27_cooperative_action";
 			}
 		}
 

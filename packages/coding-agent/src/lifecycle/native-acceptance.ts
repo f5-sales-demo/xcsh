@@ -70,7 +70,7 @@ export function nativeLifecycleContract(): Record<string, unknown> {
 			resume: "--resume <exact-session-path>",
 			cancel: "PtySession.interrupt() sends SIGINT to the native child process group",
 			managed_cancel:
-				"protocol 26 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
+				"protocol 27 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
 			await_user: "--native-lifecycle-control await-user uses the interactive ExtensionUiController",
 			continuation: "write the continuation and Enter to the same native PTY",
 			replay: "restart --resume <exact-session-path> with the same authenticated binding",

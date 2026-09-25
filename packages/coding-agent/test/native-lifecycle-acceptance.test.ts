@@ -51,14 +51,14 @@ describe("native lifecycle acceptance contract", () => {
 			resume: "--resume <exact-session-path>",
 			cancel: "PtySession.interrupt() sends SIGINT to the native child process group",
 			managed_cancel:
-				"protocol 26 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
+				"protocol 27 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
 			await_user: "--native-lifecycle-control await-user uses the interactive ExtensionUiController",
 			continuation: "write the continuation and Enter to the same native PTY",
 			replay: "restart --resume <exact-session-path> with the same authenticated binding",
 		});
 		expect(contract.scenarios).toEqual(NATIVE_LIFECYCLE_SCENARIOS);
 		expect(contract.reporter).toEqual({
-			protocol: 26,
+			protocol: 27,
 			semantic_report_timeout_ms: 5_000,
 			ambiguous_retry_limit: 1,
 			capability_env: "HERDR_NATIVE_CAPABILITY",
