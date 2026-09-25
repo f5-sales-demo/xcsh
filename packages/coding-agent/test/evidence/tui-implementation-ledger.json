@@ -3808,6 +3808,26 @@
     },
     {
       "surface": {
+        "id": "/marketplace doctor",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/plugin"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "/marketplace enable",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "subcommand",
@@ -6531,6 +6551,26 @@
     },
     {
       "surface": {
+        "id": "/plugin doctor",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/plugin"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "/plugin enable",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "subcommand",
@@ -7281,6 +7321,26 @@
       "notes": [
         "The actual-terminal matrix passed 16/16 variants; all 384 PNGs were directly inspected. It covers aliases, scoped identity, editable search/paste, Escape hierarchy, Ctrl+C separation, install→disable→upgrade→uninstall with reopen persistence, Cancel/no-write, --force replacement review, marketplace removal, empty/no-match states, themes, symbols, and responsive widths. Tests additionally prove stale-version/source rejection, atomic catalog validation, duplicate suppression, prerequisite failures, partial/offline catalogs, failed-source isolation, and retry-only-unresolved. Opening the manager never persists a default marketplace. Obsolete split-pane and immediate-mutation paths were removed. Complete-candidate convergence remains pending.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/plugins doctor",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/plugin"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
       ]
     },
     {
@@ -13441,7 +13501,18 @@
       "status": "verified",
       "adapter": "core interactive routing, shared controller, and terminal lifecycle; packages/coding-agent/src/modes/components/question-transcript.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
       "reviewPolicy": "Read-only presentation. It cannot claim or perform persistence; its caller supplies already-authoritative state.",
-      "states": ["idle", "input", "browse", "review", "cancelled", "progress", "success", "failure", "restored", "render"],
+      "states": [
+        "idle",
+        "input",
+        "browse",
+        "review",
+        "cancelled",
+        "progress",
+        "success",
+        "failure",
+        "restored",
+        "render"
+      ],
       "tests": [
         "packages/coding-agent/test/question-transcript.test.ts",
         "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
@@ -13575,7 +13646,20 @@
       "status": "verified",
       "adapter": "core interactive routing, shared controller, and terminal lifecycle; packages/coding-agent/src/modes/components/request-user-input.ts is individually classified as caller-owned-draft in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
       "reviewPolicy": "Draft-only interaction. Escape returns without mutation, and the caller must perform any Cancel-first reviewed persistence.",
-      "states": ["idle", "input", "browse", "review", "cancelled", "progress", "success", "failure", "restored", "render", "keyboard-input", "terminal-control"],
+      "states": [
+        "idle",
+        "input",
+        "browse",
+        "review",
+        "cancelled",
+        "progress",
+        "success",
+        "failure",
+        "restored",
+        "render",
+        "keyboard-input",
+        "terminal-control"
+      ],
       "tests": [
         "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",

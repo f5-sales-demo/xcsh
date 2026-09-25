@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "7f27c8350df7d8120996ec9f45f1049f57a3a095",
-  "fingerprint": "f647813f7fb59e4dad4325c4732ebca5d8320afd9e00d2287c132fb836031773",
+  "revision": "05201f729f6a420628d17667bd60c28b2c4bcfae",
+  "fingerprint": "516a39ed34a846f74bfccd3e2fe0db0c09fa12f56e3b943f90d5cc19707fbcb9",
   "counts": {
     "total": 241,
     "components": 96,
@@ -3218,7 +3218,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "connections",
-      "sha256": "6c67de68fb3434f6e6841db8bdfd0cd4aaf42a362c919eb11ff94c814276fd62",
+      "sha256": "472945890ef189084ad880b3174f9459a61ee803a14fd2db48b60ae922ac2704",
       "exports": [
         "ContextCommandController"
       ],
@@ -4549,7 +4549,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "aa1a280819c3430bf9f689ab70ec40e6ba233597946c0fe331484b071771d92f",
+      "sha256": "2e2a829473fec5dc72fa3b557876b7d66f132e1ec25a9851988ae9a19f58ee57",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
