@@ -6,8 +6,8 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: What happened?
+      label: Problem and impact
+      description: What happened, who is affected, and why does it matter?
     validations:
       required: true
 
@@ -22,8 +22,41 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Expected Behavior
-      description: What did you expect to happen?
+      label: Expected and actual behavior
+      description: State both the expected result and what actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and affected interfaces
+      description: Name affected commands, packages, APIs, plugins, configuration, or workflows; include boundaries.
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and dependencies
+      description: Note platform, compatibility, security, privacy, performance, release, or external service constraints; link related issues or specs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Objective acceptance criteria
+      description: List observable conditions and expected results, including important failure behavior.
+      placeholder: "- Given ..., when ..., then ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification and traceability
+      description: Map each criterion to a reproducer, test, UAT, or CI check; link related requirements and PRs.
     validations:
       required: true
 
@@ -31,7 +64,7 @@ body:
     id: error-output
     attributes:
       label: Error Output
-      description: Paste any error messages or stack traces
+      description: Paste sanitized error messages or stack traces; remove credentials and user data.
       render: shell
 
   - type: dropdown
@@ -74,7 +107,6 @@ body:
         - ChatGPT Plus/Pro (Codex)
         - GitHub Copilot
         - Google Cloud Code Assist (Gemini CLI)
-        - Antigravity (Gemini 3, Claude, GPT-OSS)
         - Cursor
         - OpenCode Zen
         - Kimi Code
