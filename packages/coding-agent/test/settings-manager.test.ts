@@ -143,6 +143,19 @@ describe("Settings", () => {
 		expect(settings.inspectScopes("mcp.enabled").projectValue).toBe(true);
 	});
 
+	it("persists the independent LiteLLM maximum-context toggle", async () => {
+		const settings = await Settings.init({ cwd: projectDir, agentDir });
+		expect(settings.get("providers.litellmMaxContext")).toBe(false);
+
+		settings.set("providers.litellmMaxContext", true);
+		await settings.flush();
+		_resetSettingsForTest();
+
+		const reloaded = await Settings.init({ cwd: projectDir, agentDir });
+		expect(reloaded.get("providers.litellmMaxContext")).toBe(true);
+		expect((await readSettings()).providers).toMatchObject({ litellmMaxContext: true });
+	});
+
 	describe.skipIf(process.platform === "win32")("config file permissions", () => {
 		it("restores owner-only permissions when rewriting config.yml", async () => {
 			fs.writeFileSync(getConfigPath(), "modelRoles:\n  default: anthropic/claude-opus-5\n", { mode: 0o644 });

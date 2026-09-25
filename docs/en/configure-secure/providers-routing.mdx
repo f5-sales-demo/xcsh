@@ -53,21 +53,22 @@ providers:
       groupLabel: LiteLLM
       sectionLabel: OpenAI
     modelAllowlist:
-      - gpt-6-astra
-      - gpt-5.6-sol
+      - gpt-6-luna
       - gpt-5.6-terra
+      - gpt-6-sol
+      - gpt-6-astra
       - gpt-5.6-luna
+      - gpt-5.6-sol
   anthropic:
     picker:
       groupId: litellm
       groupLabel: LiteLLM
       sectionLabel: Anthropic
     modelAllowlist:
-      - claude-fable-5-1
-      - claude-fable-5
-      - claude-opus-5
-      - claude-sonnet-5
       - claude-haiku-4-5
+      - claude-sonnet-5
+      - claude-opus-5-5
+      - claude-opus-5
 ```
 
 `modelProviderAllowlist` is a settings key that limits normal `/model` visibility. An empty list means no picker restriction; it does not make every built-in provider relevant in `/login`. Explicit provider-qualified command-line selection and direct `/login <provider>` remain available.
@@ -92,18 +93,22 @@ Both select `anthropic/claude-fable-5-1` deterministically.
 
 LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.
 
-GPT-6 Astra has route-specific limits. xcsh-generated LiteLLM configuration exposes the model's full
-1,050,000-token context window (922,000 input plus up to 128,000 output). xcsh uses the ChatGPT Codex
-subscription catalog's 272,000-token effective context window and 128,000-token maximum output. That
-catalog also advertises an 872,000-token maximum context window, which can be available when the Codex
-transport expands its effective window. Both routes support image input and `low`, `medium`, `high`,
-`xhigh`, and `max` reasoning. Astra is selectable explicitly but is not assigned to an automatic role by
-default.
+Generated LiteLLM configuration shows seven current internal models: GPT-6 Luna, GPT-5.6 Terra,
+GPT-6 Sol, GPT-6 Astra, Claude Haiku 4.5, Claude Sonnet 5, and Claude Opus 5.5. Older GPT-5.6
+Luna/Sol and Claude Opus 5 selectors remain resolvable for historical sessions but are hidden from
+ordinary browsing.
 
-Generated LiteLLM configuration routes only Astra through LiteLLM's OpenAI Responses endpoint
-(`/openai/v1/responses`). This is required when Astra uses tools with reasoning: its Chat Completions route
-rejects that combination. Luna, Terra, and Sol keep the configured OpenAI-compatible Chat Completions base
-path. Astra also omits temperature because the Responses route rejects sampling temperature for that model.
+GPT-6 Luna, Sol, and Astra use LiteLLM's OpenAI Responses endpoint (`/openai/v1/responses`), while
+GPT-5.6 Terra keeps the discovered OpenAI-compatible Chat Completions base path. The generated
+Anthropic provider uses the native Messages route. Internal routes keep zero-cost metadata until the
+gateway publishes authoritative chargeback pricing.
+
+The four current internal OpenAI models use a 272,000-token effective context window by default.
+Enable **LiteLLM Maximum Context** under **Providers** to use their verified 1,050,000-token window
+with up to 128,000 output tokens. This setting is independent from **OpenAI Codex Maximum Context**,
+which applies only to ChatGPT subscription routing. Claude Haiku 4.5 retains its 200,000-token context
+and 64,000-token output limits; Sonnet 5 and Opus 5.5 retain 1,000,000-token context and 128,000-token
+output limits.
 
 ## How do I test licensed Vertex locally?
 

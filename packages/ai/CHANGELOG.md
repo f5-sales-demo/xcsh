@@ -6,6 +6,9 @@
 
 ### Added
 
+- Added route metadata for the current internal GPT-6 and Claude models and compatibility metadata
+  that suppresses forced tool selection for native Anthropic proxy routes
+  ([#4279](https://github.com/f5-sales-demo/xcsh/issues/4279)).
 - Added Claude Opus 5.5 and OpenAI Codex GPT-6 Luna/Sol model metadata, including current
   reasoning controls, tool capabilities, pricing, and published 1M/1.05M context and 128K output
   limits ([#4240](https://github.com/f5-sales-demo/xcsh/issues/4240)).
