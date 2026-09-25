@@ -12,9 +12,11 @@ import {
 	matchesSelectorKey,
 	type SelectorFrameLine,
 	selectorCancelHint,
+	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -71,10 +73,10 @@ export class UserMessageSelectorComponent extends Container implements MouseRout
 		);
 		const end = Math.min(this.#filtered.length, start + this.#capacity);
 		const body: SelectorFrameLine[] = [
-			`Search: ${theme.nav.cursor} ${this.#search.render(Math.max(1, inner - 10))[0] ?? ""}`,
+			selectorCompactRow(`Search: ${theme.nav.cursor} ${this.#search.render(Math.max(1, inner - 10))[0] ?? ""}`),
 		];
 		if (this.#filtered.length === 0)
-			body.push(theme.fg("muted", this.#search.getValue() ? "No matching branch points" : "No user messages"));
+			body.push(selectorProse(this.#search.getValue() ? "No matching branch points" : "No user messages", "muted"));
 		else
 			body.push(
 				...this.#filtered

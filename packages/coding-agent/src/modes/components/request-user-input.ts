@@ -10,6 +10,7 @@ import {
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -66,9 +67,9 @@ export class RequestUserInputComponent implements Component {
 		if (this.form.confirming) {
 			const body: SelectorFrameLine[] = [
 				selectorRow([`1. ${INPUT_COPY.proceed}`], [inner - 2], this.#confirmation === 0),
-				{ content: theme.fg("muted", `   Submit with unanswered questions.`), selected: false },
+				selectorProse(theme.fg("muted", `   Submit with unanswered questions.`)),
 				selectorRow([`2. ${INPUT_COPY.back}`], [inner - 2], this.#confirmation === 1),
-				{ content: theme.fg("muted", `   ${INPUT_COPY.backDescription}`), selected: false },
+				selectorProse(theme.fg("muted", `   ${INPUT_COPY.backDescription}`)),
 			];
 			return selectorFrame(
 				width,
@@ -97,10 +98,9 @@ export class RequestUserInputComponent implements Component {
 			);
 			if (option.description.trim())
 				body.push(
-					...readOnlyTextLines(option.description, inner - 3).map(content => ({
-						content: theme.fg("muted", `   ${content}`),
-						selected: false,
-					})),
+					...readOnlyTextLines(option.description, inner - 3).map(content =>
+						selectorProse(theme.fg("muted", `   ${content}`)),
+					),
 				);
 		}
 		const details: string[] = [];

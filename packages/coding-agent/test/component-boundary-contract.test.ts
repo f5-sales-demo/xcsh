@@ -218,6 +218,7 @@ describe("remaining first-party component boundaries", () => {
 			],
 			2,
 			getSelectListTheme(),
+			{ presentation: "compact-with-selected-detail" },
 		);
 		const tabs = new TabBar(
 			"Scope",

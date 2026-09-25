@@ -14,9 +14,11 @@ import {
 	matchesSelectorKey,
 	type SelectorFrameLine,
 	selectorCancelHint,
+	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -237,10 +239,12 @@ export class TreeSelectorComponent extends Container implements MouseRoutable {
 	#browseBody(inner: number): SelectorFrameLine[] {
 		this.#capacity = Math.max(1, this.rows() - 13);
 		const body: SelectorFrameLine[] = [
-			`Search: ${theme.nav.cursor} ${this.#search.render(Math.max(1, inner - 10))[0] ?? ""}`,
+			selectorCompactRow(`Search: ${theme.nav.cursor} ${this.#search.render(Math.max(1, inner - 10))[0] ?? ""}`),
 		];
 		if (!this.#filtered.length) {
-			body.push(theme.fg("muted", this.#search.getValue() ? "No matching tree nodes" : "No nodes in this view"));
+			body.push(
+				selectorProse(this.#search.getValue() ? "No matching tree nodes" : "No nodes in this view", "muted"),
+			);
 			return body;
 		}
 		this.#browseStart = Math.max(
@@ -274,9 +278,11 @@ export class TreeSelectorComponent extends Container implements MouseRoutable {
 				`Session node · ${this.#detail.node.entry.id}`,
 				[],
 				[
-					...(this.#labelError ? [theme.fg("error", this.#labelError)] : []),
-					"Label (leave empty to remove)",
-					...(this.#savingLabel ? [theme.fg("muted", "Saving reviewed label…")] : this.#labelEditor.render(inner)),
+					...(this.#labelError ? [selectorProse(theme.fg("error", this.#labelError))] : []),
+					selectorProse("Label (leave empty to remove)"),
+					...(this.#savingLabel
+						? [selectorProse("Saving reviewed label…", "muted")]
+						: this.#labelEditor.render(inner).map(line => selectorCompactRow(line))),
 				],
 				[],
 				[this.#savingLabel ? "Waiting for the reviewed save to finish." : selectorCancelHint("back")],

@@ -6,6 +6,7 @@ import { CountdownTimer } from "./countdown-timer";
 import {
 	matchesSelectorKey,
 	selectorCancelHint,
+	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorNavigationHint,
@@ -63,7 +64,7 @@ export class HookInputComponent extends Container {
 			"Extension input",
 			this.title,
 			[],
-			this.#input.render(inner),
+			this.#input.render(inner).map(line => selectorCompactRow(line)),
 			[
 				...(!this.#input.getValue() && this.placeholder ? [this.placeholder] : []),
 				...details.slice(this.#offset, this.#offset + this.#capacity),

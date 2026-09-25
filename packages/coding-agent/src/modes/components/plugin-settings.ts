@@ -16,7 +16,7 @@ import {
 	type PluginSettingsStorage,
 	pluginSettingsStorage,
 } from "./plugin-settings-drafts";
-import { matchesSelectorKey, selectorFrame } from "./selector-frame";
+import { matchesSelectorKey, selectorFrame, selectorProse } from "./selector-frame";
 import { SettingsBrowser } from "./settings-browser";
 import { SettingsChoiceEditor, SettingsTextEditor } from "./settings-editors";
 
@@ -375,7 +375,7 @@ export class PluginSettingsComponent extends Container {
 				"Plugin settings",
 				"User defaults",
 				[],
-				[this.#loadError || "Loading plugin settings…"],
+				[selectorProse(this.#loadError || "Loading plugin settings…")],
 				[],
 				this.#loadError ? ["Ctrl+R: retry · Esc: back"] : [],
 			)

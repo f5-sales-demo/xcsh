@@ -2,7 +2,7 @@ import { Container, Markdown, type TUI } from "@f5-sales-demo/pi-tui";
 import { replaceTabs } from "../../tools/render-utils";
 import { getMarkdownTheme, theme } from "../theme/theme";
 import { appInterruptHint } from "../utils/keybinding-matchers";
-import { selectorCancelHint, selectorFrame, selectorFrameContentWidth } from "./selector-frame";
+import { selectorCancelHint, selectorFrame, selectorFrameContentWidth, selectorProse } from "./selector-frame";
 
 type BtwPanelState = "running" | "complete" | "aborted" | "error";
 
@@ -75,7 +75,10 @@ export class BtwPanelComponent extends Container {
 			"BTW",
 			"Ephemeral side answer from a snapshot of the current session; it is not added to the transcript.",
 			[],
-			[theme.fg("contentAccent", replaceTabs(this.#question)), "", ...body],
+			[
+				selectorProse(theme.fg("contentAccent", replaceTabs(this.#question))),
+				...body.map(line => selectorProse(line)),
+			],
 			state ? [state] : [],
 			[this.#footerLine()],
 		);

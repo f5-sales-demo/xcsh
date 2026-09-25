@@ -1,6 +1,6 @@
 import { Container, Markdown } from "@f5-sales-demo/pi-tui";
 import { getMarkdownTheme } from "../theme/theme";
-import { selectorFrame, selectorFrameContentWidth } from "./selector-frame";
+import { selectorFrame, selectorFrameContentWidth, selectorProse } from "./selector-frame";
 
 /** Static transcript-adjacent plan preview; approval controls live in the separate review overlay. */
 export class PlanPreviewComponent extends Container {
@@ -17,7 +17,7 @@ export class PlanPreviewComponent extends Container {
 			"Plan review",
 			"Prepared execution plan; use the active review overlay to approve, revise, or cancel.",
 			[],
-			body,
+			body.map(line => selectorProse(line)),
 			[],
 			[],
 		);

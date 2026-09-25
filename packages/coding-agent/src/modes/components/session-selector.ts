@@ -15,9 +15,11 @@ import {
 	matchesSelectorKey,
 	type SelectorFrameLine,
 	selectorCancelHint,
+	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -106,9 +108,13 @@ class SessionList implements Component {
 	renderFrameLines(width: number): SelectorFrameLine[] {
 		const lines: SelectorFrameLine[] = [];
 		this.#hitRows = [];
-		lines.push(`Search: ${theme.nav.cursor} ${this.#searchInput.render(Math.max(1, width - 10))[0] ?? ""}`);
+		lines.push(
+			selectorCompactRow(
+				`Search: ${theme.nav.cursor} ${this.#searchInput.render(Math.max(1, width - 10))[0] ?? ""}`,
+			),
+		);
 		if (this.#filteredSessions.length === 0) {
-			lines.push(theme.fg("muted", this.getQuery() ? "No matching sessions" : "No sessions in this scope"));
+			lines.push(selectorProse(this.getQuery() ? "No matching sessions" : "No sessions in this scope", "muted"));
 			return lines;
 		}
 		const start = Math.max(
@@ -132,16 +138,18 @@ class SessionList implements Component {
 			);
 			if (index === this.#selectedIndex) {
 				const summary = `${this.#showCwd ? `${session.cwd} · ` : ""}${session.firstMessage.replace(/\s+/g, " ").trim()}`;
-				lines.push(...wrapTextWithAnsi(theme.fg("muted", summary), width));
+				lines.push(...wrapTextWithAnsi(theme.fg("muted", summary), width).map(line => selectorProse(line)));
 			}
 		}
 		if (start > 0 || end < this.#filteredSessions.length)
-			lines.push(theme.fg("muted", `${this.#selectedIndex + 1}/${this.#filteredSessions.length}`));
+			lines.push(
+				selectorCompactRow(theme.fg("muted", `${this.#selectedIndex + 1}/${this.#filteredSessions.length}`)),
+			);
 		return lines;
 	}
 
 	render(width: number): string[] {
-		return this.renderFrameLines(width).map(line => (typeof line === "string" ? line : line.content));
+		return this.renderFrameLines(width).map(line => line.content);
 	}
 
 	handleInput(data: string): void {

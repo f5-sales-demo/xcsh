@@ -15,10 +15,12 @@ import {
 	matchesSelectorKey,
 	type SelectorFrameLine,
 	selectorCancelHint,
+	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 } from "./selector-frame";
 
 const NAME_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -185,10 +187,10 @@ export class ContextAddWizard extends Container {
 		for (const line of this.#contentContainer.render(inner)) {
 			const plain = Bun.stripANSI(line);
 			if (/^\s*(?:Esc: back|\(Press Esc to cancel\))\s*$/u.test(plain)) continue;
-			if (plain.includes(" · Esc: back")) body.push(theme.fg("muted", plain.replace(" · Esc: back", "")));
-			else body.push({ content: line, selected: plain.trimStart().startsWith(theme.nav.cursor) });
+			if (plain.includes(" · Esc: back")) body.push(selectorProse(plain.replace(" · Esc: back", ""), "muted"));
+			else body.push(selectorCompactRow(line, plain.trimStart().startsWith(theme.nav.cursor), plain));
 		}
-		const selected = body.findIndex(line => typeof line !== "string" && line.selected);
+		const selected = body.findIndex(line => line.kind === "compact-row" && line.selected);
 		this.#pageCapacity = Math.max(1, rows - 10);
 		this.#bodyLength = body.length;
 		if (!this.#manualPaging && selected >= 0)

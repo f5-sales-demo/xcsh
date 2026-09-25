@@ -1,6 +1,12 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { visibleWidth } from "@f5-sales-demo/pi-tui";
-import { selectorFrame, selectorFrameContentWidth, selectorRow } from "../src/modes/components/selector-frame";
+import {
+	selectorCompactRow,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorProse,
+	selectorRow,
+} from "../src/modes/components/selector-frame";
 import { getThemeByName, setSymbolPreset, setThemeInstance } from "../src/modes/theme/theme";
 
 beforeAll(async () => {
@@ -34,8 +40,8 @@ describe("selectorFrame", () => {
 
 	test("uses one-cell gutters below 80 columns and two-cell gutters at 80 columns", async () => {
 		await setSymbolPreset("ascii");
-		const compact = selectorFrame(79, 20, "Title", "", [], ["Choice"], [], ["Esc: back"]);
-		const spacious = selectorFrame(80, 20, "Title", "", [], ["Choice"], [], ["Esc: back"]);
+		const compact = selectorFrame(79, 20, "Title", "", [], [selectorProse("Choice")], [], ["Esc: back"]);
+		const spacious = selectorFrame(80, 20, "Title", "", [], [selectorProse("Choice")], [], ["Esc: back"]);
 
 		expect(Bun.stripANSI(compact[1]!)).toStartWith("| Title");
 		expect(Bun.stripANSI(spacious[1]!)).toStartWith("|  Title");
@@ -69,5 +75,62 @@ describe("selectorFrame", () => {
 		expect(plain).toContain("Enter: select");
 		expect(plain).toContain("Esc: back");
 		expect(lines.every(line => visibleWidth(line) === width)).toBe(true);
+	});
+
+	test("wraps classified body prose without losing ANSI-styled Unicode text", () => {
+		const width = 32;
+		const prose =
+			"Read the \u001b[1mcafé 東京 guidance\u001b[22m completely before continuing with this synthetic choice.";
+		const lines = selectorFrame(width, 20, "Guidance", "", [], [selectorProse(prose)], [], []);
+		const normalized = lines
+			.map(line => Bun.stripANSI(line).slice(1, -1).trim())
+			.join(" ")
+			.replace(/\s+/g, " ");
+
+		expect(lines.every(line => visibleWidth(line) === width)).toBe(true);
+		expect(normalized).toContain(Bun.stripANSI(prose));
+		expect(normalized).not.toContain("…");
+	});
+
+	test("shows the complete selected compact value when its row truncates", () => {
+		const width = 32;
+		const label = "synthetic-provider/café-東京-model-with-a-complete-selector";
+		const lines = selectorFrame(width, 14, "Choose", "", [], [selectorRow([label], [10], true)], [], [], {
+			selectedBodyIndex: 0,
+		});
+		const normalized = lines
+			.map(line => Bun.stripANSI(line).slice(1, -1).trim())
+			.join("")
+			.replace(/\s+/g, "");
+
+		expect(lines.every(line => visibleWidth(line) === width)).toBe(true);
+		expect(normalized).toContain(label);
+	});
+
+	test("rejects unclassified strings in the frame body at runtime", () => {
+		expect(() => selectorFrame(40, 10, "Choose", "", [], ["unclassified prose"] as never, [], [])).toThrow(
+			"selectorProse",
+		);
+	});
+
+	test("rejects a truncating compact row without complete selected detail", () => {
+		expect(() => selectorCompactRow("short", true, "", true)).toThrow("complete selected detail");
+	});
+
+	test("rejects a caller-managed detail contract when no complete detail is supplied", () => {
+		expect(() =>
+			selectorFrame(32, 10, "Choose", "", [], [selectorRow(["a very long compact value"], [6], true)], [], [], {
+				selectedBodyIndex: 0,
+				selectedDetail: "provided",
+			}),
+		).toThrow("complete selected detail");
+	});
+
+	test("requires callers to classify frame body prose", () => {
+		const invalidUsage = () => {
+			// @ts-expect-error Plain strings are not a classified frame body presentation.
+			return selectorFrame(40, 10, "Choose", "", [], ["unclassified prose"], [], []);
+		};
+		expect(invalidUsage).toBeFunction();
 	});
 });

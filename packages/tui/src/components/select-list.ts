@@ -2,7 +2,7 @@ import { getKeybindings } from "../keybindings";
 import { type MouseRoutable, routeSelectListMouse, type SgrMouseEvent } from "../mouse";
 import type { SymbolTheme } from "../symbols";
 import type { Component } from "../tui";
-import { Ellipsis, padding, replaceTabs, truncateToWidth, visibleWidth } from "../utils";
+import { Ellipsis, padding, replaceTabs, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "../utils";
 
 const DEFAULT_PRIMARY_COLUMN_WIDTH = 32;
 const PRIMARY_COLUMN_GAP = 2;
@@ -44,6 +44,7 @@ export interface SelectListTruncatePrimaryContext {
 }
 
 export interface SelectListLayoutOptions {
+	presentation: "wrapped-prose" | "compact-with-selected-detail";
 	minPrimaryColumnWidth?: number;
 	maxPrimaryColumnWidth?: number;
 	truncatePrimary?: (context: SelectListTruncatePrimaryContext) => string;
@@ -63,8 +64,11 @@ export class SelectList implements Component, MouseRoutable {
 		private readonly items: ReadonlyArray<SelectItem>,
 		private readonly maxVisible: number,
 		private readonly theme: SelectListTheme,
-		private readonly layout: SelectListLayoutOptions = {},
+		private readonly layout: SelectListLayoutOptions,
 	) {
+		if (layout.presentation !== "wrapped-prose" && layout.presentation !== "compact-with-selected-detail") {
+			throw new TypeError("SelectList requires an explicit wrapped-prose or compact-with-selected-detail policy.");
+		}
 		this.#filteredItems = items;
 	}
 
@@ -114,6 +118,7 @@ export class SelectList implements Component, MouseRoutable {
 
 	render(width: number): string[] {
 		const lines: string[] = [];
+		let selectedDetailLines: string[] = [];
 		this.#hitRows = [];
 
 		// If no items match filter, show message
@@ -138,11 +143,37 @@ export class SelectList implements Component, MouseRoutable {
 
 			const isSelected = i === this.#selectedIndex;
 			const descriptionText = item.description ? sanitizeSingleLine(item.description) : undefined;
-			const rendered = this.#renderItem(item, isSelected, width, descriptionText, primaryColumnWidth);
+			if (this.layout.presentation === "wrapped-prose") {
+				for (const rendered of this.#renderWrappedItem(item, isSelected, width, descriptionText)) {
+					this.#hitRows[lines.length] = i;
+					lines.push(
+						!isSelected && i === this.#hoveredIndex && this.theme.hovered
+							? this.theme.hovered(rendered)
+							: rendered,
+					);
+				}
+				continue;
+			}
+
+			const rendered = this.#renderCompactItem(item, isSelected, width, descriptionText, primaryColumnWidth);
 			this.#hitRows[lines.length] = i;
 			lines.push(
-				!isSelected && i === this.#hoveredIndex && this.theme.hovered ? this.theme.hovered(rendered) : rendered,
+				!isSelected && i === this.#hoveredIndex && this.theme.hovered
+					? this.theme.hovered(rendered.line)
+					: rendered.line,
 			);
+			if (isSelected && rendered.omitted) {
+				const detail = descriptionText
+					? `${this.#getDisplayValue(item)} — ${descriptionText}`
+					: this.#getDisplayValue(item);
+				selectedDetailLines = wrapTextWithAnsi(detail, Math.max(1, width - 2)).map(detailLine =>
+					this.theme.description(`  ${detailLine}`),
+				);
+			}
+		}
+		for (const detailLine of selectedDetailLines) {
+			this.#hitRows[lines.length] = undefined;
+			lines.push(detailLine);
 		}
 
 		// Add scroll indicators if needed
@@ -193,13 +224,13 @@ export class SelectList implements Component, MouseRoutable {
 		}
 	}
 
-	#renderItem(
+	#renderCompactItem(
 		item: SelectItem,
 		isSelected: boolean,
 		width: number,
 		descriptionSingleLine: string | undefined,
 		primaryColumnWidth: number,
-	): string {
+	): { line: string; omitted: boolean } {
 		const prefix = isSelected
 			? `${this.theme.symbols.cursor} `
 			: padding(visibleWidth(this.theme.symbols.cursor) + 1);
@@ -216,22 +247,47 @@ export class SelectList implements Component, MouseRoutable {
 
 			if (remainingWidth > MIN_DESCRIPTION_WIDTH) {
 				const truncatedDesc = truncateToWidth(descriptionSingleLine, remainingWidth, Ellipsis.Omit);
+				const omitted =
+					visibleWidth(this.#getDisplayValue(item)) > maxPrimaryWidth ||
+					visibleWidth(descriptionSingleLine) > remainingWidth;
 				if (isSelected) {
-					return this.theme.selectedText(`${prefix}${truncatedValue}${spacing}${truncatedDesc}`);
+					return {
+						line: this.theme.selectedText(`${prefix}${truncatedValue}${spacing}${truncatedDesc}`),
+						omitted,
+					};
 				}
 
 				const descText = this.theme.description(spacing + truncatedDesc);
-				return prefix + truncatedValue + descText;
+				return { line: prefix + truncatedValue + descText, omitted };
 			}
 		}
 
 		const maxWidth = width - prefixWidth - 2;
 		const truncatedValue = this.#truncatePrimary(item, isSelected, maxWidth, maxWidth);
+		const omitted = visibleWidth(this.#getDisplayValue(item)) > maxWidth || descriptionSingleLine !== undefined;
 		if (isSelected) {
-			return this.theme.selectedText(`${prefix}${truncatedValue}`);
+			return { line: this.theme.selectedText(`${prefix}${truncatedValue}`), omitted };
 		}
 
-		return prefix + truncatedValue;
+		return { line: prefix + truncatedValue, omitted };
+	}
+
+	#renderWrappedItem(
+		item: SelectItem,
+		isSelected: boolean,
+		width: number,
+		descriptionSingleLine: string | undefined,
+	): string[] {
+		const cursor = `${this.theme.symbols.cursor} `;
+		const prefixWidth = visibleWidth(cursor);
+		const content = descriptionSingleLine
+			? `${this.#getDisplayValue(item)} — ${descriptionSingleLine}`
+			: this.#getDisplayValue(item);
+		return wrapTextWithAnsi(content, Math.max(1, width - prefixWidth - 2)).map((wrapped, index) => {
+			const prefix = index === 0 && isSelected ? cursor : padding(prefixWidth);
+			const line = `${prefix}${wrapped}`;
+			return isSelected ? this.theme.selectedText(line) : line;
+		});
 	}
 
 	#getPrimaryColumnWidth(): number {

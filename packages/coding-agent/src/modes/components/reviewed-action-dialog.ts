@@ -11,6 +11,7 @@ import {
 	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
+	selectorProse,
 	selectorRow,
 } from "./selector-frame";
 
@@ -67,9 +68,11 @@ export class ReviewedActionDialog<T> extends Container {
 			[],
 			this.#running
 				? [
-						this.#abort?.signal.aborted
-							? "Interruption requested; waiting for acknowledgement…"
-							: "Operation in progress…",
+						selectorProse(
+							this.#abort?.signal.aborted
+								? "Interruption requested; waiting for acknowledgement…"
+								: "Operation in progress…",
+						),
 					]
 				: [
 						this.#executed ? "Close unresolved result" : "Cancel",

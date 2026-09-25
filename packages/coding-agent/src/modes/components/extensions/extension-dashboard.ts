@@ -5,7 +5,13 @@ import { getAllProvidersInfo, getDisabledProviders, setDisabledProvidersRuntime 
 import { theme } from "../../../modes/theme/theme";
 import type { ActionReview } from "../reviewed-action";
 import { ReviewedActionDialog, type ReviewedActionOutcome } from "../reviewed-action-dialog";
-import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "../selector-frame";
+import {
+	matchesSelectorKey,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorProse,
+	selectorRow,
+} from "../selector-frame";
 import { applyFilter, loadAllExtensions } from "./state-manager";
 import { type Extension, makeQualifiedExtensionId, type ProviderTab } from "./types";
 
@@ -473,7 +479,7 @@ export class ExtensionDashboard extends Container implements MouseRoutable {
 				...wrapTextWithAnsi(tabLine, inner),
 				...this.#search.render(Math.max(1, inner - 8)).map(line => `Search: ${line}`),
 			],
-			rows.length ? rows : noResults,
+			rows.length ? rows : noResults.map(line => selectorProse(line)),
 			[
 				selectedDetails,
 				this.#notice ? theme.fg(this.#noticeTone, this.#notice) : "",

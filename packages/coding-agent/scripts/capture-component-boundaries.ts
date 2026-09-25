@@ -26,7 +26,7 @@ import { appKeyHint, rawKeyHint } from "../src/modes/components/keybinding-hints
 import { LiteLLMModelSelectorComponent } from "../src/modes/components/litellm-model-selector";
 import { PlanPreviewComponent } from "../src/modes/components/plan-preview";
 import { QueueModeSelectorComponent } from "../src/modes/components/queue-mode-selector";
-import { selectorFrame, selectorFrameContentWidth } from "../src/modes/components/selector-frame";
+import { selectorCompactRow, selectorFrame, selectorFrameContentWidth } from "../src/modes/components/selector-frame";
 import { ShowImagesSelectorComponent } from "../src/modes/components/show-images-selector";
 import { SkillMessageComponent } from "../src/modes/components/skill-message";
 import { ThemeSelectorComponent } from "../src/modes/components/theme-selector";
@@ -56,9 +56,19 @@ class FramedComponent implements Component {
 
 	render(width: number): string[] {
 		const body = this.component.render(selectorFrameContentWidth(width));
-		return selectorFrame(width, this.rows, this.title, this.purpose, [], body, [], [], {
-			maxBodyRows: Math.max(1, this.rows - 7),
-		});
+		return selectorFrame(
+			width,
+			this.rows,
+			this.title,
+			this.purpose,
+			[],
+			body.map(line => selectorCompactRow(line)),
+			[],
+			[],
+			{
+				maxBodyRows: Math.max(1, this.rows - 7),
+			},
+		);
 	}
 
 	invalidate(): void {
@@ -100,6 +110,7 @@ function makePrimitiveCatalog(): Component {
 			],
 			2,
 			getSelectListTheme(),
+			{ presentation: "compact-with-selected-detail" },
 		),
 	);
 	box.addChild(

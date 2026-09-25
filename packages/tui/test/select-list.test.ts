@@ -62,6 +62,8 @@ const mouseEvent: SgrMouseEvent = {
 	leftClick: false,
 };
 
+const compactLayout = { presentation: "compact-with-selected-detail" } as const;
+
 describe("SelectList", () => {
 	beforeEach(() => {
 		setKeybindings(new KeybindingsManager(TUI_KEYBINDINGS));
@@ -80,7 +82,7 @@ describe("SelectList", () => {
 			},
 		];
 
-		const list = new SelectList(items, 5, testTheme);
+		const list = new SelectList(items, 5, testTheme, compactLayout);
 		const rendered = list.render(80);
 
 		expect(rendered.length).toBeGreaterThanOrEqual(1);
@@ -97,6 +99,7 @@ describe("SelectList", () => {
 			],
 			5,
 			{ ...testTheme, hovered: text => `<hover>${text}</hover>` },
+			compactLayout,
 		);
 		let selected: string | undefined;
 		list.onSelect = item => {
@@ -121,7 +124,7 @@ describe("SelectList", () => {
 			},
 		];
 
-		const list = new SelectList(items, 5, testTheme);
+		const list = new SelectList(items, 5, testTheme, compactLayout);
 		const rendered = list.render(80);
 
 		expect(visibleIndexOf(rendered[0], "short description")).toBe(visibleIndexOf(rendered[1], "long description"));
@@ -134,6 +137,7 @@ describe("SelectList", () => {
 		];
 
 		const list = new SelectList(items, 5, testTheme, {
+			presentation: "compact-with-selected-detail",
 			minPrimaryColumnWidth: 12,
 			maxPrimaryColumnWidth: 20,
 		});
@@ -154,6 +158,7 @@ describe("SelectList", () => {
 		];
 
 		const list = new SelectList(items, 5, testTheme, {
+			presentation: "compact-with-selected-detail",
 			minPrimaryColumnWidth: 12,
 			maxPrimaryColumnWidth: 20,
 		});
@@ -174,6 +179,7 @@ describe("SelectList", () => {
 		];
 
 		const list = new SelectList(items, 5, testTheme, {
+			presentation: "compact-with-selected-detail",
 			minPrimaryColumnWidth: 12,
 			maxPrimaryColumnWidth: 12,
 			truncatePrimary: ({ text, maxWidth }) => {
@@ -192,7 +198,7 @@ describe("SelectList", () => {
 
 	it("confirms the selected item when Enter arrives as LF", () => {
 		const items = [{ value: "run", label: "run" }];
-		const list = new SelectList(items, 5, testTheme);
+		const list = new SelectList(items, 5, testTheme, compactLayout);
 		let selectedValue: string | undefined;
 		list.onSelect = item => {
 			selectedValue = item.value;
@@ -201,5 +207,53 @@ describe("SelectList", () => {
 		list.handleInput("\n");
 
 		expect(selectedValue).toBe("run");
+	});
+
+	it.each([30, 72])("exposes complete selected details at %i columns", width => {
+		const label = "synthetic-provider/café-東京-model-with-a-complete-selector";
+		const description = "Detailed \u001b[1msynthetic guidance\u001b[22m remains readable without missing words.";
+		const list = new SelectList([{ value: label, label, description }], 5, testTheme, {
+			presentation: "compact-with-selected-detail",
+		});
+		const rendered = list.render(width);
+		const normalized = Bun.stripANSI(rendered.join(" ")).replace(/\s+/g, " ");
+
+		expect(rendered.every(line => visibleWidth(line) <= width)).toBe(true);
+		expect(normalized.replace(/\s+/g, "")).toContain(label);
+		expect(normalized).toContain("Detailed synthetic guidance remains readable without missing words.");
+		expect(normalized).not.toContain("…");
+	});
+
+	it("wraps prose items and keeps continuation rows mouse-addressable", () => {
+		const list = new SelectList(
+			[
+				{
+					value: "first",
+					label: "First café 東京 option",
+					description: "Synthetic explanatory prose remains complete at narrow widths.",
+				},
+			],
+			5,
+			testTheme,
+			{ presentation: "wrapped-prose" },
+		);
+		const rendered = list.render(24);
+		const normalized = Bun.stripANSI(rendered.join(" ")).replace(/\s+/g, " ");
+
+		expect(rendered.length).toBeGreaterThan(1);
+		expect(rendered.every(line => visibleWidth(line) <= 24)).toBe(true);
+		expect(normalized).toContain(
+			"First café 東京 option — Synthetic explanatory prose remains complete at narrow widths.",
+		);
+		expect(list.hitTest(1)).toBe(0);
+	});
+
+	it("requires an explicit presentation policy", () => {
+		const invalidUsage = () => {
+			// @ts-expect-error SelectList callers must choose wrapped prose or compact rows with selected detail.
+			return new SelectList([], 5, testTheme);
+		};
+		expect(invalidUsage).toBeFunction();
+		expect(() => new SelectList([], 5, testTheme, {} as never)).toThrow("explicit");
 	});
 });

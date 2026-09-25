@@ -15,9 +15,11 @@ import { formatKeyHints } from "../config/keybindings";
 import {
 	type SelectorFrameLine,
 	selectorCancelHint,
+	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
+	selectorProse,
 } from "../modes/components/selector-frame";
 import { theme } from "../modes/theme/theme";
 import {
@@ -660,11 +662,9 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 				maxBodyRows: bodyHeight,
 			},
 		);
-		const firstContent = visibleBodyLines.find(line =>
-			typeof line === "string" ? line.trim().length > 0 : Bun.stripANSI(line.content).trim().length > 0,
-		);
+		const firstContent = visibleBodyLines.find(line => Bun.stripANSI(line.content).trim().length > 0);
 		if (firstContent) {
-			const needle = Bun.stripANSI(typeof firstContent === "string" ? firstContent : firstContent.content).trim();
+			const needle = Bun.stripANSI(firstContent.content).trim();
 			const index = frame.findIndex(line => Bun.stripANSI(line).includes(needle));
 			this.#bodyRowStart = index >= 0 ? index : 0;
 		}
@@ -850,7 +850,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		const lines: SelectorFrameLine[] = [];
 		if (rows.length === 0) {
 			this.#bodyLineToRowIndex.push(undefined);
-			lines.push(theme.fg("muted", "No matching log entries."));
+			lines.push(selectorProse("No matching log entries.", "muted"));
 		}
 		for (let i = this.#scrollRowOffset; i < rows.length; i++) {
 			const row = rows[i];
@@ -863,7 +863,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 					break;
 				}
 				this.#bodyLineToRowIndex.push(row.rowIndex);
-				lines.push({ content: line, selected: this.#model.cursorRowIndex === row.rowIndex });
+				lines.push(selectorCompactRow(line, this.#model.cursorRowIndex === row.rowIndex));
 			}
 
 			if (lines.length >= bodyHeight) {

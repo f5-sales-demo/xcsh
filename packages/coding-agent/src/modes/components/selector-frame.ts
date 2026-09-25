@@ -10,11 +10,26 @@ import {
 import { theme } from "../theme/theme";
 
 export interface SelectorFrameRow {
+	kind: "compact-row";
 	content: string;
 	selected: boolean;
+	fullDetail: string;
+	truncated: boolean;
 }
 
-export type SelectorFrameLine = string | SelectorFrameRow;
+export interface SelectorFrameProse {
+	kind: "wrapped-prose";
+	content: string;
+	tone: "text" | "muted";
+}
+
+export type SelectorFrameLine = SelectorFrameRow | SelectorFrameProse;
+
+interface RenderedBodyLine {
+	content: string;
+	selected: boolean;
+	sourceIndex: number;
+}
 
 export interface SelectorFrameOptions {
 	/** Index of the selected row in `body`; used to retain it when the frame is height-constrained. */
@@ -27,6 +42,8 @@ export interface SelectorFrameOptions {
 	minimumDetailRows?: number;
 	/** Contextual paging controls, included only when the body actually overflows. */
 	overflowHint?: string;
+	/** The caller supplies and pages the selected compact row's complete detail text. */
+	selectedDetail?: "automatic" | "provided";
 }
 
 function selectorFrameColumns(width: number): number {
@@ -59,11 +76,11 @@ function wrapSection(values: string[], width: number): string[] {
 }
 
 function windowBody(
-	body: SelectorFrameLine[],
+	body: RenderedBodyLine[],
 	visibleRows: number,
 	selectedIndex: number | undefined,
 	stickyRows: number,
-): SelectorFrameLine[] {
+): RenderedBodyLine[] {
 	if (visibleRows <= 0) return [];
 	if (body.length <= visibleRows) return body;
 	const stickyCount = Math.min(stickyRows, visibleRows - 1, body.length);
@@ -95,13 +112,12 @@ export function selectorFrame(
 	const top = border(`${box.topLeft}${box.horizontal.repeat(columns - 2)}${box.topRight}`);
 	const divider = border(`${sharp.teeRight}${box.horizontal.repeat(columns - 2)}${sharp.teeLeft}`);
 	const bottom = border(`${box.bottomLeft}${box.horizontal.repeat(columns - 2)}${box.bottomRight}`);
-	const line = (value: SelectorFrameLine) => {
-		const row = typeof value === "string" ? undefined : value;
-		const fitted = truncateToWidth(normalizeLine(typeof value === "string" ? value : value.content), contentWidth);
+	const line = (value: string, selected = false) => {
+		const fitted = truncateToWidth(normalizeLine(value), contentWidth);
 		const content = `${" ".repeat(padding)}${fitted}${" ".repeat(
 			Math.max(0, contentWidth - visibleWidth(fitted)),
 		)}${" ".repeat(padding)}`;
-		return row?.selected
+		return selected
 			? `${edge}${theme.bg("selectedBg", theme.fg("text", content))}${edge}`
 			: `${edge}${content}${edge}`;
 	};
@@ -111,10 +127,43 @@ export function selectorFrame(
 		.slice(0, 2)
 		.map(value => theme.fg("muted", value));
 	const navigationLines = navigation.filter(hasVisibleContent).map(normalizeLine);
-	const detailLines = wrapSection(details, contentWidth);
+	const selectedSourceIndex =
+		options.selectedBodyIndex ?? body.findIndex(value => value.kind === "compact-row" && value.selected);
+	const selectedRow = selectedSourceIndex >= 0 ? body[selectedSourceIndex] : undefined;
+	if (
+		options.selectedDetail === "provided" &&
+		selectedRow?.kind === "compact-row" &&
+		(selectedRow.truncated || visibleWidth(normalizeLine(selectedRow.content)) > contentWidth) &&
+		!details.some(hasVisibleContent)
+	) {
+		throw new TypeError("A truncating compact row requires complete selected detail text.");
+	}
+	const selectedDetail =
+		options.selectedDetail !== "provided" &&
+		selectedRow?.kind === "compact-row" &&
+		(selectedRow.truncated || visibleWidth(normalizeLine(selectedRow.content)) > contentWidth)
+			? [selectedRow.fullDetail]
+			: [];
+	const detailLines = wrapSection([...selectedDetail, ...details], contentWidth);
 	while (detailLines.length < (options.minimumDetailRows ?? 0)) detailLines.push("");
 	const footerLines = wrapSection(footer, contentWidth).map(value => theme.fg("muted", value));
-	const normalizedBody = body.filter(value => typeof value !== "string" || hasVisibleContent(value));
+	const normalizedBody = body.flatMap<RenderedBodyLine>((value, sourceIndex) => {
+		if (!value || typeof value !== "object" || !("kind" in value)) {
+			throw new TypeError("Frame body text must use selectorProse() or selectorRow().");
+		}
+		if (value.kind === "wrapped-prose") {
+			return wrapSection([value.content], contentWidth).map(content => ({
+				content: theme.fg(value.tone, content),
+				selected: false,
+				sourceIndex,
+			}));
+		}
+		if (value.kind !== "compact-row") {
+			throw new TypeError("Frame body text must use selectorProse() or selectorRow().");
+		}
+		return [{ content: value.content, selected: value.selected, sourceIndex }];
+	});
+	const selectedRenderedIndex = normalizedBody.findIndex(value => value.sourceIndex === selectedSourceIndex);
 
 	const gaps = {
 		headingToNavigation: navigationLines.length > 0,
@@ -143,7 +192,7 @@ export function selectorFrame(
 	let visibleBody = windowBody(
 		normalizedBody,
 		bodyRows,
-		options.selectedBodyIndex,
+		selectedRenderedIndex >= 0 ? selectedRenderedIndex : undefined,
 		Math.max(0, options.stickyBodyRows ?? 0),
 	);
 
@@ -156,7 +205,7 @@ export function selectorFrame(
 		visibleBody = windowBody(
 			normalizedBody,
 			bodyRows,
-			options.selectedBodyIndex,
+			selectedRenderedIndex >= 0 ? selectedRenderedIndex : undefined,
 			Math.max(0, options.stickyBodyRows ?? 0),
 		);
 	}
@@ -176,18 +225,34 @@ export function selectorFrame(
 
 	return [
 		top,
-		...heading.map(line),
-		...purposeLines.map(line),
+		...heading.map(value => line(value)),
+		...purposeLines.map(value => line(value)),
 		...(gaps.headingToNavigation ? [line("")] : []),
-		...navigationLines.map(line),
+		...navigationLines.map(value => line(value)),
 		divider,
-		...visibleBody.map(line),
+		...visibleBody.map(value => line(value.content, value.selected)),
 		...(gaps.bodyToDetails ? [line("")] : []),
-		...detailLines.map(line),
+		...detailLines.map(value => line(value)),
 		...(gaps.detailsToFooter ? [line("")] : []),
-		...footerLines.map(line),
+		...footerLines.map(value => line(value)),
 		bottom,
 	];
+}
+
+export function selectorProse(content: string, tone: "text" | "muted" = "text"): SelectorFrameProse {
+	return { kind: "wrapped-prose", content, tone };
+}
+
+export function selectorCompactRow(
+	content: string,
+	selected = false,
+	fullDetail = content,
+	truncated = false,
+): SelectorFrameRow {
+	if (truncated && !hasVisibleContent(fullDetail)) {
+		throw new TypeError("A truncating compact row requires complete selected detail text.");
+	}
+	return { kind: "compact-row", content, selected, fullDetail, truncated };
 }
 
 export function selectorRow(
@@ -196,15 +261,17 @@ export function selectorRow(
 	selected = false,
 	tone: "text" | "muted" = "text",
 ): SelectorFrameRow {
+	let truncated = false;
 	const row = cells
 		.map((cell, index) => {
 			const width = Math.max(0, widths[index] ?? 0);
+			truncated ||= visibleWidth(cell) > width;
 			const fitted = truncateToWidth(cell, width);
 			return fitted + " ".repeat(Math.max(0, width - visibleWidth(fitted)));
 		})
 		.join("  ");
 	const text = `${selected ? theme.nav.cursor : " "} ${row}`;
-	return { content: theme.fg(tone, text), selected };
+	return selectorCompactRow(theme.fg(tone, text), selected, cells.join("  "), truncated);
 }
 
 type SelectorAction = "up" | "down" | "confirm" | "cancel" | "pageUp" | "pageDown";
@@ -298,7 +365,7 @@ export class ReportDetailsComponent extends Container {
 			this.title,
 			this.purpose,
 			[],
-			lines.slice(this.#offset, this.#offset + this.#capacity).map(content => ({ content, selected: false })),
+			lines.slice(this.#offset, this.#offset + this.#capacity).map(content => selectorCompactRow(content)),
 			[],
 			[
 				...(overflow
@@ -388,7 +455,7 @@ export class ConnectionInputComponent extends Container {
 			this.title,
 			"",
 			[],
-			this.content.render(inner),
+			this.content.render(inner).map(content => selectorCompactRow(content)),
 			[...wrapTextWithAnsi(this.purpose, inner).slice(0, 3), ...this.input.render(inner)],
 			[selectorNavigationHint("submit"), selectorCancelHint("cancel")],
 		);
