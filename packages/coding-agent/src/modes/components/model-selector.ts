@@ -462,7 +462,7 @@ export class ModelSelectorComponent extends Container {
 				details.push(...wrappedDetails.slice(this.#detailOffset, this.#detailOffset + this.#detailCapacity));
 			}
 			// Keep the selected compact row stable while status and detail pages change.
-			minimumDetailRows = this.#detailCapacity;
+			minimumDetailRows = this.#detailLength > this.#detailCapacity ? this.#detailCapacity : details.length + 2;
 			if (this.#detailLength > this.#detailCapacity) {
 				const first = this.#detailOffset + 1;
 				const last = Math.min(this.#detailLength, this.#detailOffset + this.#detailCapacity);

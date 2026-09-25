@@ -242,14 +242,14 @@
       "e3ed2b14"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
-      "bb2b19f5",
-      "83399b4a",
-      "7537f87b",
-      "6dcaf4b9",
-      "b4432125",
-      "0ef4f2a3",
-      "c79984cb",
-      "b47a918a"
+      "cc24b3ce",
+      "706bb0c4",
+      "b911d56f",
+      "e5452d35",
+      "7c9d1871",
+      "04d6b2c5",
+      "d335a598",
+      "951c63e2"
     ],
     "packages/coding-agent/src/modes/components/oauth-selector.ts": [
       "4ee12171",
