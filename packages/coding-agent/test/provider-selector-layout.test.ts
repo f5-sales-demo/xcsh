@@ -166,6 +166,31 @@ for (const themeName of ["xcsh-dark", "xcsh-light"])
 				selector.dispose();
 			});
 		}
+test("login input wraps complete ANSI and Unicode guidance at narrow width", () => {
+	const width = 40;
+	const longPurpose =
+		"Paste the ANSI café 東京 redirect value only after the synthetic provider confirms every authentication step is complete and the browser has returned safely.";
+	const longContent =
+		"Read the ANSI café 東京 recovery guidance completely before continuing with this synthetic provider authentication flow.";
+	const content = new Container();
+	content.addChild(new Text(`\u001b[33m${longContent}\u001b[39m`, 0, 0));
+	const auth = new ConnectionInputComponent(
+		"Sign in to Synthetic Provider",
+		longPurpose,
+		new Input(),
+		() => 24,
+		content,
+	);
+	const rendered = auth.render(width);
+	const reconstructed = rendered
+		.map(line => Bun.stripANSI(line).slice(1, -1).trim())
+		.join(" ")
+		.replace(/\s+/g, " ");
+	expect(rendered.every(line => visibleWidth(line) === width)).toBe(true);
+	expect(reconstructed).toContain(longContent);
+	expect(reconstructed).toContain(longPurpose);
+	expect(reconstructed).not.toContain("…");
+});
 test("failed application retains model, scope and reasoning for retry", async () => {
 	const fixture = providerSelectorFixture();
 	const onSelect = vi

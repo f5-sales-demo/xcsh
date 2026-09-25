@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6771c700f9c699ce348b488b2705dbc594af52fa",
-  "fingerprint": "e1ffbc5b9b06a69142e024cd2f56145cc3ef6a3cb06ced464a59e1793e5042f8",
+  "revision": "64b0c314973dc446e7ffb85714b7a726def12ab3",
+  "fingerprint": "3981134d106677656f80c806bc48544a1ab673781bf6c5684968faecb29b0793",
   "counts": {
     "total": 242,
     "components": 97,
@@ -1833,7 +1833,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "0413f22e5b15d226aa1a4e4a7b5127ce2e4fe02f9018ca59cefd14756b47b678",
+      "sha256": "09ef111987a43764e6eb16cf3ebb29acedff55eba69523ec77f63eeb7fa4e874",
       "exports": [
         "LoginDialogComponent"
       ],
@@ -2397,7 +2397,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "3959b5ba654929cdca4727846965090c4155fcb073f944a4973af14dc794dcff",
+      "sha256": "af535b6c788981e16b6d2cc0b8f83a3fc0cc17b98784bc57359ed431264e33ac",
       "exports": [
         "ConnectionChoiceComponent",
         "ConnectionInputComponent",

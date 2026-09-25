@@ -20,11 +20,15 @@
       "policy": "wrap",
       "reproductionWidth": 40,
       "fixture": "Synthetic long authentication guidance with café, 東京, and ANSI emphasis.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4337",
-      "tests": ["test/login-dialog.test.ts"],
-      "terminalUat": "pending",
-      "mergedPr": "pending"
+      "tests": [
+        "packages/coding-agent/test/modes/components/login-dialog.test.ts",
+        "packages/coding-agent/test/oauth-selector-search.test.ts",
+        "packages/coding-agent/test/provider-selector-layout.test.ts"
+      ],
+      "terminalUat": "pass: /login; width 40; expected complete wrapped ANSI/Unicode authentication prose; observed all lines within width, complete paged prose, no ellipses; 33bb030c0ff2e3c509e08a7c76d7da34ebc04d17; v21.45.3",
+      "mergedPr": "#4358"
     },
     {
       "id": "models-compact-rows",
