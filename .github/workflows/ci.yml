@@ -1234,14 +1234,14 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - name: Setup Node.js 22.14.0 for npm trusted publishing
+      - name: Setup Node.js 22.14.0 for npm release publishing
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.14.0"
           package-manager-cache: false
-      - name: Install pinned npm with OIDC support
+      - name: Install pinned npm with provenance support
         run: npm install --global npm@11.19.1
-      - name: Verify npm trusted-publishing toolchain
+      - name: Verify npm release toolchain
         run: node --version && npm --version
       - name: Cache bun dependencies
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1271,8 +1271,12 @@ jobs:
           echo "Native addons staged into platform packages:"
           find "$NPM_DIR" -name "*.node" -exec ls -lh {} \;
       - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          test -n "$NODE_AUTH_TOKEN"
+          printf '%s\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
           bun run ci:release:publish
 
   # Verify npm install works end-to-end after publishing
