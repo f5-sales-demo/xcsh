@@ -135,9 +135,15 @@ export class ContextCommandController {
 			resolve: () => this.#prepareMutation(command),
 			execute: async target => handleContextCommand(target.command, this.#ctx),
 		});
-		if (outcome === "busy") this.#ctx.showStatus("Another reviewed action is already open.");
+		if (outcome === "succeeded") this.#invalidateIntegrations();
+		else if (outcome === "busy") this.#ctx.showStatus("Another reviewed action is already open.");
 		else if (outcome === "unresolved")
 			this.#ctx.showError("The context change remains unresolved. Reopen /context to review and retry it.");
+	}
+
+	#invalidateIntegrations(): void {
+		for (const handle of this.#ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [])
+			handle.invalidate();
 	}
 
 	#isReportCommand(args: string): boolean {
@@ -531,6 +537,7 @@ export class ContextCommandController {
 						},
 					});
 					if (outcome === "succeeded") {
+						this.#invalidateIntegrations();
 						this.#ctx.showStatus(
 							renderContextMessage(context.name, shouldActivate ? "Created and activated." : "Created."),
 							{ dim: false },
