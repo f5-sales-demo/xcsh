@@ -32,7 +32,8 @@ GitHub writes made by the delivery sessions. The ledger is
    as active under **Scheduled**. Keep the Mac powered on and the app running.
 
 ```text
-Every 15 minutes, from this xcsh project directory, run exactly:
+Use $xcsh-issue-intake in run mode every 15 minutes. From this xcsh
+project directory, run exactly once:
 python3 scripts/issue_intake_trigger.py
 
 Report the exit status and the watcher's concise JSON summary. If SSH,
@@ -40,7 +41,9 @@ GitHub, Herdr pairing, or dispatch fails, report the failure and let the
 next run retry. Do not directly assess issues or create a second watcher.
 ```
 
-The trigger accepts `--check` for a pairing test. It never prints the lease.
+The repository skill `.agents/skills/xcsh-issue-intake` packages the desktop
+setup and scheduled run prompt. It does not supply a timer; Codex desktop
+Scheduled owns the recurrence. The trigger accepts `--check` for a pairing test. It never prints the lease.
 Its remote worker accepts only the Herdr context fields returned for the
 dedicated session. The watcher uses an exclusive lock, so overlapping runs
 return `already-running`; it serializes assessment and dispatch. Failed service
