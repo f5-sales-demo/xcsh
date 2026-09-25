@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "64b0c314973dc446e7ffb85714b7a726def12ab3",
-  "fingerprint": "3981134d106677656f80c806bc48544a1ab673781bf6c5684968faecb29b0793",
+  "revision": "47249211e6a9a65a69e49b1a083ee803a44cea3e",
+  "fingerprint": "39e95178add952b4eb0984414f249e62221b469b835eb2fab5301e769206539a",
   "counts": {
     "total": 242,
     "components": 97,
@@ -1608,6 +1608,7 @@
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
         "packages/coding-agent/test/core/apply-patch.test.ts",
         "packages/coding-agent/test/core/hashline.test.ts",
+        "packages/coding-agent/test/model-selector-provider-tabs.test.ts",
         "packages/coding-agent/test/modes/components/session-selector-mouse.test.ts",
         "packages/coding-agent/test/python-execution-outcome.test.ts",
         "packages/coding-agent/test/remote-control/trace-assembler.test.ts",
@@ -1920,7 +1921,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "70030975eb68ab5b647193f971f8e6b7b3c08496d66c1b43af149325e2998317",
+      "sha256": "bb2b19f583399b4a7537f87b6dcaf4b9b44321250ef4f2a3c79984cbb47a918a",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",
