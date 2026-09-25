@@ -1,0 +1,2389 @@
+{
+  "version": 1,
+  "ledgerSha256": [
+    "15cb0b07",
+    "34ac6874",
+    "cb6cbf51",
+    "85e022f8",
+    "15b12c5f",
+    "c52bc365",
+    "44810f68",
+    "0db65630"
+  ],
+  "sourceSha256": {
+    "packages/coding-agent/src/autoresearch/dashboard.ts": [
+      "ad468706",
+      "8b6075b4",
+      "697c7682",
+      "194bb3c4",
+      "249a3f78",
+      "d0b0e541",
+      "190417ab",
+      "43e3e887"
+    ],
+    "packages/coding-agent/src/autoresearch/tools/init-experiment.ts": [
+      "02b2cf2b",
+      "5539ed91",
+      "beb90abe",
+      "5c35351f",
+      "1f538bc1",
+      "707a9fa7",
+      "067c18fe",
+      "64b55381"
+    ],
+    "packages/coding-agent/src/autoresearch/tools/log-experiment.ts": [
+      "978ce100",
+      "4a85078c",
+      "bd6f4547",
+      "1f87b39f",
+      "610ca7a3",
+      "43127f1a",
+      "e069289d",
+      "dc346c83"
+    ],
+    "packages/coding-agent/src/autoresearch/tools/run-experiment.ts": [
+      "32d2926c",
+      "741fb5f6",
+      "7246e5e3",
+      "eaa57d53",
+      "7192376d",
+      "3abf501d",
+      "860dd698",
+      "bb8619e3"
+    ],
+    "packages/coding-agent/src/debug/index.ts": [
+      "d68ffe60",
+      "b9ff5daa",
+      "caab1a13",
+      "74b7eecc",
+      "76e9eeee",
+      "25e4a67e",
+      "1e267caf",
+      "23df6599"
+    ],
+    "packages/coding-agent/src/debug/log-formatting.ts": [
+      "739352b6",
+      "39989ee6",
+      "70c602f3",
+      "eb98b05b",
+      "b22ac02c",
+      "84949b3d",
+      "7556569f",
+      "fcd817c6"
+    ],
+    "packages/coding-agent/src/debug/log-viewer.ts": [
+      "a58d6738",
+      "5efa47d8",
+      "2519a68d",
+      "06cca306",
+      "a8b9daf3",
+      "163b1a16",
+      "50272b56",
+      "a14d3923"
+    ],
+    "packages/coding-agent/src/edit/renderer.ts": [
+      "7404bdd5",
+      "c43d0823",
+      "c4a136de",
+      "9f5e20ac",
+      "436d0221",
+      "7da657f9",
+      "0fc1f211",
+      "fa973934"
+    ],
+    "packages/coding-agent/src/exa/render.ts": [
+      "22bf6d5b",
+      "5384ef62",
+      "90b01d44",
+      "13baf1e1",
+      "739ed991",
+      "fe157b6f",
+      "adc29c11",
+      "35be6586"
+    ],
+    "packages/coding-agent/src/lsp/render.ts": [
+      "aaf4888c",
+      "a15d25da",
+      "bc944183",
+      "36466bbf",
+      "337252f8",
+      "b253e8d4",
+      "b3624fbd",
+      "2bbda348"
+    ],
+    "packages/coding-agent/src/mcp/render.ts": [
+      "6e378839",
+      "a0afe43c",
+      "c0374e5b",
+      "641f7c74",
+      "63439006",
+      "080ab5bb",
+      "e059103b",
+      "4a792eb9"
+    ],
+    "packages/coding-agent/src/modes/components/agent-dashboard.ts": [
+      "c8c082fd",
+      "ca3dc519",
+      "340d5366",
+      "952b2981",
+      "6274a7bc",
+      "b22ade84",
+      "b6b3950d",
+      "0694b507"
+    ],
+    "packages/coding-agent/src/modes/components/btw-panel.ts": [
+      "c0e54f92",
+      "84ff5f62",
+      "9a24df91",
+      "c464ec6d",
+      "6edff9ee",
+      "c7af2666",
+      "df26e451",
+      "cc3654c5"
+    ],
+    "packages/coding-agent/src/modes/components/context-add-wizard.ts": [
+      "24487513",
+      "d8cd5db2",
+      "c0bc5eb8",
+      "104a7f51",
+      "00c07578",
+      "7b77dacf",
+      "8ed47177",
+      "481e4bdf"
+    ],
+    "packages/coding-agent/src/modes/components/copy-selector.ts": [
+      "fdfe788d",
+      "5fb44b4a",
+      "fac7bbae",
+      "ea7d4d64",
+      "acbd2619",
+      "0303ea53",
+      "953df4bd",
+      "83878705"
+    ],
+    "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts": [
+      "8d0adab5",
+      "ed97560c",
+      "6d33fd7a",
+      "d160a6b8",
+      "196ae326",
+      "91324338",
+      "ebf0218c",
+      "c904f9e2"
+    ],
+    "packages/coding-agent/src/modes/components/footer.ts": [
+      "51943bb9",
+      "9e4f8da8",
+      "59ba3076",
+      "e0a140af",
+      "ac572459",
+      "13cb1cf8",
+      "d2154d4d",
+      "ace83e15"
+    ],
+    "packages/coding-agent/src/modes/components/history-search.ts": [
+      "57e4ab74",
+      "7ca23ed8",
+      "5b390e54",
+      "a2f11a84",
+      "74883fb7",
+      "f3231188",
+      "33a8ba5b",
+      "81847f68"
+    ],
+    "packages/coding-agent/src/modes/components/hook-editor.ts": [
+      "948b7659",
+      "4566f026",
+      "f3daf87b",
+      "40ca1e0b",
+      "4d30b923",
+      "eeb4b899",
+      "ff687ed7",
+      "a3b67027"
+    ],
+    "packages/coding-agent/src/modes/components/hook-input.ts": [
+      "5d6f0f30",
+      "1668e958",
+      "dd01ba74",
+      "8266b1e4",
+      "c8456fc7",
+      "219e5997",
+      "45ad766f",
+      "faab1547"
+    ],
+    "packages/coding-agent/src/modes/components/hook-selector.ts": [
+      "f8691128",
+      "7f956e5a",
+      "e2203b9e",
+      "7b235eb8",
+      "9746a38f",
+      "1823f6b6",
+      "8e7198b4",
+      "43f0b74d"
+    ],
+    "packages/coding-agent/src/modes/components/login-dialog.ts": [
+      "aa37fc61",
+      "1eaee5f2",
+      "0f104684",
+      "651d1801",
+      "fd7866c7",
+      "eaed4291",
+      "4f3e018c",
+      "7c527a75"
+    ],
+    "packages/coding-agent/src/modes/components/mcp-add-wizard.ts": [
+      "ecd73552",
+      "183d7936",
+      "660e74ea",
+      "a04e6b25",
+      "fa862688",
+      "5e9050c7",
+      "58856ed1",
+      "7bb81c43"
+    ],
+    "packages/coding-agent/src/modes/components/model-selector.ts": [
+      "a27fe290",
+      "a94ac12a",
+      "8d48d72a",
+      "e6f43262",
+      "298675a2",
+      "6eeaf9fc",
+      "c753a414",
+      "0aaf8fcf"
+    ],
+    "packages/coding-agent/src/modes/components/oauth-selector.ts": [
+      "a855fe32",
+      "2a68855d",
+      "468d04ec",
+      "77c38f6f",
+      "19f98009",
+      "9a0ac6f7",
+      "c674eb94",
+      "9902b38a"
+    ],
+    "packages/coding-agent/src/modes/components/plan-preview.ts": [
+      "8b18a7a4",
+      "f4753d1e",
+      "184d9411",
+      "83721eb5",
+      "352c53c1",
+      "2bc146d3",
+      "a721ddb1",
+      "0f89b304"
+    ],
+    "packages/coding-agent/src/modes/components/plugin-settings.ts": [
+      "afb8789b",
+      "837ba8aa",
+      "81f1443a",
+      "27b09d06",
+      "6f828807",
+      "ea040473",
+      "f87434e9",
+      "1bf71dc0"
+    ],
+    "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts": [
+      "4b5e4fc0",
+      "6331155d",
+      "5ed44a02",
+      "6e9697a3",
+      "13dd5ea6",
+      "0b8e2674",
+      "0f93fde6",
+      "3695b038"
+    ],
+    "packages/coding-agent/src/modes/components/question-transcript.ts": [
+      "4cd58a35",
+      "519451a6",
+      "de0c9280",
+      "810763e2",
+      "c7919e6c",
+      "e1fbda09",
+      "66024d19",
+      "13ef18c0"
+    ],
+    "packages/coding-agent/src/modes/components/request-user-input.ts": [
+      "49f98d88",
+      "c45681e4",
+      "4f059933",
+      "29fa40b7",
+      "8a374267",
+      "cadd8277",
+      "7134cff1",
+      "a504dc8d"
+    ],
+    "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts": [
+      "243a1c9b",
+      "28fd5cd1",
+      "7295b27d",
+      "80d3cbfb",
+      "a957a8fb",
+      "ddb496df",
+      "1356dc49",
+      "10c77f35"
+    ],
+    "packages/coding-agent/src/modes/components/searchable-select-list.ts": [
+      "44123bb4",
+      "ab38efbd",
+      "3010b03e",
+      "ae03670e",
+      "aefd2c4a",
+      "3137bbb4",
+      "e2db95d5",
+      "8e6f3dcf"
+    ],
+    "packages/coding-agent/src/modes/components/selector-frame.ts": [
+      "036e4127",
+      "7cae7fe6",
+      "06ae7b74",
+      "307389a1",
+      "38726de4",
+      "6f933ae2",
+      "b3bfe7b8",
+      "8baf67dd"
+    ],
+    "packages/coding-agent/src/modes/components/session-observer-overlay.ts": [
+      "89389df2",
+      "7780cc58",
+      "0c0dfb43",
+      "308a5cbc",
+      "724525e8",
+      "14c7ffa9",
+      "0a320e31",
+      "337dc201"
+    ],
+    "packages/coding-agent/src/modes/components/session-selector.ts": [
+      "43fb6f97",
+      "4e8ad46e",
+      "411ddca0",
+      "2d1e8fa5",
+      "582e6332",
+      "f84e3657",
+      "e04fe47e",
+      "65c59aec"
+    ],
+    "packages/coding-agent/src/modes/components/settings-browser.ts": [
+      "39cda0b4",
+      "bdeb376e",
+      "653f7c26",
+      "a6a94a2d",
+      "3cbc3172",
+      "41bc19db",
+      "78490109",
+      "6264fb23"
+    ],
+    "packages/coding-agent/src/modes/components/settings-editors.ts": [
+      "a35b1008",
+      "d9f57aae",
+      "56aa3e6a",
+      "c0967a4b",
+      "739a7c73",
+      "ac70bd28",
+      "2260e202",
+      "79509709"
+    ],
+    "packages/coding-agent/src/modes/components/settings-selector.ts": [
+      "b374a530",
+      "33d961e3",
+      "0f193980",
+      "636d4c66",
+      "06943045",
+      "8817ebe5",
+      "e681c0e6",
+      "d3bcd4ee"
+    ],
+    "packages/coding-agent/src/modes/components/status-line.ts": [
+      "1a6f274f",
+      "8a941183",
+      "37b9ddab",
+      "142dd02c",
+      "b6d92e3c",
+      "2518096d",
+      "f012864e",
+      "bbfcb8ea"
+    ],
+    "packages/coding-agent/src/modes/components/tool-execution.ts": [
+      "f11419a1",
+      "0528e599",
+      "b0483d56",
+      "c8933d68",
+      "543355ba",
+      "c2d78af2",
+      "9a1f7d4c",
+      "d81df80f"
+    ],
+    "packages/coding-agent/src/modes/components/transcript-notice.ts": [
+      "66f20504",
+      "c03ebf9b",
+      "25057e9a",
+      "80d40a75",
+      "fb3f7cff",
+      "e8a4da49",
+      "8732ea93",
+      "281f2e71"
+    ],
+    "packages/coding-agent/src/modes/components/tree-selector.ts": [
+      "df114d25",
+      "4c56d84e",
+      "5859fdbb",
+      "04615f5b",
+      "24d51688",
+      "47da1883",
+      "8113f0d4",
+      "369865b0"
+    ],
+    "packages/coding-agent/src/modes/components/user-message-selector.ts": [
+      "eb767652",
+      "46adabca",
+      "0f817f53",
+      "c742936d",
+      "1d75d0b9",
+      "1c651de6",
+      "b4e8b0c2",
+      "3affbffb"
+    ],
+    "packages/coding-agent/src/modes/components/welcome.ts": [
+      "8898a838",
+      "c3f3da09",
+      "14e16019",
+      "c0ea07b1",
+      "f5712679",
+      "0163b11d",
+      "57f79081",
+      "21dddf4b"
+    ],
+    "packages/coding-agent/src/modes/utils/sanitize-error-message.ts": [
+      "71c7f289",
+      "04abb574",
+      "060f48b1",
+      "fa9c8032",
+      "ce65195e",
+      "125051fc",
+      "964d354c",
+      "15ff8c9e"
+    ],
+    "packages/coding-agent/src/modes/utils/ui-helpers.ts": [
+      "c77c909f",
+      "a619e4ee",
+      "8e2140b5",
+      "cab7f78f",
+      "258e27f6",
+      "f9b9165d",
+      "a81405e7",
+      "6492670f"
+    ],
+    "packages/coding-agent/src/task/render.ts": [
+      "f395a34f",
+      "58461e6e",
+      "9ad34d79",
+      "a9ea5415",
+      "f9c72696",
+      "395c5cc1",
+      "27b4682a",
+      "3e368f93"
+    ],
+    "packages/coding-agent/src/tools/ast-edit.ts": [
+      "66fbc7d2",
+      "a3e80b98",
+      "9be1ca66",
+      "3805977e",
+      "87d1b48a",
+      "f4e7ad61",
+      "a67e427b",
+      "68da54c4"
+    ],
+    "packages/coding-agent/src/tools/ast-grep.ts": [
+      "0ec576b4",
+      "401c3ce7",
+      "19f0e241",
+      "a68dc24d",
+      "e0e6b5fb",
+      "f8e3a75e",
+      "d5563c42",
+      "43928c16"
+    ],
+    "packages/coding-agent/src/tools/bash-interactive.ts": [
+      "98a59132",
+      "b5e49782",
+      "6f6e4919",
+      "d52ca54f",
+      "73954aaa",
+      "bb93c608",
+      "981319c0",
+      "317e9c81"
+    ],
+    "packages/coding-agent/src/tools/bash.ts": [
+      "0cfae9ab",
+      "26bac510",
+      "ca8d7321",
+      "110a0588",
+      "1e3944df",
+      "f7358a6c",
+      "44476675",
+      "d0526395"
+    ],
+    "packages/coding-agent/src/tools/calculator.ts": [
+      "eab664e8",
+      "0515f315",
+      "b4c0c3bc",
+      "ef8ced04",
+      "461ab434",
+      "c105a788",
+      "d15d65a4",
+      "fc5721a8"
+    ],
+    "packages/coding-agent/src/tools/debug.ts": [
+      "20172ce4",
+      "57239ec3",
+      "179ba7c2",
+      "a7253302",
+      "45f53ae6",
+      "bfb870ab",
+      "d5be9517",
+      "daa20080"
+    ],
+    "packages/coding-agent/src/tools/find.ts": [
+      "3456812d",
+      "3b01fc0b",
+      "c3b99ae9",
+      "750cde78",
+      "fe320936",
+      "22cf566a",
+      "a11717ae",
+      "30d1b9e8"
+    ],
+    "packages/coding-agent/src/tools/grep.ts": [
+      "72feb372",
+      "9b7fafba",
+      "40700b77",
+      "b45a3db0",
+      "f9a35f42",
+      "d5fb7401",
+      "f5704388",
+      "77a52931"
+    ],
+    "packages/coding-agent/src/tools/json-tree.ts": [
+      "32373954",
+      "85f9ef21",
+      "ced2d595",
+      "8d195bad",
+      "ff94799b",
+      "79eececa",
+      "de6e0745",
+      "3fff1e7b"
+    ],
+    "packages/coding-agent/src/tools/python.ts": [
+      "da2cb832",
+      "475cc162",
+      "9339b5fe",
+      "56597bf7",
+      "6bb1a3bc",
+      "cdacccb1",
+      "079d1c9c",
+      "1d6c2b6c"
+    ],
+    "packages/coding-agent/src/tools/render-utils.ts": [
+      "6fc27735",
+      "4271db26",
+      "19d970d2",
+      "051287fc",
+      "b42a46ed",
+      "f38a188a",
+      "0cb209e2",
+      "e512507a"
+    ],
+    "packages/coding-agent/src/tools/resolve.ts": [
+      "b97ab06b",
+      "5b408974",
+      "c0f8246a",
+      "613be303",
+      "1d979adf",
+      "adbc705b",
+      "bdd9d738",
+      "6ad26bc8"
+    ],
+    "packages/coding-agent/src/tools/search-tool-bm25.ts": [
+      "0d09af5c",
+      "a593c3c8",
+      "63a53256",
+      "6030c70f",
+      "48c8d277",
+      "93d9aa29",
+      "c5a5771b",
+      "176d4d11"
+    ],
+    "packages/coding-agent/src/tools/sqlite-reader.ts": [
+      "9eeca489",
+      "6d54e6f6",
+      "1f8be482",
+      "9603e06e",
+      "579f31ee",
+      "e7e6dee3",
+      "afc1cfa0",
+      "dcc32f0d"
+    ],
+    "packages/coding-agent/src/tools/write.ts": [
+      "b3d8538c",
+      "b65d7f21",
+      "5c105ae9",
+      "4ea1a8ff",
+      "a0fed69a",
+      "cb35ee13",
+      "0c3a8434",
+      "823b9507"
+    ],
+    "packages/coding-agent/src/tui/output-block.ts": [
+      "8f107436",
+      "e84a3423",
+      "ab2b1d5b",
+      "b2aa30d6",
+      "fcbf0712",
+      "d51aec1a",
+      "2f047696",
+      "2ad37863"
+    ],
+    "packages/coding-agent/src/vim/render.ts": [
+      "8344ac34",
+      "52ea1c42",
+      "8dad412c",
+      "8ad24159",
+      "96d20b1c",
+      "d7e857f6",
+      "ce09b070",
+      "66cbd678"
+    ],
+    "packages/coding-agent/src/web/search/render.ts": [
+      "65cf2bac",
+      "dbe8c5b0",
+      "a5df5115",
+      "3ef595e8",
+      "1cdc7645",
+      "8f2e591b",
+      "9addbf64",
+      "2d07bd83"
+    ],
+    "packages/tui/src/components/editor.ts": [
+      "3af1ac7d",
+      "c618a960",
+      "460d7832",
+      "11755440",
+      "c5057e52",
+      "d211bd1d",
+      "7cd11ac1",
+      "8f19013d"
+    ],
+    "packages/tui/src/components/markdown.ts": [
+      "33dbb105",
+      "95d1bf4a",
+      "e3d5779f",
+      "1dbd5b8a",
+      "4b3bb8ac",
+      "e2e579ac",
+      "4856b644",
+      "fe2a8ff2"
+    ],
+    "packages/tui/src/components/select-list.ts": [
+      "ac74cdb3",
+      "d6d896af",
+      "ac424751",
+      "bcd1a603",
+      "f79ea37c",
+      "2f704428",
+      "35a7acfd",
+      "d0c06b46"
+    ],
+    "packages/tui/src/components/settings-list.ts": [
+      "b4d22b65",
+      "41503553",
+      "75cc70b3",
+      "28961a60",
+      "8844fb59",
+      "a5d7f6cf",
+      "577a1cee",
+      "992a749c"
+    ],
+    "packages/tui/src/components/tab-bar.ts": [
+      "e9e76f67",
+      "8ba3f840",
+      "2972db6a",
+      "c3e17d05",
+      "a4360a05",
+      "47324c63",
+      "73bdd40f",
+      "490648e7"
+    ],
+    "packages/tui/src/components/truncated-text.ts": [
+      "d294a62a",
+      "0219c136",
+      "3f0ece15",
+      "bdfe8926",
+      "b123d944",
+      "9d8f2adb",
+      "2a3f9f33",
+      "6acd71fb"
+    ]
+  },
+  "sinks": [
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 144,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 214,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 215,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 219,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 221,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 226,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 227,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 228,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 244,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 248,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 255,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 260,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 266,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 272,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 282,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 286,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 288,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 312,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 326,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/dashboard.ts",
+      "line": 344,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/tools/init-experiment.ts",
+      "line": 389,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/tools/log-experiment.ts",
+      "line": 369,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/tools/log-experiment.ts",
+      "line": 788,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/autoresearch/tools/run-experiment.ts",
+      "line": 386,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/index.ts",
+      "line": 80,
+      "sink": "selectorFrame",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/index.ts",
+      "line": 86,
+      "sink": "selectorRow",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-formatting.ts",
+      "line": 8,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 642,
+      "sink": "selectorFrame",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 798,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 808,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 811,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 831,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/debug/log-viewer.ts",
+      "line": 839,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/edit/renderer.ts",
+      "line": 214,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/edit/renderer.ts",
+      "line": 321,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/edit/renderer.ts",
+      "line": 324,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/edit/renderer.ts",
+      "line": 331,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/exa/render.ts",
+      "line": 71,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/exa/render.ts",
+      "line": 152,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/exa/render.ts",
+      "line": 181,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/exa/render.ts",
+      "line": 199,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/exa/render.ts",
+      "line": 223,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/exa/render.ts",
+      "line": 228,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 47,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 48,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 92,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 260,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 273,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 368,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 391,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 464,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 629,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/lsp/render.ts",
+      "line": 636,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/mcp/render.ts",
+      "line": 33,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/mcp/render.ts",
+      "line": 142,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/mcp/render.ts",
+      "line": 146,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 657,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 663,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 677,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 716,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 722,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 742,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 745,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
+      "line": 763,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
+      "line": 72,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
+      "line": 198,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 323,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 330,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 353,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 378,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 400,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/copy-selector.ts",
+      "line": 407,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 406,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 412,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 432,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 435,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
+      "line": 467,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/footer.ts",
+      "line": 257,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/history-search.ts",
+      "line": 42,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/history-search.ts",
+      "line": 50,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/history-search.ts",
+      "line": 76,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-editor.ts",
+      "line": 78,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-input.ts",
+      "line": 60,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
+      "line": 100,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
+      "line": 107,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/hook-selector.ts",
+      "line": 127,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/login-dialog.ts",
+      "line": 74,
+      "sink": "selectorFrame",
+      "entry": "login-prose"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
+      "line": 74,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
+      "line": 167,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
+      "line": 408,
+      "sink": "selectorRow",
+      "entry": "models-compact-rows"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
+      "line": 455,
+      "sink": "selectorRow",
+      "entry": "models-compact-rows"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
+      "line": 469,
+      "sink": "selectorRow",
+      "entry": "models-compact-rows"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
+      "line": 482,
+      "sink": "selectorFrame",
+      "entry": "models-compact-rows"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/model-selector.ts",
+      "line": 547,
+      "sink": "truncateToWidth",
+      "entry": "models-compact-rows"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
+      "line": 308,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
+      "line": 323,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
+      "line": 336,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/oauth-selector.ts",
+      "line": 352,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plan-preview.ts",
+      "line": 14,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugin-settings.ts",
+      "line": 372,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 788,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 800,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 812,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 831,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 859,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 883,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 889,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 917,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 923,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 932,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 939,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 955,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 962,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 983,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 989,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 1006,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/plugins/plugin-dashboard.ts",
+      "line": 1012,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 103,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 110,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 120,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 68,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 70,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 73,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 92,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
+      "line": 130,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts",
+      "line": 62,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts",
+      "line": 77,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
+      "line": 76,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
+      "line": 79,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
+      "line": 101,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 100,
+      "sink": "truncateToWidth",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 164,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 202,
+      "sink": "truncateToWidth",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 295,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 351,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 357,
+      "sink": "selectorRow",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 385,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-observer-overlay.ts",
+      "line": 117,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-observer-overlay.ts",
+      "line": 435,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 127,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 248,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 254,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/session-selector.ts",
+      "line": 272,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-browser.ts",
+      "line": 72,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-browser.ts",
+      "line": 80,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 52,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 167,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-editors.ts",
+      "line": 177,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-selector.ts",
+      "line": 244,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/settings-selector.ts",
+      "line": 252,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/status-line.ts",
+      "line": 741,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tool-execution.ts",
+      "line": 778,
+      "sink": "truncateToWidth",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
+      "line": 17,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
+      "line": 45,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 257,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 270,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 298,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 304,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/tree-selector.ts",
+      "line": 324,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
+      "line": 55,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
+      "line": 61,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
+      "line": 83,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/user-message-selector.ts",
+      "line": 90,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/welcome.ts",
+      "line": 59,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/utils/sanitize-error-message.ts",
+      "line": 59,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
+      "line": 633,
+      "sink": "TruncatedText",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
+      "line": 637,
+      "sink": "TruncatedText",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 97,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 305,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 340,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 384,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 425,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 571,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 599,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 614,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 710,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 830,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 900,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 925,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 945,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/task/render.ts",
+      "line": 1002,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/ast-edit.ts",
+      "line": 482,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/ast-grep.ts",
+      "line": 443,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
+      "line": 222,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
+      "line": 255,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
+      "line": 256,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
+      "line": 259,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
+      "line": 263,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash.ts",
+      "line": 1038,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash.ts",
+      "line": 1048,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/calculator.ts",
+      "line": 454,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/calculator.ts",
+      "line": 457,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/calculator.ts",
+      "line": 517,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/calculator.ts",
+      "line": 534,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 512,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 515,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 518,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 521,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 524,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 527,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 530,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 533,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 536,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 547,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/debug.ts",
+      "line": 571,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/find.ts",
+      "line": 377,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/find.ts",
+      "line": 430,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/find.ts",
+      "line": 432,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/grep.ts",
+      "line": 631,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/grep.ts",
+      "line": 735,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/json-tree.ts",
+      "line": 37,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/json-tree.ts",
+      "line": 156,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/json-tree.ts",
+      "line": 165,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 639,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 648,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 656,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 660,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 775,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 795,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 803,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 822,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 1156,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 1161,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 1163,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 1167,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/python.ts",
+      "line": 1170,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/render-utils.ts",
+      "line": 86,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/resolve.ts",
+      "line": 35,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/resolve.ts",
+      "line": 150,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/resolve.ts",
+      "line": 184,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
+      "line": 141,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
+      "line": 143,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
+      "line": 154,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
+      "line": 284,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 96,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 140,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 150,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 575,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 585,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 598,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/sqlite-reader.ts",
+      "line": 614,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/write.ts",
+      "line": 572,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/write.ts",
+      "line": 587,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/write.ts",
+      "line": 614,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/write.ts",
+      "line": 623,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/write.ts",
+      "line": 680,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tui/output-block.ts",
+      "line": 78,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tui/output-block.ts",
+      "line": 117,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/vim/render.ts",
+      "line": 129,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/vim/render.ts",
+      "line": 169,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/vim/render.ts",
+      "line": 189,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 47,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 122,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 124,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 182,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 193,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 195,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 202,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 239,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 334,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/web/search/render.ts",
+      "line": 340,
+      "sink": "truncateToWidth",
+      "entry": "coding-agent-previews"
+    },
+    {
+      "file": "packages/tui/src/components/editor.ts",
+      "line": 728,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/editor.ts",
+      "line": 809,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/editor.ts",
+      "line": 852,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/editor.ts",
+      "line": 870,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/editor.ts",
+      "line": 2446,
+      "sink": "SelectList",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/markdown.ts",
+      "line": 680,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/select-list.ts",
+      "line": 152,
+      "sink": "truncateToWidth",
+      "entry": "shared-select-list"
+    },
+    {
+      "file": "packages/tui/src/components/select-list.ts",
+      "line": 218,
+      "sink": "truncateToWidth",
+      "entry": "shared-select-list"
+    },
+    {
+      "file": "packages/tui/src/components/select-list.ts",
+      "line": 268,
+      "sink": "truncateToWidth",
+      "entry": "shared-select-list"
+    },
+    {
+      "file": "packages/tui/src/components/select-list.ts",
+      "line": 270,
+      "sink": "truncateToWidth",
+      "entry": "shared-select-list"
+    },
+    {
+      "file": "packages/tui/src/components/settings-list.ts",
+      "line": 112,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/settings-list.ts",
+      "line": 116,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/settings-list.ts",
+      "line": 122,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/settings-list.ts",
+      "line": 137,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/tab-bar.ts",
+      "line": 155,
+      "sink": "truncateToWidth",
+      "entry": "tui-core-compact"
+    },
+    {
+      "file": "packages/tui/src/components/truncated-text.ts",
+      "line": 44,
+      "sink": "truncateToWidth",
+      "entry": "shared-truncated-text"
+    }
+  ]
+}

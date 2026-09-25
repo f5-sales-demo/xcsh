@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Container, setTerminalHyperlinks, TERMINAL } from "@f5-sales-demo/pi-tui";
 import { presentAuthLink, presentDeviceCode } from "../../../src/modes/components/auth-link-presenter";
+import { selectorFrame, selectorFrameContentWidth } from "../../../src/modes/components/selector-frame";
 import { initTheme } from "../../../src/modes/theme/theme";
+import { applyHyperlinkSetting } from "../../../src/tui/hyperlink";
 
 const LONG_URL =
 	"https://login.example.test/authorize?client_id=synthetic-client&redirect_uri=https%3A%2F%2Flocalhost%2Fcallback&scope=openid%20profile&state=synthetic-state&code_challenge=synthetic-challenge";
@@ -43,7 +45,7 @@ describe("presentAuthLink", () => {
 			const visible = Bun.stripANSI(rendered).replace(/\s+/g, " ").trim();
 			expect(visible).toContain("Open sign-in page");
 			expect(visible).toContain("Ctrl+click to open");
-			expect(visible).toContain("full URL remains visible");
+			expect(visible).not.toContain("full URL is visible");
 			expect(visible).not.toContain(LONG_URL);
 
 			const linkedLines = renderedLines.filter(line => line.includes("\x1b]8;;"));
@@ -66,17 +68,59 @@ describe("presentAuthLink", () => {
 		expect(visible).not.toContain("Ctrl+click to open");
 	});
 
-	it("falls back to a visible URL when terminal hyperlinks are disabled", () => {
+	it("keeps each wrapped recovery segment linked when automatic detection is unavailable", () => {
 		setTerminalHyperlinks(false);
 		try {
 			const container = new Container();
 			presentAuthLink(container, LONG_URL, { platform: "linux" });
 
-			const rendered = container.render(240).join("\n");
-			expect(Bun.stripANSI(rendered)).toContain(LONG_URL);
-			expect(rendered).not.toContain("\x1b]8;;");
+			const rendered = container.render(44).join("\n");
+			const targets = [...rendered.matchAll(OSC_8_OPEN)].map(match => match[1]);
+			expect(targets.length).toBeGreaterThan(1);
+			expect(targets.every(target => target === LONG_URL)).toBe(true);
+			const linkedGlyphs = [...rendered.matchAll(/\x1b\]8;;[^\x07]+\x07([^\x1b]*)\x1b\]8;;\x07/g)].map(
+				match => match[1],
+			);
+			expect(linkedGlyphs.join("")).toBe(`Open sign-in page${LONG_URL}`);
+			expect(Bun.stripANSI(rendered).replace(/\s/g, "")).toContain(LONG_URL);
+			expect(Bun.stripANSI(rendered)).toContain("full URL is visible above");
+			const framed = selectorFrame(
+				44,
+				40,
+				"Sign in",
+				"",
+				[],
+				container.render(selectorFrameContentWidth(44)),
+				[],
+				[],
+			);
+			const framedLinks = framed.flatMap(line => [...line.matchAll(OSC_8_OPEN)].map(match => match[1]));
+			expect(framedLinks.length).toBeGreaterThan(1);
+			expect(framedLinks.every(target => target === LONG_URL)).toBe(true);
+			for (const line of framed)
+				expect((line.match(OSC_8_OPEN) ?? []).length).toBe((line.match(OSC_8_CLOSE) ?? []).length);
 		} finally {
 			setTerminalHyperlinks(true);
 		}
+	});
+
+	it("respects explicit hyperlink off while keeping the exact URL visible", () => {
+		applyHyperlinkSetting("off");
+		try {
+			const container = new Container();
+			presentAuthLink(container, LONG_URL);
+			const rendered = container.render(44).join("\n");
+			expect(rendered).not.toContain("\x1b]8;;");
+			expect(Bun.stripANSI(rendered).replace(/\s/g, "")).toContain(LONG_URL);
+		} finally {
+			applyHyperlinkSetting("auto");
+			setTerminalHyperlinks(true);
+		}
+	});
+
+	it("never links an unsafe recovery target", () => {
+		const container = new Container();
+		presentAuthLink(container, "https://login.example.test/\x1b]8;;injected");
+		expect(container.render(80).join("\n")).not.toContain("\x1b]8;;");
 	});
 });

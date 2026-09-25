@@ -172,7 +172,7 @@ const SMOL_MODEL_ROLE = "litellm/gpt-6-luna:low";
  * Baked role map for the current internal LiteLLM catalog. Sol handles slow and
  * planning work, while Luna and Terra cover lightweight and default work.
  */
-const DEFAULT_MODEL_ROLES: Record<string, string> = {
+export const DEFAULT_MODEL_ROLES: Record<string, string> = {
 	default: DEFAULT_MODEL_ROLE,
 	smol: SMOL_MODEL_ROLE,
 	slow: "litellm/gpt-6-sol:high",

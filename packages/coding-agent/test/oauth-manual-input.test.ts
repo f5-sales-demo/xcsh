@@ -2,6 +2,17 @@ import { describe, expect, it } from "bun:test";
 import { OAuthManualInputManager } from "../src/modes/oauth-manual-input";
 
 describe("OAuthManualInputManager", () => {
+	it("keeps only the current pending authorization URL for exact recovery copy", async () => {
+		const manager = new OAuthManualInputManager();
+		const url = "https://login.example.test/authorize?state=synthetic-state&code_challenge=synthetic-challenge";
+		manager.setAuthorizationUrl("google-vertex", url);
+		const pending = manager.waitForInput("google-vertex");
+		expect(manager.authorizationUrl).toBe(url);
+		manager.submit("synthetic-code");
+		expect(await pending).toBe("synthetic-code");
+		expect(manager.authorizationUrl).toBeUndefined();
+	});
+
 	it("resolves waitForInput with submitted value", async () => {
 		const manager = new OAuthManualInputManager();
 		const promise = manager.waitForInput("openai-codex");

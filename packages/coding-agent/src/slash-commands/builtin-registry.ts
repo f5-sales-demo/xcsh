@@ -35,6 +35,7 @@ import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
 import { getLoginOptions } from "../modes/controllers/login-options";
 import { theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
+import { reviewClipboardAction } from "../modes/utils/clipboard-action";
 import { personProfileService } from "../person-profile/service";
 import { resolveRemoteThreadId } from "../remote-control/thread-identity";
 import { createContextEnv } from "../services/context-env";
@@ -893,9 +894,25 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		description: t("commands.login.description"),
 		inlineHint: t("commands.login.inlineHint"),
 		allowArgs: true,
-		handle: (command, runtime) => {
+		handle: async (command, runtime) => {
 			const manualInput = runtime.ctx.oauthManualInput;
 			const args = command.args.trim();
+			if (args.toLowerCase() === "copy") {
+				const url = manualInput.authorizationUrl;
+				if (url) {
+					await reviewClipboardAction(runtime.ctx, {
+						title: "sign-in URL copy",
+						identity: `login:${manualInput.pendingProviderId}:authorization-url`,
+						label: "Current sign-in URL",
+						success: "Sign-in URL copied to the local clipboard.",
+						reopen: "Run /login copy while this login is waiting to review it again.",
+						current: () => manualInput.authorizationUrl === url,
+						resolveText: () => manualInput.authorizationUrl,
+					});
+				} else runtime.ctx.showWarning(t("commands.login.noUrlToCopy"));
+				runtime.ctx.editor.setText("");
+				return;
+			}
 			if (args.length > 0) {
 				const matchedProvider = getLoginOptions().find(provider => provider.id === args);
 				if (matchedProvider) {

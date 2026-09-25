@@ -156,6 +156,38 @@ describe("Settings", () => {
 		expect((await readSettings()).providers).toMatchObject({ litellmMaxContext: true });
 	});
 
+	it("migrates the exact generated v8 LiteLLM roles and preserves custom roles", async () => {
+		await writeSettings({
+			modelRoles: {
+				smol: "litellm/gpt-5.6-luna:low",
+				default: "litellm/gpt-5.6-sol:medium",
+				slow: "litellm/gpt-5.6-sol:high",
+				plan: "litellm/gpt-5.6-sol:high",
+			},
+		});
+
+		const settings = await Settings.init({ cwd: projectDir, agentDir });
+		expect(settings.get("modelRoles")).toEqual({
+			smol: "litellm/gpt-6-luna:low",
+			default: "litellm/gpt-5.6-terra:medium",
+			slow: "litellm/gpt-6-sol:high",
+			plan: "litellm/gpt-6-sol:high",
+		});
+		expect((await readSettings()).modelRoles).toEqual(settings.get("modelRoles"));
+
+		_resetSettingsForTest();
+		const customRoles = {
+			smol: "litellm/gpt-5.6-luna:low",
+			default: "litellm/gpt-5.6-sol:medium",
+			slow: "litellm/gpt-5.6-sol:high",
+			plan: "anthropic/claude-opus-5:high",
+		};
+		await writeSettings({ modelRoles: customRoles });
+		const customized = await Settings.init({ cwd: projectDir, agentDir });
+		expect(customized.get("modelRoles")).toEqual(customRoles);
+		expect((await readSettings()).modelRoles).toEqual(customRoles);
+	});
+
 	describe.skipIf(process.platform === "win32")("config file permissions", () => {
 		it("restores owner-only permissions when rewriting config.yml", async () => {
 			fs.writeFileSync(getConfigPath(), "modelRoles:\n  default: anthropic/claude-opus-5\n", { mode: 0o644 });

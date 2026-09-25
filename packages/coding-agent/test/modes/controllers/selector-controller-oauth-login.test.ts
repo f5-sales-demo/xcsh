@@ -1,10 +1,12 @@
 import { Database } from "bun:sqlite";
-import { beforeAll, describe, expect, it, vi } from "bun:test";
+import { beforeAll, describe, expect, it, spyOn, vi } from "bun:test";
 import { AuthCredentialStore, AuthStorage } from "@f5-sales-demo/pi-ai";
+import { setTerminalHyperlinks, TERMINAL } from "@f5-sales-demo/pi-tui";
 import { SelectorController } from "../../../src/modes/controllers/selector-controller";
 import { OAuthManualInputManager } from "../../../src/modes/oauth-manual-input";
 import { initTheme } from "../../../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../../../src/modes/types";
+import * as clipboardAction from "../../../src/modes/utils/clipboard-action";
 
 const LONG_AUTH_URL =
 	"https://login.example.test/authorize?client_id=synthetic-client&redirect_uri=https%3A%2F%2Flocalhost%2Fcallback&scope=openid%20profile&state=synthetic-state&code_challenge=synthetic-challenge";
@@ -245,53 +247,86 @@ describe("SelectorController Google Antigravity login", () => {
 		expect(setModel).not.toHaveBeenCalled();
 	});
 
-	it("presents the shared short link, instructions, browser policy, and manual pairing", async () => {
-		const model = { id: "gemini-3.6-flash-high", provider: "google-antigravity" };
-		const addedComponents: Array<{ render(width: number): string[] }> = [];
-		const manualInput = new OAuthManualInputManager();
-		const openInBrowser = vi.fn();
-		const login = vi.fn(async (_provider, callbacks) => {
-			callbacks.onAuth({ url: LONG_AUTH_URL, instructions: "Finish the provider instructions." });
-			expect(callbacks.onManualCodeInput).toBeDefined();
-			const redirect = callbacks.onManualCodeInput();
-			expect(manualInput.submit("http://localhost/callback?code=synthetic&state=valid")).toBe(true);
-			await expect(redirect).resolves.toContain("code=synthetic");
+	for (const providerId of ["google-antigravity", "anthropic"] as const) {
+		it(`presents the shared exact link, copy action, and manual pairing for ${providerId}`, async () => {
+			const model = {
+				id: providerId === "anthropic" ? "claude-sonnet-synthetic" : "gemini-3.6-flash-high",
+				provider: providerId,
+			};
+			const addedComponents: Array<{ render(width: number): string[]; handleInput?(key: string): void }> = [];
+			const manualInput = new OAuthManualInputManager();
+			const openInBrowser = vi.fn();
+			const copy = spyOn(clipboardAction, "reviewClipboardAction").mockImplementation(async (_ctx, action) => {
+				expect(action.resolveText()).toBe(LONG_AUTH_URL);
+				return "copied";
+			});
+			const login = vi.fn(async (_provider, callbacks) => {
+				callbacks.onAuth({ url: LONG_AUTH_URL, instructions: "Finish the provider instructions." });
+				expect(callbacks.onManualCodeInput).toBeDefined();
+				const redirect = callbacks.onManualCodeInput();
+				expect(manualInput.authorizationUrl).toBe(LONG_AUTH_URL);
+				const frame = addedComponents.find(component =>
+					component.render(100).join("\n").includes("Open sign-in page"),
+				);
+				frame?.handleInput?.("c");
+				frame?.handleInput?.("\r");
+				await Bun.sleep(0);
+				expect(copy).toHaveBeenCalledTimes(1);
+				expect(manualInput.hasPending()).toBe(true);
+				const prompt = callbacks.onPrompt({ message: "Paste the authorization code" });
+				frame?.handleInput?.("c");
+				frame?.handleInput?.("\r");
+				await Bun.sleep(0);
+				expect(copy).toHaveBeenCalledTimes(2);
+				let promptSettled = false;
+				void prompt.then(() => {
+					promptSettled = true;
+				});
+				await Bun.sleep(0);
+				expect(promptSettled).toBe(false);
+				for (const key of "synthetic-prompt-code") frame?.handleInput?.(key);
+				frame?.handleInput?.("\r");
+				expect(await prompt).toBe("synthetic-prompt-code");
+				expect(manualInput.submit("http://localhost/callback?code=synthetic&state=valid")).toBe(true);
+				await expect(redirect).resolves.toContain("code=synthetic");
+			});
+			const ctx = {
+				session: {
+					modelRegistry: { authStorage: { login }, refresh: vi.fn(async () => undefined), getAll: () => [model] },
+					setModel: vi.fn(async () => undefined),
+					setThinkingLevel: vi.fn(),
+				},
+				oauthManualInput: manualInput,
+				statusLine: { invalidate: vi.fn() },
+				updateEditorBorderColor: vi.fn(),
+				chatContainer: {
+					addChild: (component: { render(width: number): string[] }) => addedComponents.push(component),
+				},
+				editor: { render: () => [] },
+				editorContainer: {
+					clear: vi.fn(),
+					addChild: (component: (typeof addedComponents)[number]) => addedComponents.push(component),
+				},
+				ui: { requestRender: vi.fn(), setFocus: vi.fn() },
+				showStatus: vi.fn(),
+				showError: vi.fn(),
+				showHookCustom: confirmReviewedAction,
+				openInBrowser,
+			} as unknown as InteractiveModeContext;
+
+			await new SelectorController(ctx).showOAuthSelector("login", providerId);
+
+			const visible = renderVisible(addedComponents, 100);
+			expect(visible).toContain("Open sign-in page");
+			expect(visible).toContain(process.platform === "darwin" ? "Cmd+click to open" : "Ctrl+click to open");
+			expect(visible).toContain("Finish the provider instructions.");
+			expect(visible).toContain("Tip: You can complete pairing with /login <redirect URL>.");
+			expect(visible).not.toContain(LONG_AUTH_URL);
+			expect(openInBrowser).toHaveBeenCalledTimes(1);
+			expect(openInBrowser).toHaveBeenCalledWith(LONG_AUTH_URL);
+			copy.mockRestore();
 		});
-		const ctx = {
-			session: {
-				modelRegistry: { authStorage: { login }, refresh: vi.fn(async () => undefined), getAll: () => [model] },
-				setModel: vi.fn(async () => undefined),
-				setThinkingLevel: vi.fn(),
-			},
-			oauthManualInput: manualInput,
-			statusLine: { invalidate: vi.fn() },
-			updateEditorBorderColor: vi.fn(),
-			chatContainer: {
-				addChild: (component: { render(width: number): string[] }) => addedComponents.push(component),
-			},
-			editor: { render: () => [] },
-			editorContainer: {
-				clear: vi.fn(),
-				addChild: (component: (typeof addedComponents)[number]) => addedComponents.push(component),
-			},
-			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
-			showStatus: vi.fn(),
-			showError: vi.fn(),
-			showHookCustom: confirmReviewedAction,
-			openInBrowser,
-		} as unknown as InteractiveModeContext;
-
-		await new SelectorController(ctx).showOAuthSelector("login", "google-antigravity");
-
-		const visible = renderVisible(addedComponents, 100);
-		expect(visible).toContain("Open sign-in page");
-		expect(visible).toContain(process.platform === "darwin" ? "Cmd+click to open" : "Ctrl+click to open");
-		expect(visible).toContain("Finish the provider instructions.");
-		expect(visible).toContain("Tip: You can complete pairing with /login <redirect URL>.");
-		expect(visible).not.toContain(LONG_AUTH_URL);
-		expect(openInBrowser).toHaveBeenCalledTimes(1);
-		expect(openInBrowser).toHaveBeenCalledWith(LONG_AUTH_URL);
-	});
+	}
 });
 
 describe("SelectorController Corporate Vertex login", () => {
@@ -434,6 +469,7 @@ describe("SelectorController Corporate Vertex login", () => {
 			await authorizationShown.promise;
 
 			expect(emit.mock.calls).toEqual([[{ type: "user_prompt_start", kind: "input" }]]);
+			expect(manualInput.authorizationUrl).toBe(LONG_AUTH_URL);
 			expect(manualInput.submit("synthetic-code")).toBe(true);
 			await loginPromise;
 			expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_end", kind: "input" });
@@ -539,6 +575,71 @@ describe("SelectorController Corporate Vertex login", () => {
 });
 
 describe("SelectorController ChatGPT device login", () => {
+	it("keeps the full browser authorization target clickable in a narrow remote frame", async () => {
+		const previousSshConnection = process.env.SSH_CONNECTION;
+		const previousHyperlinks = TERMINAL.hyperlinks;
+		process.env.SSH_CONNECTION = "client server";
+		setTerminalHyperlinks(false);
+		try {
+			const manualInput = new OAuthManualInputManager();
+			const openInBrowser = vi.fn();
+			const editorContainer = {
+				children: [] as Array<{ render(width: number): string[]; handleInput?(key: string): void }>,
+				clear() {
+					this.children = [];
+				},
+				addChild(child: (typeof this.children)[number]) {
+					this.children.push(child);
+				},
+			};
+			const login = vi.fn(async (_provider, callbacks) => {
+				expect(callbacks.method).toBe("browser");
+				callbacks.onAuth({ url: LONG_AUTH_URL, kind: "browser" });
+				const redirect = callbacks.onManualCodeInput();
+				const frame = editorContainer.children[0];
+				const rendered = frame?.render(44).join("\n") ?? "";
+				const targets = [...rendered.matchAll(/\x1b\]8;;([^\x07]+)\x07/g)].map(match => match[1]);
+				expect(targets.length).toBeGreaterThan(0);
+				expect(targets.every(target => target === LONG_AUTH_URL)).toBe(true);
+				expect(manualInput.authorizationUrl).toBe(LONG_AUTH_URL);
+				manualInput.submit("http://localhost/callback?code=synthetic&state=valid");
+				await redirect;
+			});
+			const ctx = {
+				editorContainer,
+				editor: {},
+				session: {
+					modelRegistry: {
+						authStorage: { login },
+						refreshProvider: vi.fn(async () => undefined),
+						getAll: () => [],
+					},
+				},
+				oauthManualInput: manualInput,
+				statusLine: { invalidate: vi.fn() },
+				updateEditorBorderColor: vi.fn(),
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn(), setFocus: vi.fn(), terminal: { rows: 24 } },
+				showStatus: vi.fn(),
+				showError: vi.fn(),
+				showHookCustom: confirmReviewedAction,
+				openInBrowser,
+			} as unknown as InteractiveModeContext;
+
+			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "openai-codex");
+			await Bun.sleep(0);
+			editorContainer.children[0]?.handleInput?.("\x1b[B");
+			editorContainer.children[0]?.handleInput?.("\n");
+			await loginPromise;
+			expect(login).toHaveBeenCalledTimes(1);
+			expect(openInBrowser).toHaveBeenCalledWith(LONG_AUTH_URL);
+		} finally {
+			setTerminalHyperlinks(previousHyperlinks);
+			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;
+			else process.env.SSH_CONNECTION = previousSshConnection;
+		}
+	});
+
 	it("does not try to open a browser on the remote Ubuntu host", async () => {
 		const previousSshConnection = process.env.SSH_CONNECTION;
 		process.env.SSH_CONNECTION = "client server";

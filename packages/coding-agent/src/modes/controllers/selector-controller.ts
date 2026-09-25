@@ -40,7 +40,7 @@ import { createContextEnv } from "../../services/context-env";
 import { type SessionInfo, SessionManager } from "../../session/session-manager";
 import { FileSessionStorage } from "../../session/session-storage";
 import { isSearchProviderPreference, setPreferredImageProvider, setPreferredSearchProvider } from "../../tools";
-import { applyHyperlinkSetting } from "../../tui/hyperlink";
+import { applyHyperlinkSetting, safeRecoveryUrl } from "../../tui/hyperlink";
 import { setSessionTerminalTitle } from "../../utils/title-generator";
 import { AgentDashboard } from "../components/agent-dashboard";
 import { AssistantMessageComponent } from "../components/assistant-message";
@@ -1980,6 +1980,8 @@ export class SelectorController {
 			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) || providerId === "openai-codex";
 		const shouldOpenBrowser = providerId !== "openai-codex" || openAICodexMethod === "browser";
 		let endAuthorizationWait: (() => void) | undefined;
+		let authorizationUrl: string | undefined;
+		let authorizationKind: "browser" | "device" = "browser";
 
 		const abort = new AbortController();
 		let closeAuthFrame: (() => void) | undefined;
@@ -1997,10 +1999,22 @@ export class SelectorController {
 			});
 			input.onEscape = cancel;
 			input.onSubmit = () => {
-				const value = input
-					.getValue()
-					.trim()
-					.replace(/^\/login\s+/, "");
+				const typed = input.getValue().trim();
+				if (authorizationKind !== "device" && authorizationUrl && /^(?:c|copy)$/iu.test(typed)) {
+					const url = authorizationUrl;
+					input.setValue("");
+					void reviewClipboardAction(this.ctx, {
+						title: "sign-in URL copy",
+						identity: `login:${providerId}:authorization-url`,
+						label: "Current sign-in URL",
+						success: "Sign-in URL copied to the local clipboard.",
+						reopen: "Enter c at the login prompt to review it again.",
+						current: () => !abort.signal.aborted && authFrame?.input === input && authorizationUrl === url,
+						resolveText: () => (authorizationUrl === url ? url : undefined),
+					});
+					return;
+				}
+				const value = typed.replace(/^\/login\s+/, "");
 				if (value) manualInput.submit(value);
 				input.setValue("");
 			};
@@ -2030,11 +2044,21 @@ export class SelectorController {
 				kind?: "browser" | "device";
 				userCode?: string;
 			}) => {
+				authorizationUrl = safeRecoveryUrl(info.url);
+				authorizationKind = info.kind ?? "browser";
+				if (useManualInput) {
+					manualInput.clearAuthorizationUrl(providerId);
+					if (authorizationUrl) manualInput.setAuthorizationUrl(providerId, authorizationUrl);
+				}
 				const frame = showAuthFrame();
 				frame.content.clear();
 				if (info.kind === "device" && info.userCode) presentDeviceCode(frame.content, info.url, info.userCode);
 				else presentAuthLink(frame.content, info.url);
 				if (info.instructions) frame.content.addChild(new Text(theme.fg("muted", info.instructions), 0, 0));
+				if (info.kind !== "device" && authorizationUrl)
+					frame.content.addChild(
+						new Text(theme.fg("dim", "Type c at the prompt to copy the exact sign-in URL."), 0, 0),
+					);
 				if (useManualInput) frame.content.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 0, 0));
 				this.ctx.ui.requestRender();
 				if (shouldOpenBrowser)
@@ -2055,17 +2079,24 @@ export class SelectorController {
 				};
 				input.onSubmit = () => {
 					const value = input.getValue();
-					if (prompt.copyText && /^(?:c|copy)$/i.test(value.trim())) {
+					const copyText = prompt.copyText ?? (authorizationKind === "device" ? undefined : authorizationUrl);
+					if (copyText && /^(?:c|copy)$/i.test(value.trim())) {
+						const copyingCode = Boolean(prompt.copyText);
 						void reviewClipboardAction(this.ctx, {
 							title: "login recovery copy",
 							identity: `login:${providerId}:prompt`,
-							label: "One-time login recovery value",
-							success: "One-time login recovery value copied to the local clipboard.",
+							label: copyingCode ? "One-time login recovery value" : "Current sign-in URL",
+							success: copyingCode
+								? "One-time login recovery value copied to the local clipboard."
+								: "Sign-in URL copied to the local clipboard.",
 							reopen: "Enter copy at the login prompt to review it again.",
-							current: () => !abort.signal.aborted && frame.input === input,
-							resolveText: () => prompt.copyText,
+							current: () =>
+								!abort.signal.aborted &&
+								frame.input === input &&
+								(copyingCode || authorizationUrl === copyText),
+							resolveText: () => (copyingCode || authorizationUrl === copyText ? copyText : undefined),
 						}).then(outcome => {
-							if (outcome === "copied" || outcome === "requested") {
+							if (copyingCode && (outcome === "copied" || outcome === "requested")) {
 								restoreWaiting();
 								resolve("");
 							} else {
@@ -2108,6 +2139,7 @@ export class SelectorController {
 			} else this.ctx.showError(`Login failed: ${error instanceof Error ? error.message : String(error)}`);
 		} finally {
 			closeAuthFrame?.();
+			manualInput.clearAuthorizationUrl(providerId);
 			if (useManualInput) {
 				manualInput.clear(`Manual OAuth input cleared for ${providerId}`);
 			}
@@ -2161,7 +2193,15 @@ export class SelectorController {
 				try {
 					await authStorage.login("google-vertex", {
 						onAuth: info => {
+							const authorizationUrl = safeRecoveryUrl(info.url);
+							this.ctx.oauthManualInput.clearAuthorizationUrl("google-vertex");
+							if (authorizationUrl)
+								this.ctx.oauthManualInput.setAuthorizationUrl("google-vertex", authorizationUrl);
 							presentAuthLink(this.ctx.chatContainer, info.url);
+							if (authorizationUrl)
+								this.ctx.chatContainer.addChild(
+									new Text(theme.fg("dim", "Tip: Use /login copy to copy the exact sign-in URL."), 1, 0),
+								);
 							this.ctx.chatContainer.addChild(new Text(theme.fg("dim", VERTEX_MANUAL_LOGIN_TIP), 1, 0));
 							if (!isHeadlessTerminal(runtime.environment)) {
 								const launch = this.#launchHttpUrl(info.url);
@@ -2182,6 +2222,7 @@ export class SelectorController {
 						onManualCodeInput: () => this.ctx.oauthManualInput.waitForInput("google-vertex"),
 					});
 				} finally {
+					this.ctx.oauthManualInput.clearAuthorizationUrl("google-vertex");
 					endAuthorizationWait?.();
 				}
 				accessToken = await authStorage.getApiKey("google-vertex");
