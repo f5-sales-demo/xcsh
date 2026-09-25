@@ -57,8 +57,9 @@
 
 ### Fixed
 
-- Made Platform plugin setup offer sorted activation commands for saved session contexts and
-  resolved unique short plugin names during reviewed uninstall while rejecting ambiguity
+- Made Platform plugin setup offer sorted activation commands for saved session contexts,
+  resolved unique short plugin names during reviewed uninstall while rejecting ambiguity, and
+  directed slash-command health checks to the supported `xcsh plugin doctor` CLI
   ([#4306](https://github.com/f5-sales-demo/xcsh/issues/4306)).
 - Accepted fully qualified marketplace plugin identifiers in `plugin setup`, matching install,
   upgrade, uninstall, and doctor behavior ([#4288](https://github.com/f5-sales-demo/xcsh/issues/4288)).

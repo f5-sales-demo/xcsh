@@ -25,6 +25,21 @@ afterEach(() => {
 });
 
 describe("/plugin setup", () => {
+	it("directs slash-command doctor users to the supported CLI instead of showing marketplace inventory", async () => {
+		const showStatus = vi.fn();
+		const showError = vi.fn();
+		const ctx = {
+			editor: { setText: vi.fn() },
+			sessionManager: { getCwd: () => "/tmp" },
+			showStatus,
+			showError,
+		} as unknown as InteractiveModeContext;
+
+		expect(await executeBuiltinSlashCommand("/plugin doctor kvm", { ctx, handleBackgroundCommand() {} })).toBe(true);
+		expect(showError).toHaveBeenCalledWith("Plugin health checks are CLI-only; run xcsh plugin doctor.");
+		expect(showStatus).not.toHaveBeenCalled();
+	});
+
 	it("uses an active session context before opening the guided Platform wizard", async () => {
 		const children: unknown[] = [];
 		const setFocus = vi.fn();

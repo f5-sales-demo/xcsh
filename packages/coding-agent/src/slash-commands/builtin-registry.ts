@@ -1241,6 +1241,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				name: "setup",
 				description: t("commands.plugin.sub.setup.description"),
 			},
+			{
+				name: "doctor",
+				description: "Show CLI plugin health-check guidance",
+			},
 			{ name: "help", description: t("commands.plugin.sub.help.description") },
 		],
 		allowArgs: true,
@@ -1842,6 +1846,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}`,
 							);
 						}
+						break;
+					}
+					case "doctor": {
+						runtime.ctx.showError("Plugin health checks are CLI-only; run xcsh plugin doctor.");
 						break;
 					}
 					// ── Help ──
