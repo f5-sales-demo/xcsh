@@ -208,6 +208,20 @@ and feedback adapter. Other clipboard surfaces must adopt it before candidate ac
 
 ## What should reviewers check?
 
+The repository-wide readability contract is recorded in
+`packages/coding-agent/tui-readability-ledger.json`. Each known use of `selectorFrame`,
+`selectorRow`, `SelectList`, `TruncatedText`, or `truncateToWidth` is bound to a presentation policy
+and captured in generated source evidence. Run `bun run audit:tui-readability` from
+`packages/coding-agent` to verify it, or `bun run audit:tui-readability:write` after intentionally
+classifying a changed sink.
+
+Use `wrap` for prompts, instructions, descriptions, errors, statuses, and other prose. Reserve
+`intentionally-compact` for terminal chrome, code, and intrinsically compact labels. Use
+`truncate-with-full-detail` for dense identifiers or table cells only when selecting the row exposes
+the complete value in a wrapped detail view. An unresolved exception must remain a
+`finding-open` ledger entry linked to a child issue; it is not evidence that the surface meets the
+contract.
+
 - The title, purpose, choices, selected summary, and controls remain understandable without color.
 - With keyboard hints hidden, the task, selection, action consequences, and current state are clear.
 - Every remaining hint reveals a non-obvious control, an exception, a consequence, or recovery;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "4fe32fa1b300f707042614e1b2e6af7caceddc98",
+  "revision": "1a7543cf3b387497a063638d4272702fa34615af",
   "fingerprint": "8712657f15df756d6a7cd5faee1056356136acb4941c5b118f47a919c7bb7cd3",
   "counts": {
     "total": 241,
@@ -5357,6 +5357,7 @@
         "packages/coding-agent/test/tools/web-search-render.test.ts",
         "packages/coding-agent/test/tools/xcsh-api-renderer.test.ts",
         "packages/coding-agent/test/truncate-to-width.test.ts",
+        "packages/coding-agent/test/tui-readability-audit.test.ts",
         "packages/coding-agent/test/xcsh-context-indicators.test.ts",
         "packages/coding-agent/test/xcsh-table.test.ts",
         "packages/tui/test/ansi-width-invariants.test.ts",
