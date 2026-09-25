@@ -13,6 +13,7 @@ import {
 	remotePermissionProfile,
 } from "../sandbox/remote-permissions";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import { readRecaps } from "../session/recap";
 import { coordinateSessionTitle, RESERVED_PROVISIONAL_TITLE, subscribeSessionTitle } from "../utils/title-generator";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";
@@ -77,6 +78,8 @@ export type SessionTarget = Pick<
 			| "decidePlan"
 			| "isSessionChanging"
 			| "isDisposing"
+			| "getRecaps"
+			| "generateRecap"
 		>
 	>;
 export type RemoteCollaborationMode = "plan" | "default";
@@ -851,6 +854,7 @@ export class RemoteSession {
 				"thread/timeline/list",
 				"thread/queue/list",
 				"thread/goal/get",
+				"thread/recap/read",
 			].includes(method)
 		)
 			return this.#execute(method, params);
@@ -1211,6 +1215,22 @@ export class RemoteSession {
 			};
 		}
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
+		if (method === "thread/recap/read") {
+			const recaps = this.target.getRecaps?.() ?? readRecaps(this.target.sessionManager.getBranch());
+			return { recaps, latest: recaps.at(-1) ?? null };
+		}
+		if (method === "thread/recap/generate") {
+			if (params.speak !== undefined && typeof params.speak !== "boolean")
+				throw new ProtocolError(-32602, "Invalid recap speech preference");
+			if (!this.target.generateRecap) throw new ProtocolError(-32601, "Recap generation is unavailable");
+			const recap = await this.target.generateRecap();
+			if (recap && params.speak === true)
+				this.#voice?.mirrorText(
+					`Recap: ${recap.summary}${recap.nextAction ? ` Next: ${recap.nextAction}` : ""}`,
+					"final_answer",
+				);
+			return { recap };
+		}
 		if (method === "thread/compact/start") {
 			if (!this.#durable) throw new ProtocolError(-32601, "Compaction requires persisted session history");
 			void this.#effect(epoch, () => this.target.compact()).catch(() => {
@@ -1671,6 +1691,10 @@ export class RemoteSession {
 	}
 	#event(event: AgentSessionEvent): void {
 		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
+		if (event.type === "recap_created") {
+			this.#emit("thread/recap/created", { ...event.recap });
+			return;
+		}
 		if (event.type === "interaction") {
 			this.#emit("xcsh/interaction/event", { contract: "xcsh.interaction.v1", event: event.event });
 			return;

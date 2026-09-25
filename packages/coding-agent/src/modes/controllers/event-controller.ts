@@ -17,6 +17,7 @@ import {
 	resolveAsyncQuestionReplyFromItem,
 } from "../../modes/components/question-transcript";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
+import { RecapMessageComponent } from "../../modes/components/recap-message";
 import { TodoReminderComponent } from "../../modes/components/todo-reminder";
 import { ToolExecutionComponent } from "../../modes/components/tool-execution";
 import { TtsrNotificationComponent } from "../../modes/components/ttsr-notification";
@@ -152,6 +153,10 @@ export class EventController {
 		this.ctx.updateEditorTopBorder();
 
 		switch (event.type) {
+			case "recap_created":
+				this.ctx.chatContainer.addChild(new RecapMessageComponent(event.recap));
+				this.ctx.ui.requestRender();
+				break;
 			case "plan_resolved":
 				if (!this.ctx.session.getPlanModeState()?.enabled) await this.ctx.setRemoteCollaborationMode("default");
 				break;

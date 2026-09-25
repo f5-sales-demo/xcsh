@@ -249,6 +249,51 @@ describe("herdr-reporter extension", () => {
 		else process.env.HERDR_NATIVE_CAPABILITY = originalNativeCapability;
 	});
 
+	it("reports recaps through the ordered queue only when the server advertises agent_recaps", async () => {
+		for (const capabilities of [undefined, { agent_recaps: 1 }]) {
+			const herdr = await startFakeHerdr({ capabilities });
+			try {
+				process.env.HERDR_PANE_ID = "w1:p1";
+				process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+				const { pi, handlers } = makeMockPi();
+				herdrReporter(pi);
+				const ctx = sessionCtx("/tmp/recap-session.jsonl", "s1");
+				await handlers.get("session_start")?.({}, ctx);
+				await handlers.get("recap_created")?.(
+					{
+						type: "recap_created",
+						recap: {
+							id: "r1",
+							sessionId: "s1",
+							trigger: "manual",
+							summary: "A completed recap",
+							completedTurnCount: 3,
+							createdAt: "2026-09-25T00:00:00.000Z",
+						},
+					},
+					ctx,
+				);
+				const reports = herdr.received.filter(frame => frame.method === "agent.recap.report");
+				expect(reports).toHaveLength(capabilities ? 1 : 0);
+				if (capabilities) {
+					expect(reports[0]!.params).toMatchObject({
+						pane_id: "w1:p1",
+						source: "herdr:xcsh",
+						session_id: "/tmp/recap-session.jsonl",
+						id: "r1",
+						summary: "A completed recap",
+						completed_turn_count: 3,
+					});
+					expect(reports[0]!.order).toBeGreaterThan(
+						herdr.received.find(frame => frame.method === "pane.report_agent_session")!.order,
+					);
+				}
+			} finally {
+				await herdr.close();
+			}
+		}
+	});
+
 	it("emits state-neutral heartbeats every 10 seconds and cancels them before release", async () => {
 		const herdr = await startFakeHerdr();
 		const intervalCallbacks: Array<() => void> = [];

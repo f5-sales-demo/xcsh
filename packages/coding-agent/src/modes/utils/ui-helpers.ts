@@ -23,6 +23,7 @@ import {
 	resolveAsyncQuestionReplyFromItem,
 } from "../../modes/components/question-transcript";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
+import { RecapMessageComponent } from "../../modes/components/recap-message";
 import { SkillMessageComponent } from "../../modes/components/skill-message";
 import { ToolExecutionComponent } from "../../modes/components/tool-execution";
 import { UserMessageComponent } from "../../modes/components/user-message";
@@ -30,6 +31,7 @@ import { theme } from "../../modes/theme/theme";
 import type { CompactionQueuedMessage, InteractiveModeContext } from "../../modes/types";
 import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome-aggregator";
 import { type CustomMessage, SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "../../session/messages";
+import { readRecaps } from "../../session/recap";
 import type { SessionContext } from "../../session/session-manager";
 import { formatBytes, formatDuration } from "../../tools/render-utils";
 
@@ -306,7 +308,14 @@ export class UiHelpers {
 		const readToolCallAssistantComponents = new Map<string, AssistantMessageComponent>();
 		const toolGutters = new Map<string, ReturnType<typeof createToolGutter>>();
 		const deferredMessages: AgentMessage[] = [];
+		const recaps = readRecaps(this.ctx.sessionManager.getBranch());
+		let recapIndex = 0;
+		const addRecap = () => {
+			const recap = recaps[recapIndex++];
+			if (recap) this.ctx.chatContainer.addChild(new RecapMessageComponent(recap));
+		};
 		for (const message of sessionContext.messages) {
+			while (recaps[recapIndex] && Date.parse(recaps[recapIndex]!.createdAt) <= message.timestamp) addRecap();
 			// Defer compaction summaries so they render at the bottom (visible after scroll)
 			if (message.role === "compactionSummary") {
 				deferredMessages.push(message);
@@ -524,6 +533,7 @@ export class UiHelpers {
 		// never received a toolResult, so incomplete groups aggregate to
 		// error rather than silently closing on the last success.
 		finalizeReadGroup();
+		while (recapIndex < recaps.length) addRecap();
 		// Tool gutters without a matching result mean the session was
 		// persisted with an unfinished tool — an aborted/errored turn.
 		// Inject an error body so the component renders as failed (it has

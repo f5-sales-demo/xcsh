@@ -1011,6 +1011,16 @@ export const SETTINGS_SCHEMA = {
 	},
 
 	// Compaction
+	"recap.auto": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "context",
+			label: "Automatic Recaps",
+			description: "Create a brief recap after 30 minutes away from an idle conversation",
+		},
+	},
+
 	"compaction.enabled": {
 		type: "boolean",
 		default: true,

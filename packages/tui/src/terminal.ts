@@ -106,6 +106,7 @@ export interface Terminal {
 	 * Fires when the detected appearance changes, including the initial detection.
 	 */
 	onAppearanceChange(callback: (appearance: TerminalAppearance) => void): void;
+	onFocusChange?(callback: (focused: boolean) => void): void;
 
 	/** The last detected terminal appearance, or undefined if not yet known. */
 	get appearance(): TerminalAppearance | undefined;
@@ -132,6 +133,8 @@ export class ProcessTerminal implements Terminal {
 	#writeLogPath = $env.PI_TUI_WRITE_LOG || "";
 	#windowsVTInputRestore?: () => void;
 	#appearanceCallbacks: Array<(appearance: TerminalAppearance) => void> = [];
+	#focusCallbacks: Array<(focused: boolean) => void> = [];
+	#focused = true;
 	#appearance: TerminalAppearance | undefined;
 	#osc11Pending = false;
 	#osc11QueryQueued = false;
@@ -162,6 +165,10 @@ export class ProcessTerminal implements Terminal {
 		this.#appearanceCallbacks.push(callback);
 	}
 
+	onFocusChange(callback: (focused: boolean) => void): void {
+		this.#focusCallbacks.push(callback);
+	}
+
 	start(onInput: (data: string) => void, onResize: () => void, onDisconnect?: () => void): void {
 		this.#resizeHandler = onResize;
 		this.#disconnectHandler = onDisconnect;
@@ -184,6 +191,7 @@ export class ProcessTerminal implements Terminal {
 
 		// Enable bracketed paste mode - terminal will wrap pastes in \x1b[200~ ... \x1b[201~
 		this.#safeWrite("\x1b[?2004h");
+		this.#safeWrite("\x1b[?1004h");
 
 		// Set up resize handler immediately
 		process.stdout.on("resize", this.#resizeHandler);
@@ -319,6 +327,14 @@ export class ProcessTerminal implements Terminal {
 
 		// Forward individual sequences to the input handler
 		this.#stdinBuffer.on("data", (sequence: string) => {
+			if (sequence === "\x1b[I" || sequence === "\x1b[O") {
+				const focused = sequence === "\x1b[I";
+				if (focused !== this.#focused) {
+					this.#focused = focused;
+					for (const callback of this.#focusCallbacks) callback(focused);
+				}
+				return;
+			}
 			// Kitty protocol response — always swallow, enable protocol on first match
 			const kittyMatch = sequence.match(kittyResponsePattern);
 			if (kittyMatch) {
@@ -593,6 +609,7 @@ export class ProcessTerminal implements Terminal {
 
 		// Disable bracketed paste mode
 		this.#safeWrite("\x1b[?2004l");
+		this.#safeWrite("\x1b[?1004l");
 
 		// Disable Mode 2031 appearance change notifications
 		this.#safeWrite("\x1b[?2031l");

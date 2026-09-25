@@ -1045,6 +1045,8 @@ export class RemoteRouter {
 					}
 					case "xcsh/interaction":
 					case "thread/goal/get":
+					case "thread/recap/read":
+					case "thread/recap/generate":
 					case "thread/queue/list":
 					case "thread/turns/list":
 					case "thread/items/list":

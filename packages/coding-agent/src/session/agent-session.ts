@@ -46,6 +46,7 @@ import type {
 } from "@f5-sales-demo/pi-ai";
 import {
 	calculateRateLimitBackoffMs,
+	completeSimple,
 	getSupportedEfforts,
 	isAnthropicPermanentErrorMessage,
 	isContextOverflow,
@@ -187,6 +188,7 @@ import {
 	type PythonExecutionMessage,
 } from "./messages";
 import { RealtimeContext, type RealtimeModeInstructions } from "./realtime-context";
+import { countCompletedTurns, RECAP_ENTRY_TYPE, type RecapRecord, RecapService, readRecaps } from "./recap";
 import { formatSessionDumpText } from "./session-dump-format";
 import type {
 	BranchSummaryEntry,
@@ -251,7 +253,8 @@ export type AgentSessionEvent =
 	| { type: "retry_fallback_succeeded"; model: string; role: string }
 	| { type: "ttsr_triggered"; rules: Rule[] }
 	| { type: "todo_reminder"; todos: TodoItem[]; attempt: number; maxAttempts: number }
-	| { type: "todo_auto_clear" };
+	| { type: "todo_auto_clear" }
+	| { type: "recap_created"; recap: RecapRecord };
 
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => unknown;
@@ -594,6 +597,8 @@ export class AgentSession {
 	#planDecisionInFlight = false;
 	#publishedPlanId?: string;
 	#turnPhase = new TurnPhaseController(event => this.#publishTurnPhase(event));
+	#terminalFocused = true;
+	#recaps: RecapService;
 
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
 	// dispose() unregisters them. Prevents leaked listeners from mutating dead session state.
@@ -762,6 +767,47 @@ export class AgentSession {
 		this.#customCommands = config.customCommands ?? [];
 		this.#skillsSettings = config.skillsSettings;
 		this.#modelRegistry = config.modelRegistry;
+		this.#recaps = new RecapService({
+			getState: () => {
+				const entries = this.sessionManager.getBranch();
+				return {
+					sessionId: this.sessionId,
+					entries,
+					completedTurnCount: countCompletedTurns(entries),
+					focused: this.#terminalFocused,
+					idle: !this.isStreaming && !this.isSessionChanging && !this.isDisposing,
+					auto: this.settings.get("recap.auto"),
+				};
+			},
+			generateText: async (recapPrompt, signal) => {
+				const model = this.model;
+				if (!model) throw new Error("No model selected for recap");
+				const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+				if (!apiKey) throw new Error(`No API key for ${model.provider}`);
+				const response = await completeSimple(
+					model,
+					{
+						systemPrompt: "Summarize the supplied conversation accurately. Return only the requested JSON.",
+						messages: [{ role: "user", content: [{ type: "text", text: recapPrompt }], timestamp: Date.now() }],
+					},
+					{ apiKey, signal, maxTokens: 420 },
+				);
+				if (response.stopReason === "error" || response.stopReason === "aborted")
+					throw new Error(response.errorMessage || "Recap generation failed");
+				return response.content
+					.filter(part => part.type === "text")
+					.map(part => part.text)
+					.join("");
+			},
+			save: recap => {
+				this.sessionManager.appendCustomEntry(RECAP_ENTRY_TYPE, recap);
+			},
+			onCreated: recap => {
+				const event = { type: "recap_created" as const, recap };
+				this.#emit(event);
+				void this.#queueExtensionEvent(event);
+			},
+		});
 		this.#resolveToolPolicyForModel = config.resolveToolPolicyForModel;
 		this.#contextProfileCollector =
 			config.contextProfileCollector ?? new ContextProfileCollector(this.settings.get("context.loadingMode"));
@@ -1321,6 +1367,7 @@ export class AgentSession {
 		// status before Herdr observes idle. Other subscribers and post-turn maintenance
 		// continue concurrently. This also covers Agent.continue() continuations.
 		if (event.type === "agent_end") {
+			queueMicrotask(() => this.#recaps.refresh());
 			const lastAssistant = [...event.messages]
 				.reverse()
 				.find((message): message is AssistantMessage => message.role === "assistant");
@@ -2498,7 +2545,9 @@ export class AgentSession {
 	/** Emit extension events based on session events */
 	async #emitExtensionEvent(event: AgentSessionEvent): Promise<void> {
 		if (!this.#extensionRunner) return;
-		if (event.type === "turn_phase") {
+		if (event.type === "recap_created") {
+			await this.#extensionRunner.emit(event);
+		} else if (event.type === "turn_phase") {
 			await this.#extensionRunner.emit(event);
 		} else if (event.type === "agent_start") {
 			this.#turnIndex = 0;
@@ -2675,6 +2724,7 @@ export class AgentSession {
 	): Promise<T> {
 		return this.#sessionTransitions.run(async owner => {
 			try {
+				this.#recaps.dispose();
 				this.userInteractions.cancelAll("superseded");
 				this.conversationPlans.invalidate();
 				await this.abort();
@@ -2682,6 +2732,7 @@ export class AgentSession {
 				await this.#settleBackgroundJobsForTransition();
 				return await change(owner);
 			} finally {
+				this.#recaps.refresh();
 				if (!this.isDisposing) this.#reconnectToAgent();
 			}
 		}, scope);
@@ -2799,6 +2850,7 @@ export class AgentSession {
 			}
 		}
 		this.#beforeDisposeHooks.clear();
+		this.#recaps.dispose();
 		this.#beforeUserInputHooks.clear();
 		await this.abort();
 		await this.#sessionTransitions.waitForIdle();
@@ -3418,6 +3470,23 @@ export class AgentSession {
 	/** Current session ID */
 	get sessionId(): string {
 		return this.sessionManager.getSessionId();
+	}
+
+	getRecaps(): RecapRecord[] {
+		return readRecaps(this.sessionManager.getBranch());
+	}
+
+	generateRecap(): Promise<RecapRecord | null> {
+		return this.#recaps.generate("manual");
+	}
+
+	setTerminalFocused(focused: boolean): void {
+		this.#terminalFocused = focused;
+		this.#recaps.refresh();
+	}
+
+	refreshRecapScheduling(): void {
+		this.#recaps.refresh();
 	}
 
 	/** Current session display name, if set */
@@ -4142,6 +4211,7 @@ export class AgentSession {
 		} finally {
 			if (!agentLoopStarted && !settled) this.#turnPhase.settle("aborted");
 			this.#promptInFlightCount = Math.max(0, this.#promptInFlightCount - 1);
+			this.#recaps.refresh();
 		}
 	}
 
@@ -5767,6 +5837,7 @@ export class AgentSession {
 				]);
 			} finally {
 				this.#promptInFlightCount = Math.max(0, this.#promptInFlightCount - 1);
+				this.#recaps.refresh();
 			}
 			await completionPromise;
 			assertCurrent();

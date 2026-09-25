@@ -571,6 +571,11 @@ export interface TurnPhaseEvent {
 	turnId: number;
 }
 
+export interface RecapCreatedEvent {
+	type: "recap_created";
+	recap: import("../../session/recap").RecapRecord;
+}
+
 /** Fired when a tool starts executing */
 export interface ToolExecutionStartEvent {
 	type: "tool_execution_start";
@@ -850,6 +855,7 @@ export type ExtensionEvent =
 	| UserPromptStartEvent
 	| UserPromptEndEvent
 	| TurnPhaseEvent
+	| RecapCreatedEvent
 	| ToolExecutionStartEvent
 	| ToolExecutionUpdateEvent
 	| ToolExecutionEndEvent
@@ -1099,6 +1105,7 @@ export interface ExtensionAPI {
 	on(event: "user_prompt_start", handler: ExtensionHandler<UserPromptStartEvent>): void;
 	on(event: "user_prompt_end", handler: ExtensionHandler<UserPromptEndEvent>): void;
 	on(event: "turn_phase", handler: ExtensionHandler<TurnPhaseEvent>): void;
+	on(event: "recap_created", handler: ExtensionHandler<RecapCreatedEvent>): void;
 	on(event: "tool_execution_start", handler: ExtensionHandler<ToolExecutionStartEvent>): void;
 	on(event: "tool_execution_update", handler: ExtensionHandler<ToolExecutionUpdateEvent>): void;
 	on(event: "tool_execution_end", handler: ExtensionHandler<ToolExecutionEndEvent>): void;
