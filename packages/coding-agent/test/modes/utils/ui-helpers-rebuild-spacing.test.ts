@@ -12,7 +12,7 @@ function baseCtx(): InteractiveModeContext {
 		chatContainer: new Container(),
 		pendingTools: new Map(),
 		ui: { requestRender: vi.fn() },
-		sessionManager: { getCwd: () => "/tmp" },
+		sessionManager: { getCwd: () => "/tmp", getBranch: () => [] },
 		session: { getToolByName: () => undefined },
 		statusLine: { invalidate: vi.fn() },
 		updateEditorBorderColor: vi.fn(),

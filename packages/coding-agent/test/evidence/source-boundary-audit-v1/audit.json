@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "a6b3e09a30e2b3abd715bfb33476e6f218cd77d1",
-  "fingerprint": "7653fb4fa6c32db00617e26b2f5e2bb5af7d1fbb0702da03e5c7373283f79da2",
+  "revision": "64b0c314973dc446e7ffb85714b7a726def12ab3",
+  "fingerprint": "3981134d106677656f80c806bc48544a1ab673781bf6c5684968faecb29b0793",
   "counts": {
-    "total": 241,
-    "components": 96,
+    "total": 242,
+    "components": 97,
     "integrations": 145
   },
   "audits": [
@@ -2284,6 +2284,24 @@
         "packages/coding-agent/test/pending-glyph-sweep.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/read-tool-group.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/components/recap-message.ts",
+      "kind": "component",
+      "ownership": "read-only-renderer",
+      "domain": "core",
+      "sha256": "21e5e087b32f7afa60c7b6e2df709e9ee3ad7a344675f6da3bd8d7e18dcf8e2b",
+      "exports": [
+        "RecapMessageComponent"
+      ],
+      "interactionSignals": [
+        "render"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/recap-message.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/components/recap-message.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/request-user-input.ts",
