@@ -293,7 +293,7 @@ describe("setup litellm round-trip", () => {
 		const yml = generateModelsYml("https://litellm.internal:4000");
 		const astra = yml.slice(yml.indexOf("      gpt-6-astra:"), yml.indexOf("      gpt-5.6-sol:"));
 
-		expect(CURRENT_CONFIG_VERSION).toBe(8);
+		expect(CURRENT_CONFIG_VERSION).toBe(9);
 		expect(yml).toContain(
 			'      - id: gpt-6-astra\n        name: GPT-6 Astra\n        api: openai-responses\n        baseUrl: "https://litellm.internal:4000/openai/v1"',
 		);

@@ -719,6 +719,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		new ModelRegistry(authStorage, undefined, {
 			getProviderOrder: () => settings.get("modelProviderOrder"),
 			getOpenAICodexMaxContext: () => settings.get("providers.openaiCodexMaxContext"),
+			getLiteLLMMaxContext: () => settings.get("providers.litellmMaxContext"),
 		});
 
 	const configuredContextLoadingMode = settings.get("context.loadingMode");

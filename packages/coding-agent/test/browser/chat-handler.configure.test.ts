@@ -51,10 +51,16 @@ interface RegisterProviderCall {
 class FakeModelRegistry {
 	registerProviderCalls: RegisterProviderCall[] = [];
 	runtimeApiKeys: Array<{ provider: string; apiKey: string }> = [];
-	// The models this registry can resolve; GPT-5.6 Sol is the baked xcsh default.
+	// The models this registry can resolve, including current and legacy internal routes.
 	models: Array<{ provider: string; id: string }> = [
+		{ provider: "litellm", id: "gpt-6-luna" },
+		{ provider: "litellm", id: "gpt-6-sol" },
+		{ provider: "litellm", id: "gpt-6-astra" },
 		{ provider: "litellm", id: "gpt-5.6-sol" },
 		{ provider: "litellm", id: "gpt-5.6-terra" },
+		{ provider: "anthropic", id: "claude-haiku-4-5" },
+		{ provider: "anthropic", id: "claude-sonnet-5" },
+		{ provider: "anthropic", id: "claude-opus-5-5" },
 		{ provider: "anthropic", id: "claude-opus-5" },
 	];
 
@@ -82,7 +88,7 @@ class FakeAgentSession {
 	readonly slashCommands = [];
 	modelRegistry = new FakeModelRegistry();
 	// Current default model (used when `configure` omits `model`).
-	model = { provider: "litellm", id: "gpt-5.6-sol" };
+	model = { provider: "litellm", id: "gpt-5.6-terra" };
 	agent = {
 		abort(): void {},
 		replaceMessages(): void {},
@@ -163,7 +169,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(call.config.models).toBeUndefined();
 
 		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
-		expect(session.setThinkingLevelCalls).toEqual(["high"]);
+		expect(session.setThinkingLevelCalls).toEqual(["medium"]);
 
 		const acks = server.ofType("configure_ack");
 		expect(acks).toHaveLength(1);
@@ -177,7 +183,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 			type: "configure",
 			baseUrl: "https://f5ai.pd.f5net.com",
 			token: "<XC_API_TOKEN>",
-			model: "claude-opus-5",
+			model: "claude-opus-5-5",
 		});
 		await flush();
 
@@ -192,9 +198,9 @@ describe("ChatHandler configure frame (#2095)", () => {
 				sourceId: "office-configure",
 			},
 		]);
-		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-5" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-5-5" }]);
 		expect(session.setThinkingLevelCalls).toEqual(["high"]);
-		expect(server.ofType("configure_ack")).toEqual([{ type: "configure_ack", model: "claude-opus-5" }]);
+		expect(server.ofType("configure_ack")).toEqual([{ type: "configure_ack", model: "claude-opus-5-5" }]);
 	});
 
 	it("normalizes a saved full-path URL before switching Opus → GPT → Opus", async () => {
@@ -233,20 +239,20 @@ describe("ChatHandler configure frame (#2095)", () => {
 		await flush();
 
 		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
-		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-sol");
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
+		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-terra");
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
-	it("model omitted after Opus was active → restores the baked GPT-5.6 Sol default", async () => {
+	it("model omitted after Opus was active → restores the baked GPT-5.6 Terra default", async () => {
 		const { server, session } = makeHandler();
 		session.model = { provider: "anthropic", id: "claude-opus-5" };
 		server.emit({ type: "configure", token: "<XC_API_TOKEN>" });
 		await flush();
 
 		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
-		expect(session.setThinkingLevelCalls).toEqual(["high"]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
+		expect(session.setThinkingLevelCalls).toEqual(["medium"]);
 	});
 
 	it("(b) key-only (no baseUrl) → setRuntimeApiKey path, no registerProvider", async () => {

@@ -44,6 +44,8 @@ async function runLegacyCommitCommand(args: CommitCommandArgs): Promise<void> {
 	const authStorage = await discoverAuthStorage();
 	const modelRegistry = new ModelRegistry(authStorage, undefined, {
 		getProviderOrder: () => settings.get("modelProviderOrder"),
+		getOpenAICodexMaxContext: () => settings.get("providers.openaiCodexMaxContext"),
+		getLiteLLMMaxContext: () => settings.get("providers.litellmMaxContext"),
 	});
 	await modelRegistry.refresh();
 

@@ -41,21 +41,21 @@ test("isListModels accepts only list_models", () => {
 test("list_models reports the active model and only available curated provider/model pairs", () => {
 	const h = harness(
 		[
-			{ provider: "litellm", id: "gpt-5.6-sol" },
-			{ provider: "anthropic", id: "claude-opus-5" },
-			{ provider: "other", id: "claude-opus-5" },
+			{ provider: "litellm", id: "gpt-6-sol" },
+			{ provider: "anthropic", id: "claude-opus-5-5" },
+			{ provider: "other", id: "claude-opus-5-5" },
 		],
-		{ provider: "anthropic", id: "claude-opus-5" },
+		{ provider: "anthropic", id: "claude-opus-5-5" },
 	);
 	new ChatHandler(h.server, h.session).attach();
 	h.fire({ type: "list_models" });
 
 	expect(h.sent).toContainEqual({
 		type: "models",
-		current: "claude-opus-5",
+		current: "claude-opus-5-5",
 		models: [
-			{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
-			{ id: "claude-opus-5", label: "Claude Opus 5" },
+			{ id: "gpt-6-sol", label: "GPT-6 Sol" },
+			{ id: "claude-opus-5-5", label: "Claude Opus 5.5" },
 		],
 	});
 });

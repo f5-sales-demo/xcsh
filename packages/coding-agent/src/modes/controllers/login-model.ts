@@ -14,22 +14,22 @@ export interface LoginModelChoice {
 
 export interface LiteLLMLoginModelChoice extends LoginModelChoice {
 	provider: "anthropic" | "litellm";
-	modelId: "claude-opus-5" | "gpt-5.6-sol";
+	modelId: "claude-opus-5-5" | "gpt-6-sol";
 }
 
 export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
 	{
-		label: "GPT-5.6 Sol",
-		description: "OpenAI-compatible model with high reasoning",
+		label: "GPT-6 Sol",
+		description: "OpenAI Responses model with high reasoning",
 		provider: "litellm",
-		modelId: "gpt-5.6-sol",
+		modelId: "gpt-6-sol",
 		thinkingLevel: ThinkingLevel.High,
 	},
 	{
-		label: "Claude Opus 5",
+		label: "Claude Opus 5.5",
 		description: "Anthropic Messages model with high reasoning",
 		provider: "anthropic",
-		modelId: "claude-opus-5",
+		modelId: "claude-opus-5-5",
 		thinkingLevel: ThinkingLevel.High,
 	},
 ];
@@ -79,19 +79,19 @@ export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly
  * that policy onto the provider namespace used by the LiteLLM configuration.
  */
 export function getLiteLLMLoginModelRoles(choice: LiteLLMLoginModelChoice): Record<string, string> {
-	if (choice.modelId === "claude-opus-5") {
+	if (choice.modelId === "claude-opus-5-5") {
 		return {
 			smol: `${choice.provider}/claude-haiku-4-5:low`,
 			default: `${choice.provider}/claude-sonnet-5:medium`,
-			slow: `${choice.provider}/claude-opus-5:high`,
-			plan: `${choice.provider}/claude-opus-5:high`,
+			slow: `${choice.provider}/claude-opus-5-5:high`,
+			plan: `${choice.provider}/claude-opus-5-5:high`,
 		};
 	}
 	return {
-		smol: `${choice.provider}/gpt-5.6-luna:low`,
+		smol: `${choice.provider}/gpt-6-luna:low`,
 		default: `${choice.provider}/gpt-5.6-terra:medium`,
-		slow: `${choice.provider}/gpt-5.6-sol:high`,
-		plan: `${choice.provider}/gpt-5.6-sol:high`,
+		slow: `${choice.provider}/gpt-6-sol:high`,
+		plan: `${choice.provider}/gpt-6-sol:high`,
 	};
 }
 

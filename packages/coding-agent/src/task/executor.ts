@@ -981,6 +981,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				new ModelRegistry(authStorage, undefined, {
 					getProviderOrder: () => settings.get("modelProviderOrder"),
 					getOpenAICodexMaxContext: () => settings.get("providers.openaiCodexMaxContext"),
+					getLiteLLMMaxContext: () => settings.get("providers.litellmMaxContext"),
 				});
 			await modelRegistry.refresh();
 			checkAbort();

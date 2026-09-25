@@ -23,11 +23,11 @@ describe("Routing Presets (R03)", () => {
 		expect(BUILTIN_ROUTING_PRESETS["litellm/openai"]).toBeDefined();
 		expect(BUILTIN_ROUTING_PRESETS["litellm/openai"]).toMatchObject({
 			provider: "litellm",
-			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+			tiers: { utility: "gpt-6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-6-sol" },
 		});
 		expect(BUILTIN_ROUTING_PRESETS["litellm/anthropic"]).toMatchObject({
-			provider: "litellm",
-			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5" },
+			provider: "anthropic",
+			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5-5" },
 		});
 		expect(BUILTIN_ROUTING_PRESETS["openai-codex/gpt-6"]).toMatchObject({
 			provider: "openai-codex",
@@ -67,16 +67,16 @@ describe("Routing Presets (R03)", () => {
 
 		const litellmOpenaiPool = resolveModelPool("litellm/openai", {});
 		expect(litellmOpenaiPool).toBeDefined();
-		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-5.6-luna");
+		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-6-luna");
 		expect(litellmOpenaiPool?.tiers.balanced).toBe("gpt-5.6-terra");
-		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
+		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-6-sol");
 	});
 
-	it("should NOT cross provider families when anchor model has explicit provider prefix", () => {
-		const litellmClaudePool = resolveModelPool("litellm/claude-sonnet-5", {});
+	it("keeps the explicit LiteLLM Anthropic preset on the native provider route", () => {
+		const litellmClaudePool = resolveModelPool("litellm/anthropic", {});
 		expect(litellmClaudePool).toBeDefined();
 		expect(litellmClaudePool?.id).toBe("litellm/anthropic");
-		expect(litellmClaudePool?.provider).toBe("litellm");
+		expect(litellmClaudePool?.provider).toBe("anthropic");
 	});
 
 	it("should match custom pools when anchor model has provider prefix", () => {

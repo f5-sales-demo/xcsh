@@ -6,6 +6,9 @@
 
 ### Added
 
+- Refreshed generated internal LiteLLM configuration with seven current GPT-6/Claude models,
+  route-accurate Responses and native Messages transports, hidden legacy session resolution, and an
+  independent maximum-context setting ([#4279](https://github.com/f5-sales-demo/xcsh/issues/4279)).
 - Added current ChatGPT subscription roles for GPT-6 Luna/Sol, Claude Opus 5.5 selection, and an
   opt-in Providers setting for the GPT-6 1.05M-token context window. The default remains 272K to
   make long-context pricing explicit; LiteLLM retains its existing catalog

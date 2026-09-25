@@ -2281,7 +2281,7 @@ describe("ModelRegistry", () => {
 				expect(astra).toMatchObject({
 					reasoning: true,
 					input: ["text", "image"],
-					contextWindow: 1_050_000,
+					contextWindow: 272_000,
 					maxTokens: 128_000,
 					compat: { supportsTemperature: false },
 				});
@@ -2320,7 +2320,7 @@ describe("ModelRegistry", () => {
 				expect(registry.find("litellm", "gpt-6-astra")).toMatchObject({
 					name: "GPT-6 Astra",
 					input: ["text", "image"],
-					contextWindow: 1_050_000,
+					contextWindow: 272_000,
 					maxTokens: 128_000,
 				});
 			} finally {
