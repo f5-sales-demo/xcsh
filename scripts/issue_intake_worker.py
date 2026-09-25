@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 # ruff: noqa: D103, EM101, TRY003, S603
-"""Ubuntu side of the Mac scheduled-task handoff. Lease arrives only on stdin."""
+"""Ubuntu timer entrypoint for the Herdr-paired issue watcher."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import stat
 import subprocess
 import sys
 from pathlib import Path
 
 MAX_LEASE_BYTES = 16384
+LEASE_FILE = Path.home() / ".local/share/xcsh-issue-intake/herdr.lease"
 ENDPOINT = "/home/robin/.config/herdr/sessions/xcsh-issue-intake/herdr.sock"
 CONSUMER = "xcsh-issue-intake-mac-worker"
 ALLOWED_ENV = {
@@ -25,13 +27,24 @@ ALLOWED_ENV = {
 EXPECTED_WORKSPACE = "w1"
 
 
+def read_lease(path: Path = LEASE_FILE) -> str:
+    info = path.stat()
+    if info.st_uid != os.getuid() or info.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+        raise PermissionError("Herdr lease must be owned by the worker and owner-only")
+    if info.st_size > MAX_LEASE_BYTES:
+        raise ValueError("oversized Herdr lease")
+    payload = json.loads(path.read_text())
+    lease = payload["lease"]
+    if not isinstance(lease, str) or not lease:
+        raise ValueError("invalid Herdr lease")
+    return lease
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    lease = sys.stdin.read(MAX_LEASE_BYTES + 1).strip()
-    if not lease or len(lease) > MAX_LEASE_BYTES:
-        raise ValueError("missing or oversized Herdr lease")
+    lease = read_lease()
     result = subprocess.run(
         [
             "/home/robin/.local/bin/herdr",
@@ -74,6 +87,7 @@ if __name__ == "__main__":
         sys.exit(main())
     except (
         KeyError,
+        OSError,
         ValueError,
         subprocess.CalledProcessError,
         json.JSONDecodeError,

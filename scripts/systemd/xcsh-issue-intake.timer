@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for new xcsh issues every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+AccuracySec=1min
+Unit=xcsh-issue-intake.service
+
+[Install]
+WantedBy=timers.target

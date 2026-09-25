@@ -2,8 +2,8 @@
 # ruff: noqa: D101, D102, D103, D107, EM101, EM102, TRY003, S603, ANN204
 """Durable, single-run GitHub issue intake for the Ubuntu xcsh checkout.
 
-A Codex desktop scheduled task invokes ``run`` over SSH. The ledger and lock live
-outside Git; no background daemon or GitHub webhook is needed.
+An Ubuntu user timer invokes ``run`` through the paired worker. The ledger and
+lock live outside Git; no background daemon or GitHub webhook is needed.
 """
 
 from __future__ import annotations
