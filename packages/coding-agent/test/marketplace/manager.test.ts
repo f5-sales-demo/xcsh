@@ -125,7 +125,7 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
-			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("505f7ff2f7db8f3aa6eb8b08532d1b6181ad4bdf");
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("229752aaa99ddfd929266d7cc66c15589b639bb0");
 			const discontinuedPrefix = ["F5", "XC_"].join("");
 			expect(JSON.stringify(embeddedCatalog)).not.toContain(discontinuedPrefix);
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
@@ -150,14 +150,15 @@ describe("MarketplaceManager", () => {
 				lifecycle: { pluginDependencies: ["xorg"] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "herdr")).toMatchObject({
-				version: "1.1.2",
+				version: "1.1.3",
+				extensions: ["extensions/integration.ts"],
 				lifecycle: {
 					integrations: ["herdr"],
 					setupRequired: true,
 				},
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "ghostty")).toMatchObject({
-				version: "1.0.1",
+				version: "1.0.2",
 				lifecycle: {
 					integrations: ["ghostty"],
 					setupRequired: true,
@@ -166,7 +167,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"afd7ba717036533c8d7fced1b3573d597097fe0b5e47e0d57c946c7f9e526484",
+				"c7e0a31a5fd665e154de1bf670f63079c43c9b8f430fadc121509fcb175f708e",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
