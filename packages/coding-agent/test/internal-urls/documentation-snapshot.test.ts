@@ -1,10 +1,10 @@
+import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, it } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createGzip } from "node:zlib";
-import { Database } from "bun:sqlite";
 import tar from "tar-stream";
 import {
 	buildDocumentationIndex,
@@ -54,7 +54,7 @@ async function tarGz(entries: ReadonlyMap<string, Buffer>): Promise<Buffer> {
 	return done;
 }
 
-async function fixture(root: string) {
+async function fixture(root: string, mutateManifest?: (value: Record<string, unknown>) => void) {
 	const docsCloud = document(
 		"docs-cloud-f5-com",
 		"Protect Applications",
@@ -105,19 +105,26 @@ async function fixture(root: string) {
 			size_bytes: svg.byteLength,
 		},
 	];
-	const manifest = Buffer.from(
-		`${JSON.stringify({
-			schema_version: 2,
-			source_roots: {
-				"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
-				"my-f5-com": "https://my.f5.com/manage/s",
-			},
-			page_count: documents.length,
-			asset_count: assets.length,
-			documents,
-			assets,
-		})}\n`,
-	);
+	const manifestValue: Record<string, unknown> = {
+		schema_version: 2,
+		tool_version: "0.1.0",
+		source_roots: {
+			"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
+			"my-f5-com": "https://my.f5.com/manage/s",
+		},
+		started_at: "2026-09-26T21:00:00Z",
+		ended_at: "2026-09-26T21:01:00Z",
+		page_count: documents.length,
+		asset_count: assets.length,
+		documents,
+		assets,
+		counts: { fresh: 2 },
+		quality_status_counts: { passed: 2 },
+		removals: [],
+		failures: [],
+	};
+	mutateManifest?.(manifestValue);
+	const manifest = Buffer.from(`${JSON.stringify(manifestValue)}\n`);
 	const qualityJson = Buffer.from("{}\n");
 	const qualityMd = Buffer.from("# Quality\n");
 	const payload = new Map<string, Buffer>([
@@ -168,7 +175,10 @@ async function fixture(root: string) {
 	};
 	const publicationBytes = Buffer.from(`${JSON.stringify(publication)}\n`);
 	await writeFile(path.join(root, "publication.json"), publicationBytes);
-	const allAssets = [...publication.assets, { name: "publication.json", sha256: sha256(publicationBytes), size_bytes: publicationBytes.byteLength }];
+	const allAssets = [
+		...publication.assets,
+		{ name: "publication.json", sha256: sha256(publicationBytes), size_bytes: publicationBytes.byteLength },
+	];
 	return {
 		pin: {
 			schema_version: 1,
@@ -176,8 +186,15 @@ async function fixture(root: string) {
 			release_tag: publication.release_tag,
 			source_commit: publication.source_commit,
 			receipt_sha256: sha256(publicationBytes),
-			assets: Object.fromEntries(allAssets.map(asset => [asset.name, { sha256: asset.sha256, size_bytes: asset.size_bytes }])),
-			manifest: { schema_version: 2, document_count: 2, asset_count: 2, source_roots: Object.keys(JSON.parse(manifest.toString()).source_roots) },
+			assets: Object.fromEntries(
+				allAssets.map(asset => [asset.name, { sha256: asset.sha256, size_bytes: asset.size_bytes }]),
+			),
+			manifest: {
+				schema_version: 2,
+				document_count: 2,
+				asset_count: 2,
+				source_roots: Object.keys(JSON.parse(manifest.toString()).source_roots),
+			},
 			index: { qmd_version: "2.8.3", fingerprint: "pending", sha256: "pending", size_bytes: 0 },
 		},
 		archivePath: path.join(root, "html-to-markdown-content.tar.gz"),
@@ -198,6 +215,15 @@ describe("offline documentation release", () => {
 		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("asset set mismatch");
 	});
 
+	it("rejects augmented nested manifest records", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root, value => {
+			const documents = value.documents as Array<Record<string, unknown>>;
+			documents[0]!.unexpected = true;
+		});
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("manifest document 0 has an invalid shape");
+	});
+
 	it("verifies every archive member and generates byte-identical two-collection indexes", async () => {
 		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
 		const { pin } = await fixture(root);
@@ -214,9 +240,13 @@ describe("offline documentation release", () => {
 
 		const db = new Database(first, { readonly: true });
 		try {
-			const collections = db.query("SELECT name FROM store_collections ORDER BY name").all() as Array<{ name: string }>;
+			const collections = db.query("SELECT name FROM store_collections ORDER BY name").all() as Array<{
+				name: string;
+			}>;
 			expect(collections.map(row => row.name)).toEqual(["docs-cloud-f5-com", "my-f5-com"]);
-			const rows = db.query("SELECT markdown, file_sha256 FROM documentation_documents ORDER BY source").all() as Array<{ markdown: string; file_sha256: string }>;
+			const rows = db
+				.query("SELECT markdown, file_sha256 FROM documentation_documents ORDER BY source")
+				.all() as Array<{ markdown: string; file_sha256: string }>;
 			expect(rows).toHaveLength(2);
 			expect(rows.every(row => sha256(row.markdown) === row.file_sha256)).toBe(true);
 		} finally {
