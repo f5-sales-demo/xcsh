@@ -1,7 +1,8 @@
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { InteractionIdentity } from "../session/user-interactions";
+import { PHONE_COMMAND_WRAPPER, RemoteCommandExec } from "./command-exec";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
@@ -80,6 +81,54 @@ function projectThreadResult(result: unknown, experimental: boolean): unknown {
 		...response,
 		thread: threadWireView(response.thread as Record<string, unknown>, experimental, true),
 	};
+}
+
+/** Recognize the phone's streamed blank-chat setup; its shell script is never executed. */
+function isProjectlessWorkspaceSetup(params: Record<string, unknown>): boolean {
+	const command = params.command;
+	const env = params.env;
+	const policy = params.sandboxPolicy;
+	return (
+		params.cwd === "/" &&
+		Array.isArray(command) &&
+		command.length === 7 &&
+		command[0] === "/bin/sh" &&
+		command[1] === "-c" &&
+		command[2] === PHONE_COMMAND_WRAPPER &&
+		typeof command[3] === "string" &&
+		command[3].length <= 64 &&
+		command[4] === "/bin/sh" &&
+		command[5] === "-lc" &&
+		typeof command[6] === "string" &&
+		Buffer.byteLength(command[6]) <= 4096 &&
+		typeof params.processId === "string" &&
+		params.processId.length > 0 &&
+		params.processId.length <= 256 &&
+		params.streamStdoutStderr === true &&
+		params.streamStdin !== true &&
+		params.tty !== true &&
+		params.size == null &&
+		params.timeoutMs === 20_000 &&
+		params.outputBytesCap === 4097 &&
+		env != null &&
+		typeof env === "object" &&
+		!Array.isArray(env) &&
+		Object.keys(env).every(key => ["BASH_ENV", "ENV", "CODEX_PROJECTLESS_ROOT"].includes(key)) &&
+		(env as Record<string, unknown>).BASH_ENV === null &&
+		(env as Record<string, unknown>).ENV === null &&
+		typeof (env as Record<string, unknown>).CODEX_PROJECTLESS_ROOT === "string" &&
+		((env as Record<string, unknown>).CODEX_PROJECTLESS_ROOT as string).length <= 4096 &&
+		policy != null &&
+		typeof policy === "object" &&
+		!Array.isArray(policy) &&
+		(policy as Record<string, unknown>).type === "workspaceWrite" &&
+		(policy as Record<string, unknown>).networkAccess === true &&
+		Array.isArray((policy as Record<string, unknown>).writableRoots) &&
+		((policy as Record<string, unknown>).writableRoots as unknown[]).length === 1 &&
+		typeof ((policy as Record<string, unknown>).writableRoots as unknown[])[0] === "string" &&
+		(policy as Record<string, unknown>).excludeTmpdirEnvVar === false &&
+		(policy as Record<string, unknown>).excludeSlashTmp === false
+	);
 }
 function initializeCapabilities(value: unknown): InitializeCapabilities {
 	if (value == null) return {};
@@ -283,7 +332,9 @@ export class RemoteRouter {
 		(client, event) => this.#emit(client, event),
 		cwd => this.#visibleThreads().some(thread => thread.cwd === cwd),
 	);
+	#commands = new RemoteCommandExec((client, event) => this.#emit(client, event));
 	dispose(): void {
+		this.#commands.close();
 		this.#processes.close();
 		this.#clients.clear();
 		this.#experimental.clear();
@@ -392,6 +443,7 @@ export class RemoteRouter {
 		});
 	}
 	close(client: string): void {
+		this.#commands.close(client);
 		this.#clients.delete(client);
 		this.#experimental.delete(client);
 		this.#notificationOptOuts.delete(client);
@@ -633,6 +685,30 @@ export class RemoteRouter {
 		this.registerManagedSession(threadId, endpoint);
 		return coldResume;
 	}
+	async #allocateBlankWorkspace(): Promise<string> {
+		const root = this.lifecycle?.defaultCwd ?? this.#currentSession()?.thread.cwd;
+		if (typeof root !== "string" || !isAbsolute(root) || normalize(root) !== root)
+			throw new ProtocolError(-32602, "xcsh workspace root is unavailable");
+		const now = new Date();
+		const day = [
+			now.getFullYear(),
+			String(now.getMonth() + 1).padStart(2, "0"),
+			String(now.getDate()).padStart(2, "0"),
+		].join("-");
+		const parent = join(root, day);
+		await mkdir(parent, { recursive: true });
+		for (let index = 1; index <= 10_000; index++) {
+			const workspace = join(parent, `new-realtime-voice-chat-${index}`);
+			try {
+				await mkdir(workspace);
+				return workspace;
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== "EEXIST")
+					throw new ProtocolError(-32000, "Unable to create xcsh workspace");
+			}
+		}
+		throw new ProtocolError(-32000, "xcsh workspace limit reached");
+	}
 	async #processParams(
 		method: string,
 		params: Record<string, unknown>,
@@ -653,30 +729,7 @@ export class RemoteRouter {
 			params.streamStdin === false &&
 			params.streamStdoutStderr === false
 		) {
-			const root = this.lifecycle?.defaultCwd ?? this.#currentSession()?.thread.cwd;
-			if (typeof root !== "string" || !isAbsolute(root) || normalize(root) !== root)
-				throw new ProtocolError(-32602, "xcsh workspace root is unavailable");
-			const now = new Date();
-			const day = [
-				now.getFullYear(),
-				String(now.getMonth() + 1).padStart(2, "0"),
-				String(now.getDate()).padStart(2, "0"),
-			].join("-");
-			const parent = join(root, day);
-			await mkdir(parent, { recursive: true });
-			let workspace: string | undefined;
-			for (let index = 1; index <= 10_000; index++) {
-				const candidate = join(parent, `new-realtime-voice-chat-${index}`);
-				try {
-					await mkdir(candidate);
-					workspace = candidate;
-					break;
-				} catch (error) {
-					if ((error as NodeJS.ErrnoException).code !== "EEXIST")
-						throw new ProtocolError(-32000, "Unable to create xcsh workspace");
-				}
-			}
-			if (!workspace) throw new ProtocolError(-32000, "xcsh workspace limit reached");
+			const workspace = await this.#allocateBlankWorkspace();
 			isolated = { ...params, cwd: workspace, command: ["/usr/bin/printf", "%s", workspace] };
 			additionalAllowedCwd = workspace;
 		}
@@ -872,6 +925,94 @@ export class RemoteRouter {
 						result = { thread: threadWireView(thread, this.#experimental.has(client), false) };
 						for (const initialized of this.#clients.keys())
 							this.#defer(initialized, { method: "thread/unarchived", params: { threadId: params.threadId } });
+						break;
+					}
+					case "command/exec": {
+						if (isProjectlessWorkspaceSetup(params)) {
+							const workspace = await this.#allocateBlankWorkspace();
+							this.#emit(client, {
+								method: "command/exec/outputDelta",
+								params: {
+									processId: params.processId,
+									stream: "stdout",
+									deltaBase64: Buffer.from(`\0${workspace}`).toString("base64"),
+									capReached: false,
+								},
+							});
+							result = { exitCode: 0, stdout: "", stderr: "" };
+							break;
+						}
+						const sandboxPolicy = params.sandboxPolicy;
+						const policyType =
+							sandboxPolicy && typeof sandboxPolicy === "object" && !Array.isArray(sandboxPolicy)
+								? (sandboxPolicy as Record<string, unknown>).type
+								: undefined;
+						if (
+							policyType === "readOnly" ||
+							(policyType === "workspaceWrite" &&
+								typeof params.processId === "string" &&
+								params.streamStdoutStderr === true)
+						) {
+							if (policyType === "workspaceWrite" && params.cwd === "/")
+								throw new ProtocolError(-32602, "Working directory is unavailable");
+							const mapped = await this.#processParams("process/spawn", params);
+							let cwd = mapped.params.cwd;
+							if (
+								cwd === "/" &&
+								params.cwd === "/" &&
+								!this.#visibleThreads().some(thread => thread.cwd === cwd)
+							) {
+								const fallback = this.lifecycle?.defaultCwd;
+								if (typeof fallback !== "string" || !isAbsolute(fallback) || normalize(fallback) !== fallback)
+									throw new ProtocolError(-32602, "Working directory is unavailable");
+								try {
+									if (!(await stat(fallback)).isDirectory()) throw new Error();
+								} catch {
+									throw new ProtocolError(-32602, "Working directory is unavailable");
+								}
+								cwd = fallback;
+							}
+							// A selected project can precede its first managed thread. The
+							// read-only command sandbox, not thread visibility, confines execution.
+							if (typeof cwd !== "string" || !isAbsolute(cwd) || normalize(cwd) !== cwd)
+								throw new ProtocolError(-32602, "Working directory is unavailable");
+							try {
+								if (!(await stat(cwd)).isDirectory()) throw new Error();
+								if (policyType === "workspaceWrite" && (await realpath(cwd)) !== cwd) throw new Error();
+							} catch {
+								throw new ProtocolError(-32602, "Working directory is unavailable");
+							}
+							result = await this.#commands.execute(client, { ...mapped.params, cwd }, cwd);
+							break;
+						}
+						// The phone uses this standalone command to allocate a blank-chat
+						// workspace. Reuse the existing host-owned allocator: the supplied
+						// shell script is never executed, so its policy cannot widen access.
+						if (
+							params.cwd !== "/" ||
+							params.processId != null ||
+							params.streamStdoutStderr !== false ||
+							!Array.isArray(params.command) ||
+							typeof params.command[2] !== "string" ||
+							!params.command[2].includes('target="$PWD/Documents/') ||
+							!params.command[2].includes('mkdir -p "$target"') ||
+							!params.command[2].includes('printf %s "$target"') ||
+							(params.sandboxPolicy != null &&
+								(typeof params.sandboxPolicy !== "object" ||
+									Array.isArray(params.sandboxPolicy) ||
+									!["dangerFullAccess", "workspaceWrite"].includes(
+										String((params.sandboxPolicy as Record<string, unknown>).type),
+									)))
+						)
+							throw new ProtocolError(-32602, "Unsupported standalone command");
+						const bootstrap = await this.#processParams("process/spawn", {
+							...params,
+							tty: false,
+							streamStdin: false,
+						});
+						if (!bootstrap.additionalAllowedCwd)
+							throw new ProtocolError(-32602, "Unsupported standalone command");
+						result = { exitCode: 0, stdout: bootstrap.additionalAllowedCwd, stderr: "" };
 						break;
 					}
 					case "process/spawn":
