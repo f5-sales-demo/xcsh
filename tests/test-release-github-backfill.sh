@@ -83,13 +83,15 @@ fi
 valid_jobs=$(mktemp)
 extra_jobs=$(mktemp)
 failed_jobs=$(mktemp)
-trap 'rm -f "$valid_jobs" "$extra_jobs" "$failed_jobs"' EXIT
+failed_split_jobs=$(mktemp)
+trap 'rm -f "$valid_jobs" "$extra_jobs" "$failed_jobs" "$failed_split_jobs"' EXIT
 
 jq -n '{jobs: [
   {name: "check", conclusion: "success"},
   {name: "test", conclusion: "success"},
   {name: "Test installation methods", conclusion: "success"},
-  {name: "Native build (linux, x64, baseline and modern)", conclusion: "success"},
+  {name: "Native build (linux, x64, baseline)", conclusion: "success"},
+  {name: "Native build (linux, x64, modern)", conclusion: "success"},
   {name: "Native build (ubuntu-24.04, arm64)", conclusion: "success"},
   {name: "Native build (macos-15-intel, x64)", conclusion: "success"},
   {name: "Native build (macos-15-intel, x64)", conclusion: "success"},
@@ -109,6 +111,12 @@ jq '(.jobs[] | select(.name == "Native build (ubuntu-24.04, arm64)") | .conclusi
   "$valid_jobs" >"$failed_jobs"
 if jq -e -f "$job_validator" "$failed_jobs" >/dev/null; then
   fail "failed required native job was accepted"
+fi
+
+jq '(.jobs[] | select(.name == "Native build (linux, x64, modern)") | .conclusion) = "failure"' \
+  "$valid_jobs" >"$failed_split_jobs"
+if jq -e -f "$job_validator" "$failed_split_jobs" >/dev/null; then
+  fail "failed split Linux native job was accepted"
 fi
 
 echo "release GitHub backfill contract passed"
