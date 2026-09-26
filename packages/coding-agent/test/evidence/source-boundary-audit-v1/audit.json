@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "7b51778a9b535d5962dc6f46e07ee877564cb964",
+  "revision": "62b7d0ffa7b3049b082bbf3b8f44a3afd0c363e4",
   "fingerprint": "4fb57cbd3269b1ec301b1cab99398bde5be6e02fbb78634c0c5ff2316654bdf0",
   "counts": {
     "total": 242,
@@ -1614,6 +1614,7 @@
         "packages/coding-agent/test/python-execution-outcome.test.ts",
         "packages/coding-agent/test/remote-control/trace-assembler.test.ts",
         "packages/coding-agent/test/remote-control/trace.test.ts",
+        "packages/coding-agent/test/remote-control/voice-diagnostics.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
         "packages/coding-agent/test/tools/vim.test.ts"
