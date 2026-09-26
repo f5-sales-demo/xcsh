@@ -19,6 +19,15 @@ export interface VoiceServiceBaseline {
 	unit: string;
 	dropIns: Record<string, string>;
 	hashes: Record<string, string>;
+	runtime?: {
+		executable: string;
+		commit: string | null;
+		version: string;
+		sha256: string;
+		pid: number;
+		invocationId: string;
+		health: Record<string, unknown>;
+	};
 }
 export interface VoiceRowCollection {
 	evidenceFiles: string[];

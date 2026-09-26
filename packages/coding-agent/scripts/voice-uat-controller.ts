@@ -13,7 +13,7 @@ import {
 	stat,
 	writeFile,
 } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { canonicalWarningFingerprint, exportRemoteRealtimeDiagnostics } from "../src/remote-control/voice-diagnostics";
 import { type VoiceCandidate, VoiceUatController, type VoiceUatHost } from "../src/remote-control/voice-uat-controller";
 
@@ -115,7 +115,32 @@ class SystemdVoiceUatHost implements VoiceUatHost {
 		const hashes: Record<string, string> = { [fragment]: createHash("sha256").update(unitBytes).digest("hex") };
 		for (const [path, bytes] of Object.entries(dropIns))
 			hashes[path] = createHash("sha256").update(bytes).digest("hex");
-		return { unit: JSON.stringify({ path: fragment, bytes: unitBytes }), dropIns, hashes };
+		const pid = Number(properties.MainPID);
+		const executable = await realpath(`/proc/${pid}/exe`);
+		let commit: string | null = null;
+		try {
+			const provenance = JSON.parse(await readFile(join(dirname(executable), "provenance.json"), "utf8")) as Record<
+				string,
+				unknown
+			>;
+			const value = provenance.sourceCommit ?? provenance.commit;
+			if (typeof value === "string" && /^[a-f0-9]{40}$/.test(value)) commit = value;
+		} catch {}
+		const health = await status();
+		return {
+			unit: JSON.stringify({ path: fragment, bytes: unitBytes }),
+			dropIns,
+			hashes,
+			runtime: {
+				executable,
+				commit,
+				version: (await command([executable, "--version"])).trim(),
+				sha256: await sha256(executable),
+				pid,
+				invocationId: properties.InvocationID,
+				health,
+			},
+		};
 	}
 	async installCandidate(candidate: VoiceCandidate): Promise<void> {
 		await mkdir(dropInDirectory, { recursive: true, mode: 0o700 });
