@@ -207,6 +207,35 @@ describe("provider publication evidence gate", () => {
 		}
 	}, 60_000);
 
+	it("accepts current and historically receipted provider asset sets", async () => {
+		const fixture = await providerEvidenceFixture(false, false, true);
+		try {
+			const result = await runProviderEvidenceStep(fixture);
+			expect(result.exitCode).toBe(0);
+		} finally {
+			await fs.rm(fixture.root, { force: true, recursive: true });
+		}
+	}, 60_000);
+
+	for (const mutation of ["partial", "augmented"] as const) {
+		it(`rejects ${mutation === "augmented" ? "an" : "a"} ${mutation} provider asset set`, async () => {
+			const fixture = await providerEvidenceFixture();
+			try {
+				const detailed = await Bun.file(fixture.env.FIXTURE_DETAILED).json();
+				const deliveryId = Object.keys(detailed.receipts)[0];
+				const assets = detailed.receipts[deliveryId].publication.assets as Record<string, string>;
+				if (mutation === "partial") delete assets[Object.keys(assets)[0]];
+				else assets["unexpected.zip"] = `sha256:${"f".repeat(64)}`;
+				await Bun.write(fixture.env.FIXTURE_DETAILED, `${JSON.stringify(detailed)}\n`);
+				const result = await runProviderEvidenceStep(fixture);
+				expect(result.exitCode).not.toBe(0);
+				expect(result.output).toContain("Provider publication ledger contains malformed evidence");
+			} finally {
+				await fs.rm(fixture.root, { force: true, recursive: true });
+			}
+		}, 60_000);
+	}
+
 	it("rejects durable evidence that does not match GitHub's release digest", async () => {
 		const fixture = await providerEvidenceFixture(true);
 		try {
@@ -341,7 +370,11 @@ interface ProviderEvidenceFixture {
 	env: Record<string, string>;
 }
 
-async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = false): Promise<ProviderEvidenceFixture> {
+async function providerEvidenceFixture(
+	falseDigest = false,
+	unqualifiedPin = false,
+	includeHistoricalReceipt = false,
+): Promise<ProviderEvidenceFixture> {
 	const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provider-evidence-"));
 	const bin = path.join(root, "bin");
 	await fs.mkdir(bin);
@@ -384,7 +417,7 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 	const sourcePin = `${JSON.stringify(pinDocument)}\n`;
 	const pinSha = new Bun.CryptoHasher("sha256").update(pin).digest("hex");
 	const assets = Object.fromEntries(
-		providerAssetNames(providerVersion).map((name, index) => [
+		providerAssetNames(providerVersion, false).map((name, index) => [
 			name,
 			`sha256:${(index + 1).toString(16).padStart(64, "0")}`,
 		]),
@@ -411,9 +444,46 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 		},
 		version: 1,
 	};
+	if (includeHistoricalReceipt) {
+		const historicalSpecVersion = "6.1.2";
+		const historicalSpecTag = `v${historicalSpecVersion}`;
+		const historicalSpecCommit = "d".repeat(40);
+		const historicalProviderVersion = "8.0.0";
+		const historicalDeliveryId = calculateDeliveryIdForTarget(
+			{
+				releaseTag: historicalSpecTag,
+				targetCommit: historicalSpecCommit,
+				triggerSource: "f5-sales-demo/api-specs-enriched",
+				version: historicalSpecVersion,
+			},
+			"f5-sales-demo/terraform-provider-xcsh",
+		);
+		const historicalAssets = Object.fromEntries(
+			providerAssetNames(historicalProviderVersion, true).map((name, index) => [
+				name,
+				`sha256:${(index + 1).toString(16).padStart(64, "0")}`,
+			]),
+		);
+		const historicalDelivery = {
+			release_tag: historicalSpecTag,
+			target_commit: historicalSpecCommit,
+			version: historicalSpecVersion,
+		};
+		ledger.deliveries[historicalDeliveryId] = historicalDelivery;
+		detailed.receipts[historicalDeliveryId] = {
+			delivery: historicalDelivery,
+			publication: {
+				assets: historicalAssets,
+				commit: "e".repeat(40),
+				spec_release_sha256: "f".repeat(64),
+				tag: `v${historicalProviderVersion}`,
+				version: historicalProviderVersion,
+			},
+		};
+	}
 	const release = {
 		assets: providerAssetNames(providerVersion).map(name => ({
-			digest: falseDigest && name.startsWith("mcp-data-") ? `sha256:${"0".repeat(64)}` : assets[name],
+			digest: falseDigest && name.endsWith("_SHA256SUMS") ? `sha256:${"0".repeat(64)}` : assets[name],
 			name,
 		})),
 		body: `notes\n<!-- provider-publication-receipt:${JSON.stringify(evidence)} -->\n`,
@@ -487,8 +557,8 @@ async function runProviderEvidenceStep(
 	return { exitCode, output: `${stdout}${stderr}` };
 }
 
-function providerAssetNames(version: string): string[] {
-	return [
+function providerAssetNames(version: string, includeMcp = false): string[] {
+	const names = [
 		`terraform-provider-xcsh_${version}_darwin_amd64.zip`,
 		`terraform-provider-xcsh_${version}_darwin_arm64.zip`,
 		`terraform-provider-xcsh_${version}_freebsd_386.zip`,
@@ -502,6 +572,7 @@ function providerAssetNames(version: string): string[] {
 		`terraform-provider-xcsh_${version}_SHA256SUMS.sig`,
 		`terraform-provider-xcsh_${version}_windows_386.zip`,
 		`terraform-provider-xcsh_${version}_windows_amd64.zip`,
-		`mcp-data-${version}.tar.gz`,
 	];
+	if (includeMcp) names.push(`mcp-data-${version}.tar.gz`);
+	return names;
 }

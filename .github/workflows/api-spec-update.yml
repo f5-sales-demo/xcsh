@@ -182,8 +182,8 @@ jobs:
                 (.value.publication.commit | test("^[0-9a-f]{40}$")) and
                 (.value.publication.spec_release_sha256 | test("^[0-9a-f]{64}$")) and
                 .value.publication.tag == ("v" + .value.publication.version) and
-                (.value.publication.assets | keys | sort) == [
-                  ("mcp-data-" + .value.publication.version + ".tar.gz"),
+                (.value.publication.version as $version |
+                [
                   ("terraform-provider-xcsh_" + .value.publication.version + "_SHA256SUMS"),
                   ("terraform-provider-xcsh_" + .value.publication.version + "_SHA256SUMS.sig"),
                   ("terraform-provider-xcsh_" + .value.publication.version + "_darwin_amd64.zip"),
@@ -197,7 +197,10 @@ jobs:
                   ("terraform-provider-xcsh_" + .value.publication.version + "_manifest.json"),
                   ("terraform-provider-xcsh_" + .value.publication.version + "_windows_386.zip"),
                   ("terraform-provider-xcsh_" + .value.publication.version + "_windows_amd64.zip")
-                ] and
+                ] as $current_assets |
+                (.value.publication.assets | keys | sort) as $actual_assets |
+                $actual_assets == ($current_assets | sort) or
+                $actual_assets == (($current_assets + [("mcp-data-" + $version + ".tar.gz")]) | sort)) and
                 ([.value.publication.assets[] | test("^sha256:[0-9a-f]{64}$")] | all)
               ' >/dev/null || { echo "::error::Provider publication ledger contains malformed evidence"; exit 1; }
             done < <(printf '%s' "$PROVIDER_EVIDENCE" | jq -c '.receipts | to_entries[]')
