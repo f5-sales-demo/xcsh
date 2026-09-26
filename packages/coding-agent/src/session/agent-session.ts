@@ -117,7 +117,11 @@ import { ExtensionToolWrapper, wrapRegisteredTools } from "../extensibility/exte
 import type { HookCommandContext } from "../extensibility/hooks/types";
 import type { Skill, SkillWarning } from "../extensibility/skills";
 import { expandSlashCommand, type FileSlashCommand } from "../extensibility/slash-commands";
-import { type ApiCatalogPreflightResult, runApiCatalogPreflight } from "../internal-urls/api-catalog-preflight";
+import {
+	type ApiCatalogPreflightIntent,
+	type ApiCatalogPreflightResult,
+	runApiCatalogPreflight,
+} from "../internal-urls/api-catalog-preflight";
 import {
 	disposeKernelSessionsByOwner,
 	executePython as executePythonCommand,
@@ -345,7 +349,7 @@ export interface AgentSessionConfig {
 	/** Injectable deterministic API discovery boundary used by tests and embedded sessions. */
 	apiCatalogPreflight?: (
 		prompt: string,
-		options: { toolsEnabled: boolean },
+		options: { toolsEnabled: boolean; previousResource?: ApiCatalogPreflightIntent },
 	) => Promise<ApiCatalogPreflightResult | null>;
 	/** Enable hidden-by-default MCP tool discovery for this session. */
 	mcpDiscoveryEnabled?: boolean;
@@ -675,6 +679,7 @@ export class AgentSession {
 	#convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 	#rebuildSystemPrompt: ((toolNames: string[], tools: Map<string, AgentTool>) => Promise<string>) | undefined;
 	#apiCatalogPreflight: NonNullable<AgentSessionConfig["apiCatalogPreflight"]>;
+	#apiCatalogPreflightContext: ApiCatalogPreflightIntent | undefined;
 	#toolSelectionRevision = 0;
 	#baseSystemPrompt: string;
 	#mcpDiscoveryEnabled = false;
@@ -4074,12 +4079,25 @@ export class AgentSession {
 			// Classified F5 XC API/schema intent is discovered locally before any
 			// compaction or provider inference. A QMD/index error is deliberately
 			// terminal for this turn so the model cannot substitute web search or a guess.
-			const apiCatalogPreflight =
-				message.role === "user"
-					? await this.#apiCatalogPreflight(expandedText, {
-							toolsEnabled: this.getActiveToolNames().includes("read"),
-						})
-					: null;
+			let apiCatalogPreflight: ApiCatalogPreflightResult | null = null;
+			if (message.role === "user") {
+				try {
+					apiCatalogPreflight = await this.#apiCatalogPreflight(expandedText, {
+						toolsEnabled: this.getActiveToolNames().includes("read"),
+						previousResource: this.#apiCatalogPreflightContext,
+					});
+				} catch (error) {
+					this.#apiCatalogPreflightContext = undefined;
+					throw error;
+				}
+				this.#apiCatalogPreflightContext = apiCatalogPreflight
+					? {
+							resource: apiCatalogPreflight.resource,
+							domain: apiCatalogPreflight.domain,
+							queries: apiCatalogPreflight.queries,
+						}
+					: undefined;
+			}
 
 			// Validate model
 			if (!this.model) {
@@ -4976,6 +4994,7 @@ export class AgentSession {
 			this.#followUpMessages = [];
 			this.#pendingNextTurnMessages = [];
 			this.#scheduledHiddenNextTurnGeneration = undefined;
+			this.#apiCatalogPreflightContext = undefined;
 
 			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 			this.sessionManager.appendThinkingLevelChange(this.thinkingLevel);
@@ -7808,6 +7827,7 @@ export class AgentSession {
 				}
 
 				this.agent.replaceMessages(sessionContext.messages);
+				this.#apiCatalogPreflightContext = undefined;
 				this.#syncTodoPhasesFromBranch();
 				this.#syncRoutingStateFromBranch();
 				if (switchingToDifferentSession) {

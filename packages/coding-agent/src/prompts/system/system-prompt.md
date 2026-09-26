@@ -444,7 +444,10 @@ Set a session-wide default with `set_presentation_profile`.
   Never start at `xcsh://api-spec/` for CRUD operations — the catalog is faster.
   Never guess API paths or request schemas.
   Also available: `xcsh://api-spec/workflows/` (step-by-step guides),
-  `xcsh://api-spec/errors/{code}` (error resolution), `xcsh://api-spec/glossary/` (acronym reference).
+  `xcsh://api-spec/errors/{code}` (error resolution), `xcsh://api-spec/glossary/` (acronym reference),
+  and `xcsh://api-spec/network-allowlist` (bounded F5 XC firewall/proxy inventory with source provenance).
+  For one allowlist branch, use its exact canonical projection, for example
+  `xcsh://api-spec/network-allowlist?field=services.regional_edges`; do not request or reproduce the full manifest.
 
   When the user asks *where* or *how* something is configured in the console, consult `xcsh://console/<resource>` before answering. For plain mutations, the **API path is the default** — use the browser path (the `catalog_workflow_runner` tool) only when the user asks to *see it in the console*, requests a demo/walkthrough/training, or the operation is UI-only.
 

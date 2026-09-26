@@ -10,6 +10,7 @@ import type { ModelBenchmarkTarget, TimedJsonEvent } from "./model-matrix-report
 import {
 	MODEL_BENCHMARK_PLUGIN_DIR,
 	type ModelBenchmarkScenario,
+	type ModelScenarioTurn,
 	type ModelScenarioSuite,
 	selectModelBenchmarkScenarios,
 } from "./model-scenario-library";
@@ -19,15 +20,34 @@ import {
 	type ScenarioBenchmarkReport,
 	type ScenarioBenchmarkSample,
 	type ScenarioBenchmarkSummary,
+	type ScenarioBenchmarkTurnInput,
 	summarizeScenarioBenchmarks,
 } from "./model-scenario-report";
 
 const REPO_ROOT = path.join(import.meta.dir, "../../..");
-const DEFAULT_TARGETS: ModelBenchmarkTarget[] = [
-	{ label: "Gemini 3.6 Flash", selector: "google-vertex/gemini-3.6-flash" },
-	{ label: "GPT-5.6 Sol", selector: "litellm/gpt-5.6-sol" },
-	{ label: "Claude Opus 5", selector: "anthropic/claude-opus-5" },
+export const DEFAULT_MODEL_SCENARIO_TARGETS: ModelBenchmarkTarget[] = [
+	{ label: "GPT-6 Sol", selector: "openai-codex/gpt-6-sol" },
+	{ label: "Claude Opus 5.5", selector: "anthropic/claude-opus-5-5" },
+	{ label: "Gemini 3.8 Flash", selector: "google-vertex/gemini-3.8-flash" },
 ];
+
+export function orderedScenarioTurns(scenario: Pick<ModelBenchmarkScenario, "prompt" | "contract" | "quality" | "turns">): readonly ModelScenarioTurn[] {
+	return scenario.turns ?? [{ id: "turn-1", prompt: scenario.prompt, contract: scenario.contract, quality: scenario.quality }];
+}
+
+/** Stable seeded shuffle used to keep matched baseline/candidate execution order identical. */
+export function fixedSeedPairwiseOrder<T>(values: readonly T[], seed: number): T[] {
+	const ordered = [...values];
+	let state = seed >>> 0;
+	for (let index = ordered.length - 1; index > 0; index--) {
+		state ^= state << 13;
+		state ^= state >>> 17;
+		state ^= state << 5;
+		const selected = (state >>> 0) % (index + 1);
+		[ordered[index], ordered[selected]] = [ordered[selected], ordered[index]];
+	}
+	return ordered;
+}
 
 interface CliOptions {
 	runs: number;
@@ -178,7 +198,7 @@ function parseArgs(args: string[]): CliOptions {
 		suite,
 		maxTier,
 		scenarioIds,
-		targets: targets.length > 0 ? targets : DEFAULT_TARGETS,
+		targets: targets.length > 0 ? targets : DEFAULT_MODEL_SCENARIO_TARGETS,
 		thinkingEfforts: allThinkingEfforts
 			? [...BENCHMARK_THINKING_EFFORTS]
 			: thinkingEfforts.length > 0
@@ -196,7 +216,7 @@ function elapsedMs(startNs: number): number {
 async function captureEvents(
 	stream: ReadableStream<Uint8Array>,
 	startNs: number,
-	onEvent?: (event: unknown) => void,
+	onEvent?: (event: TimedJsonEvent) => void,
 ): Promise<CapturedEvents> {
 	const events: TimedJsonEvent[] = [];
 	const errors: string[] = [];
@@ -210,8 +230,9 @@ async function captureEvents(
 		}
 		const receivedAt = elapsedMs(startNs);
 		for (const event of parsed) {
-			events.push({ elapsedMs: receivedAt, event });
-			onEvent?.(event);
+			const timed = { elapsedMs: receivedAt, event };
+			events.push(timed);
+			onEvent?.(timed);
 		}
 	}
 	return { events, errors };
@@ -238,17 +259,18 @@ export function benchmarkExecutableArgs(binaryPath?: string): string[] {
 	return binaryPath ? [binaryPath] : [process.execPath, "run", "dev", "--"];
 }
 
-function scenarioArgs(
+export function benchmarkScenarioArgs(
 	scenario: ModelBenchmarkScenario,
 	target: ModelBenchmarkTarget,
 	contextName: string | undefined,
 	thinking: Effort,
 	binaryPath: string | undefined,
 ): string[] {
+	const multiTurn = orderedScenarioTurns(scenario).length > 1;
 	const args = [
 		...benchmarkExecutableArgs(binaryPath),
 		"--mode",
-		"json",
+		multiTurn ? "rpc" : "json",
 		"--no-session",
 		"--no-memories",
 		"--no-mcp",
@@ -276,8 +298,150 @@ function scenarioArgs(
 	} else {
 		args.push("--skills", scenario.runtime.skills.join(","));
 	}
-	args.push(scenario.prompt);
+	if (!multiTurn) args.push(scenario.prompt);
 	return args;
+}
+
+async function waitForSignal(promise: Promise<void>, timeoutMs: number, message: string): Promise<string | undefined> {
+	let timer: NodeJS.Timeout | undefined;
+	try {
+		await Promise.race([
+			promise,
+			new Promise<never>((_, reject) => {
+				timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+			}),
+		]);
+		return undefined;
+	} catch (error) {
+		return error instanceof Error ? error.message : String(error);
+	} finally {
+		if (timer) clearTimeout(timer);
+	}
+}
+
+async function runOrderedSample(
+	scenario: ModelBenchmarkScenario,
+	target: ModelBenchmarkTarget,
+	contextName: string | undefined,
+	thinking: Effort,
+	round: number,
+	warmup: boolean,
+	timeoutMs: number,
+	failFastProviderError: boolean,
+	binaryPath: string | undefined,
+): Promise<ScenarioBenchmarkSample> {
+	const startedAt = new Date().toISOString();
+	const startNs = Bun.nanoseconds();
+	const child = Bun.spawn(benchmarkScenarioArgs(scenario, target, contextName, thinking, binaryPath), {
+		cwd: REPO_ROOT,
+		env: process.env,
+		stdin: "pipe",
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	const liveEvents: TimedJsonEvent[] = [];
+	const ready = Promise.withResolvers<void>();
+	let readySettled = false;
+	let stateResponse: ReturnType<typeof Promise.withResolvers<void>> | undefined;
+	let activeTurn: ReturnType<typeof Promise.withResolvers<void>> | undefined;
+	const stdoutPromise = captureEvents(child.stdout as ReadableStream<Uint8Array>, startNs, timed => {
+		liveEvents.push(timed);
+		const event = typeof timed.event === "object" && timed.event !== null ? timed.event as Record<string, unknown> : undefined;
+		if (event?.type === "ready" && !readySettled) {
+			readySettled = true;
+			ready.resolve();
+		}
+		if (event?.type === "response" && event.command === "get_state") stateResponse?.resolve();
+		if (event?.type === "agent_end") activeTurn?.resolve();
+		if (failFastProviderError && event?.type === "auto_retry_start") {
+			activeTurn?.reject(new Error("provider retry started"));
+			child.kill();
+		}
+	}).catch(error => ({
+		events: [],
+		errors: [error instanceof Error ? error.message : String(error)],
+	}));
+	const stderrPromise = readStreamCappedText(child.stderr as ReadableStream<Uint8Array>, {
+		maxBytes: 1024 * 1024,
+		source: `${scenario.id}:${target.selector}`,
+	}).catch(error => (error instanceof Error ? error.message : String(error)));
+	void child.exited.then(code => {
+		const error = new Error(`RPC process exited ${code}`);
+		if (!readySettled) {
+			readySettled = true;
+			ready.reject(error);
+		}
+		activeTurn?.reject(error);
+	});
+
+	const turnInputs: ScenarioBenchmarkTurnInput[] = [];
+	let timedOut = false;
+	const readyError = await waitForSignal(ready.promise, Math.min(timeoutMs, 30_000), "RPC process did not become ready");
+	if (readyError) {
+		timedOut = readyError.includes("did not become ready");
+		for (const _turn of orderedScenarioTurns(scenario)) {
+			turnInputs.push({ startedAtMs: elapsedMs(startNs), durationMs: 0, events: [], error: readyError });
+		}
+	} else {
+		stateResponse = Promise.withResolvers<void>();
+		child.stdin.write(`${JSON.stringify({ id: "benchmark-state", type: "get_state" })}\n`);
+		await child.stdin.flush();
+		const stateError = await waitForSignal(stateResponse.promise, Math.min(timeoutMs, 30_000), "RPC state query timed out");
+		stateResponse = undefined;
+		if (stateError) {
+			child.kill();
+			for (const turn of orderedScenarioTurns(scenario)) {
+				turnInputs.push({ startedAtMs: elapsedMs(startNs), durationMs: 0, events: [], error: stateError });
+			}
+		}
+		for (const turn of stateError ? [] : orderedScenarioTurns(scenario)) {
+			const turnStartedAt = elapsedMs(startNs);
+			const eventStart = liveEvents.length;
+			activeTurn = Promise.withResolvers<void>();
+			child.stdin.write(`${JSON.stringify({ type: "prompt", message: turn.prompt })}\n`);
+			await child.stdin.flush();
+			const turnError = await waitForSignal(activeTurn.promise, timeoutMs, `turn ${turn.id} timed out`);
+			const durationMs = elapsedMs(startNs) - turnStartedAt;
+			turnInputs.push({
+				startedAtMs: turnStartedAt,
+				durationMs,
+				events: liveEvents.slice(eventStart).map(event => ({
+					...event,
+					elapsedMs: event.elapsedMs - turnStartedAt,
+				})),
+				error: turnError,
+			});
+			activeTurn = undefined;
+			if (turnError) {
+				timedOut = turnError.includes("timed out");
+				child.kill();
+				for (const skipped of orderedScenarioTurns(scenario).slice(turnInputs.length)) {
+					turnInputs.push({ startedAtMs: elapsedMs(startNs), durationMs: 0, events: [], error: `turn ${skipped.id} not run` });
+				}
+				break;
+			}
+		}
+	}
+	child.stdin.end();
+	let outcome = await waitForExit(child, 5_000);
+	if (outcome.timedOut) outcome = { timedOut: true, exitCode: await terminateProcess(child) };
+	const [captured, stderr] = await Promise.all([stdoutPromise, stderrPromise]);
+	return buildScenarioBenchmarkSample({
+		target,
+		scenario,
+		thinking,
+		contextName,
+		round,
+		warmup,
+		startedAt,
+		processDurationMs: elapsedMs(startNs),
+		exitCode: outcome.exitCode,
+		timedOut,
+		stderr,
+		stdoutErrors: captured.errors,
+		events: captured.events,
+		turnInputs,
+	});
 }
 
 async function runSample(
@@ -291,16 +455,30 @@ async function runSample(
 	failFastProviderError: boolean,
 	binaryPath: string | undefined,
 ): Promise<ScenarioBenchmarkSample> {
+	if (orderedScenarioTurns(scenario).length > 1) {
+		return runOrderedSample(
+			scenario,
+			target,
+			contextName,
+			thinking,
+			round,
+			warmup,
+			timeoutMs,
+			failFastProviderError,
+			binaryPath,
+		);
+	}
 	const startedAt = new Date().toISOString();
 	const startNs = Bun.nanoseconds();
-	const child = Bun.spawn(scenarioArgs(scenario, target, contextName, thinking, binaryPath), {
+	const child = Bun.spawn(benchmarkScenarioArgs(scenario, target, contextName, thinking, binaryPath), {
 		cwd: REPO_ROOT,
 		env: process.env,
 		stdin: "ignore",
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const stdoutPromise = captureEvents(child.stdout as ReadableStream<Uint8Array>, startNs, event => {
+	const stdoutPromise = captureEvents(child.stdout as ReadableStream<Uint8Array>, startNs, timed => {
+		const event = timed.event;
 		if (
 			failFastProviderError &&
 			typeof event === "object" &&
@@ -450,6 +628,16 @@ async function main(): Promise<void> {
 					weight: criterion.weight,
 				})),
 				runtime: scenario.runtime,
+				turns: scenario.turns?.map(turn => ({
+					id: turn.id,
+					prompt: turn.prompt,
+					contract: describeScenarioContract({ ...scenario, ...turn, turns: undefined }),
+					quality: turn.quality.map(criterion => ({
+						id: criterion.id,
+						label: criterion.label,
+						weight: criterion.weight,
+					})),
+				})),
 			})),
 		},
 		warmups: warmupSamples,

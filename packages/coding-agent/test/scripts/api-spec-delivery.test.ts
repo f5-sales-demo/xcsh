@@ -22,6 +22,7 @@ import {
 	supersedePendingDelivery,
 	validateArtifactVersion,
 	verifyAcknowledgmentLedgers,
+	verifyGeneratedApiSpecVersions,
 	verifyGeneratedDelivery,
 	verifyReleasedTag,
 	writePendingDelivery,
@@ -122,7 +123,14 @@ async function preparePendingDelivery(repoRoot: string): Promise<Record<string, 
 	await Bun.write(path.join(repoRoot, DELIVERY_LEDGER_PATH), '{"deliveries":{},"version":1}\n');
 	await Bun.write(path.join(repoRoot, DELIVERY_PUBLICATION_LEDGER_PATH), '{"receipts":{},"version":1}\n');
 	for (const generatedPath of GENERATED_DELIVERY_PATHS) {
-		await Bun.write(path.join(repoRoot, generatedPath), `generated ${generatedPath}\n`);
+		const source = generatedPath.endsWith("api-catalog-index.generated.ts")
+			? `export const API_CATALOG_INDEX = { version: "${VERSION}" };\n`
+			: generatedPath.endsWith("api-spec-index.generated.ts")
+				? `export const API_SPEC_VERSION = "${VERSION}";\n`
+				: generatedPath.endsWith("api-catalog-qmd-index.generated.ts")
+					? `export const QMD_API_CATALOG_PREBUILT_INDEX = { sourceVersion: "${VERSION}" };\n`
+					: `generated ${generatedPath}\n`;
+		await Bun.write(path.join(repoRoot, generatedPath), source);
 	}
 	const pinPath = path.join(repoRoot, "source-pin.json");
 	await Bun.write(pinPath, `${JSON.stringify(qualifiedSpecReleasePin())}\n`);
@@ -165,6 +173,17 @@ function dispatchEvent(overrides: Record<string, unknown> = {}): Record<string, 
 }
 
 describe("API spec delivery identity", () => {
+	it("regenerates, stages, verifies, and publishes the generated QMD index", async () => {
+		const workflow = await Bun.file(
+			path.resolve(import.meta.dir, "../../../../.github/workflows/api-spec-update.yml"),
+		).text();
+		const qmdPath = "packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts";
+		expect(workflow.match(new RegExp(qmdPath.replaceAll("/", "\\/"), "g"))?.length).toBeGreaterThanOrEqual(3);
+		expect(workflow).toContain("rm -f packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts");
+		expect(workflow).toContain("bun run generate-api-catalog-qmd-index");
+		expect(workflow).toContain(`git add -f ${qmdPath}`);
+	});
+
 	it("accepts the canonical upstream payload and derives a delivery-specific branch", () => {
 		const delivery = parseDispatchEvent(dispatchEvent());
 
@@ -207,6 +226,48 @@ describe("API spec delivery identity", () => {
 });
 
 describe("durable API spec delivery ledger", () => {
+	it("attests the generated QMD index and requires coherent generated spec versions", async () => {
+		expect(GENERATED_DELIVERY_PATHS).toContain(
+			"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
+		);
+		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-versions-"));
+		try {
+			const generatedRoot = path.join(repoRoot, "packages/coding-agent/src/internal-urls");
+			await fs.mkdir(generatedRoot, { recursive: true });
+			await Bun.write(
+				path.join(generatedRoot, "api-catalog-index.generated.ts"),
+				'export const API_CATALOG_INDEX = { version: "2.1.208" };\n',
+			);
+			await Bun.write(
+				path.join(generatedRoot, "api-spec-index.generated.ts"),
+				'export const API_SPEC_VERSION = "2.1.208";\n',
+			);
+			await Bun.write(
+				path.join(generatedRoot, "api-catalog-qmd-index.generated.ts"),
+				'export const QMD_API_CATALOG_PREBUILT_INDEX = { sourceVersion: "2.1.207" };\n',
+			);
+
+			await expect(verifyGeneratedApiSpecVersions(repoRoot, VERSION)).rejects.toThrow(
+				"api-catalog-qmd-index.generated.ts version 2.1.207 does not match 2.1.208",
+			);
+		} finally {
+			await fs.rm(repoRoot, { force: true, recursive: true });
+		}
+	});
+
+	it("accepts the exact historical release asset sets in committed immutable receipts", async () => {
+		const repoRoot = path.resolve(import.meta.dir, "../../../..");
+		const delivery = deliveryFor("4.0.0", "4c49e17f42d6600d21ebd2ed4de8336ab4a4524b");
+
+		expect(
+			await verifyAcknowledgmentLedgers(
+				path.join(repoRoot, DELIVERY_LEDGER_PATH),
+				path.join(repoRoot, DELIVERY_PUBLICATION_LEDGER_PATH),
+				delivery,
+			),
+		).toBe(true);
+	});
+
 	it("durably supersedes a rejected pending delivery without acknowledging it", async () => {
 		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-supersede-"));
 		try {
@@ -393,12 +454,37 @@ describe("durable API spec delivery ledger", () => {
 		}
 	});
 
+	it("rejects a historical asset shape for a new publication acknowledgment", async () => {
+		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-historical-publication-"));
+		try {
+			const pending = await preparePendingDelivery(repoRoot);
+			const publication = publicationEvidence(pending);
+			(publication.assets as Record<string, string>)["xcsh-linux-arm64.tar.gz"] = "d".repeat(64);
+			(publication.assets as Record<string, string>)["xcsh-linux-x64.tar.gz"] = "e".repeat(64);
+			const publicationPath = path.join(repoRoot, "historical-publication.json");
+			await Bun.write(publicationPath, `${JSON.stringify(publication)}\n`);
+
+			await expect(acknowledgePublishedDelivery(repoRoot, validDelivery(), publicationPath)).rejects.toThrow(
+				"wrong asset set",
+			);
+		} finally {
+			await fs.rm(repoRoot, { force: true, recursive: true });
+		}
+	});
+
 	it("rejects malformed provider identity and arbitrary regenerated bytes", async () => {
 		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-attestation-"));
 		try {
 			await Bun.write(path.join(repoRoot, DELIVERY_LEDGER_PATH), '{"deliveries":{},"version":1}\n');
 			for (const generatedPath of GENERATED_DELIVERY_PATHS) {
-				await Bun.write(path.join(repoRoot, generatedPath), `generated ${generatedPath}\n`);
+				const source = generatedPath.endsWith("api-catalog-index.generated.ts")
+					? `export const API_CATALOG_INDEX = { version: "${VERSION}" };\n`
+					: generatedPath.endsWith("api-spec-index.generated.ts")
+						? `export const API_SPEC_VERSION = "${VERSION}";\n`
+						: generatedPath.endsWith("api-catalog-qmd-index.generated.ts")
+							? `export const QMD_API_CATALOG_PREBUILT_INDEX = { sourceVersion: "${VERSION}" };\n`
+							: `generated ${generatedPath}\n`;
+				await Bun.write(path.join(repoRoot, generatedPath), source);
 			}
 			const pinPath = path.join(repoRoot, "source-pin.json");
 			await Bun.write(pinPath, `${JSON.stringify(qualifiedSpecReleasePin())}\n`);
@@ -428,7 +514,14 @@ describe("durable API spec delivery ledger", () => {
 		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-qualified-spec-pin-"));
 		try {
 			for (const generatedPath of GENERATED_DELIVERY_PATHS) {
-				await Bun.write(path.join(repoRoot, generatedPath), `generated ${generatedPath}\n`);
+				const source = generatedPath.endsWith("api-catalog-index.generated.ts")
+					? `export const API_CATALOG_INDEX = { version: "${VERSION}" };\n`
+					: generatedPath.endsWith("api-spec-index.generated.ts")
+						? `export const API_SPEC_VERSION = "${VERSION}";\n`
+						: generatedPath.endsWith("api-catalog-qmd-index.generated.ts")
+							? `export const QMD_API_CATALOG_PREBUILT_INDEX = { sourceVersion: "${VERSION}" };\n`
+							: `generated ${generatedPath}\n`;
+				await Bun.write(path.join(repoRoot, generatedPath), source);
 			}
 			const sourcePin = path.join(repoRoot, "source-pin.json");
 			await Bun.write(sourcePin, `${JSON.stringify(qualified)}\n`);

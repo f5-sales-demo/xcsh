@@ -79,6 +79,13 @@ export interface ModelScenarioRuntime {
 	requiresContext: boolean;
 }
 
+export interface ModelScenarioTurn {
+	id: string;
+	prompt: string;
+	contract: ModelScenarioContract;
+	quality: ModelScenarioQualityCriterion[];
+}
+
 export interface ModelBenchmarkScenario {
 	id: string;
 	label: string;
@@ -87,6 +94,8 @@ export interface ModelBenchmarkScenario {
 	prompt: string;
 	contract: ModelScenarioContract;
 	quality: ModelScenarioQualityCriterion[];
+	/** Explicit ordered prompts. Omitted for legacy single-turn scenarios. */
+	turns?: readonly ModelScenarioTurn[];
 	runtime: ModelScenarioRuntime;
 }
 
@@ -522,6 +531,78 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			],
 		},
 		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-first-anaphoric-route-limit",
+		label: "API-first immediate anaphoric route limit",
+		suite: "tools",
+		tier: 2,
+		prompt: apiFirstHttpRouteLimitPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
+			],
+			requiredKnowledgeSequence: [
+				{ type: "api-catalog-preflight", query: "http load balancer" },
+				{ type: "read", path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
+				{ type: "read", path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
+			],
+			knowledgeSequenceStartsAtFirst: true,
+			allowReadContinuations: true,
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		turns: [
+			{
+				id: "resource",
+				prompt: apiFirstHttpRouteLimitPrompt.trim(),
+				contract: {
+					requiredTools: [
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
+					],
+					requiredKnowledgeSequence: [
+						{ type: "api-catalog-preflight", query: "http load balancer" },
+						{ type: "read", path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
+						{ type: "read", path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
+					],
+					knowledgeSequenceStartsAtFirst: true,
+					allowReadContinuations: true,
+					exclusiveTools: true,
+					requiredResponsePatterns: [
+						{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
+					],
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+			{
+				id: "follow-up",
+				prompt: "What is its maximum? Re-read the exact catalog resource from the deterministic preflight, then read xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes. Cite both internal URLs and do not use public documentation or web search.",
+				contract: {
+					requiredTools: [
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
+					],
+					requiredKnowledgeSequence: [
+						{ type: "api-catalog-preflight", query: "http load balancer" },
+						{ type: "read", path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
+						{ type: "read", path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
+					],
+					knowledgeSequenceStartsAtFirst: true,
+					allowReadContinuations: true,
+					exclusiveTools: true,
+					requiredResponsePatterns: [
+						{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
+					],
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{

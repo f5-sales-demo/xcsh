@@ -5,7 +5,7 @@ import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-st
 import { Type } from "@sinclair/typebox";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
-import type { ApiCatalogPreflightResult } from "../src/internal-urls/api-catalog-preflight";
+import type { ApiCatalogPreflightIntent, ApiCatalogPreflightResult } from "../src/internal-urls/api-catalog-preflight";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { convertToLlm } from "../src/session/messages";
@@ -68,7 +68,10 @@ describe("AgentSession API catalog preflight", () => {
 	});
 
 	function createSession(
-		preflight: () => Promise<ApiCatalogPreflightResult | null>,
+		preflight: (
+			prompt: string,
+			options: { toolsEnabled: boolean; previousResource?: ApiCatalogPreflightIntent },
+		) => Promise<ApiCatalogPreflightResult | null>,
 		onMessages?: (messages: Message[]) => void,
 	) {
 		const model = getBundledModel("anthropic", "claude-sonnet-4-5");
@@ -100,7 +103,7 @@ describe("AgentSession API catalog preflight", () => {
 			settings: Settings.isolated({ "compaction.enabled": false }),
 			modelRegistry: new ModelRegistry(auth),
 			toolRegistry: new Map([["read", read]]),
-			apiCatalogPreflight: async () => preflight(),
+			apiCatalogPreflight: async (prompt, options) => preflight(prompt, options),
 		});
 		return session;
 	}
@@ -141,5 +144,33 @@ describe("AgentSession API catalog preflight", () => {
 			"Local API catalog discovery failed: corrupt index",
 		);
 		expect(inferenceCalls).toBe(0);
+	});
+
+	it("offers only the immediately preceding recognized resource to the next turn", async () => {
+		const observed: Array<string | undefined> = [];
+		const current = createSession(async (prompt, options) => {
+			observed.push(options.previousResource?.resource);
+			return prompt.startsWith("First") ? result : null;
+		});
+
+		await current.prompt("First, inspect the F5 XC HTTP load balancer limit.");
+		await current.prompt("Now discuss something unrelated.");
+		await current.prompt("What is its maximum?");
+
+		expect(observed).toEqual([undefined, "http_loadbalancer", undefined]);
+	});
+
+	it("clears the immediately preceding resource when a new session starts", async () => {
+		const observed: Array<string | undefined> = [];
+		const current = createSession(async (prompt, options) => {
+			observed.push(options.previousResource?.resource);
+			return prompt.startsWith("First") ? result : null;
+		});
+
+		await current.prompt("First, inspect the F5 XC HTTP load balancer limit.");
+		expect(await current.newSession()).toBe(true);
+		await current.prompt("What is its maximum?");
+
+		expect(observed).toEqual([undefined, undefined]);
 	});
 });

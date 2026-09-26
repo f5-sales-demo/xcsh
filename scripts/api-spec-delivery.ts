@@ -23,9 +23,14 @@ export const SPEC_RELEASE_PATH = "tools/spec-release.json";
 
 export const GENERATED_DELIVERY_PATHS = [
 	"packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts",
+	"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
 	"packages/coding-agent/src/internal-urls/api-spec-index.generated.ts",
 	"packages/coding-agent/src/internal-urls/terraform-index.generated.ts",
 	"packages/resource-management/src/defaults-metadata.generated.ts",
+] as const;
+
+const HISTORICAL_GENERATED_DELIVERY_PATH_SETS = [
+	GENERATED_DELIVERY_PATHS.filter(path => !path.endsWith("api-catalog-qmd-index.generated.ts")),
 ] as const;
 
 const XCSH_PACKAGES = ["@f5-sales-demo/pi-resource-management", "@f5-sales-demo/xcsh"] as const;
@@ -46,6 +51,14 @@ const XCSH_RELEASE_ASSETS = [
 	"xcsh-linux-arm64",
 	"xcsh-linux-x64",
 	"xcsh-windows-x64.exe",
+] as const;
+
+const HISTORICAL_XCSH_RELEASE_ASSET_SETS = [
+	[
+		...XCSH_RELEASE_ASSETS,
+		"xcsh-linux-arm64.tar.gz",
+		"xcsh-linux-x64.tar.gz",
+	],
 ] as const;
 
 export interface ApiSpecReleaseIdentity {
@@ -226,6 +239,22 @@ function validateDigestMap(document: unknown, expectedNames: readonly string[], 
 	return validated;
 }
 
+function validateDigestMapForAssetSets(
+	document: unknown,
+	expectedSets: readonly (readonly string[])[],
+	field: string,
+): Record<string, string> {
+	if (!document || typeof document !== "object" || Array.isArray(document)) {
+		throw new Error(`${field} must be an object`);
+	}
+	const names = sortedKeys(document as Record<string, unknown>);
+	const expected = expectedSets.find(
+		candidate => JSON.stringify(names) === JSON.stringify([...candidate].sort()),
+	);
+	if (!expected) throw new Error(`${field} has the wrong asset set`);
+	return validateDigestMap(document, expected, field);
+}
+
 function validateQualifiedDigestMap(
 	document: unknown,
 	expectedNames: readonly string[],
@@ -295,6 +324,32 @@ function sha256Bytes(bytes: Uint8Array | string): string {
 
 async function sha256File(file: string): Promise<string> {
 	return sha256Bytes(await fs.readFile(file));
+}
+
+const GENERATED_API_SPEC_VERSION_CONTRACTS = [
+	{
+		path: "packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts",
+		pattern: /export const API_CATALOG_INDEX[^=]*=\s*\{\s*version:\s*"([^"]+)"/s,
+	},
+	{
+		path: "packages/coding-agent/src/internal-urls/api-spec-index.generated.ts",
+		pattern: /export const API_SPEC_VERSION\s*=\s*"([^"]+)"/,
+	},
+	{
+		path: "packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
+		pattern: /sourceVersion:\s*"([^"]+)"/,
+	},
+] as const;
+
+export async function verifyGeneratedApiSpecVersions(repoRoot: string, expectedVersion: string): Promise<void> {
+	for (const contract of GENERATED_API_SPEC_VERSION_CONTRACTS) {
+		const source = await fs.readFile(path.join(repoRoot, contract.path), "utf8");
+		const actual = contract.pattern.exec(source)?.[1];
+		if (!actual) throw new Error(`${path.basename(contract.path)} has no generated API spec version`);
+		if (actual !== expectedVersion) {
+			throw new Error(`${path.basename(contract.path)} version ${actual} does not match ${expectedVersion}`);
+		}
+	}
 }
 
 export function calculateDeliveryId(delivery: Omit<ApiSpecDelivery, "deliveryId">): string {
@@ -371,6 +426,7 @@ async function pendingDeliveryFor(
 ): Promise<ApiSpecPendingDelivery> {
 	if (!/^v\d+\.\d+\.\d+$/.test(providerTag)) throw new Error("Provider tag must be vMAJOR.MINOR.PATCH");
 	if (!COMMIT_PATTERN.test(providerCommit)) throw new Error("Provider commit must be a full lowercase Git SHA");
+	await verifyGeneratedApiSpecVersions(repoRoot, pin.version);
 	const generatedEntries = await Promise.all(
 		GENERATED_DELIVERY_PATHS.map(async file => [file, await sha256File(path.join(repoRoot, file))] as const),
 	);
@@ -785,7 +841,7 @@ export async function clearPendingDelivery(repoRoot: string, delivery: ApiSpecDe
 	await fs.unlink(destination);
 }
 
-function validatePublicationEvidence(document: unknown): XcshPublicationEvidence {
+function validatePublicationEvidence(document: unknown, allowHistoricalAssetSets = false): XcshPublicationEvidence {
 	if (!document || typeof document !== "object" || Array.isArray(document)) {
 		throw new Error("xcsh publication evidence must be an object");
 	}
@@ -801,8 +857,18 @@ function validatePublicationEvidence(document: unknown): XcshPublicationEvidence
 	validateReleaseIdentity(version, tag);
 	const commit = requiredString(evidence.commit, "publication.commit");
 	if (!COMMIT_PATTERN.test(commit)) throw new Error("xcsh publication evidence has an invalid commit");
-	const assets = validateDigestMap(evidence.assets, XCSH_RELEASE_ASSETS, "publication.assets");
-	const generated = validateDigestMap(evidence.generated, GENERATED_DELIVERY_PATHS, "publication.generated");
+	const assets = validateDigestMapForAssetSets(
+		evidence.assets,
+		allowHistoricalAssetSets ? [XCSH_RELEASE_ASSETS, ...HISTORICAL_XCSH_RELEASE_ASSET_SETS] : [XCSH_RELEASE_ASSETS],
+		"publication.assets",
+	);
+	const generated = validateDigestMapForAssetSets(
+		evidence.generated,
+		allowHistoricalAssetSets
+			? [GENERATED_DELIVERY_PATHS, ...HISTORICAL_GENERATED_DELIVERY_PATH_SETS]
+			: [GENERATED_DELIVERY_PATHS],
+		"publication.generated",
+	);
 	if (!evidence.provider || typeof evidence.provider !== "object" || Array.isArray(evidence.provider)) {
 		throw new Error("xcsh publication provider identity must be an object");
 	}
@@ -881,7 +947,7 @@ function parsePublicationLedger(
 		if (!commonEntry || !ledgerEntriesEqual(detailedEntry, commonEntry)) {
 			throw new Error(`xcsh publication receipt ${deliveryId} differs from the common delivery ledger`);
 		}
-		receipts[deliveryId] = { delivery: commonEntry, publication: validatePublicationEvidence(entry.publication) };
+		receipts[deliveryId] = { delivery: commonEntry, publication: validatePublicationEvidence(entry.publication, true) };
 	}
 	if (JSON.stringify(sortedKeys(receipts)) !== JSON.stringify(sortedKeys(common.deliveries))) {
 		throw new Error("Common and xcsh publication receipt ledgers have different delivery keys");

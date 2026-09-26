@@ -41,6 +41,7 @@ function sample(
 		turnCount: 1,
 		assistantMessageCount: 1,
 		toolCalls: [],
+		turns: [],
 		ttftMs: 100,
 		responseDurationMs: 200,
 		processDurationMs: 220,
