@@ -1,7 +1,7 @@
 {
-	"repository": "https://github.com/f5-sales-demo/marketplace",
-	"sourcePath": ".xcsh-plugin/marketplace.json",
-	"commit": "1d8e31210d91866977d5f0ca7fc719f8b36af04c",
-	"sha256": "0b7abe2c513f97cf2f36f7a6c122c6a129e0d8755a377340912189f6fc18dc4c",
-	"capturedAt": "2026-09-26T04:47:31.996Z"
+  "repository": "https://github.com/f5-sales-demo/marketplace",
+  "sourcePath": ".xcsh-plugin/marketplace.json",
+  "commit": "75bf34522ad629263c4e5c1919d8bfad4c5ed4e5",
+  "sha256": "dc9d782598544282de9f475ccae51896908cedf633221a6726e0b8a49cdde3f0",
+  "capturedAt": "2026-09-26T13:25:35.476Z"
 }
