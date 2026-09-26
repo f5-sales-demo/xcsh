@@ -80,6 +80,57 @@ test("phone read-only printf probe uses the configured workspace without a live 
 	}
 });
 
+test("read-only command accepts an existing selected project before any terminal starts", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-selected-"));
+	const selected = join(root, "private-project");
+	await mkdir(selected, { mode: 0o700 });
+	const lifecycle = { defaultCwd: root, list: () => [] } as unknown as RemoteThreadLifecycle;
+	const router = new RemoteRouter(join(root, ".xcsh"), "fixture", lifecycle);
+	const events: Array<{ method: string; params: Record<string, unknown> }> = [];
+	router.notify = (_client, event) => events.push(event);
+	try {
+		await router.handle("phone", {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" } },
+		});
+		expect(
+			await router.handle("phone", {
+				id: 2,
+				method: "command/exec",
+				params: {
+					cwd: selected,
+					command: ["/bin/sh", "-c", `printf '%s' "$@"`, "probe", "ready"],
+					processId: "selected-probe",
+					streamStdoutStderr: true,
+					timeoutMs: 20_000,
+					outputBytesCap: 16,
+					sandboxPolicy: { type: "readOnly", networkAccess: false },
+				},
+			}),
+		).toEqual({ id: 2, result: { exitCode: 0, stdout: "", stderr: "" } });
+		expect(Buffer.from(String(events[0].params.deltaBase64), "base64").toString("utf8")).toBe("ready");
+		expect(
+			await router.handle("phone", {
+				id: 3,
+				method: "command/exec",
+				params: {
+					cwd: join(root, "missing-project"),
+					command: ["/bin/sh", "-c", `printf '%s' "$@"`, "probe", "ready"],
+					processId: "missing-probe",
+					streamStdoutStderr: true,
+					timeoutMs: 20_000,
+					outputBytesCap: 16,
+					sandboxPolicy: { type: "readOnly", networkAccess: false },
+				},
+			}),
+		).toMatchObject({ error: { code: -32602 } });
+	} finally {
+		router.dispose();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
 test("read-only printf probe accepts quoted punctuation and ignores unrelated environment overrides", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-printf-quoted-"));
 	const router = new RemoteRouter(join(root, ".xcsh"), "fixture");

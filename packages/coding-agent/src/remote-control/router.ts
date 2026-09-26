@@ -902,12 +902,15 @@ export class RemoteRouter {
 								}
 								cwd = fallback;
 							}
-							if (
-								typeof cwd !== "string" ||
-								(!this.#visibleThreads().some(thread => thread.cwd === cwd) &&
-									cwd !== this.lifecycle?.defaultCwd)
-							)
+							// A selected project can precede its first managed thread. The
+							// read-only command sandbox, not thread visibility, confines execution.
+							if (typeof cwd !== "string" || !isAbsolute(cwd) || normalize(cwd) !== cwd)
 								throw new ProtocolError(-32602, "Working directory is unavailable");
+							try {
+								if (!(await stat(cwd)).isDirectory()) throw new Error();
+							} catch {
+								throw new ProtocolError(-32602, "Working directory is unavailable");
+							}
 							result = await this.#commands.execute(client, { ...mapped.params, cwd }, cwd);
 							break;
 						}
