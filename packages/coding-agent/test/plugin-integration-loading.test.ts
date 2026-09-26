@@ -17,10 +17,12 @@ describe("plugin CLI integration loading", () => {
 		tempProject = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-plugin-cli-project-"));
 		const pluginRoot = path.join(tempHome, "plugin-cache", "xorg");
 		await fs.mkdir(path.join(pluginRoot, "extensions"), { recursive: true });
+		await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
 		await fs.mkdir(path.join(tempHome, ".xcsh", "plugins"), { recursive: true });
+		await fs.writeFile(path.join(pluginRoot, "package.json"), JSON.stringify({ name: "xorg", version: "1.0.1" }));
 		await fs.writeFile(
-			path.join(pluginRoot, "package.json"),
-			JSON.stringify({ name: "xorg", version: "1.0.1", xcsh: { extensions: ["extensions/integration.ts"] } }),
+			path.join(pluginRoot, ".xcsh-plugin", "plugin.json"),
+			JSON.stringify({ name: "xorg", version: "1.0.1", extensions: ["extensions/integration.ts"] }),
 		);
 		await fs.writeFile(
 			path.join(pluginRoot, "extensions", "integration.ts"),

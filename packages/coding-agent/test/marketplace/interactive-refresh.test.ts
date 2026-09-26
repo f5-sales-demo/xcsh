@@ -82,7 +82,7 @@ afterEach(() => {
 describe("interactive marketplace refresh surfaces", () => {
 	// Tests below launch up to four fresh CLI processes. Each child has a 10s deadline;
 	// the 60s outer budget lets the helper stop/reap it before afterEach removes fixtures.
-	it("discovers integrations immediately after an in-process marketplace install", async () => {
+	it("discovers manifest-only integrations immediately after an in-process marketplace install", async () => {
 		const { home, source } = makeEnvironment();
 		const extensionSource = `export default async function (pi) {
   pi.integrations.register({
@@ -90,6 +90,13 @@ describe("interactive marketplace refresh surfaces", () => {
     name: "Hello readiness",
     plugin: "hello-plugin",
     kind: "local",
+    setup: {
+      pluginDependencies: [],
+      requiredEnvironment: [],
+      profileFields: [],
+      steps: [{ kind: "install", argv: ["true"], timeoutMs: 1000 }],
+      verification: [{ argv: ["true"], timeoutMs: 1000 }],
+    },
     async probe() { return { state: "ready", value: true }; },
   });
 }`;
@@ -102,7 +109,11 @@ describe("interactive marketplace refresh surfaces", () => {
 			 await Bun.write(pluginRoot + "/package.json", JSON.stringify({
 			   name: "hello-plugin",
 			   version: "1.0.0",
-			   xcsh: { extensions: ["src/index.ts"] },
+			 }));
+			 await Bun.write(pluginRoot + "/.xcsh-plugin/plugin.json", JSON.stringify({
+			   name: "hello-plugin",
+			   version: "1.0.0",
+			   extensions: ["src/index.ts"],
 			 }));
 			 await Bun.write(pluginRoot + "/src/index.ts", ${JSON.stringify(extensionSource)});
 			 await preloadPluginRoots(process.env.HOME, process.cwd());
@@ -110,9 +121,11 @@ describe("interactive marketplace refresh surfaces", () => {
 			 invalidateFsCache(process.env.HOME + "/.xcsh/plugins/installed_plugins.json");
 			 const loaded = await discoverAndLoadExtensions([], process.cwd());
 			 const integrations = loaded.extensions.flatMap(extension => [...extension.integrations.keys()]);
-			 if (!integrations.includes("hello_ready")) {
+			 const setup = loaded.extensions.flatMap(extension => [...extension.integrations.values()]).find(handle => handle.id === "hello_ready")?.setupPlan;
+			 if (!integrations.includes("hello_ready") || !setup) {
 			   throw new Error("freshly installed integration was not discovered: " + JSON.stringify({
 			     integrations,
+			     hasSetupPlan: Boolean(setup),
 			     roots: getPreloadedPluginRoots(),
 			     registry: await Bun.file(process.env.HOME + "/.xcsh/plugins/installed_plugins.json").text(),
 			     errors: loaded.errors,
