@@ -153,8 +153,12 @@ jobs:
           bun scripts/ci-release-publish.ts --tag backfill
 
       - name: Verify every package and preserve latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          test -n "$NODE_AUTH_TOKEN"
+          printf '%s\\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
           packages=(
             @f5-sales-demo/pi-natives-linux-x64-gnu
             @f5-sales-demo/pi-natives-linux-arm64-gnu
@@ -190,6 +194,7 @@ jobs:
             test "$(npm view "${package}@${VERSION}" version)" = "$VERSION"
             test "$(npm view "${package}@${VERSION}" gitHead)" = "$TAG_SHA"
           done
+          npm dist-tag add "@f5-sales-demo/xcsh@${VERSION}" backfill
           test "$(npm view "@f5-sales-demo/xcsh@${VERSION}" version)" = "$VERSION"
           test "$(npm view @f5-sales-demo/xcsh dist-tags.backfill)" = "$VERSION"
           test "$(npm view @f5-sales-demo/xcsh dist-tags.latest)" = "$LATEST_BEFORE"
