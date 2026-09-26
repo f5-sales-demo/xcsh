@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -130,6 +131,94 @@ test("read-only command accepts an existing selected project before any terminal
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+const workspaceSandboxAvailable =
+	process.platform === "linux" &&
+	spawnSync("sudo", ["-n", "/usr/bin/bwrap", "--version"], { encoding: "utf8" }).status === 0;
+
+test.skipIf(!workspaceSandboxAvailable)(
+	"selected-folder workspace command can write only inside its isolated project",
+	async () => {
+		const root = await mkdtemp(join(process.env.XCSH_WORKSPACE_TEST_ROOT ?? tmpdir(), "xcsh-phone-workspace-"));
+		const selected = join(root, "project");
+		const outside = join(root, "outside");
+		await mkdir(selected);
+		const router = new RemoteRouter(join(root, ".xcsh"), "fixture");
+		const events: Array<{ method: string; params: Record<string, unknown> }> = [];
+		router.notify = (_client, event) => events.push(event);
+		const policy = {
+			type: "workspaceWrite",
+			writableRoots: [] as string[],
+			networkAccess: false,
+			excludeTmpdirEnvVar: false,
+			excludeSlashTmp: false,
+		};
+		const command = (script: string, target: string) => [
+			"/bin/bash",
+			"--noprofile",
+			"--norc",
+			"-c",
+			"--",
+			`printf '\\0'; exec "$@"`,
+			"xcsh-phone-command",
+			"/bin/bash",
+			"-lc",
+			script,
+			"_",
+			target,
+		];
+		const request = (id: number, script: string, target: string) => ({
+			id,
+			method: "command/exec",
+			params: {
+				cwd: selected,
+				command: command(script, target),
+				env: { BASH_ENV: null, ENV: null },
+				processId: `workspace-${id}`,
+				streamStdoutStderr: true,
+				timeoutMs: 20_000,
+				outputBytesCap: 1_000_001,
+				sandboxPolicy: policy,
+			},
+		});
+		try {
+			await router.handle("phone", {
+				id: 1,
+				method: "initialize",
+				params: { clientInfo: { name: "fixture", version: "1" } },
+			});
+			const inside = join(selected, "created");
+			expect(await router.handle("phone", request(2, 'printf ok > "$1"; printf done', inside))).toEqual({
+				id: 2,
+				result: { exitCode: 0, stdout: "", stderr: "" },
+			});
+			expect((await stat(inside)).isFile()).toBe(true);
+			expect(events.at(-1)?.method).toBe("command/exec/outputDelta");
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0done");
+			const outsideAttempt = await router.handle("phone", request(3, 'printf blocked > "$1"', outside));
+			expect(outsideAttempt).toMatchObject({
+				id: 3,
+				result: { exitCode: expect.any(Number) },
+			});
+			expect((outsideAttempt as { result: { exitCode: number } }).result.exitCode).not.toBe(0);
+			expect(
+				await stat(outside).then(
+					() => true,
+					() => false,
+				),
+			).toBe(false);
+			const networkAttempt = request(4, 'printf blocked > "$1"', inside);
+			networkAttempt.params.sandboxPolicy = { ...policy, networkAccess: true };
+			expect(await router.handle("phone", networkAttempt)).toMatchObject({ error: { code: -32602 } });
+			const extraRootAttempt = request(5, 'printf blocked > "$1"', outside);
+			extraRootAttempt.params.sandboxPolicy = { ...policy, writableRoots: [outside] };
+			expect(await router.handle("phone", extraRootAttempt)).toMatchObject({ error: { code: -32602 } });
+		} finally {
+			router.dispose();
+			await rm(root, { recursive: true, force: true });
+		}
+	},
+);
 
 test("read-only printf probe accepts quoted punctuation and ignores unrelated environment overrides", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-printf-quoted-"));

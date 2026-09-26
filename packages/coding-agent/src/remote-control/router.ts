@@ -1,4 +1,4 @@
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { InteractionIdentity } from "../session/user-interactions";
@@ -879,12 +879,19 @@ export class RemoteRouter {
 						break;
 					}
 					case "command/exec": {
+						const sandboxPolicy = params.sandboxPolicy;
+						const policyType =
+							sandboxPolicy && typeof sandboxPolicy === "object" && !Array.isArray(sandboxPolicy)
+								? (sandboxPolicy as Record<string, unknown>).type
+								: undefined;
 						if (
-							params.sandboxPolicy &&
-							typeof params.sandboxPolicy === "object" &&
-							!Array.isArray(params.sandboxPolicy) &&
-							(params.sandboxPolicy as Record<string, unknown>).type === "readOnly"
+							policyType === "readOnly" ||
+							(policyType === "workspaceWrite" &&
+								typeof params.processId === "string" &&
+								params.streamStdoutStderr === true)
 						) {
+							if (policyType === "workspaceWrite" && params.cwd === "/")
+								throw new ProtocolError(-32602, "Working directory is unavailable");
 							const mapped = await this.#processParams("process/spawn", params);
 							let cwd = mapped.params.cwd;
 							if (
@@ -908,6 +915,7 @@ export class RemoteRouter {
 								throw new ProtocolError(-32602, "Working directory is unavailable");
 							try {
 								if (!(await stat(cwd)).isDirectory()) throw new Error();
+								if (policyType === "workspaceWrite" && (await realpath(cwd)) !== cwd) throw new Error();
 							} catch {
 								throw new ProtocolError(-32602, "Working directory is unavailable");
 							}

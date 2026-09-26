@@ -4,6 +4,7 @@ import { type Notification, ProtocolError } from "./session";
 
 type Result = { exitCode: number; stdout: string; stderr: string };
 const PHONE_COMMAND_WRAPPER = `printf '\\0'; exec "$@"`;
+const PHONE_BASH_COMMAND = ["/bin/bash", "--noprofile", "--norc", "-c", "--", PHONE_COMMAND_WRAPPER] as const;
 
 function isPrintOnlyScript(script: string): boolean {
 	if (!/^printf[ \t]+/.test(script) || Buffer.byteLength(script) > 256) return false;
@@ -57,16 +58,36 @@ export class RemoteCommandExec {
 	execute(client: string, p: Record<string, unknown>, allowedCwd: string): Promise<Result> {
 		const command = p.command;
 		const policy = p.sandboxPolicy;
+		const readOnly =
+			policy != null &&
+			typeof policy === "object" &&
+			!Array.isArray(policy) &&
+			(policy as Record<string, unknown>).type === "readOnly";
+		const workspaceWrite =
+			policy != null &&
+			typeof policy === "object" &&
+			!Array.isArray(policy) &&
+			(policy as Record<string, unknown>).type === "workspaceWrite";
+		const readOnlyCommand =
+			Array.isArray(command) &&
+			["/bin/sh", "sh"].includes(command[0]) &&
+			command[1] === "-c" &&
+			typeof command[2] === "string" &&
+			(isPrintOnlyScript(command[2]) || command[2] === PHONE_COMMAND_WRAPPER);
+		const workspaceCommand =
+			Array.isArray(command) &&
+			PHONE_BASH_COMMAND.every((arg, index) => command[index] === arg) &&
+			command.length >= 10 &&
+			command[7] === "/bin/bash" &&
+			command[8] === "-lc" &&
+			typeof command[9] === "string";
 		if (
 			!Array.isArray(command) ||
 			command.length < 4 ||
 			command.length > 32 ||
 			command.some(arg => typeof arg !== "string" || arg.includes("\0")) ||
 			JSON.stringify(command).length > 256 * 1024 ||
-			!["/bin/sh", "sh"].includes(command[0]) ||
-			command[1] !== "-c" ||
-			typeof command[2] !== "string" ||
-			(!isPrintOnlyScript(command[2]) && command[2] !== PHONE_COMMAND_WRAPPER) ||
+			!(readOnly ? readOnlyCommand : workspaceWrite && workspaceCommand) ||
 			p.streamStdoutStderr !== true ||
 			p.streamStdin === true ||
 			p.tty === true ||
@@ -83,8 +104,13 @@ export class RemoteCommandExec {
 			!policy ||
 			typeof policy !== "object" ||
 			Array.isArray(policy) ||
-			(policy as Record<string, unknown>).type !== "readOnly" ||
 			(policy as Record<string, unknown>).networkAccess !== false ||
+			(workspaceWrite &&
+				(allowedCwd === "/" ||
+					!Array.isArray((policy as Record<string, unknown>).writableRoots) ||
+					((policy as Record<string, unknown>).writableRoots as unknown[]).length !== 0 ||
+					(policy as Record<string, unknown>).excludeTmpdirEnvVar === true ||
+					(policy as Record<string, unknown>).excludeSlashTmp === true)) ||
 			typeof p.cwd !== "string" ||
 			!isAbsolute(p.cwd) ||
 			normalize(p.cwd) !== p.cwd ||
@@ -111,9 +137,10 @@ export class RemoteCommandExec {
 		}
 		const processId = p.processId;
 		const outputBytesCap = p.outputBytesCap === null ? 8 * 1024 * 1024 : (p.outputBytesCap ?? 1024 * 1024);
-		const sandboxed = command[2] === PHONE_COMMAND_WRAPPER;
+		const sandboxed = workspaceWrite || command[2] === PHONE_COMMAND_WRAPPER;
+		const workspaceInTmp = allowedCwd === "/tmp" || allowedCwd.startsWith("/tmp/");
 		if (sandboxed && (process.platform !== "linux" || process.getuid?.() == null || process.getgid?.() == null))
-			throw new ProtocolError(-32602, "Read-only command sandbox is unavailable");
+			throw new ProtocolError(-32602, "Command sandbox is unavailable");
 		const file = sandboxed ? "/usr/bin/sudo" : "/bin/sh";
 		const args = sandboxed
 			? [
@@ -124,6 +151,9 @@ export class RemoteCommandExec {
 					"--ro-bind",
 					"/",
 					"/",
+					...(workspaceWrite
+						? [...(workspaceInTmp ? [] : ["--tmpfs", "/tmp"]), "--bind", allowedCwd, allowedCwd]
+						: []),
 					"--dev",
 					"/dev",
 					"--proc",
@@ -140,6 +170,7 @@ export class RemoteCommandExec {
 					"--setenv",
 					"LANG",
 					env.LANG ?? "C.UTF-8",
+					...(workspaceWrite ? ["--setenv", "TMPDIR", workspaceInTmp ? allowedCwd : "/tmp"] : []),
 					"--",
 					"/usr/bin/setpriv",
 					`--reuid=${process.getuid?.()}`,
@@ -147,10 +178,7 @@ export class RemoteCommandExec {
 					"--clear-groups",
 					"--no-new-privs",
 					"--bounding-set=-all",
-					"/bin/sh",
-					"-c",
-					command[2],
-					...command.slice(3),
+					...(workspaceWrite ? command : ["/bin/sh", "-c", command[2], ...command.slice(3)]),
 				]
 			: ["-c", command[2], ...command.slice(3)];
 		const commands = this.#active.get(client) ?? new Map<string, ChildProcess>();
