@@ -5,6 +5,7 @@ import { type Notification, ProtocolError } from "./session";
 type Result = { exitCode: number; stdout: string; stderr: string };
 export const PHONE_COMMAND_WRAPPER = `printf '\\0'; exec "$@"`;
 const PHONE_BASH_COMMAND = ["/bin/bash", "--noprofile", "--norc", "-c", "--", PHONE_COMMAND_WRAPPER] as const;
+const PHONE_BASH_LOGIN_COMMAND = ["/bin/bash", "--noprofile", "--norc", "-l", "-c", PHONE_COMMAND_WRAPPER] as const;
 
 function isPrintOnlyScript(script: string): boolean {
 	if (!/^printf[ \t]+/.test(script) || Buffer.byteLength(script) > 256) return false;
@@ -76,7 +77,8 @@ export class RemoteCommandExec {
 			(isPrintOnlyScript(command[2]) || command[2] === PHONE_COMMAND_WRAPPER);
 		const workspaceCommand =
 			Array.isArray(command) &&
-			PHONE_BASH_COMMAND.every((arg, index) => command[index] === arg) &&
+			(PHONE_BASH_COMMAND.every((arg, index) => command[index] === arg) ||
+				PHONE_BASH_LOGIN_COMMAND.every((arg, index) => command[index] === arg)) &&
 			command.length >= 10 &&
 			command[7] === "/bin/bash" &&
 			command[8] === "-lc" &&
@@ -128,6 +130,7 @@ export class RemoteCommandExec {
 					readOnlyCommand,
 					workspaceCommand,
 					prefix: PHONE_BASH_COMMAND.map((arg, index) => args[index] === arg),
+					loginCommandPrefix: PHONE_BASH_LOGIN_COMMAND.every((arg, index) => args[index] === arg),
 					bash: args[7] === "/bin/bash",
 					login: args[8] === "-lc",
 					script: typeof args[9] === "string",

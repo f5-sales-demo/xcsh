@@ -221,6 +221,13 @@ test.skipIf(!workspaceSandboxAvailable)(
 			expect(largeRequest.params.command).toHaveLength(18);
 			expect(await router.handle("phone", largeRequest)).toMatchObject({ result: { exitCode: 0 } });
 			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0compact");
+			const loginRequest = request(9, "printf login", inside);
+			loginRequest.params.command.splice(3, 2, "-l", "-c");
+			expect(await router.handle("phone", loginRequest)).toMatchObject({ result: { exitCode: 0 } });
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0login");
+			const unsupportedFlags = request(10, "printf rejected", inside);
+			unsupportedFlags.params.command.splice(3, 2, "-x", "-c");
+			expect(await router.handle("phone", unsupportedFlags)).toMatchObject({ error: { code: -32602 } });
 			const outsideAttempt = await router.handle("phone", request(3, 'printf blocked > "$1"', outside));
 			expect(outsideAttempt).toMatchObject({
 				id: 3,
