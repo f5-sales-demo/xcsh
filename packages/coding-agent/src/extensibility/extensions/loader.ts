@@ -682,22 +682,27 @@ export async function discoverAndLoadExtensions(
 	await logger.time("ext:marketplaceRoots", async () => {
 		for (const root of getPreloadedPluginRoots()) {
 			try {
-				const pkgPath = path.join(root.path, "package.json");
-				const pkg = await Bun.file(pkgPath).json();
-				const manifest = pkg?.xcsh ?? pkg?.pi;
+				const rootPath = await fs.realpath(root.path);
+				const manifestPath = path.join(rootPath, ".xcsh-plugin", "plugin.json");
+				const manifest = await Bun.file(manifestPath).json();
 				const extensions = manifest?.extensions;
 				if (Array.isArray(extensions)) {
 					for (const entry of extensions) {
 						if (typeof entry !== "string") continue;
 						if (path.isAbsolute(entry) || entry.includes("..")) continue;
-						const resolved = path.resolve(root.path, entry);
-						if (!resolved.startsWith(root.path + path.sep) && resolved !== root.path) continue;
+						let resolved: string;
+						try {
+							resolved = await fs.realpath(path.resolve(rootPath, entry));
+						} catch {
+							continue;
+						}
+						if (!resolved.startsWith(rootPath + path.sep) && resolved !== rootPath) continue;
 						if (isDisabledName(getExtensionNameFromPath(resolved))) continue;
 						addPath(resolved);
 					}
 				}
 			} catch {
-				// No package.json or invalid — skip
+				// No plugin manifest, invalid manifest, or missing entry point — skip
 			}
 		}
 	});

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "d43c730b9df671577508aef7d31554a6102b2001",
-  "fingerprint": "4fb57cbd3269b1ec301b1cab99398bde5be6e02fbb78634c0c5ff2316654bdf0",
+  "revision": "5bd524119f3fb5166f9d6577e45b9742084ce1b3",
+  "fingerprint": "2f13d49d44e2d599fa5bf56fd855fa9a3304c96d083a16b1d9bb6ddb8358747d",
   "counts": {
     "total": 242,
     "components": 97,
@@ -499,7 +499,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "e5f777ad90f4030a4146109b1af863edf9ed8e4a4dcf51270ff134aec7786e64",
+      "sha256": "0a9d3394df60bb3a0b51592053bf64f08d4a1e3f387d776fccd4d0b93c4f1aff",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
