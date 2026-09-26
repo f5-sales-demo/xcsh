@@ -7,7 +7,8 @@ def required_jobs:
 
 def required_native_jobs:
   [
-    "Native build (linux, x64, baseline and modern)",
+    "Native build (linux, x64, baseline)",
+    "Native build (linux, x64, modern)",
     "Native build (ubuntu-24.04, arm64)",
     "Native build (macos-15-intel, x64)",
     "Native build (macos-15-intel, x64)",
