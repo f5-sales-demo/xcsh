@@ -1,7 +1,7 @@
 export interface SystemdVoiceReplacement {
 	unit: string;
+	quiesceExecutable: string;
 	properties(): Promise<Record<string, string>>;
-	resolveExecutable(path: string): Promise<string>;
 	command(argv: string[]): Promise<string>;
 	wait(milliseconds: number): Promise<void>;
 }
@@ -17,8 +17,7 @@ export async function replaceSystemdVoiceService(host: SystemdVoiceReplacement):
 		const pid = Number(properties.MainPID);
 		if (!Number.isInteger(pid) || pid < 1)
 			throw new Error(`Cannot quiesce ${host.unit}: invalid MainPID ${properties.MainPID ?? "missing"}`);
-		const executable = await host.resolveExecutable(`/proc/${pid}/exe`);
-		await host.command([executable, "remote-control", "quiesce"]);
+		await host.command([host.quiesceExecutable, "remote-control", "quiesce"]);
 		for (let attempt = 0; attempt < 20; attempt++) {
 			properties = await host.properties();
 			if (properties.ActiveState === "inactive" || properties.ActiveState === "failed") break;

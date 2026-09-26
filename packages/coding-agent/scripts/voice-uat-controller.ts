@@ -185,10 +185,13 @@ class SystemdVoiceUatHost implements VoiceUatHost {
 		]);
 	}
 	async restart() {
+		const state = JSON.parse(await readFile(join(this.runDirectory, "controller.json"), "utf8")) as {
+			candidate: VoiceCandidate;
+		};
 		await replaceSystemdVoiceService({
 			unit,
+			quiesceExecutable: state.candidate.executable,
 			properties: systemdProperties,
-			resolveExecutable: realpath,
 			command,
 			wait: Bun.sleep,
 		});
