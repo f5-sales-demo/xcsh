@@ -2,6 +2,7 @@ import { mkdir, stat } from "node:fs/promises";
 import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { InteractionIdentity } from "../session/user-interactions";
+import { RemoteCommandExec } from "./command-exec";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
@@ -283,7 +284,9 @@ export class RemoteRouter {
 		(client, event) => this.#emit(client, event),
 		cwd => this.#visibleThreads().some(thread => thread.cwd === cwd),
 	);
+	#commands = new RemoteCommandExec((client, event) => this.#emit(client, event));
 	dispose(): void {
+		this.#commands.close();
 		this.#processes.close();
 		this.#clients.clear();
 		this.#experimental.clear();
@@ -392,6 +395,7 @@ export class RemoteRouter {
 		});
 	}
 	close(client: string): void {
+		this.#commands.close(client);
 		this.#clients.delete(client);
 		this.#experimental.delete(client);
 		this.#notificationOptOuts.delete(client);
@@ -875,6 +879,38 @@ export class RemoteRouter {
 						break;
 					}
 					case "command/exec": {
+						if (
+							params.sandboxPolicy &&
+							typeof params.sandboxPolicy === "object" &&
+							!Array.isArray(params.sandboxPolicy) &&
+							(params.sandboxPolicy as Record<string, unknown>).type === "readOnly"
+						) {
+							const mapped = await this.#processParams("process/spawn", params);
+							let cwd = mapped.params.cwd;
+							if (
+								cwd === "/" &&
+								params.cwd === "/" &&
+								!this.#visibleThreads().some(thread => thread.cwd === cwd)
+							) {
+								const fallback = this.lifecycle?.defaultCwd;
+								if (typeof fallback !== "string" || !isAbsolute(fallback) || normalize(fallback) !== fallback)
+									throw new ProtocolError(-32602, "Working directory is unavailable");
+								try {
+									if (!(await stat(fallback)).isDirectory()) throw new Error();
+								} catch {
+									throw new ProtocolError(-32602, "Working directory is unavailable");
+								}
+								cwd = fallback;
+							}
+							if (
+								typeof cwd !== "string" ||
+								(!this.#visibleThreads().some(thread => thread.cwd === cwd) &&
+									cwd !== this.lifecycle?.defaultCwd)
+							)
+								throw new ProtocolError(-32602, "Working directory is unavailable");
+							result = await this.#commands.execute(client, { ...mapped.params, cwd }, cwd);
+							break;
+						}
 						// The phone uses this standalone command to allocate a blank-chat
 						// workspace. Reuse the existing host-owned allocator: the supplied
 						// shell script is never executed, so its policy cannot widen access.
