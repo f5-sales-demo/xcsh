@@ -75,10 +75,11 @@ export class RemoteCommandExec {
 			!p.processId ||
 			p.processId.length > 256 ||
 			p.timeoutMs !== 20_000 ||
-			typeof p.outputBytesCap !== "number" ||
-			!Number.isInteger(p.outputBytesCap) ||
-			p.outputBytesCap < 1 ||
-			p.outputBytesCap > 1024 * 1024 ||
+			(p.outputBytesCap != null &&
+				(typeof p.outputBytesCap !== "number" ||
+					!Number.isSafeInteger(p.outputBytesCap) ||
+					p.outputBytesCap < 0 ||
+					p.outputBytesCap > 8 * 1024 * 1024)) ||
 			!policy ||
 			typeof policy !== "object" ||
 			Array.isArray(policy) ||
@@ -109,7 +110,7 @@ export class RemoteCommandExec {
 			}
 		}
 		const processId = p.processId;
-		const outputBytesCap = p.outputBytesCap;
+		const outputBytesCap = p.outputBytesCap === null ? 8 * 1024 * 1024 : (p.outputBytesCap ?? 1024 * 1024);
 		const sandboxed = command[2] === PHONE_COMMAND_WRAPPER;
 		if (sandboxed && (process.platform !== "linux" || process.getuid?.() == null || process.getgid?.() == null))
 			throw new ProtocolError(-32602, "Read-only command sandbox is unavailable");
@@ -160,7 +161,7 @@ export class RemoteCommandExec {
 			const child = execFile(
 				file,
 				args,
-				{ cwd: allowedCwd, env, timeout: 20_000, maxBuffer: 1024 * 1024, encoding: "buffer" },
+				{ cwd: allowedCwd, env, timeout: 20_000, maxBuffer: 8 * 1024 * 1024, encoding: "buffer" },
 				(error, stdout, stderr) => {
 					commands.delete(processId);
 					const connected = this.#active.get(client) === commands;

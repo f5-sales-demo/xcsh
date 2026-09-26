@@ -113,6 +113,30 @@ test("read-only printf probe accepts quoted punctuation and ignores unrelated en
 		).toEqual({ id: 2, result: { exitCode: 0, stdout: "", stderr: "" } });
 		expect(events[0].params.capReached).toBe(true);
 		expect(Buffer.from(String(events[0].params.deltaBase64), "base64").toString("utf8")).toBe(">&|;a");
+		for (const [outputBytesCap, expected, capReached] of [
+			[null, ">&|;argument", false],
+			[0, "", true],
+		] as const) {
+			const processId = `probe-${String(outputBytesCap)}`;
+			expect(
+				await router.handle("phone", {
+					id: processId,
+					method: "command/exec",
+					params: {
+						cwd: "/",
+						command: ["/bin/sh", "-c", `printf '>&|;%s' "$@"`, "probe", "argument"],
+						processId,
+						streamStdoutStderr: true,
+						timeoutMs: 20_000,
+						outputBytesCap,
+						sandboxPolicy: { type: "readOnly", networkAccess: false },
+					},
+				}),
+			).toEqual({ id: processId, result: { exitCode: 0, stdout: "", stderr: "" } });
+			const event = events.at(-1)!;
+			expect(event.params.capReached).toBe(capReached);
+			expect(Buffer.from(String(event.params.deltaBase64), "base64").toString("utf8")).toBe(expected);
+		}
 	} finally {
 		router.dispose();
 		await rm(root, { recursive: true, force: true });
