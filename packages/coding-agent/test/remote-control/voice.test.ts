@@ -1,8 +1,12 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import Ajv from "ajv";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
 import { voiceDelegation } from "../../src/remote-control/voice-delegation";
+import { CheckpointStore, VoiceDiagnosticRuntime } from "../../src/remote-control/voice-diagnostics";
 import { contextChunks, decodeVoiceEvent, existingCallConfig } from "../../src/remote-control/voice-protocol";
 import phoneDelegation from "./fixtures/codex-0.153.4-phone-delegation.json";
 import phoneRecall from "./fixtures/codex-0.153.4-phone-recall.json";
@@ -16,7 +20,7 @@ const start = {
 	outputModality: "audio",
 	includeStartupContext: false,
 };
-function fixture(records: Record<string, unknown>[] = []) {
+function fixture(records: Record<string, unknown>[] = [], diagnostics?: VoiceDiagnosticRuntime) {
 	const sent: unknown[] = [];
 	const events: { method: string; params: Record<string, unknown> }[] = [];
 	const delegated: string[] = [];
@@ -25,6 +29,7 @@ function fixture(records: Record<string, unknown>[] = []) {
 	let closed = 0;
 	let finish: (text: string) => void = () => {};
 	const deps: VoiceDependencies = {
+		diagnostics,
 		authenticate: async () => ({ accessToken: "fixture-secret", accountId: "example-voice-account" }),
 		open: async (url, headers, handlers) => {
 			expect(url).toBe("wss://api.openai.com/v1/live/fixture-call");
@@ -71,6 +76,30 @@ function fixture(records: Record<string, unknown>[] = []) {
 		finish: (text: string) => finish(text),
 	};
 }
+
+test("native voice drives crash-safe lifecycle diagnostics", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-native-voice-diagnostics-"));
+	try {
+		const file = join(root, "checkpoint.json");
+		const diagnostics = new VoiceDiagnosticRuntime({
+			checkpointFile: file,
+			resources: () => ({ rssBytes: 1, fileDescriptors: 2, sockets: 1, processState: "running" }),
+		});
+		const f = fixture([], diagnostics);
+		await f.voice.start(start);
+		f.receive({ type: "session.updated", session: {} });
+		await Bun.sleep(0);
+		await f.voice.stop();
+		expect(new CheckpointStore(file).read()).toMatchObject({
+			lifecycle: "closed",
+			eventCount: 1,
+			inboundQueueHighWaterBytes: expect.any(Number),
+			outboundQueueHighWaterBytes: expect.any(Number),
+		});
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
 const delegation = {
 	type: "delegation.created",
 	item: { type: "delegation", target: "client", id: "d1", content: [{ type: "input_text", text: "change fixture" }] },
@@ -293,6 +322,10 @@ test("context chunks preserve Unicode within the pinned 500 UTF-8 byte bound", (
 	expect(chunks.every(chunk => Buffer.byteLength(chunk) <= 500)).toBe(true);
 });
 test("Live events distinguish transcripts from delegated work and ignore malformed data", () => {
+	expect(decodeVoiceEvent({ type: "session.created", session: { id: "s0" } })).toEqual({
+		kind: "sessionUpdated",
+		id: "s0",
+	});
 	expect(decodeVoiceEvent({ type: "session.started", session: { id: "s1" } })).toEqual({
 		kind: "sessionUpdated",
 		id: "s1",
