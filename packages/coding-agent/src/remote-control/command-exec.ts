@@ -3,7 +3,7 @@ import { isAbsolute, normalize } from "node:path";
 import { type Notification, ProtocolError } from "./session";
 
 type Result = { exitCode: number; stdout: string; stderr: string };
-const PHONE_COMMAND_WRAPPER = `printf '\\0'; exec "$@"`;
+export const PHONE_COMMAND_WRAPPER = `printf '\\0'; exec "$@"`;
 const PHONE_BASH_COMMAND = ["/bin/bash", "--noprofile", "--norc", "-c", "--", PHONE_COMMAND_WRAPPER] as const;
 
 function isPrintOnlyScript(script: string): boolean {
@@ -115,8 +115,50 @@ export class RemoteCommandExec {
 			!isAbsolute(p.cwd) ||
 			normalize(p.cwd) !== p.cwd ||
 			p.cwd !== allowedCwd
-		)
+		) {
+			if (process.env.XCSH_REMOTE_COMMAND_DIAGNOSTICS === "1") {
+				const args = Array.isArray(command) ? command : [];
+				const checks = {
+					commandArray: Array.isArray(command),
+					commandLength: args.length >= 4 && args.length <= 32,
+					commandStrings: args.every(arg => typeof arg === "string" && !arg.includes("\0")),
+					commandBytes: JSON.stringify(args).length <= 256 * 1024,
+					readOnly,
+					workspaceWrite,
+					readOnlyCommand,
+					workspaceCommand,
+					prefix: PHONE_BASH_COMMAND.map((arg, index) => args[index] === arg),
+					bash: args[7] === "/bin/bash",
+					login: args[8] === "-lc",
+					script: typeof args[9] === "string",
+					stdout: p.streamStdoutStderr === true,
+					stdin: p.streamStdin !== true,
+					tty: p.tty !== true,
+					size: p.size == null,
+					processId: typeof p.processId === "string" && p.processId.length > 0 && p.processId.length <= 256,
+					timeout: p.timeoutMs === 20_000,
+					outputCap:
+						p.outputBytesCap == null ||
+						(typeof p.outputBytesCap === "number" &&
+							Number.isSafeInteger(p.outputBytesCap) &&
+							p.outputBytesCap >= 0 &&
+							p.outputBytesCap <= 8 * 1024 * 1024),
+					network: (policy as Record<string, unknown> | undefined)?.networkAccess === false,
+					roots:
+						!workspaceWrite ||
+						(Array.isArray((policy as Record<string, unknown>).writableRoots) &&
+							((policy as Record<string, unknown>).writableRoots as unknown[]).length === 0),
+					tmpOptions:
+						!workspaceWrite ||
+						((policy as Record<string, unknown>).excludeTmpdirEnvVar !== true &&
+							(policy as Record<string, unknown>).excludeSlashTmp !== true),
+					cwd:
+						typeof p.cwd === "string" && isAbsolute(p.cwd) && normalize(p.cwd) === p.cwd && p.cwd === allowedCwd,
+				};
+				process.stderr.write(`${JSON.stringify({ stage: "command-validation-reject", checks, at: Date.now() })}\n`);
+			}
 			throw new ProtocolError(-32602, "Unsupported standalone command");
+		}
 		const env: NodeJS.ProcessEnv = {
 			PATH: "/usr/bin:/bin",
 			HOME: process.env.HOME ?? "/",

@@ -419,6 +419,70 @@ test("phone command/exec workspace setup returns a buffered result under the xcs
 	}
 });
 
+test("folderless streamed workspace setup allocates a host-owned project without running the phone script", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-projectless-"));
+	const marker = join(root, "must-not-exist");
+	const lifecycle = { defaultCwd: root, list: () => [] } as unknown as RemoteThreadLifecycle;
+	const router = new RemoteRouter(join(root, ".xcsh"), "fixture", lifecycle);
+	const events: Array<{ method: string; params: Record<string, unknown> }> = [];
+	router.notify = (_client, event) => events.push(event);
+	const request = (id: number, env: Record<string, unknown>) => ({
+		id,
+		method: "command/exec",
+		params: {
+			cwd: "/",
+			command: [
+				"/bin/sh",
+				"-c",
+				`printf '\\0'; exec "$@"`,
+				"xcsh-projectless-test",
+				"/bin/sh",
+				"-lc",
+				`touch ${marker}`.padEnd(737, " "),
+			],
+			env,
+			processId: `projectless-${id}`,
+			streamStdoutStderr: true,
+			timeoutMs: 20_000,
+			outputBytesCap: 4097,
+			sandboxPolicy: {
+				type: "workspaceWrite",
+				writableRoots: [root],
+				networkAccess: true,
+				excludeTmpdirEnvVar: false,
+				excludeSlashTmp: false,
+			},
+		},
+	});
+	try {
+		await router.handle("phone", {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" } },
+		});
+		expect(
+			await router.handle("phone", request(2, { BASH_ENV: null, ENV: null, CODEX_PROJECTLESS_ROOT: root })),
+		).toEqual({ id: 2, result: { exitCode: 0, stdout: "", stderr: "" } });
+		expect(events).toHaveLength(1);
+		const path = Buffer.from(String(events[0].params.deltaBase64), "base64").toString();
+		expect(path).toStartWith(`\0${root}/`);
+		expect(path.endsWith("/new-realtime-voice-chat-1")).toBe(true);
+		expect((await stat(path.slice(1))).isDirectory()).toBe(true);
+		expect(
+			await stat(marker).then(
+				() => true,
+				() => false,
+			),
+		).toBe(false);
+		expect(await router.handle("phone", request(3, { BASH_ENV: null, ENV: null }))).toMatchObject({
+			error: { code: -32602 },
+		});
+	} finally {
+		router.dispose();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
 test("command/exec rejects arbitrary shell requests without executing them", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-phone-command-reject-"));
 	const marker = join(root, "must-not-exist");
