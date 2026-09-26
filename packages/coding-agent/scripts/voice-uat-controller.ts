@@ -16,6 +16,7 @@ import {
 import { dirname, join } from "node:path";
 import { canonicalWarningFingerprint, exportRemoteRealtimeDiagnostics } from "../src/remote-control/voice-diagnostics";
 import { type VoiceCandidate, VoiceUatController, type VoiceUatHost } from "../src/remote-control/voice-uat-controller";
+import { replaceSystemdVoiceService } from "../src/remote-control/voice-uat-systemd";
 
 const unit = "xcsh-remote-control.service";
 const dropInDirectory = join(process.env.HOME ?? "", ".config/systemd/user", `${unit}.d`);
@@ -184,7 +185,13 @@ class SystemdVoiceUatHost implements VoiceUatHost {
 		]);
 	}
 	async restart() {
-		await command(["systemctl", "--user", "restart", unit]);
+		await replaceSystemdVoiceService({
+			unit,
+			properties: systemdProperties,
+			resolveExecutable: realpath,
+			command,
+			wait: Bun.sleep,
+		});
 	}
 	async verifyCandidate(candidate: VoiceCandidate): Promise<boolean> {
 		const properties = await systemdProperties();
