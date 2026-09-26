@@ -125,7 +125,7 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
-			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("75bf34522ad629263c4e5c1919d8bfad4c5ed4e5");
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("505f7ff2f7db8f3aa6eb8b08532d1b6181ad4bdf");
 			const discontinuedPrefix = ["F5", "XC_"].join("");
 			expect(JSON.stringify(embeddedCatalog)).not.toContain(discontinuedPrefix);
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
@@ -157,7 +157,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "ghostty")).toMatchObject({
-				version: "1.0.0",
+				version: "1.0.1",
 				lifecycle: {
 					integrations: ["ghostty"],
 					setupRequired: true,
@@ -166,7 +166,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"dc9d782598544282de9f475ccae51896908cedf633221a6726e0b8a49cdde3f0",
+				"afd7ba717036533c8d7fced1b3573d597097fe0b5e47e0d57c946c7f9e526484",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
