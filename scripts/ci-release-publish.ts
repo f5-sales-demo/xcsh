@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
 
-interface PublishPackage {
+export interface PublishPackage {
 	dir: string;
 }
 
@@ -55,17 +55,6 @@ const platformPackageDirs: PublishPackage[] = [
 	{ dir: "packages/natives/npm/darwin-x64" },
 	{ dir: "packages/natives/npm/darwin-arm64" },
 	{ dir: "packages/natives/npm/win32-x64-msvc" },
-];
-
-const packageDirs: PublishPackage[] = [
-	{ dir: "packages/utils" },
-	{ dir: "packages/ai" },
-	{ dir: "packages/natives" },
-	{ dir: "packages/tui" },
-	{ dir: "packages/stats" },
-	{ dir: "packages/resource-management" },
-	{ dir: "packages/agent" },
-	{ dir: "packages/coding-agent" },
 ];
 
 export function isAlreadyPublished(output: string, version: string): boolean {
@@ -135,6 +124,38 @@ export async function waitForRegistryVisibility(
 export interface PublishedPackage {
 	name: string;
 	version: string;
+}
+
+/**
+ * Release publication is deliberately concurrent only within dependency-safe
+ * waves.  A wave is not allowed to start until every package in the preceding
+ * wave has been accepted by npm; registry visibility remains one final,
+ * concurrent receipt for the complete release.
+ */
+export const publishWaves: readonly (readonly PublishPackage[])[] = [
+	platformPackageDirs,
+	[{ dir: "packages/utils" }, { dir: "packages/resource-management" }],
+	[{ dir: "packages/natives" }, { dir: "packages/ai" }],
+	[{ dir: "packages/tui" }, { dir: "packages/agent" }, { dir: "packages/stats" }],
+	[{ dir: "packages/coding-agent" }],
+];
+
+export async function publishInDependencyWaves(
+	waves: readonly (readonly PublishPackage[])[],
+	publish: (pkg: PublishPackage) => Promise<PublishedPackage | null>,
+): Promise<PublishedPackage[]> {
+	const published: PublishedPackage[] = [];
+	for (const [index, wave] of waves.entries()) {
+		if (wave.length === 0) throw new Error(`npm publication wave ${index + 1} is empty`);
+		const dirs = wave.map(pkg => pkg.dir);
+		if (new Set(dirs).size !== dirs.length) {
+			throw new Error(`npm publication wave ${index + 1} contains duplicate package directories`);
+		}
+		console.log(`=== Publishing dependency wave ${index + 1}/${waves.length} ===`);
+		const results = await Promise.all(wave.map(pkg => publish(pkg)));
+		published.push(...results.filter((pkg): pkg is PublishedPackage => pkg !== null));
+	}
+	return published;
 }
 
 export async function waitForPublishedPackages(
@@ -327,20 +348,7 @@ async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | n
 }
 
 async function main(): Promise<void> {
-	const publishedPackages: PublishedPackage[] = [];
-	// Publish platform-specific native addon packages first
-	// so that optionalDependencies in @f5-sales-demo/pi-natives resolve
-	console.log("=== Publishing platform-specific native addon packages ===");
-	for (const pkg of platformPackageDirs) {
-		const published = await publishPackage(pkg);
-		if (published) publishedPackages.push(published);
-	}
-
-	console.log("\n=== Publishing main packages ===");
-	for (const pkg of packageDirs) {
-		const published = await publishPackage(pkg);
-		if (published) publishedPackages.push(published);
-	}
+	const publishedPackages = await publishInDependencyWaves(publishWaves, publishPackage);
 
 	if (publishedPackages.length > 0) {
 		console.log("\n=== Verifying final registry visibility ===");

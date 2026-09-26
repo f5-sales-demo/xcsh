@@ -12,18 +12,21 @@ WORKFLOWS = ROOT / ".github/workflows"
 class CiCapacityContractTests(unittest.TestCase):
     def test_ci_builds_linux_natives_once_and_aggregates_test_shards(self) -> None:
         workflow = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-        self.assertIn("  native-linux-x64:\n", workflow)
-        self.assertIn("TARGET_VARIANTS: baseline modern", workflow)
+        self.assertIn("  native-linux-x64-baseline:\n", workflow)
+        self.assertIn("  native-linux-x64-modern:\n", workflow)
+        self.assertIn("  assemble-native-linux-x64:\n", workflow)
+        self.assertIn("TARGET_VARIANTS: baseline", workflow)
+        self.assertIn("TARGET_VARIANTS: modern", workflow)
         self.assertIn("native-manifest.json", workflow)
         self.assertIn(
             'ci-native-manifest.ts create --source-sha "$GITHUB_SHA"', workflow
         )
         self.assertIn("  test-rust:\n", workflow)
         self.assertIn("  test-typescript:\n", workflow)
-        self.assertIn("    needs: native-linux-x64\n", workflow)
+        self.assertIn("    needs: assemble-native-linux-x64\n", workflow)
         self.assertIn("    needs: [test-typescript, test-rust]\n", workflow)
         self.assertIn("bun scripts/ci-native-manifest.ts verify", workflow)
-        self.assertIn('XCSH_TEST_FILE_WORKERS: "10"', workflow)
+        self.assertIn('XCSH_TEST_FILE_WORKERS: "0"', workflow)
         for platform in (
             '"platform":"linux","arch":"arm64"',
             '"platform":"win32"',

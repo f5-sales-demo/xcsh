@@ -182,7 +182,7 @@ test("CI reuses source-bound Linux natives and aggregates independent TypeScript
 	const source = await Bun.file(path.join(WORKFLOW_ROOT, "ci.yml")).text();
 	const workflow = parse(source) as WorkflowDocument;
 
-	expect(workflow.jobs?.["test-typescript"]?.needs).toBe("native-linux-x64");
+	expect(workflow.jobs?.["test-typescript"]?.needs).toBe("assemble-native-linux-x64");
 	expect(workflow.jobs?.["test-rust"]?.needs).toBeUndefined();
 	expect(workflow.jobs?.test?.needs).toEqual(["test-typescript", "test-rust"]);
 	expect(source).toContain("native-manifest.json");

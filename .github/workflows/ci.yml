@@ -86,8 +86,8 @@ jobs:
       - name: Verify pre-commit TypeScript contract
         run: python3 -m unittest tests.test_pre_commit_ts_gate
 
-  native-linux-x64:
-    name: Native build (linux, x64, baseline and modern)
+  native-linux-x64-baseline:
+    name: Native build (linux, x64, baseline)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: xcsh-compute
     steps:
@@ -107,17 +107,80 @@ jobs:
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: bash scripts/ci-bun-install.sh
-      - name: Build baseline and modern native addons once
+      - name: Build baseline native addon
         env:
           TARGET_PLATFORM: linux
           TARGET_ARCH: x64
-          TARGET_VARIANTS: baseline modern
+          TARGET_VARIANTS: baseline
         run: bun run ci:build:native
-      - name: Create source-bound native manifest
-        run: bun scripts/ci-native-manifest.ts create --source-sha "$GITHUB_SHA"
       - name: Sandbox self-test inside live bash profile
         run: bun test packages/coding-agent/test/sandbox-check.test.ts --max-concurrency=2
       - name: Upload verified Linux x64 natives
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pi-natives-linux-x64-baseline
+          path: |
+            packages/natives/native/pi_natives.linux-x64-baseline.node
+          if-no-files-found: error
+
+  native-linux-x64-modern:
+    name: Native build (linux, x64, modern)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: xcsh-compute
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - name: Verify baked build toolchain
+        run: bash scripts/verify-self-hosted-tools.sh full
+      - name: Restore exact Rust cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - run: bash scripts/ci-bun-install.sh
+      - name: Build modern native addon
+        env:
+          TARGET_PLATFORM: linux
+          TARGET_ARCH: x64
+          TARGET_VARIANTS: modern
+        run: bun run ci:build:native
+      - name: Upload verified Linux x64 native
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pi-natives-linux-x64-modern
+          path: packages/natives/native/pi_natives.linux-x64-modern.node
+          if-no-files-found: error
+
+  assemble-native-linux-x64:
+    name: Assemble verified Linux x64 natives
+    needs: [native-linux-x64-baseline, native-linux-x64-modern]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: xcsh-compute
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download baseline native
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pi-natives-linux-x64-baseline
+          path: packages/natives/native
+      - name: Download modern native
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pi-natives-linux-x64-modern
+          path: packages/natives/native
+      - name: Verify exact source-bound native contract
+        run: |
+          bun scripts/ci-native-manifest.ts create --source-sha "$GITHUB_SHA"
+          bun scripts/ci-native-manifest.ts verify --source-sha "$GITHUB_SHA"
+      - name: Upload assembled Linux x64 natives
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pi-natives-linux-x64-baseline-modern
@@ -233,7 +296,7 @@ jobs:
 
   test-typescript:
     name: TypeScript tests
-    needs: native-linux-x64
+    needs: assemble-native-linux-x64
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: xcsh-compute
     timeout-minutes: 30

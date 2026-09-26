@@ -6,6 +6,7 @@ import {
 	isAlreadyPublished,
 	isExactRegistryVersion,
 	npmPublishArgs,
+	publishInDependencyWaves,
 	publishWithRetry,
 	resolveReleaseSourceRoot,
 	waitForPublishedPackages,
@@ -86,6 +87,20 @@ describe("release npm backfill publish semantics", () => {
 	it("rejects malformed or latest backfill tags", () => {
 		expect(() => npmPublishArgs("latest")).toThrow(/latest/);
 		expect(() => npmPublishArgs("bad tag")).toThrow(/dist-tag/);
+	});
+
+	it("does not begin a dependency wave before its predecessor settles", async () => {
+		const started: string[] = [];
+		const published = await publishInDependencyWaves(
+			[[{ dir: "platform" }], [{ dir: "umbrella" }, { dir: "consumer" }]],
+			async pkg => {
+				started.push(pkg.dir);
+				if (pkg.dir === "platform") await Bun.sleep(5);
+				return { name: pkg.dir, version: "1.0.0" };
+			},
+		);
+		expect(started).toEqual(["platform", "umbrella", "consumer"]);
+		expect(published.map(pkg => pkg.name)).toEqual(["platform", "umbrella", "consumer"]);
 	});
 
 	it("requires an absolute isolated release-source root", () => {
