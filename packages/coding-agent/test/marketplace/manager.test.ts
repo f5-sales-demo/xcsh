@@ -125,7 +125,7 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
-			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("5e10b6b19b042a8c1893a5e1b62978c8250425b0");
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("1d8e31210d91866977d5f0ca7fc719f8b36af04c");
 			const discontinuedPrefix = ["F5", "XC_"].join("");
 			expect(JSON.stringify(embeddedCatalog)).not.toContain(discontinuedPrefix);
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
@@ -142,7 +142,7 @@ describe("MarketplaceManager", () => {
 				version: "1.7.0",
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "xorg")).toMatchObject({
-				version: "1.1.7",
+				version: "1.1.8",
 				lifecycle: { pluginDependencies: [] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "zoom")).toMatchObject({
@@ -157,7 +157,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"c89f09644b59849d0cecc598431587f32df2daa649f118a9fb135b4f0b75cd2f",
+				"0b7abe2c513f97cf2f36f7a6c122c6a129e0d8755a377340912189f6fc18dc4c",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
