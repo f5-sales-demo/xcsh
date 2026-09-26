@@ -36,6 +36,7 @@ export interface VoiceRowCollection {
 }
 export interface VoiceUatHost {
 	activeVoiceCall(): Promise<boolean>;
+	verifyCandidateArtifact(candidate: VoiceCandidate): Promise<boolean>;
 	captureBaseline(): Promise<VoiceServiceBaseline>;
 	installCandidate(candidate: VoiceCandidate): Promise<void>;
 	setCaptureEnvironment(
@@ -95,6 +96,8 @@ export class VoiceUatController {
 	async prepare(candidate: VoiceCandidate, taskIds: readonly string[]): Promise<void> {
 		if (!/^[a-f0-9]{40}$/.test(candidate.commit) || !/^[a-f0-9]{64}$/.test(candidate.sha256))
 			throw new Error("Candidate provenance is incomplete");
+		if (!(await this.host.verifyCandidateArtifact(candidate)))
+			throw new Error("Candidate provenance does not match the immutable artifact");
 		await mkdir(this.directory, { recursive: true, mode: 0o700 });
 		await chmod(this.directory, 0o700);
 		const baseline = await this.host.captureBaseline();

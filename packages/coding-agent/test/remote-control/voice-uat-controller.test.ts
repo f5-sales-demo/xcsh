@@ -12,6 +12,7 @@ function host(overrides: Partial<VoiceUatHost> = {}) {
 	const calls: string[] = [];
 	const implementation: VoiceUatHost = {
 		activeVoiceCall: async () => false,
+		verifyCandidateArtifact: async () => true,
 		captureBaseline: async () => ({ unit: "unit", dropIns: { "old.conf": "old" }, hashes: { unit: "a" } }),
 		installCandidate: async () => {
 			calls.push("install");
@@ -49,6 +50,17 @@ const candidate: VoiceCandidate = {
 	sha256: "b".repeat(64),
 	executable: "/candidate/xcsh-linux-x64",
 };
+
+test("controller rejects candidate metadata that does not match the immutable artifact", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-voice-controller-"));
+	try {
+		const fake = host({ verifyCandidateArtifact: async () => false });
+		const controller = new VoiceUatController(root, fake.implementation, async () => {});
+		await expect(controller.prepare(candidate, ["A01"])).rejects.toThrow("provenance");
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
 
 test("controller prepares private state and never persists the row salt", async () => {
 	const root = await mkdtemp(join(tmpdir(), "xcsh-voice-controller-"));

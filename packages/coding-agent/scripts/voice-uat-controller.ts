@@ -14,6 +14,7 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { verifyTraceArtifactProvenance } from "../src/remote-control/trace-assembler";
 import { canonicalWarningFingerprint, exportRemoteRealtimeDiagnostics } from "../src/remote-control/voice-diagnostics";
 import { type VoiceCandidate, VoiceUatController, type VoiceUatHost } from "../src/remote-control/voice-uat-controller";
 import { replaceSystemdVoiceService } from "../src/remote-control/voice-uat-systemd";
@@ -103,6 +104,15 @@ class SystemdVoiceUatHost implements VoiceUatHost {
 	constructor(private readonly runDirectory: string) {}
 	async activeVoiceCall(): Promise<boolean> {
 		return Number((await status()).liveSessions ?? 0) > 0;
+	}
+	async verifyCandidateArtifact(candidate: VoiceCandidate): Promise<boolean> {
+		try {
+			const provenance = await verifyTraceArtifactProvenance(candidate.executable, candidate.commit);
+			if (provenance.artifactSha256 !== candidate.sha256) return false;
+			return (await command([candidate.executable, "--version"])).includes(candidate.version.replace(/^v/, ""));
+		} catch {
+			return false;
+		}
 	}
 	async captureBaseline() {
 		const properties = await systemdProperties();
