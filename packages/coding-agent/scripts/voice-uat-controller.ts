@@ -146,7 +146,7 @@ class SystemdVoiceUatHost implements VoiceUatHost {
 		await mkdir(dropInDirectory, { recursive: true, mode: 0o700 });
 		await atomicWrite(
 			taskDropIn,
-			`[Service]\nExecStart=\nExecStart=${candidate.executable} remote-control supervisor\n`,
+			`[Service]\nExecStart=\nExecStart=${candidate.executable} remote-control supervisor\nExecStop=\nExecStop=${candidate.executable} remote-control quiesce\n`,
 		);
 		await command(["systemctl", "--user", "daemon-reload"]);
 	}

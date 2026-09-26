@@ -161,6 +161,7 @@ test("the systemd user service contains no credentials and restarts only the sup
 		arguments: ["remote-control", "supervisor"],
 	});
 	expect(unit).toContain("ExecStart=/opt/xcsh/bin/xcsh remote-control supervisor");
+	expect(unit).toContain("ExecStop=/opt/xcsh/bin/xcsh remote-control quiesce");
 	expect(unit).toContain("Restart=on-failure");
 	expect(unit).toContain("KillMode=mixed");
 	expect(unit).toContain("TimeoutStopSec=85s");
