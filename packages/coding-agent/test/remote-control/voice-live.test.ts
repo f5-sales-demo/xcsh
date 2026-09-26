@@ -110,6 +110,19 @@ test("standalone initializes Live once and forwards audio and text", async () =>
 	expect(f.sent.at(-1)).toEqual({ type: "session.close" });
 });
 
+test("standalone accepts session.started as the canonical first V3 event", async () => {
+	const f = fixture();
+	const started = f.voice.start({ ...base, threadId: "thread-fixture" });
+	await Bun.sleep(0);
+	f.handlers().message(JSON.stringify({ type: "session.started", session: { id: "server-session" } }));
+	await started;
+	expect(f.events).toContainEqual({
+		method: "thread/realtime/started",
+		params: { realtimeSessionId: "thread-fixture", version: "v3" },
+	});
+	await f.voice.stop();
+});
+
 test("standalone rejects malformed audio and missing API-key authentication", async () => {
 	const f = fixture();
 	const started = f.voice.start({ ...base, threadId: "thread-fixture" });

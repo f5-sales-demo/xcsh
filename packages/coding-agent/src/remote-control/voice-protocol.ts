@@ -40,7 +40,7 @@ export function existingCallConfig(params: Record<string, unknown>) {
 	requireLiveVersion(params.version);
 	if (params.outputModality !== "audio") throw new ProtocolError(-32602, "Live realtime requires audio output");
 	if (
-		params.includeStartupContext !== false ||
+		params.includeStartupContext === true ||
 		"prompt" in params ||
 		params.model != null ||
 		params.voice != null ||
@@ -95,41 +95,63 @@ export type VoiceEvent =
 			numChannels: number;
 	  }
 	| { kind: "error" };
+export type VoiceEventRejection = "invalidEnvelope" | "invalidPayload" | "unknownType";
+export interface VoiceEventDecode {
+	event: VoiceEvent | null;
+	eventType: string;
+	rejection?: VoiceEventRejection;
+}
 function object(value: unknown): Record<string, any> | null {
 	return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
-export function decodeVoiceEvent(input: unknown): VoiceEvent | null {
+const knownEventTypes = new Set([
+	"error",
+	"session.started",
+	"session.updated",
+	"input_audio_buffer.speech_started",
+	"response.created",
+	"input_transcript.added",
+	"output_transcript.added",
+	"turn.done",
+	"delegation.created",
+	"output_audio.delta",
+]);
+function diagnosticEventType(value: unknown): string {
+	return typeof value === "string" && /^[a-zA-Z0-9._/-]{1,128}$/.test(value) ? value : "invalid";
+}
+export function inspectVoiceEvent(input: unknown): VoiceEventDecode {
 	const p = object(input);
-	if (!p || typeof p.type !== "string") return null;
-	if (p.type === "error") return { kind: "error" };
-	if (p.type === "session.updated") {
+	if (!p || typeof p.type !== "string") return { event: null, eventType: "invalid", rejection: "invalidEnvelope" };
+	const eventType = diagnosticEventType(p.type);
+	let event: VoiceEvent | null = null;
+	if (p.type === "error") event = { kind: "error" };
+	else if (p.type === "session.started" || p.type === "session.updated") {
 		const session = object(p.session);
-		return typeof session?.id === "string" ? { kind: "sessionUpdated", id: session.id } : null;
-	}
-	if (p.type === "input_audio_buffer.speech_started") return { kind: "transcriptBoundary", role: "user" };
-	if (p.type === "response.created") return { kind: "transcriptBoundary", role: "assistant" };
+		event = typeof session?.id === "string" ? { kind: "sessionUpdated", id: session.id } : null;
+	} else if (p.type === "input_audio_buffer.speech_started") event = { kind: "transcriptBoundary", role: "user" };
+	else if (p.type === "response.created") event = { kind: "transcriptBoundary", role: "assistant" };
 	const item = object(p.item),
 		turn = object(p.turn);
 	if (["input_transcript.added", "output_transcript.added"].includes(p.type) && typeof item?.text === "string")
-		return {
+		event = {
 			kind: "transcript",
 			done: false,
 			role: p.type === "input_transcript.added" ? "user" : "assistant",
 			text: item.text,
 		};
-	if (
+	else if (
 		p.type === "turn.done" &&
 		(turn?.role === "user" || turn?.role === "assistant") &&
 		typeof turn.transcript === "string"
 	)
-		return {
+		event = {
 			kind: "transcript",
 			done: true,
 			role: turn.role,
 			text: turn.transcript,
 			...(typeof turn.id === "string" ? { id: turn.id } : {}),
 		};
-	if (
+	else if (
 		p.type === "delegation.created" &&
 		item?.type === "delegation" &&
 		item.target === "client" &&
@@ -141,9 +163,16 @@ export function decodeVoiceEvent(input: unknown): VoiceEvent | null {
 			.filter((c: any) => c?.type === "input_text" && typeof c.text === "string")
 			.map((c: any) => c.text)
 			.join("");
-		return text.trim() ? { kind: "delegation", id: item.id, text } : null;
-	}
-	if (p.type === "output_audio.delta" && typeof p.audio === "string")
-		return { kind: "audio", data: p.audio, sampleRate: 24000, numChannels: 1 };
-	return null;
+		event = { kind: "delegation", id: item.id, text };
+	} else if (p.type === "output_audio.delta" && typeof p.audio === "string")
+		event = { kind: "audio", data: p.audio, sampleRate: 24000, numChannels: 1 };
+	if (event) return { event, eventType };
+	return {
+		event: null,
+		eventType,
+		rejection: knownEventTypes.has(p.type) ? "invalidPayload" : "unknownType",
+	};
+}
+export function decodeVoiceEvent(input: unknown): VoiceEvent | null {
+	return inspectVoiceEvent(input).event;
 }

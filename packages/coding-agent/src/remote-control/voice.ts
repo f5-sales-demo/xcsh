@@ -21,9 +21,10 @@ import { type VoicePersonaSnapshot, voicePersonaInstructions } from "./voice-per
 import {
 	CODEX_LIVE_VERSION,
 	contextChunks,
-	decodeVoiceEvent,
 	existingCallConfig,
+	inspectVoiceEvent,
 	type VoiceEvent,
+	type VoiceEventRejection,
 	voiceInstructions,
 } from "./voice-protocol";
 import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
@@ -90,6 +91,11 @@ export class NativeVoice {
 	#chain = Promise.resolve();
 	#pendingBytes = 0;
 	#seen = new Set<string>();
+	#eventTypes = new Map<string, number>();
+	#eventRejections = new Map<VoiceEventRejection | "invalidJson" | "droppedFrame", number>();
+	#firstEventRecorded = false;
+	#diagnosticsTail: Promise<void> = Promise.resolve();
+	#startedAt = 0;
 	#pendingDelegations = 0;
 	#awaitingSession = false;
 	#sessionReady?: { resolve: () => void; reject: (error: Error) => void };
@@ -102,6 +108,7 @@ export class NativeVoice {
 	async start(params: Record<string, unknown>): Promise<void> {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
 		this.#state = "opening";
+		this.#startedAt = Date.now();
 		let callConfig: ReturnType<typeof voiceCallConfig> | undefined;
 		let config: ReturnType<typeof existingCallConfig> | ReturnType<typeof standaloneVoiceConfig> | undefined;
 		let instructions: RealtimeModeInstructions;
@@ -126,14 +133,29 @@ export class NativeVoice {
 			throw error;
 		}
 		this.#flushTail = params.flushTranscriptTailOnSessionEnd === true;
+		const records = this.deps.records();
+		const prepared = new Set(
+			records
+				.filter(
+					record => record.kind === "delegation" && record.state === "prepared" && typeof record.key === "string",
+				)
+				.map(record => String(record.key)),
+		);
+		for (const record of records)
+			if (
+				typeof record.key === "string" &&
+				((record.kind === "delegation" && record.state === "submitted") || record.kind === "delegationResult")
+			)
+				prepared.delete(record.key);
 		this.#seen = new Set(
-			this.deps
-				.records()
-				.filter(record => typeof record.key === "string")
+			records
+				.filter(record => typeof record.key === "string" && !prepared.has(String(record.key)))
 				.map(record => String(record.key)),
 		);
 		let stage = "authentication";
 		const startedAt = Date.now();
+		let stageStartedAt = startedAt;
+		let sidebandElapsedMs = 0;
 		try {
 			const diagnostics = voicePersonaInstructions(params, this.#persona).diagnostics;
 			await this.deps.record({ kind: "voicePersonaDiagnostic", ...diagnostics });
@@ -142,6 +164,12 @@ export class NativeVoice {
 			if (standalone && !apiKey) throw new ProtocolError(-32602, "Realtime conversation requires API key auth");
 			const auth = standalone ? undefined : await this.deps.authenticate();
 			if (this.#state !== "opening") throw new Error("Voice stopped during authentication");
+			await this.deps.record({
+				kind: "voiceDiagnostic",
+				stage,
+				outcome: "succeeded",
+				elapsedMs: Date.now() - stageStartedAt,
+			});
 			// Pinned created calls default to their owning thread; existing calls retain the client's optional identity.
 			const sessionId =
 				config?.realtimeSessionId ??
@@ -162,6 +190,7 @@ export class NativeVoice {
 			if (sessionId !== null) headers["x-session-id"] = sessionId;
 			if (callConfig) {
 				stage = "call-create";
+				stageStartedAt = Date.now();
 				const call = await (this.deps.createCall ?? createVoiceCall)(
 					callConfig,
 					auth!,
@@ -170,6 +199,12 @@ export class NativeVoice {
 					this.#abort.signal,
 				);
 				if (this.#state !== "opening") throw new Error("Voice stopped during call creation");
+				await this.deps.record({
+					kind: "voiceDiagnostic",
+					stage,
+					outcome: "succeeded",
+					elapsedMs: Date.now() - stageStartedAt,
+				});
 				config = existingCallConfig({
 					version: CODEX_LIVE_VERSION,
 					realtimeSessionId: sessionId,
@@ -190,11 +225,20 @@ export class NativeVoice {
 				this.#chain = this.#history.start(sessionId);
 				await this.#chain;
 				if (!this.active) throw new Error("Voice stopped during history initialization");
+				stage = "sdp-delivery";
+				stageStartedAt = Date.now();
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version: CODEX_LIVE_VERSION });
 				this.deps.emit("thread/realtime/sdp", { sdp: call.sdp });
+				await this.deps.record({
+					kind: "voiceDiagnostic",
+					stage,
+					outcome: "succeeded",
+					elapsedMs: Date.now() - stageStartedAt,
+				});
 			}
 			this.#config = config;
 			stage = "sideband-attach";
+			stageStartedAt = Date.now();
 			const socket = await this.#connect(headers);
 			if (this.#state !== "opening") {
 				socket.close();
@@ -203,6 +247,7 @@ export class NativeVoice {
 			this.#socket = socket;
 			this.#state = "open";
 			this.#connectedAt = Date.now();
+			sidebandElapsedMs = Date.now() - stageStartedAt;
 			if (standalone && this.#config?.kind === "websocket") {
 				this.#awaitingSession = true;
 				const ready = new Promise<void>((resolve, reject) => {
@@ -237,7 +282,13 @@ export class NativeVoice {
 			await this.#modeUpdates;
 			if (!this.active) throw new Error("Voice stopped during mode initialization");
 			stage = "sideband-attach";
-			await this.deps.record({ kind: "voiceDiagnostic", stage, connected: true, elapsedMs: Date.now() - startedAt });
+			await this.deps.record({
+				kind: "voiceDiagnostic",
+				stage,
+				connected: true,
+				outcome: "succeeded",
+				elapsedMs: sidebandElapsedMs,
+			});
 			if (!this.active) throw new Error("Voice stopped during connection diagnostics");
 			this.#ready = true;
 			const openingInputs = this.#openingInputs;
@@ -254,7 +305,7 @@ export class NativeVoice {
 					connected: false,
 					failure: connectionFailure(error),
 					httpStatus: status ? Number(status) : null,
-					elapsedMs: Date.now() - startedAt,
+					elapsedMs: Date.now() - stageStartedAt,
 				})
 				.catch(() => {});
 			if (error instanceof ProtocolError && error.code === -32602) {
@@ -295,8 +346,17 @@ export class NativeVoice {
 			} catch {}
 			socket.close();
 		}
-		this.#closing = Promise.all([this.#chain, endInstructions])
+		this.#closing = Promise.all([this.#chain, endInstructions, this.#diagnosticsTail])
 			.then(async () => {
+				await this.deps.record({
+					kind: "voiceEventDiagnostic",
+					eventTypes: Object.fromEntries(
+						[...this.#eventTypes].sort(([left], [right]) => left.localeCompare(right)),
+					),
+					rejections: Object.fromEntries(
+						[...this.#eventRejections].sort(([left], [right]) => left.localeCompare(right)),
+					),
+				});
 				await this.#history?.close(reason === "failed");
 			})
 			.catch(() => {
@@ -476,6 +536,7 @@ export class NativeVoice {
 		if (!this.active) return;
 		const bytes = Buffer.byteLength(data);
 		if (this.#seen.size >= 8192 || bytes > 1_048_576 || this.#pendingBytes + this.#openingBytes + bytes > 2_097_152) {
+			this.#countEvent("invalid", "droppedFrame");
 			this.#fail("Realtime input buffer limit reached");
 			return;
 		}
@@ -485,9 +546,11 @@ export class NativeVoice {
 				try {
 					input = JSON.parse(data);
 				} catch {
+					this.#countEvent("invalid", "invalidJson");
+					this.#sessionReady?.reject(new Error("Malformed realtime event before session.started"));
 					return;
 				}
-				const event = decodeVoiceEvent(input);
+				const event = this.#inspectEvent(input);
 				if (!event) return;
 				this.#awaitingSession = false;
 				if (event.kind === "sessionUpdated") {
@@ -516,16 +579,39 @@ export class NativeVoice {
 				try {
 					input = JSON.parse(data);
 				} catch {
+					this.#countEvent("invalid", "invalidJson");
 					this.#fail("Malformed realtime event");
 					return;
 				}
-				const event = decodeVoiceEvent(input);
+				const event = this.#inspectEvent(input);
 				if (event) await this.#event(event);
 			})
 			.catch(() => this.#fail())
 			.finally(() => {
 				this.#pendingBytes -= bytes;
 			});
+	}
+	#countEvent(type: string, rejection?: VoiceEventRejection | "invalidJson" | "droppedFrame"): void {
+		this.#eventTypes.set(type, (this.#eventTypes.get(type) ?? 0) + 1);
+		if (rejection) this.#eventRejections.set(rejection, (this.#eventRejections.get(rejection) ?? 0) + 1);
+	}
+	#inspectEvent(input: unknown): VoiceEvent | null {
+		const decoded = inspectVoiceEvent(input);
+		this.#countEvent(decoded.eventType, decoded.rejection);
+		if (decoded.event && !this.#firstEventRecorded) {
+			this.#firstEventRecorded = true;
+			this.#diagnosticsTail = this.#diagnosticsTail
+				.then(() =>
+					this.deps.record({
+						kind: "voiceDiagnostic",
+						stage: "first-event",
+						eventType: decoded.eventType,
+						elapsedMs: Date.now() - this.#startedAt,
+					}),
+				)
+				.catch(() => {});
+		}
+		return decoded.event;
 	}
 	#key(kind: string, id: string): string {
 		const connectionId =
@@ -654,7 +740,7 @@ export class NativeVoice {
 		await this.deps.record({
 			key,
 			kind: "delegation",
-			state: "submitted",
+			state: "prepared",
 			realtimeSessionId: this.#config?.realtimeSessionId,
 			text: event.text,
 		});
@@ -674,19 +760,25 @@ export class NativeVoice {
 		const handoff = this.#createHandoff(event.id);
 		this.#handoff = handoff;
 		this.#activeHandoffId = event.id;
-		void this.deps
-			.delegate(
-				key,
-				voiceDelegation(event.text, activeTranscript.map(entry => `${entry.role}: ${entry.text}`).join("\n")),
-				update => {
-					if (!this.active) return;
-					try {
-						handoff?.update(update);
-					} catch {
-						this.#fail("Could not stream the backing agent response");
-					}
-				},
-			)
+		const delegated = this.deps.delegate(
+			key,
+			voiceDelegation(event.text, activeTranscript.map(entry => `${entry.role}: ${entry.text}`).join("\n")),
+			update => {
+				if (!this.active) return;
+				try {
+					handoff?.update(update);
+				} catch {
+					this.#fail("Could not stream the backing agent response");
+				}
+			},
+		);
+		await this.deps.record({
+			key,
+			kind: "delegation",
+			state: "submitted",
+			realtimeSessionId: this.#config?.realtimeSessionId,
+		});
+		void delegated
 			.then(async text => {
 				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
 				await this.deps.record({ key, kind: "delegationResult", text });
