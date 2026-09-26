@@ -874,6 +874,37 @@ export class RemoteRouter {
 							this.#defer(initialized, { method: "thread/unarchived", params: { threadId: params.threadId } });
 						break;
 					}
+					case "command/exec": {
+						// The phone uses this standalone command to allocate a blank-chat
+						// workspace. Reuse the existing host-owned allocator: the supplied
+						// shell script is never executed, so its policy cannot widen access.
+						if (
+							params.cwd !== "/" ||
+							params.processId != null ||
+							params.streamStdoutStderr !== false ||
+							!Array.isArray(params.command) ||
+							typeof params.command[2] !== "string" ||
+							!params.command[2].includes('target="$PWD/Documents/') ||
+							!params.command[2].includes('mkdir -p "$target"') ||
+							!params.command[2].includes('printf %s "$target"') ||
+							(params.sandboxPolicy != null &&
+								(typeof params.sandboxPolicy !== "object" ||
+									Array.isArray(params.sandboxPolicy) ||
+									!["dangerFullAccess", "workspaceWrite"].includes(
+										String((params.sandboxPolicy as Record<string, unknown>).type),
+									)))
+						)
+							throw new ProtocolError(-32602, "Unsupported standalone command");
+						const bootstrap = await this.#processParams("process/spawn", {
+							...params,
+							tty: false,
+							streamStdin: false,
+						});
+						if (!bootstrap.additionalAllowedCwd)
+							throw new ProtocolError(-32602, "Unsupported standalone command");
+						result = { exitCode: 0, stdout: bootstrap.additionalAllowedCwd, stderr: "" };
+						break;
+					}
 					case "process/spawn":
 					case "process/kill":
 					case "process/writeStdin": {
