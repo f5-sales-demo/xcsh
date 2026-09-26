@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "outcomes": [
+    {"workflow": "ci.yml", "job": "check", "name": "check"},
+    {"workflow": "ci.yml", "job": "test", "name": "test"},
+    {"workflow": "ci.yml", "job": "install_methods", "name": "Test installation methods"},
+    {"workflow": "ci.yml", "job": "create-release", "name": "Publish immutable GitHub release"},
+    {"workflow": "ci.yml", "job": "publish-npm", "name": "Publish npm packages"},
+    {"workflow": "ci.yml", "job": "update-homebrew", "name": "Publish Homebrew cask"},
+    {"workflow": "ci.yml", "job": "verify-macos-pkg", "name": "Verify direct MDM package (${{ matrix.arch }})"},
+    {"workflow": "ci.yml", "job": "verify-npm-debian", "name": "Verify npm installation on Debian 12"},
+    {"workflow": "container.yml", "job": "container-test", "name": "container-test"},
+    {"workflow": "container.yml", "job": "publish-ghcr", "name": "publish-ghcr"},
+    {"workflow": "super-linter.yml", "job": "linked-issue", "name": "${{ github.repository == 'f5-sales-demo/xcsh' && 'Check linked issues' || 'xcsh linked issue (not applicable)' }}"}
+  ]
+}
