@@ -76,10 +76,25 @@ test("controller automatically restores the exact baseline after failed deployme
 	const root = await mkdtemp(join(tmpdir(), "xcsh-voice-controller-"));
 	try {
 		const fake = host({ verifyCandidate: async () => false });
-		const controller = new VoiceUatController(root, fake.implementation);
+		const controller = new VoiceUatController(root, fake.implementation, async () => {});
 		await controller.prepare(candidate, ["A01"]);
 		await expect(controller.deploy()).rejects.toThrow("verification");
 		expect(fake.calls).toEqual(["install", "restart", "restore", "restart"]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("controller waits through transient startup health before accepting a candidate", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-voice-controller-"));
+	try {
+		let attempts = 0;
+		const fake = host({ verifyCandidate: async () => ++attempts >= 3 });
+		const controller = new VoiceUatController(root, fake.implementation, async () => {});
+		await controller.prepare(candidate, ["A01"]);
+		await controller.deploy();
+		expect(attempts).toBe(3);
+		expect(fake.calls).toEqual(["install", "restart"]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

@@ -85,6 +85,13 @@ export class VoiceUatController {
 		await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 		await rename(temporary, this.#stateFile);
 	}
+	async #verify(candidate: VoiceCandidate): Promise<boolean> {
+		for (let attempt = 0; attempt < 20; attempt++) {
+			if (await this.host.verifyCandidate(candidate)) return true;
+			if (attempt < 19) await this.wait(500);
+		}
+		return false;
+	}
 	async prepare(candidate: VoiceCandidate, taskIds: readonly string[]): Promise<void> {
 		if (!/^[a-f0-9]{40}$/.test(candidate.commit) || !/^[a-f0-9]{64}$/.test(candidate.sha256))
 			throw new Error("Candidate provenance is incomplete");
@@ -103,8 +110,7 @@ export class VoiceUatController {
 		try {
 			await this.host.installCandidate(state.candidate);
 			await this.host.restart();
-			if (!(await this.host.verifyCandidate(state.candidate)))
-				throw new Error("Candidate verification failed after deployment");
+			if (!(await this.#verify(state.candidate))) throw new Error("Candidate verification failed after deployment");
 			await this.#write({ ...state, phase: "deployed" });
 		} catch (error) {
 			await this.host.restore(state.baseline);
@@ -121,8 +127,7 @@ export class VoiceUatController {
 		await this.host.setCaptureEnvironment(scenario.directory, id, scenario.correlationSalt, expectedReconnect);
 		try {
 			await this.host.restart();
-			if (!(await this.host.verifyCandidate(state.candidate)))
-				throw new Error("Candidate verification failed at row start");
+			if (!(await this.#verify(state.candidate))) throw new Error("Candidate verification failed at row start");
 			await this.#ledger.update(id, {
 				state: "running",
 				evidenceHashes: [],
