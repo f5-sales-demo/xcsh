@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readlink, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RemoteRouter, type RemoteThreadLifecycle } from "../../src/remote-control/router";
@@ -134,7 +134,11 @@ test("read-only command accepts an existing selected project before any terminal
 
 const workspaceSandboxAvailable =
 	process.platform === "linux" &&
-	spawnSync("sudo", ["-n", "/usr/bin/bwrap", "--version"], { encoding: "utf8" }).status === 0;
+	spawnSync(
+		"systemd-run",
+		["--user", "--quiet", "--wait", "--pipe", "--collect", "--", "sudo", "-n", "/usr/bin/bwrap", "--version"],
+		{ encoding: "utf8" },
+	).status === 0;
 
 test.skipIf(!workspaceSandboxAvailable)(
 	"selected-folder workspace command can write only inside its isolated project",
@@ -195,6 +199,28 @@ test.skipIf(!workspaceSandboxAvailable)(
 			expect((await stat(inside)).isFile()).toBe(true);
 			expect(events.at(-1)?.method).toBe("command/exec/outputDelta");
 			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0done");
+			const hostNetwork = await readlink("/proc/self/ns/net");
+			expect(await router.handle("phone", request(6, "readlink /proc/self/ns/net", inside))).toMatchObject({
+				result: { exitCode: 0 },
+			});
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).not.toContain(hostNetwork);
+			expect(
+				await router.handle(
+					"phone",
+					request(
+						7,
+						"if systemctl --user show-environment >/dev/null 2>&1; then printf exposed; else printf isolated; fi",
+						inside,
+					),
+				),
+			).toMatchObject({ result: { exitCode: 0 } });
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0isolated");
+			const largeScript = "printf compact".padEnd(13_793, " ");
+			const largeRequest = request(8, largeScript, inside);
+			largeRequest.params.command.push("one", "two", "three", "four", "five", "six");
+			expect(largeRequest.params.command).toHaveLength(18);
+			expect(await router.handle("phone", largeRequest)).toMatchObject({ result: { exitCode: 0 } });
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0compact");
 			const outsideAttempt = await router.handle("phone", request(3, 'printf blocked > "$1"', outside));
 			expect(outsideAttempt).toMatchObject({
 				id: 3,

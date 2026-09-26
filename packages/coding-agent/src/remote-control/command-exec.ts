@@ -121,6 +121,7 @@ export class RemoteCommandExec {
 			PATH: "/usr/bin:/bin",
 			HOME: process.env.HOME ?? "/",
 			LANG: process.env.LANG ?? "C.UTF-8",
+			XDG_RUNTIME_DIR: `/run/user/${process.getuid?.() ?? ""}`,
 		};
 		if (p.env != null) {
 			if (typeof p.env !== "object" || Array.isArray(p.env))
@@ -141,9 +142,17 @@ export class RemoteCommandExec {
 		const workspaceInTmp = allowedCwd === "/tmp" || allowedCwd.startsWith("/tmp/");
 		if (sandboxed && (process.platform !== "linux" || process.getuid?.() == null || process.getgid?.() == null))
 			throw new ProtocolError(-32602, "Command sandbox is unavailable");
-		const file = sandboxed ? "/usr/bin/sudo" : "/bin/sh";
+		const file = sandboxed ? "/usr/bin/systemd-run" : "/bin/sh";
 		const args = sandboxed
 			? [
+					"--user",
+					"--quiet",
+					"--wait",
+					"--pipe",
+					"--collect",
+					"--property=RuntimeMaxSec=20s",
+					"--",
+					"/usr/bin/sudo",
 					"-n",
 					"/usr/bin/bwrap",
 					"--unshare-net",
@@ -151,6 +160,8 @@ export class RemoteCommandExec {
 					"--ro-bind",
 					"/",
 					"/",
+					"--tmpfs",
+					"/run/user",
 					...(workspaceWrite
 						? [...(workspaceInTmp ? [] : ["--tmpfs", "/tmp"]), "--bind", allowedCwd, allowedCwd]
 						: []),
