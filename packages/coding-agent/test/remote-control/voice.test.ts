@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import Ajv from "ajv";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
 import { voiceDelegation } from "../../src/remote-control/voice-delegation";
@@ -267,6 +268,9 @@ test("misalignment retires later handoffs while unrelated provider failures rema
 
 test("pinned existing-call URL encodes one path segment and retains client-owned configuration", () => {
 	expect(existingCallConfig(start)).toMatchObject({ url: "wss://api.openai.com/v1/live/fixture-call" });
+	expect(existingCallConfig({ ...start, includeStartupContext: undefined })).toMatchObject({
+		url: "wss://api.openai.com/v1/live/fixture-call",
+	});
 	expect(existingCallConfig({ ...start, transport: { type: "existingCall", callId: "../../admin" } }).url).toContain(
 		"..%2F..%2Fadmin",
 	);
@@ -289,6 +293,10 @@ test("context chunks preserve Unicode within the pinned 500 UTF-8 byte bound", (
 	expect(chunks.every(chunk => Buffer.byteLength(chunk) <= 500)).toBe(true);
 });
 test("Live events distinguish transcripts from delegated work and ignore malformed data", () => {
+	expect(decodeVoiceEvent({ type: "session.started", session: { id: "s1" } })).toEqual({
+		kind: "sessionUpdated",
+		id: "s1",
+	});
 	expect(decodeVoiceEvent({ type: "turn.done", turn: { id: "t1", role: "user", transcript: "hello" } })).toEqual({
 		kind: "transcript",
 		done: true,
@@ -297,6 +305,12 @@ test("Live events distinguish transcripts from delegated work and ignore malform
 		text: "hello",
 	});
 	expect(decodeVoiceEvent(delegation)).toMatchObject({ kind: "delegation", id: "d1", text: "change fixture" });
+	expect(
+		decodeVoiceEvent({
+			...delegation,
+			item: { ...delegation.item, id: "empty", content: [{ type: "input_text", text: "" }] },
+		}),
+	).toEqual({ kind: "delegation", id: "empty", text: "" });
 	for (const event of [
 		null,
 		[],
@@ -304,6 +318,45 @@ test("Live events distinguish transcripts from delegated work and ignore malform
 		{ ...delegation, item: { ...delegation.item, target: "server" } },
 	])
 		expect(decodeVoiceEvent(event)).toBeNull();
+});
+test("empty Live delegations preserve their identity and let the backing workflow decide", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.receive({
+		...delegation,
+		item: { ...delegation.item, id: "empty", content: [{ type: "input_text", text: "" }] },
+	});
+	await Bun.sleep(0);
+	expect(f.events).toContainEqual({
+		method: "thread/realtime/itemAdded",
+		params: {
+			item: {
+				type: "handoff_request",
+				handoff_id: "empty",
+				item_id: "empty",
+				input_transcript: "",
+				active_transcript: [],
+			},
+		},
+	});
+	expect(f.delegated).toEqual([voiceDelegation("", "")]);
+	f.finish("Done.");
+	await f.voice.stop();
+});
+
+test("content-free diagnostics count unknown and invalid Live events", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.receive({ type: "future.private_event", secret: "must-not-survive" });
+	f.receive({ type: "turn.done", turn: { role: "user", transcript: 42, secret: "must-not-survive" } });
+	await Bun.sleep(0);
+	await f.voice.stop();
+	const diagnostic = f.records.find(record => record.kind === "voiceEventDiagnostic");
+	expect(diagnostic).toMatchObject({
+		eventTypes: { "future.private_event": 1, "turn.done": 1 },
+		rejections: { invalidPayload: 1, unknownType: 1 },
+	});
+	expect(JSON.stringify(diagnostic)).not.toContain("must-not-survive");
 });
 test("existing-call attachment never sends session.update or changes the work model", async () => {
 	const f = fixture();
@@ -362,6 +415,20 @@ test("persisted delegation identities suppress replay after attachment recreatio
 	expect(resumed.delegated).toEqual([]);
 	f.finish("late result");
 	resumed.voice.stop();
+});
+test("a prepared but unsubmitted delegation is recovered once", async () => {
+	const key = createHash("sha256")
+		.update(JSON.stringify(["fixture-call", "delegation", "d1"]))
+		.digest("hex");
+	const f = fixture([{ key, kind: "delegation", state: "prepared", realtimeSessionId: null, text: "change fixture" }]);
+	await f.voice.start(start);
+	f.receive(delegation);
+	f.receive(delegation);
+	await Bun.sleep(0);
+	expect(f.delegated).toEqual([voiceDelegation("change fixture", "user: change fixture")]);
+	expect(f.records).toContainEqual(expect.objectContaining({ key, kind: "delegation", state: "submitted" }));
+	f.finish("Done.");
+	await f.voice.stop();
 });
 test("ending voice leaves agent work running and ignores late events and output", async () => {
 	const f = fixture();
@@ -748,7 +815,16 @@ test("WebRTC creates the native call, forwards answer SDP and attaches without o
 	]);
 	expect(f.events[3].params.sdp).toBe("v=0\r\nfixture-answer");
 	expect(f.sent).toEqual([]);
-	f.voice.stop();
+	await f.voice.stop();
+	for (const stage of ["call-create", "sdp-delivery", "sideband-attach"])
+		expect(f.records).toContainEqual(
+			expect.objectContaining({
+				kind: "voiceDiagnostic",
+				stage,
+				outcome: "succeeded",
+				elapsedMs: expect.any(Number),
+			}),
+		);
 });
 test("WebRTC uses on-demand person routing without startup person values", async () => {
 	const f = fixture();
