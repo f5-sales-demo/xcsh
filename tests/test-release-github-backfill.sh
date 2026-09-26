@@ -42,6 +42,8 @@ grep -Fq '/attempts/1/jobs?per_page=100' "$workflow" || fail "original attempt v
 grep -Fq 'jq -e -f scripts/ci-release-source-jobs.jq' "$workflow" || fail "GitHub backfill source-run gate is missing"
 grep -Fq 'jq -e -f scripts/ci-release-source-jobs.jq' "$npm_workflow" || fail "npm backfill source-run gate is missing"
 grep -Fq 'timeout-minutes: 90' "$npm_workflow" || fail "npm backfill timeout cannot cover registry propagation"
+grep -Fq 'npm dist-tag add "@f5-sales-demo/xcsh@${VERSION}" backfill' "$npm_workflow" ||
+  fail "npm backfill must mark the verified immutable version"
 grep -Fq 'release-binaries-linux-win' "$workflow" || fail "Linux/Windows artifacts are missing"
 grep -Fq 'release-binaries-macos-*-signed' "$workflow" || fail "signed macOS artifacts are missing"
 grep -Fq 'archives-first.sha256' "$workflow" || fail "first deterministic archive pass is missing"
