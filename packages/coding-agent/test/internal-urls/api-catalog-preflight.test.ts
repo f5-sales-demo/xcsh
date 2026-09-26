@@ -14,6 +14,15 @@ const resources: ApiCatalogPreflightResource[] = [
 	},
 	{ name: "origin_pool", aliases: ["origin pool"], domain: "virtual", categories: ["origin-pools"] },
 	{ name: "dns_zone", aliases: ["dns zone"], domain: "dns", categories: ["dns-dns-zones"] },
+	{ name: "aws_vpc_site", aliases: ["aws vpc site"], domain: "site", categories: ["aws-vpc-sites"] },
+	{ name: "azure_vnet_site", aliases: ["azure vnet site"], domain: "site", categories: ["azure-vnet-sites"] },
+	{
+		name: "gcp_vpc_site",
+		aliases: ["gcp vpc site", "google cloud vpc site"],
+		domain: "site",
+		categories: ["gcp-vpc-sites"],
+	},
+	{ name: "kubernetes_cluster", aliases: ["kubernetes cluster"], domain: "site", categories: ["kubernetes-clusters"] },
 ];
 
 describe("API catalog preflight", () => {
@@ -52,6 +61,62 @@ describe("API catalog preflight", () => {
 				resources: duplicateResources,
 			}),
 		).toMatchObject({ resource: "origin_pool", domain: "virtual" });
+	});
+
+	it("keeps F5 XC cloud-named resources in scope while rejecting third-party questions", () => {
+		for (const [prompt, resource] of [
+			["What endpoint creates an F5 XC AWS VPC site?", "aws_vpc_site"],
+			["What endpoint creates an F5 XC Azure VNet site?", "azure_vnet_site"],
+			["What endpoint creates an F5 XC GCP VPC site?", "gcp_vpc_site"],
+			["What endpoint creates an F5 XC Google Cloud VPC site?", "gcp_vpc_site"],
+			["What endpoint creates an F5 XC Kubernetes cluster?", "kubernetes_cluster"],
+		] as const) {
+			expect(
+				classifyApiCatalogPreflight(prompt, {
+					toolsEnabled: true,
+					resources,
+				}),
+			).toMatchObject({ resource, domain: "site" });
+		}
+		for (const prompt of [
+			"What endpoint creates an AWS origin pool?",
+			"What endpoint creates an Azure origin pool?",
+			"What endpoint creates a GCP origin pool?",
+			"What endpoint creates a Google Cloud origin pool?",
+			"What endpoint creates a Kubernetes origin pool?",
+		]) {
+			expect(
+				classifyApiCatalogPreflight(prompt, {
+					toolsEnabled: true,
+					resources,
+				}),
+			).toBeNull();
+		}
+	});
+
+	it("uses only an explicitly supplied immediately preceding resource for anaphoric metadata", () => {
+		const previousResource = {
+			resource: "http_loadbalancer",
+			domain: "virtual",
+			queries: ["http load balancer"],
+		};
+		expect(
+			classifyApiCatalogPreflight("What is its maximum?", {
+				toolsEnabled: true,
+				resources,
+				previousResource,
+			}),
+		).toEqual(previousResource);
+		expect(
+			classifyApiCatalogPreflight("Tell me a joke", { toolsEnabled: true, resources, previousResource }),
+		).toBeNull();
+		expect(
+			classifyApiCatalogPreflight("What is its maximum?", {
+				toolsEnabled: false,
+				resources,
+				previousResource,
+			}),
+		).toBeNull();
 	});
 
 	it.each([
@@ -115,6 +180,22 @@ describe("API catalog preflight", () => {
 			"dns-import",
 			"dns-three",
 		]);
+	});
+
+	it("never lets a QMD-ranked category substitute a different resource owner", async () => {
+		const result = await runApiCatalogPreflight("Create an F5 XC DNS zone", {
+			toolsEnabled: true,
+			resources,
+			catalogVersion: "6.0.2",
+			rank: async () => ["origin-pools"],
+		});
+		expect(result?.ranked[0]).toMatchObject({
+			category: "origin-pools",
+			resource: "dns_zone",
+			domain: "dns",
+			resourceUrl: "xcsh://api-catalog/?resource=dns_zone&compact=true",
+			specUrl: "xcsh://api-spec/dns?resource=dns_zone",
+		});
 	});
 
 	it("fails closed with a local discovery error", async () => {

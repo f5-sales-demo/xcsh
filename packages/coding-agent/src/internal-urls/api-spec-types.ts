@@ -211,6 +211,13 @@ export interface ApiSpecValidationResourceEntry {
 	readonly [key: string]: unknown;
 }
 
+export interface ApiSpecNetworkAllowlist {
+	readonly sourceUrl: string;
+	readonly sha256: string;
+	readonly releaseVersion: string;
+	readonly manifest: Readonly<Record<string, unknown>>;
+}
+
 export interface ApiSpecIndex {
 	readonly version: string;
 	readonly timestamp: string;

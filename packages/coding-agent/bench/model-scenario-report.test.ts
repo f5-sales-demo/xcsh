@@ -64,6 +64,7 @@ describe("model scenario library", () => {
 			"api-catalog-answer-no-match",
 			"api-first-http-route-limit",
 			"api-first-origin-pool-required",
+			"api-first-anaphoric-route-limit",
 			"api-first-dns-zone-create",
 			"api-catalog-exact-resource",
 			"api-catalog-direct-category",
@@ -95,6 +96,66 @@ describe("model scenario library", () => {
 });
 
 describe("model scenario event contracts", () => {
+	it("retains response, tool, knowledge, timing, and error attribution for every ordered turn", () => {
+		const scenario = {
+			...readScenario,
+			turns: [
+				{ id: "resource", prompt: "First", contract: readScenario.contract, quality: readScenario.quality },
+				{ id: "follow-up", prompt: "Second", contract: { expectedResponse: "256" }, quality: readScenario.quality },
+			],
+		} as any;
+		const sample = buildScenarioBenchmarkSample({
+			target,
+			scenario,
+			thinking: Effort.High,
+			round: 1,
+			warmup: false,
+			startedAt: "2026-09-26T00:00:00.000Z",
+			processDurationMs: 90,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: [],
+			events: [{ elapsedMs: 1, event: { type: "session", provider: "provider", model: "model", thinking: "high" } }],
+			turnInputs: [
+				{
+					startedAtMs: 5,
+					durationMs: 35,
+					events: [
+						{ elapsedMs: 6, event: { type: "message_start", message: { role: "user" } } },
+						{ elapsedMs: 10, event: { type: "tool_execution_start", toolCallId: "read-1", toolName: "read", args: { path: "packages/coding-agent/bench/fixtures/tool-probe.txt" } } },
+						{ elapsedMs: 12, event: { type: "tool_execution_end", toolCallId: "read-1", toolName: "read" } },
+						{ elapsedMs: 20, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "TOOL_PROBE_OK_7F3C" } } },
+						{ elapsedMs: 30, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
+						{ elapsedMs: 35, event: { type: "turn_end" } },
+					],
+				},
+				{
+					startedAtMs: 40,
+					durationMs: 50,
+					error: "runtime failed after completion",
+					events: [
+						{ elapsedMs: 2, event: { type: "message_start", message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["http load balancer"] } } } },
+						{ elapsedMs: 3, event: { type: "message_start", message: { role: "user" } } },
+						{ elapsedMs: 20, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "256" } } },
+						{ elapsedMs: 40, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
+						{ elapsedMs: 45, event: { type: "turn_end" } },
+					],
+				},
+			],
+		});
+
+		expect(sample.turns).toHaveLength(2);
+		expect(sample).toMatchObject({ requestedThinking: "high", effectiveThinking: "high" });
+		expect(sample.turns[0]).toMatchObject({ id: "resource", response: "TOOL_PROBE_OK_7F3C", durationMs: 35 });
+		expect(sample.turns[0].toolCalls).toHaveLength(1);
+		expect(sample.turns[1]).toMatchObject({ id: "follow-up", response: "256", error: "runtime failed after completion" });
+		expect(sample.turns[1].knowledgeEvents).toEqual([
+			expect.objectContaining({ type: "api-catalog-preflight", query: "http load balancer" }),
+		]);
+		expect(sample.turns[1].timeToAuthoritativeEvidenceMs).toBe(2);
+	});
+
 	it("requires preflight to be the first knowledge event before exact internal reads", () => {
 		const scenario = {
 			...readScenario,
@@ -602,5 +663,69 @@ describe("model scenario event contracts", () => {
 		const reevaluated = regradeScenarioBenchmarkReport(report, [readScenario]);
 		expect(reevaluated.samples[0]).toMatchObject({ contractPassed: true, contractFailures: [], ttftMs: 321 });
 		expect(reevaluated.summaries[0]).toMatchObject({ contractPassRate: 1, qualityScore: { p50: 100 } });
+	});
+
+	it("regrades every stored turn against its ordered contract", () => {
+		const scenario = {
+			...readScenario,
+			turns: [
+				{ id: "first", prompt: "First", contract: { expectedResponse: "alpha" }, quality: [] },
+				{ id: "second", prompt: "Second", contract: { expectedResponse: "beta" }, quality: [] },
+			],
+		} as any;
+		const original = buildScenarioBenchmarkSample({
+			target,
+			scenario,
+			thinking: Effort.High,
+			round: 1,
+			warmup: false,
+			startedAt: "2026-09-26T00:00:00.000Z",
+			processDurationMs: 20,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: [],
+			events: [],
+			turnInputs: [
+				{ startedAtMs: 0, durationMs: 10, events: [{ elapsedMs: 1, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "alpha" } } }] },
+				{ startedAtMs: 10, durationMs: 10, events: [{ elapsedMs: 1, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "beta" } } }] },
+			],
+		});
+		const stale = {
+			...original,
+			contractPassed: false,
+			contractFailures: ["stale aggregate"],
+			turns: original.turns.map(turn => ({ ...turn, contractPassed: false, contractFailures: ["stale turn"] })),
+		};
+		const report: ScenarioBenchmarkReport = {
+			schemaVersion: 3,
+			createdAt: "2026-09-26T00:00:00.000Z",
+			config: {
+				thinkingEfforts: [Effort.High],
+				runs: 1,
+				warmups: 0,
+				timeoutMs: 1_000,
+				failFastProviderError: false,
+				order: "rotating-round-robin",
+				models: [target],
+				scenarios: [{ id: scenario.id, label: scenario.label, suite: scenario.suite, tier: scenario.tier, prompt: scenario.prompt, contract: [], quality: [], runtime: scenario.runtime }],
+			},
+			warmups: [],
+			samples: [stale],
+			summaries: [],
+		};
+
+		const reevaluated = regradeScenarioBenchmarkReport(report, [scenario]);
+		expect(reevaluated.samples[0]).toMatchObject({ contractPassed: true, contractFailures: [] });
+		expect(reevaluated.samples[0].turns.map(turn => ({ id: turn.id, passed: turn.contractPassed }))).toEqual([
+			{ id: "first", passed: true },
+			{ id: "second", passed: true },
+		]);
+		expect(reevaluated.config.scenarios[0]).toMatchObject({
+			turns: [
+				{ id: "first", prompt: "First", contract: ['exact response "alpha"'] },
+				{ id: "second", prompt: "Second", contract: ['exact response "beta"'] },
+			],
+		});
 	});
 });

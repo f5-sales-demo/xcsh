@@ -14,6 +14,7 @@
  * - xcsh://api-spec/workflows/ - Guided API workflows
  * - xcsh://api-spec/errors/ - Error resolution
  * - xcsh://api-spec/glossary/ - Acronym glossary
+ * - xcsh://api-spec/network-allowlist - Bounded F5 XC network allowlist inventory
  * - xcsh://api-catalog/ - API operation catalog
  * - xcsh://api-catalog/{category} - Category operations with curl templates
  * - xcsh://terraform/ - Terraform provider index
@@ -45,6 +46,7 @@ import { type ApiSpecResolver, createApiSpecResolver } from "./api-spec-resolve"
 import type {
 	ApiSpecDomainEnrichments,
 	ApiSpecIndex,
+	ApiSpecNetworkAllowlist,
 	ApiSpecValidationResourceEntry,
 	OpenAPISpec,
 } from "./api-spec-types";
@@ -123,6 +125,7 @@ let _apiSpecCache: {
 	data: Readonly<Record<string, OpenAPISpec>>;
 	enrichments: Readonly<Record<string, ApiSpecDomainEnrichments>>;
 	validationData: Readonly<Record<string, ApiSpecValidationResourceEntry>>;
+	networkAllowlist?: ApiSpecNetworkAllowlist;
 	version: string;
 } | null = null;
 
@@ -131,6 +134,7 @@ function loadApiSpecs(): {
 	data: Readonly<Record<string, OpenAPISpec>>;
 	enrichments: Readonly<Record<string, ApiSpecDomainEnrichments>>;
 	validationData: Readonly<Record<string, ApiSpecValidationResourceEntry>>;
+	networkAllowlist?: ApiSpecNetworkAllowlist;
 	version: string;
 } {
 	if (_apiSpecCache) return _apiSpecCache;
@@ -141,6 +145,7 @@ function loadApiSpecs(): {
 			API_SPEC_VERSION?: string;
 			API_SPEC_ENRICHMENTS?: Readonly<Record<string, ApiSpecDomainEnrichments>>;
 			API_VALIDATION_DATA?: Readonly<Record<string, ApiSpecValidationResourceEntry>>;
+			API_NETWORK_ALLOWLIST?: ApiSpecNetworkAllowlist;
 		};
 		const index = mod.API_SPEC_INDEX ?? EMPTY_INDEX;
 		const version = mod.API_SPEC_VERSION ?? "unknown";
@@ -152,6 +157,7 @@ function loadApiSpecs(): {
 			data: (mod.API_SPEC_DATA ?? {}) as Readonly<Record<string, OpenAPISpec>>,
 			enrichments: mod.API_SPEC_ENRICHMENTS ?? {},
 			validationData: (mod.API_VALIDATION_DATA ?? {}) as Readonly<Record<string, ApiSpecValidationResourceEntry>>,
+			networkAllowlist: mod.API_NETWORK_ALLOWLIST,
 			version,
 		};
 	} catch (err) {
@@ -387,6 +393,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 				specs.data,
 				specs.enrichments,
 				specs.validationData,
+				specs.networkAllowlist,
 			);
 		}
 		return this.#apiSpecResolver;

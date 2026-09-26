@@ -57,6 +57,12 @@ describe("system prompt API spec integration", () => {
 		expect(rendered).toContain("xcsh://api-spec/glossary/");
 	});
 
+	it("routes network allowlist questions to the bounded embedded inventory", async () => {
+		const rendered = await buildSystemPrompt({ tools: new Map() });
+		expect(rendered).toContain("xcsh://api-spec/network-allowlist");
+		expect(rendered).toContain("field=services.regional_edges");
+	});
+
 	it("contains schema-first generation rule", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
 		expect(rendered).toContain("schema-first-generation");

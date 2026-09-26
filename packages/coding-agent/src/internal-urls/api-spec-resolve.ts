@@ -4,6 +4,7 @@ import type {
 	ApiSpecDomainEntry,
 	ApiSpecIndex,
 	ApiSpecMinimumConfiguration,
+	ApiSpecNetworkAllowlist,
 	ApiSpecValidationResourceEntry,
 	OpenAPIPathOperation,
 	OpenAPISpec,
@@ -11,6 +12,8 @@ import type {
 import type { InternalResource, InternalUrl } from "./types";
 
 const SCHEMA_RENDER_MAX_DEPTH = 3;
+const ALLOWLIST_MAX_LEAVES = 40;
+const ALLOWLIST_MAX_VALUES = 8;
 const CRUD_OPERATION_SUFFIXES = [".API.Create", ".API.Replace", ".API.Get", ".API.List", ".API.Delete"];
 
 const DEDUP_SUFFIX_RE = /_(get|post|put|delete|patch)(_\d+)?$/;
@@ -38,6 +41,7 @@ export function createApiSpecResolver(
 	data: Readonly<Record<string, OpenAPISpec>>,
 	enrichments?: Readonly<Record<string, ApiSpecDomainEnrichments>>,
 	validationData?: Readonly<Record<string, ApiSpecValidationResourceEntry>>,
+	networkAllowlist?: ApiSpecNetworkAllowlist,
 ): ApiSpecResolver {
 	function lookup(domain: string): OpenAPISpec {
 		const spec = data[domain];
@@ -49,6 +53,10 @@ export function createApiSpecResolver(
 		async resolve(url: InternalUrl): Promise<InternalResource> {
 			const pathname = url.rawPathname ?? url.pathname;
 			const requestedDomain = pathname.replace(/^\//, "").replace(/\/$/, "");
+
+			if (requestedDomain === "network-allowlist") {
+				return makeResource(url, renderNetworkAllowlist(url, index, networkAllowlist));
+			}
 
 			// Reserved sub-paths — checked before domain lookup
 			if (requestedDomain === "workflows" || requestedDomain.startsWith("workflows/")) {
@@ -148,6 +156,118 @@ export function createApiSpecResolver(
 			}
 		},
 	};
+}
+
+interface AllowlistPathValue {
+	path: string;
+	value: unknown;
+}
+
+function collectAllowlistPaths(value: unknown, prefix = "", output: AllowlistPathValue[] = []): AllowlistPathValue[] {
+	if (prefix) output.push({ path: prefix, value });
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+			collectAllowlistPaths((value as Record<string, unknown>)[key], prefix ? `${prefix}.${key}` : key, output);
+		}
+	}
+	return output;
+}
+
+function allowlistValueCount(value: unknown): number {
+	if (Array.isArray(value)) return value.length;
+	if (value && typeof value === "object") {
+		return Object.values(value as Record<string, unknown>).reduce<number>(
+			(count, child) => count + allowlistValueCount(child),
+			0,
+		);
+	}
+	return 1;
+}
+
+function renderAllowlistValue(value: unknown): string {
+	if (Array.isArray(value)) {
+		const shown = value.slice(0, ALLOWLIST_MAX_VALUES).map(item => `\`${String(item).replaceAll("|", "\\|")}\``);
+		return `${shown.join(", ")}${value.length > shown.length ? ` ... (${shown.length} of ${value.length} shown)` : ""}`;
+	}
+	return `\`${String(value).replaceAll("|", "\\|")}\``;
+}
+
+function allowlistLeaves(value: unknown, prefix = ""): AllowlistPathValue[] {
+	return collectAllowlistPaths(value, prefix).filter(
+		entry => Array.isArray(entry.value) || !entry.value || typeof entry.value !== "object",
+	);
+}
+
+function renderAllowlistSelection(canonicalPath: string, value: unknown): string[] {
+	const leaves = allowlistLeaves(value, canonicalPath).slice(0, ALLOWLIST_MAX_LEAVES);
+	return [
+		`Canonical field: \`${canonicalPath}\``,
+		"",
+		`Value count: ${allowlistValueCount(value)}`,
+		"",
+		"| Canonical path | Count | Bounded values |",
+		"|---|---:|---|",
+		...leaves.map(
+			entry =>
+				`| ${entry.path} | ${allowlistValueCount(entry.value)} values | ${renderAllowlistValue(entry.value)} |`,
+		),
+	];
+}
+
+function renderNetworkAllowlist(
+	url: InternalUrl,
+	index: ApiSpecIndex,
+	allowlist: ApiSpecNetworkAllowlist | undefined,
+): string {
+	if (!allowlist) return "# F5 XC Network Allowlist\n\nAllowlist data is unavailable in this build.\n";
+	if (allowlist.releaseVersion !== index.version) {
+		return `# F5 XC Network Allowlist\n\nVersion mismatch: allowlist ${allowlist.releaseVersion}, API spec ${index.version}.\n`;
+	}
+	const header = [
+		"# F5 XC Network Allowlist",
+		"",
+		`Release version: \`${allowlist.releaseVersion}\``,
+		`Source URL: ${allowlist.sourceUrl}`,
+		`Source SHA-256: \`${allowlist.sha256}\``,
+		"",
+	];
+	const field = url.searchParams.get("field")?.trim();
+	if (!field) {
+		const leaves = allowlistLeaves(allowlist.manifest).slice(0, ALLOWLIST_MAX_LEAVES);
+		return [
+			...header,
+			`Leaf paths: ${allowlistLeaves(allowlist.manifest).length} | Total values: ${allowlistValueCount(allowlist.manifest)}`,
+			"",
+			"| Canonical path | Count | Bounded values |",
+			"|---|---:|---|",
+			...leaves.map(
+				entry =>
+					`| ${entry.path} | ${allowlistValueCount(entry.value)} values | ${renderAllowlistValue(entry.value)} |`,
+			),
+			"",
+		].join("\n");
+	}
+
+	const paths = collectAllowlistPaths(allowlist.manifest);
+	const exact = paths.find(entry => entry.path === field);
+	if (exact) return [...header, ...renderAllowlistSelection(exact.path, exact.value), ""].join("\n");
+	const matches = paths.filter(entry => entry.path.split(".").at(-1) === field);
+	if (matches.length === 1) {
+		return [...header, ...renderAllowlistSelection(matches[0].path, matches[0].value), ""].join("\n");
+	}
+	if (matches.length > 1) {
+		return [
+			...header,
+			`Ambiguous field: \`${field}\``,
+			"",
+			"Use one exact canonical path:",
+			...matches.map(
+				entry => `- \`${entry.path}\` — xcsh://api-spec/network-allowlist?field=${encodeURIComponent(entry.path)}`,
+			),
+			"",
+		].join("\n");
+	}
+	return [...header, `Unknown field: \`${field}\``, ""].join("\n");
 }
 
 /** Find the domain entry that owns a resource by name (for cross-domain resolution). */

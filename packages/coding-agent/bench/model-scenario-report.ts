@@ -9,6 +9,7 @@ import type {
 	ModelBenchmarkScenario,
 	ModelScenarioKnowledgeExpectation,
 	ModelScenarioSuite,
+	ModelScenarioTurn,
 	ModelScenarioToolExpectation,
 } from "./model-scenario-library";
 
@@ -58,6 +59,33 @@ export interface BuildScenarioBenchmarkSampleInput {
 	stderr: string;
 	stdoutErrors: string[];
 	events: TimedJsonEvent[];
+	turnInputs?: ScenarioBenchmarkTurnInput[];
+}
+
+export interface ScenarioBenchmarkTurnInput {
+	startedAtMs: number;
+	durationMs: number;
+	events: TimedJsonEvent[];
+	error?: string;
+}
+
+export interface ScenarioBenchmarkTurn {
+	id: string;
+	prompt: string;
+	success: boolean;
+	contractPassed: boolean;
+	contractFailures: string[];
+	quality: ScenarioQualityResult;
+	response: string;
+	error?: string;
+	startedAtMs: number;
+	durationMs: number;
+	toolCalls: ScenarioToolCall[];
+	knowledgeEvents: ScenarioKnowledgeEvent[];
+	ttftMs?: number;
+	timeToFirstToolMs?: number;
+	timeToAuthoritativeEvidenceMs?: number;
+	responseDurationMs?: number;
 }
 
 export interface ScenarioBenchmarkSample {
@@ -90,6 +118,7 @@ export interface ScenarioBenchmarkSample {
 	assistantMessageCount: number;
 	toolCalls: ScenarioToolCall[];
 	knowledgeEvents: ScenarioKnowledgeEvent[];
+	turns: ScenarioBenchmarkTurn[];
 	startupMs?: number;
 	timeToAuthoritativeEvidenceMs?: number;
 	ttftMs?: number;
@@ -152,7 +181,7 @@ export interface ScenarioBenchmarkReport {
 		order: "rotating-round-robin";
 		contextName?: string;
 		models: ModelBenchmarkTarget[];
-		scenarios: Array<{
+			scenarios: Array<{
 			id: string;
 			label: string;
 			suite: ModelScenarioSuite;
@@ -160,8 +189,14 @@ export interface ScenarioBenchmarkReport {
 			prompt: string;
 			contract: string[];
 			quality: Array<{ id: string; label: string; weight: number }>;
-			runtime: ModelBenchmarkScenario["runtime"];
-		}>;
+				runtime: ModelBenchmarkScenario["runtime"];
+				turns?: Array<{
+					id: string;
+					prompt: string;
+					contract: string[];
+					quality: Array<{ id: string; label: string; weight: number }>;
+				}>;
+			}>;
 	};
 	warmups: ScenarioBenchmarkSample[];
 	samples: ScenarioBenchmarkSample[];
@@ -393,7 +428,9 @@ export function evaluateScenarioQuality(
 	};
 }
 
-export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSampleInput): ScenarioBenchmarkSample {
+function buildSingleScenarioBenchmarkSample(
+	input: Omit<BuildScenarioBenchmarkSampleInput, "turnInputs">,
+): Omit<ScenarioBenchmarkSample, "turns"> {
 	let provider: string | undefined;
 	let model: string | undefined;
 	let effectiveThinking: Effort | undefined;
@@ -573,6 +610,147 @@ export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSample
 	};
 }
 
+function scenarioTurns(scenario: ModelBenchmarkScenario): readonly ModelScenarioTurn[] {
+	return scenario.turns ?? [
+		{ id: "turn-1", prompt: scenario.prompt, contract: scenario.contract, quality: scenario.quality },
+	];
+}
+
+function projectTurn(
+	definition: ModelScenarioTurn,
+	sample: Omit<ScenarioBenchmarkSample, "turns">,
+	input: ScenarioBenchmarkTurnInput,
+): ScenarioBenchmarkTurn {
+	return {
+		id: definition.id,
+		prompt: definition.prompt,
+		success: sample.success,
+		contractPassed: sample.contractPassed,
+		contractFailures: sample.contractFailures,
+		quality: sample.quality,
+		response: sample.response,
+		error: input.error ?? sample.error,
+		startedAtMs: input.startedAtMs,
+		durationMs: input.durationMs,
+		toolCalls: sample.toolCalls,
+		knowledgeEvents: sample.knowledgeEvents,
+		ttftMs: sample.ttftMs,
+		timeToFirstToolMs: sample.timeToFirstToolMs,
+		timeToAuthoritativeEvidenceMs: sample.timeToAuthoritativeEvidenceMs,
+		responseDurationMs: sample.responseDurationMs,
+	};
+}
+
+export function buildScenarioBenchmarkSample(input: BuildScenarioBenchmarkSampleInput): ScenarioBenchmarkSample {
+	const definitions = scenarioTurns(input.scenario);
+	if (!input.turnInputs) {
+		const sample = buildSingleScenarioBenchmarkSample(input);
+		return {
+			...sample,
+			turns: [projectTurn(definitions[0], sample, {
+				startedAtMs: sample.startupMs ?? 0,
+				durationMs: input.processDurationMs,
+				events: input.events,
+			})],
+		};
+	}
+	if (definitions.length !== input.turnInputs.length) {
+		throw new Error(`scenario ${input.scenario.id} defines ${definitions.length} turns but captured ${input.turnInputs.length}`);
+	}
+	const turnSamples = definitions.map((definition, index) => {
+		const turnInput = input.turnInputs![index];
+		const scenario: ModelBenchmarkScenario = {
+			...input.scenario,
+			prompt: definition.prompt,
+			contract: definition.contract,
+			quality: definition.quality,
+			turns: undefined,
+		};
+		const sample = buildSingleScenarioBenchmarkSample({
+			...input,
+			scenario,
+			thinking: undefined,
+			processDurationMs: turnInput.durationMs,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: turnInput.error ? [turnInput.error] : [],
+			events: turnInput.events,
+		});
+		return { sample, turn: projectTurn(definition, sample, turnInput) };
+	});
+	const last = turnSamples.at(-1)!.sample;
+	const turns = turnSamples.map(entry => entry.turn);
+	const contractFailures = turns.flatMap(turn => turn.contractFailures.map(failure => `${turn.id}: ${failure}`));
+	const errors = [
+		...input.stdoutErrors,
+		...(input.timedOut ? ["process timed out"] : []),
+		...(input.exitCode !== 0 ? [`process exited ${input.exitCode}`] : []),
+		...turns.flatMap(turn => turn.error ? [`${turn.id}: ${turn.error}`] : []),
+	];
+	const possible = turns.reduce((sum, turn) => sum + turn.quality.possible, 0);
+	const earned = turns.reduce((sum, turn) => sum + turn.quality.earned, 0);
+	const sessionEvent = input.events
+		.map(event => record(event.event))
+		.find(event => event?.type === "session");
+	const stateEvent = input.events
+		.map(event => record(event.event))
+		.find(event => event?.type === "response" && event.command === "get_state");
+	const stateData = record(stateEvent?.data);
+	const stateModel = record(stateData?.model);
+	const usages = turnSamples
+		.map(entry => entry.sample.usage)
+		.filter((usage): usage is ModelBenchmarkUsage => usage !== undefined);
+	const usage = usages.length > 0
+		? usages.reduce<ModelBenchmarkUsage>(
+			(total, item) => ({
+				input: total.input + item.input,
+				output: total.output + item.output,
+				cacheRead: total.cacheRead + item.cacheRead,
+				cacheWrite: total.cacheWrite + item.cacheWrite,
+				totalTokens: total.totalTokens + item.totalTokens,
+				costTotal: total.costTotal + item.costTotal,
+			}),
+			{ input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, costTotal: 0 },
+		)
+		: undefined;
+	return {
+		...last,
+		scenarioId: input.scenario.id,
+		scenarioLabel: input.scenario.label,
+		requestedThinking: input.thinking,
+		effectiveThinking: effortValue(sessionEvent?.thinking) ?? effortValue(stateData?.thinkingLevel),
+		provider: stringValue(sessionEvent?.provider) ?? stringValue(stateModel?.provider) ?? last.provider,
+		model: stringValue(sessionEvent?.model) ?? stringValue(stateModel?.id) ?? last.model,
+		success: errors.length === 0 && turns.every(turn => turn.success),
+		contractPassed: contractFailures.length === 0,
+		contractFailures,
+		quality: {
+			score: possible === 0 ? 0 : round((earned / possible) * 100),
+			earned,
+			possible,
+			visibleWords: turns.reduce((sum, turn) => sum + turn.quality.visibleWords, 0),
+			criteria: turns.flatMap(turn => turn.quality.criteria.map(criterion => ({ ...criterion, id: `${turn.id}:${criterion.id}` }))),
+		},
+		response: turns.map(turn => turn.response).join("\n\n"),
+		error: errors.length > 0 ? errors.join("; ") : undefined,
+		stderr: input.stderr.trim() || undefined,
+		exitCode: input.exitCode,
+		timedOut: input.timedOut,
+		eventCount: input.events.length,
+		turnCount: turns.length,
+		assistantMessageCount: turnSamples.reduce((sum, entry) => sum + entry.sample.assistantMessageCount, 0),
+		toolCalls: turns.flatMap(turn => turn.toolCalls),
+		knowledgeEvents: turns.flatMap(turn => turn.knowledgeEvents),
+		turns,
+		timeToAuthoritativeEvidenceMs: turns.find(turn => turn.timeToAuthoritativeEvidenceMs !== undefined)?.timeToAuthoritativeEvidenceMs,
+		responseDurationMs: turns.reduce((sum, turn) => sum + (turn.responseDurationMs ?? 0), 0),
+		totalToolDurationMs: turns.reduce((sum, turn) => sum + turn.toolCalls.reduce((total, call) => total + (call.durationMs ?? 0), 0), 0),
+		processDurationMs: round(input.processDurationMs),
+		usage,
+	};
+}
+
 function summarizeNumbers(values: Array<number | undefined>): NumericSummary | null {
 	const present = values.filter((value): value is number => value !== undefined && Number.isFinite(value));
 	if (present.length === 0) return null;
@@ -653,6 +831,61 @@ export function regradeScenarioBenchmarkReport(
 	const regrade = (sample: ScenarioBenchmarkSample): ScenarioBenchmarkSample => {
 		const scenario = byId.get(sample.scenarioId);
 		if (!scenario) throw new Error(`Cannot regrade sample for unknown scenario: ${sample.scenarioId}`);
+		const definitions = scenarioTurns(scenario);
+		if (definitions.length > 1) {
+			if (sample.turns.length !== definitions.length) {
+				throw new Error(
+					`Cannot regrade scenario ${scenario.id}: stored ${sample.turns.length} turns but definition has ${definitions.length}`,
+				);
+			}
+			const turns = sample.turns.map((turn, index) => {
+				const definition = definitions[index];
+				const turnScenario: ModelBenchmarkScenario = {
+					...scenario,
+					prompt: definition.prompt,
+					contract: definition.contract,
+					quality: definition.quality,
+					turns: undefined,
+				};
+				const contractFailures = evaluateScenarioContract(
+					turnScenario,
+					turn.response,
+					turn.toolCalls,
+					turn.knowledgeEvents,
+				);
+				return {
+					...turn,
+					contractPassed: contractFailures.length === 0,
+					contractFailures,
+					quality: evaluateScenarioQuality(
+						turnScenario,
+						turn.response,
+						contractFailures.length === 0,
+						turn.success,
+					),
+				};
+			});
+			const contractFailures = turns.flatMap(turn =>
+				turn.contractFailures.map(failure => `${turn.id}: ${failure}`),
+			);
+			const possible = turns.reduce((sum, turn) => sum + turn.quality.possible, 0);
+			const earned = turns.reduce((sum, turn) => sum + turn.quality.earned, 0);
+			return {
+				...sample,
+				contractPassed: contractFailures.length === 0,
+				contractFailures,
+				quality: {
+					score: possible === 0 ? 0 : round((earned / possible) * 100),
+					earned,
+					possible,
+					visibleWords: turns.reduce((sum, turn) => sum + turn.quality.visibleWords, 0),
+					criteria: turns.flatMap(turn =>
+						turn.quality.criteria.map(criterion => ({ ...criterion, id: `${turn.id}:${criterion.id}` })),
+					),
+				},
+				turns,
+			};
+		}
 		const contractFailures = evaluateScenarioContract(
 			scenario,
 			sample.response,
@@ -685,6 +918,16 @@ export function regradeScenarioBenchmarkReport(
 					weight: criterion.weight,
 				})),
 				runtime: scenario.runtime,
+				turns: scenario.turns?.map(turn => ({
+					id: turn.id,
+					prompt: turn.prompt,
+					contract: describeScenarioContract({ ...scenario, ...turn, turns: undefined }),
+					quality: turn.quality.map(criterion => ({
+						id: criterion.id,
+						label: criterion.label,
+						weight: criterion.weight,
+					})),
+				})),
 			})),
 		},
 		warmups,
