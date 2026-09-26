@@ -126,7 +126,8 @@ describe("MarketplaceManager", () => {
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("849f04a63f2882368adb97d2fadab77a8ea3cfb9");
-			expect(JSON.stringify(embeddedCatalog)).not.toContain(["F5", "XC_"].join(""));
+			const discontinuedPrefix = ["F5", "XC_"].join("");
+			expect(JSON.stringify(embeddedCatalog)).not.toContain(discontinuedPrefix);
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
 				version: "3.0.4",
 				lifecycle: { pluginDependencies: ["platform"] },
