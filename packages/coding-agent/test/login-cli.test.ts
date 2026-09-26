@@ -17,6 +17,13 @@ describe("OpenAI device-auth CLI", () => {
 			process.stdout.write = write;
 		}
 		expect(output).toContain("--device-auth");
+		expect(output).toContain("openai");
+	});
+
+	it("requires an explicit OpenAI provider context", () => {
+		expect(Login.args).toHaveProperty("provider");
+		expect(Login.args.provider.required).toBe(true);
+		expect(Login.args.provider.options).toEqual(["openai"]);
 	});
 
 	it("forces the ChatGPT OAuth helper into device mode and stores its result", async () => {
