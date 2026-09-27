@@ -7,7 +7,6 @@ import { logger } from "@f5-sales-demo/pi-utils";
 import type { ContextFile } from "../../../capability/context-file";
 import type { ExtensionModule } from "../../../capability/extension-module";
 import type { Hook } from "../../../capability/hook";
-import type { MCPServer } from "../../../capability/mcp";
 import type { Prompt } from "../../../capability/prompt";
 import type { Rule } from "../../../capability/rule";
 import type { Skill } from "../../../capability/skill";
@@ -141,49 +140,6 @@ export async function loadAllExtensions(cwd?: string, disabledIds?: string[]): P
 		addItems(nativeModules, "extension-module");
 	} catch (error) {
 		logger.warn("Failed to load extension-modules capability", { error: String(error) });
-	}
-
-	// Load MCP servers
-	try {
-		const mcps = await loadCapability<MCPServer>("mcps", loadOpts);
-		for (const server of mcps.all) {
-			const id = makeExtensionId("mcp", server.name);
-			const isDisabled = disabled("mcp", server.name, server._source, server._source.path);
-			const isShadowed = (server as { _shadowed?: boolean })._shadowed;
-			const providerEnabled = isProviderEnabled(server._source.provider);
-
-			let state: ExtensionState;
-			let disabledReason: "shadowed" | "provider-disabled" | "item-disabled" | undefined;
-
-			if (isDisabled) {
-				state = "disabled";
-				disabledReason = "item-disabled";
-			} else if (isShadowed) {
-				state = "shadowed";
-				disabledReason = "shadowed";
-			} else if (!providerEnabled) {
-				state = "disabled";
-				disabledReason = "provider-disabled";
-			} else {
-				state = "active";
-			}
-
-			extensions.push({
-				id,
-				kind: "mcp",
-				name: server.name,
-				displayName: server.name,
-				description: server.command || server.url,
-				trigger: server.transport || "stdio",
-				path: server._source.path,
-				source: sourceFromMeta(server._source),
-				state,
-				disabledReason,
-				raw: server,
-			});
-		}
-	} catch (error) {
-		logger.warn("Failed to load mcps capability", { error: String(error) });
 	}
 
 	// Load prompts
@@ -428,8 +384,6 @@ function getKindDisplayName(kind: ExtensionKind): string {
 			return "Rules";
 		case "tool":
 			return "Tools";
-		case "mcp":
-			return "MCP Servers";
 		case "prompt":
 			return "Prompts";
 		case "instruction":

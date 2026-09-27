@@ -124,7 +124,6 @@ describe("End-to-End UAT Knowledge & Rule Protections", () => {
 			promptTemplates: [],
 			slashCommands: [],
 			toolNames: ["read"],
-			enableMCP: false,
 			enableLsp: false,
 		});
 

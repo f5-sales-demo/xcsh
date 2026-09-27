@@ -76,7 +76,7 @@ const domainProfiles: Record<Domain, DomainProfile> = {
 		terminalDirectories: ["terminal-reports-final-v1"],
 	},
 	connections: {
-		adapter: "context, MCP, and SSH isolated connection lifecycle",
+		adapter: "context and SSH isolated connection lifecycle",
 		states: ["browse", "draft", "test", "review", "cancelled", "saved", "partial-failure", "retry", "reopen"],
 		terminalDirectories: ["terminal-connections-final-v1"],
 	},

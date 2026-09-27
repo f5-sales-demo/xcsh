@@ -22,7 +22,7 @@ BOILERPLATE = (
     "a current xcsh release and a shell in the intended working directory",
     "authorization for any account, tenant, repository, or file the procedure touches",
     "a backup or dry run before an operation that changes or deletes state",
-    "retry with optional plugins, mcp servers, or extensions disabled",
+    "retry with optional plugins or extensions disabled",
 )
 GENERIC_CLAIMS = (
     "reports completion",
@@ -36,7 +36,7 @@ LEGACY_COMMIT = "95c019fa60c8a8242482b18c45844ec73784ee11"
 LEGACY_TREE = "89566cca8d13cd69fb8af9ee017e9860d303b2f2"
 LEGACY_PAGE_COUNT = 59
 LEGACY_CONCEPT_COUNT = 374
-ACTIVE_CONCEPT_COUNT = 372
+ACTIVE_CONCEPT_COUNT = 335
 LEGACY_UNIT_DIGEST = "7378b8bd45b3b0ad48864a094d97af76b212ff4ab892d8f28b80f7dd43fd012e"
 INVENTORY_SCHEMA_VERSION = 2
 FIDELITY_SCHEMA_VERSION = 2
@@ -313,7 +313,7 @@ def _check_fidelity(
         fidelity.get("activeConceptCount") != ACTIVE_CONCEPT_COUNT
         or len(active_rows) != ACTIVE_CONCEPT_COUNT
     ):
-        errors.append("fidelity ledger must contain exactly 372 active concepts")
+        errors.append("fidelity ledger must contain exactly 335 active concepts")
 
     file_digest_cache: dict[Path, str] = {}
     locator_owners: dict[tuple[str, str], list[dict]] = defaultdict(list)

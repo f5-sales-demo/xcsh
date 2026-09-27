@@ -129,7 +129,6 @@ body:
         - Authentication / Login
         - Model selection
         - Tool execution
-        - MCP servers
         - Extensions / Plugins
         - CLI commands
         - Setup / Installation

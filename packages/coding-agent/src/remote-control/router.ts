@@ -21,7 +21,6 @@ export interface AsyncInteractionRegistration {
 interface InitializeCapabilities {
 	experimentalApi?: boolean;
 	requestAttestation?: boolean;
-	mcpServerOpenaiFormElicitation?: boolean;
 	extensions?: Record<string, unknown> | null;
 	optOutNotificationMethods?: string[] | null;
 }
@@ -134,7 +133,7 @@ function initializeCapabilities(value: unknown): InitializeCapabilities {
 	if (value == null) return {};
 	if (typeof value !== "object" || Array.isArray(value)) throw new ProtocolError(-32602, "Invalid capabilities");
 	const capabilities = value as Record<string, unknown>;
-	for (const field of ["experimentalApi", "requestAttestation", "mcpServerOpenaiFormElicitation"])
+	for (const field of ["experimentalApi", "requestAttestation"])
 		if (capabilities[field] != null && typeof capabilities[field] !== "boolean")
 			throw new ProtocolError(-32602, `Invalid ${field} capability`);
 	const extensions = capabilities.extensions;

@@ -38,7 +38,7 @@ import { isSqliteFile, parseSqlitePathCandidates } from "./sqlite-reader";
 import { ToolError } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
-const INTERNAL_URL_PREFIX = /^(agent|artifact|skill|rule|local|mcp):\/\//;
+const INTERNAL_URL_PREFIX = /^(agent|artifact|skill|rule|local):\/\//;
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
 
 const vimStepSchema = Type.Object({

@@ -57,7 +57,6 @@ describe("Corporate Vertex session runtime options", () => {
 			settings,
 			sessionManager: SessionManager.inMemory(),
 			enableLsp: false,
-			enableMCP: false,
 			disableExtensionDiscovery: true,
 			skills: [],
 		});
@@ -101,7 +100,6 @@ describe("Corporate Vertex session runtime options", () => {
 			settings: Settings.isolated(),
 			sessionManager: SessionManager.inMemory(),
 			enableLsp: false,
-			enableMCP: false,
 			disableExtensionDiscovery: true,
 			skills: [],
 		});

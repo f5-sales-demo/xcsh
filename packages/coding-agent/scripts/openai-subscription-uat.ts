@@ -156,7 +156,7 @@ function freshEnvironment(stateDir: string): Record<string, string> {
 }
 
 function commonArgs(): string[] {
-	return ["--no-session", "--no-mcp", "--no-tools", "--no-extensions", "--no-skills", "--no-rules"];
+	return ["--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-rules"];
 }
 
 async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {

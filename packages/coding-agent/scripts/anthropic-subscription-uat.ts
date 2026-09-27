@@ -78,7 +78,7 @@ async function runInteractive(
 	automaticBrowser: boolean,
 	phase: "login" | "restart",
 ): Promise<string> {
-	const args = ["--no-session", "--no-mcp", "--no-extensions", "--no-skills", "--no-rules"];
+	const args = ["--no-session", "--no-extensions", "--no-skills", "--no-rules"];
 	const child = Bun.spawn([...target.argv, ...args], {
 		cwd: ROOT_DIR,
 		env: isolatedEnvironment(profileDir, automaticBrowser),

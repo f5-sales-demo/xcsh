@@ -181,14 +181,14 @@ export function sanitizeSchemaForCCA(value: unknown): unknown {
 }
 
 /**
- * Fields stripped for MCP/AJV compatibility.
+ * Fields stripped for AJV compatibility.
  * Only `$schema` — AJV throws on unrecognised meta-schema URIs
  * (e.g. draft 2020-12 emitted by schemars 1.x / rmcp 0.15+).
  */
-const MCP_UNSUPPORTED_SCHEMA_FIELDS = new Set(["$schema"]);
+const AJV_UNSUPPORTED_SCHEMA_FIELDS = new Set(["$schema"]);
 
 /**
- * Sanitize a JSON Schema for MCP tool parameter validation (AJV compatibility).
+ * Sanitize a JSON Schema for tool parameter validation (AJV compatibility).
  *
  * Strips only the minimal set of fields that cause AJV validation errors:
  * - `$schema`: AJV throws on unknown meta-schema URIs.
@@ -198,7 +198,7 @@ const MCP_UNSUPPORTED_SCHEMA_FIELDS = new Set(["$schema"]);
  * (`pattern`, `format`, `additionalProperties`, etc.) and `$ref`/`$defs`.
  */
 export function sanitizeSchemaForMCP(value: unknown): unknown {
-	// Dereference $ref/$defs first — MCP servers emit standard JSON Schema
+	// Dereference $ref/$defs first because providers emit standard JSON Schema.
 	// with $defs, but providers (Anthropic, Google) only forward `properties`
 	// and `required`, dropping $defs and leaving dangling $ref pointers.
 	const dereferenced = dereferenceJsonSchema(value);
@@ -206,7 +206,7 @@ export function sanitizeSchemaForMCP(value: unknown): unknown {
 		insideProperties: false,
 		normalizeTypeArrayToNullable: false,
 		stripNullableKeyword: true,
-		unsupportedFields: MCP_UNSUPPORTED_SCHEMA_FIELDS,
+		unsupportedFields: AJV_UNSUPPORTED_SCHEMA_FIELDS,
 		seen: new WeakSet(),
 	});
 }

@@ -71,7 +71,7 @@ function sourceDomain(source: string): Domain {
 	if (/settings|theme|keybinding|extension-dashboard|plugin/.test(source)) return "settings";
 	if (/session|tree-selector|user-message|branch-summary|compaction-summary/.test(source)) return "sessions";
 	if (/debug|btw|media|footer|status-line|notification|loader|autocomplete|editor/.test(source)) return "reports";
-	if (/context|mcp|ssh/.test(source)) return "connections";
+	if (/context|ssh/.test(source)) return "connections";
 	if (/resource|export-command|manifest/.test(source)) return "resources";
 	if (/extensibility|autoresearch/.test(source)) return "extensions";
 	if (/\/(?:acp|rpc)\//.test(source) || /\/sdk\.ts$|\/print-mode\.ts$/.test(source)) return "protocols";

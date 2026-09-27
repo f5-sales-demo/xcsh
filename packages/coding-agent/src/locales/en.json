@@ -1,12 +1,10 @@
 {
 	"cli.errors.bunVersion": "error: Bun runtime must be >= {minVersion} (found v{currentVersion}). Please update Bun: bun upgrade",
 	"cli.errors.bunErrata": "error: Bun runtime errata detected (v{version}). Please update Bun: bun upgrade",
-
 	"agents.errors.bothFlags": "Choose either --user or --project, not both.",
 	"agents.status.bundledCount": "Bundled agents: {total}",
 	"agents.status.targetDirectory": "Target directory: {dir}",
 	"agents.warnings.skippedExisting": "Skipped existing: {count} (use --force to overwrite)",
-
 	"config.errors.unknownCommand": "Unknown config command: {action}",
 	"config.errors.invalidBoolean": "Invalid boolean value: {value}. Use true/false, yes/no, on/off, or 1/0",
 	"config.errors.invalidNumber": "Invalid number: {value}",
@@ -17,18 +15,14 @@
 	"config.errors.unknownSetting": "Unknown setting: {key}",
 	"config.status.valueSet": "Set {path} = {value}",
 	"config.status.valueReset": "Reset {path} to {value}",
-
 	"file.errors.notFound": "Error: File not found: {path}",
 	"file.warnings.tooLarge": "Warning: Skipping file contents (too large: {size}): {path}",
 	"file.errors.readFailed": "Error: Could not read file {path}: {message}",
-
 	"grep.errors.patternRequired": "Error: Pattern is required",
 	"grep.results.totalMatches": "Total matches: {count}",
 	"grep.results.filesWithMatches": "Files with matches: {count}",
 	"grep.results.filesSearched": "Files searched: {count}",
-
 	"read.errors.fileNotFound": "Error: File not found: {path}",
-
 	"setup.errors.usage": "Usage: {appName} setup <component>",
 	"setup.python.errors.notFound": "Python not found",
 	"setup.python.help.installPython": "Install Python 3.8+ and ensure it's in your PATH",
@@ -53,15 +47,12 @@
 	"setup.litellm.help.setEnvVars": "Set these in your shell profile (.zshrc, .bashrc) or a .env file.",
 	"setup.litellm.status.generated": "LiteLLM configuration generated",
 	"setup.litellm.errors.generationFailed": "Failed to generate LiteLLM configuration",
-
 	"ssh.errors.hostRequired": "Error: Host name required",
 	"ssh.errors.hostFlagRequired": "Error: --host is required",
 	"ssh.errors.invalidPort": "Error: Port must be an integer between 1 and 65535",
 	"ssh.status.hostAdded": "Added SSH host \"{name}\" to {scope} config",
 	"ssh.status.hostRemoved": "Removed SSH host \"{name}\" from {scope} config",
-
 	"ssh.controller.unknownSubcommand": "Unknown subcommand: {subcommand}. Type /ssh help for usage.",
-
 	"ssh.add.usage": "Usage: /ssh add <name> --host <host> [--user <user>] [--port <port>] [--key <keyPath>] [--desc <description>] [--compat] [--scope project|user]",
 	"ssh.add.missingHost": "Missing value for --host.",
 	"ssh.add.missingUser": "Missing value for --user.",
@@ -74,7 +65,6 @@
 	"ssh.add.nameRequired": "Host name required. Usage: /ssh add <name> --host <host> ...",
 	"ssh.add.hostRequired": "--host is required. Usage: /ssh add <name> --host <host> ...",
 	"ssh.add.failed": "Failed to add host: {message}",
-
 	"ssh.list.noneConfigured": "No SSH hosts configured.",
 	"ssh.list.title": "Configured SSH Hosts",
 	"ssh.list.userLevel": "User level",
@@ -82,13 +72,11 @@
 	"ssh.list.discovered": "Discovered",
 	"ssh.list.readOnly": "read-only",
 	"ssh.list.failed": "Failed to list hosts: {message}",
-
 	"ssh.remove.invalidScope": "Invalid --scope value. Use project or user.",
 	"ssh.remove.unknownOption": "Unknown option: {option}",
 	"ssh.remove.nameRequired": "Host name required. Usage: /ssh remove <name> [--scope project|user]",
 	"ssh.remove.notFound": "Host \"{name}\" not found in {scope} config.",
 	"ssh.remove.failed": "Failed to remove host: {message}",
-
 	"mode.plan.status.enabled": "Plan mode enabled. Plan file: {path}",
 	"mode.plan.status.paused": "Plan mode paused.",
 	"mode.plan.status.disabled": "Plan mode disabled.",
@@ -97,18 +85,13 @@
 	"mode.plan.errors.editorOpenFailed": "Failed to open external editor: {message}",
 	"mode.plan.status.updated": "Plan updated in external editor.",
 	"mode.plan.errors.notActive": "Plan mode is not active.",
-
 	"mode.stt.warnings.disabled": "Speech-to-text is disabled. Enable it in settings: stt.enabled",
 	"mode.subagent.status.noActive": "No active subagent sessions",
-
 	"ui.status.sessionCompacted": "Session compacted {times}",
 	"ui.status.messageQueued": "Queued message for after compaction",
 	"ui.errors.queuedMessageFailed": "Failed to send queued message: {message}",
-
 	"shell.errors.ttyRequired": "Error: shell console requires an interactive TTY.",
-
 	"search.errors.queryRequired": "Error: Query is required",
-
 	"commands.settings.description": "Open settings menu",
 	"commands.plan.description": "Toggle plan mode (agent plans before executing)",
 	"commands.plan.inlineHint": "[prompt]",
@@ -166,24 +149,6 @@
 	"commands.login.noCallbackWaiting": "No OAuth login is waiting for a manual callback.",
 	"commands.login.noUrlToCopy": "No OAuth sign-in URL is waiting to copy.",
 	"commands.logout.description": "Logout from OAuth provider",
-	"commands.mcp.description": "Manage MCP servers (add, list, remove, test)",
-	"commands.mcp.sub.add.description": "Add a new MCP server",
-	"commands.mcp.sub.list.description": "List all configured MCP servers",
-	"commands.mcp.sub.remove.description": "Remove an MCP server",
-	"commands.mcp.sub.test.description": "Test connection to a server",
-	"commands.mcp.sub.reauth.description": "Reauthorize OAuth for a server",
-	"commands.mcp.sub.unauth.description": "Remove OAuth auth from a server",
-	"commands.mcp.sub.enable.description": "Enable an MCP server",
-	"commands.mcp.sub.disable.description": "Disable an MCP server",
-	"commands.mcp.sub.smitherySearch.description": "Search Smithery registry and deploy an MCP server",
-	"commands.mcp.sub.smitheryLogin.description": "Login to Smithery and cache API key",
-	"commands.mcp.sub.smitheryLogout.description": "Remove cached Smithery API key",
-	"commands.mcp.sub.reconnect.description": "Reconnect to a specific MCP server",
-	"commands.mcp.sub.reload.description": "Force reload MCP runtime tools",
-	"commands.mcp.sub.resources.description": "List available resources from connected servers",
-	"commands.mcp.sub.prompts.description": "List available prompts from connected servers",
-	"commands.mcp.sub.notifications.description": "Show notification capabilities and subscriptions",
-	"commands.mcp.sub.help.description": "Show help message",
 	"commands.ssh.description": "Manage SSH hosts (add, list, remove)",
 	"commands.ssh.sub.add.description": "Add an SSH host",
 	"commands.ssh.sub.list.description": "List all configured SSH hosts",
@@ -264,7 +229,6 @@
 	"commands.plugin.marketplace.noneConfiguredBrowse": "No marketplaces configured.\n\nGet started:\n  /plugin marketplace add f5-sales-demo/marketplace\n\nThen browse plugins with /plugin or /plugin discover",
 	"commands.plugin.marketplace.listHintAll": "Use /plugin discover to browse plugins, or /plugin help for all commands",
 	"commands.plugin.error": "Plugin error: {message}",
-	"commands.reloadPlugins.description": "Reload all plugins (skills, commands, hooks, tools, agents, MCP)",
 	"commands.reloadPlugins.done": "Plugins reloaded.",
 	"commands.force.description": "Force next turn to use a specific tool",
 	"commands.force.inlineHint": "<tool-name> [prompt]",
@@ -287,7 +251,6 @@
 	"commands.context.sub.set.description": "Set environment variable(s)",
 	"commands.context.sub.unset.description": "Remove environment variable(s)",
 	"commands.context.sub.wizard.description": "Guided interactive context setup",
-
 	"welcome.modelProvider": "Model Provider",
 	"welcome.plugins": "Plugins",
 	"welcome.pluginSetupHint": "run: /plugin setup",
@@ -308,7 +271,6 @@
 	"login.wizard.retryHint": "Press Escape to skip, or enter a new value:",
 	"gate.noProvider": "No LLM provider configured — run /login to connect one before sending a message.",
 	"gate.noProviderBlock": "No LLM provider configured. Run /login to connect one, then retry. (/help and /model still work.)",
-
 	"plugins.tabs.installed": "Installed",
 	"plugins.tabs.recommended": "Recommended",
 	"plugins.tabs.discover": "Discover",
@@ -335,7 +297,6 @@
 	"plugins.dashboard.upgraded": "Upgraded {name}",
 	"plugins.dashboard.upgradeFailed": "Upgrade failed: {message}",
 	"plugins.dashboard.upgrading": "Upgrading {name}...",
-
 	"controller.export.warnings.useDump": "Use /dump to copy the session to clipboard.",
 	"controller.export.status.exported": "Session exported to: {path}",
 	"controller.export.errors.failed": "Failed to export session: {message}",
@@ -389,7 +350,6 @@
 	"controller.session.venv": "Venv:",
 	"controller.session.uptime": "Uptime:",
 	"controller.session.lspServers": "LSP Servers",
-	"controller.session.mcpServers": "MCP Servers",
 	"controller.session.noneConnected": "None connected",
 	"controller.jobs.title": "Background Jobs",
 	"controller.jobs.running": "Running:",
@@ -435,7 +395,6 @@
 	"controller.share.gistFailed": "Failed to create gist: {message}",
 	"controller.share.gistParseFailed": "Failed to parse gist ID from gh output",
 	"controller.bash.failed": "Bash command failed: {message}",
-
 	"hotkeys.navigation.title": "Navigation",
 	"hotkeys.navigation.moveCursor": "Move cursor / browse history (Up when empty)",
 	"hotkeys.navigation.moveByWord": "Move by word",
@@ -473,12 +432,10 @@
 	"hotkeys.other.runBashExcluded": "Run bash command (excluded from context)",
 	"hotkeys.other.runPython": "Run Python in shared kernel",
 	"hotkeys.other.runPythonExcluded": "Run Python (excluded from context)",
-
 	"tools.emptyState": "No tools are currently visible to the agent.",
 	"tools.noDescription": "No description provided.",
 	"tools.tableHeaderTool": "Tool",
 	"tools.tableHeaderDescription": "Description",
-
 	"context.list.noneFound": "No F5 XC contexts found. Use /context create or ask me to help set one up.",
 	"context.activate.usage": "Usage: /context activate <name>. Run `/context list` to see available contexts.",
 	"context.activate.notFound": "Context '{name}' not found. Run /context list to see available contexts, or /context create {name} <url> <token> to create one.",
@@ -500,60 +457,5 @@
 	"context.env.unknownAction": "Unknown env action: {action}. Use /context env set|unset|list",
 	"context.env.noActive": "No active context. Use /context activate <name> first.",
 	"context.env.set.usage": "No KEY=VALUE pairs found. Usage: /context set KEY=VALUE [KEY2=VALUE2 ...]",
-	"context.env.unset.usage": "No variable names found. Usage: /context unset KEY [KEY2 ...]",
-
-	"mcp.errors.unknownSubcommand": "Unknown subcommand: {subcommand}. Type /mcp help for usage.",
-	"mcp.errors.invalidScope": "Invalid --scope value. Use project or user.",
-	"mcp.errors.unknownOption": "Unknown option: {option}",
-	"mcp.errors.missingUrl": "Missing value for --url.",
-	"mcp.errors.invalidTransport": "Invalid --transport value. Use http or sse.",
-	"mcp.errors.missingToken": "Missing value for --token.",
-	"mcp.errors.missingLimit": "Missing value for --limit.",
-	"mcp.errors.invalidLimit": "Invalid --limit value. Use an integer between 1 and 100.",
-	"mcp.errors.serverNotFound": "Server \"{name}\" not found.",
-	"mcp.errors.serverNotFoundInScope": "Server \"{name}\" not found in {scope} config.",
-	"mcp.errors.noManager": "No MCP manager available.",
-
-	"mcp.action.enable": "enable",
-	"mcp.action.disable": "disable",
-
-	"mcp.add.nameRequired": "Server name required for quick add. Usage: /mcp add <name> ...",
-	"mcp.add.urlOrCommand": "Use either --url or -- <command...>, not both.",
-	"mcp.add.tokenRequiresUrl": "--token requires --url (HTTP/SSE transport).",
-
-	"mcp.remove.usage": "Server name required. Usage: /mcp remove <name> [--scope project|user]",
-	"mcp.remove.failed": "Failed to remove server: {message}",
-
-	"mcp.test.usage": "Server name required. Usage: /mcp test <name>",
-	"mcp.test.disabled": "Server \"{name}\" is disabled. Run /mcp enable {name} first.",
-	"mcp.test.cancelled": "Cancelled MCP test for \"{name}\"",
-	"mcp.test.failed": "Failed to connect to \"{name}\": {message}",
-
-	"mcp.enable.usage": "Server name required. Usage: /mcp enable <name>",
-	"mcp.disable.usage": "Server name required. Usage: /mcp disable <name>",
-	"mcp.setEnabled.failed": "Failed to {action} server: {message}",
-
-	"mcp.unauth.usage": "Server name required. Usage: /mcp unauth <name>",
-	"mcp.unauth.failed": "Failed to clear auth: {message}",
-
-	"mcp.reauth.usage": "Server name required. Usage: /mcp reauth <name>",
-	"mcp.reauth.disabled": "Server \"{name}\" is disabled. Run /mcp enable {name} first.",
-	"mcp.reauth.failed": "Failed to reauthorize server: {message}",
-
-	"mcp.reload.failed": "Failed to reload MCP: {message}",
-
-	"mcp.reconnect.usage": "Server name required. Usage: /mcp reconnect <name>",
-	"mcp.reconnect.failed": "Failed to reconnect to \"{name}\". Check server status and logs.",
-	"mcp.reconnect.failedWithError": "Failed to reconnect to \"{name}\": {message}",
-
-	"mcp.smithery.searchUsage": "Keyword required. Usage: /mcp smithery-search <keyword> [--scope project|user] [--limit <1-100>] [--semantic]",
-	"mcp.smithery.keyEmpty": "Smithery API key cannot be empty.",
-	"mcp.smithery.keySaved": "Smithery API key saved.",
-	"mcp.smithery.validationFailed": "Smithery API key validation failed: {message}",
-	"mcp.smithery.loginCancelled": "Smithery login cancelled.",
-	"mcp.smithery.keyRemoved": "Smithery API key removed.",
-	"mcp.smithery.noKeyFound": "No cached Smithery API key found.",
-	"mcp.smithery.deployCancelled": "MCP deploy cancelled.",
-	"mcp.smithery.selectionCancelled": "MCP Smithery selection cancelled.",
-	"mcp.smithery.searchFailed": "Smithery search failed: {message}"
+	"context.env.unset.usage": "No variable names found. Usage: /context unset KEY [KEY2 ...]"
 }

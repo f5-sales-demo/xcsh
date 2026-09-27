@@ -63,7 +63,6 @@ describe("bundled system rules", () => {
 			promptTemplates: [],
 			slashCommands: [],
 			toolNames: ["read"],
-			enableMCP: false,
 			enableLsp: false,
 		});
 

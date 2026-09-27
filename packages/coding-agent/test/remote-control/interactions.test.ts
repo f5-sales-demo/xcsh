@@ -345,16 +345,15 @@ test("approval decisions preserve decline and cancellation semantics and reject 
 	for (const decision of ["accept", "decline", "cancel", "acceptForSession"]) await run(decision);
 });
 
-test("unowned permission and MCP requests are rejected explicitly before registration", () => {
-	for (const method of ["item/permissions/requestApproval", "mcpServer/elicitation/request"]) {
-		expect(() =>
-			validateInteractionRequests("thread-a", [
-				{
-					id: "request-a",
-					method,
-					params: { threadId: "thread-a", turnId: "turn-a", itemId: "item-a" },
-				},
-			]),
-		).toThrow(`Unsupported terminal interaction request: ${method}`);
-	}
+test("unowned permission requests are rejected explicitly before registration", () => {
+	const method = "item/permissions/requestApproval";
+	expect(() =>
+		validateInteractionRequests("thread-a", [
+			{
+				id: "request-a",
+				method,
+				params: { threadId: "thread-a", turnId: "turn-a", itemId: "item-a" },
+			},
+		]),
+	).toThrow(`Unsupported terminal interaction request: ${method}`);
 });

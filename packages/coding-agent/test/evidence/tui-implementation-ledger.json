@@ -4350,993 +4350,6 @@
     },
     {
       "surface": {
-        "id": "/mcp",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "command"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp <arguments>",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "typed-arguments",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp add",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp disable",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp enable",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp help",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp list",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp notifications",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp prompts",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp reauth",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp reconnect",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp reload",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp remove",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp resources",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp smithery-login",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp smithery-logout",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp smithery-search",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp test",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "/mcp unauth",
-        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
-        "kind": "subcommand",
-        "parent": "/mcp"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
         "id": "/media",
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"
@@ -9791,7 +8804,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -10049,7 +9061,6 @@
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
@@ -10387,71 +9398,6 @@
     },
     {
       "surface": {
-        "id": "source:packages/coding-agent/src/exa/render.ts",
-        "source": "packages/coding-agent/src/exa/render.ts",
-        "kind": "integration"
-      },
-      "status": "verified",
-      "adapter": "tool authority, execution outcome, and bounded terminal rendering pipeline; packages/coding-agent/src/exa/render.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
-      "reviewPolicy": "Lifecycle orchestration does not bypass caller authority; applicable mutations retain Cancel-first review, revalidation, and truthful outcomes.",
-      "states": [
-        "queued",
-        "running",
-        "progress",
-        "success",
-        "failure",
-        "interrupted",
-        "retry",
-        "rendered",
-        "render",
-        "terminal-control"
-      ],
-      "tests": [
-        "packages/coding-agent/test/acp-event-mapper.test.ts",
-        "packages/coding-agent/test/agent-dashboard.test.ts",
-        "packages/coding-agent/test/agent-session-routing-profile.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/bordered-loader.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/ax.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.server-tools.test.ts",
-        "packages/coding-agent/test/browser/extension-reference.test.ts",
-        "packages/coding-agent/test/browser/office-pane-server.test.ts",
-        "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts",
-        "packages/coding-agent/test/cli/chrome-cli.test.ts",
-        "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
-      ],
-      "persistence": [
-        "Lifecycle orchestration does not bypass caller authority; applicable mutations retain Cancel-first review, revalidation, and truthful outcomes.",
-        "Applicable domain matrices prove isolated cancellation/no-op, truthful outcomes, and reopen behavior."
-      ],
-      "captures": [
-        "packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json · packages/coding-agent/src/exa/render.ts · sha256 22bf6d5b5384ef6290b01d4413baf1e1739ed991fe157b6fadc29c1135be6586",
-        "packages/coding-agent/test/evidence/terminal-reports-final-v1 · complete 16-variant actual-terminal domain matrix",
-        "packages/coding-agent/test/evidence/terminal-route-mode-final-v1 · complete 16-variant actual-terminal domain matrix"
-      ],
-      "visualVerdicts": [
-        "packages/coding-agent/test/evidence/terminal-reports-final-v1/visual-review.md · pass-actual-terminal",
-        "packages/coding-agent/test/evidence/terminal-route-mode-final-v1/visual-review.md · pass-actual-terminal"
-      ],
-      "fingerprint": "2fc6cb3fbe493cc462d32e8691cc6dcdfebcf894907158d116df934984d1b52c",
-      "notes": [
-        "Individually classified from current source SHA-256 22bf6d5b5384ef6290b01d4413baf1e1739ed991fe157b6fadc29c1135be6586.",
-        "Ownership: runtime-lifecycle; domain: tools; direct tests: 20.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
         "id": "source:packages/coding-agent/src/extensibility/custom-tools/types.ts",
         "source": "packages/coding-agent/src/extensibility/custom-tools/types.ts",
         "kind": "integration"
@@ -10474,7 +9420,6 @@
       "tests": [
         "packages/coding-agent/test/agent-dashboard.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -10672,7 +9617,6 @@
         "packages/coding-agent/test/agent-session-compaction.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
@@ -10733,7 +9677,6 @@
         "packages/coding-agent/test/agent-session-compaction.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -10865,7 +9808,6 @@
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
@@ -10958,70 +9900,6 @@
       "notes": [
         "Individually classified from current source SHA-256 aaf4888ca15d25dabc94418336466bbf337252f8b253e8d4b3624fbd2bbda348.",
         "Ownership: runtime-lifecycle; domain: tools; direct tests: 20.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "source:packages/coding-agent/src/mcp/render.ts",
-        "source": "packages/coding-agent/src/mcp/render.ts",
-        "kind": "integration"
-      },
-      "status": "verified",
-      "adapter": "context, MCP, and SSH isolated connection lifecycle; packages/coding-agent/src/mcp/render.ts is individually classified as runtime-lifecycle in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
-      "reviewPolicy": "Lifecycle orchestration does not bypass caller authority; applicable mutations retain Cancel-first review, revalidation, and truthful outcomes.",
-      "states": [
-        "browse",
-        "draft",
-        "test",
-        "review",
-        "cancelled",
-        "saved",
-        "partial-failure",
-        "retry",
-        "reopen",
-        "render",
-        "terminal-control"
-      ],
-      "tests": [
-        "packages/coding-agent/test/acp-event-mapper.test.ts",
-        "packages/coding-agent/test/agent-dashboard.test.ts",
-        "packages/coding-agent/test/agent-session-routing-profile.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/bordered-loader.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/ax.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.server-tools.test.ts",
-        "packages/coding-agent/test/browser/extension-reference.test.ts",
-        "packages/coding-agent/test/browser/office-pane-server.test.ts",
-        "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts",
-        "packages/coding-agent/test/cli/chrome-cli.test.ts",
-        "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
-      ],
-      "persistence": [
-        "Lifecycle orchestration does not bypass caller authority; applicable mutations retain Cancel-first review, revalidation, and truthful outcomes.",
-        "Applicable domain matrices prove isolated cancellation/no-op, truthful outcomes, and reopen behavior."
-      ],
-      "captures": [
-        "packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json · packages/coding-agent/src/mcp/render.ts · sha256 6e378839a0afe43cc0374e5b641f7c7463439006080ab5bbe059103b4a792eb9",
-        "packages/coding-agent/test/evidence/terminal-connections-final-v1 · complete 16-variant actual-terminal domain matrix"
-      ],
-      "visualVerdicts": [
-        "packages/coding-agent/test/evidence/terminal-connections-final-v1/visual-review.md · pass-actual-terminal"
-      ],
-      "fingerprint": "82b103a07319a29539fcd2c489b7377044673e82e2cec55f3c5ff926d50611ef",
-      "notes": [
-        "Individually classified from current source SHA-256 6e378839a0afe43cc0374e5b641f7c7463439006080ab5bbe059103b4a792eb9.",
-        "Ownership: runtime-lifecycle; domain: connections; direct tests: 20.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
       ]
     },
@@ -11221,7 +10099,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -11398,7 +10275,6 @@
       "tests": [
         "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
         "packages/coding-agent/test/modes/components/login-dialog.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-oauth.test.ts",
         "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts"
       ],
@@ -12085,7 +10961,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -12204,7 +11079,6 @@
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -12598,7 +11472,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -12818,57 +11691,6 @@
       "notes": [
         "Individually classified from current source SHA-256 56a353a95b04baadbc5e1c7ce6ee1e51b5a9ec26aeb5b323a909abf05606e34d.",
         "Ownership: read-only-renderer; domain: foundation; direct tests: 2.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
-        "id": "source:packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-        "source": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-        "kind": "component"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
       ]
     },
@@ -14517,7 +13339,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -14780,7 +13601,6 @@
       "tests": [
         "packages/coding-agent/test/agent-dashboard.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -16112,57 +14932,6 @@
     },
     {
       "surface": {
-        "id": "source:packages/coding-agent/src/modes/controllers/mcp-command-controller.ts",
-        "source": "packages/coding-agent/src/modes/controllers/mcp-command-controller.ts",
-        "kind": "integration"
-      },
-      "status": "verified",
-      "adapter": "MCPCommandController and MCPAddWizard → isolated config/auth persistence → shared report/review and runtime connection lifecycle",
-      "reviewPolicy": "List/help/runtime tests are read-only. Add/remove/enable/disable and authentication changes resolve exact scope, server, saved config, masked credential state, and consequences before Cancel-first review; connectivity is separate and failed writes remain retryable without repeating completed work.",
-      "states": [
-        "list",
-        "help",
-        "wizard",
-        "auth",
-        "review",
-        "cancelled",
-        "stale-review",
-        "loading",
-        "connected",
-        "disconnected",
-        "saving",
-        "partial-failure",
-        "unresolved-only-retry",
-        "success",
-        "failure",
-        "empty",
-        "reopen"
-      ],
-      "tests": [
-        "test/modes/controllers/mcp-command-controller-review.test.ts",
-        "test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "test/mcp-reconnect.test.ts",
-        "scripts/terminal-uat-walkthrough.ts --connections-fixture",
-        "scripts/terminal-uat-matrix.ts --connections-fixture"
-      ],
-      "persistence": [
-        "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
-      ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
-      "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
-      ]
-    },
-    {
-      "surface": {
         "id": "source:packages/coding-agent/src/modes/controllers/model-selection.ts",
         "source": "packages/coding-agent/src/modes/controllers/model-selection.ts",
         "kind": "integration"
@@ -16544,7 +15313,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
@@ -17019,7 +15787,6 @@
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
-        "packages/coding-agent/test/internal-urls/mcp-protocol.test.ts",
         "packages/coding-agent/test/tui-source-boundary-audit.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts"
       ],
@@ -17142,7 +15909,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -17766,7 +16532,6 @@
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
@@ -17830,7 +16595,6 @@
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
@@ -19200,7 +17964,6 @@
         "packages/coding-agent/test/acquire-control-socket.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -19533,7 +18296,7 @@
         "kind": "integration"
       },
       "status": "verified",
-      "adapter": "context, MCP, and SSH isolated connection lifecycle; packages/coding-agent/src/tools/ssh.ts is individually classified as tool-authority-boundary in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
+      "adapter": "context and SSH isolated connection lifecycle; packages/coding-agent/src/tools/ssh.ts is individually classified as tool-authority-boundary in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract.",
       "reviewPolicy": "Tool invocation authority is explicit and separate from rendering; displayed success follows the actual tool result and never authorizes work.",
       "states": [
         "browse",
@@ -19721,7 +18484,6 @@
         "packages/coding-agent/test/agent-session-context-promotion.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
@@ -20366,7 +19128,6 @@
         "packages/coding-agent/test/agent-session-concurrent.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/args.test.ts",
@@ -20606,7 +19367,6 @@
         "packages/coding-agent/test/agent-session-context-promotion.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
@@ -20979,7 +19739,6 @@
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
@@ -21286,7 +20045,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -22149,7 +20907,6 @@
       "tests": [
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",

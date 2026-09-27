@@ -325,23 +325,6 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("rule://epistemic-integrity");
 	});
 
-	test("system-prompt renders MCP discovery hint when enabled", async () => {
-		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
-		const template = await Bun.file(templatePath).text();
-
-		const rendered = prompt.render(template, {
-			...baseRenderContext,
-			mcpDiscoveryMode: true,
-			hasMCPDiscoveryServers: true,
-			mcpDiscoveryServerSummaries: ["github (2 tools)", "slack (1 tool)"],
-		});
-
-		expect(rendered).toContain("## MCP tool discovery");
-		expect(rendered).toContain("Discoverable MCP servers in this session: github (2 tools), slack (1 tool).");
-		expect(rendered).not.toContain("Example discoverable MCP tools:");
-		expect(rendered).toContain("call `search_tool_bm25` before concluding no such tool exists");
-	});
-
 	test("buildSystemPrompt deduplicates always-apply rules already present in SYSTEM.md", async () => {
 		const duplicateRule = ["Use static imports.", "", "Do not use dynamic loading."].join("\n");
 		const distinctRule = "Validate inputs at boundaries.";

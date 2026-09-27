@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "bun:test";
 import { type SettingPath, Settings } from "../../src/config/settings";
 import { getDefault } from "../../src/config/settings-schema";
 import { createTools, HIDDEN_TOOLS, type ToolSession } from "../../src/tools";
+import { buildDiscoverableToolSearchIndex } from "../../src/tools/discoverable-tool-metadata";
 
 Bun.env.PI_PYTHON_SKIP_CHECK = "1";
 
@@ -27,10 +28,10 @@ function createSettingsWithOverrides(overrides: Partial<Record<SettingPath, unkn
 function createDiscoverySessionHooks(): Partial<ToolSession> {
 	const selected: string[] = [];
 	return {
-		isMCPDiscoveryEnabled: () => true,
-		getDiscoverableMCPTools: () => [],
-		getSelectedMCPToolNames: () => [...selected],
-		activateDiscoveredMCPTools: async toolNames => {
+		getDiscoverableTools: () => [],
+		getDiscoverableToolSearchIndex: () => buildDiscoverableToolSearchIndex([]),
+		getActiveTools: () => [...selected],
+		activateDiscoveredTools: async toolNames => {
 			const activated: string[] = [];
 			for (const name of toolNames) {
 				if (!selected.includes(name)) {
@@ -239,11 +240,9 @@ describe("createTools", () => {
 		expect(names).not.toContain("calc");
 	});
 
-	it("includes search_tool_bm25 when MCP tool discovery is enabled and executable", async () => {
+	it("includes search_tool_bm25 for progressive generic tool discovery", async () => {
 		const session = createTestSession({
-			settings: createSettingsWithOverrides({
-				"mcp.discoveryMode": true,
-			}),
+			settings: createSettingsWithOverrides({ "context.loadingMode": "progressive" }),
 			...createDiscoverySessionHooks(),
 		});
 		const tools = await createTools(session);

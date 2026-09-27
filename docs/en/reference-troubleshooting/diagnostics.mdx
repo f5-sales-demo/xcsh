@@ -29,7 +29,7 @@ Confirm `/context status` and the explicit namespace. Run `validate` to separate
 
 Start from the smallest surface, then widen it:
 
-1. Run with `--no-mcp --no-extensions --no-rules`, adding `--no-pty` if the terminal itself is suspect.
+1. Run with `--no-extensions --no-rules`, adding `--no-pty` if the terminal itself is suspect.
 2. Re-enable one subsystem, then repeat the failing command.
 3. Check optional dependencies with `xcsh setup <COMPONENT> --check --json`.
 4. Check plugins with `xcsh plugin doctor`.

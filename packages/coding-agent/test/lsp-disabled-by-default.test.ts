@@ -47,7 +47,6 @@ describe("LSP startup warmup gating", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 		});
 	}
 

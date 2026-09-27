@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { Box, type Component, Text, type TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
-import { renderExaResult } from "../src/exa/render";
 import { lspToolRenderer } from "../src/lsp/render";
 import { GutterBlock } from "../src/modes/components/gutter-block";
 import { ToolExecutionComponent } from "../src/modes/components/tool-execution";
@@ -357,36 +356,6 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 		}
 	});
 
-	it("exa renderResult: zero-result + success both glyph-free", async () => {
-		const theme = (await getThemeByName("xcsh-dark")) as Theme;
-		const zero = {
-			content: [{ type: "text", text: "" }],
-			details: {
-				response: { results: [], costDollars: { total: 0.0001 }, searchTime: 0.1, requestId: "req-0" },
-				toolName: "exa_search",
-			},
-		};
-		const success = {
-			content: [{ type: "text", text: "formatted" }],
-			details: {
-				response: {
-					results: [{ title: "T", url: "https://example.com/t", text: "body" }],
-					costDollars: { total: 0.005 },
-					searchTime: 0.4,
-					requestId: "req-1",
-				},
-				toolName: "exa_search",
-			},
-		};
-		for (const [label, result] of [
-			["zero", zero],
-			["success", success],
-		] as const) {
-			const component = renderExaResult(result as never, fullOptions, theme);
-			assertNoGlyphInFull(component, `exa (${label})`);
-		}
-	});
-
 	it("search-tool-bm25 renderResult is glyph-free", async () => {
 		const theme = (await getThemeByName("xcsh-dark")) as Theme;
 		const result = {
@@ -395,15 +364,13 @@ describe("xcsh#173 — tool renderResult output has no terminal status glyph (en
 				query: "issue",
 				limit: 1,
 				total_tools: 1,
-				activated_tools: ["mcp_t"],
-				active_selected_tools: ["mcp_t"],
+				activated_tools: ["deferred_t"],
+				active_selected_tools: ["deferred_t"],
 				tools: [
 					{
-						name: "mcp_t",
+						name: "deferred_t",
 						label: "t",
 						description: "d",
-						server_name: "s",
-						mcp_tool_name: "t",
 						schema_keys: ["a"],
 						score: 1,
 					},

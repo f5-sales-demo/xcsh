@@ -115,7 +115,6 @@ export type SymbolKey =
 	| "icon.extensionSkill"
 	| "icon.extensionTool"
 	| "icon.extensionSlashCommand"
-	| "icon.extensionMcp"
 	| "icon.extensionRule"
 	| "icon.extensionHook"
 	| "icon.extensionPrompt"
@@ -280,7 +279,6 @@ const UNICODE_SYMBOLS: SymbolMap = {
 	"icon.extensionSkill": "✦",
 	"icon.extensionTool": "🛠",
 	"icon.extensionSlashCommand": "⌘",
-	"icon.extensionMcp": "🔌",
 	"icon.extensionRule": "⚖",
 	"icon.extensionHook": "🪝",
 	"icon.extensionPrompt": "✎",
@@ -518,8 +516,6 @@ const NERD_SYMBOLS: SymbolMap = {
 	"icon.extensionTool": "\uf0ad",
 	// pick:  | alt: 
 	"icon.extensionSlashCommand": "\uf120",
-	// pick:  | alt:  
-	"icon.extensionMcp": "\uf1e6",
 	// pick:  | alt:  
 	"icon.extensionRule": "\uf0e3",
 	// pick:  | alt: 
@@ -705,7 +701,6 @@ const ASCII_SYMBOLS: SymbolMap = {
 	"icon.extensionSkill": "SK",
 	"icon.extensionTool": "TL",
 	"icon.extensionSlashCommand": "/",
-	"icon.extensionMcp": "MCP",
 	"icon.extensionRule": "RL",
 	"icon.extensionHook": "HK",
 	"icon.extensionPrompt": "PR",
@@ -1586,7 +1581,6 @@ export class Theme {
 			extensionSkill: this.#symbols["icon.extensionSkill"],
 			extensionTool: this.#symbols["icon.extensionTool"],
 			extensionSlashCommand: this.#symbols["icon.extensionSlashCommand"],
-			extensionMcp: this.#symbols["icon.extensionMcp"],
 			extensionRule: this.#symbols["icon.extensionRule"],
 			extensionHook: this.#symbols["icon.extensionHook"],
 			extensionPrompt: this.#symbols["icon.extensionPrompt"],

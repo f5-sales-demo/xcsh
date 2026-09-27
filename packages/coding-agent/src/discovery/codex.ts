@@ -15,8 +15,6 @@ import { type ExtensionModule, extensionModuleCapability } from "../capability/e
 import { readFile } from "../capability/fs";
 import type { Hook } from "../capability/hook";
 import { hookCapability } from "../capability/hook";
-import type { MCPServer } from "../capability/mcp";
-import { mcpCapability } from "../capability/mcp";
 import type { Prompt } from "../capability/prompt";
 import { promptCapability } from "../capability/prompt";
 import type { Settings } from "../capability/settings";
@@ -46,6 +44,17 @@ function getProjectCodexDir(ctx: LoadContext): string {
 	return path.join(ctx.cwd, ".codex");
 }
 
+async function loadTomlConfig(_ctx: LoadContext, configPath: string): Promise<Record<string, unknown> | null> {
+	const content = await readFile(configPath);
+	if (!content) return null;
+	try {
+		return Bun.TOML.parse(content) as Record<string, unknown>;
+	} catch (error) {
+		logger.warn("Failed to parse TOML config", { path: configPath, error: String(error) });
+		return null;
+	}
+}
+
 // =============================================================================
 // Context Files (AGENTS.md)
 // =============================================================================
@@ -67,144 +76,6 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 	}
 
 	return { items, warnings };
-}
-
-// =============================================================================
-// MCP Servers (config.toml)
-// =============================================================================
-
-async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> {
-	const warnings: string[] = [];
-
-	const userConfigPath = path.join(ctx.home, SOURCE_PATHS.codex.userBase, "config.toml");
-	const codexDir = getProjectCodexDir(ctx);
-	const projectConfigPath = path.join(codexDir, "config.toml");
-
-	const [userConfig, projectConfig] = await Promise.all([
-		loadTomlConfig(ctx, userConfigPath),
-		loadTomlConfig(ctx, projectConfigPath),
-	]);
-
-	const items: MCPServer[] = [];
-	if (userConfig) {
-		const servers = extractMCPServersFromToml(userConfig);
-		for (const [name, config] of Object.entries(servers)) {
-			items.push({
-				name,
-				...config,
-				_source: createSourceMeta(PROVIDER_ID, userConfigPath, "user"),
-			});
-		}
-	}
-	if (projectConfig) {
-		const servers = extractMCPServersFromToml(projectConfig);
-		for (const [name, config] of Object.entries(servers)) {
-			items.push({
-				name,
-				...config,
-				_source: createSourceMeta(PROVIDER_ID, projectConfigPath, "project"),
-			});
-		}
-	}
-
-	return { items, warnings };
-}
-
-async function loadTomlConfig(_ctx: LoadContext, path: string): Promise<Record<string, unknown> | null> {
-	const content = await readFile(path);
-	if (!content) return null;
-
-	try {
-		return Bun.TOML.parse(content) as Record<string, unknown>;
-	} catch (error) {
-		logger.warn("Failed to parse TOML config", { path, error: String(error) });
-		return null;
-	}
-}
-
-/** Codex MCP server config format (from config.toml) */
-interface CodexMCPConfig {
-	command?: string;
-	args?: string[];
-	env?: Record<string, string>;
-	env_vars?: string[]; // Environment variable names to forward from parent
-	url?: string;
-	http_headers?: Record<string, string>;
-	env_http_headers?: Record<string, string>; // Header name -> env var name
-	bearer_token_env_var?: string;
-	cwd?: string;
-	startup_timeout_sec?: number;
-	tool_timeout_sec?: number;
-	enabled_tools?: string[];
-	disabled_tools?: string[];
-}
-
-function extractMCPServersFromToml(toml: Record<string, unknown>): Record<string, Partial<MCPServer>> {
-	// Check for [mcp_servers.*] sections (Codex format)
-	if (!toml.mcp_servers || typeof toml.mcp_servers !== "object") {
-		return {};
-	}
-
-	const codexServers = toml.mcp_servers as Record<string, CodexMCPConfig>;
-	const result: Record<string, Partial<MCPServer>> = {};
-
-	for (const [name, config] of Object.entries(codexServers)) {
-		const server: Partial<MCPServer> = {
-			command: config.command,
-			args: config.args,
-			url: config.url,
-		};
-
-		// Build env by merging explicit env and forwarded env_vars
-		const env: Record<string, string> = { ...config.env };
-		if (config.env_vars) {
-			for (const varName of config.env_vars) {
-				const value = Bun.env[varName];
-				if (value !== undefined) {
-					env[varName] = value;
-				}
-			}
-		}
-		if (Object.keys(env).length > 0) {
-			server.env = env;
-		}
-
-		// Build headers from http_headers, env_http_headers, and bearer_token_env_var
-		const headers: Record<string, string> = { ...config.http_headers };
-		if (config.env_http_headers) {
-			for (const [headerName, envVarName] of Object.entries(config.env_http_headers)) {
-				const value = Bun.env[envVarName];
-				if (value !== undefined) {
-					headers[headerName] = value;
-				}
-			}
-		}
-		if (config.bearer_token_env_var) {
-			const token = Bun.env[config.bearer_token_env_var];
-			if (token) {
-				headers.Authorization = `Bearer ${token}`;
-			}
-		}
-		if (Object.keys(headers).length > 0) {
-			server.headers = headers;
-		}
-
-		// Determine transport type (infer from config if not explicit)
-		if (config.url) {
-			server.transport = "http";
-		} else if (config.command) {
-			server.transport = "stdio";
-		}
-		// Note: validation of transport vs endpoint is handled by mcpCapability.validate()
-
-		// Map Codex tool_timeout_sec (seconds) to MCPServer timeout (milliseconds)
-		if (typeof config.tool_timeout_sec === "number" && config.tool_timeout_sec > 0) {
-			server.timeout = config.tool_timeout_sec * 1000;
-		}
-		result[name] = server;
-	}
-
-	return result;
 }
 
 // =============================================================================
@@ -470,14 +341,6 @@ registerProvider<ContextFile>(contextFileCapability.id, {
 	description: "Load context files from ~/.codex/AGENTS.md (user-level only)",
 	priority: PRIORITY,
 	load: loadContextFiles,
-});
-
-registerProvider<MCPServer>(mcpCapability.id, {
-	id: PROVIDER_ID,
-	displayName: SOURCE_LABEL,
-	description: "Load MCP servers from config.toml [mcp_servers.*] sections",
-	priority: PRIORITY,
-	load: loadMCPServers,
 });
 
 registerProvider<Skill>(skillCapability.id, {

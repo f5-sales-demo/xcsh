@@ -15,7 +15,6 @@ import {
 	type ListSessionsResponse,
 	type LoadSessionRequest,
 	type LoadSessionResponse,
-	type McpServer,
 	type NewSessionRequest,
 	type NewSessionResponse,
 	PROTOCOL_VERSION,
@@ -39,10 +38,6 @@ import type { Model } from "@f5-sales-demo/pi-ai";
 import { logger, VERSION } from "@f5-sales-demo/pi-utils";
 import type { ExtensionUIContext } from "../../extensibility/extensions";
 import { loadSlashCommands } from "../../extensibility/slash-commands";
-import type { MCPToolsLoadResult } from "../../mcp/loader";
-import { MCPManager } from "../../mcp/manager";
-import { resolveACPMCPEnabled } from "../../mcp/policy";
-import type { MCPServerConfig } from "../../mcp/types";
 import { listMediaDescriptors, readMediaAssetChunk } from "../../media/transport";
 import { theme } from "../../modes/theme/theme";
 import type { AgentSession, AgentSessionEvent } from "../../session/agent-session";
@@ -94,30 +89,7 @@ type ReplayableMessage = {
 	isError?: boolean;
 };
 
-type MCPConfigMap = {
-	[name: string]: MCPServerConfig;
-};
-
-type MCPSource = {
-	provider: string;
-	providerName: string;
-	path: string;
-	level: "project";
-};
-
-type MCPSourceMap = {
-	[name: string]: MCPSource;
-};
-
 type CreateAcpSession = (cwd: string) => Promise<AgentSession>;
-
-type AcpAgentDependencies = {
-	createMcpManager: (cwd: string) => MCPManager;
-};
-
-const defaultAcpAgentDependencies: AcpAgentDependencies = {
-	createMcpManager: cwd => new MCPManager(cwd),
-};
 
 const acpExtensionUiContext: ExtensionUIContext = {
 	select: async () => undefined,
@@ -153,21 +125,14 @@ export class AcpAgent implements Agent {
 	#connection: AgentSideConnection;
 	#initialSession: AgentSession | undefined;
 	#createSession: CreateAcpSession;
-	#dependencies: AcpAgentDependencies;
 	#sessions = new Map<string, ManagedSessionRecord>();
 	#disposePromise: Promise<void> | undefined;
 	#cleanupRegistered = false;
 
-	constructor(
-		connection: AgentSideConnection,
-		initialSession: AgentSession,
-		createSession: CreateAcpSession,
-		dependencies: Partial<AcpAgentDependencies> = {},
-	) {
+	constructor(connection: AgentSideConnection, initialSession: AgentSession, createSession: CreateAcpSession) {
 		this.#connection = connection;
 		this.#initialSession = initialSession;
 		this.#createSession = createSession;
-		this.#dependencies = { ...defaultAcpAgentDependencies, ...dependencies };
 	}
 
 	async initialize(_params: InitializeRequest): Promise<InitializeResponse> {
@@ -188,10 +153,6 @@ export class AcpAgent implements Agent {
 			],
 			agentCapabilities: {
 				loadSession: true,
-				mcpCapabilities: {
-					http: true,
-					sse: true,
-				},
 				promptCapabilities: {
 					embeddedContext: true,
 					image: true,
@@ -212,7 +173,7 @@ export class AcpAgent implements Agent {
 
 	async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
 		this.#assertAbsoluteCwd(params.cwd);
-		const record = await this.#createNewSessionRecord(params.cwd, params.mcpServers);
+		const record = await this.#createNewSessionRecord(params.cwd);
 		const response: NewSessionResponse = {
 			sessionId: record.session.sessionId,
 			configOptions: this.#buildConfigOptions(record.session),
@@ -224,7 +185,7 @@ export class AcpAgent implements Agent {
 
 	async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
 		this.#assertAbsoluteCwd(params.cwd);
-		const record = await this.#loadManagedSession(params.sessionId, params.cwd, params.mcpServers);
+		const record = await this.#loadManagedSession(params.sessionId, params.cwd);
 		await this.#replaySessionHistory(record);
 		const response: LoadSessionResponse = {
 			configOptions: this.#buildConfigOptions(record.session),
@@ -253,7 +214,7 @@ export class AcpAgent implements Agent {
 
 	async resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
 		this.#assertAbsoluteCwd(params.cwd);
-		const record = await this.#resumeManagedSession(params.sessionId, params.cwd, params.mcpServers ?? []);
+		const record = await this.#resumeManagedSession(params.sessionId, params.cwd);
 		const response: ResumeSessionResponse = {
 			configOptions: this.#buildConfigOptions(record.session),
 			modes: this.#buildModeState(),
@@ -421,7 +382,7 @@ export class AcpAgent implements Agent {
 		);
 	}
 
-	async #createNewSessionRecord(cwd: string, mcpServers: McpServer[]): Promise<ManagedSessionRecord> {
+	async #createNewSessionRecord(cwd: string): Promise<ManagedSessionRecord> {
 		const session = await this.#createSession(path.resolve(cwd));
 		try {
 			await session.sessionManager.ensureOnDisk();
@@ -429,14 +390,13 @@ export class AcpAgent implements Agent {
 			await this.#disposeStandaloneSession(session);
 			throw error;
 		}
-		return await this.#registerPreparedSession(session, mcpServers);
+		return await this.#registerPreparedSession(session);
 	}
 
-	async #loadManagedSession(sessionId: string, cwd: string, mcpServers: McpServer[]): Promise<ManagedSessionRecord> {
+	async #loadManagedSession(sessionId: string, cwd: string): Promise<ManagedSessionRecord> {
 		const existing = this.#sessions.get(sessionId);
 		if (existing) {
 			this.#assertMatchingCwd(existing.session, cwd);
-			await this.#configureMcpServers(existing, mcpServers);
 			return existing;
 		}
 
@@ -444,14 +404,13 @@ export class AcpAgent implements Agent {
 		if (!storedSession) {
 			throw new Error(`ACP session not found: ${sessionId}`);
 		}
-		return await this.#openStoredSession(storedSession.path, cwd, mcpServers, sessionId);
+		return await this.#openStoredSession(storedSession.path, cwd, sessionId);
 	}
 
-	async #resumeManagedSession(sessionId: string, cwd: string, mcpServers: McpServer[]): Promise<ManagedSessionRecord> {
+	async #resumeManagedSession(sessionId: string, cwd: string): Promise<ManagedSessionRecord> {
 		const existing = this.#sessions.get(sessionId);
 		if (existing) {
 			this.#assertMatchingCwd(existing.session, cwd);
-			await this.#configureMcpServers(existing, mcpServers);
 			return existing;
 		}
 
@@ -459,7 +418,7 @@ export class AcpAgent implements Agent {
 		if (!storedSession) {
 			throw new Error(`ACP session not found: ${sessionId}`);
 		}
-		return await this.#openStoredSession(storedSession.path, cwd, mcpServers, sessionId);
+		return await this.#openStoredSession(storedSession.path, cwd, sessionId);
 	}
 
 	async #forkManagedSession(params: ForkSessionRequest): Promise<ManagedSessionRecord> {
@@ -478,15 +437,10 @@ export class AcpAgent implements Agent {
 			await this.#disposeStandaloneSession(session);
 			throw error;
 		}
-		return await this.#registerPreparedSession(session, params.mcpServers ?? []);
+		return await this.#registerPreparedSession(session);
 	}
 
-	async #openStoredSession(
-		sessionPath: string,
-		cwd: string,
-		mcpServers: McpServer[],
-		sessionId: string,
-	): Promise<ManagedSessionRecord> {
+	async #openStoredSession(sessionPath: string, cwd: string, sessionId: string): Promise<ManagedSessionRecord> {
 		const session = await this.#createSession(path.resolve(cwd));
 		try {
 			const success = await session.switchSession(sessionPath);
@@ -497,14 +451,13 @@ export class AcpAgent implements Agent {
 			await this.#disposeStandaloneSession(session);
 			throw error;
 		}
-		return await this.#registerPreparedSession(session, mcpServers);
+		return await this.#registerPreparedSession(session);
 	}
 
-	async #registerPreparedSession(session: AgentSession, mcpServers: McpServer[]): Promise<ManagedSessionRecord> {
+	async #registerPreparedSession(session: AgentSession): Promise<ManagedSessionRecord> {
 		const record = this.#createManagedSessionRecord(session);
 		try {
 			await this.#configureExtensions(record);
-			await this.#configureMcpServers(record, mcpServers);
 			this.#sessions.set(session.sessionId, record);
 			return record;
 		} catch (error) {
@@ -1203,91 +1156,6 @@ export class AcpAgent implements Agent {
 		);
 		await extensionRunner.emit({ type: "session_start" });
 		record.extensionsConfigured = true;
-	}
-
-	async #configureMcpServers(record: ManagedSessionRecord, servers: McpServer[]): Promise<void> {
-		const runtime = record.session.mcpRuntime;
-		if (!resolveACPMCPEnabled(servers)) {
-			await runtime?.setEnabled(false);
-			return;
-		}
-		if (!runtime) throw new Error("ACP MCP descriptors require a session-owned MCP runtime");
-
-		const configs: MCPConfigMap = {};
-		const sources: MCPSourceMap = {};
-		for (const server of servers) {
-			configs[server.name] = this.#toMcpConfig(server);
-			sources[server.name] = {
-				provider: "acp",
-				providerName: "ACP Client",
-				path: `acp://${server.name}`,
-				level: "project",
-			};
-		}
-
-		await runtime.replace(async (): Promise<MCPToolsLoadResult> => {
-			const manager = this.#dependencies.createMcpManager(record.session.sessionManager.getCwd());
-			const result = await manager.connectServers(configs, sources);
-			if (result.errors.size > 0) {
-				await manager.disconnectAll();
-				throw new Error(
-					Array.from(result.errors.entries())
-						.map(([name, message]) => `${name}: ${message}`)
-						.join("; "),
-				);
-			}
-			return {
-				manager,
-				tools: result.tools.map(tool => ({
-					path: `mcp:${tool.name}`,
-					resolvedPath: `mcp:${tool.name}`,
-					tool,
-				})),
-				errors: [],
-				connectedServers: manager.getConnectedServers(),
-				exaApiKeys: [],
-			};
-		});
-	}
-
-	#toMcpConfig(server: McpServer): MCPServerConfig {
-		if ("command" in server) {
-			return {
-				type: "stdio",
-				command: server.command,
-				args: server.args,
-				env: this.#toNameValueMap(server.env),
-			};
-		}
-		if (server.type === "http") {
-			return {
-				type: "http",
-				url: server.url,
-				headers: this.#toNameValueMap(server.headers),
-			};
-		}
-		// ACP 1.x added an `acp` transport, whose descriptor carries a serverId
-		// instead of a url/headers pair. We never opt into it -- `initialize`
-		// advertises only `mcpCapabilities.http` and `.sse` -- so reject it
-		// explicitly rather than letting it fall through to the sse branch.
-		if (server.type === "acp") {
-			throw new Error(
-				`Unsupported MCP transport "acp" for server "${server.name}": xcsh advertises only http and sse`,
-			);
-		}
-		return {
-			type: "sse",
-			url: server.url,
-			headers: this.#toNameValueMap(server.headers),
-		};
-	}
-
-	#toNameValueMap(values: Array<{ name: string; value: string }>): { [name: string]: string } {
-		const mapped: { [name: string]: string } = {};
-		for (const value of values) {
-			mapped[value.name] = value.value;
-		}
-		return mapped;
 	}
 
 	async #closeManagedSession(sessionId: string, record: ManagedSessionRecord): Promise<void> {

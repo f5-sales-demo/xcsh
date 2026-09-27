@@ -87,7 +87,7 @@ Use a listed skill when the task matches its domain; read its source before acti
 Active tools: {{#list tools join=", "}}`{{this}}`{{/list}}.
 
 Tool schemas are authoritative for parameter names and result formats. Use `search_tool_bm25` once when the task
-needs a capability not currently active; it searches and activates deferred built-ins, extensions, and MCP tools.
+needs a capability not currently active; it searches and activates deferred registered tools.
 Activated tools remain available for this session. Do not conclude that a capability is absent before discovery.
 
 {{#if intentTracing}}

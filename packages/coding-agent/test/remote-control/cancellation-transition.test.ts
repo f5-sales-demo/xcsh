@@ -64,7 +64,6 @@ test.each(["new", "fork", "resume", "timeout", "late", "dispose"])(
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		let calls = 0;

@@ -161,7 +161,6 @@ async function runSample(
 		modelPattern: model,
 		sessionManager: SessionManager.inMemory(),
 		disableExtensionDiscovery: false,
-		enableMCP: false,
 		enableLsp: false,
 		customTools:
 			scenario === "large-tool-result"

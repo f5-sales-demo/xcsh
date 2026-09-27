@@ -191,7 +191,6 @@ const entries = names.map(command => {
 	const extensions = command === "extensions";
 	const plugin = command === "plugin";
 	const context = command === "context";
-	const mcp = command === "mcp";
 	const ssh = command === "ssh";
 	return {
 		command: `/${command}`,
@@ -218,7 +217,6 @@ const entries = names.map(command => {
 						extensions ||
 						plugin ||
 						context ||
-						mcp ||
 						ssh
 					? "intentional-safety-addition"
 					: reloadPlugins || resourceRead
@@ -306,22 +304,11 @@ const entries = names.map(command => {
 																				].includes(surface)
 																			? "intentional-redesign"
 																			: "intentional-safety-addition"
-																	: mcp
-																		? [
-																				"/mcp list",
-																				"/mcp test",
-																				"/mcp resources",
-																				"/mcp prompts",
-																				"/mcp notifications",
-																				"/mcp help",
-																			].includes(surface)
+																	: ssh
+																		? ["/ssh list", "/ssh help"].includes(surface)
 																			? "intentional-redesign"
 																			: "intentional-safety-addition"
-																		: ssh
-																			? ["/ssh list", "/ssh help"].includes(surface)
-																				? "intentional-redesign"
-																				: "intentional-safety-addition"
-																			: childClassification(surface, beforeSurfaces, afterSurfaces),
+																		: childClassification(surface, beforeSurfaces, afterSurfaces),
 			]),
 		),
 		coverage: {
@@ -416,7 +403,6 @@ const entries = names.map(command => {
 																											extensions ||
 																											plugin ||
 																											context ||
-																											mcp ||
 																											ssh
 																										? [
 																												"packages/coding-agent/test/evidence/slash-command-all-surfaces-open-cancel-differential-v1/receipts.json",
@@ -524,7 +510,6 @@ const entries = names.map(command => {
 																											extensions ||
 																											plugin ||
 																											context ||
-																											mcp ||
 																											ssh
 																										? [
 																												"packages/coding-agent/test/evidence/slash-command-all-surfaces-open-cancel-differential-v1/receipts.json",
@@ -639,58 +624,53 @@ const entries = names.map(command => {
 																													? [
 																															"packages/coding-agent/test/modes/controllers/context-command-controller-review.test.ts",
 																														]
-																													: mcp
+																													: ssh
 																														? [
-																																"packages/coding-agent/test/modes/controllers/mcp-command-controller-review.test.ts",
-																																"packages/coding-agent/test/modes/controllers/mcp-command-controller-smithery.test.ts",
+																																"packages/coding-agent/test/modes/controllers/ssh-command-controller-review.test.ts",
 																															]
-																														: ssh
+																														: resourceMutation ||
+																																resourceRead
 																															? [
-																																	"packages/coding-agent/test/modes/controllers/ssh-command-controller-review.test.ts",
+																																	"packages/coding-agent/test/slash-commands/resource-commands-review.test.ts",
 																																]
-																															: resourceMutation ||
-																																	resourceRead
+																															: exportSession || share
 																																? [
-																																		"packages/coding-agent/test/slash-commands/resource-commands-review.test.ts",
+																																		"packages/coding-agent/test/modes/controllers/command-controller-export.test.ts",
 																																	]
-																																: exportSession || share
+																																: handoff
 																																	? [
-																																			"packages/coding-agent/test/modes/controllers/command-controller-export.test.ts",
+																																			"packages/coding-agent/test/modes/controllers/command-controller-handoff.test.ts",
 																																		]
-																																	: handoff
+																																	: open
 																																		? [
-																																				"packages/coding-agent/test/modes/controllers/command-controller-handoff.test.ts",
+																																				"packages/coding-agent/test/modes/controllers/command-controller-open.test.ts",
 																																			]
-																																		: open
+																																		: session
 																																			? [
-																																					"packages/coding-agent/test/modes/controllers/command-controller-open.test.ts",
+																																					"packages/coding-agent/test/slash-commands/session.test.ts",
+																																					"packages/coding-agent/test/modes/controllers/selector-controller-session-delete.test.ts",
 																																				]
-																																			: session
+																																			: branch
 																																				? [
-																																						"packages/coding-agent/test/slash-commands/session.test.ts",
-																																						"packages/coding-agent/test/modes/controllers/selector-controller-session-delete.test.ts",
+																																						"packages/coding-agent/test/modes/controllers/selector-controller-branch.test.ts",
 																																					]
-																																				: branch
+																																				: tree
 																																					? [
-																																							"packages/coding-agent/test/modes/controllers/selector-controller-branch.test.ts",
+																																							"packages/coding-agent/test/modes/controllers/selector-controller-tree.test.ts",
 																																						]
-																																					: tree
+																																					: resume
 																																						? [
-																																								"packages/coding-agent/test/modes/controllers/selector-controller-tree.test.ts",
+																																								"packages/coding-agent/test/modes/controllers/selector-controller-resume.test.ts",
 																																							]
-																																						: resume
+																																						: handoff
 																																							? [
-																																									"packages/coding-agent/test/modes/controllers/selector-controller-resume.test.ts",
+																																									"packages/coding-agent/test/modes/controllers/command-controller-handoff.test.ts",
 																																								]
-																																							: handoff
+																																							: btw
 																																								? [
-																																										"packages/coding-agent/test/modes/controllers/command-controller-handoff.test.ts",
+																																										"packages/coding-agent/test/modes/controllers/btw-controller.test.ts",
 																																									]
-																																								: btw
-																																									? [
-																																											"packages/coding-agent/test/modes/controllers/btw-controller.test.ts",
-																																										]
-																																									: [],
+																																								: [],
 		notes: settings
 			? [
 					"Confirmed pre-correction regressions: hidden section navigator; missing empty-search Left/Right and Space; missing position indicators; choice PageUp/PageDown and mouse behavior removed; incomplete guidance.",
@@ -728,7 +708,7 @@ const entries = names.map(command => {
 										]
 									: reloadPlugins
 										? [
-												"Published reports a plugin reload. Pre-fix explicitly refreshes command, skill, hook, tool, agent, and MCP metadata without claiming that running plugin processes restarted.",
+												"Published reports a plugin reload. Pre-fix explicitly refreshes command, skill, hook, tool, and agent metadata without claiming that running plugin processes restarted.",
 												"The current 16-variant plugin-metadata matrix proves new command discovery and preserved source bytes; this is an intentional lifecycle redesign.",
 											]
 										: newSession
@@ -856,47 +836,42 @@ const entries = names.map(command => {
 																																					"Published context commands directly change saved or active connection state. Pre-fix retains all baseline subcommands, adds explicit link and unlink paths, keeps reports bounded, and moves every persistent or active-context change behind a Cancel-first, secret-masked, stale-aware review with unresolved-only retry.",
 																																					"Focused context-controller tests cover all baseline mutation classes, reports, secret masking, stale state, partial wizard recovery, and additive pointer operations; this is an intentional connection-safety addition with report redesigns.",
 																																				]
-																																			: mcp
+																																			: ssh
 																																				? [
-																																						"Published MCP commands mutate saved servers and authorization directly. Pre-fix retains each baseline spelling while adding Cancel-first configuration and OAuth reviews, drift checks, separated saved-versus-runtime outcomes, explicit interrupt hierarchy for browser authorization, bounded reports, and unresolved-only retry.",
-																																						"The MCP controller and Smithery tests cover configuration and credential cancellation, persistence, stale targets, failures, reports, duplicate work, and explicit interruption; this is an intentional client-management safety addition with report redesigns.",
+																																						"Published SSH add and remove mutate saved host configuration directly. Pre-fix retains add, list, remove, and help while adding Cancel-first exact-scope reviews, stale-target checks, retryable persistence failures, and bounded list/help reports that distinguish saved configuration from connectivity.",
+																																						"Focused SSH-controller tests cover cancellation, confirmation, stale targets, unresolved write retry, non-destructive removal, and list/help report controls; this is an intentional host-configuration safety addition with report redesigns.",
 																																					]
-																																				: ssh
+																																				: resourceMutation
 																																					? [
-																																							"Published SSH add and remove mutate saved host configuration directly. Pre-fix retains add, list, remove, and help while adding Cancel-first exact-scope reviews, stale-target checks, retryable persistence failures, and bounded list/help reports that distinguish saved configuration from connectivity.",
-																																							"Focused SSH-controller tests cover cancellation, confirmation, stale targets, unresolved write retry, non-destructive removal, and list/help report controls; this is an intentional host-configuration safety addition with report redesigns.",
+																																							"Published resource mutation commands execute after input validation. Pre-fix preserves the syntax and dry-run paths while adding a Cancel-first resolved-target review, credential and manifest revision checks, stale-target protection, observed completion reports, and unresolved-only retry.",
+																																							"The pinned loopback differential proves published Escape occurs after the direct write whereas pre-fix cancellation performs no remote write; confirmation, read-only dry-run, failure, and retry behavior are retained. This is an intentional remote-mutation safety addition.",
 																																						]
-																																					: resourceMutation
+																																					: resourceRead
 																																						? [
-																																								"Published resource mutation commands execute after input validation. Pre-fix preserves the syntax and dry-run paths while adding a Cancel-first resolved-target review, credential and manifest revision checks, stale-target protection, observed completion reports, and unresolved-only retry.",
-																																								"The pinned loopback differential proves published Escape occurs after the direct write whereas pre-fix cancellation performs no remote write; confirmation, read-only dry-run, failure, and retry behavior are retained. This is an intentional remote-mutation safety addition.",
+																																								"Published /describe, /diff, and /get perform the same read-only resource requests. Pre-fix retains valid, empty, and failing request paths while presenting bounded paged reports with explicit close guidance.",
+																																								"The pinned loopback differential proves the three read surfaces keep one request and unchanged remote state, while client dry-run remains non-mutating. This is an intentional report-frame redesign.",
 																																							]
-																																						: resourceRead
+																																						: exportSession
 																																							? [
-																																									"Published /describe, /diff, and /get perform the same read-only resource requests. Pre-fix retains valid, empty, and failing request paths while presenting bounded paged reports with explicit close guidance.",
-																																									"The pinned loopback differential proves the three read surfaces keep one request and unchanged remote state, while client dry-run remains non-mutating. This is an intentional report-frame redesign.",
+																																									"Published /export writes and opens an HTML transcript directly. Pre-fix retains the destination syntax while adding a Cancel-first exact-file review, stale-destination checks, atomic 0600 writes, no-op detection, and unresolved-only retry.",
+																																									"The candidate publication matrix proves cancellation, unchanged-file preservation, stale-file rejection, partial-write recovery, saved-before-open-failure guidance, permissions, and session reopen across all 16 variants; this is an intentional local-export safety addition.",
 																																								]
-																																							: exportSession
+																																							: share
 																																								? [
-																																										"Published /export writes and opens an HTML transcript directly. Pre-fix retains the destination syntax while adding a Cancel-first exact-file review, stale-destination checks, atomic 0600 writes, no-op detection, and unresolved-only retry.",
-																																										"The candidate publication matrix proves cancellation, unchanged-file preservation, stale-file rejection, partial-write recovery, saved-before-open-failure guidance, permissions, and session reopen across all 16 variants; this is an intentional local-export safety addition.",
+																																										"Published /share stages and publishes the transcript immediately. Pre-fix retains the publication route while adding a Cancel-first remote-publication review, handler revision check, stale-session protection, cleanup, explicit sensitive-content disclosure, failure retry, and no automatic URL launch.",
+																																										"The candidate publication matrix proves no publish on cancellation, failed-publication retry, staging cleanup, URL-only success, and reopen across all 16 variants; this is an intentional remote-publication safety addition.",
 																																									]
-																																								: share
+																																								: handoff
 																																									? [
-																																											"Published /share stages and publishes the transcript immediately. Pre-fix retains the publication route while adding a Cancel-first remote-publication review, handler revision check, stale-session protection, cleanup, explicit sensitive-content disclosure, failure retry, and no automatic URL launch.",
-																																											"The candidate publication matrix proves no publish on cancellation, failed-publication retry, staging cleanup, URL-only success, and reopen across all 16 variants; this is an intentional remote-publication safety addition.",
+																																											"Published /handoff begins generation and the session transition directly. Pre-fix retains typed instructions while adding a Cancel-first exact-destination review, explicit cost and background-job disclosure, interrupt-only Ctrl+C during generation, and an unresolved-transition retry that does not regenerate or bill another handoff.",
+																																											"The candidate sessions matrix proves cancellation avoids model work, confirmed handoff reopens the exact context-bearing destination, and retry preserves the already-generated handoff; this is an intentional lifecycle-safety addition.",
 																																										]
-																																									: handoff
+																																									: btw
 																																										? [
-																																												"Published /handoff begins generation and the session transition directly. Pre-fix retains typed instructions while adding a Cancel-first exact-destination review, explicit cost and background-job disclosure, interrupt-only Ctrl+C during generation, and an unresolved-transition retry that does not regenerate or bill another handoff.",
-																																												"The candidate sessions matrix proves cancellation avoids model work, confirmed handoff reopens the exact context-bearing destination, and retry preserves the already-generated handoff; this is an intentional lifecycle-safety addition.",
+																																												"Published Escape aborts an active /btw side request and permits immediate replacement. Pre-fix makes Escape navigation-only, introduces an explicit interrupt path, rejects duplicate starts, and blocks background transfer while a request remains running.",
+																																												"This is an intentional interruption-safety redesign: the focused controller test and 16-variant reports matrix retain completion, failure, retry, explicit interruption, and persistence boundaries.",
 																																											]
-																																										: btw
-																																											? [
-																																													"Published Escape aborts an active /btw side request and permits immediate replacement. Pre-fix makes Escape navigation-only, introduces an explicit interrupt path, rejects duplicate starts, and blocks background transfer while a request remains running.",
-																																													"This is an intentional interruption-safety redesign: the focused controller test and 16-variant reports matrix retain completion, failure, retry, explicit interruption, and persistence boundaries.",
-																																												]
-																																											: [],
+																																										: [],
 	};
 });
 
@@ -937,14 +912,6 @@ const ledger = {
 				"Published and pre-fix public resource CLI validation, update, failure exit-code, credentials, and manifest-export contracts.",
 			limitation:
 				"This supports resource-operation parity but does not establish interactive slash-command review, cancellation, persistence, retry, or full TUI parity.",
-		},
-		{
-			path: "packages/coding-agent/test/evidence/client-resources-differential-v1/receipt.json",
-			kind: "mcp-client-resource-contract-differential",
-			coverage:
-				"Published and pre-fix MCP resource-client capabilities, caching, pagination, reads, subscriptions, unsubscriptions, and failure isolation.",
-			limitation:
-				"This supports the MCP resource-client substrate but does not establish interactive /mcp navigation, cancellation, mutation, retry, persistence, or full TUI parity.",
 		},
 		{
 			path: "packages/coding-agent/test/evidence/resource-review-differential-v1/receipt.json",

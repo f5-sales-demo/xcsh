@@ -62,7 +62,6 @@ async function fixture() {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		cleanup.push(() => result.session.dispose());

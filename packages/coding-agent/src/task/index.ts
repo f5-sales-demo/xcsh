@@ -784,7 +784,6 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						artifactsDir: effectiveArtifactsDir,
 						contextFile: contextFilePath,
 						enableLsp: false,
-						enableMCP: this.session.enableMCP,
 						signal,
 						eventBus: this.session.eventBus,
 						onProgress: progress => {
@@ -796,7 +795,6 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						authStorage: this.session.authStorage,
 						modelRegistry: this.session.modelRegistry,
 						settings: this.session.settings,
-						mcpManager: this.session.mcpManager,
 						contextFiles,
 						skills: availableSkills,
 						promptTemplates,
@@ -839,7 +837,6 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						artifactsDir: effectiveArtifactsDir,
 						contextFile: contextFilePath,
 						enableLsp: false,
-						enableMCP: this.session.enableMCP,
 						signal,
 						eventBus: this.session.eventBus,
 						onProgress: progress => {
@@ -851,7 +848,6 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 						authStorage: this.session.authStorage,
 						modelRegistry: this.session.modelRegistry,
 						settings: this.session.settings,
-						mcpManager: this.session.mcpManager,
 						contextFiles,
 						skills: availableSkills,
 						promptTemplates,

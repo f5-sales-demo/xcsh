@@ -31,7 +31,6 @@ const AUDITED_TOP_LEVEL_COMMANDS = [
 	"/login",
 	"/logout",
 	"/manifest",
-	"/mcp",
 	"/media",
 	"/memory",
 	"/model",
@@ -77,10 +76,6 @@ const fastReceiptsFile = new URL("./evidence/fast-differential-v1/receipts.json"
 const routeReceiptsFile = new URL("./evidence/route-differential-v1/receipts.json", import.meta.url);
 const planReceiptsFile = new URL("./evidence/plan-differential-v1/receipts.json", import.meta.url);
 const mediaReceiptsFile = new URL("./evidence/media-differential-v1/receipts.json", import.meta.url);
-const clientResourcesReceiptsFile = new URL(
-	"./evidence/client-resources-differential-v1/receipt.json",
-	import.meta.url,
-);
 const resourceReviewReceiptsFile = new URL("./evidence/resource-review-differential-v1/receipt.json", import.meta.url);
 const settingsNavigationReceiptsFile = new URL(
 	"./evidence/settings-navigation-differential-v1/receipt.json",
@@ -160,10 +155,6 @@ test("differential slash-command ledger is source-pinned and complete", async ()
 			kind: "resource-cli-contract-differential",
 		}),
 		expect.objectContaining({
-			path: "packages/coding-agent/test/evidence/client-resources-differential-v1/receipt.json",
-			kind: "mcp-client-resource-contract-differential",
-		}),
-		expect.objectContaining({
 			path: "packages/coding-agent/test/evidence/resource-review-differential-v1/receipt.json",
 			kind: "interactive-resource-review-differential",
 		}),
@@ -232,7 +223,7 @@ test("differential slash-command ledger is source-pinned and complete", async ()
 			kind: "full-coding-agent-test-differential",
 		}),
 	]);
-	expect(ledger.entries).toHaveLength(51);
+	expect(ledger.entries).toHaveLength(50);
 	expect(ledger.candidateReceipts).toEqual([
 		expect.objectContaining({
 			path: "packages/coding-agent/test/evidence/working-resource-uat-v1/receipt.json",
@@ -340,7 +331,7 @@ test("differential slash-command ledger is source-pinned and complete", async ()
 			expect(run.visualVerdict).toBe("pass-actual-terminal");
 		}
 	}
-	expect(new Set(ledger.entries.map(entry => entry.command)).size).toBe(51);
+	expect(new Set(ledger.entries.map(entry => entry.command)).size).toBe(50);
 	expect(ledger.entries.map(entry => entry.command).toSorted()).toEqual(AUDITED_TOP_LEVEL_COMMANDS);
 });
 
@@ -1320,7 +1311,7 @@ test("agent, extension, and plugin surfaces retain reviewed lifecycle evidence",
 	});
 });
 
-test("context, MCP, and SSH preserve every registered surface with reviewed state changes", async () => {
+test("context and SSH preserve every registered surface with reviewed state changes", async () => {
 	const ledger = (await Bun.file(ledgerFile).json()) as { entries: ParityEntry[] };
 	const expected = {
 		"/context": {
@@ -1329,12 +1320,6 @@ test("context, MCP, and SSH preserve every registered surface with reviewed stat
 			"/context delete": "intentional-safety-addition",
 			"/context link": "additive",
 			"/context unlink": "additive",
-		},
-		"/mcp": {
-			"/mcp add": "intentional-safety-addition",
-			"/mcp list": "intentional-redesign",
-			"/mcp smithery-login": "intentional-safety-addition",
-			"/mcp help": "intentional-redesign",
 		},
 		"/ssh": {
 			"/ssh add": "intentional-safety-addition",
@@ -1360,12 +1345,6 @@ test("context, MCP, and SSH preserve every registered surface with reviewed stat
 	}
 	expect(ledger.entries.find(entry => entry.command === "/context")).toMatchObject({
 		correctingTests: ["packages/coding-agent/test/modes/controllers/context-command-controller-review.test.ts"],
-	});
-	expect(ledger.entries.find(entry => entry.command === "/mcp")).toMatchObject({
-		correctingTests: [
-			"packages/coding-agent/test/modes/controllers/mcp-command-controller-review.test.ts",
-			"packages/coding-agent/test/modes/controllers/mcp-command-controller-smithery.test.ts",
-		],
 	});
 	expect(ledger.entries.find(entry => entry.command === "/ssh")).toMatchObject({
 		correctingTests: ["packages/coding-agent/test/modes/controllers/ssh-command-controller-review.test.ts"],
@@ -1439,25 +1418,6 @@ test("fork changes from immediate copying to a reviewed parent-linked session ac
 		currentReceipts: ["packages/coding-agent/test/evidence/fork-differential-v1/receipts.json"],
 		correctingTests: ["packages/coding-agent/test/modes/controllers/command-controller-fork.test.ts"],
 	});
-});
-
-test("MCP resource-client differential receipt remains pinned and complete", async () => {
-	const receipt = (await Bun.file(clientResourcesReceiptsFile).json()) as {
-		schemaVersion: number;
-		kind: string;
-		baseline: { commit: string; exitCode: number; stderr: string };
-		preFix: { commit: string; exitCode: number; stderr: string };
-	};
-	expect(receipt.schemaVersion).toBe(1);
-	expect(receipt.kind).toBe("mcp-client-resource-contract-differential");
-	for (const [side, expectedCommit] of [
-		["baseline", "0c6d27e4afacc42b598478d1fba532ef1eab9204"],
-		["preFix", "e68d757fa7ebf6f6e5b36d52138e99712c565065"],
-	] as const) {
-		expect(receipt[side]).toMatchObject({ commit: expectedCommit, exitCode: 0 });
-		expect(receipt[side].stderr).toContain("21 pass");
-		expect(receipt[side].stderr).toContain("0 fail");
-	}
 });
 
 test("resource reads preserve baseline requests while mutation flows add reviewed safety", async () => {

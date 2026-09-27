@@ -115,7 +115,7 @@ describe("startHeadlessChatBridge", () => {
 
 		// ONE headless Office session, scoped to the minimal general tool set (NO
 		// browser builtin tools — they'd be hallucinated in a document task pane;
-		// document tools arrive at runtime via set_host_tools), no MCP/LSP/discovery.
+		// document tools arrive at runtime via set_host_tools), no LSP/discovery.
 		const o = h.sessionOpts();
 		expect(o?.hasUI).toBe(false);
 		// Sideload is deterministic even when the operator's global default or last
@@ -123,7 +123,6 @@ describe("startHeadlessChatBridge", () => {
 		// configure and are intentionally not encoded in this bootstrap default.
 		expect(o?.modelPattern).toBe("litellm/gpt-5.6-terra:medium");
 		expect(o?.thinkingLevel).toBe("medium");
-		expect(o?.enableMCP).toBe(false);
 		expect(o?.enableLsp).toBe(false);
 		expect(o?.disableExtensionDiscovery).toBe(true);
 		// Office session carries NO browser tools — no builtins beyond OFFICE_TOOL_NAMES
@@ -274,7 +273,6 @@ describe("startHeadlessChatBridge worker profile", () => {
 			expect(options).toMatchObject({
 				cwd: "/tmp/office-serve",
 				hasUI: false,
-				enableMCP: false,
 				enableLsp: false,
 				disableExtensionDiscovery: true,
 				additionalExtensionPaths: ["/tmp/bench-extension.ts"],

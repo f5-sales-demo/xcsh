@@ -94,8 +94,8 @@ export class VoiceTimeline {
 					(this.#session !== undefined &&
 						completed &&
 						item.status === "completed" &&
-						((item.type === "dynamicToolCall" && item.success === true) ||
-							(item.type === "mcpToolCall" && item.server === "codex_app")))
+						item.type === "dynamicToolCall" &&
+						item.success === true)
 				)
 					this.#promote(effects.items, turnId, item.id, { type: "wholeItem" });
 				if (completed && this.#streaming?.id === item.id) this.#streaming = undefined;

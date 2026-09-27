@@ -273,7 +273,6 @@ export function benchmarkScenarioArgs(
 		multiTurn ? "rpc" : "json",
 		"--no-session",
 		"--no-memories",
-		"--no-mcp",
 		"--no-lsp",
 		"--no-rules",
 		"--no-title",

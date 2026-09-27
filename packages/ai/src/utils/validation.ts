@@ -513,7 +513,7 @@ function coerceArgsFromErrors(
 // Create a singleton AJV instance with formats (only if not in browser extension)
 // AJV requires 'unsafe-eval' CSP which is not allowed in Manifest V3
 //
-// Silent logger: MCP servers may declare non-standard format keywords (e.g. "uint")
+// Silent logger: external tool schemas may declare non-standard format keywords (e.g. "uint").
 // which cause Ajv to emit console.warn() with strict:false — corrupting TUI output.
 const ajv = new Ajv({
 	allErrors: false,

@@ -19,10 +19,10 @@ Type `/` in the prompt to list the registry active in the current session, and `
 | Models and routing | `/model` |
 | Sessions and history | `/session`, `/resume`, `/tree`, `/branch`, `/fork`, `/compact`, `/export` |
 | F5 Distributed Cloud | `/context`, `/namespace`, `/manifest`, `/validate`, `/diff`, `/apply`, `/get`, `/create`, `/delete` |
-| Capabilities | `/tools`, `/agents`, `/plugin`, `/extensions`, `/mcp` |
+| Capabilities | `/tools`, `/agents`, `/plugin`, `/extensions` |
 | Session state | `/settings`, `/hotkeys`, `/memory`, `/usage`, `/plan` |
 
-`/context status`, `/mcp list`, and `/plugin list` report the current state of those subsystems without changing anything.
+`/context status` and `/plugin list` report the current state of those subsystems without changing anything.
 
 Slash commands are resolved from the active built-in, extension, plugin, and project capability set,
 so `/help` is the complete lookup surface for the running session. Keybindings depend on the active

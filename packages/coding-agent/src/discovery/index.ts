@@ -10,7 +10,6 @@ import "../capability/extension";
 import "../capability/extension-module";
 import "../capability/hook";
 import "../capability/instruction";
-import "../capability/mcp";
 import "../capability/prompt";
 import "../capability/rule";
 import "../capability/settings";
@@ -31,9 +30,7 @@ import "./cursor";
 import "./gemini";
 import "./opencode";
 import "./github";
-import "./mcp-json";
 import "./ssh";
-import "./vscode";
 import "./windsurf";
 
 // Re-export the main API from capability registry
@@ -67,7 +64,6 @@ export type { ExtensionModule } from "../capability/extension-module";
 export type { Hook } from "../capability/hook";
 export type { Instruction } from "../capability/instruction";
 // Re-export capability item types
-export type { MCPServer } from "../capability/mcp";
 export type { Prompt } from "../capability/prompt";
 export type { Rule, RuleFrontmatter } from "../capability/rule";
 export type { Settings } from "../capability/settings";

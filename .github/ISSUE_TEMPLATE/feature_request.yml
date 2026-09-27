@@ -28,7 +28,6 @@ body:
         - Provider / Model support
         - TUI / Display
         - Tools
-        - MCP servers
         - Extensions / Plugins
         - CLI commands
         - Skills / Commands

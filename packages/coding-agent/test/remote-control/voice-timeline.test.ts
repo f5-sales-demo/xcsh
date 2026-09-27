@@ -218,18 +218,6 @@ test.each([
 		active: true,
 		promoted: false,
 	},
-	{
-		item: { type: "mcpToolCall", server: "codex_app", status: "completed" },
-		completed: true,
-		active: true,
-		promoted: true,
-	},
-	{
-		item: { type: "mcpToolCall", server: "example", status: "completed" },
-		completed: true,
-		active: true,
-		promoted: false,
-	},
 	{ item: { type: "commandExecution", status: "completed" }, completed: true, active: true, promoted: false },
 	{ item: { type: "fileChange", status: "completed" }, completed: true, active: true, promoted: false },
 ])("whole-item promotion: $item, completed=$completed active=$active", ({ item, completed, active, promoted }) => {

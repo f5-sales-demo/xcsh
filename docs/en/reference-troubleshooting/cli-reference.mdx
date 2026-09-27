@@ -34,7 +34,7 @@ These flags configure an agent launch. They precede the prompt and do not apply 
 | Mode | `--mode` (`text`, `json`, `rpc`, `acp`), `-p`/`--print` |
 | Session | `-c`/`--continue`, `-r`/`--resume`, `--fork`, `--session-dir`, `--no-session`, `--no-memories`, `--export` |
 | Filesystem | `--allow-home`, `--allow-path`, `--no-sandbox` |
-| Capabilities | `--tools`, `--no-tools`, `--no-mcp`, `--no-lsp`, `--no-pty` |
+| Capabilities | `--tools`, `--no-tools`, `--no-lsp`, `--no-pty` |
 | Discovery | `-e`/`--extension`, `--hook`, `--plugin-dir`, `--no-extensions`, `--skills`, `--no-skills`, `--no-rules` |
 
 `packages/coding-agent/src/cli/flag-spec.ts` is the single source that renders `--help` and drives the parser, so the two cannot disagree.

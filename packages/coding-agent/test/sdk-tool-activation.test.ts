@@ -57,7 +57,6 @@ describe("createAgentSession defaultInactive tool activation", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -91,7 +90,6 @@ describe("createAgentSession defaultInactive tool activation", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			toolNames: ["read", "default_inactive_tool"],
 		});
@@ -125,7 +123,6 @@ describe("createAgentSession defaultInactive tool activation", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 				toolNames: [],
 			});

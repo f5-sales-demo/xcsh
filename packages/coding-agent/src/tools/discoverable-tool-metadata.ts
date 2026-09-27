@@ -1,43 +1,26 @@
 import type { AgentTool } from "@f5-sales-demo/pi-agent-core";
 
-export interface DiscoverableMCPTool {
+export interface DiscoverableTool {
 	name: string;
 	label: string;
 	description: string;
-	serverName?: string;
-	mcpToolName?: string;
 	schemaKeys: string[];
 }
 
-export interface DiscoverableMCPToolServerSummary {
-	name: string;
-	toolCount: number;
-}
-
-export interface DiscoverableMCPToolSummary {
-	servers: DiscoverableMCPToolServerSummary[];
-	toolCount: number;
-}
-
-export function formatDiscoverableMCPToolServerSummary(server: DiscoverableMCPToolServerSummary): string {
-	const toolLabel = server.toolCount === 1 ? "tool" : "tools";
-	return `${server.name} (${server.toolCount} ${toolLabel})`;
-}
-
-export interface DiscoverableMCPSearchDocument {
-	tool: DiscoverableMCPTool;
+export interface DiscoverableToolSearchDocument {
+	tool: DiscoverableTool;
 	termFrequencies: Map<string, number>;
 	length: number;
 }
 
-export interface DiscoverableMCPSearchIndex {
-	documents: DiscoverableMCPSearchDocument[];
+export interface DiscoverableToolSearchIndex {
+	documents: DiscoverableToolSearchDocument[];
 	averageLength: number;
 	documentFrequencies: Map<string, number>;
 }
 
-export interface DiscoverableMCPSearchResult {
-	tool: DiscoverableMCPTool;
+export interface DiscoverableToolSearchResult {
+	tool: DiscoverableTool;
 	score: number;
 }
 
@@ -46,15 +29,9 @@ const BM25_B = 0.75;
 const FIELD_WEIGHTS = {
 	name: 6,
 	label: 4,
-	serverName: 2,
-	mcpToolName: 4,
 	description: 2,
 	schemaKey: 1,
 } as const;
-
-export function isMCPToolName(name: string): boolean {
-	return name.startsWith("mcp_");
-}
 
 function getSchemaPropertyKeys(parameters: unknown): string[] {
 	if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) return [];
@@ -80,12 +57,10 @@ function addWeightedTokens(termFrequencies: Map<string, number>, value: string |
 	}
 }
 
-function buildSearchDocument(tool: DiscoverableMCPTool): DiscoverableMCPSearchDocument {
+function buildSearchDocument(tool: DiscoverableTool): DiscoverableToolSearchDocument {
 	const termFrequencies = new Map<string, number>();
 	addWeightedTokens(termFrequencies, tool.name, FIELD_WEIGHTS.name);
 	addWeightedTokens(termFrequencies, tool.label, FIELD_WEIGHTS.label);
-	addWeightedTokens(termFrequencies, tool.serverName, FIELD_WEIGHTS.serverName);
-	addWeightedTokens(termFrequencies, tool.mcpToolName, FIELD_WEIGHTS.mcpToolName);
 	addWeightedTokens(termFrequencies, tool.description, FIELD_WEIGHTS.description);
 	for (const schemaKey of tool.schemaKeys) {
 		addWeightedTokens(termFrequencies, schemaKey, FIELD_WEIGHTS.schemaKey);
@@ -94,71 +69,26 @@ function buildSearchDocument(tool: DiscoverableMCPTool): DiscoverableMCPSearchDo
 	return { tool, termFrequencies, length };
 }
 
-export function getDiscoverableMCPTool(tool: AgentTool): DiscoverableMCPTool | null {
-	if (!isMCPToolName(tool.name)) return null;
-	return getDiscoverableTool(tool);
-}
-
 /** Build safe search metadata for any registered tool source. */
-export function getDiscoverableTool(tool: AgentTool): DiscoverableMCPTool {
+export function getDiscoverableTool(tool: AgentTool): DiscoverableTool {
 	const toolRecord = tool as AgentTool & {
 		label?: string;
 		description?: string;
-		mcpServerName?: string;
-		mcpToolName?: string;
 		parameters?: unknown;
 	};
 	return {
 		name: tool.name,
 		label: typeof toolRecord.label === "string" ? toolRecord.label : tool.name,
 		description: typeof toolRecord.description === "string" ? toolRecord.description : "",
-		serverName: typeof toolRecord.mcpServerName === "string" ? toolRecord.mcpServerName : undefined,
-		mcpToolName: typeof toolRecord.mcpToolName === "string" ? toolRecord.mcpToolName : undefined,
 		schemaKeys: getSchemaPropertyKeys(toolRecord.parameters),
 	};
 }
 
-export function collectDiscoverableTools(tools: Iterable<AgentTool>): DiscoverableMCPTool[] {
+export function collectDiscoverableTools(tools: Iterable<AgentTool>): DiscoverableTool[] {
 	return Array.from(tools, getDiscoverableTool);
 }
 
-export function collectDiscoverableMCPTools(tools: Iterable<AgentTool>): DiscoverableMCPTool[] {
-	const discoverable: DiscoverableMCPTool[] = [];
-	for (const tool of tools) {
-		const metadata = getDiscoverableMCPTool(tool);
-		if (metadata) {
-			discoverable.push(metadata);
-		}
-	}
-	return discoverable;
-}
-
-export function selectDiscoverableMCPToolNamesByServer(
-	tools: Iterable<DiscoverableMCPTool>,
-	serverNames: ReadonlySet<string>,
-): string[] {
-	if (serverNames.size === 0) return [];
-	return Array.from(tools)
-		.filter(tool => tool.serverName !== undefined && serverNames.has(tool.serverName))
-		.map(tool => tool.name);
-}
-
-export function summarizeDiscoverableMCPTools(tools: DiscoverableMCPTool[]): DiscoverableMCPToolSummary {
-	const serverToolCounts = new Map<string, number>();
-	for (const tool of tools) {
-		if (!tool.serverName) continue;
-		serverToolCounts.set(tool.serverName, (serverToolCounts.get(tool.serverName) ?? 0) + 1);
-	}
-	const servers = Array.from(serverToolCounts.entries())
-		.sort(([left], [right]) => left.localeCompare(right))
-		.map(([name, toolCount]) => ({ name, toolCount }));
-	return {
-		servers,
-		toolCount: tools.length,
-	};
-}
-
-export function buildDiscoverableMCPSearchIndex(tools: Iterable<DiscoverableMCPTool>): DiscoverableMCPSearchIndex {
+export function buildDiscoverableToolSearchIndex(tools: Iterable<DiscoverableTool>): DiscoverableToolSearchIndex {
 	const documents = Array.from(tools, buildSearchDocument);
 	const averageLength = documents.reduce((sum, document) => sum + document.length, 0) / documents.length || 1;
 	const documentFrequencies = new Map<string, number>();
@@ -174,11 +104,11 @@ export function buildDiscoverableMCPSearchIndex(tools: Iterable<DiscoverableMCPT
 	};
 }
 
-export function searchDiscoverableMCPTools(
-	index: DiscoverableMCPSearchIndex,
+export function searchDiscoverableTools(
+	index: DiscoverableToolSearchIndex,
 	query: string,
 	limit: number,
-): DiscoverableMCPSearchResult[] {
+): DiscoverableToolSearchResult[] {
 	const queryTokens = tokenize(query);
 	if (queryTokens.length === 0) {
 		throw new Error("Query must contain at least one letter or number.");

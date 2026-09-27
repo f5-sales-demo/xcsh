@@ -31,7 +31,6 @@ test.each([true, false])(
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		let calls = 0;

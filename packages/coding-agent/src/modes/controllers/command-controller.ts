@@ -719,20 +719,6 @@ export class CommandController {
 			}
 		}
 
-		if (this.ctx.mcpManager) {
-			const mcpServers = this.ctx.mcpManager.getConnectedServers();
-			info += `\n${theme.bold(t("controller.session.mcpServers"))}\n`;
-			if (mcpServers.length === 0) {
-				info += `${theme.fg("dim", t("controller.session.noneConnected"))}\n`;
-			} else {
-				for (const name of mcpServers) {
-					const conn = this.ctx.mcpManager.getConnection(name);
-					const toolCount = conn?.tools?.length ?? 0;
-					info += `${theme.fg("dim", `${name}:`)} ${theme.fg("success", "connected")} ${theme.fg("dim", `(${toolCount} tools)`)}\n`;
-				}
-			}
-		}
-
 		this.ctx.chatContainer.addChild(new Spacer(1));
 		this.ctx.chatContainer.addChild(new Text(info, 1, 0));
 		this.ctx.ui.requestRender();

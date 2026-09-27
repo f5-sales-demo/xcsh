@@ -220,7 +220,6 @@ try {
 						}
 					: {}),
 				disableExtensionDiscovery: true,
-				enableMCP: false,
 				enableLsp: false,
 				rules: [],
 				contextFiles: [],

@@ -87,7 +87,7 @@ test("capture retains the delegation routing target but redacts unknown targets"
 	});
 });
 
-test.each(["experimentalFeature/list", "mcpServerStatus/list", "externalAgentConfig/detect"])(
+test.each(["experimentalFeature/list", "externalAgentConfig/detect"])(
 	"capture retains pinned request method %s",
 	method => {
 		expect(redactProtocolValue({ method }, "fixture")).toEqual({ method });

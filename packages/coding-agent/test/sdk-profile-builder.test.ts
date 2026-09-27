@@ -41,7 +41,6 @@ test.each([false, true])(
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			personProfileService: person,
 			machineProfileService: machine,

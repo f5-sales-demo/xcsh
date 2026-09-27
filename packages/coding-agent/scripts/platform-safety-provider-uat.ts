@@ -159,7 +159,6 @@ async function runPrompt(
 			"--no-session",
 			"--no-title",
 			"--no-memories",
-			"--no-mcp",
 			"--no-lsp",
 			"--tools=read,xcsh_api,aws_exec,az_exec,gcloud_exec",
 			prompt,

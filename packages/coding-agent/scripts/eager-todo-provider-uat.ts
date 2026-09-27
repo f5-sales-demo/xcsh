@@ -201,7 +201,6 @@ async function runScenario(target: ProviderTarget, scenario: Scenario, repetitio
 			"--no-session",
 			"--no-title",
 			"--no-memories",
-			"--no-mcp",
 			"--no-lsp",
 			"--no-skills",
 			"--no-rules",

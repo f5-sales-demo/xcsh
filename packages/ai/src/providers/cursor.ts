@@ -11,8 +11,8 @@ import type {
 	Context,
 	CursorExecHandlerResult,
 	CursorExecHandlers,
-	CursorMcpCall,
 	CursorShellStreamCallbacks,
+	CursorToolCall,
 	CursorToolResultHandler,
 	ImageContent,
 	Message,
@@ -225,7 +225,7 @@ function extractLogBytes(value: unknown): Uint8Array | null {
 	return null;
 }
 
-function decodeMcpArgsForLog(args?: Record<string, unknown>): Record<string, unknown> | undefined {
+function decodeToolArgsForLog(args?: Record<string, unknown>): Record<string, unknown> | undefined {
 	if (!args) {
 		return undefined;
 	}
@@ -234,7 +234,7 @@ function decodeMcpArgsForLog(args?: Record<string, unknown>): Record<string, unk
 	for (const [key, value] of Object.entries(args)) {
 		const bytes = extractLogBytes(value);
 		if (bytes) {
-			decoded[key] = decodeMcpArgValue(bytes);
+			decoded[key] = decodeToolArgValue(bytes);
 			mutated = true;
 			continue;
 		}
@@ -259,13 +259,13 @@ function decodeLogData(value: unknown): unknown {
 	const stripTypeName = typeof typeName === "string" && typeName.startsWith("agent.v1.");
 
 	if (typeName === "agent.v1.McpArgs") {
-		const decodedArgs = decodeMcpArgsForLog(record.args as Record<string, unknown> | undefined);
+		const decodedArgs = decodeToolArgsForLog(record.args as Record<string, unknown> | undefined);
 		const base = stripTypeName ? omitTypeName(record) : record;
 		return decodedArgs ? { ...base, args: decodedArgs } : base;
 	}
 	if (typeName === "agent.v1.McpToolCall") {
 		const argsRecord = record.args as Record<string, unknown> | undefined;
-		const decodedArgs = decodeMcpArgsForLog(argsRecord?.args as Record<string, unknown> | undefined);
+		const decodedArgs = decodeToolArgsForLog(argsRecord?.args as Record<string, unknown> | undefined);
 		const base = stripTypeName ? omitTypeName(record) : record;
 		if (decodedArgs && argsRecord) {
 			return { ...base, args: { ...argsRecord, args: decodedArgs } };
@@ -363,7 +363,7 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 				conversationState: cachedState,
 			});
 			conversationStateCache.set(conversationId, conversationState);
-			const requestContextTools = buildMcpToolDefinitions(context.tools);
+			const requestContextTools = buildCursorToolDefinitions(context.tools);
 
 			const baseUrl = model.baseUrl || CURSOR_API_URL;
 			h2Client = http2.connect(baseUrl);
@@ -569,7 +569,7 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 	return stream;
 };
 
-type ToolCallState = ToolCall & { index: number; partialJson?: string; kind: "mcp" | "todo_write" };
+type ToolCallState = ToolCall & { index: number; partialJson?: string; kind: "tool" | "todo_write" };
 
 interface BlockState {
 	currentTextBlock: (TextContent & { index: number }) | null;
@@ -1042,14 +1042,14 @@ async function handleExecServerMessage(
 		}
 		case "mcpArgs": {
 			const args = execMsg.message.value;
-			const mcpCall = decodeMcpCall(args);
+			const toolCall = decodeCursorToolCall(args);
 			const { execResult } = await resolveExecHandler(
-				mcpCall,
-				execHandlers?.mcp?.bind(execHandlers),
+				toolCall,
+				execHandlers?.tool?.bind(execHandlers),
 				onToolResult,
-				toolResult => buildMcpResultFromToolResult(mcpCall, toolResult),
-				_reason => buildMcpToolNotFoundResult(mcpCall),
-				error => buildMcpErrorResult(error),
+				toolResult => buildCursorToolResult(toolResult),
+				_reason => buildCursorToolNotFoundResult(toolCall),
+				error => buildCursorToolErrorResult(error),
 			);
 			sendExecClientMessage(h2Request, execMsg, "mcpResult", execResult);
 			return;
@@ -1652,7 +1652,7 @@ function parseToolArgsJson(text: string): unknown {
 	return text;
 }
 
-function decodeMcpArgValue(value: Uint8Array): unknown {
+function decodeToolArgValue(value: Uint8Array): unknown {
 	try {
 		const parsedValue = fromBinary(ValueSchema, value);
 		const jsonValue = toJson(ValueSchema, parsedValue) as JsonValue;
@@ -1665,27 +1665,27 @@ function decodeMcpArgValue(value: Uint8Array): unknown {
 	return parseToolArgsJson(text);
 }
 
-function decodeMcpArgsMap(args?: Record<string, Uint8Array>): Record<string, unknown> | undefined {
+function decodeToolArgsMap(args?: Record<string, Uint8Array>): Record<string, unknown> | undefined {
 	if (!args) {
 		return undefined;
 	}
 	const decoded: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(args)) {
-		decoded[key] = decodeMcpArgValue(value);
+		decoded[key] = decodeToolArgValue(value);
 	}
 	return decoded;
 }
 
-function decodeMcpCall(args: {
+function decodeCursorToolCall(args: {
 	name: string;
 	args: Record<string, Uint8Array>;
 	toolCallId: string;
 	providerIdentifier: string;
 	toolName: string;
-}): CursorMcpCall {
+}): CursorToolCall {
 	const decodedArgs: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(args.args ?? {})) {
-		decodedArgs[key] = decodeMcpArgValue(value);
+		decodedArgs[key] = decodeToolArgValue(value);
 	}
 	return {
 		name: args.name,
@@ -1733,9 +1733,9 @@ function buildTodoWriteArgs(toolCall: CursorUpdateTodosToolCall): {
 	};
 }
 
-function buildMcpResultFromToolResult(_mcpCall: CursorMcpCall, toolResult: ToolResultMessage) {
+function buildCursorToolResult(toolResult: ToolResultMessage) {
 	if (toolResult.isError) {
-		return buildMcpErrorResult(toolResultToText(toolResult) || "MCP tool failed");
+		return buildCursorToolErrorResult(toolResultToText(toolResult) || "Tool failed");
 	}
 	const content = toolResult.content.map(item => {
 		if (item.type === "image") {
@@ -1768,16 +1768,16 @@ function buildMcpResultFromToolResult(_mcpCall: CursorMcpCall, toolResult: ToolR
 	});
 }
 
-function buildMcpToolNotFoundResult(mcpCall: CursorMcpCall) {
+function buildCursorToolNotFoundResult(toolCall: CursorToolCall) {
 	return create(McpResultSchema, {
 		result: {
 			case: "toolNotFound",
-			value: create(McpToolNotFoundSchema, { name: mcpCall.toolName, availableTools: [] }),
+			value: create(McpToolNotFoundSchema, { name: toolCall.toolName, availableTools: [] }),
 		},
 	});
 }
 
-function buildMcpErrorResult(error: string) {
+function buildCursorToolErrorResult(error: string) {
 	return create(McpResultSchema, {
 		result: {
 			case: "error",
@@ -1854,7 +1854,7 @@ function processInteractionUpdate(
 					arguments: {},
 					index: output.content.length,
 					partialJson: "",
-					kind: "mcp",
+					kind: "tool",
 				};
 				output.content.push(block);
 				state.setToolCall(block);
@@ -1879,7 +1879,7 @@ function processInteractionUpdate(
 			}
 		}
 	} else if (updateCase === "toolCallDelta" || updateCase === "partialToolCall") {
-		if (state.currentToolCall?.kind === "mcp") {
+		if (state.currentToolCall?.kind === "tool") {
 			const delta = update.message.value.argsTextDelta || "";
 			state.currentToolCall.partialJson = `${state.currentToolCall.partialJson ?? ""}${delta}`;
 			state.currentToolCall.arguments = parseStreamingJson(state.currentToolCall.partialJson ?? "");
@@ -1889,8 +1889,8 @@ function processInteractionUpdate(
 	} else if (updateCase === "toolCallCompleted") {
 		if (state.currentToolCall) {
 			const toolCall = update.message.value.toolCall;
-			if (state.currentToolCall.kind === "mcp") {
-				const decodedArgs = decodeMcpArgsMap(toolCall?.mcpToolCall?.args?.args);
+			if (state.currentToolCall.kind === "tool") {
+				const decodedArgs = decodeToolArgsMap(toolCall?.mcpToolCall?.args?.args);
 				if (decodedArgs) {
 					state.currentToolCall.arguments = decodedArgs;
 				}
@@ -1943,7 +1943,7 @@ function createBlobId(data: Uint8Array): Uint8Array {
 
 const CURSOR_NATIVE_TOOL_NAMES = new Set(["bash", "read", "write", "delete", "ls", "grep", "lsp", "todo_write"]);
 
-function buildMcpToolDefinitions(tools: Tool[] | undefined): McpToolDefinition[] {
+function buildCursorToolDefinitions(tools: Tool[] | undefined): McpToolDefinition[] {
 	if (!tools || tools.length === 0) {
 		return [];
 	}

@@ -53,7 +53,7 @@ describe("/reload-plugins", () => {
 		finish();
 		expect(await pending).toBe(true);
 		expect(h.showStatus).toHaveBeenLastCalledWith(
-			"Plugin metadata and extension registrations refreshed. Commands, integrations, profile collectors, hooks, tools, skills, agents, advisories, and MCP metadata now use the latest discovered files. Running plugin processes were not restarted.",
+			"Plugin metadata and extension registrations refreshed. Commands, integrations, profile collectors, hooks, tools, skills, agents, and advisories now use the latest discovered files. Running plugin processes were not restarted.",
 		);
 		expect(h.showError).not.toHaveBeenCalled();
 	});

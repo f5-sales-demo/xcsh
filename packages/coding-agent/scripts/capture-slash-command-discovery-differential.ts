@@ -160,7 +160,6 @@ async function captureSide(
 					"--no-skills",
 					"--no-rules",
 					"--no-tools",
-					"--no-mcp",
 					"--no-lsp",
 					"--no-title",
 					"--no-memories",

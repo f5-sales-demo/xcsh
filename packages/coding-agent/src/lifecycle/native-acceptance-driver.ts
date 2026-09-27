@@ -330,7 +330,6 @@ function sessionProbeArgs(options: NativeLifecycleDriverOptions): string[] {
 		"--no-memories",
 		"--no-skills",
 		"--no-rules",
-		"--no-mcp",
 		"--no-lsp",
 		"--no-tools",
 	];

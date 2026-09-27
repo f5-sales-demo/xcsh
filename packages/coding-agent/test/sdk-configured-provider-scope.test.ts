@@ -85,7 +85,6 @@ describe("fallback model selection is scoped to configured providers", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 			});
 			try {

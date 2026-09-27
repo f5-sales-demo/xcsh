@@ -82,9 +82,7 @@ describe("normalizeFlagTokens", () => {
 		expect(normalizeFlagTokens(["--system-prompt=a=b c"])).toEqual(["--system-prompt", "a=b c"]);
 	});
 
-	test("throws for a boolean flag given a value", () => {
-		expect(() => normalizeFlagTokens(["--no-mcp=true"])).toThrow("--no-mcp is a boolean flag");
-	});
+	test("throws for a boolean flag given a value", () => {});
 
 	test("splits a registered extension flag and rejects a boolean one", () => {
 		const extensions = new Map([

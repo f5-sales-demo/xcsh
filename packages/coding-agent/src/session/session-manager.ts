@@ -187,13 +187,6 @@ export interface TtsrInjectionEntry extends SessionEntryBase {
 	injectedRules: string[];
 }
 
-/** Persisted MCP discovery selection state for a session branch. */
-export interface MCPToolSelectionEntry extends SessionEntryBase {
-	type: "mcp_tool_selection";
-	/** MCP tool names selected for visibility in discovery mode. */
-	selectedToolNames: string[];
-}
-
 /** Persisted active tool set for progressive loading (all registered tool sources). */
 export interface ToolSelectionEntry extends SessionEntryBase {
 	type: "tool_selection";
@@ -257,7 +250,6 @@ export type SessionEntry =
 	| CustomMessageEntry
 	| LabelEntry
 	| TtsrInjectionEntry
-	| MCPToolSelectionEntry
 	| ToolSelectionEntry
 	| SessionInitEntry
 	| ModeChangeEntry;
@@ -285,10 +277,6 @@ export interface SessionContext {
 	activeContextTenant?: string;
 	/** Names of TTSR rules that have been injected this session */
 	injectedTtsrRules: string[];
-	/** MCP tool names selected through discovery for this session branch. */
-	selectedMCPToolNames: string[];
-	/** Whether this branch contains an explicit persisted MCP selection entry. */
-	hasPersistedMCPToolSelection: boolean;
 	/** Active tool names restored for generalized progressive loading. */
 	selectedToolNames?: string[];
 	/** Whether this branch has a generalized tool_selection entry. */
@@ -588,8 +576,6 @@ export function buildSessionContext(
 			serviceTier: undefined,
 			models: {},
 			injectedTtsrRules: [],
-			selectedMCPToolNames: [],
-			hasPersistedMCPToolSelection: false,
 			selectedToolNames: [],
 			hasPersistedToolSelection: false,
 			mode: "none",
@@ -611,8 +597,6 @@ export function buildSessionContext(
 			serviceTier: undefined,
 			models: {},
 			injectedTtsrRules: [],
-			selectedMCPToolNames: [],
-			hasPersistedMCPToolSelection: false,
 			selectedToolNames: [],
 			hasPersistedToolSelection: false,
 			mode: "none",
@@ -636,8 +620,6 @@ export function buildSessionContext(
 	let activeContextTenant: string | undefined;
 	let compaction: CompactionEntry | null = null;
 	const injectedTtsrRulesSet = new Set<string>();
-	let selectedMCPToolNames: string[] = [];
-	let hasPersistedMCPToolSelection = false;
 	let selectedToolNames: string[] = [];
 	let hasPersistedToolSelection = false;
 	let mode = "none";
@@ -670,9 +652,6 @@ export function buildSessionContext(
 			for (const ruleName of entry.injectedRules) {
 				injectedTtsrRulesSet.add(ruleName);
 			}
-		} else if (entry.type === "mcp_tool_selection") {
-			selectedMCPToolNames = [...entry.selectedToolNames];
-			hasPersistedMCPToolSelection = true;
 		} else if (entry.type === "tool_selection") {
 			selectedToolNames = [...entry.selectedToolNames];
 			hasPersistedToolSelection = true;
@@ -773,8 +752,6 @@ export function buildSessionContext(
 		activeContextName,
 		activeContextTenant,
 		injectedTtsrRules,
-		selectedMCPToolNames,
-		hasPersistedMCPToolSelection,
 		selectedToolNames,
 		hasPersistedToolSelection,
 		mode,
@@ -2635,23 +2612,6 @@ export class SessionManager {
 	// =========================================================================
 	// TTSR (Time Traveling Stream Rules)
 	// =========================================================================
-
-	/**
-	 * Append an MCP tool selection entry recording the discovery-selected MCP tools.
-	 * @param selectedToolNames MCP tool names selected for this branch
-	 * @returns Entry id
-	 */
-	appendMCPToolSelection(selectedToolNames: string[]): string {
-		const entry: MCPToolSelectionEntry = {
-			type: "mcp_tool_selection",
-			id: generateId(this.#byId),
-			parentId: this.#leafId,
-			timestamp: new Date().toISOString(),
-			selectedToolNames: [...selectedToolNames],
-		};
-		this.#appendEntry(entry);
-		return entry.id;
-	}
 
 	appendToolSelection(selectedToolNames: string[]): string {
 		const entry: ToolSelectionEntry = {

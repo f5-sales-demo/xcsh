@@ -12,7 +12,6 @@ import type {
 	GrepResult,
 	LsArgs,
 	LsResult,
-	McpResult,
 	ReadArgs,
 	ReadResult,
 	ShellArgs,
@@ -222,7 +221,7 @@ export interface StreamOptions {
 	 * Set to 0 to disable the first-event watchdog for this request.
 	 */
 	streamFirstEventTimeoutMs?: number;
-	/** Cursor exec/MCP tool handlers (cursor-agent only). */
+	/** Cursor generic execution handlers (cursor-agent only). */
 	execHandlers?: CursorExecHandlers;
 }
 
@@ -428,7 +427,8 @@ export type CursorToolResultHandler = (
 	result: ToolResultMessage,
 ) => ToolResultMessage | undefined | Promise<ToolResultMessage | undefined>;
 
-export interface CursorMcpCall {
+/** A generic tool request transported by the Cursor agent protocol. */
+export interface CursorToolCall {
 	name: string;
 	providerIdentifier: string;
 	toolName: string;
@@ -454,7 +454,7 @@ export interface CursorExecHandlers {
 		callbacks: CursorShellStreamCallbacks,
 	) => Promise<CursorExecHandlerResult<ShellResult>>;
 	diagnostics?: (args: DiagnosticsArgs) => Promise<CursorExecHandlerResult<DiagnosticsResult>>;
-	mcp?: (call: CursorMcpCall) => Promise<CursorExecHandlerResult<McpResult>>;
+	tool?: (call: CursorToolCall) => Promise<CursorExecHandlerResult<unknown>>;
 	onToolResult?: CursorToolResultHandler;
 }
 

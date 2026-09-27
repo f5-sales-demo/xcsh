@@ -9,7 +9,6 @@ import type { AgentEvent, AgentMessage, ResolvedThinkingLevel, ThinkingLevel } f
 import type { Model } from "@f5-sales-demo/pi-ai";
 import type { AgentSession, AgentSessionEvent, AuthStorage, SessionStats } from "@f5-sales-demo/xcsh";
 import {
-	type CreateAgentSessionResult,
 	createAgentSession,
 	discoverAuthStorage,
 	type ModelRegistry,
@@ -75,7 +74,6 @@ export async function discoverSharedInfra(options: DiscoverSharedInfraOptions = 
  */
 export class InProcessClient {
 	#session: AgentSession | null = null;
-	#sessionResult: CreateAgentSessionResult | null = null;
 	#eventListeners: InProcessEventListener[] = [];
 	#unsubscribe: (() => void) | null = null;
 	#options: InProcessClientOptions;
@@ -98,7 +96,6 @@ export class InProcessClient {
 				: undefined,
 			toolNames: this.#options.tools ?? ["read", "edit", "write"],
 			hasUI: false,
-			enableMCP: false,
 			enableLsp: false,
 			skills: [],
 			rules: [],
@@ -106,7 +103,6 @@ export class InProcessClient {
 			disableExtensionDiscovery: true,
 		});
 
-		this.#sessionResult = result;
 		this.#session = result.session;
 
 		// Subscribe to events and forward to listeners
@@ -188,10 +184,6 @@ export class InProcessClient {
 			await this.#session.dispose();
 			this.#session = null;
 		}
-		if (this.#sessionResult?.mcpManager) {
-			await (this.#sessionResult.mcpManager as { dispose?: () => Promise<void> }).dispose?.();
-		}
-		this.#sessionResult = null;
 		this.#eventListeners = [];
 	}
 

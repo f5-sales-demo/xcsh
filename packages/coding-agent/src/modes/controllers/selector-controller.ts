@@ -897,14 +897,6 @@ export class SelectorController {
 				this.ctx.ui.requestRender();
 				break;
 
-			// MCP update injection - live subscribe/unsubscribe
-			case "mcp.notifications":
-				this.ctx.mcpManager?.setNotificationsEnabled(value as boolean);
-				break;
-			case "mcp.enabled":
-				await this.ctx.mcpRuntime?.setEnabled(value === true);
-				break;
-
 			// All other settings are handled by the definitions (get/set on SettingsManager)
 			// No additional side effects needed
 		}

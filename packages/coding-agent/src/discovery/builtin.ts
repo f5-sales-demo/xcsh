@@ -4,7 +4,7 @@
  * Primary provider for OMP native configs. Supports all capabilities.
  */
 import * as path from "node:path";
-import { logger, parseFrontmatter, tryParseJson } from "@f5-sales-demo/pi-utils";
+import { parseFrontmatter, tryParseJson } from "@f5-sales-demo/pi-utils";
 import { registerProvider } from "../capability";
 import { type ContextFile, contextFileCapability } from "../capability/context-file";
 import { type Extension, type ExtensionManifest, extensionCapability } from "../capability/extension";
@@ -12,7 +12,6 @@ import { type ExtensionModule, extensionModuleCapability } from "../capability/e
 import { readDirEntries, readFile } from "../capability/fs";
 import { type Hook, hookCapability } from "../capability/hook";
 import { type Instruction, instructionCapability } from "../capability/instruction";
-import { type MCPServer, mcpCapability } from "../capability/mcp";
 import { type Prompt, promptCapability } from "../capability/prompt";
 import { type Rule, ruleCapability } from "../capability/rule";
 import { type Settings, settingsCapability } from "../capability/settings";
@@ -26,7 +25,6 @@ import {
 	buildRuleFromMarkdown,
 	createSourceMeta,
 	discoverExtensionModulePaths,
-	expandEnvVarsDeep,
 	getExtensionNameFromPath,
 	loadFilesFromDir,
 	SOURCE_PATHS,
@@ -92,133 +90,6 @@ async function findNearestProjectConfigDir(
 	}
 	return null;
 }
-
-// MCP
-async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> {
-	const items: MCPServer[] = [];
-	const warnings: string[] = [];
-
-	const parseMcpServers = (content: string, path: string, level: "user" | "project"): MCPServer[] => {
-		const result: MCPServer[] = [];
-		const data = tryParseJson<{ mcpServers?: Record<string, unknown> }>(content);
-		if (!data?.mcpServers) return result;
-
-		const expanded = expandEnvVarsDeep(data.mcpServers);
-		for (const [serverName, config] of Object.entries(expanded)) {
-			const serverConfig = config as Record<string, unknown>;
-
-			// Validate enabled: coerce string "true"/"false", warn on other types
-			let enabled: boolean | undefined;
-			if (serverConfig.enabled === undefined || serverConfig.enabled === null) {
-				enabled = undefined;
-			} else if (typeof serverConfig.enabled === "boolean") {
-				enabled = serverConfig.enabled;
-			} else if (typeof serverConfig.enabled === "string") {
-				const lower = serverConfig.enabled.toLowerCase();
-				if (lower === "false" || lower === "0") enabled = false;
-				else if (lower === "true" || lower === "1") enabled = true;
-				else {
-					logger.warn(`MCP server "${serverName}": invalid enabled value "${serverConfig.enabled}", ignoring`);
-					enabled = undefined;
-				}
-			} else {
-				logger.warn(`MCP server "${serverName}": invalid enabled type ${typeof serverConfig.enabled}, ignoring`);
-				enabled = undefined;
-			}
-
-			// Validate timeout: coerce numeric strings, warn on invalid
-			let timeout: number | undefined;
-			if (serverConfig.timeout === undefined || serverConfig.timeout === null) {
-				timeout = undefined;
-			} else if (typeof serverConfig.timeout === "number") {
-				if (Number.isFinite(serverConfig.timeout) && serverConfig.timeout > 0) {
-					timeout = serverConfig.timeout;
-				} else {
-					logger.warn(`MCP server "${serverName}": invalid timeout ${serverConfig.timeout}, ignoring`);
-					timeout = undefined;
-				}
-			} else if (typeof serverConfig.timeout === "string") {
-				const parsed = Number(serverConfig.timeout);
-				if (Number.isFinite(parsed) && parsed > 0) {
-					timeout = parsed;
-				} else {
-					logger.warn(`MCP server "${serverName}": invalid timeout "${serverConfig.timeout}", ignoring`);
-					timeout = undefined;
-				}
-			} else {
-				logger.warn(`MCP server "${serverName}": invalid timeout type ${typeof serverConfig.timeout}, ignoring`);
-				timeout = undefined;
-			}
-
-			result.push({
-				name: serverName,
-				enabled,
-				timeout,
-				command: serverConfig.command as string | undefined,
-				args: serverConfig.args as string[] | undefined,
-				env: serverConfig.env as Record<string, string> | undefined,
-				cwd: serverConfig.cwd as string | undefined,
-				url: serverConfig.url as string | undefined,
-				headers: serverConfig.headers as Record<string, string> | undefined,
-				auth: serverConfig.auth as
-					| {
-							type: "oauth" | "apikey";
-							credentialId?: string;
-							tokenUrl?: string;
-							clientId?: string;
-							clientSecret?: string;
-					  }
-					| undefined,
-				oauth: serverConfig.oauth as
-					| {
-							clientId?: string;
-							clientSecret?: string;
-							redirectUri?: string;
-							callbackPort?: number;
-							callbackPath?: string;
-					  }
-					| undefined,
-				transport: serverConfig.type as "stdio" | "sse" | "http" | undefined,
-				_source: createSourceMeta(PROVIDER_ID, path, level),
-			});
-		}
-		return result;
-	};
-
-	const paths = [
-		{ path: path.join(ctx.cwd, PATHS.projectDir, "mcp.json"), level: "project" as const },
-		{ path: path.join(ctx.cwd, PATHS.projectDir, ".mcp.json"), level: "project" as const },
-		{ path: path.join(ctx.home, PATHS.userAgent, "mcp.json"), level: "user" as const },
-		{ path: path.join(ctx.home, PATHS.userAgent, ".mcp.json"), level: "user" as const },
-	];
-
-	const contents = await Promise.allSettled(
-		paths.map(async p => {
-			const content = await readFile(p.path);
-			if (content) {
-				return { path: p.path, content, level: p.level };
-			}
-			return null;
-		}),
-	);
-
-	for (const result of contents) {
-		if (result.status === "fulfilled" && result.value) {
-			const { path, content, level } = result.value;
-			items.push(...parseMcpServers(content, path, level));
-		}
-	}
-
-	return { items, warnings };
-}
-
-registerProvider<MCPServer>(mcpCapability.id, {
-	id: PROVIDER_ID,
-	displayName: SOURCE_LABEL,
-	description: DESCRIPTION,
-	priority: PRIORITY,
-	load: loadMCPServers,
-});
 
 // System Prompt (SYSTEM.md)
 async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemPrompt>> {

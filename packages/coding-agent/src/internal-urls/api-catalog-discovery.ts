@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { rmSync } from "node:fs";
-import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
@@ -60,8 +60,9 @@ async function getQmdStore(databasePath: string): Promise<QmdStore> {
 	let store = qmdStores.get(databasePath);
 	if (!store) {
 		store = (async () => {
-			// QMD's FTS query path still needs a writable SQLite runtime. Search a
-			// disposable copy so the checksum-pinned cache stays immutable.
+			// QMD's FTS query path can create SQLite sidecars even on a read-only
+			// connection. Search a disposable copy so the checksum-pinned cache
+			// remains byte-immutable on every supported platform.
 			const runtimeRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-api-catalog-runtime-"));
 			const runtimeDatabasePath = path.join(runtimeRoot, "index.sqlite");
 			try {
@@ -183,7 +184,7 @@ async function verifiedPrebuiltIndexPath(options: QmdBm25CatalogDiscoveryOptions
 	const databasePath = path.join(indexDirectory, "index.sqlite");
 	try {
 		const bytes = await Bun.file(databasePath).bytes();
-		if (sha256(bytes) === options.prebuiltIndex.sqliteSha256) return databasePath;
+		if (sha256(bytes) === options.prebuiltIndex.sqliteSha256) return await realpath(databasePath);
 	} catch {
 		// A missing or corrupt cache is repaired only from the embedded immutable asset.
 	}
@@ -266,7 +267,7 @@ export async function primeQmdBm25CatalogDiscovery(options: QmdBm25CatalogDiscov
 	await getQmdStore(await extractPrebuiltQmdBm25Index(options));
 }
 
-/** Model-free in-process QMD BM25 ranking with no CLI, MCP, model, or fallback path. */
+/** Model-free in-process QMD BM25 ranking with no subprocess, model, or fallback path. */
 export async function rankQmdBm25CatalogDiscovery(
 	term: string,
 	options: QmdBm25CatalogDiscoveryOptions,

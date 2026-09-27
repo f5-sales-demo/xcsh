@@ -267,7 +267,6 @@ export const SETTINGS_SCHEMA = {
 			"cline",
 			"github",
 			"vscode",
-			"mcp-json",
 			"ssh-json",
 		] as string[],
 	},
@@ -1771,60 +1770,6 @@ export const SETTINGS_SCHEMA = {
 			label: "Bash Verbose",
 			description:
 				"Show standard command output panel. When disabled, shows a compact single-line summary with status indicator.",
-		},
-	},
-
-	// MCP
-	"mcp.enabled": {
-		type: "boolean",
-		default: false,
-		scope: "user",
-		ui: { tab: "tools", label: "MCP", description: "Enable MCP servers for new sessions" },
-	},
-
-	"mcp.enableProjectConfig": {
-		type: "boolean",
-		default: true,
-		ui: { tab: "tools", label: "MCP Project Config", description: "Load .mcp.json/mcp.json from project root" },
-	},
-
-	"mcp.discoveryMode": {
-		type: "boolean",
-		default: false,
-		ui: {
-			tab: "tools",
-			label: "MCP Tool Discovery",
-			description: "Hide MCP tools by default and expose them through a tool discovery tool",
-		},
-	},
-
-	"mcp.discoveryDefaultServers": {
-		type: "array",
-		default: [] as string[],
-		ui: {
-			tab: "tools",
-			label: "MCP Discovery Default Servers",
-			description: "Keep MCP tools from these servers visible while discovery mode hides other MCP tools",
-		},
-	},
-
-	"mcp.notifications": {
-		type: "boolean",
-		default: false,
-		ui: {
-			tab: "tools",
-			label: "MCP Update Injection",
-			description: "Inject MCP resource updates into the agent conversation",
-		},
-	},
-
-	"mcp.notificationDebounceMs": {
-		type: "number",
-		default: 500,
-		ui: {
-			tab: "tools",
-			label: "MCP Notification Debounce",
-			description: "Debounce window for MCP resource update notifications before injecting into conversation",
 		},
 	},
 

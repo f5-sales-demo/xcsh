@@ -79,7 +79,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -112,7 +111,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -149,7 +147,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -212,7 +209,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -268,7 +264,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -319,7 +314,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -377,7 +371,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		const sessionAManager = sessionA.sessionManager;
@@ -410,7 +403,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		try {
@@ -437,7 +429,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		try {
@@ -469,7 +460,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		try {
@@ -500,7 +490,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -553,7 +542,6 @@ describe("createAgentSession context tracking", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 			});
 			try {
@@ -589,7 +577,6 @@ describe("createAgentSession context tracking", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		try {
@@ -611,7 +598,6 @@ describe("createAgentSession context tracking", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 			}),
 		).rejects.toThrow("Context 'missing' not found");
@@ -635,7 +621,6 @@ describe("createAgentSession context tracking", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 			});
 			try {

@@ -6,17 +6,13 @@
 import path from "node:path";
 import type { AgentEvent, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { logger, prompt, untilAborted } from "@f5-sales-demo/pi-utils";
-import type { TSchema } from "@sinclair/typebox";
 import Ajv, { type ValidateFunction } from "ajv";
 import { ModelRegistry } from "../config/model-registry";
 import { resolveModelOverride } from "../config/model-resolver";
 import type { PromptTemplate } from "../config/prompt-templates";
 import { Settings } from "../config/settings";
 import { SETTINGS_SCHEMA, type SettingPath } from "../config/settings-schema";
-import type { CustomTool } from "../extensibility/custom-tools/types";
 import type { Skill } from "../extensibility/skills";
-import { callTool } from "../mcp/client";
-import type { MCPManager } from "../mcp/manager";
 import submitReminderTemplate from "../prompts/system/subagent-submit-reminder.md" with { type: "text" };
 import subagentSystemPromptTemplate from "../prompts/system/subagent-system-prompt.md" with { type: "text" };
 import { createAgentSession, discoverAuthStorage } from "../sdk";
@@ -45,7 +41,6 @@ import {
 /** Opaque handle for the fuzzy-search database (removed from pi-natives in upstream). */
 type SearchDb = unknown;
 
-const MCP_CALL_TIMEOUT_MS = 60_000;
 const ajv = new Ajv({ allErrors: false, strict: false, logger: false });
 
 /** Agent event types to forward for progress tracking. */
@@ -74,38 +69,6 @@ function normalizeModelPatterns(value: string | string[] | undefined): string[] 
 		.split(",")
 		.map(entry => entry.trim())
 		.filter(Boolean);
-}
-
-function withAbortTimeout<T>(promise: Promise<T>, timeoutMs: number, signal?: AbortSignal): Promise<T> {
-	if (signal?.aborted) {
-		return Promise.reject(new ToolAbortError());
-	}
-
-	const { promise: wrappedPromise, resolve, reject } = Promise.withResolvers<T>();
-	let settled = false;
-	const timeoutId = setTimeout(() => {
-		if (settled) return;
-		settled = true;
-		reject(new Error(`MCP tool call timed out after ${timeoutMs}ms`));
-	}, timeoutMs);
-
-	const onAbort = () => {
-		if (settled) return;
-		settled = true;
-		clearTimeout(timeoutId);
-		reject(new ToolAbortError());
-	};
-
-	if (signal) {
-		signal.addEventListener("abort", onAbort, { once: true });
-	}
-
-	promise.then(resolve, reject).finally(() => {
-		if (signal) signal.removeEventListener("abort", onAbort);
-		clearTimeout(timeoutId);
-	});
-
-	return wrappedPromise;
 }
 
 function getReportFindingKey(value: unknown): string | null {
@@ -138,8 +101,6 @@ export interface ExecutorOptions {
 	/** Parent task recursion depth (0 = top-level, 1 = first child, etc.) */
 	taskDepth?: number;
 	enableLsp?: boolean;
-	/** Resolved parent MCP policy. Omitted preserves legacy embedder behavior. */
-	enableMCP?: boolean;
 	signal?: AbortSignal;
 	onProgress?: (progress: AgentProgress) => void;
 	sessionFile?: string | null;
@@ -152,7 +113,6 @@ export interface ExecutorOptions {
 	skills?: Skill[];
 	promptTemplates?: PromptTemplate[];
 	preparedSystemPromptInputs?: PreparedSystemPromptInputs;
-	mcpManager?: MCPManager;
 	authStorage?: AuthStorage;
 	modelRegistry?: ModelRegistry;
 	searchDb?: SearchDb;
@@ -404,78 +364,6 @@ function getUsageTokens(usage: unknown): number {
 	const cacheWrite = firstNumberField(record, ["cacheWrite", "cache_write", "cacheWriteTokens"]) ?? 0;
 
 	return input + output + cacheRead + cacheWrite;
-}
-
-/**
- * Create proxy tools that reuse the parent's MCP connections.
- */
-function createMCPProxyTools(mcpManager: MCPManager): CustomTool<TSchema>[] {
-	return mcpManager.getTools().map(tool => {
-		const mcpTool = tool as { mcpToolName?: string; mcpServerName?: string };
-		return {
-			name: tool.name,
-			label: tool.label ?? tool.name,
-			description: tool.description ?? "",
-			parameters: tool.parameters as TSchema,
-			execute: async (_toolCallId, params, _onUpdate, _ctx, signal) => {
-				if (signal?.aborted) {
-					throw new ToolAbortError();
-				}
-				const serverName = mcpTool.mcpServerName ?? "";
-				const mcpToolName = mcpTool.mcpToolName ?? "";
-				try {
-					const result = await withAbortTimeout(
-						(async () => {
-							const connection = await mcpManager.waitForConnection(serverName);
-							return callTool(connection, mcpToolName, params as Record<string, unknown>, { signal });
-						})(),
-						MCP_CALL_TIMEOUT_MS,
-						signal,
-					);
-					return {
-						content: (result.content ?? []).map(item =>
-							item.type === "text"
-								? { type: "text" as const, text: item.text ?? "" }
-								: { type: "text" as const, text: JSON.stringify(item) },
-						),
-						details: { serverName, mcpToolName, isError: result.isError },
-					};
-				} catch (error) {
-					if (error instanceof ToolAbortError) {
-						throw error;
-					}
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: `MCP error: ${error instanceof Error ? error.message : String(error)}`,
-							},
-						],
-						details: { serverName, mcpToolName, isError: true },
-					};
-				}
-			},
-		};
-	});
-}
-
-function resolveChildMcpPolicy(options: Pick<ExecutorOptions, "enableMCP" | "mcpManager">): {
-	enableMCP: boolean;
-	mcpProxyTools: CustomTool<TSchema>[];
-} {
-	// Only explicit enablement grants child access, even when an embedder
-	// supplied a manager. A manager is a connection cache, not permission.
-	if (options.enableMCP !== true) {
-		return { enableMCP: false, mcpProxyTools: [] };
-	}
-
-	// Enabled parents reuse their existing connections. Child discovery would
-	// start duplicate processes and can produce a different tool surface.
-	if (options.mcpManager) {
-		return { enableMCP: false, mcpProxyTools: createMCPProxyTools(options.mcpManager) };
-	}
-
-	return { enableMCP: true, mcpProxyTools: [] };
 }
 
 function createSubagentSettings(baseSettings: Settings): Settings {
@@ -999,8 +887,6 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				? await SessionManager.open(sessionFile)
 				: SessionManager.inMemory(worktree ?? cwd);
 
-			const { enableMCP, mcpProxyTools } = resolveChildMcpPolicy(options);
-
 			const { normalized: normalizedOutputSchema } = normalizeOutputSchema(outputSchema);
 
 			const { session } = await createAgentSession({
@@ -1034,8 +920,6 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				parentTaskPrefix: id,
 				enableLsp: lspEnabled,
 				skipPythonPreflight,
-				enableMCP,
-				customTools: mcpProxyTools,
 			});
 
 			activeSession = session;

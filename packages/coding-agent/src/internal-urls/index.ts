@@ -1,5 +1,5 @@
 /**
- * Internal URL routing system for internal protocols like agent://, memory://, skill://, mcp://, and local://.
+ * Internal URL routing system for protocols like agent://, memory://, skill://, and local://.
  *
  * This module provides a unified way to resolve internal URLs without
  * exposing filesystem paths to the agent.
@@ -34,7 +34,6 @@ export * from "./documentation-snapshot";
 export * from "./jobs-protocol";
 export * from "./json-query";
 export * from "./local-protocol";
-export * from "./mcp-protocol";
 export * from "./memory-protocol";
 export * from "./parse";
 export * from "./plugin-resolve";

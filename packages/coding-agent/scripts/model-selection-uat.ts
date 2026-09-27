@@ -205,7 +205,7 @@ try {
 	const environment = values.live
 		? ""
 		: `env -i PATH=${quote([...new Set([resolve(Bun.which("bun")!, ".."), resolve(Bun.which("xcsh")!, ".."), "/usr/local/bin", "/usr/bin", "/bin"])].join(":"))} HOME=${quote(profile)} TERM=xterm-256color HERDR_ENV=1 PI_CODING_AGENT_DIR=${quote(agentDir)} `;
-	const launchCommand = `cd ${quote(root)} && ${environment}${launch} --no-mcp --no-lsp --no-extensions --no-skills --no-memories --no-title`;
+	const launchCommand = `cd ${quote(root)} && ${environment}${launch} --no-lsp --no-extensions --no-skills --no-memories --no-title`;
 	await herdr("pane", "run", pane, launchCommand + (values.live ? " --no-session" : " --model uat-cloud-a/uat-model"));
 	await Bun.sleep(1500);
 	await wait("ready", text => text.includes("0%"), 45000);

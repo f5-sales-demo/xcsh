@@ -10,7 +10,6 @@ import type { InternalUrlRouter } from "../internal-urls";
 import { getPreludeDocs, resetPreludeDocsCache, warmPythonEnvironment } from "../ipy/executor";
 import { checkPythonKernelAvailability } from "../ipy/kernel";
 import { LspTool } from "../lsp";
-import type { DiscoverableMCPSearchIndex, DiscoverableMCPTool } from "../mcp/discoverable-tool-metadata";
 import type { PlanModeState } from "../plan-mode/state";
 import type { CustomMessage } from "../session/messages";
 import type { ToolChoiceQueue } from "../session/tool-choice-queue";
@@ -27,6 +26,7 @@ import { CancelJobTool } from "./cancel-job";
 import { CatalogWorkflowRunnerTool } from "./catalog-workflow-runner";
 import { type CheckpointState, CheckpointTool, RewindTool } from "./checkpoint";
 import { DebugTool } from "./debug";
+import type { DiscoverableTool, DiscoverableToolSearchIndex } from "./discoverable-tool-metadata";
 import { DisplayMediaTool } from "./display-media";
 import { FindTool } from "./find";
 import { GetPageContextTool } from "./get-page-context";
@@ -54,11 +54,7 @@ import { WriteTool } from "./write";
 import { XcshApiTool } from "./xcsh-api";
 import { XcshContextTool } from "./xcsh-context";
 
-// Exa MCP tools (22 tools)
-
 export * from "../edit";
-export * from "../exa";
-export type * from "../exa/types";
 export * from "../lsp";
 export * from "../session/streaming-output";
 export * from "../task";
@@ -104,7 +100,7 @@ export type ContextFileEntry = {
 	depth?: number;
 };
 
-export type { DiscoverableMCPTool } from "../mcp/discoverable-tool-metadata";
+export type { DiscoverableTool } from "./discoverable-tool-metadata";
 
 /** Session context for tool factories */
 export interface ToolSession {
@@ -138,8 +134,6 @@ export interface ToolSession {
 	readonly preparedSystemPromptInputs?: import("../system-prompt").PreparedSystemPromptInputs;
 	/** Whether LSP integrations are enabled */
 	enableLsp?: boolean;
-	/** Resolved MCP policy for this session. */
-	enableMCP?: boolean;
 	/** Whether an edit-capable tool is available in this session (controls hashline output) */
 	hasEditTool?: boolean;
 	/** Event bus for tool/extension communication */
@@ -176,9 +170,7 @@ export interface ToolSession {
 	authStorage?: import("../session/auth-storage").AuthStorage;
 	/** Model registry for passing to subagents (avoids re-discovery) */
 	modelRegistry?: import("../config/model-registry").ModelRegistry;
-	/** MCP manager for proxying MCP calls through parent */
-	mcpManager?: import("../mcp/manager").MCPManager;
-	/** Internal URL router for protocols like agent://, skill://, and mcp:// */
+	/** Internal URL router for built-in protocols. */
 	internalRouter?: InternalUrlRouter;
 	/** Agent output manager for unique agent:// IDs across task invocations */
 	agentOutputManager?: AgentOutputManager;
@@ -198,20 +190,10 @@ export interface ToolSession {
 	getTodoPhases?: () => TodoPhase[];
 	/** Replace cached todo phases for this session. */
 	setTodoPhases?: (phases: TodoPhase[]) => void;
-	/** Whether MCP tool discovery is active for this session. */
-	isMCPDiscoveryEnabled?: () => boolean;
-	/** Get hidden-but-discoverable MCP tools for search_tool_bm25 prompts and fallbacks. */
-	getDiscoverableMCPTools?: () => DiscoverableMCPTool[];
-	/** Get the cached discoverable MCP search index for search_tool_bm25 execution. */
-	getDiscoverableMCPSearchIndex?: () => DiscoverableMCPSearchIndex;
-	/** Get MCP tools activated by prior search_tool_bm25 calls. */
-	getSelectedMCPToolNames?: () => string[];
-	/** Merge MCP tool selections into the active session tool set. */
-	activateDiscoveredMCPTools?: (toolNames: string[]) => Promise<string[]>;
-	/** Search metadata for every deferred built-in, extension, and MCP tool. */
-	getDiscoverableTools?: () => DiscoverableMCPTool[];
+	/** Search metadata for every deferred registered tool. */
+	getDiscoverableTools?: () => DiscoverableTool[];
 	/** Cached generalized deferred-tool search index. */
-	getDiscoverableToolSearchIndex?: () => DiscoverableMCPSearchIndex;
+	getDiscoverableToolSearchIndex?: () => DiscoverableToolSearchIndex;
 	/** Activate deferred tools from any registered source. */
 	activateDiscoveredTools?: (toolNames: string[]) => Promise<string[]>;
 	/** Names currently advertised to the model. */
@@ -428,10 +410,7 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 		if (name === "notebook") return session.settings.get("notebook.enabled");
 		if (name === "inspect_image") return session.settings.get("inspect_image.enabled");
 		if (name === "web_search") return session.settings.get("web_search.enabled");
-		if (name === "search_tool_bm25")
-			return (
-				session.settings.get("mcp.discoveryMode") || session.settings.get("context.loadingMode") === "progressive"
-			);
+		if (name === "search_tool_bm25") return session.settings.get("context.loadingMode") === "progressive";
 		if (name === "calc") return session.settings.get("calc.enabled");
 		if (name === "browser") return session.settings.get("browser.enabled");
 		if (name === "checkpoint" || name === "rewind") return session.settings.get("checkpoint.enabled");

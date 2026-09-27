@@ -70,7 +70,6 @@ class Terminal {
 			"--extension",
 			"/provider.ts",
 			"--no-extensions",
-			"--no-mcp",
 			"--no-lsp",
 			"--no-skills",
 			"--no-memories",

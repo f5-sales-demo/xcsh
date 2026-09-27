@@ -134,15 +134,6 @@ describe("Settings", () => {
 		expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
 	});
 
-	it("keeps MCP disabled by default and ignores project attempts to enable it", async () => {
-		await Bun.write(path.join(projectDir, ".xcsh", "settings.json"), JSON.stringify({ mcp: { enabled: true } }));
-
-		const settings = await Settings.init({ cwd: projectDir, agentDir });
-
-		expect(settings.get("mcp.enabled")).toBe(false);
-		expect(settings.inspectScopes("mcp.enabled").projectValue).toBe(true);
-	});
-
 	it("persists the independent LiteLLM context tier", async () => {
 		const settings = await Settings.init({ cwd: projectDir, agentDir });
 		expect(settings.get("providers.litellmContextTier")).toBe("standard");

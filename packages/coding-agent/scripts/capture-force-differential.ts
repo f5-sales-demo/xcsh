@@ -91,7 +91,6 @@ async function captureCandidate(
 					"--no-rules",
 					"--tools",
 					"read",
-					"--no-mcp",
 					"--no-lsp",
 					"--no-title",
 					"--no-memories",

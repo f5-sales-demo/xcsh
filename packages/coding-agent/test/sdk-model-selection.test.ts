@@ -64,7 +64,6 @@ describe("createAgentSession deferred model pattern resolution", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			modelPattern,
 		};
@@ -112,7 +111,6 @@ describe("createAgentSession deferred model pattern resolution", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			modelPattern: "agent-dir-provider/agent-dir-model",
 		});
@@ -257,7 +255,6 @@ describe("createAgentSession deferred model pattern resolution", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 			});
 
