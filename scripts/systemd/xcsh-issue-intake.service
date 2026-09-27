@@ -3,5 +3,5 @@ Description=Poll xcsh GitHub issues through paired Herdr Codex CLI sessions
 [Service]
 Type=oneshot
 WorkingDirectory=/data/robin-GIT/xcsh
-Environment=PATH=/home/robin/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 /data/robin-GIT/xcsh/scripts/issue_intake_worker.py
