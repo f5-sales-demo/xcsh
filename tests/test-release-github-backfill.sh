@@ -191,17 +191,27 @@ release_json() {
 
 initial_release_list() {
   case "$scenario" in
-    resume | resume-mismatch)
+    resume | resume-digest-mismatch | resume-size-mismatch | resume-state-mismatch)
       local file="$assets_dir/pi_natives.darwin-arm64.node"
       local digest="sha256:$(file_sha256 "$file")"
-      if [ "$scenario" = "resume-mismatch" ]; then
+      local size
+      local state=uploaded
+      size=$(file_size "$file")
+      if [ "$scenario" = "resume-digest-mismatch" ]; then
         digest="sha256:$(printf 'f%.0s' {1..64})"
+      fi
+      if [ "$scenario" = "resume-size-mismatch" ]; then
+        size=$((size + 1))
+      fi
+      if [ "$scenario" = "resume-state-mismatch" ]; then
+        state=new
       fi
       jq -cn \
         --arg tag "$tag" \
-        --argjson size "$(file_size "$file")" \
+        --argjson size "$size" \
         --arg digest "$digest" \
-        '[{id: 101, tag_name: $tag, draft: true, prerelease: false, immutable: false, assets: [{name: "pi_natives.darwin-arm64.node", state: "uploaded", size: $size, digest: $digest}]}]'
+        --arg state "$state" \
+        '[{id: 101, tag_name: $tag, draft: true, prerelease: false, immutable: false, assets: [{name: "pi_natives.darwin-arm64.node", state: $state, size: $size, digest: $digest}]}]'
       ;;
     *)
       printf '[]\n'
@@ -354,9 +364,12 @@ test ! -e "$behavior_root/verified-resume/attempts-pi_natives.darwin-arm64.node"
 grep -Fq 'Already verified: pi_natives.darwin-arm64.node' "$behavior_root/verified-resume/output" ||
   fail "verified existing asset was not reported as resumed"
 
-run_uploader_case mismatched-resume resume-mismatch 4 0 || fail "mismatched existing-asset replacement failed"
-test "$(<"$behavior_root/mismatched-resume/attempts-pi_natives.darwin-arm64.node")" -eq 1 ||
-  fail "mismatched existing asset was incorrectly resumed"
+for mismatch in digest size state; do
+  run_uploader_case "resume-$mismatch-mismatch" "resume-$mismatch-mismatch" 4 0 ||
+    fail "$mismatch-mismatched existing-asset replacement failed"
+  test "$(<"$behavior_root/resume-$mismatch-mismatch/attempts-pi_natives.darwin-arm64.node")" -eq 1 ||
+    fail "$mismatch-mismatched existing asset was incorrectly resumed"
+done
 
 if run_uploader_case digest-mismatch final-mismatch 4 0; then
   fail "release published despite a final digest mismatch"
