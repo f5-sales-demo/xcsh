@@ -99,7 +99,7 @@ export async function waitForRegistryVisibility(
 	// npm may accept a package before every registry edge can serve it. Keep the
 	// wait bounded, but allow the normal propagation tail observed for large
 	// release packages rather than failing immediately before it becomes visible.
-	const maxAttempts = options.maxAttempts ?? 20;
+	const maxAttempts = options.maxAttempts ?? 40;
 	const maxDelayMs = options.maxDelayMs ?? 30_000;
 	let delayMs = Math.min(options.initialDelayMs ?? 5_000, maxDelayMs);
 
