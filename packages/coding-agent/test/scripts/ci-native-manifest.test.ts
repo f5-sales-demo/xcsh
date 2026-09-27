@@ -2,11 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import {
-	createNativeManifest,
-	resolveNativeManifestPath,
-	verifyNativeManifest,
-} from "../../../../scripts/ci-native-manifest";
+import { createNativeManifest, verifyNativeManifest } from "../../../../scripts/ci-native-manifest";
 
 const SOURCE_SHA = "d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a";
 
@@ -20,13 +16,35 @@ async function fixture() {
 }
 
 describe("source-bound native manifest", () => {
-	it("preserves an explicit absolute manifest path", () => {
-		expect(resolveNativeManifestPath("/workspace/xcsh", "/tmp/native-manifest.json")).toBe(
-			"/tmp/native-manifest.json",
-		);
-		expect(resolveNativeManifestPath("/workspace/xcsh", "packages/natives/native/native-manifest.json")).toBe(
-			"/workspace/xcsh/packages/natives/native/native-manifest.json",
-		);
+	it("accepts an absolute manifest path through the CLI", async () => {
+		const root = await fixture();
+		const manifestPath = path.join(root, "artifacts/native-manifest.json");
+		await mkdir(path.dirname(manifestPath), { recursive: true });
+		const script = path.resolve(import.meta.dir, "../../../../scripts/ci-native-manifest.ts");
+		const create = Bun.spawn([
+			process.execPath,
+			script,
+			"create",
+			"--source-sha",
+			SOURCE_SHA,
+			"--root",
+			root,
+			"--manifest",
+			manifestPath,
+		]);
+		expect(await create.exited).toBe(0);
+		const verify = Bun.spawn([
+			process.execPath,
+			script,
+			"verify",
+			"--source-sha",
+			SOURCE_SHA,
+			"--root",
+			root,
+			"--manifest",
+			manifestPath,
+		]);
+		expect(await verify.exited).toBe(0);
 	});
 
 	it("records and verifies both Linux x64 variants", async () => {
