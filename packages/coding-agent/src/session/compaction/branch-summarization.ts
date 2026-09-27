@@ -6,7 +6,7 @@
  */
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { Model } from "@f5-sales-demo/pi-ai";
-import { completeSimple } from "@f5-sales-demo/pi-ai";
+import { completeSimple, getModelEffectiveContextWindow } from "@f5-sales-demo/pi-ai";
 import { prompt } from "@f5-sales-demo/pi-utils";
 import branchSummaryPrompt from "../../prompts/compaction/branch-summary.md" with { type: "text" };
 import branchSummaryPreamble from "../../prompts/compaction/branch-summary-preamble.md" with { type: "text" };
@@ -263,7 +263,7 @@ export async function generateBranchSummary(
 	const { model, apiKey, signal, customInstructions, reserveTokens = 16384 } = options;
 
 	// Token budget = context window minus reserved space for prompt + response
-	const contextWindow = model.contextWindow || 128000;
+	const contextWindow = getModelEffectiveContextWindow(model) || 128000;
 	const tokenBudget = contextWindow - reserveTokens;
 
 	const { messages, fileOps } = prepareBranchEntries(entries, tokenBudget);

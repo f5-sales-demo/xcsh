@@ -26,7 +26,7 @@ const API_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 const anthropic = (id: string) => getBundledModel("anthropic", id) as Model<"anthropic-messages">;
 
 describe("Effort ladder", () => {
-	it("is ordered least→most intensive and ends at max", () => {
+	it("is ordered least→most intensive and ends at ultra", () => {
 		expect(THINKING_EFFORTS).toEqual([
 			Effort.Minimal,
 			Effort.Low,
@@ -34,6 +34,7 @@ describe("Effort ladder", () => {
 			Effort.High,
 			Effort.XHigh,
 			Effort.Max,
+			Effort.Ultra,
 		]);
 	});
 });
@@ -54,7 +55,7 @@ describe("mapEffortToAnthropicAdaptiveEffort", () => {
 	});
 
 	it("only ever emits values in the API's enum", () => {
-		for (const effort of THINKING_EFFORTS) {
+		for (const effort of getSupportedEfforts(model)) {
 			const wire = mapEffortToAnthropicAdaptiveEffort(model, effort);
 			expect(API_EFFORTS).toContain(wire);
 			expect(wire).not.toBe("minimal");

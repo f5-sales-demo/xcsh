@@ -218,7 +218,7 @@ function stringValue(value: unknown): string | undefined {
 }
 
 function effortValue(value: unknown): Effort | undefined {
-	return typeof value === "string" && ["minimal", "low", "medium", "high", "xhigh", "max"].includes(value)
+	return typeof value === "string" && ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(value)
 		? (value as Effort)
 		: undefined;
 }

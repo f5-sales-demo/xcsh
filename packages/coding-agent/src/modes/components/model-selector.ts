@@ -54,6 +54,7 @@ export function reasoningLabel(level: ThinkingLevel): string {
 			high: "High",
 			xhigh: "Extra high",
 			max: "Maximum",
+			ultra: "Ultra",
 		}[level] ?? level
 	);
 }

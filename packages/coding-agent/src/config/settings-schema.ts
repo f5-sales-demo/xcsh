@@ -2123,24 +2123,27 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
-	"providers.openaiCodexMaxContext": {
-		type: "boolean",
-		default: false,
+	"providers.openaiContextTier": {
+		type: "enum",
+		values: ["standard", "codex-max", "provider-max"] as const,
+		default: "standard",
 		ui: {
 			tab: "providers",
-			label: "OpenAI Codex Maximum Context",
-			description:
-				"Use the 1.05M-token context window for GPT-6 Luna and Sol (long-context pricing applies above 272K)",
+			label: "OpenAI Context Tier",
+			description: "Choose the standard, Codex maximum, or provider-advertised context window",
+			submenu: true,
 		},
 	},
 
-	"providers.litellmMaxContext": {
-		type: "boolean",
-		default: false,
+	"providers.litellmContextTier": {
+		type: "enum",
+		values: ["standard", "codex-max", "provider-max"] as const,
+		default: "standard",
 		ui: {
 			tab: "providers",
-			label: "LiteLLM Maximum Context",
-			description: "Use the verified 1.05M-token context window for current internal OpenAI models",
+			label: "LiteLLM Context Tier",
+			description: "Choose the standard, Codex maximum, or live provider-advertised context window",
+			submenu: true,
 		},
 	},
 

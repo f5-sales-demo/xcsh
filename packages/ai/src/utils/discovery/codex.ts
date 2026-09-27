@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyCodexInteractionMetadata } from "../../codex-model-interaction";
 import { REASONING_EFFORTS, type ReasoningEffort } from "../../model-thinking";
 import { CODEX_BASE_URL, OPENAI_HEADER_VALUES, OPENAI_HEADERS } from "../../providers/openai-codex/constants";
 import type { Model, ThinkingConfig } from "../../types";
@@ -28,6 +29,15 @@ const codexModelEntrySchema = z
 		family: z.unknown().optional(),
 		tier: z.unknown().optional(),
 		context_window: z.unknown().optional(),
+		max_context_window: z.unknown().optional(),
+		auto_compact_token_limit: z.unknown().optional(),
+		effective_context_window_percent: z.unknown().optional(),
+		default_reasoning_summary: z.unknown().optional(),
+		default_verbosity: z.unknown().optional(),
+		service_tiers: z.unknown().optional(),
+		default_service_tier: z.unknown().optional(),
+		truncation_policy: z.unknown().optional(),
+		supports_parallel_tool_calls: z.unknown().optional(),
 		default_reasoning_level: z.unknown().optional(),
 		supported_reasoning_levels: z.unknown().optional(),
 		input_modalities: z.unknown().optional(),
@@ -266,6 +276,7 @@ function normalizeCodexModelEntry(entry: unknown, baseUrl: string): NormalizedCo
 
 	const name = toNonEmptyString(payload.display_name) ?? slug;
 	const contextWindow = toPositiveInt(payload.context_window) ?? DEFAULT_CONTEXT_WINDOW;
+	const providerContextWindow = toPositiveInt(payload.max_context_window) ?? contextWindow;
 	const maxTokens = Math.min(DEFAULT_MAX_TOKENS, contextWindow);
 	const thinking = normalizeReasoningConfig(payload.default_reasoning_level, payload.supported_reasoning_levels);
 	const reasoning = Boolean(thinking?.supportedLevels.some(level => level.effort !== "none"));
@@ -277,24 +288,28 @@ function normalizeCodexModelEntry(entry: unknown, baseUrl: string): NormalizedCo
 
 	return {
 		priority,
-		model: {
-			id: slug,
-			name,
-			api: "openai-codex-responses",
-			provider: "openai-codex",
-			baseUrl,
-			reasoning,
-			input,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-			contextWindow,
-			maxTokens,
-			...(toNonEmptyString(payload.description) ? { description: toNonEmptyString(payload.description)! } : {}),
-			...(visibility ? { visibility } : {}),
-			...presentation,
-			...(thinking ? { thinking } : {}),
-			...(preferWebsockets ? { preferWebsockets: true } : {}),
-			...(priority !== Number.MAX_SAFE_INTEGER ? { priority } : {}),
-		},
+		model: applyCodexInteractionMetadata(
+			{
+				id: slug,
+				name,
+				api: "openai-codex-responses",
+				provider: "openai-codex",
+				baseUrl,
+				reasoning,
+				input,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+				contextWindow,
+				maxTokens,
+				providerContextWindow,
+				...(toNonEmptyString(payload.description) ? { description: toNonEmptyString(payload.description)! } : {}),
+				...(visibility ? { visibility } : {}),
+				...presentation,
+				...(thinking ? { thinking } : {}),
+				...(preferWebsockets ? { preferWebsockets: true } : {}),
+				...(priority !== Number.MAX_SAFE_INTEGER ? { priority } : {}),
+			},
+			providerContextWindow,
+		),
 	};
 }
 

@@ -1116,6 +1116,20 @@ export function resolveCliModel(options: {
 				error: undefined,
 			};
 		}
+		const thinkingSeparator = pattern.lastIndexOf(":");
+		const exactModelId =
+			thinkingSeparator !== -1 && parseThinkingLevel(pattern.slice(thinkingSeparator + 1))
+				? pattern.slice(0, thinkingSeparator)
+				: pattern;
+		if (resolveProviderModelReference(provider, exactModelId, allModels)) {
+			return {
+				model: undefined,
+				selector: undefined,
+				thinkingLevel: undefined,
+				warning: undefined,
+				error: `Model "${provider}/${exactModelId}" is unavailable. Configure or sign in to provider "${provider}".`,
+			};
+		}
 	}
 
 	const candidates = provider ? availableModels.filter(model => model.provider === provider) : availableModels;

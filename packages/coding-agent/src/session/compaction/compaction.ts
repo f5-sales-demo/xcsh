@@ -9,6 +9,7 @@ import {
 	type AssistantMessage,
 	completeSimple,
 	Effort,
+	getModelEffectiveContextWindow,
 	type MessageAttribution,
 	type Model,
 	type Usage,
@@ -214,13 +215,22 @@ export function effectiveReserveTokens(contextWindow: number, settings: Compacti
 /**
  * Check if compaction should trigger based on context usage.
  */
-export function shouldCompact(contextTokens: number, contextWindow: number, settings: CompactionSettings): boolean {
+export function shouldCompact(
+	contextTokens: number,
+	contextWindow: number,
+	settings: CompactionSettings,
+	modelAutoCompactTokenLimit?: number,
+): boolean {
 	if (!settings.enabled || settings.strategy === "off" || contextWindow <= 0) return false;
-	const thresholdTokens = resolveThresholdTokens(contextWindow, settings);
+	const thresholdTokens = resolveThresholdTokens(contextWindow, settings, modelAutoCompactTokenLimit);
 	return contextTokens > thresholdTokens;
 }
 
-function resolveThresholdTokens(contextWindow: number, settings: CompactionSettings): number {
+function resolveThresholdTokens(
+	contextWindow: number,
+	settings: CompactionSettings,
+	modelAutoCompactTokenLimit?: number,
+): number {
 	// Fixed token limit takes priority over percentage
 	const thresholdTokens = settings.thresholdTokens;
 	if (typeof thresholdTokens === "number" && Number.isFinite(thresholdTokens) && thresholdTokens > 0) {
@@ -231,6 +241,13 @@ function resolveThresholdTokens(contextWindow: number, settings: CompactionSetti
 	// Percentage-based threshold
 	const thresholdPercent = settings.thresholdPercent;
 	if (typeof thresholdPercent !== "number" || !Number.isFinite(thresholdPercent) || thresholdPercent <= 0) {
+		if (
+			typeof modelAutoCompactTokenLimit === "number" &&
+			Number.isFinite(modelAutoCompactTokenLimit) &&
+			modelAutoCompactTokenLimit > 0
+		) {
+			return Math.min(contextWindow - 1, Math.max(1, Math.floor(modelAutoCompactTokenLimit)));
+		}
 		return contextWindow - effectiveReserveTokens(contextWindow, settings);
 	}
 	const clampedThresholdPercent = Math.min(99, Math.max(1, thresholdPercent));
@@ -846,7 +863,7 @@ async function requestOpenAiRemoteCompaction(
 	const endpoint = resolveOpenAiCompactEndpoint(model);
 	const request: OpenAiRemoteCompactionRequest = {
 		model: model.id,
-		input: trimOpenAiCompactInput(compactInput, model.contextWindow, instructions),
+		input: trimOpenAiCompactInput(compactInput, getModelEffectiveContextWindow(model), instructions),
 		instructions,
 	};
 	const headers: Record<string, string> = {

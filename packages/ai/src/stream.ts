@@ -293,6 +293,7 @@ export const ANTHROPIC_THINKING: Record<Effort, number> = {
 	high: 16384,
 	xhigh: 32768,
 	max: 65536,
+	ultra: 65536,
 };
 
 const GOOGLE_THINKING: Record<Effort, number> = {
@@ -303,6 +304,7 @@ const GOOGLE_THINKING: Record<Effort, number> = {
 	xhigh: 24575,
 	// Google caps the thinking budget here; `max` cannot exceed it.
 	max: 24575,
+	ultra: 24575,
 };
 
 const BEDROCK_CLAUDE_THINKING: Record<Effort, number> = {
@@ -313,6 +315,7 @@ const BEDROCK_CLAUDE_THINKING: Record<Effort, number> = {
 	xhigh: 16384,
 	// Bedrock Claude caps the thinking budget here; `max` cannot exceed it.
 	max: 16384,
+	ultra: 16384,
 };
 
 function resolveBedrockThinkingBudget(
@@ -536,7 +539,10 @@ export function mapOptionsForApi<TApi extends Api>(
 		case "openai-responses":
 			return castApi<"openai-responses">({
 				...base,
-				reasoning: resolveOpenAiReasoningEffort(model, options),
+				reasoning:
+					model.defaultReasoningSummary !== undefined
+						? resolveCodexReasoningEffort(model, options)
+						: resolveOpenAiReasoningEffort(model, options),
 				toolChoice: mapOpenAiToolChoice(options?.toolChoice),
 				serviceTier: options?.serviceTier,
 			});

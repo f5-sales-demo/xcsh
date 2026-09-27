@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import type { Model, Usage } from "@f5-sales-demo/pi-ai";
+import { getModelEffectiveContextWindow, type Model, type Usage } from "@f5-sales-demo/pi-ai";
 import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
@@ -505,7 +505,7 @@ export class RemoteSession {
 			tokenUsage: {
 				total: this.#usageBreakdown(total),
 				last: this.#usageBreakdown(this.#lastProviderUsage),
-				modelContextWindow: this.target.model?.contextWindow ?? null,
+				modelContextWindow: this.target.model ? getModelEffectiveContextWindow(this.target.model) : null,
 			},
 		});
 	}
@@ -1419,7 +1419,7 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "Invalid client message identity");
 		if (
 			params.effort != null &&
-			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(params.effort))
+			!["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(String(params.effort))
 		)
 			throw new ProtocolError(-32602, "Unsupported reasoning effort");
 		// Summary controls reasoning presentation. This adapter exposes visible text
@@ -1516,7 +1516,7 @@ export class RemoteSession {
 		if (effort == null) return undefined;
 		const supported = model?.thinking?.supportedLevels;
 		if (
-			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(effort)) ||
+			!["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(String(effort)) ||
 			(supported && !supported.some(level => level.effort === effort))
 		)
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");

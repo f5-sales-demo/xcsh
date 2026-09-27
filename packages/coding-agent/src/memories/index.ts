@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
-import { completeSimple, Effort, type Model } from "@f5-sales-demo/pi-ai";
+import { completeSimple, Effort, getModelEffectiveContextWindow, type Model } from "@f5-sales-demo/pi-ai";
 import { getAgentDbPath, getMemoriesDir, logger, parseJsonlLenient, prompt } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../config/model-registry";
 import { resolveModelRoleValue } from "../config/model-resolver";
@@ -1214,8 +1214,8 @@ function truncateByApproxTokens(text: string, tokenLimit: number): string {
 }
 
 function computeModelTokenBudget(model: Model, config: MemoryRuntimeConfig): number {
-	const maxTokens =
-		Number.isFinite(model.contextWindow) && model.contextWindow > 0 ? model.contextWindow : config.fallbackTokenLimit;
+	const contextWindow = getModelEffectiveContextWindow(model);
+	const maxTokens = Number.isFinite(contextWindow) && contextWindow > 0 ? contextWindow : config.fallbackTokenLimit;
 	return Math.max(2048, Math.floor(maxTokens));
 }
 

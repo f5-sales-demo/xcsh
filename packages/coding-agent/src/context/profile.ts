@@ -1,4 +1,4 @@
-import type { Model, Usage } from "@f5-sales-demo/pi-ai";
+import { getModelEffectiveContextWindow, type Model, type Usage } from "@f5-sales-demo/pi-ai";
 
 export type ContextLoadingMode = "eager" | "progressive";
 
@@ -182,7 +182,7 @@ export function profileProviderPayload(payload: unknown, model: Model, call: num
 			const bytes = jsonBytes(message);
 			return { role: safeRole(message), bytes, estimatedTokens: estimateContextTokens(bytes) };
 		}),
-		contextWindow: model.contextWindow,
+		contextWindow: getModelEffectiveContextWindow(model),
 	};
 }
 

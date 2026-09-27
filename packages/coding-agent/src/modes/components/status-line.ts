@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import { type AssistantMessage, getModelEffectiveContextWindow } from "@f5-sales-demo/pi-ai";
 import { type Component, truncateToWidth, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { formatCount, getShellPwd } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
@@ -427,7 +427,7 @@ export class StatusLineComponent implements Component {
 			.find(m => m.role === "assistant" && m.stopReason !== "aborted") as AssistantMessage | undefined;
 
 		const contextTokens = lastAssistantMessage ? calculatePromptTokens(lastAssistantMessage.usage) : 0;
-		const contextWindow = state.model?.contextWindow || 0;
+		const contextWindow = state.model ? getModelEffectiveContextWindow(state.model) : 0;
 		const contextPercent = contextWindow > 0 ? (contextTokens / contextWindow) * 100 : 0;
 
 		return {

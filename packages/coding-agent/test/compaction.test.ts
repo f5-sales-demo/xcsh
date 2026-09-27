@@ -265,6 +265,36 @@ describe("shouldCompact", () => {
 		expect(shouldCompact(70_001, 100_000, settings)).toBe(true);
 	});
 
+	it("uses the model auto-compaction limit when user thresholds are unset", () => {
+		const settings: CompactionSettings = {
+			enabled: true,
+			thresholdPercent: -1,
+			thresholdTokens: -1,
+			reserveTokens: 16_384,
+			keepRecentTokens: 20_000,
+		};
+
+		expect(shouldCompact(244_800, 272_000, settings, 244_800)).toBe(false);
+		expect(shouldCompact(244_801, 272_000, settings, 244_800)).toBe(true);
+		expect(shouldCompact(784_800, 872_000, settings, 784_800)).toBe(false);
+		expect(shouldCompact(784_801, 872_000, settings, 784_800)).toBe(true);
+	});
+
+	it("keeps explicit user thresholds ahead of the model auto-compaction limit", () => {
+		const settings: CompactionSettings = {
+			enabled: true,
+			thresholdPercent: 70,
+			thresholdTokens: -1,
+			reserveTokens: 16_384,
+			keepRecentTokens: 20_000,
+		};
+
+		expect(shouldCompact(70_001, 100_000, settings, 90_000)).toBe(true);
+		settings.thresholdTokens = 80_000;
+		expect(shouldCompact(75_000, 100_000, settings, 90_000)).toBe(false);
+		expect(shouldCompact(80_001, 100_000, settings, 90_000)).toBe(true);
+	});
+
 	it("should return false when strategy is off", () => {
 		const settings: CompactionSettings = {
 			enabled: true,

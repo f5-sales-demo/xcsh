@@ -30,6 +30,10 @@ describe("current subscription model catalog", () => {
 			contextWindow: 272_000,
 			maxTokens: 128_000,
 		});
-		expect(getSupportedReasoningEfforts(model)).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
+		expect(getSupportedReasoningEfforts(model)).toEqual(
+			id === "gpt-6-luna"
+				? ["low", "medium", "high", "xhigh", "max"]
+				: ["low", "medium", "high", "xhigh", "max", "ultra"],
+		);
 	});
 });

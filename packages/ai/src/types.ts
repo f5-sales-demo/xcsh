@@ -620,6 +620,24 @@ export interface Model<TApi extends Api = any> {
 	premiumMultiplier?: number;
 	contextWindow: number;
 	maxTokens: number;
+	/** Largest context accepted by the Codex interaction contract. */
+	maxContextWindow?: number;
+	/** Live provider-advertised input limit, retained independently from the selected tier. */
+	providerContextWindow?: number;
+	/** Percentage of the selected context window available to request input. */
+	effectiveContextWindowPercent?: number;
+	/** Resolved usable input budget for the selected context tier. */
+	effectiveContextWindow?: number;
+	/** Percentage of the selected context window that triggers automatic compaction. */
+	autoCompactThresholdPercent?: number;
+	/** Resolved automatic-compaction threshold for the selected context tier. */
+	autoCompactTokenLimit?: number;
+	defaultReasoningSummary?: "none" | "auto" | "concise" | "detailed";
+	defaultVerbosity?: "low" | "medium" | "high";
+	serviceTiers?: ServiceTier[];
+	defaultServiceTier?: ServiceTier;
+	truncationPolicy?: { mode: "tokens" | "bytes"; limit: number };
+	supportsParallelToolCalls?: boolean;
 	headers?: Record<string, string>;
 	/**
 	 * Extra anthropic-beta feature flags to send for this model (anthropic-messages API only).

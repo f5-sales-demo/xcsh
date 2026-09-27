@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
@@ -9,8 +9,10 @@ import {
 	extractPrebuiltQmdBm25Index,
 	fingerprintApiCatalogDiscoveryCorpus,
 	rankBaselineCatalogDiscovery,
+	rankQmdBm25CatalogDiscovery,
 } from "../../src/internal-urls/api-catalog-discovery";
 import { API_CATALOG_CATEGORY_SUMMARIES } from "../../src/internal-urls/api-catalog-index.generated";
+import { QMD_API_CATALOG_PREBUILT_INDEX } from "../../src/internal-urls/api-catalog-qmd-index.generated";
 import type { ApiCatalogCategory, ApiCatalogIndex } from "../../src/internal-urls/api-catalog-types";
 
 const index: ApiCatalogIndex = {
@@ -125,6 +127,31 @@ describe("API catalog discovery corpus", () => {
 			await Bun.write(path.join(staleDirectory, "index.sqlite"), "corrupt");
 			const repaired = await extractPrebuiltQmdBm25Index(staleOptions);
 			expect(Buffer.from(await Bun.file(repaired).bytes())).toEqual(sqlite);
+		} finally {
+			await rm(cacheRoot, { recursive: true, force: true });
+		}
+	});
+
+	it("keeps the checksum-pinned cache immutable while QMD searches a disposable copy", async () => {
+		const cacheRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-qmd-immutable-cache-"));
+		const options = { cacheRoot, prebuiltIndex: QMD_API_CATALOG_PREBUILT_INDEX };
+		try {
+			const cachedIndex = await extractPrebuiltQmdBm25Index(options);
+			const before = createHash("sha256")
+				.update(await Bun.file(cachedIndex).bytes())
+				.digest("hex");
+
+			await Promise.all([
+				rankQmdBm25CatalogDiscovery("clone a DNS zone", options),
+				rankQmdBm25CatalogDiscovery("create an HTTP load balancer", options),
+			]);
+
+			const after = createHash("sha256")
+				.update(await Bun.file(cachedIndex).bytes())
+				.digest("hex");
+			expect(before).toBe(QMD_API_CATALOG_PREBUILT_INDEX.sqliteSha256);
+			expect(after).toBe(before);
+			expect(await readdir(path.dirname(cachedIndex))).toEqual(["index.sqlite"]);
 		} finally {
 			await rm(cacheRoot, { recursive: true, force: true });
 		}

@@ -31,8 +31,8 @@ export async function runAgenticCommit(args: CommitCommandArgs): Promise<void> {
 	process.stdout.write("● Resolving model...\n");
 	const modelRegistry = new ModelRegistry(authStorage, undefined, {
 		getProviderOrder: () => settings.get("modelProviderOrder"),
-		getOpenAICodexMaxContext: () => settings.get("providers.openaiCodexMaxContext"),
-		getLiteLLMMaxContext: () => settings.get("providers.litellmMaxContext"),
+		getOpenAIContextTier: () => settings.get("providers.openaiContextTier"),
+		getLiteLLMContextTier: () => settings.get("providers.litellmContextTier"),
 	});
 	await modelRegistry.refresh();
 	const stagedFilesPromise = (async () => {

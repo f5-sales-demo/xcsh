@@ -9,7 +9,7 @@
  * Sanitization happens here rather than in the renderer, because by the time the renderer sees
  * `gatewayHost` the secret is already gone: a leak test against the renderer would prove nothing.
  */
-import type { Model } from "@f5-sales-demo/pi-ai";
+import { getModelEffectiveContextWindow, type Model } from "@f5-sales-demo/pi-ai";
 
 /**
  * Where the active model came from.
@@ -78,7 +78,7 @@ export function buildActiveModelSnapshot(sources: ActiveModelSources): ActiveMod
 		provider: String(model.provider),
 		api: String(model.api),
 		gatewayHost: gatewayHost(model.baseUrl),
-		contextWindow: model.contextWindow,
+		contextWindow: getModelEffectiveContextWindow(model),
 		resolutionSource: sources.resolutionSource,
 		resolutionSourceNote: SOURCE_NOTES[sources.resolutionSource],
 		roles,

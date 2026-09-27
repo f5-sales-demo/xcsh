@@ -143,17 +143,17 @@ describe("Settings", () => {
 		expect(settings.inspectScopes("mcp.enabled").projectValue).toBe(true);
 	});
 
-	it("persists the independent LiteLLM maximum-context toggle", async () => {
+	it("persists the independent LiteLLM context tier", async () => {
 		const settings = await Settings.init({ cwd: projectDir, agentDir });
-		expect(settings.get("providers.litellmMaxContext")).toBe(false);
+		expect(settings.get("providers.litellmContextTier")).toBe("standard");
 
-		settings.set("providers.litellmMaxContext", true);
+		settings.set("providers.litellmContextTier", "provider-max");
 		await settings.flush();
 		_resetSettingsForTest();
 
 		const reloaded = await Settings.init({ cwd: projectDir, agentDir });
-		expect(reloaded.get("providers.litellmMaxContext")).toBe(true);
-		expect((await readSettings()).providers).toMatchObject({ litellmMaxContext: true });
+		expect(reloaded.get("providers.litellmContextTier")).toBe("provider-max");
+		expect((await readSettings()).providers).toMatchObject({ litellmContextTier: "provider-max" });
 	});
 
 	it("migrates the exact generated v8 LiteLLM roles and preserves custom roles", async () => {

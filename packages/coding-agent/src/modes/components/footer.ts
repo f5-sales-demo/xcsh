@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { getModelEffectiveContextWindow } from "@f5-sales-demo/pi-ai";
 import { type Component, padding, truncateToWidth, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { formatNumber, getProjectDir } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
@@ -130,7 +131,8 @@ export class FooterComponent implements Component {
 		// Calculate context usage from session (handles compaction correctly).
 		// After compaction, tokens are unknown until the next LLM response.
 		const contextUsage = this.session.getContextUsage();
-		const contextWindow = contextUsage?.contextWindow ?? state.model?.contextWindow ?? 0;
+		const contextWindow =
+			contextUsage?.contextWindow ?? (state.model ? getModelEffectiveContextWindow(state.model) : 0);
 		const contextPercentValue = contextUsage?.percent ?? 0;
 		const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
 
