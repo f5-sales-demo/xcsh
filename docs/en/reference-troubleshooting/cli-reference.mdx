@@ -18,17 +18,16 @@ The installed `xcsh <COMMAND> --help` output is the command-line interface (CLI)
 | Extensibility | `agents`, `plugin`, `worker`, `manager` |
 | Interfaces | `chrome`, `chrome-host`, `office`, `herdr` |
 | Repository | `commit`, `grievances` |
-| Maintenance | `self-update`, `update --check` |
+| Maintenance | `self-update` |
 
-`search` also answers to `q`. On `update`, `-f` names a resource manifest; an executable force-update uses `--force`.
+`search` also answers to `q`. `update -f` names a resource manifest; executable checks and updates use `self-update`.
 
-`xcsh update --check` is read-only and reports the installation channel. Homebrew,
+`xcsh self-update --check` is read-only and reports the installation channel. Homebrew,
 apt, npm, Bun, Windows installer, and direct MDM installations retain ownership:
 the command prints their exact upgrade instruction or managed-install message and
 performs no update. Only a standalone Unix executable with a valid adjacent
 `xcsh-install.json` receipt can replace itself. Unknown or conflicting provenance
 exits nonzero without changing files, and `--force` does not bypass this policy.
-Bare `xcsh update` and `xcsh self-update` use the same executable-update policy.
 
 ## Which global flags does a session accept?
 

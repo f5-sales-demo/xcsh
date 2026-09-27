@@ -27,14 +27,6 @@ export interface UpdateCommandDependencies {
 	stderr(value: string): void;
 }
 
-export function parseUpdateArgs(args: string[]): { force: boolean; check: boolean } | undefined {
-	if (args.length === 0 || args[0] !== "self-update") return undefined;
-	return {
-		force: args.includes("--force") || args.includes("-f"),
-		check: args.includes("--check") || args.includes("-c"),
-	};
-}
-
 async function getLatestRelease(): Promise<ReleaseInfo> {
 	const response = await fetch("https://registry.npmjs.org/@f5-sales-demo/xcsh/latest");
 	if (!response.ok) throw new Error(`Failed to fetch release info: ${response.statusText}`);
@@ -147,7 +139,7 @@ function defaultUpdateCommandDependencies(): UpdateCommandDependencies {
 	};
 }
 
-/** Run the shared policy for both `update` and `self-update`. */
+/** Run the executable self-update policy. */
 export async function runUpdateCommand(
 	opts: { force: boolean; check: boolean },
 	deps: UpdateCommandDependencies = defaultUpdateCommandDependencies(),
@@ -204,25 +196,4 @@ export async function runUpdateCommand(
 
 export function getBrewUpgradeCommand(): string {
 	return "brew upgrade --cask f5-sales-demo/tap/xcsh";
-}
-
-export function printUpdateHelp(): void {
-	console.log(`${chalk.bold(`${APP_NAME} update`)} - Check the executable and follow its installation channel
-
-${chalk.bold("Usage:")}
-  ${APP_NAME} update [--check | --force]
-  ${APP_NAME} update -f <manifest> [resource options]
-
-${chalk.bold("Executable options:")}
-  -c, --check   Report the detected channel without changing files
-      --force   Show or perform the channel-owned action even when current
-
-Only an official standalone install with a valid adjacent xcsh-install.json
-receipt can replace itself. Homebrew, apt, npm, Bun, Windows installer, and MDM
-installs print their exact owner-managed instruction and perform no update.
-Unknown or conflicting provenance is blocked without changing the installation.
-
-Short -f means --filename for xcsh update. Use xcsh self-update -f for the
-short executable force form. Executable and resource flags cannot be mixed.
-`);
 }
