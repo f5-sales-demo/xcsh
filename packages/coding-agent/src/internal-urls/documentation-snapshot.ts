@@ -690,6 +690,7 @@ function canonicalizeDatabase(
 ): void {
 	const db = new Database(databasePath);
 	try {
+		db.exec("PRAGMA secure_delete = ON");
 		db.exec("BEGIN");
 		db.query("UPDATE content SET created_at = ?").run(FIXED_TIME);
 		db.query("UPDATE documents SET created_at = ?, modified_at = ?").run(FIXED_TIME, FIXED_TIME);
@@ -796,6 +797,24 @@ function verifyIndexedBodies(databasePath: string, snapshot: VerifiedDocumentati
 	}
 }
 
+function canonicalizeSqliteHeader(bytes: Buffer): Buffer {
+	const header = "SQLite format 3\0";
+	if (bytes.byteLength < 100 || bytes.subarray(0, header.length).toString("ascii") !== header) {
+		throw new Error("documentation index is not a valid SQLite database");
+	}
+	const canonical = Buffer.from(bytes);
+	// SQLite's file change counter and version-valid-for number describe the
+	// connection's write history, not database content. Their values can differ
+	// across Bun's platform builds even when every page after the header is
+	// identical. Keep the required equality while removing that host history.
+	canonical.writeUInt32BE(1, 24);
+	canonical.writeUInt32BE(1, 92);
+	// The producing SQLite library version is informational and differs between
+	// Bun's release-platform builds. It does not affect the file format.
+	canonical.writeUInt32BE(3_000_000, 96);
+	return canonical;
+}
+
 export async function buildDocumentationIndex(
 	snapshot: VerifiedDocumentationSnapshot,
 	outputPath: string,
@@ -835,6 +854,8 @@ export async function buildDocumentationIndex(
 					FIXED_TIME,
 				);
 			}
+			store.internal.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+			store.internal.db.exec("PRAGMA journal_mode = DELETE");
 		} finally {
 			await store.close();
 		}
@@ -843,9 +864,9 @@ export async function buildDocumentationIndex(
 		await mkdir(path.dirname(outputPath), { recursive: true });
 		const stagingOutput = `${outputPath}.tmp`;
 		await rm(stagingOutput, { force: true });
-		await writeFile(stagingOutput, await readFile(databasePath), { mode: 0o600 });
+		const bytes = canonicalizeSqliteHeader(await readFile(databasePath));
+		await writeFile(stagingOutput, bytes, { mode: 0o600 });
 		await rename(stagingOutput, outputPath);
-		const bytes = await readFile(outputPath);
 		return { fingerprint: indexFingerprint, sha256: sha256Bytes(bytes), sizeBytes: bytes.byteLength };
 	} finally {
 		await rm(stagingRoot, { recursive: true, force: true });

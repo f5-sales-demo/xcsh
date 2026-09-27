@@ -115,8 +115,10 @@ describe("memories runtime", () => {
 
 	afterEach(async () => {
 		vi.restoreAllMocks();
-		process.env.XDG_DATA_HOME = savedXdgData;
-		process.env.XDG_STATE_HOME = savedXdgState;
+		if (savedXdgData === undefined) delete process.env.XDG_DATA_HOME;
+		else process.env.XDG_DATA_HOME = savedXdgData;
+		if (savedXdgState === undefined) delete process.env.XDG_STATE_HOME;
+		else process.env.XDG_STATE_HOME = savedXdgState;
 		for (const dir of createdDirs) {
 			await fs.rm(dir, { recursive: true, force: true });
 		}
@@ -343,8 +345,10 @@ describe("buildMemoryToolDeveloperInstructions", () => {
 
 	afterEach(async () => {
 		vi.restoreAllMocks();
-		process.env.XDG_DATA_HOME = savedXdgData;
-		process.env.XDG_STATE_HOME = savedXdgState;
+		if (savedXdgData === undefined) delete process.env.XDG_DATA_HOME;
+		else process.env.XDG_DATA_HOME = savedXdgData;
+		if (savedXdgState === undefined) delete process.env.XDG_STATE_HOME;
+		else process.env.XDG_STATE_HOME = savedXdgState;
 		for (const dir of createdDirs) {
 			await fs.rm(dir, { recursive: true, force: true });
 		}

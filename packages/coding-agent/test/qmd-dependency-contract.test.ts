@@ -19,4 +19,16 @@ describe("QMD dependency patch", () => {
 		const source = await readFile(qmdStoreModule, "utf8");
 		expect(source).not.toContain("console.warn(_sqliteVecUnavailableReason)");
 	});
+
+	it("opens prebuilt BM25 indexes read-only without changing their journal mode", async () => {
+		const [databaseSource, indexSource, storeSource] = await Promise.all([
+			readFile(qmdDatabaseModule, "utf8"),
+			readFile(qmdEntrypoint, "utf8"),
+			readFile(qmdStoreModule, "utf8"),
+		]);
+
+		expect(databaseSource).toContain("if (!options.readonly)");
+		expect(indexSource).toContain("readonly: options.readonly");
+		expect(storeSource).toContain("if (!options.readonly)");
+	});
 });

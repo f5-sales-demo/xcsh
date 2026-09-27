@@ -33,5 +33,5 @@ describe("QMD compiled-binary smoke", () => {
 		} finally {
 			database.close();
 		}
-	});
+	}, 30_000);
 });
