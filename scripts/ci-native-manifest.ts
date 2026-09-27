@@ -62,6 +62,10 @@ function option(name: string): string | undefined {
 	return index < 0 ? undefined : process.argv[index + 1];
 }
 
+export function resolveNativeManifestPath(root: string, manifestPath: string): string {
+	return path.isAbsolute(manifestPath) ? manifestPath : path.join(root, manifestPath);
+}
+
 if (import.meta.main) {
 	const command = process.argv[2];
 	const sourceSha = option("--source-sha");
@@ -75,9 +79,9 @@ if (import.meta.main) {
 	}
 	if (command === "create") {
 		const manifest = await createNativeManifest(root, sourceSha);
-		await Bun.write(path.join(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`);
+		await Bun.write(resolveNativeManifestPath(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`);
 	} else {
-		const manifest = (await Bun.file(path.join(root, manifestPath)).json()) as NativeManifest;
+		const manifest = (await Bun.file(resolveNativeManifestPath(root, manifestPath)).json()) as NativeManifest;
 		await verifyNativeManifest(root, manifest, sourceSha);
 	}
 }

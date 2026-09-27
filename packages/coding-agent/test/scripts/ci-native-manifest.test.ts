@@ -2,7 +2,11 @@ import { describe, expect, it } from "bun:test";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { createNativeManifest, verifyNativeManifest } from "../../../../scripts/ci-native-manifest";
+import {
+	createNativeManifest,
+	resolveNativeManifestPath,
+	verifyNativeManifest,
+} from "../../../../scripts/ci-native-manifest";
 
 const SOURCE_SHA = "d8d2d2eba38a0c3964e4057eeaa78e2a4fd2449a";
 
@@ -16,6 +20,15 @@ async function fixture() {
 }
 
 describe("source-bound native manifest", () => {
+	it("preserves an explicit absolute manifest path", () => {
+		expect(resolveNativeManifestPath("/workspace/xcsh", "/tmp/native-manifest.json")).toBe(
+			"/tmp/native-manifest.json",
+		);
+		expect(resolveNativeManifestPath("/workspace/xcsh", "packages/natives/native/native-manifest.json")).toBe(
+			"/workspace/xcsh/packages/natives/native/native-manifest.json",
+		);
+	});
+
 	it("records and verifies both Linux x64 variants", async () => {
 		const root = await fixture();
 		const manifest = await createNativeManifest(root, SOURCE_SHA);
