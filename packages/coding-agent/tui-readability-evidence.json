@@ -172,14 +172,14 @@
       "7bb626cb"
     ],
     "packages/coding-agent/src/modes/components/footer.ts": [
-      "51943bb9",
-      "9e4f8da8",
-      "59ba3076",
-      "e0a140af",
-      "ac572459",
-      "13cb1cf8",
-      "d2154d4d",
-      "ace83e15"
+      "f5624f23",
+      "dbadbafd",
+      "57ebe3a1",
+      "9b7d1c18",
+      "174b2edf",
+      "10cf09bc",
+      "8a9ade95",
+      "27408f99"
     ],
     "packages/coding-agent/src/modes/components/history-search.ts": [
       "3c8f9624",
@@ -242,14 +242,14 @@
       "e3ed2b14"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
-      "cc24b3ce",
-      "706bb0c4",
-      "b911d56f",
-      "e5452d35",
-      "7c9d1871",
-      "04d6b2c5",
-      "d335a598",
-      "951c63e2"
+      "3e3be131",
+      "60e7e29b",
+      "a3d7060e",
+      "5e492d22",
+      "379d3947",
+      "b5de024f",
+      "48af4bab",
+      "132db885"
     ],
     "packages/coding-agent/src/modes/components/oauth-selector.ts": [
       "4ee12171",
@@ -392,14 +392,14 @@
       "826f8668"
     ],
     "packages/coding-agent/src/modes/components/status-line.ts": [
-      "1a6f274f",
-      "8a941183",
-      "37b9ddab",
-      "142dd02c",
-      "b6d92e3c",
-      "2518096d",
-      "f012864e",
-      "bbfcb8ea"
+      "c0fc4004",
+      "78e5b9da",
+      "8352cad7",
+      "fa7c1297",
+      "a3017d47",
+      "1701f332",
+      "d212e2ae",
+      "23216764"
     ],
     "packages/coding-agent/src/modes/components/tool-execution.ts": [
       "f11419a1",
@@ -1247,7 +1247,7 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/footer.ts",
-      "line": 257,
+      "line": 259,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
@@ -1367,31 +1367,31 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 413,
+      "line": 414,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 477,
+      "line": 478,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 491,
+      "line": 492,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 503,
+      "line": 504,
       "sink": "selectorProse",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 505,
+      "line": 506,
       "sink": "selectorFrame",
       "entry": "models-compact-rows"
     },

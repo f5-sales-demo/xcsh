@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "eee21a520cfe97141046e0eebbf49b774191e2b6",
-  "fingerprint": "80088a4bab3f2bea768784ab9a1db0c75f02445963248b34043dcc37bb64f745",
+  "revision": "c09b6a7af9270e4f68d1db94d9fffb2a3b6c5448",
+  "fingerprint": "ce548535ab85dce0187f1330d0decd3264d75906892f7d66b13be78491b81a6c",
   "counts": {
     "total": 242,
     "components": 97,
@@ -1594,7 +1594,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "reports",
-      "sha256": "51943bb99e4f8da859ba3076e0a140afac57245913cb1cf8d2154d4dace83e15",
+      "sha256": "f5624f23dbadbafd57ebe3a19b7d1c18174b2edf10cf09bc8a9ade9527408f99",
       "exports": [
         "FooterComponent"
       ],
@@ -1923,7 +1923,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "cc24b3ce706bb0c4b911d56fe5452d357c9d187104d6b2c5d335a598951c63e2",
+      "sha256": "3e3be13160e7e29ba3d7060e5e492d22379d3947b5de024f48af4bab132db885",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",
@@ -2619,7 +2619,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "reports",
-      "sha256": "1a6f274f8a94118337b9ddab142dd02cb6d92e3c2518096df012864ebbfcb8ea",
+      "sha256": "c0fc400478e5b9da8352cad7fa7c1297a3017d471701f332d212e2ae23216764",
       "exports": [
         "StatusLineComponent",
         "StatusLineSegmentOptions",
@@ -3579,7 +3579,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "70cb71b4f5728636bf1298a1518ba4e58afb2b74b779d3a90c4870407f613529",
+      "sha256": "9b7f6980904010698bb44c73459826dec1452889cf9d0d30fc475393848233b9",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -4415,7 +4415,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "c103594c1dc5f117d219d20076c9f847c9be510de3ab0712ed97d88da6fb3357",
+      "sha256": "9637c3b94790fd8df22e4b5089ff1d72f1965272ac463f0d1a4a5f2e9fd208eb",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",

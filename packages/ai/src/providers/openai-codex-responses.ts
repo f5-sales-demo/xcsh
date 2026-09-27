@@ -19,6 +19,7 @@ import type {
 	ResponseReasoningItem,
 } from "openai/resources/responses/responses";
 import packageJson from "../../package.json" with { type: "json" };
+import type { ReasoningEffort } from "../model-thinking";
 import { calculateCost } from "../models";
 import { isUsageLimitError } from "../rate-limit-utils";
 import { getEnvApiKey } from "../stream";
@@ -72,8 +73,8 @@ import {
 import { transformMessages } from "./transform-messages";
 
 export interface OpenAICodexResponsesOptions extends StreamOptions {
-	reasoning?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
-	reasoningSummary?: "auto" | "concise" | "detailed" | null;
+	reasoning?: ReasoningEffort;
+	reasoningSummary?: "none" | "auto" | "concise" | "detailed" | null;
 	textVerbosity?: "low" | "medium" | "high";
 	include?: string[];
 	codexMode?: boolean;
@@ -527,9 +528,10 @@ async function buildTransformedCodexRequestBody(
 
 	const codexOptions: CodexRequestOptions = {
 		reasoningEffort: options?.reasoning,
-		reasoningSummary: options?.reasoningSummary ?? "auto",
+		reasoningSummary: options?.reasoningSummary,
 		textVerbosity: options?.textVerbosity,
 		include: options?.include,
+		metadata: options?.metadata,
 	};
 
 	return transformRequestBody(params, model, codexOptions, systemPrompt);

@@ -5,6 +5,14 @@ import type {
 	ResponseCreateParamsStreaming,
 	ResponseInput,
 } from "openai/resources/responses/responses";
+import {
+	type ReasoningSummary,
+	resolveCodexWireReasoningEffort,
+	resolveWireReasoningSummary,
+	type WireReasoningSummary,
+} from "../codex-model-interaction";
+import type { ReasoningEffort } from "../model-thinking";
+import { requireSupportedReasoningEffort } from "../model-thinking";
 import { getEnvApiKey } from "../stream";
 import {
 	type Api,
@@ -47,6 +55,7 @@ import {
 	hasCopilotVisionInput,
 	resolveGitHubCopilotBaseUrl,
 } from "./github-copilot-headers";
+import { normalizeClientMetadata, truncateFunctionCallOutputs } from "./openai-codex/request-transformer";
 import {
 	appendResponsesToolResultMessages,
 	collectKnownCallIds,
@@ -73,8 +82,9 @@ function getPromptCacheRetention(baseUrl: string, cacheRetention: CacheRetention
 
 // OpenAI Responses-specific options
 export interface OpenAIResponsesOptions extends StreamOptions {
-	reasoning?: "minimal" | "low" | "medium" | "high" | "xhigh";
-	reasoningSummary?: "auto" | "detailed" | "concise" | null;
+	reasoning?: ReasoningEffort;
+	reasoningSummary?: ReasoningSummary | null;
+	textVerbosity?: "low" | "medium" | "high";
 	serviceTier?: ServiceTier;
 	toolChoice?: ToolChoice;
 	/**
@@ -125,12 +135,17 @@ function canReplayOpenAIResponsesNativeHistory(
 	return providerSessionState?.nativeHistoryReplayWarmed ?? true;
 }
 
-type OpenAIResponsesSamplingParams = ResponseCreateParamsStreaming & {
+type OpenAIResponsesSamplingParams = Omit<ResponseCreateParamsStreaming, "reasoning"> & {
+	reasoning?: {
+		effort?: Exclude<ReasoningEffort, "ultra">;
+		summary?: WireReasoningSummary;
+	};
 	top_p?: number;
 	top_k?: number;
 	min_p?: number;
 	presence_penalty?: number;
 	repetition_penalty?: number;
+	client_metadata?: Record<string, string>;
 };
 
 /**
@@ -193,7 +208,10 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 				url: `${baseUrl ?? "https://api.openai.com/v1"}/responses`,
 				body: params,
 			};
-			const openaiStream = await client.responses.create(params, { signal: requestSignal });
+			// The pinned SDK schema predates the provider's `max` effort value.
+			const openaiStream = await client.responses.create(params as ResponseCreateParamsStreaming, {
+				signal: requestSignal,
+			});
 			const firstEventWatchdog = createFirstEventWatchdog(
 				options?.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs(idleTimeoutMs),
 				() => abortTracker.abortLocally(firstEventTimeoutAbortError),
@@ -325,7 +343,7 @@ function buildParams(
 		strictResponsesPairing,
 		providerSessionState,
 	);
-	const messages: ResponseInput = [...conversationMessages];
+	let messages: ResponseInput = [...conversationMessages];
 
 	if (context.systemPrompt) {
 		const role = model.reasoning && supportsDeveloperRole(resolvedBaseUrl ?? model) ? "developer" : "system";
@@ -337,6 +355,7 @@ function buildParams(
 
 	const cacheRetention = resolveCacheRetention(options?.cacheRetention);
 	const promptCacheKey = cacheRetention === "none" ? undefined : options?.sessionId;
+	const hasCodexInteractionDefaults = model.defaultReasoningSummary !== undefined;
 	const params: OpenAIResponsesSamplingParams = {
 		model: model.id,
 		input: messages,
@@ -345,6 +364,14 @@ function buildParams(
 		prompt_cache_retention: promptCacheKey ? getPromptCacheRetention(model.baseUrl, cacheRetention) : undefined,
 		store: false,
 	};
+
+	if (model.truncationPolicy) {
+		messages = truncateFunctionCallOutputs(
+			messages as unknown as import("./openai-codex/request-transformer").InputItem[],
+			model.truncationPolicy,
+		) as unknown as ResponseInput;
+		params.input = messages;
+	}
 
 	if (options?.maxTokens) {
 		params.max_output_tokens = options?.maxTokens;
@@ -369,15 +396,27 @@ function buildParams(
 	if (options?.repetitionPenalty !== undefined) {
 		params.repetition_penalty = options.repetitionPenalty;
 	}
-	if (isSpecialServiceTier(options?.serviceTier)) {
-		params.service_tier = options.serviceTier;
+	const requestedServiceTier = options?.serviceTier ?? model.defaultServiceTier;
+	if (requestedServiceTier && model.serviceTiers) {
+		if (!model.serviceTiers.includes(requestedServiceTier)) {
+			throw new Error(
+				`Service tier "${requestedServiceTier}" is unavailable for ${model.provider}/${model.id}. Supported tiers: ${model.serviceTiers.join(", ")}`,
+			);
+		}
+		params.service_tier = requestedServiceTier;
+	} else if (isSpecialServiceTier(requestedServiceTier)) {
+		params.service_tier = requestedServiceTier;
 	}
 
 	if (context.tools) {
 		params.tools = convertTools(context.tools, supportsStrictMode(model));
-		if (options?.toolChoice) {
+		if (!hasCodexInteractionDefaults && options?.toolChoice) {
 			params.tool_choice = mapToOpenAIResponsesToolChoice(options.toolChoice);
 		}
+	}
+	if (hasCodexInteractionDefaults) params.tool_choice = "auto";
+	if (model.supportsParallelToolCalls !== undefined) {
+		params.parallel_tool_calls = model.supportsParallelToolCalls;
 	}
 
 	if (model.reasoning) {
@@ -387,10 +426,19 @@ function buildParams(
 		// See: https://github.com/f5-sales-demo/xcsh/issues/41
 		params.include = ["reasoning.encrypted_content"];
 
-		if (options?.reasoning || options?.reasoningSummary) {
+		if (options?.reasoning || options?.reasoningSummary || hasCodexInteractionDefaults) {
+			const requestedEffort = (options?.reasoning ??
+				(hasCodexInteractionDefaults ? model.thinking?.defaultLevel : undefined) ??
+				"medium") as ReasoningEffort;
+			const supportedEffort = model.thinking
+				? requireSupportedReasoningEffort(model, requestedEffort)
+				: requestedEffort;
+			const summary = resolveWireReasoningSummary(
+				options?.reasoningSummary ?? model.defaultReasoningSummary ?? "auto",
+			);
 			params.reasoning = {
-				effort: options?.reasoning || "medium",
-				summary: options?.reasoningSummary || "auto",
+				effort: resolveCodexWireReasoningEffort(model.id, supportedEffort) as Exclude<ReasoningEffort, "ultra">,
+				...(summary ? { summary } : {}),
 			};
 		} else if (model.name.startsWith("gpt-5")) {
 			// Jesus Christ, see https://community.openai.com/t/need-reasoning-false-option-for-gpt-5/1351588/7
@@ -404,6 +452,13 @@ function buildParams(
 				],
 			});
 		}
+	}
+
+	if (options?.textVerbosity || model.defaultVerbosity) {
+		params.text = { verbosity: options?.textVerbosity ?? model.defaultVerbosity ?? "low" };
+	}
+	if (hasCodexInteractionDefaults) {
+		params.client_metadata = normalizeClientMetadata(options?.metadata);
 	}
 
 	return { conversationMessages, params };

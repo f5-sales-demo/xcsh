@@ -886,13 +886,13 @@ export class SelectorController {
 					setPreferredImageProvider(value);
 				}
 				break;
-			case "providers.openaiCodexMaxContext":
-				this.ctx.session.modelRegistry.setOpenAICodexMaxContext(value === true);
+			case "providers.openaiContextTier":
+				this.ctx.session.modelRegistry.setOpenAIContextTier(value as "standard" | "codex-max" | "provider-max");
 				this.ctx.statusLine.invalidate();
 				this.ctx.ui.requestRender();
 				break;
-			case "providers.litellmMaxContext":
-				this.ctx.session.modelRegistry.setLiteLLMMaxContext(value === true);
+			case "providers.litellmContextTier":
+				this.ctx.session.modelRegistry.setLiteLLMContextTier(value as "standard" | "codex-max" | "provider-max");
 				this.ctx.statusLine.invalidate();
 				this.ctx.ui.requestRender();
 				break;

@@ -530,6 +530,24 @@ describe("resolveCliModel", () => {
 		expect(result.model?.id).toBe("gpt-4o");
 	});
 
+	test("reports an exact unavailable model instead of remapping it to a fuzzy provider match", () => {
+		const registry = {
+			getAll: () => mockCodexOverlapModels,
+			getAvailable: () => [mockCodexOverlapModels[1]!],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({
+			cliProvider: "openai-codex",
+			cliModel: "gpt-5.3-codex",
+			modelRegistry: registry,
+		});
+
+		expect(result.model).toBeUndefined();
+		expect(result.error).toBe(
+			'Model "openai-codex/gpt-5.3-codex" is unavailable. Configure or sign in to provider "openai-codex".',
+		);
+	});
+
 	test("supports --model <pattern>:<thinking> (without explicit --thinking)", () => {
 		const registry = {
 			getAll: () => allModels,

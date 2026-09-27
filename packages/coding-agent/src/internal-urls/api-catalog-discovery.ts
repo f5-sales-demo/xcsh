@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { rmSync } from "node:fs";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
@@ -38,6 +40,17 @@ type QmdStore = Awaited<ReturnType<typeof createStore>>;
 const qmdStores = new Map<string, Promise<QmdStore>>();
 const verifiedIndexPaths = new Map<string, string>();
 const indexExtractions = new Map<string, Promise<string>>();
+const runtimeRoots = new Set<string>();
+let runtimeCleanupRegistered = false;
+
+function registerRuntimeRoot(root: string): void {
+	runtimeRoots.add(root);
+	if (runtimeCleanupRegistered) return;
+	runtimeCleanupRegistered = true;
+	process.once("exit", () => {
+		for (const runtimeRoot of runtimeRoots) rmSync(runtimeRoot, { recursive: true, force: true });
+	});
+}
 
 function indexCacheKey(options: QmdBm25CatalogDiscoveryOptions): string {
 	return `${options.cacheRoot}\u0000${options.prebuiltIndex.fingerprint}\u0000${options.prebuiltIndex.sqliteSha256}`;
@@ -46,7 +59,21 @@ function indexCacheKey(options: QmdBm25CatalogDiscoveryOptions): string {
 async function getQmdStore(databasePath: string): Promise<QmdStore> {
 	let store = qmdStores.get(databasePath);
 	if (!store) {
-		store = createStore({ dbPath: databasePath });
+		store = (async () => {
+			// QMD's FTS query path still needs a writable SQLite runtime. Search a
+			// disposable copy so the checksum-pinned cache stays immutable.
+			const runtimeRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-api-catalog-runtime-"));
+			const runtimeDatabasePath = path.join(runtimeRoot, "index.sqlite");
+			try {
+				await Bun.write(runtimeDatabasePath, Bun.file(databasePath));
+				const runtimeStore = await createStore({ dbPath: runtimeDatabasePath });
+				registerRuntimeRoot(runtimeRoot);
+				return runtimeStore;
+			} catch (error) {
+				await rm(runtimeRoot, { recursive: true, force: true });
+				throw error;
+			}
+		})();
 		qmdStores.set(databasePath, store);
 	}
 	try {

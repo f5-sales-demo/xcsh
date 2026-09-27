@@ -4,7 +4,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Effort, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import { streamOpenAIResponses } from "@f5-sales-demo/pi-ai/providers/openai-responses";
-import type { Model } from "@f5-sales-demo/pi-ai/types";
+import type { Context, Model } from "@f5-sales-demo/pi-ai/types";
+import { Type } from "@sinclair/typebox";
 import { YAML } from "bun";
 import { CURRENT_CONFIG_VERSION, generateModelsYml } from "../src/config/auto-config";
 import { ModelRegistry } from "../src/config/model-registry";
@@ -16,16 +17,29 @@ import { BUILTIN_ROUTING_PRESETS } from "../src/routing/presets";
 import { AuthStorage } from "../src/session/auth-storage";
 
 const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
-const CURRENT_OPENAI_IDS = ["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"] as const;
+const CURRENT_OPENAI_IDS = [
+	"gpt-6-luna",
+	"gpt-5.6-terra",
+	"gpt-6-sol",
+	"gpt-6-astra",
+	"gpt-5.6-luna",
+	"gpt-5.6-sol",
+	"gpt-5.5",
+] as const;
 const CURRENT_ANTHROPIC_IDS = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5"] as const;
-const LEGACY_OPENAI_IDS = ["gpt-5.6-luna", "gpt-5.6-sol"] as const;
 
 describe("current internal LiteLLM model contract", () => {
 	let tempDir: string;
 	let modelsPath: string;
 	let authStorage: AuthStorage;
+	let previousBaseUrl: string | undefined;
+	let previousApiKey: string | undefined;
 
 	beforeEach(async () => {
+		previousBaseUrl = Bun.env.LITELLM_BASE_URL;
+		previousApiKey = Bun.env.LITELLM_API_KEY;
+		delete Bun.env.LITELLM_BASE_URL;
+		delete Bun.env.LITELLM_API_KEY;
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-litellm-current-"));
 		modelsPath = path.join(tempDir, "models.yml");
 		authStorage = await AuthStorage.create(path.join(tempDir, "auth.db"));
@@ -41,9 +55,13 @@ describe("current internal LiteLLM model contract", () => {
 	afterEach(() => {
 		authStorage.close();
 		fs.rmSync(tempDir, { recursive: true, force: true });
+		if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
+		else Bun.env.LITELLM_BASE_URL = previousBaseUrl;
+		if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
+		else Bun.env.LITELLM_API_KEY = previousApiKey;
 	});
 
-	it("generates v9 with route-accurate current and legacy-resolvable providers", () => {
+	it("generates v11 with Responses routing for all OpenAI interaction models", () => {
 		const document = YAML.parse(fs.readFileSync(modelsPath, "utf8")) as {
 			configVersion: number;
 			providers: {
@@ -56,8 +74,8 @@ describe("current internal LiteLLM model contract", () => {
 				};
 			};
 		};
-		expect(CURRENT_CONFIG_VERSION).toBe(9);
-		expect(document.configVersion).toBe(9);
+		expect(CURRENT_CONFIG_VERSION).toBe(11);
+		expect(document.configVersion).toBe(11);
 
 		const anthropic = document.providers.anthropic;
 		expect(anthropic.api).toBe("anthropic-messages");
@@ -67,51 +85,60 @@ describe("current internal LiteLLM model contract", () => {
 		const openai = document.providers.litellm;
 		expect(openai.api).toBe("openai-completions");
 		expect(openai.baseUrl).toBe("https://proxy.example.com/api/v1");
-		expect(openai.modelAllowlist).toEqual([...CURRENT_OPENAI_IDS, ...LEGACY_OPENAI_IDS]);
+		expect(openai.modelAllowlist).toEqual([...CURRENT_OPENAI_IDS]);
 
 		const byId = new Map(openai.models.map((model: { id: string }) => [model.id, model]));
-		for (const id of ["gpt-6-luna", "gpt-6-sol", "gpt-6-astra"]) {
+		for (const id of CURRENT_OPENAI_IDS) {
 			expect(byId.get(id)).toMatchObject({
 				id,
 				api: "openai-responses",
 				baseUrl: "https://proxy.example.com/openai/v1",
 			});
 		}
-		expect(byId.get("gpt-5.6-terra")).toMatchObject({ id: "gpt-5.6-terra", api: "openai-completions" });
 	});
 
 	it("exposes exact route, capability, effort, limit, and zero-cost metadata", () => {
-		const registry = new ModelRegistry(authStorage, modelsPath, { getLiteLLMMaxContext: () => true });
+		const registry = new ModelRegistry(authStorage, modelsPath, { getLiteLLMContextTier: () => "provider-max" });
 		const expectedEfforts = new Map<string, ReasoningEffort[]>([
-			[
-				"gpt-6-luna",
-				[ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max],
-			],
+			["gpt-6-luna", [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max]],
 			[
 				"gpt-5.6-terra",
-				[ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max],
+				[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max, ReasoningEffort.Ultra],
 			],
 			[
 				"gpt-6-sol",
-				[ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max],
+				[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max, ReasoningEffort.Ultra],
 			],
-			["gpt-6-astra", [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max]],
+			[
+				"gpt-6-astra",
+				[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max, ReasoningEffort.Ultra],
+			],
+			[
+				"gpt-5.6-sol",
+				[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max, ReasoningEffort.Ultra],
+			],
+			["gpt-5.6-luna", [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max]],
+			["gpt-5.5", [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]],
 		]);
 
 		for (const id of CURRENT_OPENAI_IDS) {
 			const model = registry.find("litellm", id);
 			expect(model).toMatchObject({
-				api: id === "gpt-5.6-terra" ? "openai-completions" : "openai-responses",
+				api: "openai-responses",
 				reasoning: true,
 				input: ["text", "image"],
 				cost: ZERO_COST,
-				contextWindow: 1_050_000,
+				contextWindow: id.startsWith("gpt-6-") ? 922_000 : 1_050_000,
 				maxTokens: 128_000,
 				compat: { supportsTemperature: false },
+				defaultReasoningSummary: "none",
+				defaultVerbosity: "low",
+				serviceTiers: ["default", "priority"],
+				truncationPolicy: { mode: "tokens", limit: 10_000 },
+				supportsParallelToolCalls: true,
 			});
 			expect(model?.thinking?.supportedLevels.map(level => level.effort)).toEqual(expectedEfforts.get(id));
 		}
-
 		for (const [id, contextWindow, maxTokens] of [
 			["claude-haiku-4-5", 200_000, 64_000],
 			["claude-sonnet-5", 1_000_000, 128_000],
@@ -142,10 +169,15 @@ describe("current internal LiteLLM model contract", () => {
 
 		streamOpenAIResponses(
 			model,
-			{ messages: [{ role: "user", content: "Reply with PONG", timestamp: 1 }] },
+			{
+				messages: [{ role: "user", content: "Reply with PONG", timestamp: 1 }],
+				tools: [{ name: "probe", description: "Run a probe", parameters: Type.Object({}) }],
+			},
 			{
 				apiKey: "synthetic-test-key",
 				reasoning: "high",
+				sessionId: "stable-session",
+				metadata: { source: "xcsh", attempt: 1 },
 				signal: controller.signal,
 				onPayload: payload => resolve(payload as unknown as Record<string, unknown>),
 			},
@@ -160,13 +192,70 @@ describe("current internal LiteLLM model contract", () => {
 			model: "gpt-6-sol",
 			stream: true,
 			store: false,
-			reasoning: { effort: "high", summary: "auto" },
+			tool_choice: "auto",
+			parallel_tool_calls: true,
+			reasoning: { effort: "high" },
+			text: { verbosity: "low" },
+			include: ["reasoning.encrypted_content"],
+			service_tier: "priority",
+			prompt_cache_key: "stable-session",
+			client_metadata: { source: "xcsh", attempt: "1" },
 		});
 		expect(payload).toHaveProperty("input");
 		expect(payload).not.toHaveProperty("messages");
 	});
 
-	it("shows exactly seven current models while retaining legacy selectors", () => {
+	it("applies the Codex tool-result truncation policy on LiteLLM Responses", async () => {
+		const registry = new ModelRegistry(authStorage, modelsPath);
+		const model = {
+			...(registry.find("litellm", "gpt-6-sol") as Model<"openai-responses">),
+			truncationPolicy: { mode: "tokens" as const, limit: 10 },
+		};
+		const callId = "call_1";
+		const context: Context = {
+			messages: [
+				{ role: "user", content: "Run the probe", timestamp: 1 },
+				{
+					role: "assistant",
+					content: [{ type: "toolCall", id: callId, name: "probe", arguments: {} }],
+					api: "openai-responses",
+					provider: "litellm",
+					model: "gpt-6-sol",
+					usage: {
+						input: 0,
+						output: 0,
+						cacheRead: 0,
+						cacheWrite: 0,
+						totalTokens: 0,
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					},
+					stopReason: "toolUse",
+					timestamp: 2,
+				},
+				{
+					role: "toolResult",
+					toolCallId: callId,
+					toolName: "probe",
+					content: [{ type: "text", text: "a".repeat(60) }],
+					isError: false,
+					timestamp: 3,
+				},
+			],
+		};
+		const controller = new AbortController();
+		controller.abort();
+		const { promise, resolve } = Promise.withResolvers<{ input?: Array<Record<string, unknown>> }>();
+		streamOpenAIResponses(model, context, {
+			apiKey: "synthetic-test-key",
+			signal: controller.signal,
+			onPayload: payload => resolve(payload as { input?: Array<Record<string, unknown>> }),
+		});
+
+		const output = (await promise).input?.find(item => item.type === "function_call_output")?.output;
+		expect(output).toBe(`${"a".repeat(20)}…5 tokens truncated…${"a".repeat(20)}`);
+	});
+
+	it("shows all seven provider-advertised OpenAI models", () => {
 		const registry = new ModelRegistry(authStorage, modelsPath);
 		const visible = filterCurrentBrowserModels(registry.getAll()).filter(
 			model => model.provider === "litellm" || model.provider === "anthropic",
@@ -177,11 +266,10 @@ describe("current internal LiteLLM model contract", () => {
 				...CURRENT_ANTHROPIC_IDS.map(id => `anthropic/${id}`),
 			].sort(),
 		);
-		for (const id of LEGACY_OPENAI_IDS) expect(registry.find("litellm", id)).toBeDefined();
 		expect(registry.find("anthropic", "claude-opus-5")).toBeDefined();
 	});
 
-	it("restores historical sessions that selected hidden legacy models", async () => {
+	it("restores sessions for every configured GPT-5.6 variant", async () => {
 		const registry = new ModelRegistry(authStorage, modelsPath);
 		for (const [provider, id] of [
 			["litellm", "gpt-5.6-luna"],
@@ -229,21 +317,27 @@ describe("current internal LiteLLM model contract", () => {
 	});
 
 	it("keeps maximum-context controls independent across discovery refreshes", async () => {
-		expect(SETTINGS_SCHEMA["providers.litellmMaxContext"]).toMatchObject({
-			type: "boolean",
-			default: false,
-			ui: { tab: "providers", label: "LiteLLM Maximum Context" },
+		expect(SETTINGS_SCHEMA["providers.litellmContextTier"]).toMatchObject({
+			type: "enum",
+			default: "standard",
+			ui: { tab: "providers", label: "LiteLLM Context Tier" },
 		});
-		expect(SETTINGS_SCHEMA["providers.openaiCodexMaxContext"].default).toBe(false);
+		expect(SETTINGS_SCHEMA["providers.openaiContextTier"].default).toBe("standard");
 
-		const registry = new ModelRegistry(authStorage, modelsPath, { getLiteLLMMaxContext: () => false });
+		const registry = new ModelRegistry(authStorage, modelsPath, { getLiteLLMContextTier: () => "standard" });
 		for (const id of CURRENT_OPENAI_IDS) expect(registry.find("litellm", id)?.contextWindow).toBe(272_000);
 		expect(registry.find("anthropic", "claude-opus-5-5")?.contextWindow).toBe(1_000_000);
 		await registry.refreshProvider("litellm", "offline");
 		for (const id of CURRENT_OPENAI_IDS) expect(registry.find("litellm", id)?.contextWindow).toBe(272_000);
 
-		registry.setLiteLLMMaxContext(true);
-		for (const id of CURRENT_OPENAI_IDS) expect(registry.find("litellm", id)?.contextWindow).toBe(1_050_000);
+		registry.setLiteLLMContextTier("codex-max");
+		for (const id of CURRENT_OPENAI_IDS) {
+			expect(registry.find("litellm", id)?.contextWindow).toBe(id === "gpt-5.5" ? 272_000 : 872_000);
+		}
+		registry.setLiteLLMContextTier("provider-max");
+		for (const id of CURRENT_OPENAI_IDS) {
+			expect(registry.find("litellm", id)?.contextWindow).toBe(id.startsWith("gpt-6-") ? 922_000 : 1_050_000);
+		}
 		expect(registry.find("anthropic", "claude-opus-5-5")?.contextWindow).toBe(1_000_000);
 	});
 });

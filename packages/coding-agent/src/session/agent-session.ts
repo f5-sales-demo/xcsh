@@ -47,6 +47,7 @@ import type {
 import {
 	calculateRateLimitBackoffMs,
 	completeSimple,
+	getModelEffectiveContextWindow,
 	getSupportedEfforts,
 	isAnthropicPermanentErrorMessage,
 	isContextOverflow,
@@ -3821,7 +3822,7 @@ export class AgentSession {
 		const contextEstimate = {
 			usedTokens: calculateUsedTokens(this.messages) + systemTokens + promptTokens + toolsTokens,
 			reserveTokens,
-			contextWindow: this.model.contextWindow ?? 128000,
+			contextWindow: getModelEffectiveContextWindow(this.model) || 128000,
 		};
 		const decision = await this.#routingCoordinator.evaluateTurn({
 			anchorModel,
@@ -3841,7 +3842,7 @@ export class AgentSession {
 				const m = this.#modelRegistry
 					.getAvailable()
 					.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
-				return m?.contextWindow ?? 128000;
+				return m ? getModelEffectiveContextWindow(m) : 128000;
 			},
 		});
 
@@ -5977,7 +5978,7 @@ export class AgentSession {
 	async #checkCompaction(assistantMessage: AssistantMessage, skipAbortedCheck = true): Promise<void> {
 		// Skip if message was aborted (user cancelled) - unless skipAbortedCheck is false
 		if (skipAbortedCheck && assistantMessage.stopReason === "aborted") return;
-		const contextWindow = this.model?.contextWindow ?? 0;
+		const contextWindow = this.model ? getModelEffectiveContextWindow(this.model) : 0;
 		const generation = this.#promptGeneration;
 		// Skip overflow check if the message came from a different model.
 		// This handles the case where user switched from a smaller-context model (e.g. opus)
@@ -6026,7 +6027,7 @@ export class AgentSession {
 		if (pruneResult) {
 			contextTokens = Math.max(0, contextTokens - pruneResult.tokensSaved);
 		}
-		if (shouldCompact(contextTokens, contextWindow, compactionSettings)) {
+		if (shouldCompact(contextTokens, contextWindow, compactionSettings, this.model?.autoCompactTokenLimit)) {
 			// Try promotion first — if a larger model is available, switch instead of compacting
 			const promoted = await this.#tryContextPromotion(assistantMessage);
 			if (!promoted) {
@@ -6251,7 +6252,7 @@ export class AgentSession {
 		if (!currentModel) return false;
 		if (assistantMessage.provider !== currentModel.provider || assistantMessage.model !== currentModel.id)
 			return false;
-		const contextWindow = currentModel.contextWindow ?? 0;
+		const contextWindow = getModelEffectiveContextWindow(currentModel);
 		if (contextWindow <= 0) return false;
 		const targetModel = await this.#resolveContextPromotionTarget(currentModel, contextWindow);
 		if (!targetModel) return false;
@@ -6280,7 +6281,7 @@ export class AgentSession {
 		const candidate = this.#resolveContextPromotionConfiguredTarget(currentModel, availableModels);
 		if (!candidate) return undefined;
 		if (modelsAreEqual(candidate, currentModel)) return undefined;
-		if (candidate.contextWindow <= contextWindow) return undefined;
+		if (getModelEffectiveContextWindow(candidate) <= contextWindow) return undefined;
 		const apiKey = await this.#modelRegistry.getApiKey(candidate, this.sessionId);
 		if (!apiKey) return undefined;
 		return candidate;
@@ -6556,7 +6557,9 @@ export class AgentSession {
 			addCandidate(this.#resolveRoleModelFull(role, availableModels, currentModel).model);
 		}
 
-		const sortedByContext = [...availableModels].sort((a, b) => b.contextWindow - a.contextWindow);
+		const sortedByContext = [...availableModels].sort(
+			(a, b) => getModelEffectiveContextWindow(b) - getModelEffectiveContextWindow(a),
+		);
 		for (const model of sortedByContext) {
 			if (!seen.has(this.#getModelKey(model))) {
 				addCandidate(model);
@@ -6981,7 +6984,7 @@ export class AgentSession {
 		if (message.stopReason !== "error" || !message.errorMessage) return false;
 
 		// Context overflow is handled by compaction, not retry
-		const contextWindow = this.model?.contextWindow ?? 0;
+		const contextWindow = this.model ? getModelEffectiveContextWindow(this.model) : 0;
 		if (isContextOverflow(message, contextWindow)) return false;
 
 		const err = message.errorMessage;
@@ -8426,7 +8429,7 @@ export class AgentSession {
 		const model = this.model;
 		if (!model) return undefined;
 
-		const contextWindow = model.contextWindow ?? 0;
+		const contextWindow = getModelEffectiveContextWindow(model);
 		if (contextWindow <= 0) return undefined;
 
 		// After compaction, the last assistant usage reflects pre-compaction context size.

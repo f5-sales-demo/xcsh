@@ -76,7 +76,7 @@ function registrationSkillErrors(value: unknown): NonNullable<SessionEndpoint["s
 function registrationModels(value: unknown): NonNullable<SessionEndpoint["models"]> {
 	if (value == null) return [];
 	if (!Array.isArray(value) || value.length > 512) throw new ProtocolError(-32602, "Invalid model registration");
-	const effortValues = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+	const effortValues = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
 	const identities = new Set<string>();
 	for (const model of value) {
 		const identity =

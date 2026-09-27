@@ -1575,6 +1575,33 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("entitlement-scoped OAuth discovery", () => {
+		test("a successful empty Codex catalog removes bundled models", async () => {
+			await authStorage.set("openai-codex", {
+				type: "oauth",
+				access: "test-codex-access-token",
+				refresh: "test-codex-refresh-token",
+				expires: Date.now() + 60_000,
+				accountId: "example-account",
+			});
+			using _hook = hookFetch((input: string | URL | Request) => {
+				const url = input instanceof Request ? input.url : String(input);
+				if (url === "https://registry.npmjs.org/@openai%2Fcodex/latest") {
+					return Response.json({ version: "0.152.1" });
+				}
+				if (url.startsWith("https://chatgpt.com/backend-api/codex/models?")) {
+					return Response.json({ models: [] });
+				}
+				throw new Error(`Unexpected URL: ${url}`);
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			expect(getModelsForProvider(registry, "openai-codex").length).toBeGreaterThan(0);
+			await registry.refreshProvider("openai-codex", "online");
+
+			expect(registry.getProviderDiscoveryState("openai-codex")).toMatchObject({ status: "ok", models: [] });
+			expect(getModelsForProvider(registry, "openai-codex")).toEqual([]);
+		});
+
 		test("refreshes expired Antigravity credentials before discovering models", async () => {
 			await authStorage.set("google-antigravity", {
 				type: "oauth",
@@ -2074,6 +2101,78 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("retains live LiteLLM input and output limits for Codex context tiers", async () => {
+			writeModelsJson({
+				litellm: providerConfig("https://proxy.example.com/v1", [{ id: "gpt-6-sol" }], "openai-responses"),
+			});
+			const document = JSON.parse(fs.readFileSync(modelsJsonPath, "utf8")) as {
+				providers: Record<string, Record<string, unknown>>;
+			};
+			document.providers.litellm.discovery = { type: "openai-compat" };
+			fs.writeFileSync(modelsJsonPath, JSON.stringify(document));
+
+			using _hook = hookFetch(input => {
+				if (String(input) !== "https://proxy.example.com/v1/models") throw new Error("Unexpected URL");
+				return Response.json({
+					data: [{ id: "gpt-6-sol", context_window: 922_000, max_output_tokens: 128_000 }],
+				});
+			});
+			const registry = new ModelRegistry(authStorage, modelsJsonPath, {
+				getLiteLLMContextTier: () => "provider-max",
+			});
+			await registry.refreshProvider("litellm", "online");
+
+			expect(registry.find("litellm", "gpt-6-sol")).toMatchObject({
+				providerContextWindow: 922_000,
+				contextWindow: 922_000,
+				maxTokens: 128_000,
+			});
+		});
+
+		test("successful discovery is authoritative over configured LiteLLM model overlays", async () => {
+			writeModelsJson({
+				litellm: providerConfig(
+					"https://proxy.example.com/v1",
+					[{ id: "advertised-model" }, { id: "unavailable-model" }],
+					"openai-responses",
+				),
+			});
+			const document = JSON.parse(fs.readFileSync(modelsJsonPath, "utf8")) as {
+				providers: Record<string, Record<string, unknown>>;
+			};
+			document.providers.litellm.discovery = { type: "openai-compat" };
+			fs.writeFileSync(modelsJsonPath, JSON.stringify(document));
+
+			using _hook = mockOpenAiCompatibleModels("https://proxy.example.com/v1/models", ["advertised-model"]);
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("litellm", "online");
+
+			expect(registry.find("litellm", "advertised-model")).toBeDefined();
+			expect(registry.find("litellm", "unavailable-model")).toBeUndefined();
+			expect(registry.getProviderDiscoveryState("litellm")).toMatchObject({
+				status: "ok",
+				models: ["advertised-model"],
+			});
+		});
+
+		test("successful empty discovery removes configured LiteLLM models", async () => {
+			writeModelsJson({
+				litellm: providerConfig("https://proxy.example.com/v1", [{ id: "unavailable-model" }], "openai-responses"),
+			});
+			const document = JSON.parse(fs.readFileSync(modelsJsonPath, "utf8")) as {
+				providers: Record<string, Record<string, unknown>>;
+			};
+			document.providers.litellm.discovery = { type: "openai-compat" };
+			fs.writeFileSync(modelsJsonPath, JSON.stringify(document));
+
+			using _hook = mockOpenAiCompatibleModels("https://proxy.example.com/v1/models", []);
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("litellm", "online");
+
+			expect(getModelsForProvider(registry, "litellm")).toEqual([]);
+			expect(registry.getProviderDiscoveryState("litellm")).toMatchObject({ status: "ok", models: [] });
+		});
+
 		test("vLLM discovery consumes advertised context limits and preserves fallbacks", async () => {
 			writeRawModelsJson({
 				vllm: {
@@ -2231,15 +2330,14 @@ describe("ModelRegistry", () => {
 				expect(model).toMatchObject({
 					reasoning: true,
 					input: ["text", "image"],
-					thinking: createThinkingConfig([
-						ReasoningEffort.None,
+					thinking: createThinkingConfig(
+						[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max, ReasoningEffort.Ultra],
+						"effort",
 						Effort.Low,
-						Effort.Medium,
-						Effort.High,
-						Effort.XHigh,
-						ReasoningEffort.Max,
-					]),
-					contextWindow: 1_050_000,
+					),
+					contextWindow: 272_000,
+					effectiveContextWindow: 258_400,
+					autoCompactTokenLimit: 244_800,
 					maxTokens: 128_000,
 					compat: { supportsTemperature: false },
 				});
@@ -2285,13 +2383,14 @@ describe("ModelRegistry", () => {
 					maxTokens: 128_000,
 					compat: { supportsTemperature: false },
 				});
-				expect(astra?.thinking?.defaultLevel).toBe(Effort.Medium);
+				expect(astra?.thinking?.defaultLevel).toBe(Effort.Low);
 				expect(astra?.thinking?.supportedLevels.map(level => level.effort)).toEqual([
 					Effort.Low,
 					Effort.Medium,
 					Effort.High,
 					Effort.XHigh,
 					ReasoningEffort.Max,
+					ReasoningEffort.Ultra,
 				]);
 			} finally {
 				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;

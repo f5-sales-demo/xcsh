@@ -11,8 +11,12 @@ import type { InteractiveModeContext } from "../src/modes/types";
 import { AuthStorage } from "../src/session/auth-storage";
 import { providerSelectorFixture } from "./helpers/provider-selector-fixture";
 
-test("new LiteLLM connection loads its six model routes before browsing without changing assignments", async () => {
+test("new LiteLLM connection loads its seven model routes before browsing without changing assignments", async () => {
 	initTheme();
+	const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
+	const previousApiKey = Bun.env.LITELLM_API_KEY;
+	delete Bun.env.LITELLM_BASE_URL;
+	delete Bun.env.LITELLM_API_KEY;
 	const previousDir = getAgentDir();
 	const dir = mkdtempSync(join(tmpdir(), "connected-provider-"));
 	setAgentDir(dir);
@@ -128,6 +132,10 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 		unhook[Symbol.dispose]();
 		auth.close();
 		setAgentDir(previousDir);
+		if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
+		else Bun.env.LITELLM_BASE_URL = previousBaseUrl;
+		if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
+		else Bun.env.LITELLM_API_KEY = previousApiKey;
 		rmSync(dir, { recursive: true, force: true });
 	}
 });

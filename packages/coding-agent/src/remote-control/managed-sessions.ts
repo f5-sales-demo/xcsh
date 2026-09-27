@@ -260,7 +260,7 @@ async function createManagedWorkerRuntime(
 
 function thinkingLevel(value: unknown): ThinkingLevel | undefined {
 	if (value === "none") return "off";
-	return ["minimal", "low", "medium", "high", "xhigh", "max"].includes(String(value))
+	return ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(String(value))
 		? (value as ThinkingLevel)
 		: undefined;
 }

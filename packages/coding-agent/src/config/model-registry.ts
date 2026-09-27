@@ -2,7 +2,9 @@ import * as path from "node:path";
 import {
 	type Api,
 	type AssistantMessageEventStream,
+	applyCodexInteractionMetadata,
 	applyGeneratedModelPolicies,
+	type CodexContextTier,
 	type Context,
 	createModelManager,
 	DEFAULT_LOCAL_TOKEN,
@@ -23,6 +25,7 @@ import {
 	readModelCache,
 	registerCustomApi,
 	registerOAuthProvider,
+	resolveCodexContextBudget,
 	type SimpleStreamOptions,
 	type ThinkingConfig,
 	unregisterCustomApis,
@@ -50,15 +53,12 @@ export type { CanonicalModelIndex, CanonicalModelRecord, CanonicalModelVariant, 
 
 export const kNoAuth = NO_AUTH_API_KEY;
 
-const OPENAI_CODEX_STANDARD_CONTEXT_WINDOW = 272_000;
-const OPENAI_CODEX_MAX_CONTEXT_WINDOW = 1_050_000;
-const OPENAI_CODEX_MAX_CONTEXT_MODEL_IDS = new Set(["gpt-6-luna", "gpt-6-sol"]);
-const LITELLM_STANDARD_CONTEXT_WINDOW = 272_000;
-const LITELLM_MAX_CONTEXT_WINDOW = 1_050_000;
-const LITELLM_MAX_CONTEXT_MODEL_IDS = new Set(["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"]);
-
 export function isAuthenticated(apiKey: string | undefined | null): apiKey is string {
 	return Boolean(apiKey) && apiKey !== kNoAuth;
+}
+
+function positiveInteger(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : undefined;
 }
 
 export type ModelRole = "default" | "smol" | "slow" | "vision" | "plan" | "designer" | "commit" | "task";
@@ -878,8 +878,8 @@ export class ModelRegistry {
 	#lastDiscoveryWarnings: Map<string, string> = new Map();
 	#hasProbed = false;
 	#refreshQueue: Promise<void> = Promise.resolve();
-	#openAICodexMaxContext = false;
-	#litellmMaxContext = false;
+	#openAIContextTier: CodexContextTier = "standard";
+	#litellmContextTier: CodexContextTier = "standard";
 
 	#enqueueRefresh(operation: () => Promise<void>): Promise<void> {
 		const pending = this.#refreshQueue.then(operation);
@@ -901,8 +901,8 @@ export class ModelRegistry {
 		modelsPath?: string,
 		private readonly options: {
 			getProviderOrder?: () => readonly string[];
-			getOpenAICodexMaxContext?: () => boolean;
-			getLiteLLMMaxContext?: () => boolean;
+			getOpenAIContextTier?: () => CodexContextTier;
+			getLiteLLMContextTier?: () => CodexContextTier;
 		} = {},
 	) {
 		this.#modelsConfigFile = ModelsConfigFile.relocate(modelsPath);
@@ -1055,8 +1055,8 @@ export class ModelRegistry {
 	}
 
 	#loadModels() {
-		this.#openAICodexMaxContext = this.options.getOpenAICodexMaxContext?.() ?? this.#openAICodexMaxContext;
-		this.#litellmMaxContext = this.options.getLiteLLMMaxContext?.() ?? this.#litellmMaxContext;
+		this.#openAIContextTier = this.options.getOpenAIContextTier?.() ?? this.#openAIContextTier;
+		this.#litellmContextTier = this.options.getLiteLLMContextTier?.() ?? this.#litellmContextTier;
 		// Load custom models from models.json first (to know which providers to override)
 		const {
 			models: customModels = [],
@@ -1090,42 +1090,39 @@ export class ModelRegistry {
 		const combined = this.#mergeCustomModels(withConfigModels, this.#runtimeModelOverlays);
 
 		this.#models = this.#applyProviderModelAllowlists(this.#applyModelOverrides(combined, this.#modelOverrides));
-		this.#applyOpenAICodexContextWindow();
-		this.#applyLiteLLMContextWindow();
+		this.#applyOpenAIContextTier();
+		this.#applyLiteLLMContextTier();
 		this.#rebuildCanonicalIndex();
 	}
 
-	#applyOpenAICodexContextWindow(): void {
-		const contextWindow = this.#openAICodexMaxContext
-			? OPENAI_CODEX_MAX_CONTEXT_WINDOW
-			: OPENAI_CODEX_STANDARD_CONTEXT_WINDOW;
+	#applyContextTier(provider: "openai-codex" | "litellm", tier: CodexContextTier): void {
 		for (const model of this.#models) {
-			if (model.provider === "openai-codex" && OPENAI_CODEX_MAX_CONTEXT_MODEL_IDS.has(model.id)) {
-				model.contextWindow = contextWindow;
-			}
+			if (model.provider !== provider) continue;
+			Object.assign(model, applyCodexInteractionMetadata(model));
+			const budget = resolveCodexContextBudget(model.id, tier, model.providerContextWindow);
+			if (budget) Object.assign(model, budget);
 		}
 	}
 
-	/** Update GPT-6 subscription context limits without rebuilding the registry. */
-	setOpenAICodexMaxContext(enabled: boolean): void {
-		this.#openAICodexMaxContext = enabled;
-		this.#applyOpenAICodexContextWindow();
+	#applyOpenAIContextTier(): void {
+		this.#applyContextTier("openai-codex", this.#openAIContextTier);
+	}
+
+	/** Update subscription context limits without rebuilding the registry. */
+	setOpenAIContextTier(tier: CodexContextTier): void {
+		this.#openAIContextTier = tier;
+		this.#applyOpenAIContextTier();
 		this.#rebuildCanonicalIndex();
 	}
 
-	#applyLiteLLMContextWindow(): void {
-		const contextWindow = this.#litellmMaxContext ? LITELLM_MAX_CONTEXT_WINDOW : LITELLM_STANDARD_CONTEXT_WINDOW;
-		for (const model of this.#models) {
-			if (model.provider === "litellm" && LITELLM_MAX_CONTEXT_MODEL_IDS.has(model.id)) {
-				model.contextWindow = contextWindow;
-			}
-		}
+	#applyLiteLLMContextTier(): void {
+		this.#applyContextTier("litellm", this.#litellmContextTier);
 	}
 
 	/** Update current internal OpenAI context limits without changing subscription models. */
-	setLiteLLMMaxContext(enabled: boolean): void {
-		this.#litellmMaxContext = enabled;
-		this.#applyLiteLLMContextWindow();
+	setLiteLLMContextTier(tier: CodexContextTier): void {
+		this.#litellmContextTier = tier;
+		this.#applyLiteLLMContextTier();
 		this.#rebuildCanonicalIndex();
 	}
 
@@ -1196,6 +1193,13 @@ export class ModelRegistry {
 			}
 		}
 		return merged;
+	}
+
+	#filterOverlaysBySuccessfulDiscovery(models: CustomModelOverlay[]): CustomModelOverlay[] {
+		return models.filter(model => {
+			const discovery = this.#providerDiscoveryStates.get(model.provider);
+			return discovery?.status !== "ok" || discovery.models.includes(model.id);
+		});
 	}
 
 	#applyProviderModelAllowlists(models: Model<Api>[]): Model<Api>[] {
@@ -1420,9 +1424,15 @@ export class ModelRegistry {
 		]);
 		const discovered = [...configuredDiscovered, ...builtInDiscovered];
 		// Replace only catalogs which completed successfully, including an empty response.
+		const successfulDiscoveryProviders = providerFilter
+			? [...providerFilter].filter(provider => this.#providerDiscoveryStates.get(provider)?.status === "ok")
+			: [...this.#providerDiscoveryStates.values()]
+					.filter(state => state.status === "ok")
+					.map(state => state.provider);
 		const refreshed = new Set([
 			...selectedDiscoverableProviders.map(provider => provider.provider),
 			...discovered.map(model => model.provider),
+			...successfulDiscoveryProviders,
 		]);
 		const discoveredModels = this.#applyHardcodedModelPolicies(
 			discovered.map(model => {
@@ -1452,12 +1462,18 @@ export class ModelRegistry {
 			model => !refreshed.has(model.provider) || this.#providerDiscoveryStates.get(model.provider)?.status !== "ok",
 		);
 		const resolved = this.#mergeResolvedModels(this.#models, discoveredModels);
-		const withConfigModels = this.#mergeCustomModels(resolved, this.#customModelOverlays);
+		const withConfigModels = this.#mergeCustomModels(
+			resolved,
+			this.#filterOverlaysBySuccessfulDiscovery(this.#customModelOverlays),
+		);
 		// Merge runtime extension models so they survive online discovery completion
-		const combined = this.#mergeCustomModels(withConfigModels, this.#runtimeModelOverlays);
+		const combined = this.#mergeCustomModels(
+			withConfigModels,
+			this.#filterOverlaysBySuccessfulDiscovery(this.#runtimeModelOverlays),
+		);
 		this.#models = this.#applyProviderModelAllowlists(this.#applyModelOverrides(combined, this.#modelOverrides));
-		this.#applyOpenAICodexContextWindow();
-		this.#applyLiteLLMContextWindow();
+		this.#applyOpenAIContextTier();
+		this.#applyLiteLLMContextTier();
 		this.#rebuildCanonicalIndex();
 	}
 
@@ -2047,7 +2063,13 @@ export class ModelRegistry {
 			throw new Error(`HTTP ${response.status} from ${modelsUrl}`);
 		}
 		const payload = await response.json();
-		const items: Array<{ id: string; contextWindow?: number }> =
+		const items: Array<{
+			id: string;
+			contextWindow?: number;
+			context_window?: unknown;
+			max_input_tokens?: unknown;
+			max_output_tokens?: unknown;
+		}> =
 			providerConfig.provider === "vllm"
 				? parseVllmModelsPayload(payload)
 				: ((payload as { data?: Array<{ id: string }> }).data ?? []);
@@ -2055,6 +2077,10 @@ export class ModelRegistry {
 		for (const item of items) {
 			const id = item.id;
 			if (!id) continue;
+			const advertisedContextWindow =
+				positiveInteger(item.context_window) ?? positiveInteger(item.max_input_tokens) ?? item.contextWindow;
+			const advertisedOutputLimit = positiveInteger(item.max_output_tokens);
+			const contextWindow = advertisedContextWindow ?? 128000;
 			discovered.push(
 				enrichModelThinking({
 					id,
@@ -2065,11 +2091,13 @@ export class ModelRegistry {
 					reasoning: false,
 					input: ["text"],
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: item.contextWindow ?? 128000,
+					contextWindow,
 					maxTokens:
-						item.contextWindow === undefined
+						advertisedOutputLimit ??
+						(advertisedContextWindow === undefined
 							? 8192
-							: Math.max(1, Math.min(8192, Math.floor(item.contextWindow / 4))),
+							: Math.max(1, Math.min(8192, Math.floor(advertisedContextWindow / 4)))),
+					providerContextWindow: advertisedContextWindow,
 					headers,
 				}),
 			);
@@ -2150,7 +2178,8 @@ export class ModelRegistry {
 		// bundled corrections. Reapply generated-model policy before a cached entry
 		// replaces its bundled peer; explicit user overrides still run afterward.
 		applyGeneratedModelPolicies(models, { preserveDiscoveredThinking });
-		return models.map(model => {
+		return models.map(rawModel => {
+			const model = applyCodexInteractionMetadata(rawModel);
 			if (model.id !== "gpt-5.4" || model.provider === "github-copilot") {
 				return model;
 			}

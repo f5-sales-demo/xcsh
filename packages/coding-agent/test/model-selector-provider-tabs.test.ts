@@ -27,8 +27,8 @@ const state = (
 beforeAll(() => initTheme());
 
 describe("authenticated provider model groups", () => {
-	it("groups both LiteLLM transports into one tab with the seven current models and unassigned Astra", () => {
-		const ids = ["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra", "gpt-5.6-luna", "gpt-5.6-sol"];
+	it("groups both LiteLLM transports into one tab with all seven OpenAI interaction models", () => {
+		const ids = ["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.5"];
 		const claudeIds = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5", "claude-opus-5"];
 		const metadata = (provider: string) => ({
 			groupId: "litellm",
@@ -57,20 +57,21 @@ describe("authenticated provider model groups", () => {
 		expect(groups[0]?.label).toBe("LiteLLM");
 		expect(groups[0]?.providers).toEqual(["litellm", "anthropic"]);
 		expect(groups[0]?.stale).toBe(false);
-		expect(groups[0]?.models).toHaveLength(7);
+		expect(groups[0]?.models).toHaveLength(10);
 		expect(groups[0]?.models.map(item => item.selector).sort()).toEqual(
 			[
 				"litellm/gpt-6-luna",
 				"litellm/gpt-5.6-terra",
 				"litellm/gpt-6-sol",
 				"litellm/gpt-6-astra",
+				"litellm/gpt-5.6-luna",
+				"litellm/gpt-5.6-sol",
+				"litellm/gpt-5.5",
 				"anthropic/claude-haiku-4-5",
 				"anthropic/claude-sonnet-5",
 				"anthropic/claude-opus-5-5",
 			].sort(),
 		);
-		expect(groups[0]?.models.some(item => item.selector === "litellm/gpt-5.6-luna")).toBe(false);
-		expect(groups[0]?.models.some(item => item.selector === "litellm/gpt-5.6-sol")).toBe(false);
 		expect(groups[0]?.models.some(item => item.selector === "anthropic/claude-opus-5")).toBe(false);
 		expect(groups[0]?.models.some(item => item.selector === "litellm/gpt-6-astra")).toBe(true);
 		expect(Object.values(Settings.isolated().getModelRoles()).some(role => role?.includes("gpt-6-astra"))).toBe(
@@ -107,7 +108,9 @@ describe("authenticated provider model groups", () => {
 			model("github-copilot", "gpt-5.6-sol"),
 		]);
 		expect(filtered.map(item => `${item.provider}/${item.id}`)).toEqual([
+			"openai-codex/gpt-5.5",
 			"openai-codex/gpt-5.6-terra",
+			"openai-codex/gpt-5.6-luna",
 			"openai-codex/gpt-6-astra",
 			"openai-codex/gpt-6-luna",
 			"openai-codex/gpt-6-sol",

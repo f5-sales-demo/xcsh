@@ -130,7 +130,7 @@ test("turn lifecycle emits truthful status and usage in Codex 0.154 order", asyn
 		sessionId: "usage",
 		sessionName: undefined,
 		sessionFile: "/tmp/usage.jsonl",
-		model: { id: "fixture", provider: "fixture", contextWindow: 12345 },
+		model: { id: "fixture", provider: "fixture", contextWindow: 12345, effectiveContextWindow: 11728 },
 		messages,
 		isStreaming: false,
 		settings: Settings.isolated({ "sandbox.enabled": false }),
@@ -199,7 +199,7 @@ test("turn lifecycle emits truthful status and usage in Codex 0.154 order", asyn
 			outputTokens: 5,
 			reasoningOutputTokens: 0,
 		},
-		modelContextWindow: 12345,
+		modelContextWindow: 11728,
 	});
 	expect(events[5]?.params.status).toEqual({ type: "idle" });
 	remote.dispose();

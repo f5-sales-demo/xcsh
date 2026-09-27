@@ -93,22 +93,27 @@ Both select `anthropic/claude-fable-5-1` deterministically.
 
 LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.
 
-Generated LiteLLM configuration shows seven current internal models: GPT-6 Luna, GPT-5.6 Terra,
-GPT-6 Sol, GPT-6 Astra, Claude Haiku 4.5, Claude Sonnet 5, and Claude Opus 5.5. Older GPT-5.6
-Luna/Sol and Claude Opus 5 selectors remain resolvable for historical sessions but are hidden from
-ordinary browsing.
+Generated LiteLLM configuration exposes seven internal OpenAI models when the provider advertises
+them: GPT-6 Astra, Sol, and Luna; GPT-5.6 Sol, Terra, and Luna; and GPT-5.5. All seven use LiteLLM's
+OpenAI Responses endpoint (`/openai/v1/responses`). The separate generated Anthropic provider uses
+the native Messages route. Internal routes keep zero-cost metadata until the gateway publishes
+authoritative chargeback pricing.
 
-GPT-6 Luna, Sol, and Astra use LiteLLM's OpenAI Responses endpoint (`/openai/v1/responses`), while
-GPT-5.6 Terra keeps the discovered OpenAI-compatible Chat Completions base path. The generated
-Anthropic provider uses the native Messages route. Internal routes keep zero-cost metadata until the
-gateway publishes authoritative chargeback pricing.
+Both ChatGPT subscription and LiteLLM routing offer three context tiers under **Providers**:
 
-The four current internal OpenAI models use a 272,000-token effective context window by default.
-Enable **LiteLLM Maximum Context** under **Providers** to use their verified 1,050,000-token window
-with up to 128,000 output tokens. This setting is independent from **OpenAI Codex Maximum Context**,
-which applies only to ChatGPT subscription routing. Claude Haiku 4.5 retains its 200,000-token context
-and 64,000-token output limits; Sonnet 5 and Opus 5.5 retain 1,000,000-token context and 128,000-token
-output limits.
+- **Standard** uses 272,000 tokens.
+- **Codex maximum** uses 872,000 tokens, except GPT-5.5 remains at 272,000.
+- **Provider maximum** uses the live provider-advertised input limit without exceeding xcsh's
+  verified ceiling: 922,000 for internal GPT-6 models and 1,050,000 for internal GPT-5.6 and GPT-5.5.
+
+xcsh makes 95% of the selected window available to the conversation and starts automatic compaction
+at 90%. These models allow up to 128,000 output tokens and truncate individual tool results at 10,000
+tokens. Provider discovery is authoritative: models that are absent or not entitled stay hidden, and
+an exact selector for an unavailable model returns an availability error instead of choosing a
+different model. The Fast service option sends the Responses API value `priority`.
+
+Claude Haiku 4.5 retains its 200,000-token context and 64,000-token output limits; Sonnet 5 and Opus
+5.5 retain 1,000,000-token context and 128,000-token output limits.
 
 ## How do I test licensed Vertex locally?
 

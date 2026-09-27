@@ -15,6 +15,7 @@ export const enum Effort {
 	High = "high",
 	XHigh = "xhigh",
 	Max = "max",
+	Ultra = "ultra",
 }
 
 /** Public reasoning preset enum. `none` is distinct from inheriting the provider default. */
@@ -26,8 +27,9 @@ export const ReasoningEffort = {
 	High: Effort.High,
 	XHigh: Effort.XHigh,
 	Max: Effort.Max,
+	Ultra: Effort.Ultra,
 } as const;
-export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
 
 /**
  * Anthropic's `output_config.effort` enum, verbatim. Authority is the API's own
@@ -47,7 +49,7 @@ export type EffortThroughXHigh = "minimal" | "low" | "medium" | "high" | "xhigh"
  * clamping is the safe direction if a caller bypasses the range check.
  */
 export function clampEffortThroughXHigh(effort: Effort): EffortThroughXHigh {
-	return effort === Effort.Max ? Effort.XHigh : effort;
+	return effort === Effort.Max || effort === Effort.Ultra ? Effort.XHigh : effort;
 }
 
 /** Order is load-bearing: `indexOf` drives expandEffortRange/requireSupportedEffort. */
@@ -58,6 +60,7 @@ export const THINKING_EFFORTS: readonly Effort[] = [
 	Effort.High,
 	Effort.XHigh,
 	Effort.Max,
+	Effort.Ultra,
 ];
 
 export const REASONING_EFFORTS: readonly ReasoningEffort[] = [ReasoningEffort.None, ...THINKING_EFFORTS];
@@ -70,6 +73,7 @@ const EFFORT_DESCRIPTIONS: Readonly<Record<ReasoningEffort, string>> = {
 	[ReasoningEffort.High]: "Deep reasoning",
 	[ReasoningEffort.XHigh]: "Very deep reasoning",
 	[ReasoningEffort.Max]: "Maximum reasoning",
+	[ReasoningEffort.Ultra]: "Maximum reasoning with automatic task delegation",
 };
 
 /** Build explicit metadata for custom models and programmatic registries. */
@@ -365,6 +369,7 @@ export function mapEffortToGoogleThinkingLevel<TApi extends Api>(
 		case Effort.High:
 		case Effort.XHigh:
 		case Effort.Max:
+		case Effort.Ultra:
 			return "HIGH";
 	}
 }
@@ -391,6 +396,7 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 		case Effort.XHigh:
 			return "xhigh";
 		case Effort.Max:
+		case Effort.Ultra:
 			return "max";
 	}
 }

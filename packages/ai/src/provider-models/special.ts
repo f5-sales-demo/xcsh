@@ -18,6 +18,7 @@ export function openaiCodexModelManagerOptions(
 	const { accessToken, accountId, clientVersion } = config;
 	return {
 		providerId: "openai-codex",
+		staticModels: [],
 		...(accessToken
 			? {
 					fetchDynamicModels: async () => {

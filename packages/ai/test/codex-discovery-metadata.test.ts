@@ -11,7 +11,7 @@ const GPT_56_LEVELS = [
 ];
 
 describe("Codex model discovery metadata", () => {
-	it("preserves the live catalog's distinct GPT-5.6 tiers and presentation metadata", async () => {
+	it("merges the pinned GPT-5.6 interaction contract with live catalog presentation", async () => {
 		const fetchFn = vi.fn(async (input: string | URL | Request) => {
 			if (String(input).includes("registry.npmjs.org")) return Response.json({ version: "0.152.1" });
 			return Response.json({
@@ -36,6 +36,7 @@ describe("Codex model discovery metadata", () => {
 						visibility: "list",
 						priority: 1,
 						supported_in_api: true,
+						context_window: 1_050_000,
 					},
 					{
 						slug: "gpt-5.6-luna",
@@ -46,6 +47,7 @@ describe("Codex model discovery metadata", () => {
 						visibility: "list",
 						priority: 2,
 						supported_in_api: true,
+						context_window: 1_050_000,
 					},
 				],
 			});
@@ -54,17 +56,26 @@ describe("Codex model discovery metadata", () => {
 		const result = await fetchCodexModels({ accessToken: "test-token", fetchFn });
 
 		expect(result?.models.map(model => model.id)).toEqual(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]);
+		const expectedEfforts = {
+			"gpt-5.6-sol": ["low", "medium", "high", "xhigh", "max", "ultra"],
+			"gpt-5.6-terra": ["low", "medium", "high", "xhigh", "max", "ultra"],
+			"gpt-5.6-luna": ["low", "medium", "high", "xhigh", "max"],
+		} as const;
+		const expectedDefaults = { "gpt-5.6-sol": "low", "gpt-5.6-terra": "medium", "gpt-5.6-luna": "medium" } as const;
 		for (const model of result?.models ?? []) {
 			expect(model).toMatchObject({
 				publisher: "OpenAI",
 				family: "GPT-5.6",
 				visibility: "list",
-				thinking: {
-					mode: "effort",
-					defaultLevel: "medium",
-					supportedLevels: GPT_56_LEVELS,
-				},
+				providerContextWindow: 1_050_000,
+				defaultReasoningSummary: "none",
+				defaultVerbosity: "low",
+				truncationPolicy: { mode: "tokens", limit: 10_000 },
 			});
+			expect(model.thinking?.defaultLevel).toBe(expectedDefaults[model.id as keyof typeof expectedDefaults]);
+			expect(model.thinking?.supportedLevels.map(level => level.effort)).toEqual([
+				...expectedEfforts[model.id as keyof typeof expectedEfforts],
+			]);
 			expect(model.tier).toBe(model.name.replace("GPT-5.6 ", ""));
 		}
 		expect(result?.models[0]?.description).toBe("Flagship model for complex professional work");

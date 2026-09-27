@@ -85,11 +85,23 @@ describe("model thinking metadata", () => {
 			provider: "litellm",
 			reasoning: true,
 			input: ["text", "image"],
-			contextWindow: 1050000,
-			maxTokens: 128000,
-			thinking: createThinkingConfig([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]),
+			contextWindow: 272_000,
+			providerContextWindow: 1_050_000,
+			maxTokens: 128_000,
+			thinking: createThinkingConfig(
+				[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max, Effort.Ultra],
+				"effort",
+				Effort.Low,
+			),
 		});
-		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]);
+		expect(getSupportedEfforts(model)).toEqual([
+			Effort.Low,
+			Effort.Medium,
+			Effort.High,
+			Effort.XHigh,
+			Effort.Max,
+			Effort.Ultra,
+		]);
 	});
 
 	it("corrects image input only for the generated LiteLLM GPT-5.6 Sol entry", () => {
