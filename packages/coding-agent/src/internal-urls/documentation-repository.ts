@@ -271,7 +271,7 @@ export function createEmbeddedDocumentationRepository(
 				const database = new Database(materialized.indexPath, { readonly: true });
 				try {
 					verifyDatabase(database, assets);
-					const store = await createStore({ dbPath: materialized.indexPath });
+					const store = await createStore({ dbPath: materialized.indexPath, readonly: true });
 					return { ...materialized, database, store };
 				} catch (error) {
 					database.close();

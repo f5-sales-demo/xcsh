@@ -1,5 +1,20 @@
+diff --git a/dist/db.d.ts b/dist/db.d.ts
+index ef762e95b..e5d4183ae 100644
+--- a/dist/db.d.ts
++++ b/dist/db.d.ts
+@@ -32,7 +32,9 @@ export type SQLiteParams = readonly SQLiteValue[];
+  * restores the upstream fail-fast behaviour). See
+  * https://bun.sh/docs/api/sqlite#busy-timeout.
+  */
+-export declare function openDatabase(path: string): Database;
++export declare function openDatabase(path: string, options?: {
++    readonly?: boolean;
++}): Database;
+ /**
+  * Common subset of the Database interface used throughout QMD.
+  */
 diff --git a/dist/db.js b/dist/db.js
-index acef8250fb369378129a963753774d65d0116559..d19dfd7c8e151cddbf1ae9af5888af53a6130a60 100644
+index acef8250f..4f575dfd0 100644
 --- a/dist/db.js
 +++ b/dist/db.js
 @@ -5,10 +5,8 @@
@@ -39,8 +54,71 @@ index acef8250fb369378129a963753774d65d0116559..d19dfd7c8e151cddbf1ae9af5888af53
      try {
          const { getLoadablePath } = await import("sqlite-vec");
          const vecPath = getLoadablePath();
+@@ -103,13 +87,14 @@ function enableWal(db, budgetMs) {
+  * restores the upstream fail-fast behaviour). See
+  * https://bun.sh/docs/api/sqlite#busy-timeout.
+  */
+-export function openDatabase(path) {
+-    const db = new _Database(path);
++export function openDatabase(path, options = {}) {
++    const db = new _Database(path, options.readonly ? { readonly: true } : undefined);
+     const raw = process.env.QMD_SQLITE_BUSY_TIMEOUT;
+     const parsed = raw !== undefined && raw !== "" ? Number(raw) : Number.NaN;
+     const busyTimeoutMs = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 120_000;
+     db.exec(`PRAGMA busy_timeout = ${busyTimeoutMs}`);
+-    enableWal(db, busyTimeoutMs);
++    if (!options.readonly)
++        enableWal(db, busyTimeoutMs);
+     return db;
+ }
+ /**
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 2f887b7dd..63caacae9 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -108,6 +108,8 @@ export interface ExpandQueryOptions {
+ export interface StoreOptions {
+     /** Path to the SQLite database file */
+     dbPath: string;
++    /** Open an existing database without changing its bytes or journal mode. */
++    readonly?: boolean;
+     /** Path to a YAML config file (mutually exclusive with `config`) */
+     configPath?: string;
+     /** Inline collection config (mutually exclusive with `configPath`) */
+diff --git a/dist/index.js b/dist/index.js
+index 8f8df72d3..8f1ad292c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -57,8 +57,11 @@ export async function createStore(options) {
+     if (options.configPath && options.config) {
+         throw new Error("Provide either configPath or config, not both");
+     }
++    if (options.readonly && (options.configPath || options.config)) {
++        throw new Error("Read-only stores require existing database configuration");
++    }
+     // Create the internal store (opens DB, creates tables)
+-    const internal = createStoreInternal(options.dbPath);
++    const internal = createStoreInternal(options.dbPath, { readonly: options.readonly });
+     const db = internal.db;
+     // Track whether we have a YAML config path for write-through
+     const hasYamlConfig = !!options.configPath;
+diff --git a/dist/store.d.ts b/dist/store.d.ts
+index c9ab8c6d4..654f68dcf 100644
+--- a/dist/store.d.ts
++++ b/dist/store.d.ts
+@@ -412,7 +412,9 @@ export declare function generateEmbeddings(store: Store, options?: EmbedOptions)
+  * @param dbPath - Path to the SQLite database file
+  * @returns Store instance with all methods bound to the database
+  */
+-export declare function createStore(dbPath?: string): Store;
++export declare function createStore(dbPath?: string, options?: {
++    readonly?: boolean;
++}): Store;
+ /**
+  * Unified document result type with all metadata.
+  * Body is optional - use getDocumentBody() to load it separately if needed.
 diff --git a/dist/store.js b/dist/store.js
-index cd6c7cd87d4b912f19ca30d0bcf4adec4046a877..b839c8ffe42b0202ceb28ce69735fa411ad9e91b 100644
+index cd6c7cd87..7f7b7fae9 100644
 --- a/dist/store.js
 +++ b/dist/store.js
 @@ -992,10 +992,10 @@ function initializeDatabase(db) {
@@ -56,3 +134,18 @@ index cd6c7cd87d4b912f19ca30d0bcf4adec4046a877..b839c8ffe42b0202ceb28ce69735fa41
      }
      db.exec("PRAGMA foreign_keys = ON");
      // Drop legacy tables that are now managed in YAML
+@@ -1744,10 +1744,11 @@ export async function generateEmbeddings(store, options) {
+  * @param dbPath - Path to the SQLite database file
+  * @returns Store instance with all methods bound to the database
+  */
+-export function createStore(dbPath) {
++export function createStore(dbPath, options = {}) {
+     const resolvedPath = dbPath || getDefaultDbPath();
+-    const db = openDatabase(resolvedPath);
+-    initializeDatabase(db);
++    const db = openDatabase(resolvedPath, options);
++    if (!options.readonly)
++        initializeDatabase(db);
+     const store = {
+         db,
+         dbPath: resolvedPath,

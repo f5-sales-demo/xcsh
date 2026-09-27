@@ -260,7 +260,14 @@ describe("offline documentation release", () => {
 		const firstResult = await buildDocumentationIndex(verified, first);
 		const secondResult = await buildDocumentationIndex(verified, second);
 		expect(firstResult).toEqual(secondResult);
-		expect(await readFile(first)).toEqual(await readFile(second));
+		const firstBytes = await readFile(first);
+		expect(firstBytes).toEqual(await readFile(second));
+		// SQLite mutates these header fields according to the connection's write
+		// history. Pinning both values makes identical logical databases portable
+		// across the Linux and macOS release builders.
+		expect(firstBytes.readUInt32BE(24)).toBe(1);
+		expect(firstBytes.readUInt32BE(92)).toBe(1);
+		expect(firstBytes.readUInt32BE(96)).toBe(3_000_000);
 
 		const db = new Database(first, { readonly: true });
 		try {
