@@ -363,20 +363,23 @@ install_binary() {
   echo "Using version: $LATEST"
 
   mkdir -p "$INSTALL_DIR"
+  INSTALL_STAGE_DIR="$(mktemp -d "$INSTALL_DIR/.xcsh-install.XXXXXX")"
+  cleanup_binary_install() {
+    [ -z "$INSTALL_STAGE_DIR" ] || [ ! -d "$INSTALL_STAGE_DIR" ] || rm -rf "$INSTALL_STAGE_DIR"
+  }
+  trap cleanup_binary_install EXIT INT TERM
   # Download binary
   BINARY_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BINARY}"
   echo "Downloading ${BINARY}..."
-  rm -f "${INSTALL_DIR}/xcsh"
-  curl -fsSL "$BINARY_URL" -o "${INSTALL_DIR}/xcsh"
-  chmod +x "${INSTALL_DIR}/xcsh"
+  curl -fsSL "$BINARY_URL" -o "${INSTALL_STAGE_DIR}/xcsh"
+  chmod 0755 "${INSTALL_STAGE_DIR}/xcsh"
   downloaded_native=0
   if [ "$ARCH" = "x64" ]; then
     for variant in modern baseline; do
       NATIVE_ADDON="pi_natives.${PLATFORM}-${ARCH}-${variant}.node"
       NATIVE_URL="https://github.com/${REPO}/releases/download/${LATEST}/${NATIVE_ADDON}"
       echo "Downloading ${NATIVE_ADDON}..."
-      rm -f "${INSTALL_DIR}/${NATIVE_ADDON}"
-      curl -fsSL "$NATIVE_URL" -o "${INSTALL_DIR}/${NATIVE_ADDON}" || {
+      curl -fsSL "$NATIVE_URL" -o "${INSTALL_STAGE_DIR}/${NATIVE_ADDON}" || {
         echo "Failed to download ${NATIVE_ADDON}"
         exit 1
       }
@@ -386,10 +389,31 @@ install_binary() {
     NATIVE_ADDON="pi_natives.${PLATFORM}-${ARCH}.node"
     NATIVE_URL="https://github.com/${REPO}/releases/download/${LATEST}/${NATIVE_ADDON}"
     echo "Downloading ${NATIVE_ADDON}..."
-    rm -f "${INSTALL_DIR}/${NATIVE_ADDON}"
-    curl -fsSL "$NATIVE_URL" -o "${INSTALL_DIR}/${NATIVE_ADDON}"
+    curl -fsSL "$NATIVE_URL" -o "${INSTALL_STAGE_DIR}/${NATIVE_ADDON}"
     downloaded_native=1
   fi
+  expected_version="${LATEST#v}"
+  installed_version=$("${INSTALL_STAGE_DIR}/xcsh" --version 2>/dev/null || true)
+  case "$installed_version" in
+  *"/${expected_version}") ;;
+  *)
+    echo "Downloaded xcsh did not report expected version ${expected_version}"
+    exit 1
+    ;;
+  esac
+  receipt_exec=$(printf '%s' "${INSTALL_DIR}/xcsh" | sed 's/\\/\\\\/g; s/"/\\"/g')
+  printf '{"schemaVersion":1,"channel":"standalone","version":"%s","executablePath":"%s","platform":"%s","arch":"%s"}\n' \
+    "$expected_version" "$receipt_exec" "$PLATFORM" "$ARCH" >"${INSTALL_STAGE_DIR}/xcsh-install.json"
+  for staged_native in "${INSTALL_STAGE_DIR}"/pi_natives.*.node; do
+    mv -f "$staged_native" "$INSTALL_DIR/$(basename "$staged_native")"
+  done
+  mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"
+  # The receipt is committed last, so interrupted or failed installs are never
+  # granted standalone self-update ownership.
+  mv -f "$INSTALL_STAGE_DIR/xcsh-install.json" "$INSTALL_DIR/xcsh-install.json"
+  rmdir "$INSTALL_STAGE_DIR"
+  INSTALL_STAGE_DIR=""
+  trap - EXIT INT TERM
   echo ""
   echo "✓ Installed xcsh to ${INSTALL_DIR}/xcsh"
   echo "✓ Installed ${downloaded_native} native addon file(s) to ${INSTALL_DIR}"

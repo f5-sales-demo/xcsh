@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "7ff8125f16bf5d304875ba6c8692966bb9803df2",
+  "revision": "f7f0d585154237eb89aac7b3120077ec16b391bd",
   "fingerprint": "f045f5987430ab254c573805d9d46ecadd404d9836a13095aa38b70e93bcf167",
   "counts": {
     "total": 238,
@@ -3047,7 +3047,6 @@
         "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
         "packages/coding-agent/test/regression-guard.test.ts",
         "packages/coding-agent/test/tools/sqlite.test.ts",
-        "packages/coding-agent/test/update-cli.test.ts",
         "packages/coding-agent/test/welcome-checks.test.ts",
         "packages/coding-agent/test/welcome-component.test.ts",
         "packages/coding-agent/test/welcome-context-retry.test.ts",

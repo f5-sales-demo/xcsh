@@ -256,21 +256,48 @@ function Install-Binary {
     Write-Host "Using version: $Latest"
 
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-
-    # Download binary
-    $BinaryUrl = "https://github.com/$Repo/releases/download/$Latest/$BinaryName"
-    Write-Host "Downloading $BinaryName..."
+    $StageDir = Join-Path $InstallDir (".xcsh-install-" + [System.Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $StageDir | Out-Null
     $OutPath = Join-Path $InstallDir "xcsh.exe"
-    Invoke-WebRequest -Uri $BinaryUrl -OutFile $OutPath
-
-    # Download native addons
+    $ReceiptPath = Join-Path $InstallDir "xcsh-install.json"
+    $StagedBinary = Join-Path $StageDir "xcsh.exe"
+    $StagedReceipt = Join-Path $StageDir "xcsh-install.json"
     $downloadedNative = 0
-    foreach ($nativeAddonName in $NativeAddonNames) {
-        $nativeUrl = "https://github.com/$Repo/releases/download/$Latest/$nativeAddonName"
-        Write-Host "Downloading $nativeAddonName..."
-        $nativeOutPath = Join-Path $InstallDir $nativeAddonName
-        Invoke-WebRequest -Uri $nativeUrl -OutFile $nativeOutPath
-        $downloadedNative += 1
+    try {
+        $BinaryUrl = "https://github.com/$Repo/releases/download/$Latest/$BinaryName"
+        Write-Host "Downloading $BinaryName..."
+        Invoke-WebRequest -Uri $BinaryUrl -OutFile $StagedBinary
+
+        foreach ($nativeAddonName in $NativeAddonNames) {
+            $nativeUrl = "https://github.com/$Repo/releases/download/$Latest/$nativeAddonName"
+            Write-Host "Downloading $nativeAddonName..."
+            Invoke-WebRequest -Uri $nativeUrl -OutFile (Join-Path $StageDir $nativeAddonName)
+            $downloadedNative += 1
+        }
+
+        $ExpectedVersion = $Latest.TrimStart("v")
+        $ActualVersion = (& $StagedBinary --version).Trim()
+        if ($LASTEXITCODE -ne 0 -or $ActualVersion -ne "xcsh/$ExpectedVersion") {
+            throw "Downloaded xcsh did not report expected version $ExpectedVersion"
+        }
+        $Receipt = @{
+            schemaVersion = 1
+            channel = "windows-installer"
+            version = $ExpectedVersion
+            executablePath = $OutPath
+            platform = "win32"
+            arch = "x64"
+        } | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText($StagedReceipt, $Receipt, [System.Text.UTF8Encoding]::new($false))
+
+        foreach ($nativeAddonName in $NativeAddonNames) {
+            Move-Item -Force (Join-Path $StageDir $nativeAddonName) (Join-Path $InstallDir $nativeAddonName)
+        }
+        Move-Item -Force $StagedBinary $OutPath
+        # Commit the receipt last so only a complete installer run grants ownership.
+        Move-Item -Force $StagedReceipt $ReceiptPath
+    } finally {
+        Remove-Item -Recurse -Force $StageDir -ErrorAction SilentlyContinue
     }
     Write-Host ""
     Write-Host "✓ Installed xcsh to $OutPath" -ForegroundColor Green
