@@ -29,6 +29,7 @@ export interface CreateArchivesOptions {
 	binariesDir?: string;
 	dryRun?: boolean;
 	sourceDateEpoch?: string;
+	onArchiveStart?: (arch: "arm64" | "x64") => void | Promise<void>;
 }
 
 export interface ComputeChecksumsOptions {
@@ -63,13 +64,15 @@ function parseSourceDateEpoch(value: string | undefined): number {
 }
 
 export async function createArchives(options: CreateArchivesOptions = {}): Promise<void> {
-	console.log("Creating macOS archives for Homebrew...");
+	console.log("Creating macOS archives for Homebrew concurrently: arm64, x64");
 	const outputDir = options.binariesDir ?? binariesDir;
 	const dryRun = options.dryRun ?? isDryRun;
 	const sourceDateEpoch = options.sourceDateEpoch ?? process.env.SOURCE_DATE_EPOCH;
 	const epochSeconds = dryRun ? undefined : parseSourceDateEpoch(sourceDateEpoch);
 
-	for (const target of archiveTargets) {
+	await Promise.all(
+		archiveTargets.map(async target => {
+			await options.onArchiveStart?.(target.arch);
 		const binaryPath = path.join(outputDir, target.binary);
 		const archivePath = path.join(outputDir, target.archive);
 
@@ -77,7 +80,7 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 			await fs.stat(binaryPath);
 		} catch {
 			console.log(`  Skipping ${target.binary} (not found)`);
-			continue;
+			return;
 		}
 
 		const nativePrefix = `pi_natives.darwin-${target.arch}`;
@@ -113,7 +116,7 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 			const archiveEntries = ["bin/xcsh", ...nativeNames.map(name => `libexec/${name}`), "provenance/manifest.json"];
 			if (dryRun) {
 				console.log(`  DRY RUN: zip -X ${archivePath} ${archiveEntries.join(" ")}`);
-				continue;
+				return;
 			}
 
 			if (epochSeconds === undefined) throw new Error("SOURCE_DATE_EPOCH was not resolved");
@@ -130,7 +133,8 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 		} finally {
 			await fs.rm(tmpDir, { recursive: true, force: true });
 		}
-	}
+		}),
+	);
 }
 
 export async function computeChecksums(options: ComputeChecksumsOptions = {}): Promise<Map<string, string>> {

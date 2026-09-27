@@ -242,7 +242,7 @@ jobs:
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: bash scripts/ci-bun-install.sh
-      - name: Build native addon(s)
+      - name: "Build native addon(s): ${{ matrix.variants || 'default' }}"
         env:
           CROSS_TARGET: ${{ matrix.target }}
           TARGET_PLATFORM: ${{ matrix.platform }}
