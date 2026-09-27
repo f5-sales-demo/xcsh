@@ -229,6 +229,40 @@ class CiCapacityContractTests(unittest.TestCase):
             prime,
         )
 
+    def test_bun_caches_are_isolated_by_runner_environment(self) -> None:
+        cache_keys: list[tuple[str, str]] = []
+        for path in WORKFLOWS.glob("*.yml"):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for index, line in enumerate(lines):
+                if line.strip() != "path: ~/.bun/install/cache":
+                    continue
+                key_line = next(
+                    (
+                        candidate.strip()
+                        for candidate in lines[index + 1 : index + 5]
+                        if candidate.strip().startswith("key: ")
+                    ),
+                    None,
+                )
+                self.assertIsNotNone(
+                    key_line,
+                    f"{path.relative_to(ROOT)}:{index + 1} has no Bun cache key",
+                )
+                cache_keys.append((str(path.relative_to(ROOT)), key_line or ""))
+
+        self.assertGreater(len(cache_keys), 0)
+        expected_prefix = (
+            "key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-"
+            "${{ runner.arch }}-"
+        )
+        expected_lock = "${{ hashFiles('**/bun.lock') }}"
+        for workflow, key in cache_keys:
+            self.assertTrue(
+                key.startswith(expected_prefix),
+                f"{workflow} can share a non-portable Bun cache across runner environments: {key}",
+            )
+            self.assertIn(expected_lock, key, f"{workflow} cache is not lock-pinned")
+
     def test_cache_smoke_is_path_scoped_or_manual(self) -> None:
         smoke = (WORKFLOWS / "self-hosted-runner-cache-smoke.yml").read_text(
             encoding="utf-8"
