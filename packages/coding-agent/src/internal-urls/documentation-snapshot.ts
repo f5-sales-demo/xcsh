@@ -4,7 +4,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createGunzip } from "node:zlib";
+import { createGunzip, gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
@@ -131,6 +131,10 @@ export interface DocumentationIndexResult {
 	readonly fingerprint: string;
 	readonly sha256: string;
 	readonly sizeBytes: number;
+}
+
+export interface VerifiedPrebuiltDocumentationAssets {
+	readonly indexGzip: Buffer;
 }
 
 interface ScannedArchiveEntry {
@@ -871,6 +875,37 @@ export async function buildDocumentationIndex(
 	} finally {
 		await rm(stagingRoot, { recursive: true, force: true });
 	}
+}
+
+export async function verifyPrebuiltDocumentationAssets(
+	root: string,
+	pin: DocumentationReleasePin,
+): Promise<VerifiedPrebuiltDocumentationAssets> {
+	if (pin.index.sha256 === "pending" || pin.index.fingerprint === "pending" || pin.index.size_bytes === 0) {
+		throw new Error("prebuilt documentation index requires a complete index pin");
+	}
+	const archivePath = path.join(root, "html-to-markdown-content.tar.gz");
+	const archive = await stat(archivePath);
+	if (
+		archive.size !== pin.assets["html-to-markdown-content.tar.gz"].size_bytes ||
+		(await sha256File(archivePath)) !== pin.assets["html-to-markdown-content.tar.gz"].sha256
+	) {
+		throw new Error("prebuilt documentation archive disagrees with pin");
+	}
+	const indexGzip = await readFile(path.join(root, "documentation-index.sqlite.gz"));
+	if (indexGzip.byteLength > pin.index.size_bytes) {
+		throw new Error("prebuilt compressed documentation index exceeds its expanded size");
+	}
+	let index: Buffer;
+	try {
+		index = gunzipSync(indexGzip, { maxOutputLength: pin.index.size_bytes + 1 });
+	} catch (error) {
+		throw new Error("prebuilt documentation index is not valid bounded gzip", { cause: error });
+	}
+	if (index.byteLength !== pin.index.size_bytes || sha256Bytes(index) !== pin.index.sha256) {
+		throw new Error("prebuilt documentation index disagrees with pin");
+	}
+	return { indexGzip };
 }
 
 export async function extractVerifiedDocumentationAsset(

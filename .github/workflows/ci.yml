@@ -524,12 +524,44 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun scripts/release.ts auto
 
+  prepare-documentation-index:
+    name: Prepare canonical documentation index
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check, test, install_methods]
+    runs-on: xcsh-compute
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - name: Verify baked TypeScript toolchain
+        run: bash scripts/verify-self-hosted-tools.sh full
+      - name: Restore Bun dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+      - run: bash scripts/ci-bun-install.sh
+      - name: Generate canonical documentation index
+        run: bun --cwd=packages/coding-agent run generate-documentation-index
+      - name: Upload canonical documentation index
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: documentation-index-${{ github.sha }}
+          path: |
+            packages/coding-agent/src/internal-urls/.documentation-generated/html-to-markdown-content.tar.gz
+            packages/coding-agent/src/internal-urls/.documentation-generated/documentation-index.sqlite.gz
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
   # Build Linux + Windows binaries on Ubuntu
   build-release:
     environment: release
     name: Build Linux and Windows release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [check, native, test, install_methods]
+    needs: [check, native, test, install_methods, prepare-documentation-index]
     runs-on: xcsh-compute
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -589,6 +621,11 @@ jobs:
           path: ~/.bun/install/cache
           key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
+      - name: Download canonical documentation index
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: documentation-index-${{ github.sha }}
+          path: packages/coding-agent/src/internal-urls/.documentation-generated
       - name: Download native addons
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -605,6 +642,7 @@ jobs:
       - name: Build Linux and Windows binaries
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
+          XCSH_DOCUMENTATION_INDEX_MODE: prebuilt
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           XCSH_VERTEX_OAUTH_CLIENT_ID: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_ID }}
           XCSH_VERTEX_OAUTH_CLIENT_SECRET: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_SECRET }}
@@ -627,7 +665,7 @@ jobs:
     environment: release
     name: Build and sign macOS (${{ matrix.arch }})
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [check, native, test, install_methods]
+    needs: [check, native, test, install_methods, prepare-documentation-index]
     strategy:
       fail-fast: false
       matrix:
@@ -701,6 +739,11 @@ jobs:
         run: bash scripts/ci-bun-install.sh
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
+      - name: Download canonical documentation index
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: documentation-index-${{ github.sha }}
+          path: packages/coding-agent/src/internal-urls/.documentation-generated
       - name: Download macOS native addons
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -818,6 +861,7 @@ jobs:
       - name: Build macOS binary
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
+          XCSH_DOCUMENTATION_INDEX_MODE: prebuilt
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           XCSH_VERTEX_OAUTH_CLIENT_ID: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_ID }}
           XCSH_VERTEX_OAUTH_CLIENT_SECRET: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_SECRET }}
