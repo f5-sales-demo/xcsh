@@ -166,7 +166,6 @@ async function captureSurface(directory: string, surface: string, providerUrl: s
 					"--no-skills",
 					"--no-rules",
 					"--no-tools",
-					"--no-mcp",
 					"--no-lsp",
 					"--no-title",
 					"--no-memories",

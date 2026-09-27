@@ -98,7 +98,7 @@ function tryGetContextService(): ContextService | null {
 	}
 }
 
-/** Declarative subcommand definition for commands like /mcp. */
+/** Declarative subcommand definition for commands with nested actions. */
 export interface SubcommandDef {
 	name: string;
 	description: string;
@@ -123,7 +123,7 @@ export interface SubcommandDef {
 export interface BuiltinSlashCommand {
 	name: string;
 	description: string;
-	/** Subcommands for dropdown completion (e.g. /mcp add, /mcp list). */
+	/** Subcommands for dropdown completion. */
 	subcommands?: SubcommandDef[];
 	/** Static inline hint when command takes a simple argument (no subcommands). */
 	inlineHint?: string;
@@ -961,88 +961,6 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		handle: (_command, runtime) => {
 			void runtime.ctx.showOAuthSelector("logout");
 			runtime.ctx.editor.setText("");
-		},
-	},
-	{
-		name: "mcp",
-		description: t("commands.mcp.description"),
-		subcommands: [
-			{
-				name: "add",
-				description: t("commands.mcp.sub.add.description"),
-				usage: "<name> [--scope project|user] [--url <url>] [-- <command...>]",
-			},
-			{ name: "list", description: t("commands.mcp.sub.list.description") },
-			{
-				name: "remove",
-				description: t("commands.mcp.sub.remove.description"),
-				usage: "<name> [--scope project|user]",
-			},
-			{
-				name: "test",
-				description: t("commands.mcp.sub.test.description"),
-				usage: "<name>",
-			},
-			{
-				name: "reauth",
-				description: t("commands.mcp.sub.reauth.description"),
-				usage: "<name>",
-			},
-			{
-				name: "unauth",
-				description: t("commands.mcp.sub.unauth.description"),
-				usage: "<name>",
-			},
-			{
-				name: "enable",
-				description: t("commands.mcp.sub.enable.description"),
-				usage: "<name>",
-			},
-			{
-				name: "disable",
-				description: t("commands.mcp.sub.disable.description"),
-				usage: "<name>",
-			},
-			{
-				name: "smithery-search",
-				description: t("commands.mcp.sub.smitherySearch.description"),
-				usage: "<keyword> [--scope project|user] [--limit <1-100>] [--semantic]",
-			},
-			{
-				name: "smithery-login",
-				description: t("commands.mcp.sub.smitheryLogin.description"),
-			},
-			{
-				name: "smithery-logout",
-				description: t("commands.mcp.sub.smitheryLogout.description"),
-			},
-			{
-				name: "reconnect",
-				description: t("commands.mcp.sub.reconnect.description"),
-				usage: "<name>",
-			},
-			{ name: "reload", description: t("commands.mcp.sub.reload.description") },
-			{
-				name: "resources",
-				description: t("commands.mcp.sub.resources.description"),
-			},
-			{
-				name: "prompts",
-				description: t("commands.mcp.sub.prompts.description"),
-			},
-			{
-				name: "notifications",
-				description: t("commands.mcp.sub.notifications.description"),
-			},
-			{ name: "help", description: t("commands.mcp.sub.help.description") },
-		],
-		allowArgs: true,
-		handle: async (command, runtime) => {
-			runtime.ctx.editor.addToHistory(
-				/^\/mcp\s+add\b.*(?:^|\s)--token(?:\s|=)/i.test(command.text) ? "/mcp add" : command.text,
-			);
-			runtime.ctx.editor.setText("");
-			await runtime.ctx.handleMCPCommand(command.text);
 		},
 	},
 	{
@@ -1936,7 +1854,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				clearXcshPluginRootsCache();
 				await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
 				runtime.ctx.showStatus(
-					"Plugin metadata and extension registrations refreshed. Commands, integrations, profile collectors, hooks, tools, skills, agents, advisories, and MCP metadata now use the latest discovered files. Running plugin processes were not restarted.",
+					"Plugin metadata and extension registrations refreshed. Commands, integrations, profile collectors, hooks, tools, skills, agents, and advisories now use the latest discovered files. Running plugin processes were not restarted.",
 				);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);

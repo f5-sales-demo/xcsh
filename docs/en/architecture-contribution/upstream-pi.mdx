@@ -36,7 +36,7 @@ The four implementation waves accepted these upstream pull requests:
 | Hyperlinks, login launch, and copy picker | #10196, #10606, #11002, #10922, #11086, #5887, and #6282 | #3758 |
 
 These ports protect provider-bound secrets and compaction boundaries, enforce exact-case
-environment references and complete protocol tails, repair Responses replay and shared MCP
+environment references and complete protocol tails, repair Responses replay and shared tool
 results, improve rate-limit and retained-string behavior, chain directory completion, extend
 power assertions across supported platforms, and harden stats persistence and network exposure.
 The source pull requests remain attributable to `can1357/oh-my-pi`; the xcsh deliveries link the
@@ -77,7 +77,7 @@ merge commits `db2f55888b9f500b51010d7958a9cc8712e19f5c`,
 | `cffb804d`, `27ed9f7a`, and log-viewer portion of `5fbe8876` | Ported to the session picker, extension dashboard, and debug-log viewer |
 | `7eca774c` and raw-SSE portion of `5fbe8876` | Not applicable: those surfaces do not exist in xcsh |
 | Plan Review `2976847e` | Deferred: xcsh retains its compact plan-review selector |
-| MCP, OpenCode, and unrelated renderer/UI changes | Excluded from this pass |
+| OpenCode and unrelated renderer/UI changes | Excluded from this pass |
 
 ## Where does xcsh deliberately diverge?
 
@@ -85,7 +85,7 @@ xcsh retains its own:
 
 - F5-scoped packages, prompts-as-files, tool factories, and capability discovery;
 - SQLite multi-credential storage, multi-account authentication, and provider routing;
-- MCP, SSH, F5 Distributed Cloud, Office, and browser integrations;
+- SSH, F5 Distributed Cloud, Office, and browser integrations;
 - Bun-first runtime, session semantics, release pipeline, branding, and governance.
 
 Public interfaces use prerelease clean breaks. In this wave,
@@ -99,7 +99,7 @@ Upstream workflows, branding, release machinery, generated model catalogs, compa
 new packages, and large unrelated subsystems are excluded. The security-scan subsystem in #7048
 and the native minimizer in #2176 remain deferred. The range-dashboard optimization in #9327 and
 earendil-works/pi-only fullscreen transcript, mouse, clipboard, and renderer subsystems also remain
-outside this campaign. MCP, OpenCode, Herdr, #10625, and #10491 were explicitly excluded from the
+outside this campaign. OpenCode, Herdr, #10625, and #10491 were explicitly excluded from the
 second-pass batch; the Herdr work is now covered by the third pass. Commits after the new frozen
 source tip require a later audit.
 

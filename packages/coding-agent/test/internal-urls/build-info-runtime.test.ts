@@ -314,7 +314,6 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("`tui`");
 		expect(md).toContain("`natives`");
 		expect(md).toContain("## Capabilities");
-		expect(md).toContain("MCP server/client");
 		expect(md).toContain("F5 XC federated product docs");
 	});
 	it("lists SE specialization capabilities alongside platform capabilities", () => {
@@ -325,7 +324,6 @@ describe("renderAboutDoc", () => {
 		};
 		const md = renderAboutDoc(info, null, null, null);
 		// Platform capabilities (inherited)
-		expect(md).toContain("MCP server/client");
 		expect(md).toContain("slash commands");
 		// SE specialization layer (must not be omitted)
 		expect(md).toContain("F5 XC API integration");

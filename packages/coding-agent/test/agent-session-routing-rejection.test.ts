@@ -351,7 +351,6 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		let evaluateAndApplyRoutingCalledWithSignal = false;
 		let childPromptAborted = false;
 
-		const originalChildSession = AgentSession.prototype.buildDisplaySessionContext;
 		const originalPrompt = AgentSession.prototype.prompt;
 		const oldKey = process.env.OPENAI_API_KEY;
 
@@ -364,17 +363,6 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			});
 
 			process.env.OPENAI_API_KEY = "test-key";
-
-			let buildDisplaySessionContextCalled = false;
-
-			(AgentSession.prototype as any).buildDisplaySessionContext = () => {
-				buildDisplaySessionContextCalled = true;
-				return {
-					usedTokens: 42,
-					hasPersistedMCPToolSelection: false,
-					messages: [],
-				};
-			};
 
 			(AgentSession.prototype as any).prompt = async () => {
 				return new Promise<void>((_resolve, reject) => {
@@ -424,11 +412,9 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			await session.sendCustomMessage(message, { triggerTurn: true, signal: controller.signal } as any);
 
 			expect(evaluateAndApplyRoutingCalledWithSignal).toBe(true);
-			expect(buildDisplaySessionContextCalled).toBe(true);
 			expect(childPromptAborted).toBe(true);
 			expect(emittedTokens).toBe(0);
 		} finally {
-			(AgentSession.prototype as any).buildDisplaySessionContext = originalChildSession;
 			(AgentSession.prototype as any).prompt = originalPrompt;
 			if (oldKey === undefined) {
 				delete process.env.OPENAI_API_KEY;

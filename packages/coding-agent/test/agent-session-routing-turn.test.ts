@@ -66,7 +66,6 @@ describe("AgentSession Turn Routing Evaluation (I02)", () => {
 				clearSourceRegistrations: () => {},
 			} as any,
 			enableLsp: false,
-			enableMCP: false,
 		});
 
 		// Force mutate the state to pretend we were in a routed state

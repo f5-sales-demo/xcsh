@@ -1,10 +1,9 @@
 /**
  * Extensions Capability
  *
- * Gemini-style extensions that provide MCP servers, tools, and context.
+ * Gemini-style extensions that provide tools and context.
  */
 import { defineCapability } from ".";
-import type { MCPServer } from "./mcp";
 import type { SourceMeta } from "./types";
 
 /**
@@ -13,7 +12,6 @@ import type { SourceMeta } from "./types";
 export interface ExtensionManifest {
 	name?: string;
 	description?: string;
-	mcpServers?: Record<string, Omit<MCPServer, "name" | "_source">>;
 	tools?: unknown[];
 	context?: unknown;
 }
@@ -37,7 +35,7 @@ export interface Extension {
 export const extensionCapability = defineCapability<Extension>({
 	id: "extensions",
 	displayName: "Extensions",
-	description: "Gemini-style extensions providing MCP servers, tools, and context",
+	description: "Gemini-style extensions providing tools and context",
 	key: ext => ext.name,
 	validate: ext => {
 		if (!ext.name) return "Missing extension name";

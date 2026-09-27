@@ -23,7 +23,7 @@
     },
     {
       "label": "Automate and extend",
-      "description": "Use headless protocols, the SDK, extensions, hooks, rules, skills, plugins, and MCP.",
+      "description": "Use headless protocols, the SDK, extensions, hooks, rules, skills, and plugins.",
       "paths": [
         "automate-extend/**"
       ]

@@ -376,7 +376,7 @@ function expandEnvVars(value: string, extraEnv?: Record<string, string>): string
 
 /**
  * Build plugin-specific environment variables for variable substitution.
- * These are injected as extraEnv when loading plugin configs (hooks, MCP, LSP).
+ * These are injected as extraEnv when loading plugin configs (hooks and LSP).
  */
 export function buildPluginEnvVars(pluginRoot: string, pluginId: string, projectDir?: string): Record<string, string> {
 	const dataDir = path.join(os.homedir(), getConfigDirName(), "plugins", "data", pluginId.replace("@", "__"));

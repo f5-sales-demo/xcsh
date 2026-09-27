@@ -27,7 +27,7 @@ export function validateInteractionRequests(threadId: string, input: unknown): I
 	const seen = new Set<string>();
 	for (const request of input) {
 		if (!record(request) || !identity(request.id) || !record(request.params)) throw invalid();
-		if (["item/permissions/requestApproval", "mcpServer/elicitation/request"].includes(String(request.method)))
+		if (request.method === "item/permissions/requestApproval")
 			throw new ProtocolError(-32601, `Unsupported terminal interaction request: ${request.method}`);
 		const params = request.params;
 		if (seen.has(request.id) || params.threadId !== threadId || !identity(params.turnId) || !identity(params.itemId))

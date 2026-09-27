@@ -26,7 +26,6 @@ test("SDK background completion persists executor facts in the actual custom-mes
 		contextFiles: [],
 		promptTemplates: [],
 		slashCommands: [],
-		enableMCP: false,
 		enableLsp: false,
 	});
 	const delivered = Promise.withResolvers<void>();

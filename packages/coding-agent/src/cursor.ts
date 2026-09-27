@@ -8,8 +8,8 @@ import type {
 	AgentToolUpdateCallback,
 } from "@f5-sales-demo/pi-agent-core";
 import type {
-	CursorMcpCall,
 	CursorShellStreamCallbacks,
+	CursorToolCall,
 	CursorExecHandlers as ICursorExecHandlers,
 	ToolResultMessage,
 } from "@f5-sales-demo/pi-ai";
@@ -145,7 +145,7 @@ function decodeToolCallId(toolCallId?: string): string {
 	return toolCallId && toolCallId.length > 0 ? toolCallId : randomUUID();
 }
 
-function decodeMcpArgs(rawArgs: Record<string, Uint8Array>): Record<string, unknown> {
+function decodeGenericToolArgs(rawArgs: Record<string, Uint8Array>): Record<string, unknown> {
 	const decoded: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(rawArgs)) {
 		const text = new TextDecoder().decode(value);
@@ -156,11 +156,6 @@ function decodeMcpArgs(rawArgs: Record<string, Uint8Array>): Record<string, unkn
 		}
 	}
 	return decoded;
-}
-
-function formatMcpToolErrorMessage(toolName: string, availableTools: string[]): string {
-	const list = availableTools.length > 0 ? availableTools.join(", ") : "none";
-	return `MCP tool "${toolName}" not found. Available tools: ${list}`;
 }
 
 export class CursorExecHandlers implements ICursorExecHandlers {
@@ -298,26 +293,10 @@ export class CursorExecHandlers implements ICursorExecHandlers {
 		return toolResultMessage;
 	}
 
-	async mcp(call: CursorMcpCall) {
+	async tool(call: CursorToolCall) {
 		const toolName = call.toolName || call.name;
 		const toolCallId = decodeToolCallId(call.toolCallId);
-		const tool = this.options.tools.get(toolName);
-		if (!tool) {
-			const availableTools = Array.from(this.options.tools.keys()).filter(name => name.startsWith("mcp_"));
-			const message = formatMcpToolErrorMessage(toolName, availableTools);
-			const toolResult: ToolResultMessage = {
-				role: "toolResult",
-				toolCallId,
-				toolName,
-				content: [{ type: "text", text: message }],
-				isError: true,
-				timestamp: Date.now(),
-			};
-			return toolResult;
-		}
-
-		const args = Object.keys(call.args ?? {}).length > 0 ? call.args : decodeMcpArgs(call.rawArgs ?? {});
-		const toolResultMessage = await executeTool(this.options, toolName, toolCallId, args);
-		return toolResultMessage;
+		const args = Object.keys(call.args).length > 0 ? call.args : decodeGenericToolArgs(call.rawArgs);
+		return executeTool(this.options, toolName, toolCallId, args);
 	}
 }

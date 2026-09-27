@@ -274,7 +274,7 @@ run_sample() {
     --no-session \
     --no-memories \
     --no-tools \
-    --no-mcp \
+    \
     --no-lsp \
     --no-extensions \
     --no-skills \

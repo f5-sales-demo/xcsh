@@ -1,7 +1,7 @@
 /**
  * Unified Web Search Tool
  *
- * Single tool supporting Anthropic, Perplexity, Exa, Brave, Jina, Kimi, Gemini, Codex, Tavily, Kagi, Z.AI, and Synthetic
+ * Single tool supporting Anthropic, Perplexity, Exa, Brave, Jina, Kimi, Gemini, Codex, Tavily, Kagi, and Synthetic
  * providers with provider-specific parameters exposed conditionally.
  *
  */
@@ -119,9 +119,6 @@ function formatProviderError(error: unknown, provider: SearchProvider): string {
 			return "Anthropic web search returned 404 (model or endpoint not found).";
 		}
 		if (error.status === 401 || error.status === 403) {
-			if (error.provider === "zai") {
-				return error.message;
-			}
 			return `${getSearchProvider(error.provider).label} authorization failed (${error.status}). Check API key or base URL.`;
 		}
 		return parseWebSearchError(error).userMessage;
@@ -284,7 +281,7 @@ export async function runSearchQuery(
 /**
  * Web search tool implementation.
  *
- * Supports Anthropic, Perplexity, Exa, Brave, Jina, Kimi, Gemini, Codex, Z.AI, and Synthetic providers with automatic fallback.
+ * Supports Anthropic, Perplexity, Exa, Brave, Jina, Kimi, Gemini, Codex, and Synthetic providers with automatic fallback.
  * Session is accepted for interface consistency but not used.
  */
 export class SearchTool implements AgentTool<typeof webSearchSchema, SearchRenderDetails> {

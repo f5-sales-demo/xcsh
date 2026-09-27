@@ -59,7 +59,6 @@ describe("createAgentSession session storage isolation", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -93,7 +92,6 @@ describe("createAgentSession session storage isolation", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 
@@ -122,7 +120,6 @@ describe("createAgentSession session storage isolation", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		};
 
@@ -208,7 +205,6 @@ describe("createAgentSession session storage isolation", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 		try {

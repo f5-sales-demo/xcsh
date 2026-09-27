@@ -41,7 +41,6 @@ export function nativeLifecycleChildArgv(options: NativeLifecycleChildOptions): 
 		"--no-memories",
 		"--no-skills",
 		"--no-rules",
-		"--no-mcp",
 		"--no-lsp",
 		"--tools",
 		options.tools,
@@ -69,7 +68,7 @@ export function nativeLifecycleContract(): Record<string, unknown> {
 		model: "configured non-secret model identifier",
 		child: {
 			modes: { non_interactive: "json", pty: "interactive" },
-			reduced_discovery_flags: ["--no-memories", "--no-skills", "--no-rules", "--no-mcp", "--no-lsp"],
+			reduced_discovery_flags: ["--no-memories", "--no-skills", "--no-rules", "--no-lsp"],
 		},
 		controls: {
 			resume: "--resume <exact-session-path>",

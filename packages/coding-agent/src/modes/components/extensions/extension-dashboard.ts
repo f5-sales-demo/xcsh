@@ -73,7 +73,6 @@ function semantics(extension: Extension): string {
 			return "Context contribution: this item supplies instructions or context; opening it here never executes code.";
 		case "tool":
 		case "hook":
-		case "mcp":
 		case "extension-module":
 			return "Execution capability: the loaded item can execute when its owning workflow invokes it; opening it here never invokes it.";
 	}
@@ -259,7 +258,7 @@ export class ExtensionDashboard extends Container implements MouseRoutable {
 					after: enabled ? "Disabled" : "Enabled",
 				},
 			],
-			consequence: `${enabled ? "Disables" : "Enables"} discovery for this provider across skills, tools, commands, hooks, prompts, context, and MCP definitions. Item overrides remain stored and a reload may be required.`,
+			consequence: `${enabled ? "Disables" : "Enables"} discovery for this provider across skills, tools, commands, hooks, prompts, and context. Item overrides remain stored and a reload may be required.`,
 		};
 	}
 

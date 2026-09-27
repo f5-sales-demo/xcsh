@@ -5,25 +5,13 @@
  * Priority: 70 (below claude.ts at 80, so user overrides in .xcsh/ take precedence)
  */
 import * as path from "node:path";
-import { logger } from "@f5-sales-demo/pi-utils";
 import { registerProvider } from "../capability";
-import { readFile } from "../capability/fs";
 import { type Hook, hookCapability } from "../capability/hook";
-import { type MCPServer, mcpCapability } from "../capability/mcp";
 import { type Skill, skillCapability } from "../capability/skill";
 import { type SlashCommand, slashCommandCapability } from "../capability/slash-command";
 import { type CustomTool, toolCapability } from "../capability/tool";
 import type { LoadContext, LoadResult } from "../capability/types";
-import {
-	createSourceMeta,
-	listXcshPluginRoots,
-	loadFilesFromDir,
-	scanSkillsFromDir,
-	scopeToLevel,
-	type XcshPluginRoot,
-} from "./helpers";
-
-import { substitutePluginRoot } from "./substitute-plugin-root";
+import { listXcshPluginRoots, loadFilesFromDir, scanSkillsFromDir, scopeToLevel, type XcshPluginRoot } from "./helpers";
 
 const PROVIDER_ID = "xcsh-plugins";
 const SOURCE_LABEL = "xcsh Marketplace";
@@ -187,73 +175,6 @@ async function loadTools(ctx: LoadContext): Promise<LoadResult<CustomTool>> {
 }
 
 // =============================================================================
-// MCP Servers
-// =============================================================================
-
-async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> {
-	const items: MCPServer[] = [];
-	const warnings: string[] = [];
-
-	const { roots, warnings: rootWarnings } = await listXcshPluginRoots(ctx.home, ctx.cwd);
-	warnings.push(...rootWarnings);
-
-	for (const root of roots) {
-		const mcpPath = path.join(root.path, ".mcp.json");
-		const raw = await readFile(mcpPath);
-		if (raw === null) continue; // file absent — skip silently
-
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(raw);
-		} catch {
-			warnings.push(`[claude-plugins] Invalid JSON in ${mcpPath}`);
-			logger.warn(`[claude-plugins] Invalid JSON in ${mcpPath}`);
-			continue;
-		}
-
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-		const config = parsed as { mcpServers?: Record<string, unknown> };
-		if (!config.mcpServers || typeof config.mcpServers !== "object") continue;
-
-		for (const [serverName, serverCfg] of Object.entries(config.mcpServers)) {
-			if (!serverCfg || typeof serverCfg !== "object" || Array.isArray(serverCfg)) continue;
-			const raw = serverCfg as {
-				enabled?: boolean;
-				timeout?: number;
-				command?: string;
-				args?: string[];
-				env?: Record<string, string>;
-				cwd?: string;
-				url?: string;
-				headers?: Record<string, string>;
-				auth?: MCPServer["auth"];
-				oauth?: MCPServer["oauth"];
-				type?: string;
-			};
-			const namespacedName = root.plugin ? `${root.plugin}:${serverName}` : serverName;
-			const server: MCPServer = {
-				name: namespacedName,
-				...(raw.enabled !== undefined && { enabled: raw.enabled }),
-				...(raw.timeout !== undefined && { timeout: raw.timeout }),
-				...(raw.command !== undefined && { command: substitutePluginRoot(raw.command, root.path) }),
-				...(raw.args !== undefined && { args: substitutePluginRoot(raw.args, root.path) }),
-				...(raw.env !== undefined && { env: substitutePluginRoot(raw.env, root.path) }),
-				...(raw.cwd !== undefined && { cwd: substitutePluginRoot(raw.cwd, root.path) }),
-				...(raw.url !== undefined && { url: raw.url }),
-				...(raw.headers !== undefined && { headers: raw.headers }),
-				...(raw.auth !== undefined && { auth: raw.auth }),
-				...(raw.oauth !== undefined && { oauth: raw.oauth }),
-				...(raw.type !== undefined && { transport: raw.type as MCPServer["transport"] }),
-				_source: createSourceMeta(PROVIDER_ID, mcpPath, scopeToLevel(root.scope)),
-			};
-			items.push(server);
-		}
-	}
-
-	return { items, warnings };
-}
-
-// =============================================================================
 // Provider Registration
 // =============================================================================
 
@@ -287,12 +208,4 @@ registerProvider<CustomTool>(toolCapability.id, {
 	description: "Load custom tools from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadTools,
-});
-
-registerProvider<MCPServer>(mcpCapability.id, {
-	id: PROVIDER_ID,
-	displayName: SOURCE_LABEL,
-	description: "Load MCP servers from marketplace plugin .mcp.json files",
-	priority: PRIORITY,
-	load: loadMCPServers,
 });

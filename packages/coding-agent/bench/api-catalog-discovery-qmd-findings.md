@@ -11,7 +11,7 @@ Date: 2026-09-20
 
 ## Reproducible result
 
-The production candidate uses QMD's in-process, model-free BM25 `createStore` and `searchLex` path under Bun 1.4.2. It performs no vector embedding, reranking, MCP, CLI subprocess, or model download. QMD ranks only natural-language `xcsh://api-catalog/?search=` candidates; existing catalog/spec resolvers remain authoritative for content and schemas.
+The production candidate uses QMD's in-process, model-free BM25 `createStore` and `searchLex` path under Bun 1.4.2. It performs no vector embedding, reranking, CLI subprocess, or model download. QMD ranks only natural-language `xcsh://api-catalog/?search=` candidates; existing catalog/spec resolvers remain authoritative for content and schemas.
 
 ## macOS SQLite patch
 

@@ -319,7 +319,6 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `agent://<id>/<path>` — JSON field extraction via path (jq-like: `.foo.bar[0]`)
 - `artifact://<id>` — Raw artifact content (truncated tool output)
 - `jobs://<job-id>` — Specific job status and result
-- `mcp://<resource-uri>` — MCP resource from a connected server; matched against exact resource URIs first, then RFC 6570 URI templates advertised by connected servers
 - `xcsh://fleet` — **MUST** read before creating, updating, or deleting content in any repository of this organization,
   and whenever you are asked which repositories you author in or manage. It gives the class of the repository you are
   working in and what you may author there, plus the full roster: every repository in the fleet listed by name under
@@ -619,14 +618,6 @@ You **MUST** use the following tools, as effectively as possible, to complete th
 {{#each toolInfo}}
 - {{#if label}}{{label}}: `{{name}}`{{else}}- `{{name}}`{{/if}}
 {{/each}}
-{{/if}}
-
-{{#if mcpDiscoveryMode}}
-## MCP tool discovery
-
-Some MCP tools are intentionally hidden from the initial tool list.
-{{#if hasMCPDiscoveryServers}}Discoverable MCP servers in this session: {{#list mcpDiscoveryServerSummaries join=", "}}{{this}}{{/list}}.{{/if}}
-If the task may involve external systems, SaaS APIs, chat, tickets, databases, deployments, or other non-local integrations, you **SHOULD** call `search_tool_bm25` before concluding no such tool exists.
 {{/if}}
 
 ## Precedence

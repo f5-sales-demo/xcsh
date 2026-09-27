@@ -565,7 +565,6 @@ export class AgentDashboard extends Container implements MouseRoutable {
 			systemPrompt: prompt.render(agentCreationArchitectPrompt, { TASK_TOOL_NAME: "task" }),
 			hasUI: false,
 			enableLsp: false,
-			enableMCP: false,
 			disableExtensionDiscovery: true,
 			toolNames: ["__none__"],
 			customTools: [],

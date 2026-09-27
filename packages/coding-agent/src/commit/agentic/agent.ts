@@ -63,7 +63,6 @@ export async function runCommitAgentSession(input: CommitAgentInput): Promise<Co
 		systemPrompt,
 		customTools: tools,
 		enableLsp: false,
-		enableMCP: false,
 		hasUI: false,
 		spawns,
 		toolNames: ["__none__"],

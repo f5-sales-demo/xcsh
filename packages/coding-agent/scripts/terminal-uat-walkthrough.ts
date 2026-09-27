@@ -612,7 +612,6 @@ const connectionRequests: Array<{ method: string; path: string; authorized: bool
 let connectionService: ReturnType<typeof Bun.serve> | undefined;
 let connectionContextRoot = "";
 let connectionProjectConfigRoot = "";
-let connectionMcpPath = "";
 let connectionSshPath = "";
 let connectionLocalActivePath = "";
 if (connectionsFixture) {
@@ -654,20 +653,6 @@ if (connectionsFixture) {
 	);
 	connectionLocalActivePath = join(connectionProjectConfigRoot, "contexts", "active_context");
 	await Bun.write(connectionLocalActivePath, "primary\n");
-	const mcpServer = resolve(import.meta.dir, "../test/fixtures/terminal-uat-mcp-server.mjs");
-	connectionMcpPath = join(connectionProjectConfigRoot, "mcp.json");
-	await Bun.write(
-		connectionMcpPath,
-		`${JSON.stringify(
-			{
-				mcpServers: {
-					"synthetic-mcp": { type: "stdio", command: process.execPath, args: [mcpServer], timeout: 5_000 },
-				},
-			},
-			null,
-			2,
-		)}\n`,
-	);
 	connectionSshPath = join(connectionProjectConfigRoot, "ssh.json");
 	await Bun.write(
 		connectionSshPath,
@@ -692,7 +677,6 @@ if (connectionsFixture) {
 		join(connectionContextRoot, "active_context"),
 		join(connectionProjectConfigRoot, "contexts", "primary.json"),
 		connectionLocalActivePath,
-		connectionMcpPath,
 		connectionSshPath,
 	])
 		await chmod(file, 0o600);
@@ -804,7 +788,6 @@ for (const pattern of [
 	"packages/tui/src/**/*.ts",
 	"packages/coding-agent/scripts/*terminal*.ts",
 	"packages/coding-agent/test/fixtures/terminal-uat-opener.sh",
-	"packages/coding-agent/test/fixtures/terminal-uat-mcp-server.mjs",
 ])
 	for (const file of [...new Bun.Glob(pattern).scanSync({ cwd: root })].sort())
 		hash.update(file).update(await Bun.file(join(root, file)).bytes());
@@ -1440,8 +1423,6 @@ try {
 		const globalActiveBytes = await Bun.file(globalActivePath).text();
 		const localPointerBytes = await Bun.file(localPointerPath).text();
 		const localActiveBytes = await Bun.file(connectionLocalActivePath).text();
-		const mcpFixturePath = resolve(import.meta.dir, "../test/fixtures/terminal-uat-mcp-server.mjs");
-
 		send("/context list\r", "Inspect isolated saved contexts and active runtime state");
 		await wait(
 			() => screen().includes("F5 XC contexts") && screen().includes("primary") && screen().includes("secondary"),
@@ -1498,52 +1479,6 @@ try {
 		if ((await Bun.file(connectionLocalActivePath).exists()) || (await Bun.file(localPointerPath).exists()))
 			throw new Error("Confirmed context unlink retained project-local pointers");
 
-		send("/mcp list\r", "Inspect isolated MCP saved configuration and runtime state");
-		await wait(() => screen().includes("Configured MCP servers") && screen().includes("synthetic-mcp"), "MCP list");
-		await capture("mcp-list", true);
-		send("\x1b", "Close MCP list");
-		await wait(() => !screen().includes("Configured MCP servers"), "closed MCP list");
-
-		send("/mcp test synthetic-mcp\r", "Test connectivity without changing saved MCP configuration");
-		await wait(() => screen().includes('Testing MCP connection "synthetic-mcp"'), "MCP test loader");
-		await capture("mcp-test-loading", true, 0);
-		await wait(
-			() => screen().includes("MCP connection: synthetic-mcp") && screen().includes("Successfully connected"),
-			"MCP test report",
-		);
-		await capture("mcp-test-success", true);
-		send("\x1b", "Close MCP connectivity report");
-		await wait(() => !screen().includes("MCP connection: synthetic-mcp"), "closed MCP test report");
-
-		const addMcp = `/mcp add candidate --scope project -- ${process.execPath} ${mcpFixturePath}\r`;
-		send(addMcp, "Review a second disposable MCP server addition");
-		await wait(() => screen().includes("Review MCP server addition"), "MCP add review");
-		await capture("mcp-add-review", true);
-		send("\r", "Cancel MCP addition first");
-		await wait(() => !screen().includes("Review MCP server addition"), "cancelled MCP add");
-		send(addMcp, "Reopen the same MCP server addition review");
-		await wait(() => screen().includes("Review MCP server addition"), "second MCP add review");
-		send("\x1b[B\r", "Confirm the exact MCP configuration write");
-		await wait(() => screen().includes('Saved MCP server "candidate"'), "saved MCP server");
-		await capture("mcp-add-saved", true);
-
-		send("/mcp remove synthetic-mcp --scope project\r", "Open an MCP removal review for stale-target testing");
-		await wait(() => screen().includes("Review MCP server removal"), "MCP remove review");
-		const changedMcp = JSON.parse(await Bun.file(connectionMcpPath).text()) as {
-			mcpServers: Record<string, Record<string, unknown>>;
-		};
-		changedMcp.mcpServers["synthetic-mcp"].timeout = 6_000;
-		await Bun.write(connectionMcpPath, `${JSON.stringify(changedMcp, null, 2)}\n`);
-		send("\x1b[B\r", "Reject the stale MCP proposal at execution time");
-		await wait(() => screen().includes("proposal changed"), "renewed MCP removal review");
-		await capture("mcp-remove-stale", true);
-		send("\r", "Close the renewed MCP removal without deleting the changed target");
-		await wait(() => !screen().includes("MCP server removal"), "closed stale MCP removal");
-		send("/mcp remove candidate --scope project\r", "Review removal of the saved MCP candidate");
-		await wait(() => screen().includes("Review MCP server removal"), "candidate MCP remove review");
-		send("\x1b[B\r", "Confirm MCP candidate removal");
-		await wait(() => screen().includes('Removed MCP server "candidate"'), "removed MCP candidate");
-
 		send("/ssh list\r", "Inspect isolated SSH configuration and loopback target");
 		await wait(() => screen().includes("SSH Hosts") && screen().includes("loopback"), "SSH list");
 		await capture("ssh-list", true);
@@ -1579,9 +1514,6 @@ try {
 		send("\x1b[B\r", "Confirm removal of the currently reviewed SSH host");
 		await wait(() => screen().includes('Removed SSH host "candidate"'), "removed SSH candidate");
 
-		const reopenedMcp = JSON.parse(await Bun.file(connectionMcpPath).text()) as {
-			mcpServers: Record<string, Record<string, unknown>>;
-		};
 		const reopenedSsh = JSON.parse(await Bun.file(connectionSshPath).text()) as {
 			hosts: Record<string, Record<string, unknown>>;
 		};
@@ -1590,8 +1522,6 @@ try {
 			(await Bun.file(secondaryPath).text()) !== secondaryBytes
 		)
 			throw new Error("Context lifecycle changed saved credential files");
-		if (reopenedMcp.mcpServers.candidate || reopenedMcp.mcpServers["synthetic-mcp"]?.timeout !== 6_000)
-			throw new Error("MCP configuration failed independent reopen verification");
 		if (reopenedSsh.hosts.candidate || !reopenedSsh.hosts.loopback)
 			throw new Error("SSH configuration failed independent reopen verification");
 		persistence = {
@@ -1602,8 +1532,6 @@ try {
 			startupSelectionUnchanged: (await Bun.file(globalActivePath).text()) === globalActiveBytes,
 			cancelledUnlinkBytesUnchanged: true,
 			confirmedUnlinkRemovedOnlyLocalPointers: true,
-			mcpConnectivityTestUsedDisposableProcess: true,
-			mcpStaleTargetPreservedAndCandidateRemoved: true,
 			sshSaveDisclosedNoConnectivityTest: true,
 			sshStaleTargetPreservedAndCandidateRemoved: true,
 			independentReopenVerified: true,

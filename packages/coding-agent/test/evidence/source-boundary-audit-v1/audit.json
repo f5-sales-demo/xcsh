@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "revision": "c09b6a7af9270e4f68d1db94d9fffb2a3b6c5448",
-  "fingerprint": "ce548535ab85dce0187f1330d0decd3264d75906892f7d66b13be78491b81a6c",
+  "revision": "7ff8125f16bf5d304875ba6c8692966bb9803df2",
+  "fingerprint": "f045f5987430ab254c573805d9d46ecadd404d9836a13095aa38b70e93bcf167",
   "counts": {
-    "total": 242,
-    "components": 97,
-    "integrations": 145
+    "total": 238,
+    "components": 96,
+    "integrations": 142
   },
   "audits": [
     {
@@ -54,7 +54,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -70,7 +69,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/autoresearch/index.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -164,7 +164,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "54d8323d4170dd217ae58b543b8219efe181643c41f82b5f2df1e52a8e5bc4fc",
+      "sha256": "78813575fa29c6682788e31b5dcfc54468e68f7da2e7825247675a73929423b8",
       "exports": [
         "CommitAgentInput",
         "ExistingChangelogEntries",
@@ -191,10 +191,10 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
-        "packages/coding-agent/test/agent-session-obfuscator-init.test.ts"
+        "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
+        "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts"
       ],
       "classification": "packages/coding-agent/src/commit/agentic/agent.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -269,7 +269,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -285,7 +284,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/debug/index.ts is individually classified as reviewed-mutation-adapter in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -401,57 +401,18 @@
         "packages/coding-agent/test/tools/chunk-mode.test.ts",
         "packages/coding-agent/test/tools/compile-graph.test.ts",
         "packages/coding-agent/test/tools/edit-renderer.test.ts",
-        "packages/coding-agent/test/tools/exa-renderer.test.ts",
         "packages/coding-agent/test/tools/fetch-kagi-toggle.test.ts",
-        "packages/coding-agent/test/tools/inspect-image-renderer.test.ts"
+        "packages/coding-agent/test/tools/inspect-image-renderer.test.ts",
+        "packages/coding-agent/test/tools/inspect-image.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/renderer.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
-    },
-    {
-      "source": "packages/coding-agent/src/exa/render.ts",
-      "kind": "integration",
-      "ownership": "runtime-lifecycle",
-      "domain": "tools",
-      "sha256": "22bf6d5b5384ef6290b01d4413baf1e1739ed991fe157b6fadc29c1135be6586",
-      "exports": [
-        "renderExaCall",
-        "renderExaResult"
-      ],
-      "interactionSignals": [
-        "render",
-        "terminal-control"
-      ],
-      "persistenceSignals": [],
-      "directTests": [
-        "packages/coding-agent/test/acp-event-mapper.test.ts",
-        "packages/coding-agent/test/agent-dashboard.test.ts",
-        "packages/coding-agent/test/agent-session-routing-profile.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/bordered-loader.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/ax.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.server-tools.test.ts",
-        "packages/coding-agent/test/browser/extension-reference.test.ts",
-        "packages/coding-agent/test/browser/office-pane-server.test.ts",
-        "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts",
-        "packages/coding-agent/test/cli/chrome-cli.test.ts"
-      ],
-      "classification": "packages/coding-agent/src/exa/render.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/extensibility/custom-tools/types.ts",
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "d482d9e144f7cb5a038e8d4d94ef94393142c017f07d750d413973851e69f0a3",
+      "sha256": "bff33bd7757fb8507f90f7f6d12b91ac01cf80413a66101bc914a84d63e17e74",
       "exports": [
         "CustomTool",
         "CustomToolAPI",
@@ -473,7 +434,6 @@
       "directTests": [
         "packages/coding-agent/test/agent-dashboard.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -482,15 +442,16 @@
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/client-prompts.test.ts",
-        "packages/coding-agent/test/client-resources.test.ts",
         "packages/coding-agent/test/compaction-hooks-example.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/console-catalog-types.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
-        "packages/coding-agent/test/debug/debug-selector-review.test.ts"
+        "packages/coding-agent/test/debug/debug-selector-review.test.ts",
+        "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
+        "packages/coding-agent/test/discovery/helpers.test.ts",
+        "packages/coding-agent/test/discovery/monorepo-skills.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/custom-tools/types.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -513,7 +474,6 @@
         "settings-mutation"
       ],
       "directTests": [
-        "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
@@ -532,7 +492,8 @@
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts"
+        "packages/coding-agent/test/person-extension-contract.test.ts",
+        "packages/coding-agent/test/person-profile-source-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -586,7 +547,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "bff0ba25b27d5ffaf88050e39185854da5a65f750fe207ad5446155b72aac7a5",
+      "sha256": "ed4084d09bbdc03f2359ae73818d647b7223a505a16542b4b008e3324c32eccd",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -730,7 +691,6 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
@@ -739,7 +699,8 @@
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/agent-session-user-shortcut-hooks.test.ts",
         "packages/coding-agent/test/args.test.ts",
-        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts"
+        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
+        "packages/coding-agent/test/autoresearch-state.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/types.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -818,7 +779,6 @@
         "packages/coding-agent/test/agent-session-compaction.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -831,7 +791,8 @@
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-images.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
-        "packages/coding-agent/test/chat-handler-reason.test.ts"
+        "packages/coding-agent/test/chat-handler-reason.test.ts",
+        "packages/coding-agent/test/chat-handler-ttft.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/hooks/types.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -866,6 +827,7 @@
         "packages/coding-agent/test/input-controller-background.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/marketplace/slash-install-parser.test.ts",
+        "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
         "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
@@ -877,8 +839,7 @@
         "packages/coding-agent/test/slash-commands/copy.test.ts",
         "packages/coding-agent/test/slash-commands/exit.test.ts",
         "packages/coding-agent/test/slash-commands/fast.test.ts",
-        "packages/coding-agent/test/slash-commands/force.test.ts",
-        "packages/coding-agent/test/slash-commands/login.test.ts"
+        "packages/coding-agent/test/slash-commands/force.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/slash-commands.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -926,11 +887,11 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
-        "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts"
+        "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
+        "packages/coding-agent/test/agent-session-python-cleanup.test.ts"
       ],
       "classification": "packages/coding-agent/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -975,45 +936,6 @@
       "classification": "packages/coding-agent/src/lsp/render.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
-      "source": "packages/coding-agent/src/mcp/render.ts",
-      "kind": "integration",
-      "ownership": "runtime-lifecycle",
-      "domain": "connections",
-      "sha256": "6e378839a0afe43cc0374e5b641f7c7463439006080ab5bbe059103b4a792eb9",
-      "exports": [
-        "renderMCPCall",
-        "renderMCPResult"
-      ],
-      "interactionSignals": [
-        "render",
-        "terminal-control"
-      ],
-      "persistenceSignals": [],
-      "directTests": [
-        "packages/coding-agent/test/acp-event-mapper.test.ts",
-        "packages/coding-agent/test/agent-dashboard.test.ts",
-        "packages/coding-agent/test/agent-session-routing-profile.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/bordered-loader.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/ax.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
-        "packages/coding-agent/test/browser/chat-handler.server-tools.test.ts",
-        "packages/coding-agent/test/browser/extension-reference.test.ts",
-        "packages/coding-agent/test/browser/office-pane-server.test.ts",
-        "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts",
-        "packages/coding-agent/test/cli/chrome-cli.test.ts"
-      ],
-      "classification": "packages/coding-agent/src/mcp/render.ts is individually classified as runtime-lifecycle in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
-    },
-    {
       "source": "packages/coding-agent/src/media/markdown-resolver.ts",
       "kind": "integration",
       "ownership": "runtime-lifecycle",
@@ -1036,7 +958,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "9ae1c74151eb1d246b1e47359a424caa4256e8737a109c8f9abec07b527d0a0b",
+      "sha256": "9907591a7378af4da7e4532f77d48ff0aa90c5b0b58b24f846d72593f7776b06",
       "exports": [
         "AcpAgent"
       ],
@@ -1099,7 +1021,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1115,7 +1036,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/acp/index.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1140,7 +1062,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "8d63d03dbec1ee13196bb30ed7216f4561c02b726ad7a0f43d1af88e618a0893",
+      "sha256": "2c117942a9868ea79811efd662c6fa2cc92f91e6adb7eade99b96c66ce903418",
       "exports": [
         "AgentDashboard",
         "AgentDashboardDependencies",
@@ -1196,8 +1118,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/modes/components/auth-link-presenter.test.ts",
-        "packages/coding-agent/test/modes/components/login-dialog.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-oauth.test.ts"
+        "packages/coding-agent/test/modes/components/login-dialog.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/auth-link-presenter.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1318,7 +1239,6 @@
       ],
       "directTests": [
         "packages/coding-agent/test/context-add-wizard.test.ts",
-        "packages/coding-agent/test/keybindings-escape-components.test.ts",
         "packages/coding-agent/test/slash-commands/plugin-setup.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/context-add-wizard.ts is individually classified as caller-owned-draft in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -1460,7 +1380,7 @@
       "kind": "component",
       "ownership": "reviewed-mutation-adapter",
       "domain": "settings",
-      "sha256": "37b0ea7cf7ee5eda4df6de416692bc78c88a8cd8580c5df0efe41d317bb626cb",
+      "sha256": "c9825424c6d18eab49fcfc325e0d6ebf31eb55f0b6f22037b447ca305bf52c56",
       "exports": [
         "ExtensionDashboard",
         "ExtensionDashboardDependencies"
@@ -1491,7 +1411,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1507,7 +1426,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1516,7 +1436,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "00f9ffce9a948776efb5721926eb9c69ec4c058b391edbd263296e5bc3c51031",
+      "sha256": "19421349e3a9efd240e1949b68b7d2f892a8f0500437500a8eaa8db954fe7452",
       "exports": [
         "ExtensionSettingsManager",
         "applyFilter",
@@ -1544,7 +1464,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "d903cd85604d05aff4153c07b2e970e2d670e5372c6b3a6d8a9bc00347513ec8",
+      "sha256": "e4a36fb4c167b83d15aae4a7fa672f980d3fb62e1e996b33f557c968eca75d64",
       "exports": [
         "DashboardCallbacks",
         "DashboardState",
@@ -1573,7 +1493,6 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -1585,7 +1504,8 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/bench-instant-extension.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts"
+        "packages/coding-agent/test/browser/chat-conformance.test.ts",
+        "packages/coding-agent/test/browser/dt-context.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/types.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1772,7 +1692,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1788,7 +1707,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1868,30 +1788,6 @@
         "packages/coding-agent/test/login-prompt-input.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/login-prompt-input.ts is individually classified as read-only-renderer in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
-    },
-    {
-      "source": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "kind": "component",
-      "ownership": "caller-owned-draft",
-      "domain": "connections",
-      "sha256": "f57fdf66f20dd09b511d1d100b12a030ca30f8c70cddb21e8998d332e3ed2b14",
-      "exports": [
-        "MCPAddWizard"
-      ],
-      "interactionSignals": [
-        "render",
-        "keyboard-input",
-        "cancellation-callback",
-        "async-progress",
-        "terminal-control"
-      ],
-      "persistenceSignals": [
-        "session-persistence"
-      ],
-      "directTests": [
-        "packages/coding-agent/test/keybindings-escape-components.test.ts"
-      ],
-      "classification": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts is individually classified as caller-owned-draft in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/media-message.ts",
@@ -2071,7 +1967,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -2087,7 +1982,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugins/index.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2155,7 +2051,6 @@
       "directTests": [
         "packages/coding-agent/test/agent-dashboard.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -2164,15 +2059,16 @@
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/client-prompts.test.ts",
-        "packages/coding-agent/test/client-resources.test.ts",
         "packages/coding-agent/test/compaction-hooks-example.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/console-catalog-types.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
-        "packages/coding-agent/test/debug/debug-selector-review.test.ts"
+        "packages/coding-agent/test/debug/debug-selector-review.test.ts",
+        "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
+        "packages/coding-agent/test/discovery/helpers.test.ts",
+        "packages/coding-agent/test/discovery/monorepo-skills.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugins/types.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2509,7 +2405,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "291f72ed5e1561fcb49089dbdb42e11e2221e9edb94823782f9b80d4461a06c5",
+      "sha256": "bbcda8c0a43cbbd02b237938f6253ce55fb8ed6a23afe09cd3b7b3a76878fe32",
       "exports": [
         "BooleanSettingDef",
         "EnumSettingDef",
@@ -2719,7 +2615,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -2735,7 +2630,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/status-line/index.ts is individually classified as read-only-renderer in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2854,7 +2750,6 @@
       "directTests": [
         "packages/coding-agent/test/agent-dashboard.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -2863,15 +2758,16 @@
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/client-prompts.test.ts",
-        "packages/coding-agent/test/client-resources.test.ts",
         "packages/coding-agent/test/compaction-hooks-example.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/console-catalog-types.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
-        "packages/coding-agent/test/debug/debug-selector-review.test.ts"
+        "packages/coding-agent/test/debug/debug-selector-review.test.ts",
+        "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
+        "packages/coding-agent/test/discovery/helpers.test.ts",
+        "packages/coding-agent/test/discovery/monorepo-skills.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/status-line/types.ts is individually classified as read-only-renderer in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3203,7 +3099,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "49c346f9973c9b59584991d0e1959724cca7d6d6b742e73a20a4bc5c5fff166f",
+      "sha256": "047e590371c0c7634914b67160f067be64cc529c982ecf96ca9b8d2547ca997d",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -3222,6 +3118,7 @@
       ],
       "directTests": [
         "packages/coding-agent/test/command-controller-status-icon.test.ts",
+        "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/media-message-component.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-compact.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-dump.test.ts",
@@ -3234,13 +3131,12 @@
         "packages/coding-agent/test/modes/controllers/command-controller-rename.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/context-command-controller-review.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-review.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-smithery.test.ts",
         "packages/coding-agent/test/modes/controllers/ssh-command-controller-review.test.ts",
         "packages/coding-agent/test/pending-glyph-sweep.test.ts",
         "packages/coding-agent/test/regression-guard.test.ts",
-        "packages/coding-agent/test/session-manager/move-to.test.ts"
+        "packages/coding-agent/test/session-manager/move-to.test.ts",
+        "packages/coding-agent/test/session-provider-section.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/controllers/command-controller.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3493,32 +3389,6 @@
       "classification": "packages/coding-agent/src/modes/controllers/login-options.ts is individually classified as runtime-lifecycle in the foundation domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
-      "source": "packages/coding-agent/src/modes/controllers/mcp-command-controller.ts",
-      "kind": "integration",
-      "ownership": "reviewed-mutation-adapter",
-      "domain": "connections",
-      "sha256": "cf24c0d411d93278490acde90ee4bc238f68fa7da08b45025f98f59a0750c4ab",
-      "exports": [
-        "MCPCommandController",
-        "MCPCommandDependencies",
-        "showMcpOAuthAuthorization"
-      ],
-      "interactionSignals": [
-        "async-progress",
-        "terminal-control"
-      ],
-      "persistenceSignals": [
-        "session-persistence"
-      ],
-      "directTests": [
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-oauth.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-review.test.ts",
-        "packages/coding-agent/test/modes/controllers/mcp-command-controller-smithery.test.ts",
-        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
-      ],
-      "classification": "packages/coding-agent/src/modes/controllers/mcp-command-controller.ts is individually classified as reviewed-mutation-adapter in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
-    },
-    {
       "source": "packages/coding-agent/src/modes/controllers/model-selection.ts",
       "kind": "integration",
       "ownership": "runtime-lifecycle",
@@ -3579,7 +3449,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "9b7f6980904010698bb44c73459826dec1452889cf9d0d30fc475393848233b9",
+      "sha256": "2fe87cea6b347fdea0ea639bc54a193b322bb5610e3056ffe5c65a13e1e48b2d",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -3732,7 +3602,6 @@
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
@@ -3747,7 +3616,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
-        "packages/coding-agent/test/connected-provider-reload.test.ts"
+        "packages/coding-agent/test/connected-provider-reload.test.ts",
+        "packages/coding-agent/test/context-completion.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3756,7 +3626,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "6564f2f8b62acc63fa2e86480208e74b93532eb353e87c84946fbeeb2cd8ac87",
+      "sha256": "120f991fa9a33397fd38f2d21e2d24b1775cd28a813824415e3cb510697fd7a9",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4053,7 +3923,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -4069,7 +3938,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/defaults/index.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4123,7 +3993,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "settings",
-      "sha256": "45d3d60b2175eff30056f8c158eab81722d0993303e6e1181d1bd2e3be68918f",
+      "sha256": "e4823fc6ca3d3610d01a244beaf0f570700e51e2fc2a3ffe34764f9496966fa1",
       "exports": [
         "SpinnerType",
         "SymbolKey",
@@ -4203,7 +4073,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "53444ca9a1a78bea9a06c84afcdab925ee42812ea43c1856cd5141ffdb96be0b",
+      "sha256": "fd6b08cee6eba4dec486805f236230ae9c7a612bf2e83a3e2d9310fad1b60474",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",
@@ -4223,7 +4093,6 @@
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -4233,12 +4102,13 @@
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/client-prompts.test.ts",
-        "packages/coding-agent/test/client-resources.test.ts",
         "packages/coding-agent/test/compaction-hooks-example.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/components/todo-reminder.test.ts",
-        "packages/coding-agent/test/connected-provider-reload.test.ts"
+        "packages/coding-agent/test/connected-provider-reload.test.ts",
+        "packages/coding-agent/test/console-catalog-types.test.ts",
+        "packages/coding-agent/test/context-completion.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/types.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4415,7 +4285,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "9637c3b94790fd8df22e4b5089ff1d72f1965272ac463f0d1a4a5f2e9fd208eb",
+      "sha256": "fd2e52dbe9b92a7683c1243fcafef4ca00aa8b5be4cd9cd001987fba566dc8d9",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -4438,7 +4308,6 @@
         "discoverContextFiles",
         "discoverCustomTSCommands",
         "discoverExtensions",
-        "discoverMCPServers",
         "discoverPromptTemplates",
         "discoverSkills",
         "discoverSlashCommands",
@@ -4447,8 +4316,7 @@
         "type ToolSession"
       ],
       "interactionSignals": [
-        "render",
-        "async-progress"
+        "render"
       ],
       "persistenceSignals": [
         "file-write",
@@ -4470,11 +4338,11 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
-        "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts"
+        "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
+        "packages/coding-agent/test/agent-session-python-cleanup.test.ts"
       ],
       "classification": "packages/coding-agent/src/sdk.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4483,7 +4351,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "428cd2c233e097cccccd81ec1751306e6028b604dd276035826bf189fffafc72",
+      "sha256": "f1c43096ac1974a771750cdeb517a81558cf8bd7d803e859e635601114134a7a",
       "exports": [
         "BranchSummaryEntry",
         "CURRENT_SESSION_VERSION",
@@ -4493,7 +4361,6 @@
         "CustomMessageEntry",
         "FileEntry",
         "LabelEntry",
-        "MCPToolSelectionEntry",
         "ModeChangeEntry",
         "ModelChangeEntry",
         "NewSessionOptions",
@@ -4550,12 +4417,12 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
-        "packages/coding-agent/test/agent-session-python-cleanup.test.ts"
+        "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
+        "packages/coding-agent/test/agent-session-resolve-reminder.test.ts"
       ],
       "classification": "packages/coding-agent/src/session/session-manager.ts is individually classified as runtime-lifecycle in the sessions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4582,7 +4449,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "b0d52a7f5d30c0066636ee1ea80f68849b8bd333fe4a6d9bcd07c7ad69c81097",
+      "sha256": "3ee59ea28c119ecd8dc32ef7143302e3797f0c4e78cfb5401c7d3caefa05f039",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4601,6 +4468,7 @@
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/input-controller-background.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
+        "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
         "packages/coding-agent/test/slash-command-tui-inventory.test.ts",
         "packages/coding-agent/test/slash-commands.test.ts",
@@ -5006,10 +4874,10 @@
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/progressive-context-loading.test.ts",
-        "packages/coding-agent/test/regression-guard.test.ts",
         "packages/coding-agent/test/sandbox-containment.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
-        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
+        "packages/coding-agent/test/slash-commands/browser.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/debug.ts is individually classified as tool-authority-boundary in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5063,8 +4931,6 @@
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/browser/provider.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/client-prompts.test.ts",
-        "packages/coding-agent/test/client-resources.test.ts",
         "packages/coding-agent/test/compaction-provider-boundary.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
@@ -5074,7 +4940,9 @@
         "packages/coding-agent/test/e2e/extension-panel-e2e.test.ts",
         "packages/coding-agent/test/e2e/staging-crud.test.ts",
         "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts",
-        "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts"
+        "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts",
+        "packages/coding-agent/test/e2e/stealth-workers.e2e.test.ts",
+        "packages/coding-agent/test/enterprise-oauth-login-flow.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5288,7 +5156,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "18ecd72a5ed630753c44e201edf84531e0c3cabc82278650bb196b7fb28cb814",
+      "sha256": "230fa6795dffb8c78d68e57088c1c8682ea7bed2b29bba97d86d3bd94cdbd49d",
       "exports": [
         "ReadTool",
         "ReadToolDetails",
@@ -5306,7 +5174,6 @@
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -5320,7 +5187,8 @@
         "packages/coding-agent/test/autocomplete-max-visible.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts"
+        "packages/coding-agent/test/bash-execution-outcome.test.ts",
+        "packages/coding-agent/test/bash-executor.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/read.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5492,7 +5360,6 @@
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/chat-handler-slash-commands.test.ts",
         "packages/coding-agent/test/chat-handler-web-search.test.ts",
-        "packages/coding-agent/test/client-prompts.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
@@ -5503,7 +5370,8 @@
         "packages/coding-agent/test/extension-dashboard.test.ts",
         "packages/coding-agent/test/herdr-terminal.test.ts",
         "packages/coding-agent/test/input-controller-clipboard-review.test.ts",
-        "packages/coding-agent/test/integration-registry.test.ts"
+        "packages/coding-agent/test/integration-registry.test.ts",
+        "packages/coding-agent/test/interactive-mode-plan-review.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/review.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5512,7 +5380,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "0d09af5ca593c3c863a532566030c70f48c8d27793d9aa29c5a5771b176d4d11",
+      "sha256": "aa7fbd5efe3a1b759523f68aebd6084437682cdc30a2e1ecff558188b4ef9765",
       "exports": [
         "SearchToolBm25Details",
         "SearchToolBm25Tool",
@@ -5604,7 +5472,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "10479d2b94579b0419b9705da53912c1c66a691fb8fbff846a8273f67865cca5",
+      "sha256": "982660b76efecf4d392ca9bc023a81a2952a6e8135a80f8f0cb082b298f71b4d",
       "exports": [
         "VimRenderArgs",
         "VimTool",
@@ -5656,7 +5524,6 @@
         "packages/coding-agent/test/agent-session-context-promotion.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
@@ -5668,7 +5535,8 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/background-terminal.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts"
+        "packages/coding-agent/test/bash-executor.test.ts",
+        "packages/coding-agent/test/block-images.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/write.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5912,6 +5780,7 @@
         "packages/coding-agent/test/chat-handler-slash-commands.test.ts",
         "packages/coding-agent/test/input-controller-background.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
+        "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/prompt-action-autocomplete.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
         "packages/coding-agent/test/session-manager/move-to.test.ts",
@@ -5924,8 +5793,7 @@
         "packages/coding-agent/test/slash-commands/force.test.ts",
         "packages/coding-agent/test/slash-commands/login.test.ts",
         "packages/coding-agent/test/slash-commands/plugin-setup.test.ts",
-        "packages/coding-agent/test/slash-commands/reload-plugins.test.ts",
-        "packages/coding-agent/test/slash-commands/route.test.ts"
+        "packages/coding-agent/test/slash-commands/reload-plugins.test.ts"
       ],
       "classification": "packages/tui/src/autocomplete.ts is individually classified as runtime-lifecycle in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6014,7 +5882,6 @@
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/args.test.ts",
@@ -6027,7 +5894,8 @@
         "packages/coding-agent/test/browser/selector.test.ts",
         "packages/coding-agent/test/chat-handler-context-paths.test.ts",
         "packages/coding-agent/test/cli/flag-spec.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
+        "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/tui/src/components/box.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6125,10 +5993,10 @@
         "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-images.test.ts",
-        "packages/coding-agent/test/client-resources.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/core/python-executor-display.test.ts",
-        "packages/coding-agent/test/core/python-kernel-display.test.ts"
+        "packages/coding-agent/test/core/python-kernel-display.test.ts",
+        "packages/coding-agent/test/default-model.test.ts"
       ],
       "classification": "packages/tui/src/components/image.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6161,14 +6029,14 @@
         "packages/coding-agent/test/agent-session-context-promotion.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
-        "packages/coding-agent/test/agent-session-turn-phase.test.ts"
+        "packages/coding-agent/test/agent-session-turn-phase.test.ts",
+        "packages/coding-agent/test/auth-profile-rpc-uat.test.ts"
       ],
       "classification": "packages/tui/src/components/input.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6188,7 +6056,6 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
@@ -6207,7 +6074,8 @@
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts"
+        "packages/coding-agent/test/person-extension-contract.test.ts",
+        "packages/coding-agent/test/person-profile-source-contract.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6382,12 +6250,12 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-message-pipeline.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-obfuscator-init.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
-        "packages/coding-agent/test/agent-session-python-cleanup.test.ts"
+        "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
+        "packages/coding-agent/test/agent-session-resolve-reminder.test.ts"
       ],
       "classification": "packages/tui/src/components/text.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6449,18 +6317,18 @@
         "packages/coding-agent/test/async-job-cancellation.test.ts",
         "packages/coding-agent/test/bench-instant-extension.test.ts",
         "packages/coding-agent/test/browser/chat-handler.server-tools.test.ts",
-        "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/browser/input-commit.test.ts",
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
         "packages/coding-agent/test/compaction-hooks.test.ts",
+        "packages/coding-agent/test/cursor-generic-tool-bridge.test.ts",
         "packages/coding-agent/test/e2e/bench/multi-resource-report.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/interaction-parity.test.ts",
         "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
         "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
-        "packages/coding-agent/test/mcp-runtime-controller.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts"
+        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
+        "packages/coding-agent/test/modes/print-mode-json-events.test.ts"
       ],
       "classification": "packages/tui/src/events.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6546,7 +6414,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -6562,7 +6429,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/tui/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -7080,7 +6948,6 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
-        "packages/coding-agent/test/agent-session-mcp-discovery.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -7096,7 +6963,8 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts",
+        "packages/coding-agent/test/core/chunk-tree.test.ts"
       ],
       "classification": "packages/typescript-edit-benchmark/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     }

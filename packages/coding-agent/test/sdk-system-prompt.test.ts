@@ -38,7 +38,6 @@ describe("SDK system prompt overrides", () => {
 				contextFiles: [],
 				promptTemplates: [],
 				slashCommands: [],
-				enableMCP: false,
 				enableLsp: false,
 				systemPrompt,
 			});

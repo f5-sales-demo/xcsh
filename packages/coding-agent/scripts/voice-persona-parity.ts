@@ -151,7 +151,6 @@ try {
 			authStorage: auth,
 			cwd,
 			disableExtensionDiscovery: true,
-			enableMCP: false,
 			model,
 			modelRegistry: registry,
 			rules: [],

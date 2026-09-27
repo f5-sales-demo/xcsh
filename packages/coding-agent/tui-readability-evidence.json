@@ -91,16 +91,6 @@
       "0fc1f211",
       "fa973934"
     ],
-    "packages/coding-agent/src/exa/render.ts": [
-      "22bf6d5b",
-      "5384ef62",
-      "90b01d44",
-      "13baf1e1",
-      "739ed991",
-      "fe157b6f",
-      "adc29c11",
-      "35be6586"
-    ],
     "packages/coding-agent/src/lsp/render.ts": [
       "aaf4888c",
       "a15d25da",
@@ -111,25 +101,15 @@
       "b3624fbd",
       "2bbda348"
     ],
-    "packages/coding-agent/src/mcp/render.ts": [
-      "6e378839",
-      "a0afe43c",
-      "c0374e5b",
-      "641f7c74",
-      "63439006",
-      "080ab5bb",
-      "e059103b",
-      "4a792eb9"
-    ],
     "packages/coding-agent/src/modes/components/agent-dashboard.ts": [
-      "8d63d03d",
-      "bec1ee13",
-      "196bb30e",
-      "d7216f45",
-      "61c02b72",
-      "6ad7a0f4",
-      "3d1af88e",
-      "618a0893"
+      "2c117942",
+      "a9868ea7",
+      "9811efd6",
+      "62c6fa2c",
+      "c92f91e6",
+      "adb7eade",
+      "99b96c66",
+      "ce903418"
     ],
     "packages/coding-agent/src/modes/components/btw-panel.ts": [
       "f236f593",
@@ -162,14 +142,14 @@
       "7404e8b8"
     ],
     "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts": [
-      "37b0ea7c",
-      "f7ee5eda",
-      "4df6de41",
-      "6692bc78",
-      "c88a8cd8",
-      "580c5df0",
-      "efe41d31",
-      "7bb626cb"
+      "c9825424",
+      "c6d18eab",
+      "49fcfc32",
+      "5e0d6ebf",
+      "31eb55f0",
+      "b6f22037",
+      "b447ca30",
+      "5bf52c56"
     ],
     "packages/coding-agent/src/modes/components/footer.ts": [
       "f5624f23",
@@ -230,16 +210,6 @@
       "a69523ec",
       "77f63eeb",
       "7fa4e874"
-    ],
-    "packages/coding-agent/src/modes/components/mcp-add-wizard.ts": [
-      "f57fdf66",
-      "f20dd09b",
-      "511d1d10",
-      "0b12a030",
-      "ca30f8c7",
-      "0cddb21e",
-      "8998d332",
-      "e3ed2b14"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
       "3e3be131",
@@ -602,14 +572,14 @@
       "6ad26bc8"
     ],
     "packages/coding-agent/src/tools/search-tool-bm25.ts": [
-      "0d09af5c",
-      "a593c3c8",
-      "63a53256",
-      "6030c70f",
-      "48c8d277",
-      "93d9aa29",
-      "c5a5771b",
-      "176d4d11"
+      "aa7fbd5e",
+      "fe3a1b75",
+      "9523f68a",
+      "ebd60844",
+      "37682cdc",
+      "30a2e1ec",
+      "ff558188",
+      "b4ef9765"
     ],
     "packages/coding-agent/src/tools/sqlite-reader.ts": [
       "9eeca489",
@@ -958,42 +928,6 @@
       "entry": "coding-agent-previews"
     },
     {
-      "file": "packages/coding-agent/src/exa/render.ts",
-      "line": 71,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/exa/render.ts",
-      "line": 152,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/exa/render.ts",
-      "line": 181,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/exa/render.ts",
-      "line": 199,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/exa/render.ts",
-      "line": 223,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/exa/render.ts",
-      "line": 228,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
       "file": "packages/coding-agent/src/lsp/render.ts",
       "line": 47,
       "sink": "truncateToWidth",
@@ -1054,80 +988,62 @@
       "entry": "coding-agent-previews"
     },
     {
-      "file": "packages/coding-agent/src/mcp/render.ts",
-      "line": 33,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/mcp/render.ts",
-      "line": 142,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/mcp/render.ts",
-      "line": 146,
-      "sink": "truncateToWidth",
-      "entry": "coding-agent-previews"
-    },
-    {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 663,
+      "line": 662,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 669,
+      "line": 668,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 683,
+      "line": 682,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 689,
+      "line": 688,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 722,
+      "line": 721,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 728,
+      "line": 727,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 748,
+      "line": 747,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 751,
+      "line": 750,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 769,
+      "line": 768,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/agent-dashboard.ts",
-      "line": 778,
+      "line": 777,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
@@ -1211,37 +1127,37 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 412,
+      "line": 411,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 418,
+      "line": 417,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 438,
+      "line": 437,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 441,
+      "line": 440,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 473,
+      "line": 472,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/extensions/extension-dashboard.ts",
-      "line": 482,
+      "line": 481,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
@@ -1340,30 +1256,6 @@
       "line": 95,
       "sink": "selectorProse",
       "entry": "login-prose"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "line": 76,
-      "sink": "truncateToWidth",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "line": 159,
-      "sink": "selectorProse",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "line": 160,
-      "sink": "selectorCompactRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/mcp-add-wizard.ts",
-      "line": 169,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
@@ -2447,25 +2339,25 @@
     },
     {
       "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
-      "line": 141,
+      "line": 113,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
-      "line": 143,
+      "line": 115,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
-      "line": 154,
+      "line": 126,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
-      "line": 284,
+      "line": 240,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },

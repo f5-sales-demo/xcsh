@@ -945,7 +945,7 @@ export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 		const displayMode = resolveFileDisplayMode(this.session);
 		const chunkMode = resolveEditMode(this.session) === "chunk";
 
-		// Handle internal URLs (agent://, artifact://, memory://, skill://, rule://, local://, mcp://)
+		// Handle internal URLs (agent://, artifact://, memory://, skill://, rule://, local://)
 		const internalRouter = this.session.internalRouter;
 		if (internalRouter?.canHandle(readPath)) {
 			const parsed = parseSel(sel);
@@ -1335,7 +1335,7 @@ export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 	}
 
 	/**
-	 * Handle internal URLs (agent://, artifact://, memory://, skill://, rule://, local://, mcp://).
+	 * Handle internal URLs (agent://, artifact://, memory://, skill://, rule://, local://).
 	 * Supports pagination via offset/limit but rejects them when query extraction is used.
 	 */
 	async #handleInternalUrl(url: string, offset?: number, limit?: number): Promise<AgentToolResult<ReadToolDetails>> {

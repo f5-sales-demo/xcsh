@@ -40,7 +40,6 @@ export default function (pi) {
 					"--extension",
 					extension,
 					"--no-tools",
-					"--no-mcp",
 					"--no-lsp",
 					"--no-memories",
 					"--no-skills",

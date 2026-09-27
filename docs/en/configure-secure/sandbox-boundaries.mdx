@@ -10,7 +10,7 @@ A model instruction is not a sandbox. Enforcement belongs to the tool, host proc
 
 ## How do I restrict the exposed tool set?
 
-Start with `--no-tools` or an explicit `--tools` allow-list when a run needs only conversation. Disable Model Context Protocol (MCP) and extensions separately because they can register additional capabilities. Review custom tool and hook code with the same care as any locally executed module.
+Start with `--no-tools` or an explicit `--tools` allow-list when a run needs only conversation. Disable extensions separately because they can register additional capabilities. Review custom tool and hook code with the same care as any locally executed module.
 
 ## How do I constrain files and processes?
 

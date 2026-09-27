@@ -57,7 +57,6 @@ describe("SYSTEM.md prompt assembly", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 

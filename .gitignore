@@ -115,7 +115,6 @@ projects/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .remember/
-.playwright-mcp/
 .serena/
 .auto-claude/
 claudedocs/

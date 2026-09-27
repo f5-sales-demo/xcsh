@@ -54,7 +54,6 @@ describe("progressive context loading", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			toolNames,
 		});
@@ -86,7 +85,6 @@ describe("progressive context loading", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			toolNames,
 		});
@@ -236,7 +234,6 @@ describe("progressive context loading", () => {
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 		});
 

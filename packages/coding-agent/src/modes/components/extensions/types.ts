@@ -11,7 +11,6 @@ export type ExtensionKind =
 	| "skill"
 	| "rule"
 	| "tool"
-	| "mcp"
 	| "prompt"
 	| "instruction"
 	| "context-file"

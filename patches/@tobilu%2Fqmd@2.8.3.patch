@@ -17,7 +17,12 @@ diff --git a/dist/db.js b/dist/db.js
 index acef8250f..4f575dfd0 100644
 --- a/dist/db.js
 +++ b/dist/db.js
-@@ -5,10 +5,8 @@
+@@ -1,56 +1,41 @@
++import { pathToFileURL } from "node:url";
+ /**
+  * db.ts - Cross-runtime SQLite compatibility layer
+  *
+  * Provides a unified Database export that works under both Bun (bun:sqlite)
   * and Node.js (better-sqlite3). The APIs are nearly identical — the main
   * difference is the import path.
   *
@@ -30,7 +35,8 @@ index acef8250f..4f575dfd0 100644
   */
  export const isBun = "Bun" in globalThis;
  let _Database;
-@@ -17,22 +15,8 @@ if (isBun) {
+ let _sqliteVecLoad;
+ if (isBun) {
      // Dynamic string prevents tsc from resolving bun:sqlite on Node.js builds
      const bunSqlite = "bun:" + "sqlite";
      const BunDatabase = (await import(/* @vite-ignore */ bunSqlite)).Database;
@@ -54,14 +60,38 @@ index acef8250f..4f575dfd0 100644
      try {
          const { getLoadablePath } = await import("sqlite-vec");
          const vecPath = getLoadablePath();
-@@ -103,13 +87,14 @@ function enableWal(db, budgetMs) {
+         const testDb = new BunDatabase(":memory:");
+         testDb.loadExtension(vecPath);
+         testDb.close();
+         _sqliteVecLoad = (db) => db.loadExtension(vecPath);
+     }
+     catch {
+         // Vector search won't work, but BM25 and other operations are unaffected.
+         _sqliteVecLoad = null;
+     }
+ }
+ else {
+     _Database = (await import("better-sqlite3")).default;
+     const sqliteVec = await import("sqlite-vec");
+     _sqliteVecLoad = (db) => sqliteVec.load(db);
+ }
+ function isBusyError(err) {
+     if (typeof err !== "object" || err === null)
+         return false;
+@@ -103,13 +88,20 @@ function enableWal(db, budgetMs) {
   * restores the upstream fail-fast behaviour). See
   * https://bun.sh/docs/api/sqlite#busy-timeout.
   */
 -export function openDatabase(path) {
 -    const db = new _Database(path);
 +export function openDatabase(path, options = {}) {
-+    const db = new _Database(path, options.readonly ? { readonly: true } : undefined);
++    const readonlyOptions = options.readonly
++        ? (isBun ? { readonly: true, create: false } : { readonly: true, fileMustExist: true })
++        : undefined;
++    const databasePath = options.readonly && isBun && process.platform === "darwin"
++        ? `${pathToFileURL(path).href}?immutable=1`
++        : path;
++    const db = new _Database(databasePath, readonlyOptions);
      const raw = process.env.QMD_SQLITE_BUSY_TIMEOUT;
      const parsed = raw !== undefined && raw !== "" ? Number(raw) : Number.NaN;
      const busyTimeoutMs = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 120_000;

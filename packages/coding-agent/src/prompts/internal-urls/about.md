@@ -67,7 +67,7 @@ SE-specific skills, and the federated llms.txt hierarchy.
 
 ## Capabilities
 
-Sessions, MCP server/client, skills, TUI with themes, commit assistant,
+Sessions, skills, TUI with themes, commit assistant,
 Python REPL, native shell/PTY, provider-agnostic LLM routing, slash commands,
 SSH remote execution, image generation and analysis.
 

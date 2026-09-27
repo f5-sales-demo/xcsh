@@ -162,7 +162,6 @@ describe("session prompt snapshot lifecycle", () => {
 			skills: [],
 			promptTemplates: [],
 			slashCommands: [],
-			enableMCP: false,
 			enableLsp: false,
 			toolNames: ["read"],
 		});
@@ -235,7 +234,6 @@ describe("session prompt snapshot lifecycle", () => {
 					preparedSystemPromptInputs: snapshot,
 					promptTemplates: [],
 					slashCommands: [],
-					enableMCP: false,
 					enableLsp: false,
 					toolNames: ["read", "todo_write"],
 					excludedToolNames: ["todo_write"],

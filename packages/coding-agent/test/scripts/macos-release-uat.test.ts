@@ -218,8 +218,9 @@ describe("published macOS UAT execution boundaries", () => {
 
 		for (const source of [buildScript, pkgScript, homebrewScript]) {
 			expect(source).toContain("XCSH_SMOKE_TEST_QMD");
-			expect(source).toContain("XCSH_QMD_SMOKE_OK");
 		}
+		expect(buildScript).toContain("parseQmdSmokeOutput");
+		for (const source of [pkgScript, homebrewScript]) expect(source).toContain("validate-qmd-smoke-output");
 	});
 
 	it("validates the private MDM workspace through sudo", async () => {

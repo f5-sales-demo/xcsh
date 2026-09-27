@@ -4,9 +4,7 @@ import { setKeybindings, type TUI } from "@f5-sales-demo/pi-tui";
 import { KeybindingsManager } from "../src/config/keybindings";
 import type { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
-import { ContextAddWizard } from "../src/modes/components/context-add-wizard";
 import { HistorySearchComponent } from "../src/modes/components/history-search";
-import { MCPAddWizard } from "../src/modes/components/mcp-add-wizard";
 import { ModelSelectorComponent } from "../src/modes/components/model-selector";
 import { SessionSelectorComponent } from "../src/modes/components/session-selector";
 import { TreeSelectorComponent } from "../src/modes/components/tree-selector";
@@ -79,35 +77,6 @@ describe("component escape bindings", () => {
 		expect(onCancel).not.toHaveBeenCalled();
 		selector.handleInput("\x1b");
 		expect(onCancel).toHaveBeenCalledTimes(1);
-	});
-
-	it("separates Back from Ctrl+C in context and MCP add wizards", () => {
-		setKeybindings(
-			KeybindingsManager.inMemory({
-				"app.interrupt": "ctrl+c",
-				"tui.select.cancel": "alt+x",
-			}),
-		);
-		const contextCancel = vi.fn();
-		const context = new ContextAddWizard(
-			() => {},
-			contextCancel,
-			() => {},
-		);
-		const mcpCancel = vi.fn();
-		const mcp = new MCPAddWizard(() => {}, mcpCancel);
-
-		for (const component of [context, mcp]) {
-			component.handleInput("\x03");
-			component.handleInput("\x1b");
-		}
-		expect(contextCancel).not.toHaveBeenCalled();
-		expect(mcpCancel).not.toHaveBeenCalled();
-
-		context.handleInput("\x1bx");
-		mcp.handleInput("\x1bx");
-		expect(contextCancel).toHaveBeenCalledTimes(1);
-		expect(mcpCancel).toHaveBeenCalledTimes(1);
 	});
 
 	it("clears history search before Back and never treats Ctrl+C as Back", () => {

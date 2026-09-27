@@ -1,522 +1,102 @@
 import { describe, expect, it } from "bun:test";
 import { Settings } from "../../src/config/settings";
 import {
-	buildDiscoverableMCPSearchIndex,
-	type DiscoverableMCPSearchIndex,
-} from "../../src/mcp/discoverable-tool-metadata";
-import { getThemeByName } from "../../src/modes/theme/theme";
+	buildDiscoverableToolSearchIndex,
+	type DiscoverableTool,
+	searchDiscoverableTools,
+} from "../../src/tools/discoverable-tool-metadata";
 import type { ToolSession } from "../../src/tools/index";
-import {
-	renderSearchToolBm25Description,
-	SearchToolBm25Tool,
-	searchToolBm25Renderer,
-} from "../../src/tools/search-tool-bm25";
+import { renderSearchToolBm25Description, SearchToolBm25Tool } from "../../src/tools/search-tool-bm25";
 
-type TestDiscoverableMCPTool = {
-	name: string;
-	label: string;
-	description: string;
-	serverName?: string;
-	mcpToolName?: string;
-	schemaKeys: string[];
-};
+type DiscoverySession = ToolSession & { getSelected(): string[] };
 
-type MCPDiscoveryToolSession = ToolSession & {
-	isMCPDiscoveryEnabled: () => boolean;
-	getDiscoverableMCPTools: () => TestDiscoverableMCPTool[];
-	getDiscoverableMCPSearchIndex?: () => DiscoverableMCPSearchIndex;
-	getSelectedMCPToolNames: () => string[];
-	activateDiscoveredMCPTools: (toolNames: string[]) => Promise<string[]>;
-	getSelected: () => string[];
-};
+const discoverableTools: DiscoverableTool[] = [
+	{
+		name: "github_create_issue",
+		label: "GitHub create issue",
+		description: "Create a GitHub issue in the selected repository",
+		schemaKeys: ["owner", "repo", "title", "body"],
+	},
+	{
+		name: "github_list_pull_requests",
+		label: "GitHub list pull requests",
+		description: "List pull requests for a repository",
+		schemaKeys: ["owner", "repo", "state"],
+	},
+	{
+		name: "slack_post_message",
+		label: "Slack post message",
+		description: "Post a message to a Slack channel",
+		schemaKeys: ["channel", "text"],
+	},
+];
 
 function createSession(
-	tools: TestDiscoverableMCPTool[],
-	overrides: Partial<MCPDiscoveryToolSession> = {},
-): MCPDiscoveryToolSession {
+	tools: DiscoverableTool[] = discoverableTools,
+	loadingMode: "eager" | "progressive" = "progressive",
+): DiscoverySession {
 	const selected: string[] = [];
 	return {
 		cwd: "/tmp/test",
 		hasUI: false,
 		getSessionFile: () => null,
 		getSessionSpawns: () => "*",
-		settings: Settings.isolated({ "mcp.discoveryMode": true }),
-		isMCPDiscoveryEnabled: () => true,
-		getDiscoverableMCPTools: () => tools,
-		getSelectedMCPToolNames: () => [...selected],
-		activateDiscoveredMCPTools: async (toolNames: string[]) => {
-			for (const name of toolNames) {
-				if (!selected.includes(name)) {
-					selected.push(name);
-				}
+		settings: Settings.isolated({ "context.loadingMode": loadingMode }),
+		getDiscoverableTools: () => tools,
+		getDiscoverableToolSearchIndex: () => buildDiscoverableToolSearchIndex(tools),
+		getActiveTools: () => [...selected],
+		activateDiscoveredTools: async names => {
+			for (const name of names) {
+				if (!selected.includes(name)) selected.push(name);
 			}
-			return toolNames;
+			return names;
 		},
 		getSelected: () => [...selected],
-		...overrides,
-	};
+	} as DiscoverySession;
 }
 
-describe("SearchToolBm25Tool", () => {
-	const discoverableTools: TestDiscoverableMCPTool[] = [
-		{
-			name: "mcp_github_create_issue",
-			label: "github/create_issue",
-			description: "Create a GitHub issue in the selected repository",
-			serverName: "github",
-			mcpToolName: "create_issue",
-			schemaKeys: ["owner", "repo", "title", "body"],
-		},
-		{
-			name: "mcp_github_list_pull_requests",
-			label: "github/list_pull_requests",
-			description: "List pull requests for a repository",
-			serverName: "github",
-			mcpToolName: "list_pull_requests",
-			schemaKeys: ["owner", "repo", "state"],
-		},
-		{
-			name: "mcp_slack_post_message",
-			label: "slack/post_message",
-			description: "Post a message to a Slack channel",
-			serverName: "slack",
-			mcpToolName: "post_message",
-			schemaKeys: ["channel", "text"],
-		},
-	];
+describe("generic progressive tool discovery", () => {
+	it("builds deterministic BM25 metadata without source-specific fields", () => {
+		const index = buildDiscoverableToolSearchIndex(discoverableTools);
+		expect(searchDiscoverableTools(index, "github issue", 2).map(result => result.tool.name)).toEqual([
+			"github_create_issue",
+			"github_list_pull_requests",
+		]);
+		expect(Object.keys(discoverableTools[0]!).sort()).toEqual(["description", "label", "name", "schemaKeys"]);
+	});
 
-	it("advertises discoverable MCP servers and search guidance in its description", () => {
+	it("advertises only generic deferred tool metadata", () => {
 		const description = renderSearchToolBm25Description(discoverableTools);
-		expect(description).toContain("Discoverable MCP servers in this session: github (2 tools), slack (1 tool).");
-		expect(description).not.toContain("Example discoverable MCP tools:");
-		expect(description).toContain("Total discoverable MCP tools loaded: 3.");
-		expect(description).toContain("If you are unsure, start with `limit` between 5 and 10");
-		expect(description).toContain("- `label`");
-		expect(description).toContain("- `mcp_tool_name`");
-		expect(description).toContain("input schema property keys (`schema_keys`)");
-		expect(description).toContain("- `activated_tools` — MCP tools activated by this search call");
-		expect(description).toContain("- `match_count` — number of ranked matches returned by the search");
-		expect(description).not.toContain("- `active_selected_tools`");
-		expect(description).not.toContain("- `tools`");
+		expect(description).toContain("Total discoverable tools loaded: 3.");
+		expect(description).toContain("schema_keys");
+		expect(description).toContain("activated_tools");
+		expect(description).not.toContain("server");
 	});
 
-	it("uses the session-provided cached search index during execution", async () => {
-		let rawToolsCalls = 0;
-		let searchIndexCalls = 0;
-		const searchIndex = buildDiscoverableMCPSearchIndex(discoverableTools);
-		const session = createSession(discoverableTools, {
-			getDiscoverableMCPTools: () => {
-				rawToolsCalls++;
-				return discoverableTools;
-			},
-			getDiscoverableMCPSearchIndex: () => {
-				searchIndexCalls++;
-				return searchIndex;
-			},
-		});
+	it("is available only for progressive sessions with activation support", () => {
+		expect(SearchToolBm25Tool.createIf(createSession())).toBeInstanceOf(SearchToolBm25Tool);
+		expect(SearchToolBm25Tool.createIf(createSession(discoverableTools, "eager"))).toBeNull();
+	});
+
+	it("activates ranked tools additively and skips already-active matches", async () => {
+		const session = createSession();
 		const tool = new SearchToolBm25Tool(session);
-		expect(rawToolsCalls).toBe(0);
-
-		const result = await tool.execute("call-index", { query: "github" });
-		expect(searchIndexCalls).toBe(1);
-		expect(rawToolsCalls).toBe(0);
-		expect(result.details?.tools.map(match => match.name)).toEqual([
-			"mcp_github_create_issue",
-			"mcp_github_list_pull_requests",
-		]);
-		expect(result.content).toEqual([
-			{
-				type: "text",
-				text: JSON.stringify({
-					query: "github",
-					activated_tools: ["mcp_github_create_issue", "mcp_github_list_pull_requests"],
-					match_count: 2,
-					total_tools: 3,
-				}),
-			},
-		]);
+		const first = await tool.execute("call-1", { query: "github issue", limit: 1 });
+		expect(first.details?.activated_tools).toEqual(["github_create_issue"]);
+		expect(session.getSelected()).toEqual(["github_create_issue"]);
+		const second = await tool.execute("call-2", { query: "github", limit: 1 });
+		expect(second.details?.activated_tools).toEqual(["github_list_pull_requests"]);
+		expect(second.details?.active_selected_tools).toEqual(["github_create_issue", "github_list_pull_requests"]);
 	});
 
-	it("renders a titled discovery summary instead of the raw tool name", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const renderedCall = searchToolBm25Renderer.renderCall(
-			{ query: "github issue", limit: 2 },
-			{ expanded: false, isPartial: false },
-			uiTheme,
+	it("fails closed for invalid queries and warns when no tool matches", async () => {
+		const tool = new SearchToolBm25Tool(createSession());
+		await expect(tool.execute("empty", { query: "   " })).rejects.toThrow("Query is required");
+		await expect(tool.execute("limit", { query: "github", limit: 0 as never })).rejects.toThrow(
+			"Limit must be a positive integer",
 		);
-		expect(renderedCall.render(120).join("\n")).toContain("Tool Discovery");
-		expect(renderedCall.render(120).join("\n")).not.toContain("search_tool_bm25");
-
-		const renderedResult = searchToolBm25Renderer.renderResult(
-			{
-				content: [{ type: "text", text: "" }],
-				details: {
-					query: "github issue",
-					limit: 2,
-					total_tools: 3,
-					activated_tools: ["mcp_github_create_issue"],
-					active_selected_tools: ["mcp_github_create_issue"],
-					tools: [
-						{
-							name: "mcp_github_create_issue",
-							label: "github/create_issue",
-							description: "Create a GitHub issue in the selected repository",
-							server_name: "github",
-							mcp_tool_name: "create_issue",
-							schema_keys: ["owner", "repo", "title", "body"],
-							score: 1.234567,
-						},
-					],
-				},
-			},
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const renderedText = renderedResult.render(120).join("\n");
-		expect(renderedText).toContain("Tool Discovery");
-		expect(renderedText).toContain("github/create_issue");
-		expect(renderedText).toContain("1 active");
-		expect(renderedText).toContain("limit:2");
-		expect(renderedText).not.toContain("keys:");
-		expect(renderedText).not.toContain("search_tool_bm25");
-	});
-
-	it("truncates fallback discovery text before rendering", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const longLine = "Long discovery output ".repeat(20);
-		const renderedResult = searchToolBm25Renderer.renderResult(
-			{
-				content: [{ type: "text", text: longLine }],
-			},
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const renderedText = renderedResult.render(200).join("\n");
-		expect(renderedText).toContain("Tool Discovery");
-		expect(renderedText).toContain("Long discovery output Long discovery output");
-		expect(renderedText).not.toContain(longLine);
-	});
-
-	it("tolerates partially streamed render-call arguments", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const renderedCall = searchToolBm25Renderer.renderCall(
-			{} as never,
-			{ expanded: false, isPartial: true },
-			uiTheme,
-		);
-		expect(renderedCall.render(120).join("\n")).toContain("(empty query)");
-	});
-
-	it("sanitizes MCP metadata before rendering discovery output", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const renderedResult = searchToolBm25Renderer.renderResult(
-			{
-				content: [{ type: "text", text: "" }],
-				details: {
-					query: "github\tissue",
-					limit: 2,
-					total_tools: 1,
-					activated_tools: ["mcp_github_create_issue"],
-					active_selected_tools: ["mcp_github_create_issue"],
-					tools: [
-						{
-							name: "mcp_github_create_issue",
-							label: "github\t/create_issue",
-							description: "Create\ta GitHub issue",
-							server_name: "git\thub",
-							mcp_tool_name: "create_issue",
-							schema_keys: ["owner", "repo"],
-							score: 1.234567,
-						},
-					],
-				},
-			},
-			{ expanded: true, isPartial: false },
-			uiTheme,
-		);
-		const renderedText = renderedResult.render(120).join("\n");
-		expect(renderedText).not.toContain("\t");
-		expect(renderedText).toContain("github   issue");
-		expect(renderedText).toContain("git   hub");
-		expect(renderedText).toContain("Create   a GitHub issue");
-	});
-
-	it("shows at most five tools in collapsed renderer output", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const tools = Array.from({ length: 6 }, (_, index) => ({
-			name: `mcp_github_tool_${index + 1}`,
-			label: `github/tool_${index + 1}`,
-			description: `GitHub tool ${index + 1}`,
-			server_name: "github",
-			mcp_tool_name: `tool_${index + 1}`,
-			schema_keys: ["owner", "repo"],
-			score: 1 - index * 0.01,
-		}));
-		const rendered = searchToolBm25Renderer.renderResult(
-			{
-				content: [{ type: "text", text: "" }],
-				details: {
-					query: "github tools",
-					limit: 8,
-					total_tools: 6,
-					activated_tools: tools.map(tool => tool.name),
-					active_selected_tools: tools.map(tool => tool.name),
-					tools,
-				},
-			},
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const renderedText = rendered.render(120).join("\n");
-		expect(renderedText).toContain("github/tool_5");
-		expect(renderedText).not.toContain("github/tool_6");
-		expect(renderedText).toContain("1 more tool");
-	});
-
-	it("defaults to 8 results and lets callers override the limit", async () => {
-		const manyTools: TestDiscoverableMCPTool[] = Array.from({ length: 10 }, (_, index) => ({
-			name: `mcp_github_tool_${index + 1}`,
-			label: `github/tool_${index + 1}`,
-			description: `GitHub tool ${index + 1} for repository workflows`,
-			serverName: "github",
-			mcpToolName: `tool_${index + 1}`,
-			schemaKeys: ["owner", "repo", `field_${index + 1}`],
-		}));
-		const tool = new SearchToolBm25Tool(createSession(manyTools));
-
-		const defaultResult = await tool.execute("call-default", { query: "github" });
-		expect(defaultResult.details?.limit).toBe(8);
-		expect(defaultResult.details?.tools).toHaveLength(8);
-		expect(defaultResult.details?.active_selected_tools).toHaveLength(8);
-		const defaultContent = defaultResult.content[0];
-		expect(defaultContent).toBeDefined();
-		expect(defaultContent).toEqual({
-			type: "text",
-			text: JSON.stringify({
-				query: "github",
-				activated_tools: defaultResult.details?.activated_tools,
-				match_count: 8,
-				total_tools: 10,
-			}),
-		});
-
-		const limitedTool = new SearchToolBm25Tool(createSession(manyTools));
-		const limitedResult = await limitedTool.execute("call-limited", { query: "github", limit: 3 });
-		expect(limitedResult.details?.limit).toBe(3);
-		expect(limitedResult.details?.tools).toHaveLength(3);
-		expect(limitedResult.details?.active_selected_tools).toHaveLength(3);
-	});
-
-	it("returns ranked matches and unions activated tools across repeated searches", async () => {
-		const session = createSession(discoverableTools);
-		const tool = new SearchToolBm25Tool(session);
-
-		const firstResult = await tool.execute("call-1", { query: "github issue", limit: 1 });
-		const firstDetails = firstResult.details;
-		expect(firstDetails?.tools.map(match => match.name)).toEqual(["mcp_github_create_issue"]);
-		expect(firstDetails?.active_selected_tools).toEqual(["mcp_github_create_issue"]);
-		expect(session.getSelected()).toEqual(["mcp_github_create_issue"]);
-
-		const secondResult = await tool.execute("call-2", { query: "slack message", limit: 1 });
-		const secondDetails = secondResult.details;
-		expect(secondDetails?.tools.map(match => match.name)).toEqual(["mcp_slack_post_message"]);
-		expect(secondDetails?.active_selected_tools).toEqual(["mcp_github_create_issue", "mcp_slack_post_message"]);
-		expect(session.getSelected()).toEqual(["mcp_github_create_issue", "mcp_slack_post_message"]);
-	});
-
-	it("skips already-selected matches before applying limit", async () => {
-		const session = createSession(discoverableTools);
-		const tool = new SearchToolBm25Tool(session);
-
-		const firstResult = await tool.execute("call-github-1", { query: "github", limit: 1 });
-		expect(firstResult.details?.tools.map(match => match.name)).toEqual(["mcp_github_create_issue"]);
-		expect(firstResult.details?.activated_tools).toEqual(["mcp_github_create_issue"]);
-
-		const secondResult = await tool.execute("call-github-2", { query: "github", limit: 1 });
-		expect(secondResult.details?.tools.map(match => match.name)).toEqual(["mcp_github_list_pull_requests"]);
-		expect(secondResult.details?.activated_tools).toEqual(["mcp_github_list_pull_requests"]);
-		expect(secondResult.details?.active_selected_tools).toEqual([
-			"mcp_github_create_issue",
-			"mcp_github_list_pull_requests",
-		]);
-
-		const exhaustedResult = await tool.execute("call-github-3", { query: "github", limit: 1 });
-		expect(exhaustedResult.details?.tools).toEqual([]);
-		expect(exhaustedResult.details?.activated_tools).toEqual([]);
-		expect(exhaustedResult.details?.active_selected_tools).toEqual([
-			"mcp_github_create_issue",
-			"mcp_github_list_pull_requests",
-		]);
-	});
-
-	it("rejects invalid input", async () => {
-		const tool = new SearchToolBm25Tool(createSession(discoverableTools));
-
-		await expect(tool.execute("call-empty", { query: "   " })).rejects.toThrow(
-			"Query is required and must not be empty.",
-		);
-		await expect(tool.execute("call-limit", { query: "github", limit: 0 as never })).rejects.toThrow(
-			"Limit must be a positive integer.",
-		);
-	});
-
-	it("rejects execution when discovery mode is disabled", async () => {
-		const tool = new SearchToolBm25Tool(
-			createSession(discoverableTools, {
-				isMCPDiscoveryEnabled: () => false,
-				settings: Settings.isolated({ "mcp.discoveryMode": false }),
-			}),
-		);
-
-		await expect(tool.execute("call-disabled", { query: "github" })).rejects.toThrow(
-			"MCP tool discovery is disabled.",
-		);
-	});
-});
-
-function stripAnsi(text: string): string {
-	return text.replace(/\x1b\[[0-9;]*m/g, "");
-}
-
-describe("search-tool-bm25 renderResult has no terminal status glyph", () => {
-	const sampleTools: TestDiscoverableMCPTool[] = [
-		{
-			name: "mcp_github_create_issue",
-			label: "github/create_issue",
-			description: "Create a GitHub issue in the selected repository",
-			serverName: "github",
-			mcpToolName: "create_issue",
-			schemaKeys: ["owner", "repo", "title", "body"],
-		},
-	];
-
-	it("fallback renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const rendered = searchToolBm25Renderer.renderResult(
-			{ content: [{ type: "text", text: "Tool discovery fell back" }] },
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const text = stripAnsi(rendered.render(200).join("\n"));
-		expect(text).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
-	});
-
-	it("normal success renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const rendered = searchToolBm25Renderer.renderResult(
-			{
-				content: [{ type: "text", text: "" }],
-				details: {
-					query: "github issue",
-					limit: 2,
-					total_tools: 3,
-					activated_tools: ["mcp_github_create_issue"],
-					active_selected_tools: ["mcp_github_create_issue"],
-					tools: [
-						{
-							name: "mcp_github_create_issue",
-							label: "github/create_issue",
-							description: "Create a GitHub issue in the selected repository",
-							server_name: "github",
-							mcp_tool_name: "create_issue",
-							schema_keys: ["owner", "repo", "title", "body"],
-							score: 1.234567,
-						},
-					],
-				},
-			},
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const text = stripAnsi(rendered.render(200).join("\n"));
-		expect(text).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
-	});
-
-	it("empty-matches renderResult contains no ✓✔✗✘⚠ⓘ after ANSI strip", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const rendered = searchToolBm25Renderer.renderResult(
-			{
-				content: [{ type: "text", text: "" }],
-				details: {
-					query: "nomatch",
-					limit: 8,
-					total_tools: 3,
-					activated_tools: [],
-					active_selected_tools: [],
-					tools: [],
-				},
-			},
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const text = stripAnsi(rendered.render(200).join("\n"));
-		expect(text).not.toMatch(/[✓✔✗✘⚠ⓘ]/);
-	});
-
-	// Ensure renderCall's "pending" icon is preserved (no assertion on ✓/✘/⚠ only).
-	it("renderCall still emits a pending header (not stripped)", async () => {
-		const theme = await getThemeByName("xcsh-dark");
-		expect(theme).toBeDefined();
-		const uiTheme = theme!;
-		const rendered = searchToolBm25Renderer.renderCall(
-			{ query: "github", limit: 2 },
-			{ expanded: false, isPartial: false },
-			uiTheme,
-		);
-		const text = stripAnsi(rendered.render(120).join("\n"));
-		expect(text).toContain("Tool Discovery");
-		// pending marker should remain — we only strip terminal outcome glyphs
-		expect(sampleTools.length).toBe(1);
-	});
-});
-
-describe("search-tool-bm25 execute signals isWarning on fallback", () => {
-	const discoverableTools: TestDiscoverableMCPTool[] = [
-		{
-			name: "mcp_github_create_issue",
-			label: "github/create_issue",
-			description: "Create a GitHub issue in the selected repository",
-			serverName: "github",
-			mcpToolName: "create_issue",
-			schemaKeys: ["owner", "repo", "title", "body"],
-		},
-		{
-			name: "mcp_slack_post_message",
-			label: "slack/post_message",
-			description: "Post a message to a Slack channel",
-			serverName: "slack",
-			mcpToolName: "post_message",
-			schemaKeys: ["channel", "text"],
-		},
-	];
-
-	it("result.isWarning is true on fallback path (no matching tools)", async () => {
-		const tool = new SearchToolBm25Tool(createSession(discoverableTools));
-		const result = await tool.execute("call-no-match", { query: "quantumflux" });
-		expect(result.details?.tools).toEqual([]);
-		expect(result.isWarning).toBe(true);
-	});
-
-	it("result.isWarning is falsy on normal success", async () => {
-		const tool = new SearchToolBm25Tool(createSession(discoverableTools));
-		const result = await tool.execute("call-success", { query: "github issue" });
-		expect(result.details?.tools.length).toBeGreaterThan(0);
-		expect(result.isWarning).toBeFalsy();
+		const missing = await tool.execute("missing", { query: "quantumflux" });
+		expect(missing.details?.tools).toEqual([]);
+		expect(missing.isWarning).toBe(true);
 	});
 });

@@ -180,7 +180,6 @@ export async function startHeadlessChatBridge(
 					hasUI: false,
 					toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
 					customTools: createExtensionBridgeTools(bridge),
-					enableMCP: false,
 					enableLsp: false,
 					disableExtensionDiscovery: true,
 					...(process.env.XCSH_BENCH_EXTENSION
@@ -201,7 +200,6 @@ export async function startHeadlessChatBridge(
 				sessionManager: SessionManager.inMemory(cwd),
 				toolNames: [...OFFICE_TOOL_NAMES],
 				customTools: [],
-				enableMCP: false,
 				enableLsp: false,
 				disableExtensionDiscovery: true,
 				bundledExtensions: ["sandbox-guard"],

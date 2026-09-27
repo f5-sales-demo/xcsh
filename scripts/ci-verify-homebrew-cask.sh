@@ -99,7 +99,7 @@ verify_current_install() {
   qmd_home=$(mktemp -d "${TMPDIR:-/tmp}/xcsh-qmd-smoke.XXXXXX")
   qmd_stderr="${TMPDIR:-/tmp}/xcsh-qmd-smoke.stderr"
   qmd_output=$(HOME="$qmd_home" XCSH_SMOKE_TEST_QMD=1 "$installed_link" 2>"$qmd_stderr")
-  test "$qmd_output" = "XCSH_QMD_SMOKE_OK"
+  printf '%s\n' "$qmd_output" | bun scripts/validate-qmd-smoke-output.ts
   test ! -s "$qmd_stderr"
   rm -rf "$qmd_home" "$qmd_stderr"
   PI_DEV=1 "$installed_link" sandbox check 2>&1 | tee "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"

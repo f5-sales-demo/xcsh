@@ -49,7 +49,7 @@ describe("InteractiveMode.finishPendingSubmission", () => {
 			modelRegistry,
 		});
 		eventBus = new EventBus();
-		mode = new InteractiveMode(session, "test", () => {}, undefined, undefined, eventBus);
+		mode = new InteractiveMode(session, "test", () => {}, undefined, eventBus);
 	});
 
 	afterEach(async () => {

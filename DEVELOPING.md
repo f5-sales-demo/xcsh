@@ -80,9 +80,8 @@ src/
 ├── tools/               # Built-in tool implementations
 ├── task/                # Subagent orchestration and parallel execution
 ├── capability/          # Capability definitions and schemas
-├── discovery/           # Provider discovery (native/editor/MCP/etc.)
+├── discovery/           # Provider discovery (native/editor/etc.)
 ├── extensibility/       # Extensions, hooks, custom tools, plugins, skills
-├── mcp/                 # MCP transport/manager/tool bridge
 ├── lsp/                 # Language server client integration
 ├── internal-urls/       # Protocol router (agent://, docs://, rule://, ...)
 ├── exec/ ipy/ ssh/      # Execution backends (shell, python, ssh)

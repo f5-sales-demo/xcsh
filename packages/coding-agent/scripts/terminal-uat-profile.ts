@@ -92,7 +92,6 @@ export async function createTerminalUatProfile(
 		...(toolFixture !== "none"
 			? ["--tools", "read", "--provider", "anthropic", "--model", "claude-sonnet-4-5"]
 			: ["--no-tools"]),
-		"--no-mcp",
 		"--no-lsp",
 		"--no-title",
 		"--no-memories",

@@ -11,7 +11,6 @@ import { type ContextFile, contextFileCapability } from "../capability/context-f
 import { type ExtensionModule, extensionModuleCapability } from "../capability/extension-module";
 import { readFile } from "../capability/fs";
 import { type Hook, hookCapability } from "../capability/hook";
-import { type MCPServer, mcpCapability } from "../capability/mcp";
 import { type Settings, settingsCapability } from "../capability/settings";
 import { type Skill, skillCapability } from "../capability/skill";
 import { type SlashCommand, slashCommandCapability } from "../capability/slash-command";
@@ -22,7 +21,6 @@ import {
 	calculateDepth,
 	createSourceMeta,
 	discoverExtensionModulePaths,
-	expandEnvVarsDeep,
 	getExtensionNameFromPath,
 	loadFilesFromDir,
 	scanSkillsFromDir,
@@ -49,76 +47,6 @@ function getProjectClaude(ctx: LoadContext): string {
 
 function isMissingDirectoryError(error: unknown): boolean {
 	return hasFsCode(error, "ENOENT") || hasFsCode(error, "ENOTDIR");
-}
-
-// =============================================================================
-// MCP Servers
-// =============================================================================
-
-async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> {
-	const items: MCPServer[] = [];
-	const warnings: string[] = [];
-
-	const userBase = getUserClaude(ctx);
-	const userClaudeJson = path.join(ctx.home, ".xcsh.json");
-	const userMcpJson = path.join(userBase, "mcp.json");
-
-	const projectBase = path.join(ctx.cwd, CONFIG_DIR);
-	const projectMcpJson = path.join(projectBase, ".mcp.json");
-	const projectMcpJsonAlt = path.join(projectBase, "mcp.json");
-
-	const userPaths = [
-		{ path: userClaudeJson, level: "user" as const },
-		{ path: userMcpJson, level: "user" as const },
-	];
-	const projectPaths = [
-		{ path: projectMcpJson, level: "project" as const },
-		{ path: projectMcpJsonAlt, level: "project" as const },
-	];
-
-	const allPaths = [...userPaths, ...projectPaths];
-	const contents = await Promise.all(allPaths.map(({ path }) => readFile(path)));
-
-	const parseMcpServers = (content: string | null, path: string, level: "user" | "project"): MCPServer[] => {
-		if (!content) return [];
-		const json = tryParseJson<{ mcpServers?: Record<string, unknown> }>(content);
-		if (!json?.mcpServers) return [];
-
-		const mcpServers = expandEnvVarsDeep(json.mcpServers);
-		return Object.entries(mcpServers).map(([name, config]) => {
-			const serverConfig = config as Record<string, unknown>;
-			return {
-				name,
-				timeout: typeof serverConfig.timeout === "number" ? serverConfig.timeout : undefined,
-				command: serverConfig.command as string | undefined,
-				args: serverConfig.args as string[] | undefined,
-				env: serverConfig.env as Record<string, string> | undefined,
-				url: serverConfig.url as string | undefined,
-				headers: serverConfig.headers as Record<string, string> | undefined,
-				transport: serverConfig.type as "stdio" | "sse" | "http" | undefined,
-				_source: createSourceMeta(PROVIDER_ID, path, level),
-			};
-		});
-	};
-
-	for (let i = 0; i < userPaths.length; i++) {
-		const servers = parseMcpServers(contents[i], userPaths[i].path, userPaths[i].level);
-		if (servers.length > 0) {
-			items.push(...servers);
-			break;
-		}
-	}
-
-	const projectOffset = userPaths.length;
-	for (let i = 0; i < projectPaths.length; i++) {
-		const servers = parseMcpServers(contents[projectOffset + i], projectPaths[i].path, projectPaths[i].level);
-		if (servers.length > 0) {
-			items.push(...servers);
-			break;
-		}
-	}
-
-	return { items, warnings };
 }
 
 // =============================================================================
@@ -470,14 +398,6 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 // =============================================================================
 // Provider Registration
 // =============================================================================
-
-registerProvider<MCPServer>(mcpCapability.id, {
-	id: PROVIDER_ID,
-	displayName: SOURCE_LABEL,
-	description: "Load MCP servers from .xcsh.json and .xcsh/mcp.json",
-	priority: PRIORITY,
-	load: loadMCPServers,
-});
 
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,

@@ -78,7 +78,7 @@ def format_data(typ: str, subtype: str, data: dict | None) -> str:
          args_str = json.dumps(args, default=str) if args else ""
          if len(args_str) > 200:
             args_str = args_str[:200] + "..."
-         return f" mcp:{name} {args_str}"
+         return f" tool:{name} {args_str}"
       elif case == "grepArgs":
          pattern = value.get("pattern", "")
          path = value.get("path", ".")

@@ -23,8 +23,6 @@ import type {
 import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import type { CompactOptions } from "../extensibility/extensions/types";
 import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
-import type { MCPToolsLoadResult } from "../mcp/loader";
-import type { MCPRuntimeController } from "../mcp/runtime-controller";
 import { startSessionBridge } from "../remote-control/bridge";
 import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
@@ -53,7 +51,6 @@ import { CommandController } from "./controllers/command-controller";
 import { EventController } from "./controllers/event-controller";
 import { ExtensionUiController } from "./controllers/extension-ui-controller";
 import { InputController } from "./controllers/input-controller";
-import { MCPCommandController } from "./controllers/mcp-command-controller";
 import { applyModelSelection, prepareModelSelection } from "./controllers/model-selection";
 import { SelectorController } from "./controllers/selector-controller";
 import { SSHCommandController } from "./controllers/ssh-command-controller";
@@ -174,10 +171,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	#planModeHasEntered = false;
 	#planTransition: Promise<void> = Promise.resolve();
 	lspServers?: import("../tools").LspStartupServerInfo[];
-	readonly mcpRuntime?: MCPRuntimeController<MCPToolsLoadResult>;
-	get mcpManager(): import("../mcp").MCPManager | undefined {
-		return this.mcpRuntime?.current?.manager;
-	}
 	readonly #toolUiContextSetter: (uiContext: ExtensionUIContext, hasUI: boolean) => void;
 
 	readonly #btwController: BtwController;
@@ -204,7 +197,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		version: string,
 		setToolUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void = () => {},
 		lspServers?: import("../tools").LspStartupServerInfo[],
-		mcpRuntime?: MCPRuntimeController<MCPToolsLoadResult>,
 		eventBus?: EventBus,
 	) {
 		this.session = session;
@@ -215,7 +207,6 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#version = version;
 		this.#toolUiContextSetter = setToolUIContext;
 		this.lspServers = lspServers;
-		this.mcpRuntime = mcpRuntime;
 		this.#eventBus = eventBus;
 		if (eventBus) {
 			this.#eventBusUnsubscribers.push(
@@ -285,16 +276,13 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		// Convert custom commands (TypeScript) to SlashCommand format
 		const customCommands: SlashCommandDiscoveryCandidate[] = this.session.customCommands.map(loaded => {
-			const isMcpPrompt = loaded.resolvedPath.startsWith("mcp:");
 			return {
 				name: loaded.command.name,
 				description: loaded.command.description,
 				discovery: {
-					behavior: isMcpPrompt ? "prompt expansion" : "execution",
-					provenance: isMcpPrompt
-						? `MCP prompt ${loaded.resolvedPath.slice("mcp:".length)}`
-						: `TypeScript command ${loaded.resolvedPath}`,
-					scope: isMcpPrompt ? "session" : loaded.source === "bundled" ? "native" : loaded.source,
+					behavior: "execution",
+					provenance: `TypeScript command ${loaded.resolvedPath}`,
+					scope: loaded.source === "bundled" ? "native" : loaded.source,
 				},
 			};
 		});
@@ -1311,11 +1299,6 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	handlePythonCommand(code: string, excludeFromContext?: boolean): Promise<void> {
 		return this.#commandController.handlePythonCommand(code, excludeFromContext);
-	}
-
-	async handleMCPCommand(text: string): Promise<void> {
-		const controller = new MCPCommandController(this);
-		await controller.handle(text);
 	}
 
 	async handleSSHCommand(text: string): Promise<void> {

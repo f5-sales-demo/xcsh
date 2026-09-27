@@ -1,32 +1,28 @@
 {
-  "schemaVersion": 1,
   "evidence": [
     {
+      "cleanupResult": "temporary-download-removed",
+      "command": "gh release view v21.11.7; verify digest; install; xcsh --version",
+      "exitStatus": 0,
       "id": "installed-release",
       "receipt": ".github/docs-quality/evidence/installed-release.txt",
       "receiptSha256": "8bfcc1ff331086f3b95ee634f7ad1e6a9472d487f0a60279efe104c4cce473cf",
-      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
-      "xcshVersion": "21.11.7",
-      "command": "gh release view v21.11.7; verify digest; install; xcsh --version",
-      "exitStatus": 0,
-      "verificationLevel": "executed-offline",
-      "cleanupResult": "temporary-download-removed",
       "sections": [
         "docs/en/index.mdx",
         "docs/en/index.mdx#Verify installation",
         "docs/en/index.mdx#Install xcsh"
-      ]
+      ],
+      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
+      "verificationLevel": "executed-offline",
+      "xcshVersion": "21.11.7"
     },
     {
-      "id": "candidate-cli",
-      "receipt": ".github/docs-quality/evidence/candidate-cli.txt",
-      "receiptSha256": "5fde5197e73e52fb6ad71654e5da2fb0890cff53284d9d8c6c77d2c456f5414c",
-      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
-      "xcshVersion": "21.11.8-candidate",
+      "cleanupResult": "not-required",
       "command": "bun packages/coding-agent/src/cli.ts --version; --help; subcommand --help",
       "exitStatus": 0,
-      "verificationLevel": "executed-offline",
-      "cleanupResult": "not-required",
+      "id": "candidate-cli",
+      "receipt": ".github/docs-quality/evidence/candidate-cli.txt",
+      "receiptSha256": "6e68dcbb1aa00e6876bb550c5d96624015d6069b544b97af8a824d76de58f2f1",
       "sections": [
         "docs/en/architecture-contribution/build-release.mdx",
         "docs/en/architecture-contribution/build-release.mdx#How are releases produced?",
@@ -45,9 +41,6 @@
         "docs/en/automate-extend/headless-protocols.mdx#When do I use the software development kit (SDK) instead?",
         "docs/en/automate-extend/index.mdx",
         "docs/en/automate-extend/index.mdx#Which extension mechanism fits?",
-        "docs/en/automate-extend/mcp-configuration.mdx",
-        "docs/en/automate-extend/mcp-configuration.mdx#How do I disable a discovered server?",
-        "docs/en/automate-extend/mcp-configuration.mdx#Which transport and lifecycle should I declare?",
         "docs/en/automate-extend/plugins-marketplaces.mdx",
         "docs/en/automate-extend/plugins-marketplaces.mdx#How do I diagnose a plugin?",
         "docs/en/automate-extend/plugins-marketplaces.mdx#How do I inspect before installing?",
@@ -153,18 +146,18 @@
         "docs/en/use-xcsh/sessions-memory.mdx#How do I branch or compact a long conversation?",
         "docs/en/use-xcsh/sessions-memory.mdx#How do I export a record?",
         "docs/en/use-xcsh/sessions-memory.mdx#How does project memory differ?"
-      ]
+      ],
+      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
+      "verificationLevel": "executed-offline",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "disposable-home-removed",
+      "command": "disposable HOME: config path/list and agents unpack",
+      "exitStatus": 0,
       "id": "offline-configuration",
       "receipt": ".github/docs-quality/evidence/offline-configuration.txt",
       "receiptSha256": "3b89ac8251c64b55a9d4cc5f96d4f3aa4f39fce1437b05302d9221f0e3fec725",
-      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
-      "xcshVersion": "21.11.8-candidate",
-      "command": "disposable HOME: config path/list and agents unpack",
-      "exitStatus": 0,
-      "verificationLevel": "executed-offline",
-      "cleanupResult": "disposable-home-removed",
       "sections": [
         "docs/en/configure-secure/environment-reference.mdx#Which variables address an F5 Distributed Cloud tenant?",
         "docs/en/configure-secure/index.mdx",
@@ -185,18 +178,18 @@
         "docs/en/use-xcsh/planning-agents.mdx",
         "docs/en/use-xcsh/planning-agents.mdx#What belongs in a decision-complete plan?",
         "docs/en/use-xcsh/planning-agents.mdx#When should I use a specialized agent?"
-      ]
+      ],
+      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
+      "verificationLevel": "executed-offline",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "deleted-and-confirmed-absent",
+      "command": "validate; diff; dry-run; create; get; export; update; apply; delete; confirm absence",
+      "exitStatus": 0,
       "id": "live-resource-lifecycle",
       "receipt": ".github/docs-quality/evidence/live-resource-lifecycle.txt",
       "receiptSha256": "d5d045328d610391bbe2401df254a74ade92d4ce1b3506de08165c588a21a798",
-      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
-      "xcshVersion": "21.11.8-candidate",
-      "command": "validate; diff; dry-run; create; get; export; update; apply; delete; confirm absence",
-      "exitStatus": 0,
-      "verificationLevel": "executed-live",
-      "cleanupResult": "deleted-and-confirmed-absent",
       "sections": [
         "docs/en/f5-distributed-cloud/api-catalog.mdx",
         "docs/en/f5-distributed-cloud/api-catalog.mdx#How do I choose a supported kind?",
@@ -226,18 +219,18 @@
         "docs/en/getting-started/first-manifest.mdx#How do I check a manifest without credentials?",
         "docs/en/getting-started/first-manifest.mdx#How do I export and remove it?",
         "docs/en/getting-started/first-manifest.mdx#How do I preview the live change?"
-      ]
+      ],
+      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
+      "verificationLevel": "executed-live",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "not-required",
+      "command": "inspect and hash selected current source authorities",
+      "exitStatus": 0,
       "id": "source-authority",
       "receipt": ".github/docs-quality/evidence/source-authority.txt",
       "receiptSha256": "936fdd10a35267049436d0cf119aca7af8a9990049eb12d6e584d5a22d0187bc",
-      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
-      "xcshVersion": "21.11.8-candidate",
-      "command": "inspect and hash selected current source authorities",
-      "exitStatus": 0,
-      "verificationLevel": "source-inspected",
-      "cleanupResult": "not-required",
       "sections": [
         "docs/en/architecture-contribution/agent-session-runtime.mdx",
         "docs/en/architecture-contribution/agent-session-runtime.mdx#How do I trace a behavior?",
@@ -262,9 +255,6 @@
         "docs/en/automate-extend/headless-protocols.mdx#When do I use the software development kit (SDK) instead?",
         "docs/en/automate-extend/index.mdx",
         "docs/en/automate-extend/index.mdx#Which extension mechanism fits?",
-        "docs/en/automate-extend/mcp-configuration.mdx",
-        "docs/en/automate-extend/mcp-configuration.mdx#How do I disable a discovered server?",
-        "docs/en/automate-extend/mcp-configuration.mdx#Which transport and lifecycle should I declare?",
         "docs/en/automate-extend/plugins-marketplaces.mdx",
         "docs/en/automate-extend/plugins-marketplaces.mdx#How do I diagnose a plugin?",
         "docs/en/automate-extend/plugins-marketplaces.mdx#How do I inspect before installing?",
@@ -374,18 +364,18 @@
         "docs/en/use-xcsh/sessions-memory.mdx#How do I branch or compact a long conversation?",
         "docs/en/use-xcsh/sessions-memory.mdx#How do I export a record?",
         "docs/en/use-xcsh/sessions-memory.mdx#How does project memory differ?"
-      ]
+      ],
+      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
+      "verificationLevel": "source-inspected",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "temporary-browser-artifacts-removed",
+      "command": "production docs-builder; Chromium screenshots and DOM; link and LLM corpus audit",
+      "exitStatus": 0,
       "id": "browser-build",
       "receipt": ".github/docs-quality/evidence/browser-build.txt",
       "receiptSha256": "1240bb3235010128866b4d25c0e089d8270ebfaed5c95cd045ca02d4ee4445b0",
-      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
-      "xcshVersion": "21.11.8-candidate",
-      "command": "production docs-builder; Chromium screenshots and DOM; link and LLM corpus audit",
-      "exitStatus": 0,
-      "verificationLevel": "browser-observed",
-      "cleanupResult": "temporary-browser-artifacts-removed",
       "sections": [
         "docs/en/f5-distributed-cloud/get-export-delete.mdx",
         "docs/en/f5-distributed-cloud/get-export-delete.mdx#How do I delete and prove absence?",
@@ -396,22 +386,20 @@
         "docs/en/index.mdx#Explore by goal",
         "docs/en/integrations-deployment/index.mdx",
         "docs/en/integrations-deployment/index.mdx#Which integration fits?"
-      ]
+      ],
+      "sourceDigest": "3b787eb20a910ee5dd92062e03f27ff94151a2ac",
+      "verificationLevel": "browser-observed",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "test temporary directories registered teardown; candidate container image and build log removed",
+      "command": "candidate CLI help matrix; focused Bun workflow tests; Dockerfile.alpine build and container version probe",
+      "exitStatus": 0,
       "id": "legacy-enrichment",
       "receipt": ".github/docs-quality/evidence/legacy-enrichment.txt",
       "receiptSha256": "df90a364247c8c39e800139d0cb5f3425f7570607c46416746bfb1730800549b",
-      "sourceDigest": "a01c8ffb471c525088ef99296f50e958d51ae835",
-      "xcshVersion": "21.11.8-candidate",
-      "command": "candidate CLI help matrix; focused Bun workflow tests; Dockerfile.alpine build and container version probe",
-      "exitStatus": 0,
-      "verificationLevel": "executed-offline",
-      "cleanupResult": "test temporary directories registered teardown; candidate container image and build log removed",
       "sections": [
         "docs/en/automate-extend/extensions-custom-tools.mdx#How do I test an extension boundary?",
-        "docs/en/automate-extend/mcp-configuration.mdx#Which transport and lifecycle should I declare?",
-        "docs/en/automate-extend/mcp-runtime-authoring.mdx#How do reload and teardown work?",
         "docs/en/configure-secure/environment-reference.mdx#Which variables address an F5 Distributed Cloud tenant?",
         "docs/en/configure-secure/providers-routing.mdx#How do I confirm a route?",
         "docs/en/configure-secure/settings-files.mdx#How is configuration resolved?",
@@ -424,18 +412,18 @@
         "docs/en/use-xcsh/execution-modes.mdx#How do the modes differ?",
         "docs/en/use-xcsh/sessions-memory.mdx#How do I branch or compact a long conversation?",
         "docs/en/use-xcsh/tui-navigation.mdx#How do I move through the session tree?"
-      ]
+      ],
+      "sourceDigest": "a01c8ffb471c525088ef99296f50e958d51ae835",
+      "verificationLevel": "executed-offline",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "server stopped; generated output retained only through final review",
+      "command": "shared production docs-builder; internal-link and LLM surface audit; Playwright desktop/mobile light/dark and local Pagefind query",
+      "exitStatus": 0,
       "id": "legacy-build-browser",
       "receipt": ".github/docs-quality/evidence/legacy-build-browser.txt",
       "receiptSha256": "c73ada3e6636072510ffe778ebc9b8727a917514b892e3443d37f359db08d5f7",
-      "sourceDigest": "a01c8ffb471c525088ef99296f50e958d51ae835",
-      "xcshVersion": "21.11.8-candidate",
-      "command": "shared production docs-builder; internal-link and LLM surface audit; Playwright desktop/mobile light/dark and local Pagefind query",
-      "exitStatus": 0,
-      "verificationLevel": "browser-observed",
-      "cleanupResult": "server stopped; generated output retained only through final review",
       "sections": [
         "docs/en/architecture-contribution/storage-artifacts.mdx#How is filesystem discovery cached?",
         "docs/en/index.mdx#Quickstart",
@@ -443,37 +431,41 @@
         "docs/en/reference-troubleshooting/configuration-schema.mdx#How do I inspect the effective schema-backed values?",
         "docs/en/reference-troubleshooting/configuration-schema.mdx#Which key namespaces exist?",
         "docs/en/use-xcsh/tui-navigation.mdx#How do I move through the session tree?"
-      ]
+      ],
+      "sourceDigest": "a01c8ffb471c525088ef99296f50e958d51ae835",
+      "verificationLevel": "browser-observed",
+      "xcshVersion": "21.11.8-candidate"
     },
     {
+      "cleanupResult": "completed",
+      "command": "disposable installer, npm, apt availability, container, and release CI verification",
+      "exitStatus": 0,
       "id": "install-channels-20260916",
       "receipt": ".github/docs-quality/evidence/install-channels-20260916.txt",
       "receiptSha256": "0c18832d54ca668418bb7241e2330d8764352be51a8d9701ae5f94a54eb4f788",
-      "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
-      "xcshVersion": "21.29.2 release; 21.29.1 published package channels",
-      "command": "disposable installer, npm, apt availability, container, and release CI verification",
-      "exitStatus": 0,
-      "verificationLevel": "executed-with-recorded-channel-lag",
-      "cleanupResult": "completed",
       "sections": [
         "docs/en/index.mdx#Install xcsh",
         "docs/en/index.mdx#Verify installation"
-      ]
+      ],
+      "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
+      "verificationLevel": "executed-with-recorded-channel-lag",
+      "xcshVersion": "21.29.2 release; 21.29.1 published package channels"
     },
     {
+      "cleanupResult": "completed",
+      "command": "shared production builder plus Puppeteer desktop, mobile, theme, tab, and sidebar checks",
+      "exitStatus": 0,
       "id": "production-build-20260916",
       "receipt": ".github/docs-quality/evidence/production-build-20260916.txt",
       "receiptSha256": "4df5c7dcf005c5871797f632913e7b2ede18b2a4f0822dd28c8b454d0f866c97",
-      "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
-      "xcshVersion": "21.29.2",
-      "command": "shared production builder plus Puppeteer desktop, mobile, theme, tab, and sidebar checks",
-      "exitStatus": 0,
-      "verificationLevel": "executed",
-      "cleanupResult": "completed",
       "sections": [
         "docs/en/index.mdx",
         "docs/en/index.mdx#Install xcsh"
-      ]
+      ],
+      "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
+      "verificationLevel": "executed",
+      "xcshVersion": "21.29.2"
     }
-  ]
+  ],
+  "schemaVersion": 1
 }

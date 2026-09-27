@@ -24,7 +24,6 @@ body:
         - Provider setup / Login
         - Custom models (models.yml)
         - Extensions
-        - MCP servers
         - Skills / Commands
         - Configuration
         - Other

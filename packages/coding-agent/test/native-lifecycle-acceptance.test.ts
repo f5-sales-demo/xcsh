@@ -33,7 +33,6 @@ describe("native lifecycle acceptance contract", () => {
 			"--no-memories",
 			"--no-skills",
 			"--no-rules",
-			"--no-mcp",
 			"--no-lsp",
 			"--tools",
 			"read",

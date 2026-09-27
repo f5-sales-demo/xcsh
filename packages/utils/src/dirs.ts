@@ -438,18 +438,6 @@ export function getProjectPluginOverridesPath(cwd: string = getProjectDir()): st
 	return path.join(getProjectAgentDir(cwd), "plugin-overrides.json");
 }
 
-// =============================================================================
-// MCP config paths
-// =============================================================================
-
-/** Get the primary MCP config file path (first candidate). */
-export function getMCPConfigPath(scope: "user" | "project", cwd: string = getProjectDir()): string {
-	if (scope === "user") {
-		return path.join(getAgentDir(), "mcp.json");
-	}
-	return path.join(getProjectAgentDir(cwd), "mcp.json");
-}
-
 /** Get the SSH config file path. */
 export function getSSHConfigPath(scope: "user" | "project", cwd: string = getProjectDir()): string {
 	if (scope === "user") {

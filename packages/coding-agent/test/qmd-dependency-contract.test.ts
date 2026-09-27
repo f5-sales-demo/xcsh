@@ -46,6 +46,10 @@ describe("QMD dependency patch", () => {
 		]);
 
 		expect(databaseSource).toContain("if (!options.readonly)");
+		expect(databaseSource).toContain("{ readonly: true, create: false }");
+		expect(databaseSource).toContain("{ readonly: true, fileMustExist: true }");
+		expect(databaseSource).toContain('process.platform === "darwin"');
+		expect(databaseSource).toContain("?immutable=1");
 		expect(indexSource).toContain("readonly: options.readonly");
 		expect(storeSource).toContain("if (!options.readonly)");
 	});

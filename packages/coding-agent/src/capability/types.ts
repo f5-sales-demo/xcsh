@@ -2,8 +2,8 @@
  * Core types for the capability-based config discovery system.
  *
  * This architecture inverts control: instead of callers knowing about paths like
- * `.xcsh`, `.codex`, `.gemini`, they simply ask for `load("mcps")` and get back
- * a unified array of MCP servers.
+ * `.xcsh`, `.codex`, `.gemini`, they simply ask for a capability and get back
+ * a unified array of items.
  */
 
 /**
@@ -33,7 +33,7 @@ export interface LoadResult<T> {
  * A provider that can load items for a capability.
  */
 export interface Provider<T> {
-	/** Unique provider ID (e.g., "xcsh", "mcp-json", "agents-md") */
+	/** Unique provider ID (e.g., "xcsh", "codex", "agents-md") */
 	id: string;
 
 	/** Human-readable name for UI display (e.g., "xcsh", "OpenAI Codex") */
@@ -47,7 +47,7 @@ export interface Provider<T> {
 	 * Suggested ranges:
 	 *   100+ : Primary providers (xcsh, pi)
 	 *   50-99: Tool-specific providers (claude, codex, gemini)
-	 *   1-49 : Shared standards (mcp-json, agents-md)
+	 *   1-49 : Shared standards (agents-md)
 	 */
 	priority: number;
 
@@ -110,10 +110,10 @@ export interface CapabilityResult<T> {
  * Definition of a capability.
  */
 export interface Capability<T> {
-	/** Capability ID (e.g., "mcps", "skills", "context-files") */
+	/** Capability ID (e.g., "skills", "context-files") */
 	id: string;
 
-	/** Human-readable name for UI display (e.g., "MCP Servers", "Skills") */
+	/** Human-readable name for UI display (e.g., "Skills", "Context Files") */
 	displayName: string;
 
 	/** Short description for settings/status UI */

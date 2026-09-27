@@ -241,23 +241,6 @@ describe("bash tool secret masking (PR #77)", () => {
 	});
 });
 
-// ─── MCP Connection Message Suppression ──────────────────────────────────
-
-describe("MCP startup message suppression (fork preference)", () => {
-	it("sdk.ts uses logger.debug for MCP connection message (not stderr)", async () => {
-		const src = await fs.readFile(path.join(import.meta.dir, "../src/sdk.ts"), "utf8");
-		// Fork: silent debug logging
-		expect(src).toContain('logger.debug("Connecting to MCP servers"');
-		// Upstream: visible stderr output — must NOT be present
-		expect(src).not.toContain("process.stderr.write");
-	});
-
-	it("sdk.ts does not import chalk (no styled stderr output)", async () => {
-		const src = await fs.readFile(path.join(import.meta.dir, "../src/sdk.ts"), "utf8");
-		expect(src).not.toContain("import chalk");
-	});
-});
-
 // ─── F5 XC Context Auto-Loading ───────────────────────────────────────────
 
 // Session-scoped context: startup no longer calls loadActive() (FR-104 removed).

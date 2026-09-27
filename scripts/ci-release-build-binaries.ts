@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { $ } from "bun";
+import { parseQmdSmokeOutput } from "./qmd-smoke-output";
 import { vertexBuildDefines } from "./vertex-build-credentials";
 
 interface BinaryTarget {
@@ -206,10 +207,17 @@ async function smokeTestHostBinary(): Promise<void> {
 		});
 		const qmdStdout = qmdResult.stdout.toString().trim();
 		const qmdStderr = qmdResult.stderr.toString().trim();
-		if (qmdResult.exitCode !== 0 || qmdStdout !== "XCSH_QMD_SMOKE_OK" || qmdStderr.length > 0) {
+		let qmdTraceError: unknown;
+		try {
+			parseQmdSmokeOutput(qmdStdout);
+		} catch (error) {
+			qmdTraceError = error;
+		}
+		if (qmdResult.exitCode !== 0 || qmdTraceError || qmdStderr.length > 0) {
 			console.error(`FAIL: compiled binary QMD smoke exited with code ${qmdResult.exitCode}`);
 			if (qmdStdout) console.error(qmdStdout);
 			if (qmdStderr) console.error(qmdStderr);
+			if (qmdTraceError) console.error(qmdTraceError);
 			throw new Error("Compiled binary QMD BM25 smoke test failed");
 		}
 		console.log(`  ${qmdStdout}`);

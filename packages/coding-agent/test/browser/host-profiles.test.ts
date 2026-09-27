@@ -182,7 +182,7 @@ describe("host profiles", () => {
 		expect(hostProfile(excel)).toBe(HOST_PROFILES.excel);
 	});
 	for (const host of ["excel", "powerpoint", "word"] as const) {
-		it(`${host} tells the agent it has native CLI tools and NO MCP/plugins`, () => {
+		it(`${host} tells the agent it has native CLI tools and no plugin tools`, () => {
 			const prompt = HOST_PROFILES[host].systemPrompt;
 			// Native tool-calling parity: the agent must know it can shell out.
 			expect(prompt).toContain("bash");
@@ -190,15 +190,11 @@ describe("host profiles", () => {
 			expect(prompt).toContain("gh");
 			// …and that its file tools are sandbox-confined to the launch dir.
 			expect(prompt).toContain("confined to the folder");
-			// No-MCP guidance: prevents a wasted turn hunting for an MCP server and the
-			// scary "plugin manifest failed to load" narration in a live demo.
-			expect(prompt).toContain("NO MCP servers");
-			expect(prompt).toContain("NO plugin-provided TOOLS");
+			expect(prompt).toContain("no plugin-provided tools");
 		});
 
 		it(`${host} permits plugin RESOURCES even though plugin TOOLS are absent`, () => {
-			// The earlier wording ("do not look for, read, or report on plugin/MCP
-			// manifests") over-reached: it forbade the very thing an installed plugin
+			// Earlier wording about plugin manifests over-reached: it forbade what an installed plugin
 			// exists to provide. A pane told that cannot read a plugin's schema, run its
 			// engine, or follow its slash command.
 			const prompt = HOST_PROFILES[host].systemPrompt;

@@ -5,14 +5,7 @@ import * as url from "node:url";
 
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 const NARROW_NO_BREAK_SPACE = "\u202F";
-const TOP_LEVEL_INTERNAL_URL_PREFIXES = [
-	"agent://",
-	"artifact://",
-	"skill://",
-	"rule://",
-	"local://",
-	"mcp://",
-] as const;
+const TOP_LEVEL_INTERNAL_URL_PREFIXES = ["agent://", "artifact://", "skill://", "rule://", "local://"] as const;
 
 function normalizeUnicodeSpaces(str: string): string {
 	return str.replace(UNICODE_SPACES, " ");
@@ -74,8 +67,7 @@ function normalizeAtPrefix(filePath: string): string {
 		withoutAt.startsWith("artifact://") ||
 		withoutAt.startsWith("skill://") ||
 		withoutAt.startsWith("rule://") ||
-		withoutAt.startsWith("local://") ||
-		withoutAt.startsWith("mcp://")
+		withoutAt.startsWith("local://")
 	) {
 		return withoutAt;
 	}

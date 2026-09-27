@@ -196,7 +196,6 @@ async function createSessionHarness(
 		contextFiles: [],
 		promptTemplates: [],
 		slashCommands: [],
-		enableMCP: false,
 		enableLsp: false,
 	});
 

@@ -115,7 +115,6 @@ function verifyTranscript(transcript: string, expected: ExpectedOutcome): void {
 		"todo_write",
 		"FABLE_SKILL_READY",
 		"FABLE_PLUGIN_READY",
-		"FABLE_MCP_READY",
 		"FABLE_CONTEXT_READY",
 		"FABLE_ROUTE_READY",
 		"FABLE_IMAGE_READY",
@@ -135,7 +134,7 @@ async function runTarget(target: UatTarget, auth: AuthMode, expected: ExpectedOu
 		if (auth === "oauth") console.log("First run /login anthropic and complete the browser sign-in.");
 		if (expected === "success") {
 			console.log(
-				"Run the displayed Fable 5.1 checklist for streaming/model attribution, continuity, read/shell/todo_write, fixture skill/plugin/MCP, xcsh context, routing, and image input; then run explicit Fable 5 and Opus 5 text/tool controls. Preserve the printed marker names exactly and exit.",
+				"Run the displayed Fable 5.1 checklist for streaming/model attribution, continuity, read/shell/todo_write, fixture skill/plugin, xcsh context, routing, and image input; then run explicit Fable 5 and Opus 5 text/tool controls. Preserve the printed marker names exactly and exit.",
 			);
 		} else {
 			console.log("Send one prompt, wait for the immediate entitlement error, then exit without retrying.");
