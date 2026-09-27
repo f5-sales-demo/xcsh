@@ -78,6 +78,54 @@ assert actual == expected | {"provenance/manifest.json"}, (actual, expected)
 PY
 }
 
+validate_qmd_smoke_output() {
+  local output=$1
+  /usr/bin/python3 - "$output" <<'PY'
+import json, pathlib, sys
+
+lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
+assert lines.pop() == "XCSH_QMD_SMOKE_OK", "QMD smoke output has no success marker"
+trace = [json.loads(line) for line in lines]
+expected_events = [
+    "api-catalog-rank",
+    "documentation-search",
+    "documentation-read",
+    "documentation-search",
+    "documentation-read",
+    "documentation-follow-up-read",
+    "documentation-missing",
+    "documentation-tools-disabled",
+    "documentation-svg-convert",
+    "sqlite-open",
+]
+assert [entry["sequence"] for entry in trace] == list(range(1, 11)), trace
+assert [entry["event"] for entry in trace] == expected_events, trace
+assert trace[0].get("category") == "dns-dns-zone-clone-from-dns-domain", trace[0]
+assert trace[0].get("outcome") == "rank-1", trace[0]
+expected_resources = [
+    "xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
+    "xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+    "xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1",
+    "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
+    "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
+    "xcsh://documentation/?search=zzzxxyyqqqv",
+    "xcsh://documentation/docs-cloud-f5-com/administration/assets/9b018ba3f71b1f3a7068267cb30fefe9362cfa13e8fd90e1f14e6c67fbfe480c.svg",
+]
+assert [entry["resource"] for entry in trace if "resource" in entry] == expected_resources, trace
+for entry in trace[1:3]:
+    assert entry.get("title") == "Create Web Application Firewall", entry
+    assert entry.get("source") == "docs-cloud-f5-com", entry
+for entry in trace[3:6]:
+    assert entry.get("title") == "Set Up DNS Load Balancer", entry
+    assert entry.get("source") == "docs-cloud-f5-com", entry
+assert trace[6].get("outcome") == "no-match-no-fetch", trace[6]
+assert trace[7].get("outcome") == "Pinned offline documentation is unavailable because this session has no read tool; the answer cannot be verified.", trace[7]
+assert trace[8].get("source") == "docs-cloud-f5-com", trace[8]
+assert trace[8].get("outcome") == "image/png", trace[8]
+assert trace[9].get("outcome") == "ok", trace[9]
+PY
+}
+
 verify_current_install() {
   test -L "$installed_link"
   resolved_binary=$(realpath "$installed_link")
@@ -97,11 +145,12 @@ verify_current_install() {
   "$installed_link" --version
   "$installed_link" --help >/dev/null
   qmd_home=$(mktemp -d "${TMPDIR:-/tmp}/xcsh-qmd-smoke.XXXXXX")
+  qmd_stdout="${TMPDIR:-/tmp}/xcsh-qmd-smoke.stdout"
   qmd_stderr="${TMPDIR:-/tmp}/xcsh-qmd-smoke.stderr"
-  qmd_output=$(HOME="$qmd_home" XCSH_SMOKE_TEST_QMD=1 "$installed_link" 2>"$qmd_stderr")
-  printf '%s\n' "$qmd_output" | bun scripts/validate-qmd-smoke-output.ts
+  HOME="$qmd_home" XCSH_SMOKE_TEST_QMD=1 "$installed_link" >"$qmd_stdout" 2>"$qmd_stderr"
+  validate_qmd_smoke_output "$qmd_stdout"
   test ! -s "$qmd_stderr"
-  rm -rf "$qmd_home" "$qmd_stderr"
+  rm -rf "$qmd_home" "$qmd_stdout" "$qmd_stderr"
   PI_DEV=1 "$installed_link" sandbox check 2>&1 | tee "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
   grep -F "Loaded native addon from ${installed_root}/libexec/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
   "$installed_link" chrome recycle
