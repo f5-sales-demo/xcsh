@@ -165,7 +165,11 @@ describe("installation-channel recommendation", () => {
 				},
 			}),
 		);
-		expect(recommendation).toMatchObject({ channel: "standalone", action: "self-update", command: "xcsh update" });
+		expect(recommendation).toMatchObject({
+			channel: "standalone",
+			action: "self-update",
+			command: "xcsh self-update",
+		});
 	});
 
 	it("recognizes a valid Windows installer receipt beside the LocalAppData executable", async () => {
@@ -344,7 +348,7 @@ describe("update command channel policy", () => {
 		const harness = commandDependencies({
 			channel: "standalone",
 			action: "self-update",
-			command: "xcsh update",
+			command: "xcsh self-update",
 			evidence: "receipt",
 		});
 		const exitCode = await runUpdateCommand({ check: true, force: true }, harness.deps);
@@ -358,7 +362,7 @@ describe("update command channel policy", () => {
 		const harness = commandDependencies({
 			channel: "standalone",
 			action: "self-update",
-			command: "xcsh update",
+			command: "xcsh self-update",
 			evidence: "receipt",
 		});
 		const exitCode = await runUpdateCommand({ check: false, force: true }, harness.deps);
