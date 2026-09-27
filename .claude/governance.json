@@ -49,6 +49,7 @@
       ".github/workflows/github-pages-deploy.yml",
       ".github/workflows/super-linter.yml"
     ],
+    "html-to-markdown": ["LICENSE", ".ruff.toml", ".mypy.ini", ".gitignore"],
     "i18n-core": [
       ".ruff.toml",
       ".mypy.ini",
@@ -203,6 +204,7 @@
       "docs-control": "scaffolding",
       "docs-icons": "developer",
       "docs-theme": "developer",
+      "html-to-markdown": "developer",
       "i18n-core": "developer",
       "marketplace": "developer",
       "marketplace-claude-code": "developer",
