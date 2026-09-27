@@ -15,7 +15,7 @@ on:
         type: string
 
 permissions:
-  actions: read
+  actions: read # Required to download artifacts from the validated source run.
   contents: read
 
 concurrency:
@@ -94,9 +94,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           gh release download "$TAG" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPOSITORY" \
             --pattern 'xcsh-*.zip' \
             --dir .release-source/packages/coding-agent/binaries
 

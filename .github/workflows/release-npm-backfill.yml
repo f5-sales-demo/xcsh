@@ -59,7 +59,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install pinned npm with provenance support
-        run: npm install --global npm@11.19.1
+        run: bash scripts/ci-install-release-npm.sh
 
       - name: Verify npm release toolchain
         run: node --version && npm --version

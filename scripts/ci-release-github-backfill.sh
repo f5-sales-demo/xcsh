@@ -12,6 +12,11 @@ assets_dir=$3
 [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || exit 2
 [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 2
 test -d "$assets_dir"
+upload_concurrency=${XCSH_RELEASE_UPLOAD_CONCURRENCY:-4}
+if ! [[ "$upload_concurrency" =~ ^[1-4]$ ]]; then
+  echo "XCSH_RELEASE_UPLOAD_CONCURRENCY must be an integer from 1 through 4" >&2
+  exit 2
+fi
 
 file_size() {
   if stat -f %z "$1" >/dev/null 2>&1; then
@@ -70,14 +75,22 @@ fi
 jq -e --arg tag "$tag" '.tag_name == $tag and .draft == true and .prerelease == false and .immutable == false' <<<"$release" >/dev/null
 release_id=$(jq -r '.id' <<<"$release")
 
-for name in "${expected_assets[@]}"; do
-  asset="$assets_dir/$name"
+upload_asset() {
+  local name=$1
+  local asset="$assets_dir/$name"
+  local size
+  local digest
+  local existing
+  local delay
+  local uploaded
+  local attempt
   size=$(file_size "$asset")
   digest="sha256:$(file_sha256 "$asset")"
   existing=$(jq -c --arg name "$name" '[.assets[] | select(.name == $name)] | if length == 0 then null elif length == 1 then .[0] else error("duplicate asset name") end' <<<"$release")
   if [ "$existing" != "null" ] && jq -e --argjson size "$size" --arg digest "$digest" '.state == "uploaded" and .size == $size and .digest == $digest' <<<"$existing" >/dev/null; then
     echo "Already verified: $name"
-    continue
+    printf 'resumed\n' >"$work/$name.result"
+    return
   fi
 
   delay=20
@@ -95,9 +108,41 @@ for name in "${expected_assets[@]}"; do
   done
   if [ "$uploaded" -ne 1 ]; then
     echo "Failed to upload $name after 5 attempts" >&2
-    exit 1
+    return 1
+  fi
+  printf 'uploaded\n' >"$work/$name.result"
+}
+
+echo "Release upload: assets=${#expected_assets[@]} concurrency=$upload_concurrency"
+upload_started=$SECONDS
+pids=()
+upload_failed=0
+wait_for_uploads() {
+  local pid
+  for pid in "${pids[@]}"; do
+    if ! wait "$pid"; then
+      upload_failed=1
+    fi
+  done
+  pids=()
+}
+
+for name in "${expected_assets[@]}"; do
+  upload_asset "$name" &
+  pids+=("$!")
+  if [ "${#pids[@]}" -ge "$upload_concurrency" ]; then
+    wait_for_uploads
   fi
 done
+wait_for_uploads
+if [ "$upload_failed" -ne 0 ]; then
+  echo "Release upload failed; preserving draft release $tag" >&2
+  exit 1
+fi
+
+uploaded_count=$({ grep -l '^uploaded$' "$work"/*.result 2>/dev/null || true; } | wc -l | tr -d ' ')
+resumed_count=$({ grep -l '^resumed$' "$work"/*.result 2>/dev/null || true; } | wc -l | tr -d ' ')
+echo "Release upload complete: uploaded=$uploaded_count resumed=$resumed_count elapsed=$((SECONDS - upload_started))s"
 
 release=$(gh api "repos/${repository}/releases/${release_id}")
 jq -r '.assets[] | [.name, (.size | tostring), (.digest // "")] | @tsv' <<<"$release" | LC_ALL=C sort >"$work/actual-assets"

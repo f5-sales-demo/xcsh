@@ -385,6 +385,18 @@
           "runs_on": "matrix",
           "reason": "Apple signing and notarization require macOS"
         },
+        "create-release": {
+          "runs_on": "macos-14",
+          "reason": "immutable release assembly verifies Developer ID signatures on macOS"
+        },
+        "update-homebrew": {
+          "runs_on": "macos-14",
+          "reason": "Homebrew publication verifies the signed macOS archive provenance"
+        },
+        "verify-macos-pkg": {
+          "runs_on": "matrix",
+          "reason": "MDM package installation verification requires native Apple silicon and Intel macOS"
+        },
         "verify-homebrew-install": {
           "runs_on": "matrix",
           "reason": "Homebrew cask release verification requires Apple silicon and Intel macOS"
@@ -394,6 +406,12 @@
         "verify-homebrew-install": {
           "runs_on": "matrix",
           "reason": "Homebrew cask release verification requires Apple silicon and Intel macOS"
+        }
+      },
+      ".github/workflows/release-github-backfill.yml": {
+        "backfill": {
+          "runs_on": "macos-14",
+          "reason": "immutable release backfill performs strict Developer ID signature verification"
         }
       },
       ".github/workflows/console-catalog-drift.yml": {
@@ -424,6 +442,12 @@
           "reason": "office-pane deployment uses hosted release credentials"
         }
       },
+      ".github/workflows/dependency-cache-prime.yml": {
+        "prime-hosted-bun": {
+          "runs_on": "ubuntu-24.04",
+          "reason": "hosted-runner Bun cache requires the GitHub-hosted cache environment"
+        }
+      },
       ".github/workflows/pii-guard.yml": {
         "pii-guard": {
           "runs_on": "ubuntu-22.04",
@@ -442,10 +466,16 @@
           "reason": "release reconciliation uses hosted registry access"
         }
       },
-      ".github/workflows/test-codesign.yml": {
-        "test-codesign": {
-          "runs_on": "matrix",
-          "reason": "Apple code signing requires native macOS"
+      ".github/workflows/spoofed-version-drift.yml": {
+        "check": {
+          "runs_on": "ubuntu-22.04",
+          "reason": "upstream version inspection uses the isolated hosted network environment"
+        }
+      },
+      ".github/workflows/container.yml": {
+        "publish-ghcr-arm64": {
+          "runs_on": "ubuntu-24.04-arm",
+          "reason": "native ARM64 container publication requires the hosted ARM64 Docker environment"
         }
       },
       ".github/workflows/windows-containment-uat.yml": {

@@ -131,7 +131,21 @@ describe("Homebrew release archives", () => {
 				sourceDateEpoch: String(epochSeconds),
 			};
 
-			await createArchives(options);
+			const started: string[] = [];
+			let resolveBothStarted: (() => void) | undefined;
+			const bothStarted = new Promise<void>((resolve, reject) => {
+				resolveBothStarted = resolve;
+				setTimeout(() => reject(new Error("Homebrew archive targets did not start concurrently")), 1_000);
+			});
+			await createArchives({
+				...options,
+				onArchiveStart: async arch => {
+					started.push(arch);
+					if (started.length === 2) resolveBothStarted?.();
+					await bothStarted;
+				},
+			});
+			expect(started.slice(0, 2).sort()).toEqual(["arm64", "x64"]);
 			const firstArmArchive = await fs.readFile(armArchivePath);
 			const firstIntelArchive = await fs.readFile(intelArchivePath);
 			await createArchives(options);

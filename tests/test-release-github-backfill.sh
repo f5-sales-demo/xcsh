@@ -64,6 +64,13 @@ fi
 grep -Fq '.state == "uploaded" and .size == $size and .digest == $digest' "$script" || fail "resumed assets are not hash verified"
 grep -Fq 'for attempt in 1 2 3 4 5' "$script" || fail "upload retries are not bounded"
 grep -Fq 'release upload "$tag" "$asset" --repo "$repository" --clobber' "$script" || fail "resumable upload command is missing"
+grep -Fq 'XCSH_RELEASE_UPLOAD_CONCURRENCY' "$script" || fail "upload concurrency control is missing"
+grep -Fq '^[1-4]$' "$script" || fail "upload concurrency must be bounded from one through four"
+grep -Fq 'upload_asset "$name" &' "$script" || fail "independent uploads must use background workers"
+grep -Fq 'if [ "${#pids[@]}" -ge "$upload_concurrency" ]; then' "$script" || fail "upload worker pool is not bounded"
+grep -Fq 'wait_for_uploads' "$script" || fail "upload workers are not joined before publication"
+grep -Fq 'Release upload failed; preserving draft release $tag' "$script" || fail "worker failures must preserve the draft release"
+grep -Fq 'Release upload complete: uploaded=' "$script" || fail "upload timing report is missing"
 grep -Fq 'diff -u "$work/expected-assets" "$work/actual-assets"' "$script" || fail "exact asset verification is missing"
 grep -Fq 'release edit "$tag" --repo "$repository" --draft=false' "$script" || fail "final publication is missing"
 grep -Fq '.immutable == true and (.assets | length) == 19' "$script" || fail "immutable final-state verification is missing"
@@ -80,6 +87,14 @@ if grep -Fq 'gh release create "$tag" "$assets_dir"/*' "$script"; then
 fi
 if grep -Fq 'gh release create "$tag"' "$script"; then
   fail "draft creation must not depend on a follow-up release-list read"
+fi
+
+invalid_concurrency_assets=$(mktemp -d)
+if XCSH_RELEASE_UPLOAD_CONCURRENCY=5 "$script" f5-sales-demo/xcsh v1.2.3 "$invalid_concurrency_assets" >/dev/null 2>&1; then
+  fail "out-of-range upload concurrency was accepted"
+fi
+if XCSH_RELEASE_UPLOAD_CONCURRENCY=parallel "$script" f5-sales-demo/xcsh v1.2.3 "$invalid_concurrency_assets" >/dev/null 2>&1; then
+  fail "non-numeric upload concurrency was accepted"
 fi
 
 valid_jobs=$(mktemp)
