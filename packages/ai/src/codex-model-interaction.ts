@@ -2,6 +2,8 @@ import type { ReasoningEffort } from "./model-thinking";
 import type { Api, Model, ServiceTier, ThinkingConfig } from "./types";
 
 export type CodexContextTier = "standard" | "codex-max" | "provider-max";
+export type ReasoningSummary = "none" | "auto" | "concise" | "detailed";
+export type WireReasoningSummary = Exclude<ReasoningSummary, "none">;
 
 export interface CodexModelInteractionMetadata {
 	standardContextWindow: number;
@@ -10,7 +12,7 @@ export interface CodexModelInteractionMetadata {
 	outputLimit: number;
 	effectiveContextWindowPercent: number;
 	autoCompactThresholdPercent: number;
-	defaultReasoningSummary: "none" | "auto" | "concise" | "detailed";
+	defaultReasoningSummary: ReasoningSummary;
 	defaultVerbosity: "low" | "medium" | "high";
 	thinking: ThinkingConfig;
 	serviceTiers: ServiceTier[];
@@ -107,6 +109,10 @@ export function resolveCodexContextBudget(
 export function resolveCodexWireReasoningEffort(modelId: string, effort: ReasoningEffort): ReasoningEffort {
 	if (effort !== "ultra") return effort;
 	return CODEX_MODEL_INTERACTION_METADATA[modelId]?.ultraReasoningEffort ?? "max";
+}
+
+export function resolveWireReasoningSummary(summary: ReasoningSummary): WireReasoningSummary | undefined {
+	return summary === "none" ? undefined : summary;
 }
 
 /** Return the model's usable runtime context, clamped to its selected provider-facing window. */

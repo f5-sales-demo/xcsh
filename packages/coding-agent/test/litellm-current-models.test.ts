@@ -194,7 +194,7 @@ describe("current internal LiteLLM model contract", () => {
 			store: false,
 			tool_choice: "auto",
 			parallel_tool_calls: true,
-			reasoning: { effort: "high", summary: "none" },
+			reasoning: { effort: "high" },
 			text: { verbosity: "low" },
 			include: ["reasoning.encrypted_content"],
 			service_tier: "priority",

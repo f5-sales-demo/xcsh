@@ -1,16 +1,21 @@
-import { resolveCodexWireReasoningEffort } from "../../codex-model-interaction";
+import {
+	type ReasoningSummary,
+	resolveCodexWireReasoningEffort,
+	resolveWireReasoningSummary,
+	type WireReasoningSummary,
+} from "../../codex-model-interaction";
 import type { ReasoningEffort } from "../../model-thinking";
 import { requireSupportedReasoningEffort } from "../../model-thinking";
 import type { Api, Model } from "../../types";
 
 export interface ReasoningConfig {
 	effort: ReasoningEffort;
-	summary: "none" | "auto" | "concise" | "detailed" | null;
+	summary?: WireReasoningSummary;
 }
 
 export interface CodexRequestOptions {
 	reasoningEffort?: ReasoningConfig["effort"];
-	reasoningSummary?: ReasoningConfig["summary"] | null;
+	reasoningSummary?: ReasoningSummary | null;
 	textVerbosity?: "low" | "medium" | "high";
 	include?: string[];
 	metadata?: Record<string, unknown>;
@@ -57,6 +62,7 @@ export interface RequestBody {
 }
 
 function getReasoningConfig(model: Model<Api>, options: CodexRequestOptions): ReasoningConfig {
+	const summary = resolveWireReasoningSummary(options.reasoningSummary ?? model.defaultReasoningSummary ?? "none");
 	return {
 		effort: resolveCodexWireReasoningEffort(
 			model.id,
@@ -65,7 +71,7 @@ function getReasoningConfig(model: Model<Api>, options: CodexRequestOptions): Re
 				(options.reasoningEffort ?? model.thinking?.defaultLevel) as ReasoningEffort,
 			),
 		),
-		summary: options.reasoningSummary ?? model.defaultReasoningSummary ?? "none",
+		...(summary ? { summary } : {}),
 	};
 }
 
@@ -215,8 +221,9 @@ export async function transformRequestBody(
 
 	if (model.reasoning && (model.thinking || options.reasoningEffort !== undefined)) {
 		const reasoningConfig = getReasoningConfig(model, options);
+		const { summary: _summary, ...existingReasoning } = body.reasoning ?? {};
 		body.reasoning = {
-			...body.reasoning,
+			...existingReasoning,
 			...reasoningConfig,
 		};
 	} else {

@@ -30,6 +30,26 @@ function createCodexModel(id: string): Model<"openai-codex-responses"> {
 	});
 }
 
+async function captureLiteLLMPayload(
+	model: Model<"openai-responses">,
+	reasoningSummary?: "none" | "auto" | "concise" | "detailed",
+): Promise<Record<string, unknown>> {
+	const controller = new AbortController();
+	controller.abort();
+	const { promise, resolve } = Promise.withResolvers<Record<string, unknown>>();
+	streamOpenAIResponses(
+		model,
+		{ messages: [{ role: "user", content: "hello", timestamp: 1 }] },
+		{
+			apiKey: "test-key",
+			reasoningSummary,
+			signal: controller.signal,
+			onPayload: payload => resolve(payload as Record<string, unknown>),
+		},
+	);
+	return promise;
+}
+
 describe("openai-codex request transformer", () => {
 	// Differential contract pinned to openai/codex@985cf47a4eb6084b2ff6b30ebdb1216acda85bb4:
 	// codex-rs/core/src/client.rs and codex-rs/codex-api/src/common.rs.
@@ -56,7 +76,7 @@ describe("openai-codex request transformer", () => {
 			tools: [{ type: "function", name: "probe", description: "probe", parameters: {} }],
 			tool_choice: "auto",
 			parallel_tool_calls: true,
-			reasoning: { effort: "medium", summary: "none" },
+			reasoning: { effort: "medium" },
 			store: false,
 			stream: true,
 			include: ["reasoning.encrypted_content"],
@@ -131,6 +151,36 @@ describe("openai-codex request transformer", () => {
 		expect(normalize(liteLLMPayload)).toEqual(normalize(codexPayload));
 	});
 
+	it("lets explicit none override a LiteLLM catalog summary", async () => {
+		const codexModel = applyCodexInteractionMetadata(createCodexModel("gpt-5.6-terra"));
+		const liteLLMModel: Model<"openai-responses"> = {
+			...codexModel,
+			api: "openai-responses",
+			provider: "litellm",
+			baseUrl: "https://proxy.example.com/openai/v1",
+			defaultReasoningSummary: "detailed",
+		};
+
+		const payload = await captureLiteLLMPayload(liteLLMModel, "none");
+		expect(payload.reasoning).toEqual({ effort: "medium" });
+	});
+
+	it.each(["auto", "concise", "detailed"] as const)(
+		"serializes the %s reasoning summary through LiteLLM Responses",
+		async summary => {
+			const codexModel = applyCodexInteractionMetadata(createCodexModel("gpt-5.6-terra"));
+			const liteLLMModel: Model<"openai-responses"> = {
+				...codexModel,
+				api: "openai-responses",
+				provider: "litellm",
+				baseUrl: "https://proxy.example.com/openai/v1",
+			};
+
+			const payload = await captureLiteLLMPayload(liteLLMModel, summary);
+			expect(payload.reasoning).toEqual({ effort: "medium", summary });
+		},
+	);
+
 	it.each(["gpt-6-luna", "gpt-6-sol"])("preserves tools, developer messages, and max effort for %s", async id => {
 		const model = getBundledModel("openai-codex", id) as Model<"openai-codex-responses">;
 		const transformed = await transformRequestBody(
@@ -144,7 +194,7 @@ describe("openai-codex request transformer", () => {
 		);
 		expect(transformed.input?.[0]).toMatchObject({ type: "message", role: "developer" });
 		expect(transformed.tools).toEqual([{ type: "function", name: "probe", description: "probe", parameters: {} }]);
-		expect(transformed.reasoning).toEqual({ effort: "max", summary: "none" });
+		expect(transformed.reasoning).toEqual({ effort: "max" });
 		expect(transformed.text).toEqual({ verbosity: "low" });
 		expect(transformed.tool_choice).toBe("auto");
 		expect(transformed.parallel_tool_calls).toBe(true);
@@ -163,7 +213,7 @@ describe("openai-codex request transformer", () => {
 		const transformed = await transformRequestBody({ model: "gpt-6-astra", input: [] }, model, {
 			reasoningEffort: "ultra",
 		});
-		expect(transformed.reasoning).toEqual({ effort: "xhigh", summary: "none" });
+		expect(transformed.reasoning).toEqual({ effort: "xhigh" });
 	});
 
 	it("removes sampling controls rejected by the Codex backend", async () => {
@@ -266,7 +316,7 @@ describe("openai-codex request transformer", () => {
 });
 
 describe("openai-codex reasoning effort validation", () => {
-	it("sends explicit none, preserves max, and omits inherited effort", async () => {
+	it("omits semantic none while preserving reasoning effort", async () => {
 		const model = createCodexModel("gpt-5.6-sol");
 		model.thinking = {
 			mode: "effort",
@@ -282,9 +332,30 @@ describe("openai-codex reasoning effort validation", () => {
 		const none = await transformRequestBody({ model: model.id, input: [] }, model, { reasoningEffort: "none" });
 		const max = await transformRequestBody({ model: model.id, input: [] }, model, { reasoningEffort: "max" });
 
-		expect(inherited.reasoning).toEqual({ effort: "medium", summary: "none" });
-		expect(none.reasoning).toEqual({ effort: "none", summary: "none" });
-		expect(max.reasoning).toEqual({ effort: "max", summary: "none" });
+		expect(inherited.reasoning).toEqual({ effort: "medium" });
+		expect(none.reasoning).toEqual({ effort: "none" });
+		expect(max.reasoning).toEqual({ effort: "max" });
+	});
+
+	it("lets explicit none remove an existing or catalog-provided summary", async () => {
+		const model = createCodexModel("gpt-5.6-terra");
+		model.defaultReasoningSummary = "detailed";
+		const transformed = await transformRequestBody(
+			{ model: model.id, input: [], reasoning: { effort: "medium", summary: "auto" } },
+			model,
+			{ reasoningSummary: "none" },
+		);
+
+		expect(transformed.reasoning).toEqual({ effort: "medium" });
+	});
+
+	it.each(["auto", "concise", "detailed"] as const)("serializes the %s reasoning summary", async summary => {
+		const model = createCodexModel("gpt-5.6-terra");
+		const transformed = await transformRequestBody({ model: model.id, input: [] }, model, {
+			reasoningSummary: summary,
+		});
+
+		expect(transformed.reasoning).toEqual({ effort: "medium", summary });
 	});
 
 	it("rejects gpt-5.1 xhigh when metadata does not list it", async () => {

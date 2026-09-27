@@ -5,7 +5,12 @@ import type {
 	ResponseCreateParamsStreaming,
 	ResponseInput,
 } from "openai/resources/responses/responses";
-import { resolveCodexWireReasoningEffort } from "../codex-model-interaction";
+import {
+	type ReasoningSummary,
+	resolveCodexWireReasoningEffort,
+	resolveWireReasoningSummary,
+	type WireReasoningSummary,
+} from "../codex-model-interaction";
 import type { ReasoningEffort } from "../model-thinking";
 import { requireSupportedReasoningEffort } from "../model-thinking";
 import { getEnvApiKey } from "../stream";
@@ -78,7 +83,7 @@ function getPromptCacheRetention(baseUrl: string, cacheRetention: CacheRetention
 // OpenAI Responses-specific options
 export interface OpenAIResponsesOptions extends StreamOptions {
 	reasoning?: ReasoningEffort;
-	reasoningSummary?: "none" | "auto" | "detailed" | "concise" | null;
+	reasoningSummary?: ReasoningSummary | null;
 	textVerbosity?: "low" | "medium" | "high";
 	serviceTier?: ServiceTier;
 	toolChoice?: ToolChoice;
@@ -133,7 +138,7 @@ function canReplayOpenAIResponsesNativeHistory(
 type OpenAIResponsesSamplingParams = Omit<ResponseCreateParamsStreaming, "reasoning"> & {
 	reasoning?: {
 		effort?: Exclude<ReasoningEffort, "ultra">;
-		summary?: "none" | "auto" | "concise" | "detailed" | null;
+		summary?: WireReasoningSummary;
 	};
 	top_p?: number;
 	top_k?: number;
@@ -203,8 +208,7 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 				url: `${baseUrl ?? "https://api.openai.com/v1"}/responses`,
 				body: params,
 			};
-			// The pinned SDK schema predates the provider's `none` summary and `max`
-			// effort values, but both are part of the live Responses wire contract.
+			// The pinned SDK schema predates the provider's `max` effort value.
 			const openaiStream = await client.responses.create(params as ResponseCreateParamsStreaming, {
 				signal: requestSignal,
 			});
@@ -429,9 +433,12 @@ function buildParams(
 			const supportedEffort = model.thinking
 				? requireSupportedReasoningEffort(model, requestedEffort)
 				: requestedEffort;
+			const summary = resolveWireReasoningSummary(
+				options?.reasoningSummary ?? model.defaultReasoningSummary ?? "auto",
+			);
 			params.reasoning = {
 				effort: resolveCodexWireReasoningEffort(model.id, supportedEffort) as Exclude<ReasoningEffort, "ultra">,
-				summary: options?.reasoningSummary ?? model.defaultReasoningSummary ?? "auto",
+				...(summary ? { summary } : {}),
 			};
 		} else if (model.name.startsWith("gpt-5")) {
 			// Jesus Christ, see https://community.openai.com/t/need-reasoning-false-option-for-gpt-5/1351588/7
