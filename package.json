@@ -58,6 +58,7 @@
 		"bench:model-scenarios": "bun packages/coding-agent/bench/model-scenarios.ts",
 		"bench:model-scenarios:analyze": "bun packages/coding-agent/bench/model-scenario-analysis.ts",
 		"bench:model-scenarios:regrade": "bun packages/coding-agent/bench/model-scenario-regrade.ts",
+		"bench:documentation": "bun packages/coding-agent/bench/documentation-retrieval-benchmark.ts",
 		"prepublishOnly": "bun run check",
 		"prepare": "git config core.hooksPath .githooks && bun --cwd=packages/coding-agent run generate-docs-index && bun --cwd=packages/coding-agent run generate-build-info",
 		"publish": "bun run prepublishOnly && npm publish -ws --access public",

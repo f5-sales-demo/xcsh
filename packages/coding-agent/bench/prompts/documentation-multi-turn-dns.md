@@ -1,0 +1,1 @@
+Use only the `read` tool and pinned offline documentation. Search `xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1`, then read `xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md`. State the exact document title. Do not use the API catalog, live `llms.txt`, or web search.
