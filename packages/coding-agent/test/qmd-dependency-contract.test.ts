@@ -7,6 +7,14 @@ const qmdDatabaseModule = path.join(path.dirname(qmdEntrypoint), "db.js");
 const qmdStoreModule = path.join(path.dirname(qmdEntrypoint), "store.js");
 
 describe("QMD dependency patch", () => {
+	it("declares node-gyp for clean-runner better-sqlite3 builds", async () => {
+		const rootPackage = JSON.parse(
+			await readFile(path.resolve(import.meta.dir, "../../..", "package.json"), "utf8"),
+		) as { devDependencies?: Record<string, string> };
+
+		expect(rootPackage.devDependencies?.["node-gyp"]).toBe("13.0.2");
+	});
+
 	it("keeps Bun on its embedded SQLite instead of selecting Homebrew SQLite", async () => {
 		const source = await readFile(qmdDatabaseModule, "utf8");
 
