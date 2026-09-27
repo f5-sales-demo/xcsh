@@ -77,7 +77,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Type check workspace
         env:
@@ -324,7 +324,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Test TypeScript workspaces
         run: bun run test:ts
@@ -409,7 +409,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - name: Verify immutable runner dependencies
         run: |
           command -v fd
@@ -507,7 +507,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Verify spoofed client versions before release
         run: bun run check-spoofed-versions
@@ -541,7 +541,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Generate canonical documentation index
         run: bun --cwd=packages/coding-agent run generate-documentation-index
@@ -619,7 +619,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Download canonical documentation index
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -734,7 +734,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - name: Install dependencies
         run: bash scripts/ci-bun-install.sh
         env:
@@ -1162,7 +1162,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Download immutable macOS Homebrew archives from release
         env:
@@ -1356,7 +1356,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Download native addon artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
