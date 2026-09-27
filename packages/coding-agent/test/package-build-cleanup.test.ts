@@ -40,6 +40,37 @@ describe("coding-agent package build", () => {
 });
 
 describe("release binary build", () => {
+	test("reuses one verified Linux-generated documentation index on every release platform", async () => {
+		const root = path.resolve(import.meta.dir, "../../..");
+		const workflow = await readFile(path.join(root, ".github/workflows/ci.yml"), "utf8");
+		const releaseScript = await readFile(path.join(root, "scripts/ci-release-build-binaries.ts"), "utf8");
+		const generator = await readFile(
+			path.join(root, "packages/coding-agent/scripts/generate-documentation-index.ts"),
+			"utf8",
+		);
+		const prepare =
+			workflow.match(/\n {2}prepare-documentation-index:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
+		const linuxWindows = workflow.match(/\n {2}build-release:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
+		const macos = workflow.match(/\n {2}build-sign-macos:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
+
+		expect(prepare).toContain("runs-on: xcsh-compute");
+		expect(prepare).toContain("bun --cwd=packages/coding-agent run generate-documentation-index");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+		expect(prepare).toContain("name: documentation-index-${{ github.sha }}");
+		expect(prepare).toContain("include-hidden-files: true");
+		for (const job of [linuxWindows, macos]) {
+			expect(job).toContain("prepare-documentation-index");
+			expect(job).toContain("actions/download-artifact@");
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+			expect(job).toContain("name: documentation-index-${{ github.sha }}");
+			expect(job).toContain("XCSH_DOCUMENTATION_INDEX_MODE: prebuilt");
+		}
+		expect(releaseScript).toContain('Bun.env.XCSH_DOCUMENTATION_INDEX_MODE === "prebuilt"');
+		expect(releaseScript).toContain("generate-documentation-index --use-existing");
+		expect(generator).toContain('process.argv.includes("--use-existing")');
+		expect(generator).toContain("verifyPrebuiltDocumentationAssets");
+	});
+
 	test("generates and resets documentation inside the cleanup boundary and runs compiled QMD smoke", async () => {
 		const releaseScript = await readFile(
 			path.resolve(import.meta.dir, "../../..", "scripts", "ci-release-build-binaries.ts"),

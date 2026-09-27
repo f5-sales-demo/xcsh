@@ -118,11 +118,18 @@ async function generateBundle(): Promise<void> {
 }
 
 async function generateDocumentationIndex(): Promise<void> {
+	const usePrebuilt = Bun.env.XCSH_DOCUMENTATION_INDEX_MODE === "prebuilt";
 	if (isDryRun) {
-		console.log("DRY RUN bun --cwd=packages/coding-agent run generate-documentation-index");
+		console.log(
+			`DRY RUN bun --cwd=packages/coding-agent run generate-documentation-index${usePrebuilt ? " --use-existing" : ""}`,
+		);
 		return;
 	}
-	await $`bun --cwd=packages/coding-agent run generate-documentation-index`.cwd(repoRoot);
+	if (usePrebuilt) {
+		await $`bun --cwd=packages/coding-agent run generate-documentation-index --use-existing`.cwd(repoRoot);
+	} else {
+		await $`bun --cwd=packages/coding-agent run generate-documentation-index`.cwd(repoRoot);
+	}
 }
 
 async function resetArtifacts(): Promise<void> {

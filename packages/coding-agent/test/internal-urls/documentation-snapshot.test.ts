@@ -1,15 +1,16 @@
 import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, it } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createGzip } from "node:zlib";
+import { createGzip, gzipSync } from "node:zlib";
 import tar from "tar-stream";
 import {
 	buildDocumentationIndex,
 	parseDocumentationReleasePin,
 	verifyDocumentationRelease,
+	verifyPrebuiltDocumentationAssets,
 } from "../../src/internal-urls/documentation-snapshot";
 
 function sha256(value: Uint8Array | string): string {
@@ -283,5 +284,44 @@ describe("offline documentation release", () => {
 		} finally {
 			db.close();
 		}
+	});
+
+	it("accepts only prebuilt archive and index bytes that match the complete pin", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin, archivePath } = await fixture(root);
+		const verified = await verifyDocumentationRelease(root, pin);
+		const indexPath = path.join(root, "index.sqlite");
+		const index = await buildDocumentationIndex(verified, indexPath);
+		const completePin = parseDocumentationReleasePin({
+			...pin,
+			index: {
+				qmd_version: "2.8.3",
+				fingerprint: index.fingerprint,
+				sha256: index.sha256,
+				size_bytes: index.sizeBytes,
+			},
+		});
+		const generated = path.join(root, "generated");
+		await mkdir(generated);
+		await copyFile(archivePath, path.join(generated, "html-to-markdown-content.tar.gz"));
+		const compressed = gzipSync(await readFile(indexPath), { level: 9 });
+		await writeFile(path.join(generated, "documentation-index.sqlite.gz"), compressed);
+
+		const accepted = await verifyPrebuiltDocumentationAssets(generated, completePin);
+		expect(accepted.indexGzip).toEqual(compressed);
+
+		await writeFile(path.join(generated, "html-to-markdown-content.tar.gz"), Buffer.from("corrupt"));
+		await expect(verifyPrebuiltDocumentationAssets(generated, completePin)).rejects.toThrow(
+			"prebuilt documentation archive disagrees with pin",
+		);
+		await copyFile(archivePath, path.join(generated, "html-to-markdown-content.tar.gz"));
+		await writeFile(path.join(generated, "documentation-index.sqlite.gz"), gzipSync(Buffer.from("wrong")));
+		await expect(verifyPrebuiltDocumentationAssets(generated, completePin)).rejects.toThrow(
+			"prebuilt documentation index disagrees with pin",
+		);
+		await writeFile(path.join(generated, "documentation-index.sqlite.gz"), Buffer.from("corrupt"));
+		await expect(verifyPrebuiltDocumentationAssets(generated, completePin)).rejects.toThrow(
+			"prebuilt documentation index is not valid bounded gzip",
+		);
 	});
 });
