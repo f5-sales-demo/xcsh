@@ -218,7 +218,10 @@ class CiCapacityContractTests(unittest.TestCase):
         )
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         self.assertNotIn('bun-version: "1.3', workflows)
-        self.assertIn("bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}", workflows)
+        self.assertIn(
+            "bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}",
+            workflows,
+        )
         self.assertNotIn("lookup-only:", workflows)
         self.assertIn("actions/cache/restore@", workflows)
         prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
@@ -264,9 +267,7 @@ class CiCapacityContractTests(unittest.TestCase):
             self.assertIn(expected_lock, key, f"{workflow} cache is not lock-pinned")
 
     def test_bun_cache_prime_covers_both_linux_runner_environments(self) -> None:
-        prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(
-            encoding="utf-8"
-        )
+        prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
         self.assertIn("runs-on: xcsh-socketless", prime)
         self.assertIn("runs-on: ubuntu-24.04", prime)
         self.assertEqual(2, prime.count("path: ~/.bun/install/cache"))
