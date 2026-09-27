@@ -20,16 +20,19 @@ function harness(onSelect = vi.fn()) {
 	);
 	return { selector, onSelect };
 }
-test("Enter offers explicit scope and preselects conversation without applying anything", async () => {
+test("Enter chooses reasoning before offering scope and preselects conversation without applying anything", async () => {
 	const { selector, onSelect } = harness();
 	await Bun.sleep(0);
 	selector.handleInput("\r");
 	const rendered = Bun.stripANSI(selector.render(100).join("\n"));
-	expect(rendered).toContain("Use in this conversation");
-	expect(rendered).toContain("Save as default");
-	expect(rendered).toContain("Assign to role");
+	expect(rendered).toContain("Reasoning");
+	expect(rendered).toContain("Provider default");
 	expect(onSelect).not.toHaveBeenCalled();
 	selector.handleInput("\r");
+	const scope = Bun.stripANSI(selector.render(100).join("\n"));
+	expect(scope).toContain("Use in this conversation");
+	expect(scope).toContain("Save as default");
+	expect(scope).toContain("Assign to role");
 	selector.handleInput("\r");
 	await Bun.sleep(0);
 	expect(onSelect).toHaveBeenCalledWith(
@@ -72,8 +75,8 @@ test("saved default is an explicit scope and supported current reasoning is pres
 	const { selector, onSelect } = harness();
 	await Bun.sleep(0);
 	selector.handleInput("\r");
-	selector.handleInput("\x1b[B");
 	selector.handleInput("\r");
+	selector.handleInput("\x1b[B");
 	selector.handleInput("\r");
 	expect(onSelect).toHaveBeenCalledWith(
 		expect.objectContaining({ scope: "default", selector: "anthropic/claude-sonnet-4-5" }),

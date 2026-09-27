@@ -1,5 +1,11 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { getSupportedReasoningEfforts, type Model, modelsAreEqual, ReasoningEffort } from "@f5-sales-demo/pi-ai";
+import {
+	type CodexContextTier,
+	getSupportedReasoningEfforts,
+	type Model,
+	modelsAreEqual,
+	ReasoningEffort,
+} from "@f5-sales-demo/pi-ai";
 import {
 	Container,
 	getKeybindings,
@@ -57,6 +63,10 @@ export function reasoningLabel(level: ThinkingLevel): string {
 			ultra: "Ultra",
 		}[level] ?? level
 	);
+}
+
+function formatContextSize(tokens: number): string {
+	return `${Math.round(tokens / 1_000)}K`;
 }
 export interface ModelNavigationContext {
 	initialSearchInput?: string;
@@ -312,6 +322,8 @@ export interface ModelSelection {
 	model: Model;
 	selector: string;
 	thinkingLevel: ThinkingLevel;
+	/** Provider-wide context policy, present only for supported OpenAI routes. */
+	contextTier?: CodexContextTier;
 	role?: string;
 }
 type RoleSelectCallback = (selection: ModelSelection) => boolean | undefined | Promise<boolean | undefined>;
@@ -398,19 +410,28 @@ export class ModelSelectorComponent extends Container {
 		];
 		if (this.#isMenuOpen && selected) {
 			details.push(...wrapTextWithAnsi(selected.selector, inner));
-			title = getModelDisplayName(selected.model);
+			title =
+				this.#menuStep === "thinking"
+					? "Reasoning"
+					: this.#menuStep === "context"
+						? "Context window"
+						: getModelDisplayName(selected.model);
 			const labels =
-				this.#menuStep === "scope"
-					? this.#scopeActions()
-					: this.#menuStep === "role"
-						? this.#menuRoleActions.map(action => action.label)
-						: this.#getThinkingLevelsForModel(selected.model).map(reasoningLabel);
+				this.#menuStep === "context"
+					? this.#contextActions(selected.model).map(action => action.label)
+					: this.#menuStep === "scope"
+						? this.#scopeActions()
+						: this.#menuStep === "role"
+							? this.#menuRoleActions.map(action => action.label)
+							: this.#getThinkingLevelsForModel(selected.model).map(reasoningLabel);
 			purpose =
 				this.#menuStep === "thinking"
-					? `Reasoning · ${this.#menuScope === "conversation" ? "This conversation" : this.#menuScope === "default" ? "Saved default" : `Role: ${this.#menuSelectedRole}`}`
-					: this.#menuStep === "scope"
-						? "Choose where this model applies."
-						: "Choose a specialist role.";
+					? "Choose reasoning for this model."
+					: this.#menuStep === "context"
+						? "This provider-wide setting controls the usable context window. Scope controls only the model and reasoning assignment."
+						: this.#menuStep === "scope"
+							? "Choose where this model applies."
+							: "Choose a specialist role.";
 			body = labels.map((label, i) => selectorRow([label], [inner - 2], i === this.#menuSelectedIndex));
 			selectedBodyIndex = this.#menuSelectedIndex;
 			if (this.#menuStep === "scope")
@@ -422,10 +443,17 @@ export class ModelSelectorComponent extends Container {
 					][this.#menuSelectedIndex],
 				);
 			else if (this.#menuStep === "thinking") details.push(`Reasoning: ${labels[this.#menuSelectedIndex]}`);
+			else if (this.#menuStep === "context") {
+				const context = this.#contextActions(selected.model)[this.#menuSelectedIndex];
+				if (context) {
+					details.push(`Usable window: ${formatContextSize(context.effectiveContextWindow)}.`);
+					details.push(`Automatic compaction begins at ${formatContextSize(context.autoCompactTokenLimit)}.`);
+				}
+			}
 			if (this.#errorMessage)
 				details.push(`Could not apply: ${String(this.#errorMessage)}. ${selectorKeys("confirm")} to retry.`);
 			footer = [
-				selectorNavigationHint(this.#menuStep === "thinking" ? "confirm" : "continue"),
+				selectorNavigationHint(this.#menuStep === "scope" || this.#menuStep === "role" ? "continue" : "confirm"),
 				selectorCancelHint(),
 			];
 		} else {
@@ -585,13 +613,15 @@ export class ModelSelectorComponent extends Container {
 	// Context menu state
 	#isMenuOpen: boolean = false;
 	#menuSelectedIndex: number = 0;
-	#menuStep: "scope" | "role" | "thinking" = "scope";
+	#menuStep: "thinking" | "context" | "scope" | "role" = "thinking";
 	#menuScope: ModelSelection["scope"] = "conversation";
 	#menuItem?: ModelItem | CanonicalModelItem;
 	#applying = false;
 	#onLogin?: () => void;
 	#currentThinkingLevel: ThinkingLevel = ThinkingLevel.Inherit;
 	#menuSelectedRole: string | null = null;
+	#menuThinkingLevel: ThinkingLevel = ThinkingLevel.Inherit;
+	#menuContextTier?: CodexContextTier;
 
 	constructor(
 		tui: TUI,
@@ -1197,6 +1227,47 @@ export class ModelSelectorComponent extends Container {
 		return foundIndex >= 0 ? foundIndex : 0;
 	}
 
+	#contextSettingFor(model: Model): "providers.openaiContextTier" | "providers.litellmContextTier" | undefined {
+		if (model.provider === "openai-codex") return "providers.openaiContextTier";
+		if (model.provider === "litellm") return "providers.litellmContextTier";
+		return undefined;
+	}
+
+	#contextActions(model: Model): Array<{
+		tier: CodexContextTier;
+		label: string;
+		effectiveContextWindow: number;
+		autoCompactTokenLimit: number;
+	}> {
+		const setting = this.#contextSettingFor(model);
+		if (!setting || !model.maxContextWindow) return [];
+		// The registry has already clamped this to the safe advertised provider limit.
+		const providerMaximum = model.providerContextWindow ?? model.maxContextWindow;
+		const standard = Math.min(272_000, providerMaximum);
+		const codexMaximum = Math.min(model.maxContextWindow, providerMaximum);
+		const effectivePercent = model.effectiveContextWindowPercent ?? 95;
+		const compactPercent = model.autoCompactThresholdPercent ?? 90;
+		const current = this.#settings.get(setting) as CodexContextTier;
+		return [
+			["standard", "Standard", standard],
+			["codex-max", "Codex maximum", codexMaximum],
+			["provider-max", "Provider maximum", providerMaximum],
+		].map(([tier, label, size]) => ({
+			tier: tier as CodexContextTier,
+			label: `${label} — ${formatContextSize(size as number)}${tier === current ? " (current/default)" : ""}`,
+			effectiveContextWindow: Math.floor(((size as number) * effectivePercent) / 100),
+			autoCompactTokenLimit: Math.floor(((size as number) * compactPercent) / 100),
+		}));
+	}
+
+	#contextPreselectIndex(model: Model): number {
+		const setting = this.#contextSettingFor(model);
+		if (!setting) return 0;
+		const current = this.#settings.get(setting) as CodexContextTier;
+		const index = this.#contextActions(model).findIndex(action => action.tier === current);
+		return index >= 0 ? index : 0;
+	}
+
 	#getSelectedItem(): ModelItem | CanonicalModelItem | undefined {
 		return this.#isCanonicalTab()
 			? this.#filteredCanonicalModels[this.#selectedIndex]
@@ -1214,29 +1285,31 @@ export class ModelSelectorComponent extends Container {
 		if (!this.#menuItem || this.#isItemDisabled(this.#menuItem)) return;
 		this.#isMenuOpen = true;
 		this.#menuScope = "conversation";
-		this.#menuStep = "scope";
+		this.#menuStep = "thinking";
 		this.#menuSelectedRole = null;
-		this.#menuSelectedIndex = 0;
+		this.#menuThinkingLevel = this.#getThinkingLevelsForModel(this.#menuItem.model)[0] ?? ThinkingLevel.Inherit;
+		this.#menuContextTier = undefined;
+		this.#menuSelectedIndex = this.#getThinkingPreselectIndex("default", this.#menuItem.model);
 		this.#updateMenu();
 	}
 
-	#openThinkingMenu(role: string): void {
+	#openScopeMenu(): void {
 		const selected = this.#menuItem ?? this.#getSelectedItem();
 		if (!selected) return;
 		this.#menuItem = selected;
 		this.#isMenuOpen = true;
-		this.#menuStep = "thinking";
-		this.#menuSelectedRole = role;
-		this.#menuSelectedIndex = this.#getThinkingPreselectIndex(role, selected.model);
+		this.#menuStep = "scope";
+		this.#menuSelectedIndex = 0;
 		this.#updateMenu();
 	}
 
 	#closeMenu(): void {
 		this.#resetDetailPage();
 		this.#isMenuOpen = false;
-		this.#menuStep = "role";
+		this.#menuStep = "thinking";
 		this.#menuSelectedRole = null;
 		this.#menuItem = undefined;
+		this.#menuContextTier = undefined;
 		this.#updateList();
 	}
 
@@ -1336,11 +1409,13 @@ export class ModelSelectorComponent extends Container {
 		if (!selectedItem) return;
 
 		const optionCount =
-			this.#menuStep === "thinking" && this.#menuSelectedRole !== null
+			this.#menuStep === "thinking"
 				? this.#getThinkingLevelsForModel(selectedItem.model).length
-				: this.#menuStep === "scope"
-					? this.#scopeActions().length
-					: this.#menuRoleActions.length;
+				: this.#menuStep === "context"
+					? this.#contextActions(selectedItem.model).length
+					: this.#menuStep === "scope"
+						? this.#scopeActions().length
+						: this.#menuRoleActions.length;
 		if (optionCount === 0) return;
 
 		if (matchesSelectorKey(keyData, "up")) {
@@ -1356,13 +1431,31 @@ export class ModelSelectorComponent extends Container {
 		}
 
 		if (matchesSelectorKey(keyData, "confirm")) {
+			if (this.#menuStep === "thinking") {
+				const thinking = this.#getThinkingLevelsForModel(selectedItem.model)[this.#menuSelectedIndex];
+				if (!thinking) return;
+				this.#menuThinkingLevel = thinking;
+				if (this.#contextActions(selectedItem.model).length > 0) {
+					this.#menuStep = "context";
+					this.#menuSelectedIndex = this.#contextPreselectIndex(selectedItem.model);
+					this.#updateMenu();
+				} else this.#openScopeMenu();
+				return;
+			}
+			if (this.#menuStep === "context") {
+				const context = this.#contextActions(selectedItem.model)[this.#menuSelectedIndex];
+				if (!context) return;
+				this.#menuContextTier = context.tier;
+				this.#openScopeMenu();
+				return;
+			}
 			if (this.#menuStep === "scope") {
 				this.#menuScope = (["conversation", "default", "role"] as const)[this.#menuSelectedIndex];
 				if (this.#menuScope === "role") {
 					this.#menuStep = "role";
 					this.#menuSelectedIndex = 0;
 					this.#updateMenu();
-				} else this.#openThinkingMenu("default");
+				} else void this.#handleSelect(selectedItem, this.#menuThinkingLevel);
 				return;
 			}
 			if (this.#menuStep === "role") {
@@ -1370,27 +1463,41 @@ export class ModelSelectorComponent extends Container {
 				const action = this.#menuRoleActions[this.#menuSelectedIndex];
 				if (!action) return;
 				this.#menuSelectedRole = action.role;
-				this.#menuStep = "thinking";
-				this.#menuSelectedIndex = this.#getThinkingPreselectIndex(action.role, selectedItem.model);
-				this.#updateMenu();
+				void this.#handleSelect(selectedItem, this.#menuThinkingLevel);
 				return;
 			}
-
-			if (!this.#menuSelectedRole) return;
-			const thinkingOptions = this.#getThinkingLevelsForModel(selectedItem.model);
-			const thinkingLevel = thinkingOptions[this.#menuSelectedIndex];
-			if (!thinkingLevel) return;
-			void this.#handleSelect(selectedItem, thinkingLevel);
-			return;
 		}
 
 		if (getKeybindings().matches(keyData, "tui.select.cancel")) {
-			if (this.#menuStep === "thinking" && this.#menuSelectedRole !== null) {
-				this.#menuStep = this.#menuScope === "role" ? "role" : "scope";
-				const roleIndex = this.#menuRoleActions.findIndex(action => action.role === this.#menuSelectedRole);
+			if (this.#menuStep === "role") {
+				this.#menuStep = "scope";
 				this.#menuSelectedRole = null;
-				this.#menuSelectedIndex =
-					this.#menuScope === "role" ? Math.max(0, roleIndex) : this.#menuScope === "default" ? 1 : 0;
+				this.#menuSelectedIndex = 2;
+				this.#updateMenu();
+				return;
+			}
+			if (this.#menuStep === "scope") {
+				if (this.#contextActions(selectedItem.model).length > 0) {
+					this.#menuStep = "context";
+					this.#menuSelectedIndex = this.#contextActions(selectedItem.model).findIndex(
+						action => action.tier === this.#menuContextTier,
+					);
+					if (this.#menuSelectedIndex < 0)
+						this.#menuSelectedIndex = this.#contextPreselectIndex(selectedItem.model);
+				} else {
+					this.#menuStep = "thinking";
+					this.#menuSelectedIndex = this.#getThinkingLevelsForModel(selectedItem.model).indexOf(
+						this.#menuThinkingLevel,
+					);
+				}
+				this.#updateMenu();
+				return;
+			}
+			if (this.#menuStep === "context") {
+				this.#menuStep = "thinking";
+				this.#menuSelectedIndex = this.#getThinkingLevelsForModel(selectedItem.model).indexOf(
+					this.#menuThinkingLevel,
+				);
 				this.#updateMenu();
 				return;
 			}
@@ -1411,6 +1518,7 @@ export class ModelSelectorComponent extends Container {
 			model: item.model,
 			selector: item.selector,
 			thinkingLevel,
+			...(this.#menuContextTier ? { contextTier: this.#menuContextTier } : {}),
 			...(this.#menuScope === "role" ? { role: this.#menuSelectedRole! } : {}),
 		};
 		this.#applying = true;
