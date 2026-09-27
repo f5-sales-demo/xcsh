@@ -16,6 +16,37 @@ async function fixture() {
 }
 
 describe("source-bound native manifest", () => {
+	it("accepts an absolute manifest path through the CLI", async () => {
+		const root = await fixture();
+		const manifestPath = path.join(root, "artifacts/native-manifest.json");
+		await mkdir(path.dirname(manifestPath), { recursive: true });
+		const script = path.resolve(import.meta.dir, "../../../../scripts/ci-native-manifest.ts");
+		const create = Bun.spawn([
+			process.execPath,
+			script,
+			"create",
+			"--source-sha",
+			SOURCE_SHA,
+			"--root",
+			root,
+			"--manifest",
+			manifestPath,
+		]);
+		expect(await create.exited).toBe(0);
+		const verify = Bun.spawn([
+			process.execPath,
+			script,
+			"verify",
+			"--source-sha",
+			SOURCE_SHA,
+			"--root",
+			root,
+			"--manifest",
+			manifestPath,
+		]);
+		expect(await verify.exited).toBe(0);
+	});
+
 	it("records and verifies both Linux x64 variants", async () => {
 		const root = await fixture();
 		const manifest = await createNativeManifest(root, SOURCE_SHA);
