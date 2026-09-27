@@ -1,0 +1,1 @@
+Use only the `read` tool. Search `xcsh://documentation/?search=zzzxxyyqqqv`. If the pinned snapshot has no result, say that it has no matching document. Do not use live `llms.txt`, web search, or invent an answer.

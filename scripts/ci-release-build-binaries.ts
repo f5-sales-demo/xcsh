@@ -117,16 +117,26 @@ async function generateBundle(): Promise<void> {
 	await $`bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --generate`.cwd(repoRoot);
 }
 
+async function generateDocumentationIndex(): Promise<void> {
+	if (isDryRun) {
+		console.log("DRY RUN bun --cwd=packages/coding-agent run generate-documentation-index");
+		return;
+	}
+	await $`bun --cwd=packages/coding-agent run generate-documentation-index`.cwd(repoRoot);
+}
+
 async function resetArtifacts(): Promise<void> {
 	if (isDryRun) {
 		console.log("DRY RUN bun --cwd=packages/natives run embed:native --reset");
 		console.log("DRY RUN bun --cwd=packages/stats scripts/generate-client-bundle.ts --reset");
 		console.log("DRY RUN bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --reset");
+		console.log("DRY RUN bun --cwd=packages/coding-agent run generate-documentation-index --reset");
 		return;
 	}
 	await $`bun --cwd=packages/natives run embed:native --reset`.cwd(repoRoot);
 	await $`bun --cwd=packages/stats scripts/generate-client-bundle.ts --reset`.cwd(repoRoot);
 	await $`bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --reset`.cwd(repoRoot);
+	await $`bun --cwd=packages/coding-agent run generate-documentation-index --reset`.cwd(repoRoot);
 }
 
 async function smokeTestHostBinary(): Promise<void> {
@@ -274,12 +284,13 @@ async function generateConsoleCatalog(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-	await fs.mkdir(binariesDir, { recursive: true });
-	await generateBuildInfo();
-	await generateApiSpecIndex();
-	await generateConsoleCatalog();
-	await generateBundle();
 	try {
+		await fs.mkdir(binariesDir, { recursive: true });
+		await generateBuildInfo();
+		await generateApiSpecIndex();
+		await generateConsoleCatalog();
+		await generateDocumentationIndex();
+		await generateBundle();
 		for (const target of targets) {
 			await buildBinary(target);
 		}

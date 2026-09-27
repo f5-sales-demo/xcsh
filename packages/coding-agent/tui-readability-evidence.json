@@ -552,14 +552,14 @@
       "30d1b9e8"
     ],
     "packages/coding-agent/src/tools/grep.ts": [
-      "72feb372",
-      "9b7fafba",
-      "40700b77",
-      "b45a3db0",
-      "f9a35f42",
-      "d5fb7401",
-      "f5704388",
-      "77a52931"
+      "ba6b7e61",
+      "ef9cf378",
+      "27dc1cb3",
+      "b4f0fe8e",
+      "0e5b49f6",
+      "369aa2e2",
+      "3fb6f6b1",
+      "4fef121d"
     ],
     "packages/coding-agent/src/tools/json-tree.ts": [
       "32373954",
@@ -2315,13 +2315,13 @@
     },
     {
       "file": "packages/coding-agent/src/tools/grep.ts",
-      "line": 631,
+      "line": 634,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/grep.ts",
-      "line": 735,
+      "line": 738,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },

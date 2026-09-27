@@ -163,6 +163,9 @@ export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 						throw new ToolError(`Glob patterns are not supported for internal URLs: ${rawPath}`);
 					}
 					const resource = await internalRouter.resolve(rawPath);
+					if (resource.encoding === "base64" || resource.contentType.startsWith("image/")) {
+						throw new ToolError(`Cannot grep binary internal resource: ${rawPath}`);
+					}
 					const diskPath =
 						resource.sourcePath && !resource.sourcePath.includes("://") ? resource.sourcePath : undefined;
 					if (diskPath && (await Bun.file(diskPath).exists())) {

@@ -232,24 +232,32 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("not an assumed set");
 	});
 
-	test("system-prompt routes F5 XC product and ecosystem questions through the llms.txt hierarchy", async () => {
+	test("system-prompt routes product knowledge through offline documentation before disclosed live fallback", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
 		expect(template).toContain("# Product and ecosystem knowledge");
+		expect(template).toContain("xcsh://documentation/?search=<query>");
+		expect(template).toContain("read the exact");
+		expect(template).toContain("`xcsh://documentation/<source>/<stable-path>/index.md` result");
+		expect(template).toContain("stale, missing, or the QMD lookup fails");
+		expect(template).toContain("disclose that condition before using the live");
 		expect(template).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
-		expect(template).toContain("F5 Distributed Cloud product and ecosystem questions");
-		expect(template).toContain("developer tooling, GitHub Actions, automation, and CI/CD");
-		expect(template).toContain("live knowledge index");
+		expect(template).toContain("conceptual, product, operational, or support questions about F5 Distributed Cloud");
+		expect(template).toContain("fallback knowledge index");
 		expect(template).toContain("https://f5-sales-demo.github.io/xcsh-action/llms.txt");
 		expect(template).toContain("prefer\n`f5-sales-demo/xcsh-action`");
 		expect(template).toContain("direct xcsh CLI shell commands");
 		expect(template).toContain("## Routing discipline");
-		expect(template).toContain("MUST NOT** web-search for F5 XC product or ecosystem information");
+		expect(template).toContain("MUST NOT** use the live `llms.txt` hierarchy or web search");
+		expect(template).toContain("API metadata routed through the deterministic internal preflight");
 		expect(template).toContain("rule://llms-search");
 
 		const rulePath = path.resolve(import.meta.dir, "../src/prompts/rules/llms-search.md");
 		const ruleText = await Bun.file(rulePath).text();
 		expect(ruleText).toContain("Follow `## Contents` links recursively");
+		expect(ruleText).toContain("search `xcsh://documentation/?search=<query>` first");
+		expect(ruleText).toContain("read its exact follow-up URL");
+		expect(ruleText).toContain("disclose why the pinned snapshot is stale, missing, or unavailable");
 		expect(ruleText).toContain("Stop at the narrowest source that answers the question");
 		expect(ruleText).toContain("Multi-site questions");
 		expect(ruleText).toContain("xcsh-action");

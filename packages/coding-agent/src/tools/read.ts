@@ -41,7 +41,12 @@ import { renderCodeCell, renderStatusLine } from "../tui";
 import { CachedOutputBlock } from "../tui/output-block";
 import { resolveEditMode } from "../utils/edit-mode";
 import { resolveFileDisplayMode } from "../utils/file-display-mode";
-import { ImageInputTooLargeError, loadImageInput, MAX_IMAGE_INPUT_BYTES } from "../utils/image-loading";
+import {
+	ensureSupportedImageInput,
+	ImageInputTooLargeError,
+	loadImageInput,
+	MAX_IMAGE_INPUT_BYTES,
+} from "../utils/image-loading";
 import { convertFileWithMarkit } from "../utils/markit";
 import { type ArchiveReader, openArchive, parseArchivePathCandidates } from "./archive-reader";
 import {
@@ -1361,6 +1366,24 @@ export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 		// Resolve the internal URL
 		const resource = await internalRouter.resolve(url);
 		const details: ReadToolDetails = { resolvedPath: resource.sourcePath };
+		if (resource.encoding === "base64") {
+			if (!resource.contentType.startsWith("image/")) {
+				throw new ToolError(`Unsupported binary internal resource: ${resource.contentType}`);
+			}
+			if (offset !== undefined || limit !== undefined) {
+				throw new ToolError("Cannot paginate a binary internal resource");
+			}
+			const image = await ensureSupportedImageInput({
+				type: "image",
+				data: resource.content,
+				mimeType: resource.contentType,
+			});
+			if (!image) throw new ToolError(`Unsupported image resource: ${resource.contentType}`);
+			return toolResult(details)
+				.content([{ type: "text", text: `Read image resource [${image.mimeType}]` }, image])
+				.sourceInternal(url)
+				.done();
+		}
 
 		// If extraction was used, return directly (no pagination)
 		if (hasExtraction) {

@@ -1,7 +1,17 @@
-# Documentation Lookup Hierarchy (llms.txt Cascade)
+# Documentation Lookup Hierarchy (Offline QMD First)
 
-Use this progressive cascade for conceptual and operational F5 XC product, developer-tool, automation, lab, and documentation-platform questions.
-For API paths, methods, payload fields, required status, enums, and constraints, use the deterministic `api-catalog-preflight` result followed by exact `xcsh://api-catalog/` and `xcsh://api-spec/` reads first. Use this cascade only to supplement missing conceptual or operational guidance:
+For conceptual, product, operational, and support questions, search `xcsh://documentation/?search=<query>` first.
+Select the best result and read its exact follow-up URL,
+`xcsh://documentation/<source>/<stable-path>/index.md`, before answering. Use the source filter when the question
+clearly targets `docs-cloud-f5-com` or `my-f5-com`.
+
+For API paths, methods, payload fields, required status, enums, and constraints, use the deterministic
+`api-catalog-preflight` result followed by exact `xcsh://api-catalog/` and `xcsh://api-spec/` reads first.
+Do not route API metadata through the documentation QMD index.
+
+Use the live cascade below only when the pinned documentation is stale or missing the required content, or when
+the QMD lookup fails. You **MUST** disclose why the pinned snapshot is stale, missing, or unavailable before the
+first live lookup:
 
 1. **Federation index** — Read `https://f5-sales-demo.github.io/docs/llms.txt` and select the relevant categorized site.
 2. **Site index** — Read that site's `llms.txt`; use its Documentation Sets, Sections, and Translations links as published.

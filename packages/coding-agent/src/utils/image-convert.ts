@@ -14,6 +14,13 @@ export async function convertToPng(
 	}
 
 	try {
+		if (mimeType === "image/svg+xml") {
+			const { renderSvg } = await import("./svg-convert");
+			return {
+				data: Buffer.from(await renderSvg(base64Data)).toBase64(),
+				mimeType: "image/png",
+			};
+		}
 		const pngBuffer = await imagePipeline(Buffer.from(base64Data, "base64")).png().bytes();
 		return {
 			data: Buffer.from(pngBuffer).toBase64(),

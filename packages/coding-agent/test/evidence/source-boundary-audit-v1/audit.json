@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "bd246adad7b352aab1a6759f94f65c1dafe58e72",
-  "fingerprint": "2f13d49d44e2d599fa5bf56fd855fa9a3304c96d083a16b1d9bb6ddb8358747d",
+  "revision": "451f23cf1d6d936ea9ac4ee1ff916e185b831faf",
+  "fingerprint": "fba66c7cf7030f16e9f514be085372d8d01b23789727cad2b385780fae188579",
   "counts": {
     "total": 242,
     "components": 97,
@@ -354,11 +354,11 @@
         "packages/coding-agent/test/discovery/helpers.test.ts",
         "packages/coding-agent/test/edit-diff.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
+        "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
         "packages/coding-agent/test/join-patch.test.ts",
         "packages/coding-agent/test/marketplace/recommended.test.ts",
         "packages/coding-agent/test/model-registry.test.ts",
-        "packages/coding-agent/test/model-selector-openai-codex.test.ts",
-        "packages/coding-agent/test/model-selector-role-badge-thinking.test.ts"
+        "packages/coding-agent/test/model-selector-openai-codex.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5127,7 +5127,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "72feb3729b7fafba40700b77b45a3db0f9a35f42d5fb7401f570438877a52931",
+      "sha256": "ba6b7e61ef9cf37827dc1cb3b4f0fe8e0e5b49f6369aa2e23fb6f6b14fef121d",
       "exports": [
         "GrepTool",
         "GrepToolDetails",
@@ -5289,7 +5289,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "ec88ea0fbba3561278305af34be5722f385fc84460718934d0246b9c370ae8ff",
+      "sha256": "18ecd72a5ed630753c44e201edf84531e0c3cabc82278650bb196b7fb28cb814",
       "exports": [
         "ReadTool",
         "ReadToolDetails",
@@ -6251,10 +6251,10 @@
         "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/changes-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/console-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/local-protocol.test.ts",
-        "packages/coding-agent/test/internal-urls/memory-protocol.test.ts",
-        "packages/coding-agent/test/internal-urls/skill-protocol.test.ts"
+        "packages/coding-agent/test/internal-urls/documentation-repository.test.ts",
+        "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
+        "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
+        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
