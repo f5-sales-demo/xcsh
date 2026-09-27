@@ -6,6 +6,10 @@
 	"workspaces": [
 		"packages/*"
 	],
+	"trustedDependencies": [
+		"puppeteer",
+		"tree-sitter-typescript"
+	],
 	"scripts": {
 		"install:dev": "bun install && bun --cwd=packages/coding-agent link && bun --cwd=packages/ai link && bun run ensure:dependencies",
 		"check:dependencies": "bun scripts/check-installed-dependencies.ts",
