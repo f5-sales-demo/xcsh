@@ -16,6 +16,7 @@ export const NATIVE_LIFECYCLE_SCENARIOS = [
 	"cancel",
 	"managed-cancel",
 	"managed-working-cancel",
+	"local-operation-failure",
 	"reply-loss-replay",
 ] as const;
 export type NativeLifecycleScenario = (typeof NATIVE_LIFECYCLE_SCENARIOS)[number];
@@ -45,7 +46,11 @@ export function nativeLifecycleChildArgv(options: NativeLifecycleChildOptions): 
 		"--tools",
 		options.tools,
 		...(options.resume !== undefined
-			? ["--resume", options.resume, ...(options.prompt ? [options.prompt] : [])]
+			? [
+					"--resume",
+					options.resume,
+					...(options.prompt ? (options.interactive ? [options.prompt] : ["--print", options.prompt]) : []),
+				]
 			: options.interactive
 				? [options.prompt]
 				: ["--print", options.prompt]),
@@ -71,9 +76,24 @@ export function nativeLifecycleContract(): Record<string, unknown> {
 			cancel: "PtySession.interrupt() sends SIGINT to the native child process group",
 			managed_cancel:
 				"protocol 27 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
-			await_user: "--native-lifecycle-control await-user uses the interactive ExtensionUiController",
+			await_user_v1: "--native-lifecycle-control await_user_v1 uses the ordinary interactive ExtensionUIController",
+			local_operation_failure_v1:
+				"--native-lifecycle-control local_operation_failure_v1 performs an owned missing-file read and propagates its native ENOENT failure",
 			continuation: "write the continuation and Enter to the same native PTY",
 			replay: "restart --resume <exact-session-path> with the same authenticated binding",
+		},
+		native_launch_mapping: {
+			managed_turn_v1: { argv: [], backend_contract: "protocol-27 v3 current" },
+			await_user_v1: {
+				argv: ["--native-lifecycle-control", "await_user_v1"],
+				requires: { interactive: true },
+				backend_contract: "typed lifecycle_mode extension required",
+			},
+			local_operation_failure_v1: {
+				argv: ["--native-lifecycle-control", "local_operation_failure_v1"],
+				requires: { interactive: false },
+				backend_contract: "typed lifecycle_mode extension required",
+			},
 		},
 		reporter: {
 			protocol: HERDR_PROTOCOL_MAX_VERSION,

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as path from "node:path";
 import { Agent, type AgentTool } from "@f5-sales-demo/pi-agent-core";
 import { type AssistantMessage, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
@@ -7,6 +7,8 @@ import { TempDir } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
+import { NativeLifecycleLocalOperationError } from "../src/extensibility/extensions/bundled/native-lifecycle-control";
+import type { ExtensionRunner } from "../src/extensibility/extensions/runner";
 import { AgentSession, type AgentSessionEvent } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
@@ -171,5 +173,56 @@ describe("AgentSession normalized turn phases", () => {
 		finishOrdinaryAgentEnd.resolve();
 		await prompt;
 		expect(JSON.stringify(phases)).not.toContain("PRIVATE_");
+	});
+
+	it("does not reject a failed prompt before queued lifecycle consumers settle", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini");
+		if (!model) throw new Error("Expected bundled OpenAI test model");
+		tempDir = TempDir.createSync("@pi-turn-failure-phase-");
+		authStorage = await AuthStorage.create(path.join(tempDir.path(), "auth.db"));
+		authStorage.setRuntimeApiKey(model.provider, "test-key");
+
+		const failureObserved = Promise.withResolvers<void>();
+		const finishFailureConsumer = Promise.withResolvers<void>();
+		const extensionRunner = {
+			emitBeforeAgentStart: vi.fn(async () => {
+				throw new NativeLifecycleLocalOperationError(new Error("owned operation failed"));
+			}),
+			emit: vi.fn(async (event: AgentSessionEvent) => {
+				if (event.type !== "turn_phase" || event.phase !== "error") return;
+				failureObserved.resolve();
+				await finishFailureConsumer.promise;
+			}),
+		} as unknown as ExtensionRunner;
+		const agent = new Agent({
+			getApiKey: () => "test-key",
+			initialState: { model, systemPrompt: "Test", tools: [], messages: [] },
+			streamFn: () => {
+				throw new Error("model must not run after the local operation fails");
+			},
+		});
+		session = new AgentSession({
+			agent,
+			sessionManager: SessionManager.inMemory(),
+			settings: Settings.isolated({ "compaction.enabled": false }),
+			modelRegistry: new ModelRegistry(authStorage),
+			extensionRunner,
+		});
+
+		let promptSettled = false;
+		const outcome = session
+			.prompt("trigger owned operation")
+			.then(
+				() => ({ error: undefined }),
+				error => ({ error }),
+			)
+			.finally(() => {
+				promptSettled = true;
+			});
+		await failureObserved.promise;
+		await Bun.sleep(0);
+		expect(promptSettled).toBe(false);
+		finishFailureConsumer.resolve();
+		expect((await outcome).error).toBeInstanceOf(NativeLifecycleLocalOperationError);
 	});
 });

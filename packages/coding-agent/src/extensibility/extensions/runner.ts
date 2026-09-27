@@ -11,6 +11,7 @@ import type { IntegrationHandle } from "../../integrations/types";
 import { type Theme, theme } from "../../modes/theme/theme";
 import { personProfileService } from "../../person-profile/service";
 import type { SessionManager } from "../../session/session-manager";
+import { NativeLifecycleLocalOperationError } from "./bundled/native-lifecycle-control";
 import type {
 	BeforeAgentStartEvent,
 	BeforeAgentStartEventResult,
@@ -599,6 +600,7 @@ export class ExtensionRunner {
 						result = handlerResult as SessionCompactingResult;
 					}
 				} catch (err) {
+					if (err instanceof NativeLifecycleLocalOperationError) throw err;
 					const message = err instanceof Error ? err.message : String(err);
 					const stack = err instanceof Error ? err.stack : undefined;
 					this.emitError({
