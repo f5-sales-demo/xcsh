@@ -168,6 +168,8 @@ describe("system Handlebars prompt templates", () => {
 		expect(withInspectImage).toContain("### Image inspection");
 		expect(withInspectImage).toContain("**MUST** use `inspect_image` over `read`");
 		expect(withInspectImage).toContain("Write a specific `question` for `inspect_image`");
+		expect(withInspectImage).toContain("Documentation images are the exception");
+		expect(withInspectImage).toContain("exact `xcsh://documentation/` asset URI with `read`");
 
 		const withoutInspectImage = prompt.render(template, {
 			...baseRenderContext,
@@ -263,6 +265,16 @@ describe("system Handlebars prompt templates", () => {
 		expect(ruleText).toContain("xcsh-action");
 		expect(ruleText).toContain("fall back to English and disclose that fallback");
 		expect(ruleText).toContain("Web search re-entry");
+		expect(ruleText).toContain("only when the user explicitly asks to see them");
+		expect(ruleText).toContain("unique Markdown image references");
+		expect(ruleText).toContain("one at a time in document order");
+		expect(ruleText).toContain("caption and nearby prose");
+
+		const displayMediaPath = path.resolve(import.meta.dir, "../src/prompts/tools/display-media.md");
+		const displayMediaText = await Bun.file(displayMediaPath).text();
+		expect(displayMediaText).toContain("`xcsh://documentation/<source>/<stable-path>/assets/<filename>`");
+		expect(displayMediaText).toContain("use `read`");
+		expect(displayMediaText).toContain("not timelines");
 	});
 
 	test("system-prompt requires the platform catalog before ambiguous cloud-provider routing (issues #3614, #3656)", async () => {

@@ -20,6 +20,7 @@ import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { 
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
 import documentationAnswerMissingPrompt from "./prompts/documentation-answer-missing.md" with { type: "text" };
 import documentationAnswerWafPrompt from "./prompts/documentation-answer-waf.md" with { type: "text" };
+import documentationMediaCsdPrompt from "./prompts/documentation-media-csd.md" with { type: "text" };
 import documentationMultiTurnDnsPrompt from "./prompts/documentation-multi-turn-dns.md" with { type: "text" };
 import documentationToolsDisabledPrompt from "./prompts/documentation-tools-disabled.md" with { type: "text" };
 import modelPingPrompt from "./prompts/model-ping.md" with { type: "text" };
@@ -80,6 +81,8 @@ export interface ModelScenarioContract {
 	knowledgeSequenceStartsAtFirst?: boolean;
 	/** Permit read calls with `sel` to continue an already-authorized required resource. */
 	allowReadContinuations?: boolean;
+	/** Require the exact number of successful ImageContent blocks returned by tools. */
+	requiredImageContentCount?: number;
 	exclusiveTools?: boolean;
 }
 
@@ -454,6 +457,113 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			},
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "documentation-media-csd",
+		label: "Offline documentation ordered screenshots",
+		suite: "documentation",
+		tier: 2,
+		prompt: documentationMediaCsdPrompt.trim(),
+		contract: {},
+		quality: EXACT_CONTRACT_QUALITY,
+		turns: [
+			{
+				id: "summary",
+				prompt: documentationMediaCsdPrompt.trim(),
+				contract: {
+					requiredTools: [
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/?search=configure%20client-side%20defense&source=docs-cloud-f5-com&limit=1",
+							},
+						},
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/docs-cloud-f5-com/client-side-defense/how-tos/configure-csd/index.md",
+							},
+						},
+					],
+					requiredToolSequence: [
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/?search=configure%20client-side%20defense&source=docs-cloud-f5-com&limit=1",
+							},
+						},
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/docs-cloud-f5-com/client-side-defense/how-tos/configure-csd/index.md",
+							},
+						},
+					],
+					exclusiveTools: true,
+					requiredResponsePatterns: [
+						{ label: "summarizes Client-Side Defense configuration", pattern: /Client-Side Defense|\bCSD\b/i },
+					],
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+			{
+				id: "screenshots",
+				prompt: "Show me any screenshots",
+				contract: {
+					requiredTools: [
+						...[
+							"9f920f51152fbc0aa0e3aef7c64730ba1948f40ee21921ea2cd3bf3bb1656ba7.png",
+							"7cf9eb0ce4e3cf9f20fc479327dfec379c0f73a323187bed461dba02eb0815bd.png",
+							"e83baeb148c2ff41847952981faf512bfb8b5c470ce6562aa425408549274183.png",
+							"e2db8922b14530dafe30e1fbce10e3c46e73736456225dd39643006815de6fc8.png",
+							"8ce8c0a99658588a1a404555e2b7f7fd95fc56279c193725fc3cfe4d53987606.png",
+							"13e5844f8cefe7d79bf6951ee7d6af9b3c11300c68c21a83641f1dc3f37f6912.png",
+						].map(filename => ({
+							name: "read",
+							count: 1,
+							arguments: {
+								path: `xcsh://documentation/docs-cloud-f5-com/client-side-defense/how-tos/configure-csd/assets/${filename}`,
+							},
+						})),
+					],
+					requiredToolSequence: [
+						...[
+							"9f920f51152fbc0aa0e3aef7c64730ba1948f40ee21921ea2cd3bf3bb1656ba7.png",
+							"7cf9eb0ce4e3cf9f20fc479327dfec379c0f73a323187bed461dba02eb0815bd.png",
+							"e83baeb148c2ff41847952981faf512bfb8b5c470ce6562aa425408549274183.png",
+							"e2db8922b14530dafe30e1fbce10e3c46e73736456225dd39643006815de6fc8.png",
+							"8ce8c0a99658588a1a404555e2b7f7fd95fc56279c193725fc3cfe4d53987606.png",
+							"13e5844f8cefe7d79bf6951ee7d6af9b3c11300c68c21a83641f1dc3f37f6912.png",
+						].map(filename => ({
+							name: "read",
+							count: 1,
+							arguments: {
+								path: `xcsh://documentation/docs-cloud-f5-com/client-side-defense/how-tos/configure-csd/assets/${filename}`,
+							},
+						})),
+					],
+					requiredImageContentCount: 6,
+					exclusiveTools: true,
+					requiredResponsePatterns: [
+						{
+							label: "presents all official captions in document order",
+							pattern: /Figure: Script List[\s\S]*Figure: Protect a Root Domain[\s\S]*Figure: Enable Client-Side Defense on an HTTP Load Balancer[\s\S]*Figure: Configure a Domain Matcher[\s\S]*Figure: Configure a Path Matcher[\s\S]*Figure: Configure JavaScript Insertion/i,
+						},
+					],
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+		],
+		runtime: {
+			tools: ["read", "display_media", "inspect_image"],
+			extensions: "none",
+			skills: "none",
+			requiresContext: false,
+		},
 	},
 	{
 		id: "api-catalog-known-resource",

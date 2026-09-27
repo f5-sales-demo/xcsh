@@ -5,6 +5,13 @@ Select the best result and read its exact follow-up URL,
 `xcsh://documentation/<source>/<stable-path>/index.md`, before answering. Use the source filter when the question
 clearly targets `docs-cloud-f5-com` or `my-f5-com`.
 
+Render documentation images only when the user explicitly asks to see them. Extract all unique Markdown image references
+from the exact document, resolve relative references against its exact `xcsh://documentation/` URI, and
+read each asset one at a time in document order. Static screenshot collections are not timelines or slideshows.
+Pair every returned image with its official caption and one conservative explanation grounded in the image, its
+caption, and nearby prose. If pixels are unavailable, use only the caption and nearby prose without inventing visual
+details. Documentation assets use `read`, even when generic image-inspection guidance prefers `inspect_image`.
+
 For API paths, methods, payload fields, required status, enums, and constraints, use the deterministic
 `api-catalog-preflight` result followed by exact `xcsh://api-catalog/` and `xcsh://api-spec/` reads first.
 Do not route API metadata through the documentation QMD index.
