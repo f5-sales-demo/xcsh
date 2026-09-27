@@ -182,9 +182,10 @@ test("CI reuses source-bound Linux natives and aggregates independent TypeScript
 	const source = await Bun.file(path.join(WORKFLOW_ROOT, "ci.yml")).text();
 	const workflow = parse(source) as WorkflowDocument;
 
-	expect(workflow.jobs?.["test-typescript"]?.needs).toBe("assemble-native-linux-x64");
+	expect(workflow.jobs?.["test-typescript-independent"]?.needs).toBeUndefined();
+	expect(workflow.jobs?.["test-typescript-native"]?.needs).toBe("assemble-native-linux-x64");
 	expect(workflow.jobs?.["test-rust"]?.needs).toBeUndefined();
-	expect(workflow.jobs?.test?.needs).toEqual(["test-typescript", "test-rust"]);
+	expect(workflow.jobs?.test?.needs).toEqual(["test-typescript-independent", "test-typescript-native", "test-rust"]);
 	expect(source).toContain("native-manifest.json");
 	expect(source).toContain("ci-native-manifest.ts verify");
 	expect(source).not.toContain("sudo apt-get install --yes --no-install-recommends llvm");
@@ -201,6 +202,11 @@ test("Docker consumers use the container pool and every trust gate is socketless
 	for (const workflow of workflows) {
 		for (const [jobId, job] of Object.entries(workflow.document.jobs ?? {})) {
 			const location = `${workflow.path}:${jobId}`;
+			if (location === ".github/workflows/container.yml:publish-ghcr-arm64") {
+				dockerConsumers.push(location);
+				expect(job["runs-on"], location).toBe("ubuntu-24.04-arm");
+				continue;
+			}
 			if (jobId === "trust-gate") {
 				trustGates.push(location);
 				expect(job["runs-on"], location).toBe("xcsh-socketless");
@@ -220,6 +226,8 @@ test("Docker consumers use the container pool and every trust gate is socketless
 	]);
 	expect(dockerConsumers).toContain(".github/workflows/ci.yml:verify-npm-debian");
 	expect(dockerConsumers).toContain(".github/workflows/container.yml:container-build");
+	expect(dockerConsumers).toContain(".github/workflows/container.yml:publish-ghcr-amd64");
+	expect(dockerConsumers).toContain(".github/workflows/container.yml:publish-ghcr-arm64");
 	expect(dockerConsumers).toContain(".github/workflows/container.yml:publish-ghcr");
 	expect(dockerConsumers).toContain(".github/workflows/self-hosted-runner-cache-smoke.yml:container-build-smoke");
 	expect(dockerConsumers).toContain(".github/workflows/arc-compatibility.yml:container");
@@ -274,7 +282,9 @@ test("release Docker jobs remain tag-only and preserve their release dependencie
 	const ciWorkflow = parse(await Bun.file(path.join(WORKFLOW_ROOT, "ci.yml")).text()) as WorkflowDocument;
 
 	expect(containerWorkflow.jobs?.["publish-ghcr"]?.if).toBe(releaseCondition);
-	expect(containerWorkflow.jobs?.["publish-ghcr"]?.needs).toEqual(["container-test"]);
+	expect(containerWorkflow.jobs?.["publish-ghcr"]?.needs).toEqual(["publish-ghcr-amd64", "publish-ghcr-arm64"]);
+	expect(containerWorkflow.jobs?.["publish-ghcr-amd64"]?.needs).toEqual(["container-test"]);
+	expect(containerWorkflow.jobs?.["publish-ghcr-arm64"]?.needs).toEqual(["container-test"]);
 	expect(ciWorkflow.jobs?.["trust-gate"]?.if).toBe(releaseCondition);
 	expect(ciWorkflow.jobs?.["trust-gate"]?.needs).toBe("verify-npm-install");
 	expect(ciWorkflow.jobs?.["verify-npm-debian"]?.if).toBe(releaseCondition);
