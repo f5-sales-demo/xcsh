@@ -42,6 +42,8 @@
 
 ### Changed
 
+- Standardized executable updates on `xcsh self-update`; `xcsh update` is now reserved for strict manifest resource updates ([#4487](https://github.com/f5-sales-demo/xcsh/issues/4487)).
+
 - Added `power.sleepPrevention` with an `idle` default and cumulative `off`, `idle`, `display`, and
   `system` modes for session-scoped sleep prevention on macOS, Linux, and Windows
   ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).

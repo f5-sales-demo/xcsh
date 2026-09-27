@@ -157,7 +157,7 @@ function recommendationFor(channel: Exclude<InstallChannel, "unknown">, evidence
 				evidence,
 			};
 		case "standalone":
-			return { channel, action: "self-update", command: "xcsh update", evidence };
+			return { channel, action: "self-update", command: "xcsh self-update", evidence };
 		case "windows-installer":
 			return { channel, action: "external-command", command: WINDOWS_INSTALL_COMMAND, evidence };
 	}
@@ -270,7 +270,7 @@ export function formatUpdateRecommendation(recommendation: UpdateRecommendation)
 		case "managed":
 			return "Managed by your organization; request an MDM deployment.\nNo update was performed.";
 		case "self-update":
-			return "This official standalone installation can update itself with: xcsh update";
+			return "This official standalone installation can update itself with: xcsh self-update";
 		case "blocked":
 			return `Update blocked: ${recommendation.evidence}. Reinstall using the documented installation channel that owns this executable.`;
 	}
@@ -280,7 +280,7 @@ export function formatStartupUpdateNotice(version: string, recommendation: Updat
 	const prefix = `Update available: v${version} — `;
 	if (recommendation.action === "external-command") return `${prefix}run: ${recommendation.command}`;
 	if (recommendation.action === "managed") return `${prefix}managed by your organization; request an MDM deployment`;
-	if (recommendation.action === "self-update") return `${prefix}run: xcsh update`;
+	if (recommendation.action === "self-update") return `${prefix}run: xcsh self-update`;
 	return `${prefix}update blocked: ${recommendation.evidence}`;
 }
 
