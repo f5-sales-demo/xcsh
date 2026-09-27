@@ -218,7 +218,10 @@ class CiCapacityContractTests(unittest.TestCase):
         )
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         self.assertNotIn('bun-version: "1.3', workflows)
-        self.assertIn("bun-1.4.2-${{ runner.os }}-${{ runner.arch }}", workflows)
+        self.assertIn(
+            "bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}",
+            workflows,
+        )
         self.assertNotIn("lookup-only:", workflows)
         self.assertIn("actions/cache/restore@", workflows)
         prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
@@ -227,6 +230,53 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn(
             "key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}",
             prime,
+        )
+
+    def test_bun_caches_are_isolated_by_runner_environment(self) -> None:
+        cache_keys: list[tuple[str, str]] = []
+        for path in WORKFLOWS.glob("*.yml"):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for index, line in enumerate(lines):
+                if line.strip() != "path: ~/.bun/install/cache":
+                    continue
+                key_line = next(
+                    (
+                        candidate.strip()
+                        for candidate in lines[index + 1 : index + 5]
+                        if candidate.strip().startswith("key: ")
+                    ),
+                    None,
+                )
+                self.assertIsNotNone(
+                    key_line,
+                    f"{path.relative_to(ROOT)}:{index + 1} has no Bun cache key",
+                )
+                cache_keys.append((str(path.relative_to(ROOT)), key_line or ""))
+
+        self.assertGreater(len(cache_keys), 0)
+        expected_prefix = (
+            "key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-"
+            "${{ runner.arch }}-"
+        )
+        expected_lock = "${{ hashFiles('**/bun.lock') }}"
+        for workflow, key in cache_keys:
+            self.assertTrue(
+                key.startswith(expected_prefix),
+                f"{workflow} can share a non-portable Bun cache across runner environments: {key}",
+            )
+            self.assertIn(expected_lock, key, f"{workflow} cache is not lock-pinned")
+
+    def test_bun_cache_prime_covers_both_linux_runner_environments(self) -> None:
+        prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
+        self.assertIn("runs-on: xcsh-socketless", prime)
+        self.assertIn("runs-on: ubuntu-24.04", prime)
+        self.assertEqual(2, prime.count("path: ~/.bun/install/cache"))
+        self.assertEqual(
+            2,
+            prime.count(
+                "key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-"
+                "${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}"
+            ),
         )
 
     def test_cache_smoke_is_path_scoped_or_manual(self) -> None:

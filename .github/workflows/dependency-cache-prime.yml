@@ -54,10 +54,34 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
-          key: bun-1.4.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
 
       - name: Install dependencies without lockfile drift
         run: bash scripts/ci-bun-install.sh
 
       - name: Populate Rust dependency cache
         run: cargo fetch --locked
+
+  prime-hosted-bun:
+    name: Prime exact hosted Bun cache
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun 1.4.2
+        uses: ./.github/actions/setup-bun
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+
+      - name: Restore and save exact hosted Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+
+      - name: Install dependencies without lockfile drift
+        run: bash scripts/ci-bun-install.sh

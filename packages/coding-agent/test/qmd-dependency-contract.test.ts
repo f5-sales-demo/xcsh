@@ -7,6 +7,24 @@ const qmdDatabaseModule = path.join(path.dirname(qmdEntrypoint), "db.js");
 const qmdStoreModule = path.join(path.dirname(qmdEntrypoint), "store.js");
 
 describe("QMD dependency patch", () => {
+	it("keeps QMD build-only so downstream CLI installs do not run unused native build scripts", async () => {
+		const codingAgentPackage = JSON.parse(
+			await readFile(path.resolve(import.meta.dir, "..", "package.json"), "utf8"),
+		) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+
+		expect(codingAgentPackage.dependencies?.["@tobilu/qmd"]).toBeUndefined();
+		expect(codingAgentPackage.devDependencies?.["@tobilu/qmd"]).toBe("2.8.3");
+	});
+
+	it("uses bundled better-sqlite3 binaries without running its node-gyp fallback", async () => {
+		const rootPackage = JSON.parse(
+			await readFile(path.resolve(import.meta.dir, "../../..", "package.json"), "utf8"),
+		) as { devDependencies?: Record<string, string>; trustedDependencies?: string[] };
+
+		expect(rootPackage.devDependencies?.["node-gyp"]).toBeUndefined();
+		expect(rootPackage.trustedDependencies).toEqual(["puppeteer", "tree-sitter-typescript"]);
+	});
+
 	it("keeps Bun on its embedded SQLite instead of selecting Homebrew SQLite", async () => {
 		const source = await readFile(qmdDatabaseModule, "utf8");
 

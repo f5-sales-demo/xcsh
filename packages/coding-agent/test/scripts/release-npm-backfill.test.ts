@@ -172,17 +172,17 @@ describe("release npm backfill publish semantics", () => {
 		expect(sleeps).toEqual([5, 10]);
 	});
 
-	it("allows registry visibility after the former default retry limit", async () => {
+	it("allows registry visibility after the previous 20-attempt bound", async () => {
 		let lookups = 0;
 		const attempts = await waitForRegistryVisibility("@f5-sales-demo/pi-agent-core", "21.0.0", {
 			lookup: async () => {
 				lookups++;
-				return lookups === 17 ? '"21.0.0"' : null;
+				return lookups === 21 ? '"21.0.0"' : null;
 			},
 			sleep: async () => {},
 		});
 
-		expect(attempts).toBe(17);
+		expect(attempts).toBe(21);
 	});
 
 	it("identifies the exact package and version on registry timeout", async () => {
@@ -193,6 +193,20 @@ describe("release npm backfill publish semantics", () => {
 				maxAttempts: 2,
 			}),
 		).rejects.toThrow("@f5-sales-demo/pi-agent-core@21.0.0");
+	});
+
+	it("keeps the extended registry visibility window finite", async () => {
+		let lookups = 0;
+		await expect(
+			waitForRegistryVisibility("@f5-sales-demo/pi-agent-core", "21.0.0", {
+				lookup: async () => {
+					lookups++;
+					return null;
+				},
+				sleep: async () => {},
+			}),
+		).rejects.toThrow("after 40 checks");
+		expect(lookups).toBe(40);
 	});
 
 	it("retries an exact staged-version conflict until it is visible", async () => {
