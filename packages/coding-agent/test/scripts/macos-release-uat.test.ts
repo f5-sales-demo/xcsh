@@ -208,6 +208,12 @@ describe("Homebrew immutable-baseline upgrade fixture", () => {
 });
 
 describe("published macOS UAT execution boundaries", () => {
+	it("validates the Homebrew QMD trace without requiring Bun in the no-sudo PATH", async () => {
+		const script = await fs.readFile(homebrewVerifier, "utf8");
+		expect(script).toContain('/usr/bin/python3 - "$output"');
+		expect(script).not.toContain("bun scripts/validate-qmd-smoke-output.ts");
+	});
+
 	it("runs the fixed QMD smoke through compiled, Homebrew, and MDM binaries", async () => {
 		const buildScript = await fs.readFile(
 			path.join(import.meta.dir, "../../../../scripts/ci-release-build-binaries.ts"),
@@ -220,7 +226,8 @@ describe("published macOS UAT execution boundaries", () => {
 			expect(source).toContain("XCSH_SMOKE_TEST_QMD");
 		}
 		expect(buildScript).toContain("parseQmdSmokeOutput");
-		for (const source of [pkgScript, homebrewScript]) expect(source).toContain("validate-qmd-smoke-output");
+		expect(pkgScript).toContain("validate-qmd-smoke-output");
+		expect(homebrewScript).toContain("validate_qmd_smoke_output");
 	});
 
 	it("validates the private MDM workspace through sudo", async () => {
