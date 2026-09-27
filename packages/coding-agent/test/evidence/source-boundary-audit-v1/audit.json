@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "451f23cf1d6d936ea9ac4ee1ff916e185b831faf",
-  "fingerprint": "fba66c7cf7030f16e9f514be085372d8d01b23789727cad2b385780fae188579",
+  "revision": "eee21a520cfe97141046e0eebbf49b774191e2b6",
+  "fingerprint": "80088a4bab3f2bea768784ab9a1db0c75f02445963248b34043dcc37bb64f745",
   "counts": {
     "total": 242,
     "components": 97,
@@ -541,7 +541,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "e17d92ed21643b19964132d6a776a84be36a3c748b18ecba5fedc7d520dbd234",
+      "sha256": "cd6e706a7bd499afac38e25a736d3eee66d0b0bd58dc801c507cc08dc372a9b9",
       "exports": [
         "BranchHandler",
         "ExtensionErrorListener",
@@ -562,6 +562,7 @@
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
+        "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/agent-session-user-shortcut-hooks.test.ts",
         "packages/coding-agent/test/browser/chat-handler.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
@@ -576,8 +577,7 @@
         "packages/coding-agent/test/fable-uat.test.ts",
         "packages/coding-agent/test/integration-registry.test.ts",
         "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
-        "packages/coding-agent/test/manager.int.test.ts",
-        "packages/coding-agent/test/mermaid-renderer.test.ts"
+        "packages/coding-agent/test/manager.int.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/runner.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1578,14 +1578,14 @@
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
+        "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/agent-session-user-shortcut-hooks.test.ts",
         "packages/coding-agent/test/args.test.ts",
         "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/bench-instant-extension.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts",
-        "packages/coding-agent/test/browser/dt-context.test.ts"
+        "packages/coding-agent/test/browser/chat-conformance.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/types.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3348,7 +3348,6 @@
       "directTests": [
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
-        "packages/coding-agent/test/native-lifecycle-acceptance.test.ts",
         "packages/coding-agent/test/remote-control/interaction-host.test.ts",
         "packages/coding-agent/test/reviewed-action-dialog.test.ts"
       ],
