@@ -17,6 +17,7 @@
  * - xcsh://api-spec/network-allowlist - Bounded F5 XC network allowlist inventory
  * - xcsh://api-catalog/ - API operation catalog
  * - xcsh://api-catalog/{category} - Category operations with curl templates
+ * - xcsh://documentation/ - Pinned offline F5 product and support documentation
  * - xcsh://terraform/ - Terraform provider index
  * - xcsh://terraform/{category} - Category resource list
  * - xcsh://terraform/{category}/{resource} - Self-contained resource doc
@@ -56,6 +57,16 @@ import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalo
 import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./console-field-metadata-types";
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
+import { EMBEDDED_DOCUMENTATION_ASSETS } from "./documentation-assets.generated";
+import {
+	createEmbeddedDocumentationRepository,
+	type EmbeddedDocumentationRepository,
+} from "./documentation-repository";
+import {
+	createDocumentationResolver,
+	type DocumentationRepository,
+	type DocumentationResolver,
+} from "./documentation-resolve";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
 import { EXTENSION_TOOL_REFERENCE } from "./extension-tools.generated";
 import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet-resolve";
@@ -70,6 +81,7 @@ const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
+const DOCUMENTATION_HOST = "documentation";
 const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
 const REGISTRY_HOST = "registry";
@@ -336,6 +348,7 @@ export interface InternalDocsProtocolOptions {
 	readonly getContainment?: () => ContainmentStatus | null;
 	readonly apiSpecResolver?: ApiSpecResolver;
 	readonly apiCatalogResolver?: ApiCatalogResolver;
+	readonly documentationRepository?: DocumentationRepository;
 	readonly getPluginRoots?: GetPluginRoots;
 	/** Injected so tests can classify without a git repo, a `gh` binary, or a network. */
 	readonly fleetDeps?: Partial<FleetDeps>;
@@ -351,6 +364,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly #getContainment: (() => ContainmentStatus | null) | undefined;
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
+	#documentationResolver: DocumentationResolver | null;
 	#terraformResolver: TerraformResolver | null;
 	#registryResolver: RegistryResolver | null = null;
 	#consoleResolver: ConsoleResolver | null = null;
@@ -373,6 +387,19 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#getContainment = options.getContainment;
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
 		this.#apiCatalogResolver = options.apiCatalogResolver ?? null;
+		const documentationRepository =
+			options.documentationRepository ??
+			(EMBEDDED_DOCUMENTATION_ASSETS
+				? createEmbeddedDocumentationRepository(EMBEDDED_DOCUMENTATION_ASSETS, {
+						cacheRoot: path.join(os.homedir(), ".xcsh", "cache", "documentation"),
+					})
+				: null);
+		this.#documentationResolver = documentationRepository
+			? createDocumentationResolver(documentationRepository)
+			: null;
+		if (documentationRepository && "prime" in documentationRepository) {
+			void (documentationRepository as EmbeddedDocumentationRepository).prime().catch(() => undefined);
+		}
 		this.#terraformResolver = null;
 		this.#getPluginRoots = options.getPluginRoots;
 		this.#fleetDeps = options.fleetDeps;
@@ -502,6 +529,11 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#getApiCatalogResolver().resolve(url);
 		}
 
+		if (host === DOCUMENTATION_HOST) {
+			if (!this.#documentationResolver) throw new Error("Embedded documentation is unavailable in this build");
+			return this.#documentationResolver.resolve(url);
+		}
+
 		if (host === CONSOLE_HOST) {
 			return this.#getConsoleResolver().resolve(url);
 		}
@@ -578,6 +610,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const fleetEntry = `- [${FLEET_HOST}](${SCHEME_PREFIX}${FLEET_HOST}) — this repository's class and what you may author here`;
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
+		const documentationEntry = `- [${DOCUMENTATION_HOST}/](${SCHEME_PREFIX}${DOCUMENTATION_HOST}/) — pinned offline F5 product and support documentation`;
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
 		const tf = loadTerraformIndex();
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
@@ -591,6 +624,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			fleetEntry,
 			apiSpecEntry,
 			apiCatalogEntry,
+			documentationEntry,
 			brandingEntry,
 			terraformEntry,
 			registryEntry,

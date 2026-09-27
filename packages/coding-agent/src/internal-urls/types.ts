@@ -11,10 +11,20 @@
 export interface InternalResource {
 	/** Canonical URL that was resolved */
 	url: string;
-	/** Resolved text content */
+	/** Resolved text content, or base64 bytes when encoding is base64. */
 	content: string;
-	/** MIME type: text/markdown, application/json, or text/plain */
-	contentType: "text/markdown" | "application/json" | "text/plain";
+	/** MIME type for text and supported image resources. */
+	contentType:
+		| "text/markdown"
+		| "application/json"
+		| "text/plain"
+		| "image/png"
+		| "image/jpeg"
+		| "image/gif"
+		| "image/webp"
+		| "image/svg+xml";
+	/** Present only for binary resources. */
+	encoding?: "base64";
 	/** Content size in bytes */
 	size?: number;
 	/** Underlying filesystem path (for debugging, not exposed to agent) */

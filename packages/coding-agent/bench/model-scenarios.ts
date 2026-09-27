@@ -99,7 +99,7 @@ function parseTarget(value: string): ModelBenchmarkTarget {
 }
 
 function parseSuite(value: string): ModelScenarioSuite | "all" {
-	if (["ping", "identity", "tools", "plugins", "authenticated", "integrations", "all"].includes(value)) {
+	if (["ping", "identity", "tools", "documentation", "plugins", "authenticated", "integrations", "all"].includes(value)) {
 		return value as ModelScenarioSuite | "all";
 	}
 	throw new Error(`Unknown suite: ${value}`);
@@ -179,7 +179,7 @@ function parseArgs(args: string[]): CliOptions {
 			index++;
 		} else if (argument === "--help" || argument === "-h") {
 			process.stdout.write(
-				"Usage: bun bench:model-scenarios [--suite identity|tools|plugins|authenticated|integrations|all] [--tier 0-5] [--thinking low|medium|high|xhigh|max|all] [--scenario ID] [--context NAME] [--runs N] [--warmups N] [--fail-fast-provider-error] [--model LABEL=PROVIDER/MODEL] [--binary PATH] [--out FILE]\n",
+				"Usage: bun bench:model-scenarios [--suite identity|tools|documentation|plugins|authenticated|integrations|all] [--tier 0-5] [--thinking low|medium|high|xhigh|max|all] [--scenario ID] [--context NAME] [--runs N] [--warmups N] [--fail-fast-provider-error] [--model LABEL=PROVIDER/MODEL] [--binary PATH] [--out FILE]\n",
 			);
 			process.exit(0);
 		} else {

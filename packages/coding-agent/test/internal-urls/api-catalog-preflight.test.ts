@@ -13,6 +13,12 @@ const resources: ApiCatalogPreflightResource[] = [
 		categories: ["http-loadbalancers"],
 	},
 	{ name: "origin_pool", aliases: ["origin pool"], domain: "virtual", categories: ["origin-pools"] },
+	{
+		name: "app_firewall",
+		aliases: ["web application firewall", "waf policy"],
+		domain: "virtual",
+		categories: ["app-firewalls"],
+	},
 	{ name: "dns_zone", aliases: ["dns zone"], domain: "dns", categories: ["dns-dns-zones"] },
 	{ name: "aws_vpc_site", aliases: ["aws vpc site"], domain: "site", categories: ["aws-vpc-sites"] },
 	{ name: "azure_vnet_site", aliases: ["azure vnet site"], domain: "site", categories: ["azure-vnet-sites"] },
@@ -126,6 +132,7 @@ describe("API catalog preflight", () => {
 		"What is the AWS Application Load Balancer API endpoint?",
 		"What endpoint creates an AWS origin pool?",
 		"What is the maximum number of routes in this unrelated proxy?",
+		"Use pinned documentation to configure a web application firewall. Read xcsh://documentation/?search=configure%20web%20application%20firewall&limit=1, then read the exact documentation result. Do not use the API catalog.",
 	])("does not preflight negative control: %s", prompt => {
 		expect(classifyApiCatalogPreflight(prompt, { toolsEnabled: true, resources })).toBeNull();
 	});

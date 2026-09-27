@@ -1,0 +1,1 @@
+Use only the `read` tool and pinned offline documentation. First read `xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1`, then read `xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md`. State the document title and source. Do not use the API catalog, live `llms.txt`, or web search.

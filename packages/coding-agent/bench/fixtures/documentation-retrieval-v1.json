@@ -1,0 +1,51 @@
+{
+	"schemaVersion": 1,
+	"seed": 4434,
+	"scenarios": [
+		{
+			"id": "docs-cloud-waf",
+			"query": "configure web application firewall",
+			"source": "docs-cloud-f5-com",
+			"expectedPath": "docs/how-to/app-security/web-app-firewall",
+			"maxRank": 1,
+			"liveUrl": "https://docs.cloud.f5.com/docs-v2/docs/how-to/app-security/web-app-firewall"
+		},
+		{
+			"id": "docs-cloud-dns",
+			"query": "set up DNS load balancer",
+			"source": "docs-cloud-f5-com",
+			"expectedPath": "dns-management/how-to/configure-dns-load-balancer",
+			"maxRank": 1,
+			"liveUrl": "https://docs.cloud.f5.com/docs-v2/dns-management/how-to/configure-dns-load-balancer"
+		},
+		{
+			"id": "myf5-errors",
+			"query": "common 5xx and 4xx error response codes",
+			"source": "my-f5-com",
+			"expectedPath": "K000146828",
+			"maxRank": 1,
+			"liveUrl": "https://my.f5.com/manage/s/article/K000146828"
+		},
+		{
+			"id": "myf5-safe-update",
+			"query": "safely update load balancer origin pool without disruption",
+			"source": "my-f5-com",
+			"expectedPath": "K000151087",
+			"maxRank": 1,
+			"liveUrl": "https://my.f5.com/manage/s/article/K000151087"
+		},
+		{
+			"id": "cross-source-ambiguity",
+			"query": "DNS load balancer",
+			"expectedPath": "dns-management/how-to/configure-dns-load-balancer",
+			"maxRank": 3,
+			"requiredSources": ["docs-cloud-f5-com", "my-f5-com"],
+			"liveUrl": "https://docs.cloud.f5.com/docs-v2/dns-management/how-to/configure-dns-load-balancer"
+		},
+		{
+			"id": "missing-content",
+			"query": "zzzxxyyqqqv",
+			"expectNoResults": true
+		}
+	]
+}

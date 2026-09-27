@@ -1,0 +1,1 @@
+What does the pinned offline F5 documentation say about configuring a web application firewall? No tools are available in this session. Do not answer from memory and do not use or claim live documentation; state that you cannot verify the answer without the offline documentation read tool.

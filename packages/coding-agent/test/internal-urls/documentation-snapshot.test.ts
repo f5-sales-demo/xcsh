@@ -79,7 +79,13 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 			body_sha256: sha256("# Protect Applications\n\nConfigure a load balancer and web application firewall.\n"),
 			file_sha256: sha256(docsCloud),
 			size_bytes: docsCloud.byteLength,
-			provenance: { freshness: "fresh" },
+			provenance: {
+				consecutive_failure_count: 0,
+				current_failure: null,
+				freshness: "fresh",
+				last_success_at: "2026-09-26T21:00:00Z",
+				terminal_confirmation_count: 0,
+			},
 		},
 		{
 			sourceId: "my-f5-com",
@@ -88,7 +94,13 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 			body_sha256: sha256("# Support Article\n\nTroubleshoot a certificate.\n"),
 			file_sha256: sha256(myF5),
 			size_bytes: myF5.byteLength,
-			provenance: { freshness: "fresh" },
+			provenance: {
+				consecutive_failure_count: 0,
+				current_failure: null,
+				freshness: "fresh",
+				last_success_at: "2026-09-26T21:00:00Z",
+				terminal_confirmation_count: 0,
+			},
 		},
 	];
 	const assets = [
@@ -222,6 +234,18 @@ describe("offline documentation release", () => {
 			documents[0]!.unexpected = true;
 		});
 		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("manifest document 0 has an invalid shape");
+	});
+
+	it("rejects array-shaped document failure provenance", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root, value => {
+			const documents = value.documents as Array<Record<string, unknown>>;
+			const provenance = documents[0]!.provenance as Record<string, unknown>;
+			provenance.current_failure = [];
+		});
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow(
+			"manifest document 0.current_failure is invalid",
+		);
 	});
 
 	it("verifies every archive member and generates byte-identical two-collection indexes", async () => {

@@ -32,7 +32,7 @@
 	},
 	"scripts": {
 		"prebuild": "bun ../../scripts/check-installed-dependencies.ts",
-		"build": "bun run generate-build-info && bun run generate-extension-capabilities && bun run generate-api-catalog-qmd-index && test -f src/internal-urls/api-spec-index.generated.ts && bun --cwd=../stats scripts/generate-client-bundle.ts --generate && bun --cwd=../office-pane scripts/generate-client-bundle.ts --generate && bun --cwd=../natives run embed:native && bun scripts/build-binary.ts && bun --cwd=../natives run embed:native --reset && bun --cwd=../stats scripts/generate-client-bundle.ts --reset && bun --cwd=../office-pane scripts/generate-client-bundle.ts --reset",
+		"build": "bun scripts/build-package.ts",
 		"precheck": "bun ../../scripts/check-installed-dependencies.ts",
 		"check": "biome check . && bun run format-prompts -- --check && bun run audit:tui-readability && bun run check:types",
 		"audit:tui-readability": "bun scripts/audit-tui-readability.ts --check",
@@ -53,6 +53,7 @@
 		"generate-docs-index": "bun scripts/generate-docs-index.ts",
 		"generate-api-spec-index": "bun scripts/generate-api-spec-index.ts",
 		"generate-api-catalog-qmd-index": "bun scripts/generate-api-catalog-qmd-index.ts",
+		"generate-documentation-index": "bun scripts/generate-documentation-index.ts",
 		"generate-branding-index": "bun scripts/generate-branding-index.ts",
 		"generate-sitecli-index": "bun scripts/generate-sitecli-index.ts",
 		"generate-build-info": "bun scripts/generate-build-info.ts",
@@ -74,6 +75,7 @@
 		"@f5-sales-demo/pi-utils": "workspace:*",
 		"@f5-sales-demo/xcsh-stats": "workspace:*",
 		"@mozilla/readability": "^0.6",
+		"@resvg/resvg-wasm": "2.6.2",
 		"@sinclair/typebox": "0.34.52",
 		"@tobilu/qmd": "2.8.3",
 		"@xterm/headless": "^6.0",
@@ -86,10 +88,12 @@
 		"lru-cache": "11.5.2",
 		"markit-ai": "0.5.3",
 		"puppeteer": "25.10.0",
+		"tar-stream": "3.1.7",
 		"yaml": "2.9.0"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.2",
+		"@types/tar-stream": "3.1.4",
 		"@xterm/addon-unicode11": "0.9.0",
 		"handlebars": "^4.7"
 	},

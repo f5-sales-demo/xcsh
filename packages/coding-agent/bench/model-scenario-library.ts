@@ -18,13 +18,24 @@ import apiFirstHttpRouteLimitPrompt from "./prompts/api-first-http-route-limit.m
 import apiFirstOriginPoolRequiredPrompt from "./prompts/api-first-origin-pool-required.md" with { type: "text" };
 import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { type: "text" };
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
+import documentationAnswerMissingPrompt from "./prompts/documentation-answer-missing.md" with { type: "text" };
+import documentationAnswerWafPrompt from "./prompts/documentation-answer-waf.md" with { type: "text" };
+import documentationMultiTurnDnsPrompt from "./prompts/documentation-multi-turn-dns.md" with { type: "text" };
+import documentationToolsDisabledPrompt from "./prompts/documentation-tools-disabled.md" with { type: "text" };
 import modelPingPrompt from "./prompts/model-ping.md" with { type: "text" };
 import pluginSkillPrompt from "./prompts/plugin-skill-probe.md" with { type: "text" };
 import pluginToolPrompt from "./prompts/plugin-tool-probe.md" with { type: "text" };
 import readToolPrompt from "./prompts/read-tool-probe.md" with { type: "text" };
 import userAssistancePrompt from "./prompts/user-assistance.md" with { type: "text" };
 
-export type ModelScenarioSuite = "ping" | "identity" | "tools" | "plugins" | "authenticated" | "integrations";
+export type ModelScenarioSuite =
+	| "ping"
+	| "identity"
+	| "tools"
+	| "documentation"
+	| "plugins"
+	| "authenticated"
+	| "integrations";
 
 export interface ModelScenarioToolExpectation {
 	name: string;
@@ -269,6 +280,179 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "documentation-answer-waf",
+		label: "Offline documentation exact WAF evidence",
+		suite: "documentation",
+		tier: 2,
+		prompt: documentationAnswerWafPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
+					},
+				},
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+					},
+				},
+			],
+			requiredToolSequence: [
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
+					},
+				},
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+					},
+				},
+			],
+			requiredKnowledgeSequence: [
+				{
+					type: "read",
+					path: "xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
+				},
+				{
+					type: "read",
+					path: "xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+				},
+			],
+			knowledgeSequenceStartsAtFirst: true,
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "states the exact document title", pattern: /Create Web Application Firewall/i },
+				{ label: "states the pinned source", pattern: /docs-cloud-f5-com/i },
+			],
+			forbiddenResponsePatterns: [
+				{ label: "does not substitute API metadata", pattern: /xcsh:\/\/api-(?:catalog|spec)/i },
+				{ label: "does not use live fallback", pattern: /llms\.txt/i },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "documentation-answer-missing",
+		label: "Offline documentation missing content",
+		suite: "documentation",
+		tier: 2,
+		prompt: documentationAnswerMissingPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{ name: "read", count: 1, arguments: { path: "xcsh://documentation/?search=zzzxxyyqqqv" } },
+			],
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "reports no matching pinned document", pattern: /no matching document|pinned snapshot has no match/i },
+			],
+			forbiddenResponsePatterns: [{ label: "does not use live fallback", pattern: /https?:\/\/|llms\.txt/i }],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "documentation-tools-disabled",
+		label: "Offline documentation with tools disabled",
+		suite: "documentation",
+		tier: 2,
+		prompt: documentationToolsDisabledPrompt.trim(),
+		contract: {
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "discloses that evidence cannot be verified", pattern: /can(?:not|'t|’t) verify|unable to verify/i },
+				{ label: "names the unavailable offline read path", pattern: /offline documentation|read tool/i },
+			],
+			forbiddenResponsePatterns: [{ label: "does not claim live evidence", pattern: /according to (?:the )?(?:live|current) documentation/i }],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: "none", extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "documentation-multi-turn-dns",
+		label: "Offline documentation multi-turn follow-up",
+		suite: "documentation",
+		tier: 2,
+		prompt: documentationMultiTurnDnsPrompt.trim(),
+		contract: {},
+		quality: EXACT_CONTRACT_QUALITY,
+		turns: [
+			{
+				id: "discover",
+				prompt: documentationMultiTurnDnsPrompt.trim(),
+				contract: {
+					requiredTools: [
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1",
+							},
+						},
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
+							},
+						},
+					],
+					requiredToolSequence: [
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1",
+							},
+						},
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
+							},
+						},
+					],
+					exclusiveTools: true,
+					requiredResponsePatterns: [{ label: "states the exact title", pattern: /Set Up DNS Load Balancer/i }],
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+			{
+				id: "follow-up",
+				prompt: "Which pinned source did you use? Re-read the exact document from the previous turn and answer with its xcsh:// URL and source name. Do not search again or use live documentation.",
+				contract: {
+					requiredTools: [
+						{
+							name: "read",
+							count: 1,
+							arguments: {
+								path: "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
+							},
+						},
+					],
+					exclusiveTools: true,
+					requiredResponsePatterns: [
+						{ label: "states the source", pattern: /docs-cloud-f5-com/i },
+						{ label: "states the exact URL", pattern: /xcsh:\/\/documentation\/docs-cloud-f5-com\/dns-management\/how-to\/configure-dns-load-balancer\/index\.md/i },
+					],
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{

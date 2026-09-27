@@ -4,6 +4,7 @@ import {
 	type DocumentationRepository,
 } from "../../src/internal-urls/documentation-resolve";
 import { InternalUrlRouter } from "../../src/internal-urls/router";
+import { InternalDocsProtocolHandler } from "../../src/internal-urls/xcsh-protocol";
 
 const markdown = "---\ntitle: Protect applications\n---\n\n# Protect applications\n\nConfigure a load balancer.\n";
 
@@ -20,7 +21,7 @@ function repository(): DocumentationRepository {
 		},
 		async search(query, source, limit) {
 			expect(query).toBe("protect applications");
-			expect(limit).toBe(5);
+			expect(limit).toBe(source === undefined ? 5 : 1);
 			const rows = [
 				{
 					title: "Protect applications",
@@ -70,6 +71,13 @@ function router(): InternalUrlRouter {
 }
 
 describe("xcsh://documentation", () => {
+	it("is wired through the default xcsh protocol handler", async () => {
+		const value = new InternalUrlRouter();
+		value.register(new InternalDocsProtocolHandler({ documentationRepository: repository() }));
+		const result = await value.resolve("xcsh://documentation/");
+		expect(result.content).toContain("# Offline F5 documentation");
+	});
+
 	it("renders bounded inventory and pinned provenance", async () => {
 		const result = await router().resolve("xcsh://documentation/");
 		expect(result.content).toContain("content-20260926T214508Z");

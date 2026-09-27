@@ -93,7 +93,7 @@ describe("End-to-End UAT Knowledge & Rule Protections", () => {
 		const resource = await router.resolve("rule://llms-search");
 
 		expect(resource.sourcePath).toBe("embedded:llms-search.md");
-		expect(resource.content).toContain("# Documentation Lookup Hierarchy (llms.txt Cascade)");
+		expect(resource.content).toContain("# Documentation Lookup Hierarchy (Offline QMD First)");
 		expect(resource.content).toContain("1. **Federation index**");
 		expect(resource.content).toContain("Follow `## Contents` links recursively");
 		expect(resource.content).toContain("f5-sales-demo/xcsh-action");
