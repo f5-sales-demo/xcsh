@@ -34,6 +34,11 @@ import { LAUNCH_FLAGS } from "./cli/flag-spec";
 import { buildInitialMessage } from "./cli/initial-message";
 import { listModels } from "./cli/list-models";
 import { selectSession } from "./cli/session-picker";
+import {
+	defaultInstallChannelDependencies,
+	getStartupUpdateNotice,
+	resolveInstallChannel,
+} from "./cli/update-recommendation";
 import { findConfigFile } from "./config";
 import { ModelRegistry, ModelsConfigFile } from "./config/model-registry";
 import { resolveCliModel, resolveModelRoleValue, resolveModelScope, type ScopedModel } from "./config/model-resolver";
@@ -178,8 +183,8 @@ async function runInteractiveMode(
 	// already up). If it never resolves, the update is available on demand via /plugins.
 	if (settings.get("startup.checkUpdate")) {
 		void versionCheckPromise
-			.then(latest => {
-				if (latest) mode.showStatus(`Update available: v${latest} — run: xcsh update`, { dim: true });
+			.then(notice => {
+				if (notice) mode.showStatus(notice, { dim: true });
 			})
 			.catch(() => {});
 	}
@@ -1097,7 +1102,10 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 	} else if (mode === "acp") {
 		await runAcpMode(session, createAcpSession);
 	} else if (isInteractive) {
-		const versionCheckPromise = checkForNewVersion(VERSION).catch(() => undefined);
+		const versionCheckPromise = getStartupUpdateNotice(VERSION, {
+			getLatestVersion: checkForNewVersion,
+			resolveRecommendation: () => resolveInstallChannel(defaultInstallChannelDependencies(VERSION)),
+		}).catch(() => undefined);
 
 		const scopedModelsForDisplay = sessionOptions.scopedModels ?? scopedModels;
 		if (scopedModelsForDisplay.length > 0) {

@@ -54,7 +54,7 @@ import { Aside, Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/compone
   curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
   ```
 
-  <p>It installs the latest prebuilt release into <code>~/.local/bin</code>. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
+  <p>It installs the latest prebuilt release into <code>~/.local/bin</code> with a provenance receipt. This is the only channel that <code>xcsh update</code> replaces in process. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
 </section>
 
 ## What xcsh helps you do
@@ -87,7 +87,7 @@ brew install --cask f5-sales-demo/tap/xcsh
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
 
-Upgrade with `brew upgrade --cask xcsh`. Remove the cask with `brew uninstall --cask xcsh`. These commands preserve configuration, credentials, and sessions under `~/.xcsh`.
+Upgrade with `brew upgrade --cask f5-sales-demo/tap/xcsh`. Remove the cask with `brew uninstall --cask xcsh`. `xcsh update` reports the tap-qualified command but never invokes Homebrew. These commands preserve configuration, credentials, and sessions under `~/.xcsh`.
 </details>
 
 <Aside type="caution" title="Clean break from the historical package cask">
@@ -116,7 +116,7 @@ sudo apt-get update && sudo apt-get install xcsh
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
 
-Upgrade with `sudo apt-get update && sudo apt-get install --only-upgrade xcsh`. Remove the package with `sudo apt-get remove xcsh`.
+Upgrade with `sudo apt-get update && sudo apt-get install --only-upgrade xcsh`. Remove the package with `sudo apt-get remove xcsh`. `xcsh update` reports this command when `dpkg-query` proves that package `xcsh` owns the running executable; it never invokes apt.
 </details>
 </TabItem>
 
@@ -132,7 +132,7 @@ It installs `xcsh.exe` and native add-ons to `%LOCALAPPDATA%\\xcsh`. **Bash is r
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
 
-Re-run the installer to upgrade. To uninstall, remove `%LOCALAPPDATA%\\xcsh` and its entry from the user `PATH`.
+Re-run the installer to upgrade. `xcsh update` reports the PowerShell installer command but does not replace a Windows installer-owned executable. To uninstall, remove `%LOCALAPPDATA%\\xcsh` and its entry from the user `PATH`.
 </details>
 </TabItem>
 
@@ -169,10 +169,17 @@ The explicit `--source` and `--ref` arguments select a reproducible source insta
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
 
-Upgrade with `bun update --global @f5-sales-demo/xcsh` or `npm update --global @f5-sales-demo/xcsh`. Remove the package with `bun remove --global @f5-sales-demo/xcsh` or `npm uninstall --global @f5-sales-demo/xcsh`; re-run the source command at a new ref to replace that channel.
+Upgrade with `bun update --global @f5-sales-demo/xcsh` or
+`npm update --global @f5-sales-demo/xcsh`. `xcsh update` reports the matching
+command for a validated compiled-release launcher but never invokes the package
+manager. Remove the package with `bun remove --global @f5-sales-demo/xcsh` or
+`npm uninstall --global @f5-sales-demo/xcsh`; re-run the source command at a new
+ref to replace that unsupported development channel.
 </details>
 </TabItem>
 </Tabs>
+
+Run `xcsh update --check` for a read-only version and installation-channel report. A direct MDM package remains organization-managed. Missing, stale, spoofed, or conflicting provenance is blocked without downloading, invoking a package manager, or changing the executable; reinstall through the documented channel instead of mixing installers.
 
 Whichever installation channel you choose, open xcsh next.
 

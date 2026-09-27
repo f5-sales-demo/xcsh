@@ -254,7 +254,6 @@
 	"welcome.modelProvider": "Model Provider",
 	"welcome.plugins": "Plugins",
 	"welcome.pluginSetupHint": "run: /plugin setup",
-	"welcome.updateHint": "run: xcsh update",
 	"welcome.newVersion": "new version",
 	"welcome.connectionFailed": "— connection failed",
 	"welcome.runLoginReconnect": "Run /login to reconnect",

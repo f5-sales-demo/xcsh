@@ -81,7 +81,7 @@ export function parseUpdateInvocation(argv: readonly string[]): UpdateInvocation
 }
 
 export default class Update extends Command {
-	static description = "Update the xcsh executable or existing resources from manifests";
+	static description = "Update resources or follow the xcsh executable installation channel";
 	static flags = updateFlags;
 	static examples = [
 		"xcsh update                         # update the executable",
@@ -95,7 +95,8 @@ export default class Update extends Command {
 		const invocation = parseUpdateInvocation(this.argv);
 		if (invocation.mode === "executable") {
 			await initTheme();
-			await runUpdateCommand({ force: invocation.force, check: invocation.check });
+			const exitCode = await runUpdateCommand({ force: invocation.force, check: invocation.check });
+			if (exitCode !== 0) process.exitCode = exitCode;
 			return;
 		}
 		await runResourceCli({

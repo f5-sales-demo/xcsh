@@ -1,487 +1,228 @@
-/**
- * Update CLI command handler.
- *
- * Handles executable updates for explicit `xcsh self-update` and compatible `xcsh update` forms.
- * Auto-detects the installation method (npm, brew, bun, or standalone binary)
- * and updates through the appropriate channel.
- */
+/** Context-aware executable update policy and standalone replacement. */
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { realpath } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
-import { $which, APP_NAME, isEnoent, VERSION } from "@f5-sales-demo/pi-utils";
-import { $ } from "bun";
+import { APP_NAME, isEnoent, VERSION } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
-import { theme } from "../modes/theme/theme";
+import {
+	defaultInstallChannelDependencies,
+	formatUpdateRecommendation,
+	resolveInstallChannel,
+	type UpdateRecommendation,
+} from "./update-recommendation";
 
 const REPO = "f5-sales-demo/xcsh";
-const PACKAGE = "@f5-sales-demo/xcsh";
 
-interface ReleaseInfo {
+export interface ReleaseInfo {
 	tag: string;
 	version: string;
 }
 
-/**
- * Parse update subcommand arguments.
- * Returns undefined if not a self-update command.
- */
-export function parseUpdateArgs(args: string[]): { force: boolean; check: boolean } | undefined {
-	if (args.length === 0 || args[0] !== "self-update") {
-		return undefined;
-	}
+export interface UpdateCommandDependencies {
+	currentVersion: string;
+	getLatestRelease(): Promise<ReleaseInfo>;
+	resolveRecommendation(): Promise<UpdateRecommendation>;
+	updateStandalone(version: string): Promise<void>;
+	stdout(value: string): void;
+	stderr(value: string): void;
+}
 
+export function parseUpdateArgs(args: string[]): { force: boolean; check: boolean } | undefined {
+	if (args.length === 0 || args[0] !== "self-update") return undefined;
 	return {
 		force: args.includes("--force") || args.includes("-f"),
 		check: args.includes("--check") || args.includes("-c"),
 	};
 }
 
-async function getBunGlobalBinDir(): Promise<string | undefined> {
-	if (!$which("bun")) return undefined;
-	try {
-		const result = await $`bun pm bin -g`.quiet().nothrow();
-		if (result.exitCode !== 0) return undefined;
-		const output = result.text().trim();
-		return output.length > 0 ? output : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-function normalizePathForComparison(filePath: string): string {
-	const normalized = path.normalize(filePath);
-	if (process.platform === "win32") return normalized.toLowerCase();
-	return normalized;
-}
-
-function isPathInDirectory(filePath: string, directoryPath: string): boolean {
-	const normalizedPath = normalizePathForComparison(path.resolve(filePath));
-	const normalizedDirectory = normalizePathForComparison(path.resolve(directoryPath));
-	const relativePath = path.relative(normalizedDirectory, normalizedPath);
-	return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
-}
-
-export type InstallMethod = "npm" | "brew" | "bun" | "binary";
-
-type UpdateTarget =
-	| { method: "npm"; path: string }
-	| { method: "brew"; path: string }
-	| { method: "bun" }
-	| { method: "binary"; path: string };
-
-/**
- * Detect how xcsh was installed by examining the binary path.
- *
- * Detection order:
- * 1. bun  — binary is inside bun's global bin directory
- * 2. npm  — binary is a symlink whose resolution chain contains "node_modules"
- * 3. brew — binary path or realpath contains "Cellar", "Caskroom", or "homebrew"
- * 4. binary — fallback for standalone installs
- */
-function detectInstallMethod(binPath: string, bunBinDir: string | undefined): InstallMethod {
-	// 1. Bun: binary lives inside bun's global bin dir
-	if (bunBinDir && isPathInDirectory(binPath, bunBinDir)) {
-		return "bun";
-	}
-
-	// 2. npm: binary is a symlink whose target chain contains node_modules
-	try {
-		const stats = fs.lstatSync(binPath);
-		if (stats.isSymbolicLink()) {
-			const linkTarget = fs.readlinkSync(binPath);
-			const resolvedTarget = path.resolve(path.dirname(binPath), linkTarget);
-			if (linkTarget.includes("node_modules") || resolvedTarget.includes("node_modules")) {
-				return "npm";
-			}
-			try {
-				const realPath = fs.realpathSync(binPath);
-				if (realPath.includes("node_modules")) {
-					return "npm";
-				}
-			} catch {
-				// realpath may fail if target doesn't exist
-			}
-		}
-	} catch {
-		// lstat/readlink may fail; fall through
-	}
-
-	// 3. brew: path or realpath contains Cellar, Caskroom, or homebrew
-	const lowerBinPath = binPath.toLowerCase();
-	if (
-		lowerBinPath.includes("/cellar/") ||
-		lowerBinPath.includes("/caskroom/") ||
-		lowerBinPath.includes("/homebrew/")
-	) {
-		return "brew";
-	}
-	try {
-		const realPath = fs.realpathSync(binPath).toLowerCase();
-		if (realPath.includes("/cellar/") || realPath.includes("/caskroom/") || realPath.includes("/homebrew/")) {
-			return "brew";
-		}
-	} catch {
-		// realpath may fail; fall through
-	}
-
-	// 4. Standalone binary (fallback)
-	return "binary";
-}
-
-function resolveUpdateMethod(
-	ompPath: string,
-	bunBinDir: string | undefined,
-	distributionChannel = process.env.XCSH_DISTRIBUTION_CHANNEL,
-): InstallMethod {
-	if (distributionChannel === "bun" || distributionChannel === "npm") return distributionChannel;
-	return detectInstallMethod(ompPath, bunBinDir);
-}
-
-export function _resolveUpdateMethodForTest(
-	ompPath: string,
-	bunBinDir: string | undefined,
-	distributionChannel?: string,
-): InstallMethod {
-	return resolveUpdateMethod(ompPath, bunBinDir, distributionChannel);
-}
-async function resolveUpdateTarget(): Promise<UpdateTarget> {
-	const bunBinDir = await getBunGlobalBinDir();
-	const ompPath = resolveOmpPath();
-
-	if (ompPath) {
-		const method = resolveUpdateMethod(ompPath, bunBinDir);
-		if (method === "bun") return { method };
-		return { method, path: ompPath };
-	}
-
-	if (bunBinDir) return { method: "bun" };
-
-	throw new Error(`Could not resolve ${APP_NAME} binary path in PATH`);
-}
-
-/**
- * Get the latest release info from the npm registry.
- * Uses npm instead of GitHub API to avoid unauthenticated rate limiting.
- */
 async function getLatestRelease(): Promise<ReleaseInfo> {
-	const response = await fetch(`https://registry.npmjs.org/${PACKAGE}/latest`);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch release info: ${response.statusText}`);
-	}
-
-	const data = (await response.json()) as { version: string };
-	const version = data.version;
-	const tag = `v${version}`;
-
-	return {
-		tag,
-		version,
-	};
+	const response = await fetch("https://registry.npmjs.org/@f5-sales-demo/xcsh/latest");
+	if (!response.ok) throw new Error(`Failed to fetch release info: ${response.statusText}`);
+	const data = (await response.json()) as { version?: string };
+	if (!data.version) throw new Error("Latest release response did not include a version");
+	return { tag: `v${data.version}`, version: data.version };
 }
 
-/**
- * Compare semver versions. Returns:
- * - negative if a < b
- * - 0 if a == b
- * - positive if a > b
- */
 function compareVersions(a: string, b: string): number {
 	const pa = a.split(".").map(Number);
 	const pb = b.split(".").map(Number);
-
 	for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-		const na = pa[i] || 0;
-		const nb = pb[i] || 0;
-		if (na !== nb) return na - nb;
+		const difference = (pa[i] || 0) - (pb[i] || 0);
+		if (difference !== 0) return difference;
 	}
 	return 0;
 }
 
-/**
- * Get the appropriate binary name for this platform.
- */
-function getBinaryName(): string {
-	const platform = process.platform;
-	const arch = process.arch;
-
-	let os: string;
-	switch (platform) {
-		case "linux":
-			os = "linux";
-			break;
-		case "darwin":
-			os = "darwin";
-			break;
-		case "win32":
-			os = "windows";
-			break;
-		default:
-			throw new Error(`Unsupported platform: ${platform}`);
-	}
-
-	let archName: string;
-	switch (arch) {
-		case "x64":
-			archName = "x64";
-			break;
-		case "arm64":
-			archName = "arm64";
-			break;
-		default:
-			throw new Error(`Unsupported architecture: ${arch}`);
-	}
-
-	if (os === "windows") {
-		return `${APP_NAME}-${os}-${archName}.exe`;
-	}
-	return `${APP_NAME}-${os}-${archName}`;
+function getBinaryName(platform = process.platform, arch = process.arch): string {
+	if (platform === "linux" && (arch === "x64" || arch === "arm64")) return `${APP_NAME}-linux-${arch}`;
+	if (platform === "darwin" && (arch === "x64" || arch === "arm64")) return `${APP_NAME}-darwin-${arch}`;
+	throw new Error(`Unsupported standalone update platform: ${platform}/${arch}`);
 }
 
-/**
- * Resolve the path that `xcsh` maps to in the user's PATH.
- */
-function resolveOmpPath(): string | undefined {
-	return $which(APP_NAME) ?? undefined;
+async function validateExecutableVersion(executable: string, expectedVersion: string): Promise<void> {
+	const child = Bun.spawn([executable, "--version"], { stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+	const [exitCode, output] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+	const actual = output.match(/\/(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/u)?.[1];
+	if (exitCode !== 0 || actual !== expectedVersion) {
+		throw new Error(
+			actual
+				? `${APP_NAME} at ${executable} reports ${actual}; expected ${expectedVersion}`
+				: `${APP_NAME} at ${executable} could not be verified as ${expectedVersion}`,
+		);
+	}
 }
 
-/**
- * Run the resolved xcsh binary and check if it reports the expected version.
- */
-async function verifyInstalledVersion(
+export interface StandaloneReplacementOptions {
+	targetPath: string;
+	platform?: NodeJS.Platform;
+	arch?: NodeJS.Architecture;
+	fetchImpl?(input: string | URL | Request, init?: RequestInit): Promise<Response>;
+	rename?(source: string, destination: string): Promise<void>;
+	validate?(executable: string, expectedVersion: string): Promise<void>;
+}
+
+/** Atomically replace one proven standalone executable, restoring it on every failure. */
+export async function replaceStandaloneExecutable(
 	expectedVersion: string,
-	explicitPath?: string,
-): Promise<{ ok: boolean; actual?: string; path?: string }> {
-	const ompPath = explicitPath ?? resolveOmpPath();
-	if (!ompPath) return { ok: false };
+	options: StandaloneReplacementOptions,
+): Promise<void> {
+	const targetPath = options.targetPath;
+	const binaryName = getBinaryName(options.platform, options.arch);
+	const url = `https://github.com/${REPO}/releases/download/v${expectedVersion}/${binaryName}`;
+	const tempPath = `${targetPath}.new-${process.pid}`;
+	const backupPath = `${targetPath}.bak`;
+	const fetchImpl = options.fetchImpl ?? fetch;
+	const rename = options.rename ?? fs.promises.rename;
+	const validate = options.validate ?? validateExecutableVersion;
+	let originalMoved = false;
+
 	try {
-		const result = await $`${ompPath} --version`.quiet().nothrow();
-		if (result.exitCode !== 0) return { ok: false, path: ompPath };
-		const output = result.text().trim();
-		// Output format: "xcsh/X.Y.Z"
-		const match = output.match(/\/(\d+\.\d+\.\d+)/);
-		const actual = match?.[1];
-		return { ok: actual === expectedVersion, actual, path: ompPath };
-	} catch {
-		return { ok: false, path: ompPath };
+		const response = await fetchImpl(url, { redirect: "follow" });
+		if (!response.ok || !response.body) throw new Error(`Download failed: ${response.statusText}`);
+		await pipeline(response.body, fs.createWriteStream(tempPath, { mode: 0o755, flags: "wx" }));
+		await fs.promises.chmod(tempPath, 0o755);
+		await validate(tempPath, expectedVersion);
+
+		try {
+			await fs.promises.unlink(backupPath);
+		} catch (error) {
+			if (!isEnoent(error)) throw error;
+		}
+		await rename(targetPath, backupPath);
+		originalMoved = true;
+		await rename(tempPath, targetPath);
+		await validate(targetPath, expectedVersion);
+		await fs.promises.unlink(backupPath);
+		originalMoved = false;
+	} catch (error) {
+		if (originalMoved) {
+			try {
+				await fs.promises.unlink(targetPath);
+			} catch (unlinkError) {
+				if (!isEnoent(unlinkError)) throw unlinkError;
+			}
+			await rename(backupPath, targetPath);
+			originalMoved = false;
+		}
+		throw error;
+	} finally {
+		try {
+			await fs.promises.unlink(tempPath);
+		} catch {}
 	}
 }
 
-/**
- * Print post-update verification result.
- */
-async function printVerification(expectedVersion: string, explicitPath?: string): Promise<void> {
-	const result = await verifyInstalledVersion(expectedVersion, explicitPath);
-	if (result.ok) {
-		console.log(chalk.green(`\n${theme.status.success} Updated to ${expectedVersion}`));
-		return;
-	}
-	if (result.actual) {
-		console.log(
-			chalk.yellow(
-				`\nWarning: ${APP_NAME} at ${result.path} still reports ${result.actual} (expected ${expectedVersion})`,
-			),
-		);
-	} else {
-		console.log(
-			chalk.yellow(`\nWarning: could not verify updated version${result.path ? ` at ${result.path}` : ""}`),
-		);
-	}
-	console.log(
-		chalk.yellow(
-			`You may need to reinstall: curl -fsSL https://raw.githubusercontent.com/${REPO}/main/install.sh | bash`,
-		),
-	);
+export async function updateStandaloneExecutable(expectedVersion: string): Promise<void> {
+	return replaceStandaloneExecutable(expectedVersion, { targetPath: await realpath(process.execPath) });
 }
 
-/**
- * Update via bun package manager.
- */
-async function updateViaBun(expectedVersion: string): Promise<void> {
-	console.log(chalk.dim("Updating via bun..."));
-	const result = await $`bun install -g ${PACKAGE}@${expectedVersion}`.nothrow();
-	if (result.exitCode !== 0) {
-		throw new Error(`bun install failed with exit code ${result.exitCode}`);
-	}
-
-	await printVerification(expectedVersion);
+function defaultUpdateCommandDependencies(): UpdateCommandDependencies {
+	return {
+		currentVersion: VERSION,
+		getLatestRelease,
+		resolveRecommendation: () => resolveInstallChannel(defaultInstallChannelDependencies(VERSION)),
+		updateStandalone: updateStandaloneExecutable,
+		stdout: value => console.log(value),
+		stderr: value => console.error(value),
+	};
 }
 
-/**
- * Update via npm package manager.
- */
-async function updateViaNpm(expectedVersion: string): Promise<void> {
-	console.log(chalk.dim("Updating via npm..."));
-	const result = await $`npm install -g ${PACKAGE}@${expectedVersion}`.nothrow();
-	if (result.exitCode !== 0) {
-		throw new Error(`npm install failed with exit code ${result.exitCode}`);
-	}
-}
+/** Run the shared policy for both `update` and `self-update`. */
+export async function runUpdateCommand(
+	opts: { force: boolean; check: boolean },
+	deps: UpdateCommandDependencies = defaultUpdateCommandDependencies(),
+): Promise<number> {
+	deps.stdout(chalk.dim(`Current version: ${deps.currentVersion}`));
 
-/**
- * Handle brew-installed xcsh.
- *
- * For corporate environments, brew-managed software must not be bypassed.
- * Prints instructions instead of running brew upgrade automatically.
- */
-function updateViaBrew(targetPath: string, expectedVersion: string): void {
-	console.log(chalk.yellow(`\n${APP_NAME} at ${targetPath} was installed via Homebrew.`));
-	console.log(chalk.yellow(`To update to ${expectedVersion}, run:`));
-	console.log(chalk.cyan(`  ${getBrewUpgradeCommand()}`));
-	console.log(chalk.dim("\nThis ensures the update goes through your organization's Homebrew tap."));
-	// #1874 Task 7: brew upgrade runs out-of-band, so we can't recycle automatically.
-	// Nudge the one command that applies it to the Chrome extension immediately.
-	console.log(chalk.dim(`Then run  ${APP_NAME} chrome recycle  to apply it to the extension now`));
-	console.log(chalk.dim("(otherwise it takes effect the next time you open Chrome)."));
+	let recommendation: UpdateRecommendation;
+	try {
+		recommendation = await deps.resolveRecommendation();
+	} catch (error) {
+		deps.stderr(chalk.red(`Update blocked: installation provenance check failed: ${error}`));
+		return 1;
+	}
+	deps.stdout(chalk.dim(`Detected channel: ${recommendation.channel}`));
+	if (recommendation.action === "blocked") {
+		deps.stderr(chalk.red(formatUpdateRecommendation(recommendation)));
+		return 1;
+	}
+
+	let release: ReleaseInfo;
+	try {
+		release = await deps.getLatestRelease();
+	} catch (error) {
+		deps.stderr(chalk.red(`Failed to check for updates: ${error}`));
+		return 1;
+	}
+
+	const comparison = compareVersions(release.version, deps.currentVersion);
+	if (comparison > 0) deps.stdout(chalk.cyan(`New version available: ${release.version}`));
+	else if (opts.force) deps.stdout(chalk.yellow(`Forcing update recommendation for ${release.version}`));
+	else deps.stdout(chalk.green("✓ Already up to date"));
+
+	if (opts.check) {
+		deps.stdout(formatUpdateRecommendation(recommendation));
+		return 0;
+	}
+
+	if (recommendation.action !== "self-update") {
+		deps.stdout(formatUpdateRecommendation(recommendation));
+		return 0;
+	}
+	if (comparison <= 0 && !opts.force) return 0;
+
+	try {
+		await deps.updateStandalone(release.version);
+		deps.stdout(chalk.green(`✓ Updated to ${release.version}`));
+		deps.stdout(chalk.dim(`Restart ${APP_NAME} to use the new version`));
+		return 0;
+	} catch (error) {
+		deps.stderr(chalk.red(`Update failed: ${error}`));
+		return 1;
+	}
 }
 
 export function getBrewUpgradeCommand(): string {
-	return `brew upgrade --cask ${APP_NAME}`;
+	return "brew upgrade --cask f5-sales-demo/tap/xcsh";
 }
 
-/**
- * Download a release binary to a target path, replacing an existing file.
- */
-async function updateViaBinaryAt(targetPath: string, expectedVersion: string): Promise<void> {
-	const binaryName = getBinaryName();
-	const tag = `v${expectedVersion}`;
-	const url = `https://github.com/${REPO}/releases/download/${tag}/${binaryName}`;
-
-	const tempPath = `${targetPath}.new`;
-	const backupPath = `${targetPath}.bak`;
-	console.log(chalk.dim(`Downloading ${binaryName}…`));
-
-	const response = await fetch(url, { redirect: "follow" });
-	if (!response.ok || !response.body) {
-		throw new Error(`Download failed: ${response.statusText}`);
-	}
-	const fileStream = fs.createWriteStream(tempPath, { mode: 0o755 });
-	await pipeline(response.body, fileStream);
-
-	console.log(chalk.dim("Installing update..."));
-	try {
-		try {
-			await fs.promises.unlink(backupPath);
-		} catch (err) {
-			if (!isEnoent(err)) throw err;
-		}
-		await fs.promises.rename(targetPath, backupPath);
-		await fs.promises.rename(tempPath, targetPath);
-		await fs.promises.unlink(backupPath);
-
-		await printVerification(expectedVersion, targetPath);
-		console.log(chalk.dim(`Restart ${APP_NAME} to use the new version`));
-	} catch (err) {
-		if (fs.existsSync(backupPath) && !fs.existsSync(targetPath)) {
-			await fs.promises.rename(backupPath, targetPath);
-		}
-		if (fs.existsSync(tempPath)) {
-			await fs.promises.unlink(tempPath);
-		}
-		throw err;
-	}
-}
-
-/**
- * Run the update command.
- */
-export async function runUpdateCommand(opts: { force: boolean; check: boolean }): Promise<void> {
-	console.log(chalk.dim(`Current version: ${VERSION}`));
-
-	// Check for updates
-	let release: ReleaseInfo;
-	try {
-		release = await getLatestRelease();
-	} catch (err) {
-		console.error(chalk.red(`Failed to check for updates: ${err}`));
-		process.exit(1);
-	}
-
-	const comparison = compareVersions(release.version, VERSION);
-
-	if (comparison <= 0 && !opts.force) {
-		console.log(chalk.green(`${theme.status.success} Already up to date`));
-		return;
-	}
-
-	if (comparison > 0) {
-		console.log(chalk.cyan(`New version available: ${release.version}`));
-	} else {
-		console.log(chalk.yellow(`Forcing reinstall of ${release.version}`));
-	}
-
-	if (opts.check) {
-		// Just check, don't install
-		return;
-	}
-
-	// Choose update method based on the prioritized xcsh binary in PATH
-	try {
-		const target = await resolveUpdateTarget();
-		console.log(chalk.dim(`Install method: ${target.method}`));
-
-		switch (target.method) {
-			case "bun":
-				await updateViaBun(release.version);
-				break;
-			case "npm":
-				await updateViaNpm(release.version);
-				await printVerification(release.version);
-				break;
-			case "brew":
-				updateViaBrew(target.path, release.version);
-				return;
-			case "binary":
-				await updateViaBinaryAt(target.path, release.version);
-				break;
-		}
-
-		// #1874 Task 7: the binary just changed under a possibly-running OLD manager.
-		// Proactively recycle so the new version takes effect now instead of on the
-		// next Chrome launch — refresh the native-host wrapper + step the old manager
-		// down (its successor re-adopts live workers, zero-downtime). The just-updated
-		// `xcsh` on PATH is the new version. Best-effort, non-blocking; passive
-		// supersede covers it if this is skipped.
-		try {
-			Bun.spawn(["xcsh", "chrome", "recycle"], { stdout: "ignore", stderr: "ignore" });
-		} catch {
-			/* recycle is a convenience — never fail an update on it */
-		}
-	} catch (err) {
-		console.error(chalk.red(`Update failed: ${err}`));
-		process.exit(1);
-	}
-}
-
-/**
- * Print update command help.
- */
 export function printUpdateHelp(): void {
-	console.log(`${chalk.bold(`${APP_NAME} update`)} - Update the executable or existing resources from manifests
+	console.log(`${chalk.bold(`${APP_NAME} update`)} - Check the executable and follow its installation channel
 
 ${chalk.bold("Usage:")}
   ${APP_NAME} update [--check | --force]
   ${APP_NAME} update -f <manifest> [resource options]
 
 ${chalk.bold("Executable options:")}
-  -c, --check   Check for executable updates without installing
-      --force   Force reinstall even if up to date
+  -c, --check   Report the detected channel without changing files
+      --force   Show or perform the channel-owned action even when current
 
-${chalk.bold("Resource input:")}
-  -f, --filename <manifest>   Update resources from a manifest
+Only an official standalone install with a valid adjacent xcsh-install.json
+receipt can replace itself. Homebrew, apt, npm, Bun, Windows installer, and MDM
+installs print their exact owner-managed instruction and perform no update.
+Unknown or conflicting provenance is blocked without changing the installation.
 
 Short -f means --filename for xcsh update. Use xcsh self-update -f for the
 short executable force form. Executable and resource flags cannot be mixed.
-
-${chalk.bold("Install methods (auto-detected):")}
-  npm           Installed via npm install -g
-  brew          Installed via Homebrew (prints upgrade instructions)
-  bun           Installed via bun install -g
-  binary        Standalone binary (direct download)
-
-${chalk.bold("Examples:")}
-  ${APP_NAME} update           Update to latest version
-  ${APP_NAME} update --check   Check if updates are available
-  ${APP_NAME} update --force   Force reinstall
-  ${APP_NAME} update -f manifest.yaml   Update resources
 `);
 }

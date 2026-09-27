@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { renderCommandHelp } from "@f5-sales-demo/pi-utils/cli";
-import { _resolveUpdateMethodForTest, getBrewUpgradeCommand, parseUpdateArgs } from "../src/cli/update-cli";
+import { getBrewUpgradeCommand, parseUpdateArgs } from "../src/cli/update-cli";
 import SelfUpdate from "../src/commands/self-update";
 import Update, { parseUpdateInvocation } from "../src/commands/update";
 
@@ -80,51 +80,42 @@ describe("update command boundary", () => {
 			renderCommandHelp("xcsh", "self-update", SelfUpdate);
 			const executableUpdate = write.mock.calls.map(([chunk]) => String(chunk)).join("");
 
-			expect(compatibilityUpdate).toContain("Update the xcsh executable or existing resources from manifests");
+			expect(compatibilityUpdate).toContain("Update resources or follow the xcsh executable installation channel");
 			expect(compatibilityUpdate).toContain("-f, --filename=<value>");
 			expect(compatibilityUpdate).toContain("--force");
 			expect(compatibilityUpdate).toContain("xcsh self-update -f");
-			expect(executableUpdate).toContain("Check for and install xcsh executable updates");
+			expect(executableUpdate).toContain("Check for xcsh updates and follow the detected installation channel");
 			expect(executableUpdate).toContain("--check");
 		} finally {
 			write.mockRestore();
 		}
 	});
 
-	it("directs both English update notices to the version-universal command", () => {
-		const mainSource = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
-		const messages = JSON.parse(
-			fs.readFileSync(new URL("../src/locales/en.json", import.meta.url), "utf8"),
-		) as Record<string, string>;
-
-		expect(mainSource).toContain("run: xcsh update");
-		expect(mainSource).not.toContain("run: xcsh self-update");
-		expect(messages["welcome.updateHint"]).toBe("run: xcsh update");
-	});
-
 	it.each([
 		["bare", []],
 		["check", ["--check"]],
 		["short check", ["-c"]],
-	])("runs the %s executable form without entering onboarding", (_name, argv) => {
+	])("fails closed for the %s executable form in an unproven source checkout", (_name, argv) => {
 		const result = runUpdateSubprocess(argv);
 		const { combined: output } = processOutput(result);
-		expect(result.exitCode).toBe(0);
+		expect(result.exitCode).toBe(1);
 		expect(output).toContain("Current version:");
-		expect(output).toContain("Already up to date");
+		expect(output).toContain("Detected channel: unknown");
+		expect(output).toContain("Update blocked");
 		expect(output).not.toContain("Model Provider URL");
 	});
 
-	it("runs update --force through executable replacement without entering onboarding", () => {
+	it("ignores a PATH shadow and never replaces it", () => {
 		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-update-command-"));
 		const fakeBinary = path.join(tempDir, "xcsh");
 		try {
 			fs.writeFileSync(fakeBinary, "#!/bin/sh\nprintf 'xcsh/0.0.0\\n'\n", { mode: 0o755 });
+			const before = fs.readFileSync(fakeBinary);
 			const result = runUpdateSubprocess(["--force"], tempDir);
 			const { combined: output } = processOutput(result);
-			expect(result.exitCode).toBe(0);
-			expect(output).toContain("Forcing reinstall");
-			expect(output).toContain("Install method: binary");
+			expect(result.exitCode).toBe(1);
+			expect(output).toContain("Detected channel: unknown");
+			expect(fs.readFileSync(fakeBinary)).toEqual(before);
 			expect(output).not.toContain("Model Provider URL");
 		} finally {
 			fs.rmSync(tempDir, { recursive: true, force: true });
@@ -159,111 +150,6 @@ describe("update command boundary", () => {
 
 describe("update-cli install target detection", () => {
 	it("directs Homebrew installs to the cask upgrade command", () => {
-		expect(getBrewUpgradeCommand()).toBe("brew upgrade --cask xcsh");
-	});
-
-	it("preserves the package launcher channel for cached compiled binaries", () => {
-		expect(_resolveUpdateMethodForTest("/tmp/cache/xcsh", undefined, "bun")).toBe("bun");
-		expect(_resolveUpdateMethodForTest("/tmp/cache/xcsh", undefined, "npm")).toBe("npm");
-	});
-
-	// --- Existing tests (bun and binary) ---
-
-	it("uses bun update when prioritized xcsh is inside bun global bin", () => {
-		const method = _resolveUpdateMethodForTest("/Users/example/.bun/bin/xcsh", "/Users/example/.bun/bin");
-
-		expect(method).toBe("bun");
-	});
-
-	it("uses binary update when prioritized xcsh is outside bun global bin", () => {
-		const method = _resolveUpdateMethodForTest("/Users/example/.local/bin/xcsh", "/Users/example/.bun/bin");
-
-		expect(method).toBe("binary");
-	});
-
-	it("uses binary update when bun global bin cannot be resolved", () => {
-		const method = _resolveUpdateMethodForTest("/Users/example/.local/bin/xcsh", undefined);
-
-		expect(method).toBe("binary");
-	});
-
-	// --- Brew detection (path-based) ---
-
-	it("uses brew update when path contains Cellar", () => {
-		const method = _resolveUpdateMethodForTest("/opt/homebrew/Cellar/xcsh/15.5.0/bin/xcsh", undefined);
-
-		expect(method).toBe("brew");
-	});
-
-	it("uses brew update when path contains homebrew", () => {
-		const method = _resolveUpdateMethodForTest("/opt/homebrew/bin/xcsh", undefined);
-
-		expect(method).toBe("brew");
-	});
-
-	it("uses brew update when an Intel cask path contains Caskroom", () => {
-		const method = _resolveUpdateMethodForTest("/usr/local/Caskroom/xcsh/21.31.0/bin/xcsh", undefined);
-
-		expect(method).toBe("brew");
-	});
-
-	it("prefers bun over brew when binary is in bun global bin under homebrew", () => {
-		const method = _resolveUpdateMethodForTest("/opt/homebrew/.bun/bin/xcsh", "/opt/homebrew/.bun/bin");
-
-		expect(method).toBe("bun");
-	});
-
-	// --- npm detection (symlink-based) ---
-
-	describe("npm detection via symlinks", () => {
-		let tmpDir: string;
-
-		beforeEach(() => {
-			tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-update-test-"));
-		});
-
-		afterEach(() => {
-			fs.rmSync(tmpDir, { recursive: true, force: true });
-		});
-
-		it("uses npm update when binary is a symlink into node_modules", () => {
-			// Create a fake node_modules structure
-			const nodeModulesTarget = path.join(tmpDir, "node_modules", "@f5-sales-demo", "xcsh", "dist");
-			fs.mkdirSync(nodeModulesTarget, { recursive: true });
-			const targetFile = path.join(nodeModulesTarget, "xcsh");
-			fs.writeFileSync(targetFile, "");
-
-			// Create a symlink pointing into node_modules
-			const symlink = path.join(tmpDir, "xcsh");
-			fs.symlinkSync(path.join("node_modules", "@f5-sales-demo", "xcsh", "dist", "xcsh"), symlink);
-
-			const method = _resolveUpdateMethodForTest(symlink, undefined);
-
-			expect(method).toBe("npm");
-		});
-
-		it("uses npm update for chained symlinks resolving into node_modules", () => {
-			// Create node_modules target
-			const nodeModulesTarget = path.join(tmpDir, "lib", "node_modules", "@f5-sales-demo", "xcsh", "dist");
-			fs.mkdirSync(nodeModulesTarget, { recursive: true });
-			const targetFile = path.join(nodeModulesTarget, "xcsh");
-			fs.writeFileSync(targetFile, "");
-
-			// First symlink: usr/bin/xcsh -> lib/node_modules/.../xcsh
-			const binDir = path.join(tmpDir, "usr", "bin");
-			fs.mkdirSync(binDir, { recursive: true });
-			const firstLink = path.join(binDir, "xcsh");
-			fs.symlinkSync(path.join(tmpDir, "lib", "node_modules", "@f5-sales-demo", "xcsh", "dist", "xcsh"), firstLink);
-
-			// Second symlink: local/bin/xcsh -> usr/bin/xcsh
-			const localBinDir = path.join(tmpDir, "local", "bin");
-			fs.mkdirSync(localBinDir, { recursive: true });
-			const secondLink = path.join(localBinDir, "xcsh");
-			fs.symlinkSync(firstLink, secondLink);
-
-			const method = _resolveUpdateMethodForTest(secondLink, undefined);
-
-			expect(method).toBe("npm");
-		});
+		expect(getBrewUpgradeCommand()).toBe("brew upgrade --cask f5-sales-demo/tap/xcsh");
 	});
 });
