@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { parseFileWorkers, testCommand, verifiedNativeTestCommands } from "../../../../scripts/run-ts-tests";
+import {
+	parseFileWorkers,
+	parseShard,
+	shardTestCommands,
+	testCommand,
+	verifiedNativeTestCommands,
+} from "../../../../scripts/run-ts-tests";
 
 describe("guarded TypeScript test runner", () => {
 	it("defaults to bounded serial file execution", () => {
@@ -48,5 +54,16 @@ describe("guarded TypeScript test runner", () => {
 			"--max-concurrency=2",
 		]);
 		expect(commands.flat().join(" ")).not.toContain("build");
+	});
+
+	it("selects only declared workspace shards and keeps their work serial", () => {
+		expect(parseShard(["--shard=native-independent"])).toBe("native-independent");
+		expect(parseShard(["--shard=native-dependent"])).toBe("native-dependent");
+		expect(() => parseShard(["--shard=unknown"])).toThrow("unknown TypeScript test shard");
+		const commands = shardTestCommands(["@f5-sales-demo/pi-natives", "@f5-sales-demo/pi-tui"], 0);
+		expect(commands).toHaveLength(2);
+		expect(commands[0]).toContain("@f5-sales-demo/pi-natives");
+		expect(commands[1]).toContain("@f5-sales-demo/pi-tui");
+		expect(commands.flat().join(" ")).not.toContain("--concurrent");
 	});
 });

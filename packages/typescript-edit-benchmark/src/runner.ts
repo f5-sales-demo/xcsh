@@ -10,8 +10,9 @@ import * as path from "node:path";
 import type { AgentMessage, ResolvedThinkingLevel, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { prompt, Snowflake } from "@f5-sales-demo/pi-utils";
-import { computeLineHash, formatSessionDumpText, RpcClient } from "@f5-sales-demo/xcsh";
+import { computeLineHash, RpcClient } from "@f5-sales-demo/xcsh";
 import { diffLines } from "diff";
+import { type ConversationDumpSnapshot, writeConversationDump } from "./conversation-dump";
 import { formatDirectory } from "./formatter";
 import { discoverSharedInfra, InProcessClient, type SharedInfra } from "./in-process-client";
 import benchmarkRetryPrompt from "./prompts/benchmark-retry.md" with { type: "text" };
@@ -19,6 +20,8 @@ import benchmarkSystemPrompt from "./prompts/benchmark-system.md" with { type: "
 import benchmarkTaskPrompt from "./prompts/benchmark-task.md" with { type: "text" };
 import type { EditTask } from "./tasks";
 import { verifyExpectedFileSubset, verifyExpectedFiles } from "./verify";
+
+export { writeConversationDump } from "./conversation-dump";
 
 const TMP = `/tmp/rb-${crypto.randomUUID()}`;
 const CLI_PATH = path.resolve(import.meta.dir, "../../coding-agent/src/cli.ts");
@@ -81,70 +84,6 @@ export interface BenchmarkConfig {
 	conversationDumpDir?: string;
 	/** Use in-process agent sessions instead of spawning CLI subprocesses. Default: true */
 	inProcess?: boolean;
-}
-
-type ConversationDumpSnapshot = {
-	messages: AgentMessage[];
-	sourceSessionFile?: string;
-	systemPrompt?: string;
-	model?: Model;
-	thinkingLevel?: ThinkingLevel | undefined;
-	dumpTools?: Array<{ name: string; description: string; parameters: unknown }>;
-};
-
-function sanitizeDumpPathSegment(value: string): string {
-	return value.replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
-function getConversationDumpPath(dumpDir: string, taskId: string, runIndex: number): string {
-	return path.join(dumpDir, sanitizeDumpPathSegment(taskId), `run-${runIndex + 1}.md`);
-}
-
-/** Artifacts directory for a session dump file (.md or legacy .jsonl). */
-function dumpArtifactsDir(dumpFilePath: string): string {
-	if (dumpFilePath.endsWith(".md")) {
-		return dumpFilePath.slice(0, -3);
-	}
-	if (dumpFilePath.endsWith(".jsonl")) {
-		return dumpFilePath.slice(0, -6);
-	}
-	const ext = path.extname(dumpFilePath);
-	return path.join(path.dirname(dumpFilePath), path.basename(dumpFilePath, ext));
-}
-
-async function copyConversationArtifacts(sourceSessionFile: string, targetDumpFile: string): Promise<void> {
-	const sourceArtifactsDir = dumpArtifactsDir(sourceSessionFile);
-	const targetArtifactsDir = dumpArtifactsDir(targetDumpFile);
-	try {
-		const stat = await fs.promises.stat(sourceArtifactsDir);
-		if (!stat.isDirectory()) return;
-		await fs.promises.cp(sourceArtifactsDir, targetArtifactsDir, { recursive: true });
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
-		throw error;
-	}
-}
-
-export async function writeConversationDump(params: {
-	dumpDir: string;
-	taskId: string;
-	runIndex: number;
-	snapshot: ConversationDumpSnapshot;
-}): Promise<string> {
-	const dumpPath = getConversationDumpPath(params.dumpDir, params.taskId, params.runIndex);
-	await fs.promises.mkdir(path.dirname(dumpPath), { recursive: true });
-	const body = formatSessionDumpText({
-		messages: params.snapshot.messages,
-		systemPrompt: params.snapshot.systemPrompt,
-		model: params.snapshot.model,
-		thinkingLevel: params.snapshot.thinkingLevel,
-		tools: params.snapshot.dumpTools,
-	});
-	await Bun.write(dumpPath, `${body}\n`);
-	if (params.snapshot.sourceSessionFile) {
-		await copyConversationArtifacts(params.snapshot.sourceSessionFile, dumpPath);
-	}
-	return dumpPath;
 }
 
 async function snapshotConversationDump(client: BenchmarkClient): Promise<ConversationDumpSnapshot> {

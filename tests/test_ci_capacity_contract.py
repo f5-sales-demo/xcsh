@@ -22,9 +22,22 @@ class CiCapacityContractTests(unittest.TestCase):
             'ci-native-manifest.ts create --source-sha "$GITHUB_SHA"', workflow
         )
         self.assertIn("  test-rust:\n", workflow)
-        self.assertIn("  test-typescript:\n", workflow)
-        self.assertIn("    needs: assemble-native-linux-x64\n", workflow)
-        self.assertIn("    needs: [test-typescript, test-rust]\n", workflow)
+        self.assertIn("  test-typescript-independent:\n", workflow)
+        self.assertIn("  test-typescript-native:\n", workflow)
+        independent = workflow.split("  test-typescript-independent:\n", 1)[1].split(
+            "  test-typescript-native:\n", 1
+        )[0]
+        native = workflow.split("  test-typescript-native:\n", 1)[1].split(
+            "  test:\n", 1
+        )[0]
+        self.assertNotIn("    needs:", independent)
+        self.assertIn("bun run test:ts -- --shard=native-independent", independent)
+        self.assertIn("    needs: assemble-native-linux-x64\n", native)
+        self.assertIn("bun run test:ts -- --shard=native-dependent", native)
+        self.assertIn(
+            "    needs: [test-typescript-independent, test-typescript-native, test-rust]\n",
+            workflow,
+        )
         self.assertIn("bun scripts/ci-native-manifest.ts verify", workflow)
         self.assertIn('XCSH_TEST_FILE_WORKERS: "0"', workflow)
         for platform in (

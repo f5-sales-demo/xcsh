@@ -3,8 +3,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { formatSessionDumpText, SessionManager } from "@f5-sales-demo/xcsh";
-import { writeConversationDump } from "../src/runner";
+import { formatSessionDumpText } from "../../coding-agent/src/session/session-dump-format";
+import { SessionManager } from "../../coding-agent/src/session/session-manager";
+import { writeConversationDump } from "../src/conversation-dump";
 
 const tempDirs: TempDir[] = [];
 

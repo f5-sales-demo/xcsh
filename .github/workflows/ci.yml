@@ -196,7 +196,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)) && fromJSON('[
+        include:
+          ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)) && fromJSON('[
           {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern"},
@@ -294,8 +295,36 @@ jobs:
       - name: Test Rust workspaces
         run: bun run test:rs
 
-  test-typescript:
-    name: TypeScript tests
+  test-typescript-independent:
+    name: TypeScript tests (native-independent)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: xcsh-compute
+    timeout-minutes: 30
+    env:
+      # Serial is the production-safe path. File-worker parallelism requires
+      # separate frozen-source qualification before promotion.
+      XCSH_TEST_FILE_WORKERS: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+      - name: Verify baked TypeScript toolchain
+        run: bash scripts/verify-self-hosted-tools.sh full
+      - name: Verify complete TypeScript shard classification
+        run: python3 scripts/validate_ts_test_shards.py
+      - name: Restore Bun dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+      - run: bash scripts/ci-bun-install.sh
+      - name: Test native-independent TypeScript workspaces
+        run: bun run test:ts -- --shard=native-independent
+
+  test-typescript-native:
+    name: TypeScript tests (native-dependent)
     needs: assemble-native-linux-x64
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: xcsh-compute
@@ -326,14 +355,14 @@ jobs:
           path: ~/.bun/install/cache
           key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
-      - name: Test TypeScript workspaces
-        run: bun run test:ts
+      - name: Test native-dependent TypeScript workspaces
+        run: bun run test:ts -- --shard=native-dependent
       - name: CLI smoke test
         run: bun run ci:test:smoke
 
   test:
     name: test
-    needs: [test-typescript, test-rust]
+    needs: [test-typescript-independent, test-typescript-native, test-rust]
     runs-on: xcsh-socketless
     steps:
       - run: echo "TypeScript and Rust test shards passed"

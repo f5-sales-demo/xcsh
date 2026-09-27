@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "shards": {
+    "native-independent": [
+      "@f5-sales-demo/pi-ai",
+      "@f5-sales-demo/pi-agent-core",
+      "@f5-sales-demo/xcsh-chat-ui",
+      "@f5-sales-demo/xcsh-office-pane",
+      "@f5-sales-demo/pi-resource-management",
+      "@f5-sales-demo/xcsh-stats",
+      "@f5-sales-demo/typescript-edit-benchmark",
+      "@f5-sales-demo/pi-utils"
+    ],
+    "native-dependent": [
+      "@f5-sales-demo/pi-natives",
+      "@f5-sales-demo/pi-tui",
+      "@f5-sales-demo/xcsh"
+    ]
+  }
+}

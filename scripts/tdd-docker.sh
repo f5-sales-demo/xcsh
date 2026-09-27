@@ -98,9 +98,10 @@ assert_job_route() {
 for workflow_file in .github/workflows/ci.yml .github/workflows/container.yml .github/workflows/self-hosted-runner-cache-smoke.yml; do
   assert_job_route "$workflow_file" trust-gate xcsh-socketless
 done
-for job_id in container-build podman-uat-harness container-test publish-ghcr; do
+for job_id in container-build podman-uat-harness container-test publish-ghcr-amd64 publish-ghcr; do
   assert_job_route .github/workflows/container.yml "$job_id" xcsh-container-build
 done
+assert_job_route .github/workflows/container.yml publish-ghcr-arm64 ubuntu-24.04-arm
 assert_job_route .github/workflows/ci.yml verify-npm-debian xcsh-container-build
 assert_job_route .github/workflows/self-hosted-runner-cache-smoke.yml container-build-smoke xcsh-container-build
 assert_job_route .github/workflows/arc-compatibility.yml compute xcsh-compute
@@ -186,12 +187,19 @@ if grep -Fq 'name: Verify same-repository trust boundary' .github/workflows/cont
 fi
 grep -Fq 'runs-on: xcsh-container-build' .github/workflows/container.yml
 grep -Fq 'docker/build-push-action@' .github/workflows/container.yml
-grep -Fq 'docker/setup-qemu-action@' .github/workflows/container.yml
-grep -Fq 'platforms: linux/amd64,linux/arm64' .github/workflows/container.yml
-grep -Fq 'docker buildx build' .github/workflows/container.yml
+if grep -Fq 'docker/setup-qemu-action@' .github/workflows/container.yml; then
+  echo 'ERROR: GHCR publication must use native runners without QEMU' >&2
+  exit 1
+fi
+grep -Fq 'platforms: linux/amd64' .github/workflows/container.yml
+grep -Fq 'platforms: linux/arm64' .github/workflows/container.yml
+grep -Fq 'push-by-digest=true' .github/workflows/container.yml
+grep -Fq 'needs: [publish-ghcr-amd64, publish-ghcr-arm64]' .github/workflows/container.yml
+grep -Fq 'digest-receipt.json' .github/workflows/container.yml
+grep -Fq 'docker buildx imagetools create' .github/workflows/container.yml
 grep -Fq 'index_digest="sha256:$(docker buildx imagetools inspect --raw' .github/workflows/container.yml
-grep -Fq "printf '%s\\n'" .github/workflows/container.yml
-grep -Fq '# check=skip=InvalidDefaultArgInFrom' .github/workflows/container.yml
+grep -Fq 'docker run --rm "$IMAGE@$DIGEST" --version' .github/workflows/container.yml
+grep -Fq -- '--entrypoint uname "$IMAGE@$DIGEST" -m' .github/workflows/container.yml
 grep -Fq 'EXPECTED_MACHINE' .github/workflows/container.yml
 if grep -Fq "<<'DOCKERFILE'" .github/workflows/container.yml; then
   echo "ERROR: Published image verification uses a YAML-ambiguous heredoc." >&2

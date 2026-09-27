@@ -1,8 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "outcomes": [
     {"workflow": "ci.yml", "job": "check", "name": "check"},
-    {"workflow": "ci.yml", "job": "test", "name": "test"},
+    {"workflow": "ci.yml", "job": "test-typescript-independent", "name": "TypeScript tests (native-independent)", "needs": []},
+    {"workflow": "ci.yml", "job": "test-typescript-native", "name": "TypeScript tests (native-dependent)", "needs": ["assemble-native-linux-x64"]},
+    {"workflow": "ci.yml", "job": "test", "name": "test", "needs": ["test-typescript-independent", "test-typescript-native", "test-rust"]},
     {"workflow": "ci.yml", "job": "install_methods", "name": "Test installation methods"},
     {"workflow": "ci.yml", "job": "create-release", "name": "Publish immutable GitHub release"},
     {"workflow": "ci.yml", "job": "publish-npm", "name": "Publish npm packages"},
@@ -10,7 +12,9 @@
     {"workflow": "ci.yml", "job": "verify-macos-pkg", "name": "Verify direct MDM package (${{ matrix.arch }})"},
     {"workflow": "ci.yml", "job": "verify-npm-debian", "name": "Verify npm installation on Debian 12"},
     {"workflow": "container.yml", "job": "container-test", "name": "container-test"},
-    {"workflow": "container.yml", "job": "publish-ghcr", "name": "publish-ghcr"},
+    {"workflow": "container.yml", "job": "publish-ghcr-amd64", "name": "publish-ghcr (native-amd64)", "needs": ["container-test"]},
+    {"workflow": "container.yml", "job": "publish-ghcr-arm64", "name": "publish-ghcr (native-arm64)", "needs": ["container-test"]},
+    {"workflow": "container.yml", "job": "publish-ghcr", "name": "publish-ghcr", "needs": ["publish-ghcr-amd64", "publish-ghcr-arm64"]},
     {"workflow": "super-linter.yml", "job": "linked-issue", "name": "${{ github.repository == 'f5-sales-demo/xcsh' && 'Check linked issues' || 'xcsh linked issue (not applicable)' }}"}
   ]
 }
