@@ -19,6 +19,7 @@ const ciWorkflowPath = path.join(root, ".github/workflows/ci.yml");
 const workflowPath = path.join(root, ".github/workflows/release-npm-backfill.yml");
 const runnerPolicyPath = path.join(root, ".github/config/self-hosted-runner-policy.json");
 const sourceJobsPath = path.join(root, "scripts/ci-release-source-jobs.jq");
+const npmInstallerPath = path.join(root, "scripts/ci-install-release-npm.sh");
 
 describe("release npm backfill publish semantics", () => {
 	it("keeps platform binaries out of the umbrella native package", async () => {
@@ -284,7 +285,7 @@ describe("release npm backfill workflow contract", () => {
 		expect(publishJob).toContain("id-token: write");
 		expect(publishJob).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
 		expect(publishJob).toContain('node-version: "22.14.0"');
-		expect(publishJob).toContain("npm install --global npm@11.19.1");
+		expect(publishJob).toContain("bash scripts/ci-install-release-npm.sh");
 		expect(publishJob).toContain("NPM_TOKEN");
 		expect(publishJob).toContain("NODE_AUTH_TOKEN");
 		expect(publishJob).toContain("_authToken");
@@ -295,10 +296,16 @@ describe("release npm backfill workflow contract", () => {
 		expect(backfillWorkflow).toContain("id-token: write");
 		expect(backfillWorkflow).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
 		expect(backfillWorkflow).toContain('node-version: "22.14.0"');
-		expect(backfillWorkflow).toContain("npm install --global npm@11.19.1");
+		expect(backfillWorkflow).toContain("bash scripts/ci-install-release-npm.sh");
 		expect(backfillWorkflow).toContain("NPM_TOKEN");
 		expect(backfillWorkflow).toContain("NODE_AUTH_TOKEN");
 		expect(backfillWorkflow).toContain("_authToken");
+
+		const npmInstaller = await fs.readFile(npmInstallerPath, "utf8");
+		const npmInstallerStat = await fs.stat(npmInstallerPath);
+		expect(npmInstallerStat.mode & 0o111).not.toBe(0);
+		expect(npmInstaller).toContain("set -euo pipefail");
+		expect(npmInstaller).toContain("npm install --global npm@11.19.1");
 
 		const runnerPolicy = JSON.parse(await fs.readFile(runnerPolicyPath, "utf8"));
 		const xcshHosted = runnerPolicy.hosted_exceptions["f5-sales-demo/xcsh"];
