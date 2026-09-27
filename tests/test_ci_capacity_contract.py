@@ -39,6 +39,10 @@ class CiCapacityContractTests(unittest.TestCase):
             workflow,
         )
         self.assertIn("bun scripts/ci-native-manifest.ts verify", workflow)
+        self.assertIn(
+            "XCSH_NATIVE_MANIFEST_TOOL: ${{ github.workspace }}/scripts/ci-native-manifest.ts",
+            native,
+        )
         self.assertIn('XCSH_TEST_FILE_WORKERS: "0"', workflow)
         for platform in (
             '"platform":"linux","arch":"arm64"',

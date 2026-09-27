@@ -330,6 +330,7 @@ jobs:
     runs-on: xcsh-compute
     timeout-minutes: 30
     env:
+      XCSH_NATIVE_MANIFEST_TOOL: ${{ github.workspace }}/scripts/ci-native-manifest.ts
       XCSH_VERIFIED_NATIVE_MANIFEST: ${{ github.workspace }}/packages/natives/native/native-manifest.json
       # Serial is the production-safe path. File-worker parallelism requires
       # separate frozen-source qualification before promotion.

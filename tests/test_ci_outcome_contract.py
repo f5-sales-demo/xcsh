@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# ruff: noqa: PT009, S603
+# ruff: noqa: PT009
 import json
 import subprocess
 import sys
