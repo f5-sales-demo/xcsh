@@ -1,10 +1,12 @@
 /** Context-aware executable update policy and standalone replacement. */
 import * as fs from "node:fs";
 import { realpath } from "node:fs/promises";
+import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { APP_NAME, isEnoent, VERSION } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import {
+	createInstallReceipt,
 	defaultInstallChannelDependencies,
 	formatUpdateRecommendation,
 	resolveInstallChannel,
@@ -70,23 +72,49 @@ export interface StandaloneReplacementOptions {
 	arch?: NodeJS.Architecture;
 	fetchImpl?(input: string | URL | Request, init?: RequestInit): Promise<Response>;
 	rename?(source: string, destination: string): Promise<void>;
+	readFile?(file: string): Promise<string>;
+	writeFile?(file: string, contents: string): Promise<void>;
+	unlink?(file: string): Promise<void>;
 	validate?(executable: string, expectedVersion: string): Promise<void>;
 }
 
-/** Atomically replace one proven standalone executable, restoring it on every failure. */
+async function ignoreMissing(unlink: (file: string) => Promise<void>, file: string): Promise<void> {
+	try {
+		await unlink(file);
+	} catch (error) {
+		if (!isEnoent(error)) throw error;
+	}
+}
+
+/** Replace a proven standalone executable and receipt as one rollback-safe transaction. */
 export async function replaceStandaloneExecutable(
 	expectedVersion: string,
 	options: StandaloneReplacementOptions,
 ): Promise<void> {
 	const targetPath = options.targetPath;
-	const binaryName = getBinaryName(options.platform, options.arch);
+	const platform = options.platform ?? process.platform;
+	const arch = options.arch ?? process.arch;
+	const binaryName = getBinaryName(platform, arch);
 	const url = `https://github.com/${REPO}/releases/download/v${expectedVersion}/${binaryName}`;
 	const tempPath = `${targetPath}.new-${process.pid}`;
-	const backupPath = `${targetPath}.bak`;
+	const receiptPath = path.join(path.dirname(targetPath), "xcsh-install.json");
+	const tempReceiptPath = `${receiptPath}.new-${process.pid}`;
+	const backupPath = `${targetPath}.bak-${process.pid}`;
+	const backupReceiptPath = `${receiptPath}.bak-${process.pid}`;
 	const fetchImpl = options.fetchImpl ?? fetch;
 	const rename = options.rename ?? fs.promises.rename;
+	const readFile = options.readFile ?? (file => fs.promises.readFile(file, "utf8"));
+	const writeFile =
+		options.writeFile ??
+		(async (file, contents) => fs.promises.writeFile(file, contents, { flag: "wx", mode: 0o644 }));
+	const unlink = options.unlink ?? fs.promises.unlink;
 	const validate = options.validate ?? validateExecutableVersion;
-	let originalMoved = false;
+	const receiptContents = `${JSON.stringify(createInstallReceipt("standalone", expectedVersion, targetPath, platform, arch))}\n`;
+	let originalBinaryMoved = false;
+	let originalReceiptMoved = false;
+	let replacementBinaryInstalled = false;
+	let replacementReceiptInstalled = false;
+	let committed = false;
 
 	try {
 		const response = await fetchImpl(url, { redirect: "follow" });
@@ -94,33 +122,69 @@ export async function replaceStandaloneExecutable(
 		await pipeline(response.body, fs.createWriteStream(tempPath, { mode: 0o755, flags: "wx" }));
 		await fs.promises.chmod(tempPath, 0o755);
 		await validate(tempPath, expectedVersion);
+		await writeFile(tempReceiptPath, receiptContents);
+		if ((await readFile(tempReceiptPath)) !== receiptContents)
+			throw new Error("Staged install receipt validation failed");
 
-		try {
-			await fs.promises.unlink(backupPath);
-		} catch (error) {
-			if (!isEnoent(error)) throw error;
-		}
 		await rename(targetPath, backupPath);
-		originalMoved = true;
+		originalBinaryMoved = true;
+		await rename(receiptPath, backupReceiptPath);
+		originalReceiptMoved = true;
 		await rename(tempPath, targetPath);
+		replacementBinaryInstalled = true;
+		await rename(tempReceiptPath, receiptPath);
+		replacementReceiptInstalled = true;
 		await validate(targetPath, expectedVersion);
-		await fs.promises.unlink(backupPath);
-		originalMoved = false;
+		if ((await readFile(receiptPath)) !== receiptContents) throw new Error("Installed receipt validation failed");
+		committed = true;
+		await ignoreMissing(unlink, backupPath).catch(() => {});
+		originalBinaryMoved = false;
+		await ignoreMissing(unlink, backupReceiptPath).catch(() => {});
+		originalReceiptMoved = false;
 	} catch (error) {
-		if (originalMoved) {
+		const rollbackErrors: unknown[] = [];
+		if (replacementReceiptInstalled) {
 			try {
-				await fs.promises.unlink(targetPath);
-			} catch (unlinkError) {
-				if (!isEnoent(unlinkError)) throw unlinkError;
+				await ignoreMissing(unlink, receiptPath);
+				replacementReceiptInstalled = false;
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
 			}
-			await rename(backupPath, targetPath);
-			originalMoved = false;
 		}
+		if (originalReceiptMoved) {
+			try {
+				await rename(backupReceiptPath, receiptPath);
+				originalReceiptMoved = false;
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
+			}
+		}
+		if (replacementBinaryInstalled) {
+			try {
+				await ignoreMissing(unlink, targetPath);
+				replacementBinaryInstalled = false;
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
+			}
+		}
+		if (originalBinaryMoved) {
+			try {
+				await rename(backupPath, targetPath);
+				originalBinaryMoved = false;
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
+			}
+		}
+		if (rollbackErrors.length > 0)
+			throw new AggregateError([error, ...rollbackErrors], "Self-update rollback failed");
 		throw error;
 	} finally {
-		try {
-			await fs.promises.unlink(tempPath);
-		} catch {}
+		await ignoreMissing(unlink, tempPath).catch(() => {});
+		await ignoreMissing(unlink, tempReceiptPath).catch(() => {});
+		if (committed) {
+			await ignoreMissing(unlink, backupPath).catch(() => {});
+			await ignoreMissing(unlink, backupReceiptPath).catch(() => {});
+		}
 	}
 }
 

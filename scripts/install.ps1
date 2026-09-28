@@ -20,7 +20,6 @@ $Repo = "f5-sales-demo/xcsh"
 $Package = "@f5-sales-demo/xcsh"
 $InstallDir = if ($env:PI_INSTALL_DIR) { $env:PI_INSTALL_DIR } else { "$env:LOCALAPPDATA\xcsh" }
 $BinaryName = "xcsh-windows-x64.exe"
-$NativeAddonNames = @("pi_natives.win32-x64-modern.node", "pi_natives.win32-x64-baseline.node")
 $MinimumBunVersion = "1.4.2"
 
 function Test-BunInstalled {
@@ -258,22 +257,14 @@ function Install-Binary {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     $StageDir = Join-Path $InstallDir (".xcsh-install-" + [System.Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $StageDir | Out-Null
-    $OutPath = Join-Path $InstallDir "xcsh.exe"
-    $ReceiptPath = Join-Path $InstallDir "xcsh-install.json"
+    $OutPath = [System.IO.Path]::GetFullPath((Join-Path $InstallDir "xcsh.exe"))
+    $ReceiptPath = [System.IO.Path]::GetFullPath((Join-Path $InstallDir "xcsh-install.json"))
     $StagedBinary = Join-Path $StageDir "xcsh.exe"
     $StagedReceipt = Join-Path $StageDir "xcsh-install.json"
-    $downloadedNative = 0
     try {
         $BinaryUrl = "https://github.com/$Repo/releases/download/$Latest/$BinaryName"
         Write-Host "Downloading $BinaryName..."
         Invoke-WebRequest -Uri $BinaryUrl -OutFile $StagedBinary
-
-        foreach ($nativeAddonName in $NativeAddonNames) {
-            $nativeUrl = "https://github.com/$Repo/releases/download/$Latest/$nativeAddonName"
-            Write-Host "Downloading $nativeAddonName..."
-            Invoke-WebRequest -Uri $nativeUrl -OutFile (Join-Path $StageDir $nativeAddonName)
-            $downloadedNative += 1
-        }
 
         $ExpectedVersion = $Latest.TrimStart("v")
         $ActualVersion = (& $StagedBinary --version).Trim()
@@ -281,7 +272,7 @@ function Install-Binary {
             throw "Downloaded xcsh did not report expected version $ExpectedVersion"
         }
         $Receipt = @{
-            schemaVersion = 1
+            schemaVersion = 2
             channel = "windows-installer"
             version = $ExpectedVersion
             executablePath = $OutPath
@@ -290,18 +281,17 @@ function Install-Binary {
         } | ConvertTo-Json -Compress
         [System.IO.File]::WriteAllText($StagedReceipt, $Receipt, [System.Text.UTF8Encoding]::new($false))
 
-        foreach ($nativeAddonName in $NativeAddonNames) {
-            Move-Item -Force (Join-Path $StageDir $nativeAddonName) (Join-Path $InstallDir $nativeAddonName)
-        }
         Move-Item -Force $StagedBinary $OutPath
         # Commit the receipt last so only a complete installer run grants ownership.
         Move-Item -Force $StagedReceipt $ReceiptPath
+        Get-ChildItem -Path $InstallDir -Filter "pi_natives.*.node" -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force
     } finally {
         Remove-Item -Recurse -Force $StageDir -ErrorAction SilentlyContinue
     }
     Write-Host ""
     Write-Host "✓ Installed xcsh to $OutPath" -ForegroundColor Green
-    Write-Host "✓ Installed $downloadedNative native addon file(s) to $InstallDir" -ForegroundColor Green
+    Write-Host "✓ Installed standalone receipt to $ReceiptPath" -ForegroundColor Green
 
     # Add to PATH if not already there
     $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")

@@ -7,6 +7,25 @@ set -euo pipefail
 
 baseline_tap="xcsh-uat/baseline"
 target_tap="f5-sales-demo/tap"
+minimum_available_kib=2097152
+available_kib=$(df -Pk "${TMPDIR:-/tmp}" | awk 'NR == 2 { print $4 }')
+echo "Homebrew UAT disk capacity: ${available_kib} KiB available; ${minimum_available_kib} KiB required"
+if [[ ! "$available_kib" =~ ^[0-9]+$ ]] || ((available_kib < minimum_available_kib)); then
+  echo "Insufficient disk capacity for Homebrew upgrade UAT" >&2
+  exit 1
+fi
+
+cleanup() {
+  status=$?
+  trap - EXIT INT TERM
+  if ((status != 0)); then
+    brew uninstall --cask --force "${target_tap}/xcsh" >/dev/null 2>&1 || true
+    brew uninstall --cask --force "${baseline_tap}/xcsh" >/dev/null 2>&1 || true
+  fi
+  brew untap "$baseline_tap" >/dev/null 2>&1 || true
+  exit "$status"
+}
+trap cleanup EXIT INT TERM
 
 brew untap "$baseline_tap" >/dev/null 2>&1 || true
 brew tap-new --no-git "$baseline_tap"

@@ -54,7 +54,7 @@ import { Aside, Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/compone
   curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
   ```
 
-  <p>It installs the latest prebuilt release into <code>~/.local/bin</code> with a provenance receipt. This is the only channel that <code>xcsh self-update</code> replaces in process. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
+  <p>It installs the latest prebuilt release and a schema-v2 provenance receipt into <code>~/.local/bin</code>. The native addon is embedded in the executable, so those are the only two standalone payloads. This is the only channel that <code>xcsh self-update</code> replaces in process. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
 </section>
 
 ## What xcsh helps you do
@@ -127,7 +127,7 @@ Run the PowerShell installer, then restart the terminal so its user `PATH` refre
 irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1 | iex
 ```
 
-It installs `xcsh.exe` and native add-ons to `%LOCALAPPDATA%\\xcsh`. **Bash is required for tool-backed sessions.** Install Git for Windows, WSL, Cygwin, or MSYS2; set `shellPath` in `%USERPROFILE%\\.xcsh\\agent\\settings.json` when Bash is elsewhere.
+It installs `xcsh.exe` and its schema-v2 provenance receipt to `%LOCALAPPDATA%\\xcsh`; the native addon is embedded. **Bash is required for tool-backed sessions.** Install Git for Windows, WSL, Cygwin, or MSYS2; set `shellPath` in `%USERPROFILE%\\.xcsh\\agent\\settings.json` when Bash is elsewhere.
 
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
@@ -180,6 +180,10 @@ ref to replace that unsupported development channel.
 </Tabs>
 
 Run `xcsh self-update --check` for a read-only version and installation-channel report. A direct MDM package remains organization-managed. Missing, stale, spoofed, or conflicting provenance is blocked without downloading, invoking a package manager, or changing the executable; reinstall through the documented channel instead of mixing installers.
+
+<Aside type="caution" title="Standalone receipt schema v2">
+Standalone installations with an older schema-v1 receipt must run the documented installer once before using `xcsh self-update`. There is no compatibility parser or automatic receipt migration. A successful self-update advances the executable and adjacent receipt together and restores both if the transaction fails.
+</Aside>
 
 Whichever installation channel you choose, open xcsh next.
 
