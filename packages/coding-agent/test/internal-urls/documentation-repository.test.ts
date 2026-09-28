@@ -184,6 +184,18 @@ describe("embedded documentation repository", () => {
 		expect(new Set(unfiltered.map(result => result.source))).toEqual(
 			new Set(["docs-cloud-f5-com", "my-f5-com", "www-f5-com"]),
 		);
+		expect((await repository.search("what is client side defense", undefined, 5))[0]).toMatchObject({
+			source: "www-f5-com",
+			stablePath: "products/distributed-cloud-services/client-side-defense",
+		});
+		expect((await repository.search("configure web application firewall", undefined, 5))[0]).toMatchObject({
+			source: "docs-cloud-f5-com",
+			stablePath: "protect-applications",
+		});
+		expect((await repository.search("troubleshoot expired certificate", undefined, 5))[0]).toMatchObject({
+			source: "my-f5-com",
+			stablePath: "K000000001",
+		});
 		const filtered = await repository.search("protect applications", "docs-cloud-f5-com", 1);
 		expect(filtered).toHaveLength(1);
 		expect(filtered[0]?.source).toBe("docs-cloud-f5-com");
