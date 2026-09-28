@@ -50,7 +50,7 @@ const DOCUMENTATION_INTENT =
 const CONFIGURATION_INTENT = /\b(?:configure|configuration|set\s*up|procedure|instructions?|how\s+(?:do|can|to))\b/i;
 const SUPPORT_INTENT = /\b(?:troubleshoot|support|knowledge[- ]base|error|failure|issue|K[0-9]{6,})\b/i;
 const MARKETING_TOPIC =
-	/\b(?:client[- ]side defense|distributed cloud|web app(?:lication)? and api protection|multi[- ]cloud networking|dns load balancer|bot defense|api security|app connect|appstack|content delivery network|cdn|mobile app shield|synthetic monitoring|web app scanning)\b/i;
+	/\b(?:client[- ]side defense|distributed cloud|web (?:app|application) and api protection|multi[- ]cloud networking|dns load balancer|bot defense|api security|app connect|appstack|content delivery network|cdn|mobile app shield|synthetic monitoring|web app scanning)\b/i;
 const EXCLUDED_API_INTENT = /\b(?:pricing|price|quote|licen[cs]ing|sales)\b/i;
 const DIRECT_URI = /\bxcsh:\/\/(?:api-catalog|api-spec|documentation)\/[^\s)>\]}]*/i;
 
