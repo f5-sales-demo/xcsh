@@ -503,9 +503,10 @@ unique Markdown image reference from the exact document, resolve each relative r
 the transcript order is stable. Do not use `display_media` for documentation assets, and do not convert a static
 screenshot collection into a timeline or slideshow.
 
-Inspect each returned image conservatively. Present its official Markdown caption with one grounded explanation.
+Inspect each returned image conservatively. Present its official Markdown caption verbatim with one grounded explanation.
 If image pixels are unavailable to the active model, quietly rely only on the official caption and nearby document
-prose; never invent visual details. Verify that the reported image count matches the number of successful asset reads.
+prose; never invent visual details. Do not announce or estimate the image count before all reads finish. Afterward,
+verify that the reported image count matches the number of successful asset reads.
 
 If the pinned snapshot is stale, missing, or the QMD lookup fails, disclose that condition before using the live
 fallback knowledge index:
