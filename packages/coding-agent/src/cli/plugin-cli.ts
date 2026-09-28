@@ -28,7 +28,7 @@ import {
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
 } from "../integrations/setup";
-import type { IntegrationHandle } from "../integrations/types";
+import type { IntegrationHandle, IntegrationState } from "../integrations/types";
 import { theme } from "../modes/theme/theme";
 import { personProfileService } from "../person-profile/service";
 import { ContextError, ContextService, type XCSHContext } from "../services/xcsh-context";
@@ -336,11 +336,18 @@ async function handleIntegrationStatus(args: string[], flags: { json?: boolean; 
 	});
 }
 
-export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle<unknown>) {
+export function shouldSkipIntegrationSetup(state: IntegrationState, force = false): boolean {
+	return state === "ready" && !force;
+}
+
+export async function reviewAndExecuteIntegrationSetup(
+	handle: IntegrationHandle<unknown>,
+	options: { force?: boolean } = {},
+) {
 	const plan = handle.setupPlan;
 	if (!plan) throw new Error(`Integration ${handle.id} does not declare setup`);
 	const current = await handle.get();
-	if (current.state === "ready") return current;
+	if (shouldSkipIntegrationSetup(current.state, options.force)) return current;
 	if (plan.guidedAction?.kind === "context_wizard")
 		throw new Error(
 			`Plugin ${handle.plugin ?? handle.id} setup requires interactive xcsh; run /plugin setup ${handle.plugin ?? handle.id} in the xcsh TUI.`,
@@ -358,19 +365,22 @@ export async function reviewAndExecuteIntegrationSetup(handle: IntegrationHandle
 	return result;
 }
 
-async function handleIntegrationSetup(args: string[], flags: { json?: boolean; context?: string }): Promise<void> {
+async function handleIntegrationSetup(
+	args: string[],
+	flags: { json?: boolean; context?: string; force?: boolean },
+): Promise<void> {
 	if (flags.json) throw new CliUsageError("plugin setup is human-only and does not accept --json");
-	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin> [--context <name>]`);
+	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin> [--context <name>] [--force]`);
 	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
 	const handles = await loadIntegrationHandles();
 	await withPluginContext(flags.context, async () => {
 		const handle = selectSetupIntegration(handles, args[0]);
 		const current = await handle.get();
-		if (current.state === "ready") {
+		if (shouldSkipIntegrationSetup(current.state, flags.force)) {
 			process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
 			return;
 		}
-		const result = await reviewAndExecuteIntegrationSetup(handle);
+		const result = await reviewAndExecuteIntegrationSetup(handle, { force: flags.force });
 		process.stdout.write(
 			`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
 		);
