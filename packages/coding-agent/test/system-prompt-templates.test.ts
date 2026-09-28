@@ -240,7 +240,7 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("# Product and ecosystem knowledge");
 		expect(template).toContain("xcsh://documentation/?search=<query>");
 		expect(template).toContain("read the exact");
-		expect(template).toContain("`xcsh://documentation/<source>/<stable-path>/index.md` result");
+		expect(template).toContain("`xcsh://documentation/<source>/<stable-path>/index.md#<anchor>` result");
 		expect(template).toContain("stale, missing, or the QMD lookup fails");
 		expect(template).toContain("disclose that condition before using the live");
 		expect(template).toContain("https://f5-sales-demo.github.io/llms.txt");
@@ -258,7 +258,7 @@ describe("system Handlebars prompt templates", () => {
 		const ruleText = await Bun.file(rulePath).text();
 		expect(ruleText).toContain("Follow `## Contents` links recursively");
 		expect(ruleText).toContain("search `xcsh://documentation/?search=<query>` first");
-		expect(ruleText).toContain("read its exact follow-up URL");
+		expect(ruleText).toContain("read its exact section-qualified follow-up URL");
 		expect(ruleText).toContain("disclose why the pinned snapshot is stale, missing, or unavailable");
 		expect(ruleText).toContain("Stop at the narrowest source that answers the question");
 		expect(ruleText).toContain("Multi-site questions");

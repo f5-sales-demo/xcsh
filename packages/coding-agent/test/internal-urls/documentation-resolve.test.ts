@@ -19,7 +19,7 @@ function repository(): DocumentationRepository {
 			documentCount: 2,
 			assetCount: 1,
 		},
-		async search(query, source, limit) {
+		async search(query, source, limit, filters) {
 			expect(["protect applications", "what is client side defense"]).toContain(query);
 			expect(limit).toBe(source === undefined ? 5 : 1);
 			const rows = [
@@ -28,40 +28,102 @@ function repository(): DocumentationRepository {
 					source: "docs-cloud-f5-com" as const,
 					originalUrl: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection",
 					stablePath: "web-app-and-api-protection",
+					anchor: "protect-applications",
+					heading: "Protect applications",
 					snippet: "Configure a load balancer.",
 					score: 7.25,
+					product: "web-application-firewall",
+					contentType: "how_to" as const,
+					taskType: "configure" as const,
+					language: "en",
+					lifecycle: "current" as const,
+					replacementUrl: null,
+					relatedDocuments: [
+						{
+							relation: "support" as const,
+							title: "Support article",
+							canonicalUrl: "https://my.f5.com/manage/s/article/K000000001",
+							source: "my-f5-com" as const,
+							stablePath: "K000000001",
+						},
+					],
 				},
 				{
 					title: "Support article",
 					source: "my-f5-com" as const,
 					originalUrl: "https://my.f5.com/manage/s/article/K000000001",
 					stablePath: "K000000001",
+					anchor: "support-article",
+					heading: "Support article",
 					snippet: "Support content.",
 					score: 4.5,
+					product: null,
+					contentType: "knowledge_article" as const,
+					taskType: "support" as const,
+					language: "en",
+					lifecycle: "deprecated" as const,
+					replacementUrl: null,
+					relatedDocuments: [],
 				},
 				{
 					title: "Client-Side Defense",
 					source: "www-f5-com" as const,
 					originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
 					stablePath: "products/distributed-cloud-services/client-side-defense",
+					anchor: "client-side-defense",
+					heading: "Client-Side Defense",
 					snippet: "Protect web applications from malicious scripts.",
 					score: 8.5,
+					product: "client-side-defense",
+					contentType: "product_overview" as const,
+					taskType: "concept" as const,
+					language: "en",
+					lifecycle: "current" as const,
+					replacementUrl: null,
+					relatedDocuments: [],
 				},
 			];
-			return rows.filter(row => source === undefined || row.source === source).slice(0, limit);
+			return rows
+				.filter(row => source === undefined || row.source === source)
+				.filter(row => filters?.product === undefined || row.product === filters.product)
+				.slice(0, limit);
 		},
-		async readDocument(source, stablePath) {
+		async readDocument(source, stablePath, anchor) {
+			if (source === "docs-cloud-f5-com" && stablePath === "web-app-and-api-protection" && anchor) {
+				return anchor === "protect-applications"
+					? {
+							markdown: "# Protect applications\n\nConfigure a load balancer.\n",
+							title: "Protect applications",
+							originalUrl: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection",
+							lifecycle: "current" as const,
+							replacementUrl: null,
+						}
+					: null;
+			}
+			if (source === "my-f5-com" && stablePath === "K000000001") {
+				return {
+					markdown: "# Support article\n",
+					title: "Support article",
+					originalUrl: "https://my.f5.com/manage/s/article/K000000001",
+					lifecycle: "deprecated" as const,
+					replacementUrl: null,
+				};
+			}
 			return source === "docs-cloud-f5-com" && stablePath === "web-app-and-api-protection"
 				? {
 						markdown,
 						title: "Protect applications",
 						originalUrl: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection",
+						lifecycle: "current",
+						replacementUrl: null,
 					}
 				: source === "www-f5-com" && stablePath === "products/distributed-cloud-services/client-side-defense"
 					? {
 							markdown: "# Client-Side Defense\n",
 							title: "Client-Side Defense",
 							originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+							lifecycle: "current",
+							replacementUrl: null,
 						}
 					: null;
 		},
@@ -114,7 +176,7 @@ describe("xcsh://documentation", () => {
 		);
 		expect(result.content).toContain("Client-Side Defense");
 		expect(result.content).toContain(
-			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md#client-side-defense",
 		);
 		const document = await router().resolve(
 			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
@@ -133,7 +195,10 @@ describe("xcsh://documentation", () => {
 	it("searches all sources with five results by default and exact follow-up URLs", async () => {
 		const result = await router().resolve("xcsh://documentation/?search=protect%20applications");
 		expect(result.content).toContain("Protect applications");
-		expect(result.content).toContain("xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md");
+		expect(result.content).toContain(
+			"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md#protect-applications",
+		);
+		expect(result.content).toContain("xcsh://documentation/my-f5-com/K000000001/index.md");
 		expect(result.content).toContain("Snapshot: `content-20260926T214508Z`");
 	});
 
@@ -142,7 +207,29 @@ describe("xcsh://documentation", () => {
 			"xcsh://documentation/?search=protect%20applications&source=my-f5-com&limit=1",
 		);
 		expect(result.content).toContain("Support article");
+		expect(result.content).toContain("Warning: this document is deprecated");
 		expect(result.content).not.toContain("Protect applications");
+		const exact = await router().resolve("xcsh://documentation/my-f5-com/K000000001/index.md");
+		expect(exact.content).toStartWith("> Warning: this document is deprecated.");
+	});
+
+	it("passes normalized metadata filters and rejects invalid or duplicate values", async () => {
+		const result = await router().resolve(
+			"xcsh://documentation/?search=protect%20applications&product=web-application-firewall&content_type=how_to&task_type=configure&language=en&lifecycle=current",
+		);
+		expect(result.content).toContain("Product: web-application-firewall");
+		for (const invalid of [
+			"product=Not-A-Slug",
+			"content_type=guide",
+			"task_type=install",
+			"language=not_a_tag",
+			"lifecycle=removed",
+		]) {
+			await expect(router().resolve(`xcsh://documentation/?search=x&${invalid}`)).rejects.toThrow();
+		}
+		await expect(router().resolve("xcsh://documentation/?search=x&language=en&language=fr")).rejects.toThrow(
+			"Duplicate",
+		);
 	});
 
 	it("returns exact verified Markdown", async () => {
@@ -151,6 +238,14 @@ describe("xcsh://documentation", () => {
 		);
 		expect(result.content).toBe(markdown);
 		expect(result.contentType).toBe("text/markdown");
+	});
+
+	it("returns exact heading-bounded Markdown for anchored reads", async () => {
+		const result = await router().resolve(
+			"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md#protect-applications",
+		);
+		expect(result.content).toBe("# Protect applications\n\nConfigure a load balancer.\n");
+		expect(result.sourcePath).toEndWith("index.md#protect-applications");
 	});
 
 	it("returns base64 image resources", async () => {
@@ -173,6 +268,8 @@ describe("xcsh://documentation", () => {
 		"xcsh://documentation/docs-cloud-f5-com/missing/index.md",
 		"xcsh://documentation/www-f5-com/../company/index.md",
 		"xcsh://documentation/www-f5-com/company/about-us/index.md",
+		"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md#%2fetc",
+		"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md#..",
 	])("rejects invalid or unknown route %s", async value => {
 		await expect(router().resolve(value)).rejects.toThrow();
 	});

@@ -8,6 +8,14 @@ import { createGunzip, gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
+import {
+	type DocumentationMetadata,
+	type DocumentationPassage,
+	parseDocumentationMetadata,
+	passageHash,
+	splitHeadingPassages,
+	validateDocumentationGraph,
+} from "./documentation-metadata";
 import { DOCUMENTATION_SOURCES, type DocumentationSource } from "./documentation-resolve";
 
 const MIB = 1024 * 1024;
@@ -33,6 +41,7 @@ const COMMIT = /^[a-f0-9]{40}$/;
 const RELEASE_TAG = /^content-[0-9]{8}T[0-9]{6}Z$/;
 const TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/;
 const FIXED_TIME = "2000-01-01T00:00:00.000Z";
+const DOCUMENTATION_INDEX_SCHEMA_VERSION = 2;
 const MANIFEST_KEYS = [
 	"asset_count",
 	"assets",
@@ -112,6 +121,8 @@ export interface VerifiedDocumentationDocument {
 	readonly fileSha256: string;
 	readonly sizeBytes: number;
 	readonly markdown: string;
+	readonly metadata: DocumentationMetadata;
+	readonly passages: readonly DocumentationPassage[];
 }
 
 export interface VerifiedDocumentationAsset {
@@ -196,6 +207,39 @@ function validateOriginalUrl(value: unknown, source: DocumentationSource, field:
 		throw new Error(`${field} is outside the declared source root`);
 	}
 	return result;
+}
+
+function validateCorpusUrl(value: unknown, source: DocumentationSource | undefined, field: string): string {
+	if (source !== undefined) {
+		const result = validateOriginalUrl(value, source, field);
+		validateNormalizedUrl(result, field);
+		return result;
+	}
+	for (const candidate of DOCUMENTATION_SOURCES) {
+		try {
+			const result = validateOriginalUrl(value, candidate, field);
+			validateNormalizedUrl(result, field);
+			return result;
+		} catch {
+			// Continue until one complete source policy accepts the URL.
+		}
+	}
+	throw new Error(`${field} is outside the documentation corpus`);
+}
+
+function validateNormalizedUrl(value: string, field: string): void {
+	const parsed = new URL(value);
+	if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.hash) {
+		throw new Error(`${field} is not a normalized HTTPS URL`);
+	}
+	const entries = [...parsed.searchParams.entries()].sort(
+		([leftKey, leftValue], [rightKey, rightValue]) =>
+			leftKey.localeCompare(rightKey) || leftValue.localeCompare(rightValue),
+	);
+	const normalizedQuery = new URLSearchParams(entries).toString();
+	const normalizedPath = parsed.pathname === "/" ? "/" : parsed.pathname.replace(/\/{2,}/g, "/").replace(/\/$/, "");
+	const normalized = `${parsed.protocol}//${parsed.host}${normalizedPath}${normalizedQuery ? `?${normalizedQuery}` : ""}`;
+	if (normalized !== value) throw new Error(`${field} is not normalized`);
 }
 
 export function sha256Bytes(value: Uint8Array | string): string {
@@ -616,6 +660,16 @@ export async function verifyDocumentationRelease(
 		}
 		if (parsed.metadata.sourceId !== source || parsed.metadata.url !== originalUrl)
 			throw new Error(`manifest document frontmatter mismatch: ${archiveMemberPath}`);
+		const metadata = parseDocumentationMetadata(
+			parsed.metadata,
+			validateCorpusUrl,
+			source,
+			`document ${archiveMemberPath}`,
+		);
+		const passages = splitHeadingPassages(parsed.body);
+		if (new Set(passages.map(passage => passage.anchor)).size !== passages.length) {
+			throw new Error(`document heading anchors are not unique: ${archiveMemberPath}`);
+		}
 		const bodySha256 = string(item.body_sha256, "manifest document body hash");
 		const fileSha256 = string(item.file_sha256, "manifest document file hash");
 		const sizeBytes = count(item.size_bytes, "manifest document size");
@@ -633,8 +687,11 @@ export async function verifyDocumentationRelease(
 			fileSha256,
 			sizeBytes,
 			markdown,
+			metadata,
+			passages,
 		};
 	});
+	validateDocumentationGraph(documents);
 
 	const marketingDocumentPaths = new Set(
 		documents.filter(document => document.source === "www-f5-com").map(document => document.stablePath),
@@ -690,6 +747,7 @@ function fingerprint(snapshot: VerifiedDocumentationSnapshot): string {
 	return sha256Bytes(
 		JSON.stringify({
 			archiveSha256: snapshot.archiveSha256,
+			indexSchema: DOCUMENTATION_INDEX_SCHEMA_VERSION,
 			releaseTag: snapshot.releaseTag,
 			sourceCommit: snapshot.sourceCommit,
 			qmdVersion: "2.8.3",
@@ -739,7 +797,46 @@ function canonicalizeDatabase(
 			file_sha256 TEXT NOT NULL,
 			size_bytes INTEGER NOT NULL,
 			markdown TEXT NOT NULL,
+			canonical_url TEXT NOT NULL,
+			last_updated TEXT,
+			product TEXT,
+			content_type TEXT NOT NULL,
+			task_type TEXT NOT NULL,
+			language TEXT NOT NULL,
+			lifecycle TEXT NOT NULL,
+			replacement_url TEXT,
+			aliases_json TEXT NOT NULL,
+			related_documents_json TEXT NOT NULL,
 			PRIMARY KEY (source, stable_path)
+		)`);
+		db.exec(`CREATE TABLE documentation_passages (
+			source TEXT NOT NULL,
+			stable_path TEXT NOT NULL,
+			anchor TEXT NOT NULL,
+			heading TEXT NOT NULL,
+			markdown TEXT NOT NULL,
+			ordinal INTEGER NOT NULL,
+			qmd_path TEXT NOT NULL UNIQUE,
+			PRIMARY KEY (source, stable_path, anchor)
+		)`);
+		db.exec(`CREATE INDEX documentation_metadata_filters ON documentation_documents (
+			product, content_type, task_type, language, lifecycle, source
+		)`);
+		db.exec(`CREATE INDEX documentation_passage_page ON documentation_passages (source, stable_path, ordinal)`);
+		db.exec(`CREATE TABLE documentation_aliases (
+			product TEXT NOT NULL,
+			alias TEXT NOT NULL,
+			PRIMARY KEY (product, alias)
+		)`);
+		db.exec(`CREATE TABLE documentation_relationships (
+			source TEXT NOT NULL,
+			stable_path TEXT NOT NULL,
+			relation TEXT NOT NULL,
+			target_source TEXT NOT NULL,
+			target_stable_path TEXT NOT NULL,
+			title TEXT NOT NULL,
+			canonical_url TEXT NOT NULL,
+			PRIMARY KEY (source, stable_path, canonical_url)
 		)`);
 		db.exec(`CREATE TABLE documentation_assets (
 			source TEXT NOT NULL,
@@ -757,11 +854,17 @@ function canonicalizeDatabase(
 			asset_count: String(snapshot.assets.length),
 			document_count: String(snapshot.documents.length),
 			fingerprint: indexFingerprint,
+			index_schema: String(DOCUMENTATION_INDEX_SCHEMA_VERSION),
 			release_tag: snapshot.releaseTag,
 			source_commit: snapshot.sourceCommit,
 		}).sort(([left], [right]) => left.localeCompare(right)))
 			provenance.run(key, value);
-		const insertDocument = db.query("INSERT INTO documentation_documents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		const insertDocument = db.query(
+			"INSERT INTO documentation_documents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		);
+		const insertPassage = db.query("INSERT INTO documentation_passages VALUES (?, ?, ?, ?, ?, ?, ?)");
+		const insertAlias = db.query("INSERT OR IGNORE INTO documentation_aliases VALUES (?, ?)");
+		const insertRelationship = db.query("INSERT INTO documentation_relationships VALUES (?, ?, ?, ?, ?, ?, ?)");
 		for (const document of snapshot.documents) {
 			insertDocument.run(
 				document.source,
@@ -773,7 +876,42 @@ function canonicalizeDatabase(
 				document.fileSha256,
 				document.sizeBytes,
 				document.markdown,
+				document.metadata.canonicalUrl,
+				document.metadata.lastUpdated,
+				document.metadata.product,
+				document.metadata.contentType,
+				document.metadata.taskType,
+				document.metadata.language,
+				document.metadata.lifecycle,
+				document.metadata.replacementUrl,
+				JSON.stringify(document.metadata.aliases),
+				JSON.stringify(document.metadata.relatedDocuments),
 			);
+			for (const passage of document.passages) {
+				insertPassage.run(
+					document.source,
+					document.stablePath,
+					passage.anchor,
+					passage.heading,
+					passage.markdown,
+					passage.ordinal,
+					`${document.stablePath}/index.md#${passage.anchor}`,
+				);
+			}
+			if (document.metadata.product) {
+				for (const alias of document.metadata.aliases) insertAlias.run(document.metadata.product, alias);
+			}
+			for (const related of document.metadata.relatedDocuments) {
+				insertRelationship.run(
+					document.source,
+					document.stablePath,
+					related.relation,
+					related.source,
+					related.stablePath,
+					related.title,
+					related.canonicalUrl,
+				);
+			}
 		}
 		const insertAsset = db.query("INSERT INTO documentation_assets VALUES (?, ?, ?, ?, ?, ?, ?)");
 		for (const asset of snapshot.assets) {
@@ -810,9 +948,15 @@ function verifyIndexedBodies(databasePath: string, snapshot: VerifiedDocumentati
 			FROM documents d JOIN content c ON c.hash = d.hash WHERE d.active = 1
 			ORDER BY d.collection, d.path`)
 			.all() as Array<{ source: string; path: string; markdown: string }>;
-		if (rows.length !== snapshot.documents.length) throw new Error("documentation index document count mismatch");
+		const passageCount = snapshot.documents.reduce((total, document) => total + document.passages.length, 0);
+		if (rows.length !== passageCount) throw new Error("documentation index passage count mismatch");
 		const expected = new Map(
-			snapshot.documents.map(document => [`${document.source}/${document.stablePath}/index.md`, document.markdown]),
+			snapshot.documents.flatMap(document =>
+				document.passages.map(passage => [
+					`${document.source}/${document.stablePath}/index.md#${passage.anchor}`,
+					passage.markdown,
+				]),
+			),
 		);
 		for (const row of rows) {
 			const key = `${row.source}/${row.path.replaceAll("\\", "/")}`;
@@ -875,15 +1019,27 @@ export async function buildDocumentationIndex(
 		});
 		try {
 			for (const document of snapshot.documents) {
-				store.internal.insertContent(document.fileSha256, document.markdown, FIXED_TIME);
-				store.internal.insertDocument(
-					document.source,
-					`${document.stablePath}/index.md`,
+				const weightedTitle = [
 					document.title,
-					document.fileSha256,
-					FIXED_TIME,
-					FIXED_TIME,
-				);
+					document.metadata.product,
+					document.metadata.contentType,
+					document.metadata.taskType,
+					...document.metadata.aliases,
+				]
+					.filter(Boolean)
+					.join(" ");
+				for (const passage of document.passages) {
+					const hash = passageHash(document.fileSha256, passage.anchor, passage.markdown);
+					store.internal.insertContent(hash, passage.markdown, FIXED_TIME);
+					store.internal.insertDocument(
+						document.source,
+						`${document.stablePath}/index.md#${passage.anchor}`,
+						weightedTitle,
+						hash,
+						FIXED_TIME,
+						FIXED_TIME,
+					);
+				}
 			}
 			store.internal.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
 			store.internal.db.exec("PRAGMA journal_mode = DELETE");

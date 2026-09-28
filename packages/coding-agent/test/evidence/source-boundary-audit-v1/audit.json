@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "64ba69e78ed9c038974c148b6a2c3b758224d549",
+  "revision": "8d450daa14651838ca12482d526de539507cc5fe",
   "fingerprint": "e4de65fc99203fd012a91b5f098e33afffadd8868da7e6c51e8f953e198caad2",
   "counts": {
     "total": 238,
@@ -354,11 +354,11 @@
         "packages/coding-agent/test/discovery/helpers.test.ts",
         "packages/coding-agent/test/edit-diff.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
+        "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
         "packages/coding-agent/test/join-patch.test.ts",
         "packages/coding-agent/test/marketplace/recommended.test.ts",
-        "packages/coding-agent/test/model-registry.test.ts",
-        "packages/coding-agent/test/model-selector-openai-codex.test.ts"
+        "packages/coding-agent/test/model-registry.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6120,10 +6120,10 @@
         "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/changes-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/console-resolve.test.ts",
+        "packages/coding-agent/test/internal-urls/documentation-metadata.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-repository.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
-        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts"
+        "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
