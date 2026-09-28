@@ -234,6 +234,24 @@ describe("InputController escape behavior", () => {
 		expect(editor.getText()).toBe("");
 	});
 
+	it("reserves the /status builtin alias before extension input handlers", async () => {
+		const { ctx, editor } = createContext();
+		const emitInput = vi.fn(async () => ({ handled: true }));
+		const showExtensionsDashboard = vi.fn();
+		(ctx.session as { extensionRunner?: unknown }).extensionRunner = {
+			hasHandlers: () => true,
+			emitInput,
+		};
+		ctx.showExtensionsDashboard = showExtensionsDashboard;
+		const controller = new InputController(ctx);
+
+		controller.setupEditorSubmitHandler();
+		await editor.onSubmit?.("/status");
+
+		expect(showExtensionsDashboard).toHaveBeenCalledTimes(1);
+		expect(emitInput).not.toHaveBeenCalled();
+	});
+
 	it("falls back to aborting the active session when no pending optimistic submission exists", () => {
 		const { ctx, editor, spies } = createContext();
 		ctx.loadingAnimation = {} as InteractiveModeContext["loadingAnimation"];

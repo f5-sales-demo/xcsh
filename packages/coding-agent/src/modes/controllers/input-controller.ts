@@ -281,6 +281,19 @@ export class InputController {
 				return;
 			}
 
+			// Handle built-in slash commands
+			const slashResult = await executeBuiltinSlashCommand(text, {
+				ctx: this.ctx,
+				handleBackgroundCommand: () => this.handleBackgroundCommand(),
+			});
+			if (slashResult === true) {
+				return;
+			}
+			if (typeof slashResult === "string") {
+				// Command handled but returned remaining text to use as prompt
+				text = slashResult;
+			}
+
 			const runner = this.ctx.session.extensionRunner;
 			let inputImages = this.ctx.pendingImages.length > 0 ? [...this.ctx.pendingImages] : undefined;
 
@@ -300,19 +313,6 @@ export class InputController {
 			}
 
 			if (!text) return;
-
-			// Handle built-in slash commands
-			const slashResult = await executeBuiltinSlashCommand(text, {
-				ctx: this.ctx,
-				handleBackgroundCommand: () => this.handleBackgroundCommand(),
-			});
-			if (slashResult === true) {
-				return;
-			}
-			if (typeof slashResult === "string") {
-				// Command handled but returned remaining text to use as prompt
-				text = slashResult;
-			}
 
 			// Handle skill commands (/skill:name [args])
 			if (text.startsWith("/skill:")) {
