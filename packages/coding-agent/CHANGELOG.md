@@ -42,6 +42,9 @@
 
 ### Changed
 
+- Allowed explicit `xcsh plugin setup <plugin> --force` runs to refresh dynamic setup plans even
+  when the current integration receipt is already ready ([#4516](https://github.com/f5-sales-demo/xcsh/issues/4516)).
+
 - Made standalone executable and schema-v2 receipt updates transactional, canonicalized receipt paths,
   removed unused adjacent native payloads from standalone installs, and added published installer
   qualification on Linux, macOS, and Windows ([#4510](https://github.com/f5-sales-demo/xcsh/issues/4510)).

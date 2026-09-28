@@ -3,6 +3,7 @@ import {
 	describeIntegrationSetupNextAction,
 	reviewAndExecuteIntegrationSetup,
 	selectSetupIntegration,
+	shouldSkipIntegrationSetup,
 } from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
 import {
@@ -411,6 +412,12 @@ describe("IntegrationRegistry", () => {
 			verifyAfterSetup,
 		});
 		expect(result.state).toBe("ready");
+	});
+
+	test("forced setup reruns a ready integration while ordinary setup remains a no-op", () => {
+		expect(shouldSkipIntegrationSetup("ready", false)).toBe(true);
+		expect(shouldSkipIntegrationSetup("ready", true)).toBe(false);
+		expect(shouldSkipIntegrationSetup("setup_required", false)).toBe(false);
 	});
 
 	test("direct CLI setup directs guided actions to the interactive xcsh TUI", async () => {
