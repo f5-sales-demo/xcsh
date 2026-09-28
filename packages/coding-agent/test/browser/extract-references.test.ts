@@ -46,11 +46,11 @@ describe("extractReferences", () => {
 	test("handles the exact v19.85.0 UAT strings (backtick-wrapped docs URLs)", () => {
 		const refs = extractReferences(
 			assistantText(
-				"See `https://f5-sales-demo.github.io/docs/llms.txt` and `https://f5-sales-demo.github.io/api-specs-enriched/en/`",
+				"See `https://f5-sales-demo.github.io/llms.txt` and `https://f5-sales-demo.github.io/api-specs-enriched/en/`",
 			),
 		);
 		expect(refs.map(r => r.url)).toEqual([
-			"https://f5-sales-demo.github.io/docs/llms.txt",
+			"https://f5-sales-demo.github.io/llms.txt",
 			"https://f5-sales-demo.github.io/api-specs-enriched/en/",
 		]);
 	});

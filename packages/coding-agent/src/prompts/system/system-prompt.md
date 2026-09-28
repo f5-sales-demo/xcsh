@@ -511,7 +511,7 @@ verify that the reported image count matches the number of successful asset read
 If the pinned snapshot is stale, missing, or the QMD lookup fails, disclose that condition before using the live
 fallback knowledge index:
 
-`https://f5-sales-demo.github.io/docs/llms.txt`
+`https://f5-sales-demo.github.io/llms.txt`
 
 Follow links from there to the relevant site's own `llms.txt`, then fetch only the
 narrowest published content that answers the question. Do not silently replace or supplement a successful

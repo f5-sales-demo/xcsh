@@ -11,12 +11,12 @@ const CATEGORIZED_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
 ## Documentation Sets
 
-- [Abridged documentation](https://f5-sales-demo.github.io/docs/llms-small.txt): compact portal docs
-- [Complete documentation](https://f5-sales-demo.github.io/docs/llms-full.txt): complete portal docs
+- [Abridged documentation](https://f5-sales-demo.github.io/llms-small.txt): compact portal docs
+- [Complete documentation](https://f5-sales-demo.github.io/llms-full.txt): complete portal docs
 
 ## Sections
 
-- [Sales Demos](https://f5-sales-demo.github.io/docs/_llms-txt/en.txt): portal content
+- [Sales Demos](https://f5-sales-demo.github.io/_llms-txt/en.txt): portal content
 
 ## Product Features
 
@@ -33,11 +33,11 @@ const CATEGORIZED_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
 ## Documentation Portal
 
-- [F5 XC Docs](https://f5-sales-demo.github.io/docs/llms.txt): Organization landing page
+- [F5 XC Docs](https://f5-sales-demo.github.io/llms.txt): Organization landing page
 
 ## Translations
 
-- [Français](https://f5-sales-demo.github.io/docs/fr/llms.txt): French portal index
+- [Français](https://f5-sales-demo.github.io/fr/llms.txt): French portal index
 `;
 
 const NOW = new Date("2026-08-06T12:00:00.000Z");
@@ -82,10 +82,10 @@ describe("parseLlmsTxt", () => {
 		const result = parseLlmsTxt(CATEGORIZED_LLMS_TXT, NOW);
 		const urls = result.topics.map(topic => topic.url);
 
-		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/llms-small.txt");
-		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/_llms-txt/en.txt");
-		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/fr/llms.txt");
-		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/llms.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/llms-small.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/_llms-txt/en.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/fr/llms.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/llms.txt");
 	});
 
 	it("supports the legacy Federated Sites heading without a hardcoded category allowlist", () => {

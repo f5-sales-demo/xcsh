@@ -243,7 +243,7 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("`xcsh://documentation/<source>/<stable-path>/index.md` result");
 		expect(template).toContain("stale, missing, or the QMD lookup fails");
 		expect(template).toContain("disclose that condition before using the live");
-		expect(template).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
+		expect(template).toContain("https://f5-sales-demo.github.io/llms.txt");
 		expect(template).toContain("conceptual, product, operational, or support questions about F5 Distributed Cloud");
 		expect(template).toContain("fallback knowledge index");
 		expect(template).toContain("https://f5-sales-demo.github.io/xcsh-action/llms.txt");

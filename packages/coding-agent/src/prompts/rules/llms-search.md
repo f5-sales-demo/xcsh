@@ -22,7 +22,7 @@ Use the live cascade below only when the pinned documentation is stale or missin
 the QMD lookup fails. You **MUST** disclose why the pinned snapshot is stale, missing, or unavailable before the
 first live lookup:
 
-1. **Federation index** — Read `https://f5-sales-demo.github.io/docs/llms.txt` and select the relevant categorized site.
+1. **Federation index** — Read `https://f5-sales-demo.github.io/llms.txt` and select the relevant categorized site.
 2. **Site index** — Read that site's `llms.txt`; use its Documentation Sets, Sections, and Translations links as published.
 3. **Locale index** — Prefer the user's published locale. The default locale's Section normally points to `/_llms-txt/en.txt`; locale-aware tiered paths use `/_llms-txt/{locale}/…`. If a localized endpoint is absent or contains only a system marker, fall back to English and disclose that fallback.
 4. **Focused content** — Follow `## Contents` links recursively until the narrowest leaf `.txt` answers the question. Generated `/_llms-txt/` links are canonical; do not rewrite them. A same-locale page endpoint such as `/{locale}/{slug}.md` is an equivalent leaf when a page URL is already known.

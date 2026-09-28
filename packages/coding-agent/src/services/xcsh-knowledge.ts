@@ -21,7 +21,6 @@ export interface LlmsIndex {
 
 const ENTRY_PATTERN = /^- \[([^\]]+)\]\(([^)]+)\):\s*(.+)$/;
 const ROOT_LLMS_FILE = "llms.txt";
-const PORTAL_SLUG = "docs";
 
 function extractRootLlmsSlug(url: string): string | null {
 	try {
@@ -64,8 +63,9 @@ function isValidIndex(value: unknown): value is LlmsIndex {
  *
  * Federation category headings are intentionally open-ended. A list entry is a
  * topic when it links to a sibling site's root /{slug}/llms.txt endpoint; this
- * excludes documentation sets, locale indexes, and tiered content without
- * hardcoding today's category names.
+ * excludes documentation sets and tiered content. The root portal now has
+ * locale feeds at /{locale}/llms.txt, so translation entries are excluded
+ * by their heading without restricting future federation categories.
  */
 export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 	const lines = content.split("\n");
@@ -94,11 +94,11 @@ export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 		}
 
 		const match = ENTRY_PATTERN.exec(trimmed);
-		if (!match || !category) continue;
+		if (!match || !category || category === "Translations") continue;
 
 		const [, name, url, topicDescription] = match;
 		const slug = extractRootLlmsSlug(url);
-		if (!slug || slug === PORTAL_SLUG || seenUrls.has(url)) continue;
+		if (!slug || seenUrls.has(url)) continue;
 
 		seenUrls.add(url);
 		topics.push({ name, description: topicDescription, url, category });
@@ -113,7 +113,7 @@ export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 	};
 }
 
-const ROOT_LLMS_URL = "https://f5-sales-demo.github.io/docs/llms.txt";
+const ROOT_LLMS_URL = "https://f5-sales-demo.github.io/llms.txt";
 const DEFAULT_TTL_MS = 3_600_000;
 
 export class KnowledgeService {

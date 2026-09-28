@@ -29,7 +29,7 @@ This document is the authoritative answer when the user asks about xcsh itself.
 
 xcsh serves F5 Distributed Cloud sales engineers. Product documentation is
 federated across the f5-sales-demo GitHub organization. Entry point:
-https://f5-sales-demo.github.io/docs/llms.txt
+https://f5-sales-demo.github.io/llms.txt
 
 Each product repo publishes: llms.txt (index with sidebar nav), custom sets
 at /_llms-txt/{topic}.txt, per-page content at /{slug}.md, plus

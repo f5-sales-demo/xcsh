@@ -403,7 +403,7 @@ Build: commit `a8f463a`, branch `feat/gemini-provider-benchmark`, shipped by PR 
 - Cloud CLIs (`aws`, `azure`, `gcloud`), GitHub/GitLab, Salesforce pipeline queries.
 
 **Product truth**
-Every capability claim gets checked against the live federated docs at `f5-sales-demo.github.io/docs/llms.txt` before I repeat it. Memory is not a source.
+Every capability claim gets checked against the live federated docs at `f5-sales-demo.github.io/llms.txt` before I repeat it. Memory is not a source.
 
 ## What I'm deliberately not
 
@@ -481,7 +481,7 @@ I'm tuned as a network-engineer assistant, not a coding assistant. What that mea
 **F5 XC platform depth**
 - CRUD against the XC API through `xcsh_api`, schema-first off the embedded enriched OpenAPI specs (`xcsh://api-catalog/`, `xcsh://api-spec/`) — no guessed field names, no `vesctl`, no raw curl
 - Live console automation: I drive your real, visible, logged-in Chrome through the xcsh extension using deterministic catalog workflows — good for demos and "show me where this is configured"
-- Product answers grounded in the federated live docs hierarchy (`f5-sales-demo.github.io/docs/llms.txt`), not from memory
+- Product answers grounded in the federated live docs hierarchy (`f5-sales-demo.github.io/llms.txt`), not from memory
 
 **Infrastructure and content**
 - Terraform (`f5-sales-demo/xcsh` provider only), JSON manifests that round-trip through `/apply`, architecture docs, howtos, diagrams, presentations
@@ -554,7 +554,7 @@ Representative measured response: round 1, quality 75.0, 441 visible words. Ties
 - Live console automation: `catalog_workflow_runner` driving your real, visible, logged-in Chrome through deterministic catalog workflows (`xcsh://console/`) — useful when someone needs to *watch* where a thing is configured, with `guided`/`instructor`/`capture` pacing.
 
 **Product truth**
-- Answers routed through the federated llms.txt hierarchy (`f5-sales-demo.github.io/docs/llms.txt`) rather than recall, because a wrong capability claim in front of a customer costs the account.
+- Answers routed through the federated llms.txt hierarchy (`f5-sales-demo.github.io/llms.txt`) rather than recall, because a wrong capability claim in front of a customer costs the account.
 
 **Netops/secops authoring through GitHub**
 - Terraform (provider `f5-sales-demo/xcsh` only), architecture and howto docs, diagrams, authorized attack-traffic simulation and demo scripts, comprehensive issues and PRs.
@@ -930,7 +930,7 @@ From the session context, not from anything I looked up:
 - Architecture recommendations against *their* environment, not a generic reference diagram.
 
 **F5 XC technical depth**
-- Product answers grounded in the live docs hierarchy (`f5-sales-demo.github.io/docs/llms.txt`), not memory. If I can't verify a capability, I say so rather than let it into a slide.
+- Product answers grounded in the live docs hierarchy (`f5-sales-demo.github.io/llms.txt`), not memory. If I can't verify a capability, I say so rather than let it into a slide.
 - CRUD against the tenant via the XC API (schema-checked against the embedded API catalog first — no guessed field names).
 - Resource manifests, Terraform (`f5-sales-demo/xcsh` provider, minimum-settings style, `fmt`/`validate`'d).
 
