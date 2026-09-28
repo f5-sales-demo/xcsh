@@ -3,7 +3,9 @@
 For conceptual, product, operational, and support questions, search `xcsh://documentation/?search=<query>` first.
 Select the best result and read its exact follow-up URL,
 `xcsh://documentation/<source>/<stable-path>/index.md`, before answering. Use the source filter when the question
-clearly targets `docs-cloud-f5-com` or `my-f5-com`.
+clearly targets `docs-cloud-f5-com`, `my-f5-com`, or `www-f5-com`. Prefer `www-f5-com` for conceptual and product
+questions, `docs-cloud-f5-com` for configuration and procedures, and `my-f5-com` for troubleshooting and support.
+An explicit source filter is authoritative.
 
 Render documentation images only when the user explicitly asks to see them. Extract all unique Markdown image references
 from the exact document, resolve relative references against its exact `xcsh://documentation/` URI, and

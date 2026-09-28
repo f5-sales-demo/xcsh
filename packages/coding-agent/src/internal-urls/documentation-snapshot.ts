@@ -68,7 +68,13 @@ const DOCUMENT_PROVENANCE_KEYS = [
 const SOURCE_ROOT_URLS: Readonly<Record<DocumentationSource, string>> = {
 	"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
 	"my-f5-com": "https://my.f5.com/manage/s",
+	"www-f5-com": "https://www.f5.com/products/distributed-cloud-services",
 };
+const MARKETING_SOLUTION_URLS = new Set([
+	"https://www.f5.com/solutions/use-cases/hybrid-multicloud-application-delivery",
+	"https://www.f5.com/solutions/use-cases/multi-cloud-networking",
+	"https://www.f5.com/solutions/web-app-and-api-protection",
+]);
 
 export interface DocumentationReleaseAssetPin {
 	readonly sha256: string;
@@ -182,7 +188,11 @@ function validateTimestamp(value: unknown, field: string): string {
 function validateOriginalUrl(value: unknown, source: DocumentationSource, field: string): string {
 	const result = string(value, field);
 	const root = SOURCE_ROOT_URLS[source];
-	if (result !== root && !result.startsWith(`${root}/`) && !result.startsWith(`${root}?`)) {
+	const allowed =
+		source === "www-f5-com"
+			? result === root || result.startsWith(`${root}/`) || MARKETING_SOLUTION_URLS.has(result)
+			: result === root || result.startsWith(`${root}/`) || result.startsWith(`${root}?`);
+	if (!allowed) {
 		throw new Error(`${field} is outside the declared source root`);
 	}
 	return result;
@@ -598,6 +608,12 @@ export async function verifyDocumentationRelease(
 		const markdown = entry.data.toString("utf8");
 		const parsed = splitDocument(markdown);
 		const originalUrl = validateOriginalUrl(item.url, source, "manifest document URL");
+		if (
+			source === "www-f5-com" &&
+			archiveMemberPath !== `content/www-f5-com${new URL(originalUrl).pathname}/index.md`
+		) {
+			throw new Error(`marketing document path does not match its reviewed URL: ${archiveMemberPath}`);
+		}
 		if (parsed.metadata.sourceId !== source || parsed.metadata.url !== originalUrl)
 			throw new Error(`manifest document frontmatter mismatch: ${archiveMemberPath}`);
 		const bodySha256 = string(item.body_sha256, "manifest document body hash");
@@ -620,6 +636,9 @@ export async function verifyDocumentationRelease(
 		};
 	});
 
+	const marketingDocumentPaths = new Set(
+		documents.filter(document => document.source === "www-f5-com").map(document => document.stablePath),
+	);
 	const assets = manifest.assets.map((value, position): VerifiedDocumentationAsset => {
 		const item = object(value, `manifest asset ${position}`);
 		exactKeys(item, MANIFEST_ASSET_KEYS, `manifest asset ${position}`);
@@ -631,6 +650,9 @@ export async function verifyDocumentationRelease(
 		const source = archiveMemberPath.split("/")[1] as DocumentationSource;
 		if (!DOCUMENTATION_SOURCES.includes(source)) throw new Error(`unknown manifest asset source: ${source}`);
 		const parsed = stableAssetPath(archiveMemberPath, source);
+		if (source === "www-f5-com" && !marketingDocumentPaths.has(parsed.stablePath)) {
+			throw new Error(`marketing asset is not attached to a reviewed document: ${archiveMemberPath}`);
+		}
 		const digest = string(item.sha256, "manifest asset hash");
 		if (!SHA256.test(digest) || !parsed.filename.startsWith(`${digest}.`)) {
 			throw new Error(`manifest asset digest filename mismatch: ${archiveMemberPath}`);
@@ -842,6 +864,11 @@ export async function buildDocumentationIndex(
 						path: path.join(documentsRoot, "my-f5-com"),
 						pattern: "**/*.md",
 						context: { "/": "MyF5 support and knowledge-base documentation" },
+					},
+					"www-f5-com": {
+						path: path.join(documentsRoot, "www-f5-com"),
+						pattern: "**/*.md",
+						context: { "/": "F5 Distributed Cloud product and solution overviews" },
 					},
 				},
 			},

@@ -42,9 +42,11 @@ describe("embedded documentation repository", () => {
 	let rawIndexPath: string;
 	let assets: Parameters<typeof createEmbeddedDocumentationRepository>[0];
 	const docsCloudMarkdown =
-		"---\ntitle: Protect Applications\n---\n\n# Protect Applications\n\nConfigure a web application firewall.\n";
+		"---\ntitle: Protect Applications\n---\n\n# Protect Applications\n\nConfigure a web application firewall. Shared corpusmarker.\n";
 	const myF5Markdown =
-		"---\ntitle: Certificate Support\n---\n\n# Certificate Support\n\nTroubleshoot an expired certificate.\n";
+		"---\ntitle: Certificate Support\n---\n\n# Certificate Support\n\nTroubleshoot an expired certificate. Shared corpusmarker.\n";
+	const marketingMarkdown =
+		"---\ntitle: Client-Side Defense\n---\n\n# Client-Side Defense\n\nClient-Side Defense protects web applications from malicious scripts. Shared corpusmarker.\n";
 
 	beforeAll(async () => {
 		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-documentation-repository-"));
@@ -52,6 +54,7 @@ describe("embedded documentation repository", () => {
 		const png = Buffer.from("png-image");
 		const jpg = Buffer.from("jpeg-image");
 		const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"/>');
+		const webp = Buffer.from("webp-image");
 		const documents = [
 			{
 				source: "docs-cloud-f5-com" as const,
@@ -59,7 +62,9 @@ describe("embedded documentation repository", () => {
 				archivePath: "content/docs-cloud-f5-com/protect-applications/index.md",
 				title: "Protect Applications",
 				originalUrl: "https://docs.cloud.f5.com/docs-v2/protect-applications",
-				bodySha256: sha256("# Protect Applications\n\nConfigure a web application firewall.\n"),
+				bodySha256: sha256(
+					"# Protect Applications\n\nConfigure a web application firewall. Shared corpusmarker.\n",
+				),
 				fileSha256: sha256(docsCloudMarkdown),
 				sizeBytes: Buffer.byteLength(docsCloudMarkdown),
 				markdown: docsCloudMarkdown,
@@ -70,10 +75,23 @@ describe("embedded documentation repository", () => {
 				archivePath: "content/my-f5-com/K000000001/index.md",
 				title: "Certificate Support",
 				originalUrl: "https://my.f5.com/manage/s/article/K000000001",
-				bodySha256: sha256("# Certificate Support\n\nTroubleshoot an expired certificate.\n"),
+				bodySha256: sha256("# Certificate Support\n\nTroubleshoot an expired certificate. Shared corpusmarker.\n"),
 				fileSha256: sha256(myF5Markdown),
 				sizeBytes: Buffer.byteLength(myF5Markdown),
 				markdown: myF5Markdown,
+			},
+			{
+				source: "www-f5-com" as const,
+				stablePath: "products/distributed-cloud-services/client-side-defense",
+				archivePath: "content/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+				title: "Client-Side Defense",
+				originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+				bodySha256: sha256(
+					"# Client-Side Defense\n\nClient-Side Defense protects web applications from malicious scripts. Shared corpusmarker.\n",
+				),
+				fileSha256: sha256(marketingMarkdown),
+				sizeBytes: Buffer.byteLength(marketingMarkdown),
+				markdown: marketingMarkdown,
 			},
 		];
 		const assetRows = [
@@ -97,6 +115,13 @@ describe("embedded documentation repository", () => {
 				bytes: svg,
 				extension: "svg",
 				mimeType: "image/svg+xml" as const,
+			},
+			{
+				source: "www-f5-com" as const,
+				stablePath: "products/distributed-cloud-services/client-side-defense",
+				bytes: webp,
+				extension: "webp",
+				mimeType: "image/webp" as const,
 			},
 		];
 		const snapshotAssets = assetRows.map(row => {
@@ -150,17 +175,30 @@ describe("embedded documentation repository", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	it("searches both collections with source filtering and reads exact Markdown", async () => {
+	it("searches all three collections with authoritative source filtering and exact reads", async () => {
 		const repository = createEmbeddedDocumentationRepository(assets, { cacheRoot });
 		const all = await repository.search("certificate", undefined, 5);
 		expect(all[0]).toMatchObject({ source: "my-f5-com", stablePath: "K000000001" });
 		expect(all[0]?.snippet.length).toBeLessThanOrEqual(600);
+		const unfiltered = await repository.search("corpusmarker", undefined, 5);
+		expect(new Set(unfiltered.map(result => result.source))).toEqual(
+			new Set(["docs-cloud-f5-com", "my-f5-com", "www-f5-com"]),
+		);
 		const filtered = await repository.search("protect applications", "docs-cloud-f5-com", 1);
 		expect(filtered).toHaveLength(1);
 		expect(filtered[0]?.source).toBe("docs-cloud-f5-com");
 		expect((await repository.readDocument("docs-cloud-f5-com", "protect-applications"))?.markdown).toBe(
 			docsCloudMarkdown,
 		);
+		const marketing = await repository.search("what is client side defense", "www-f5-com", 1);
+		expect(marketing[0]).toMatchObject({
+			source: "www-f5-com",
+			stablePath: "products/distributed-cloud-services/client-side-defense",
+		});
+		expect(
+			(await repository.readDocument("www-f5-com", "products/distributed-cloud-services/client-side-defense"))
+				?.markdown,
+		).toBe(marketingMarkdown);
 		const cachedIndex = path.join(cacheRoot, assets.fingerprint, "documentation-index.sqlite");
 		expect(sha256(await readFile(cachedIndex))).toBe(assets.indexSha256);
 	});
@@ -171,10 +209,10 @@ describe("embedded documentation repository", () => {
 		const rows = db
 			.query("SELECT source, stable_path, filename, mime_type FROM documentation_assets ORDER BY filename")
 			.all() as Array<{
-			source: "docs-cloud-f5-com" | "my-f5-com";
+			source: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
 			stable_path: string;
 			filename: string;
-			mime_type: "image/jpeg" | "image/png" | "image/svg+xml";
+			mime_type: "image/jpeg" | "image/png" | "image/svg+xml" | "image/webp";
 		}>;
 		db.close();
 		for (const row of rows) {

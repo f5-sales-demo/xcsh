@@ -1,6 +1,6 @@
 import type { InternalResource, InternalUrl } from "./types";
 
-export const DOCUMENTATION_SOURCES = ["docs-cloud-f5-com", "my-f5-com"] as const;
+export const DOCUMENTATION_SOURCES = ["docs-cloud-f5-com", "my-f5-com", "www-f5-com"] as const;
 export type DocumentationSource = (typeof DOCUMENTATION_SOURCES)[number];
 
 export interface DocumentationProvenance {

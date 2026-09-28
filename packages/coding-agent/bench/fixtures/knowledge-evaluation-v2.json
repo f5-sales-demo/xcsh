@@ -4004,6 +4004,246 @@
 			"relevance": {
 				"K000161122": 3
 			}
+		},
+		{
+			"id": "docs-www-f5-com-1",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Distributed Cloud Services",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-2",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud API Security",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/api-security": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-3",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Securely connect and protect apps across environments",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/app-connect": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-4",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud App Stack",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/appstack": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-5",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud Bot Defense",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/bot-defense": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-6",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud CDN",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/cdn": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-7",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud Client-Side Defense",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/client-side-defense": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-8",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud Data Intelligence",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/data-intelligence-platform": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-9",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud Console",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/distributed-cloud-console": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-10",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 WAF for Distributed Cloud",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/distributed-cloud-waf": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-11",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Secure, Cloud-Based DNS as a Service",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/dns": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-12",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud DNS Load Balancer",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/dns-load-balancer": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-13",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Mobile App Shield | Mobile Application Protection",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/f5-distributed-cloud-mobile-app-shield": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-14",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Global Network",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/globalnetwork": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-15",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Distributed Cloud DDoS Mitigation Service",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/l3-and-l7-ddos-attack-mitigation": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-16",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Secure Apps with F5 Distributed Cloud Managed Services",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/managed-services": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-17",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Network Connect",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/network-connect": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-18",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Distributed Cloud Platform",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/platform-overview": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-19",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Security Operations Center (SOC)",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/security-operations-center": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-20",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "F5 Distributed Cloud Synthetic Monitoring",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/synthetic-monitoring": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-21",
+			"family": "www-f5-com:products/distributed-cloud-services",
+			"split": "tuning",
+			"query": "Web App Scanning: Automated Penetration Testing & DAST",
+			"source": "www-f5-com",
+			"relevance": {
+				"products/distributed-cloud-services/web-app-scanning": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-22",
+			"family": "www-f5-com:solutions/use-cases",
+			"split": "sealed",
+			"query": "Hybrid Multicloud Application Delivery",
+			"source": "www-f5-com",
+			"relevance": {
+				"solutions/use-cases/hybrid-multicloud-application-delivery": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-23",
+			"family": "www-f5-com:solutions/use-cases",
+			"split": "sealed",
+			"query": "Multicloud Networking Solutions and Services",
+			"source": "www-f5-com",
+			"relevance": {
+				"solutions/use-cases/multi-cloud-networking": 3
+			}
+		},
+		{
+			"id": "docs-www-f5-com-24",
+			"family": "www-f5-com:solutions/web-app-and-api-protection",
+			"split": "sealed",
+			"query": "Web application and API protection solutions",
+			"source": "www-f5-com",
+			"relevance": {
+				"solutions/web-app-and-api-protection": 3
+			}
 		}
 	],
 	"classifier": [

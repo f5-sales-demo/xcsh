@@ -6,6 +6,7 @@ describe("offline documentation model scenarios", () => {
 		const scenarios = selectModelBenchmarkScenarios({ suite: "documentation" });
 			expect(scenarios.map(scenario => scenario.id)).toEqual([
 			"documentation-answer-waf",
+			"documentation-answer-client-side-defense",
 			"documentation-answer-missing",
 			"documentation-tools-disabled",
 			"documentation-multi-turn-dns",
@@ -14,12 +15,17 @@ describe("offline documentation model scenarios", () => {
 		const exact = scenarios[0]!;
 		expect(exact.contract.requiredToolSequence?.map(call => call.name)).toEqual(["read", "read"]);
 		expect(exact.contract.requiredKnowledgeSequence?.map(event => event.type)).toEqual(["read", "read"]);
-		expect(scenarios[2]!.runtime.tools).toBe("none");
-		expect(scenarios[3]!.turns).toHaveLength(2);
-		expect(scenarios[3]!.turns?.[1]?.contract.requiredTools?.[0]?.arguments?.path).toBe(
+		const marketing = scenarios[1]!;
+		expect(marketing.contract.requiredToolSequence?.map(call => call.arguments?.path)).toEqual([
+			"xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+		]);
+		expect(scenarios[3]!.runtime.tools).toBe("none");
+		expect(scenarios[4]!.turns).toHaveLength(2);
+		expect(scenarios[4]!.turns?.[1]?.contract.requiredTools?.[0]?.arguments?.path).toBe(
 			"xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
 		);
-		const media = scenarios[4]!;
+		const media = scenarios[5]!;
 		expect(media.turns).toHaveLength(2);
 		expect(media.runtime.tools).toEqual(["read", "display_media", "inspect_image"]);
 		expect(media.turns?.[0]?.contract.requiredTools?.map(call => call.name)).toEqual(["read", "read"]);

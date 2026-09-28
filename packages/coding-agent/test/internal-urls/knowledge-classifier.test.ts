@@ -51,6 +51,25 @@ describe("deterministic knowledge classifier", () => {
 		expect(result.query.hyde[0]).toContain("authoritative F5 documentation page");
 	});
 
+	it("selects marketing, operational, and support sources by question intent", () => {
+		expect(classifyKnowledgeRequest("What is client side defense?", { toolsEnabled: true, resources })).toMatchObject(
+			{
+				route: "documentation",
+				source: "www-f5-com",
+				constraints: { source: "www-f5-com" },
+			},
+		);
+		expect(
+			classifyKnowledgeRequest("How do I configure F5 Distributed Cloud DNS?", { toolsEnabled: true, resources }),
+		).toMatchObject({ source: "docs-cloud-f5-com", constraints: { source: "docs-cloud-f5-com" } });
+		expect(
+			classifyKnowledgeRequest("Troubleshoot an F5 Distributed Cloud certificate issue", {
+				toolsEnabled: true,
+				resources,
+			}),
+		).toMatchObject({ source: "my-f5-com", constraints: { source: "my-f5-com" } });
+	});
+
 	it("recognizes exact xcsh URIs without rewriting them", () => {
 		const uri = "xcsh://api-spec/dns?resource=dns_zone";
 		expect(classifyKnowledgeRequest(`Read ${uri}`, { toolsEnabled: true, resources })).toMatchObject({
@@ -58,6 +77,15 @@ describe("deterministic knowledge classifier", () => {
 			confidence: 1,
 			directUri: uri,
 			constraints: { domain: "dns" },
+		});
+	});
+
+	it("preserves the marketing source on exact documentation URIs", () => {
+		const uri = "xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md";
+		expect(classifyKnowledgeRequest(`Read ${uri}`, { toolsEnabled: true, resources })).toMatchObject({
+			route: "direct-uri",
+			directUri: uri,
+			constraints: { source: "www-f5-com" },
 		});
 	});
 

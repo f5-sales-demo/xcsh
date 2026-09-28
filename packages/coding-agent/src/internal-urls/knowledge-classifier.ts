@@ -1,5 +1,5 @@
 export type KnowledgeRoute = "api" | "documentation" | "direct-uri" | "none";
-export type DocumentationKnowledgeSource = "docs-cloud-f5-com" | "my-f5-com";
+export type DocumentationKnowledgeSource = "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
 
 export interface KnowledgeClassifierResource {
 	readonly name: string;
@@ -46,7 +46,11 @@ const ANAPHORIC = /\b(?:its|it|that|this|those|them|the same)\b/i;
 const API_METADATA =
 	/\b(?:api|endpoint|operation\s*id|api\s+path|http\s+method|method|payload|request\s+body|required\s+fields?|enum|allowed\s+values?|constraints?|limits?|maximum|max(?:imum)?|minimum|min(?:imum)?|how\s+many|create|creates|creating|get|gets|list|lists|update|updates|replace|replaces|delete|deletes|clone|import)\b/i;
 const DOCUMENTATION_INTENT =
-	/\b(?:documentation|docs?|guide|tutorial|how\s+(?:do|can|to)|configure|configuration|set\s*up|troubleshoot|procedure|instructions?)\b/i;
+	/\b(?:documentation|docs?|guide|tutorial|how\s+(?:do|can|to)|configure|configuration|set\s*up|troubleshoot|procedure|instructions?|what\s+(?:is|are)|overview|product|solution|capabilities|benefits)\b/i;
+const CONFIGURATION_INTENT = /\b(?:configure|configuration|set\s*up|procedure|instructions?|how\s+(?:do|can|to))\b/i;
+const SUPPORT_INTENT = /\b(?:troubleshoot|support|knowledge[- ]base|error|failure|issue|K[0-9]{6,})\b/i;
+const MARKETING_TOPIC =
+	/\b(?:client[- ]side defense|distributed cloud|web app(?:lication)? and api protection|multi[- ]cloud networking|dns load balancer|bot defense|api security|app connect|appstack|content delivery network|cdn|mobile app shield|synthetic monitoring|web app scanning)\b/i;
 const EXCLUDED_API_INTENT = /\b(?:pricing|price|quote|licen[cs]ing|sales)\b/i;
 const DIRECT_URI = /\bxcsh:\/\/(?:api-catalog|api-spec|documentation)\/[^\s)>\]}]*/i;
 
@@ -130,7 +134,9 @@ function direct(prompt: string): KnowledgeClassification | null {
 		}
 		if (parsed.hostname === "documentation") {
 			const source = parsed.pathname.split("/").filter(Boolean)[0];
-			if (source === "docs-cloud-f5-com" || source === "my-f5-com") Object.assign(constraints, { source });
+			if (source === "docs-cloud-f5-com" || source === "my-f5-com" || source === "www-f5-com") {
+				Object.assign(constraints, { source });
+			}
 		}
 		return { route: "direct-uri", confidence: 1, directUri, constraints, query: EMPTY_QUERY };
 	} catch {
@@ -191,9 +197,17 @@ export function classifyKnowledgeRequest(prompt: string, options: KnowledgeClass
 	if (
 		!thirdPartyOnly &&
 		(DOCUMENTATION_INTENT.test(prompt) || (ANAPHORIC.test(prompt) && previousDocumentation)) &&
-		(F5_SCOPE.test(prompt) || /\b(?:documentation|docs?)\b/i.test(prompt) || previousDocumentation)
+		(F5_SCOPE.test(prompt) ||
+			/\b(?:documentation|docs?)\b/i.test(prompt) ||
+			MARKETING_TOPIC.test(prompt) ||
+			previousDocumentation)
 	) {
-		const source = options.documentationSource ?? previousDocumentation?.source;
+		const inferredSource = SUPPORT_INTENT.test(prompt)
+			? "my-f5-com"
+			: CONFIGURATION_INTENT.test(prompt)
+				? "docs-cloud-f5-com"
+				: "www-f5-com";
+		const source = options.documentationSource ?? previousDocumentation?.source ?? inferredSource;
 		const subject = documentationSubject(prompt);
 		return {
 			route: "documentation",
