@@ -119,13 +119,7 @@ function receiptIsValid(
 		return false;
 	}
 	if (receipt.channel === "standalone") return deps.platform !== "win32";
-	if (deps.platform !== "win32") return false;
-	const localAppData = deps.env.LOCALAPPDATA;
-	if (!localAppData) return false;
-	return (
-		comparablePath(resolvedExecPath, deps.platform) ===
-		comparablePath(path.win32.join(localAppData, "xcsh", "xcsh.exe"), deps.platform)
-	);
+	return deps.platform === "win32";
 }
 
 async function defaultRun(command: string, args: string[]): Promise<CommandResult> {
