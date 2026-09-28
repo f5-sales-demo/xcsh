@@ -22,7 +22,7 @@ import type {
 } from "../extensibility/extensions";
 import { discoverAndLoadExtensions } from "../extensibility/extensions";
 import type { CompactOptions } from "../extensibility/extensions/types";
-import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slash-commands";
+import { getBuiltinSlashCommandDiscoveryCandidates, loadSlashCommands } from "../extensibility/slash-commands";
 import { startSessionBridge } from "../remote-control/bridge";
 import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
@@ -254,10 +254,7 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		this.hideThinkingBlock = settings.get("hideThinkingBlock");
 
-		const builtinCommands: SlashCommandDiscoveryCandidate[] = BUILTIN_SLASH_COMMANDS.map(command => ({
-			...command,
-			discovery: { behavior: "execution", provenance: "xcsh built-in", scope: "native" },
-		}));
+		const builtinCommands = getBuiltinSlashCommandDiscoveryCandidates();
 		const builtinCommandNames = new Set(builtinCommands.map(c => c.name));
 		const extensionCommands: SlashCommandDiscoveryCandidate[] = (
 			this.session.extensionRunner?.getRegisteredCommandEntries(builtinCommandNames) ?? []

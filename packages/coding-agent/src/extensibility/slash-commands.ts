@@ -4,6 +4,7 @@ import { slashCommandCapability } from "../capability/slash-command";
 import { appendInlineArgsFallback, templateUsesInlineArgPlaceholders } from "../config/prompt-templates";
 import type { SlashCommand } from "../discovery";
 import { loadCapability } from "../discovery";
+import type { SlashCommandDiscoveryCandidate } from "../modes/slash-command-discovery";
 import {
 	BUILTIN_SLASH_COMMAND_DEFS,
 	type BuiltinSlashCommand,
@@ -134,6 +135,26 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<
 	}
 	return cmd;
 });
+
+/**
+ * Native slash-command candidates for the editor discovery menu.
+ *
+ * Aliases must appear here too: autocomplete can otherwise replace a typed
+ * built-in alias with an extension command before submit-time dispatch sees it.
+ */
+export function getBuiltinSlashCommandDiscoveryCandidates(): SlashCommandDiscoveryCandidate[] {
+	return BUILTIN_SLASH_COMMANDS.flatMap(command => {
+		const discovery = { behavior: "execution" as const, provenance: "xcsh built-in", scope: "native" as const };
+		const canonical: SlashCommandDiscoveryCandidate = { ...command, discovery };
+		const aliases = (command.aliases ?? []).map(alias => ({
+			...command,
+			name: alias,
+			description: `Alias for /${command.name}: ${command.description}`,
+			discovery,
+		}));
+		return [canonical, ...aliases];
+	});
+}
 
 /**
  * Represents a custom slash command loaded from a file
