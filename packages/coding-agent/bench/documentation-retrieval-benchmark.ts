@@ -4,7 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { EMBEDDED_DOCUMENTATION_ASSETS } from "../src/internal-urls/documentation-assets.generated";
 import { createEmbeddedDocumentationRepository } from "../src/internal-urls/documentation-repository";
-import type { DocumentationSource } from "../src/internal-urls/documentation-resolve";
+import type {
+	DocumentationSearchFilters,
+	DocumentationSource,
+} from "../src/internal-urls/documentation-resolve";
 import { fixedSeedPairwiseOrder } from "./model-scenarios";
 
 interface QualificationInput {
@@ -34,6 +37,7 @@ interface FixtureScenario {
 	readonly id: string;
 	readonly query: string;
 	readonly source?: DocumentationSource;
+	readonly filters?: DocumentationSearchFilters;
 	readonly expectedPath?: string;
 	readonly maxRank?: number;
 	readonly requiredSources?: readonly DocumentationSource[];
@@ -127,10 +131,17 @@ async function run(): Promise<void> {
 	for (let run = 1; run <= requestedRuns; run++) {
 		for (const scenario of fixedSeedPairwiseOrder(fixture.scenarios, fixture.seed + run)) {
 			const candidateStarted = performance.now();
-			const results = await repository.search(scenario.query, scenario.source, 5);
+			const results = await repository.search(scenario.query, scenario.source, 5, scenario.filters);
 			let documentBytes = 0;
+			const matched = scenario.expectedPath
+				? results.find(result => result.stablePath === scenario.expectedPath)
+				: undefined;
 			if (scenario.expectedPath) {
-				const document = await repository.readDocument(scenario.source ?? "docs-cloud-f5-com", scenario.expectedPath);
+				const document = await repository.readDocument(
+					matched?.source ?? scenario.source ?? "docs-cloud-f5-com",
+					scenario.expectedPath,
+					matched?.anchor,
+				);
 				documentBytes = document ? Buffer.byteLength(document.markdown, "utf8") : 0;
 				integrityPassed &&= documentBytes > 0;
 			}
@@ -173,6 +184,7 @@ async function run(): Promise<void> {
 				documentBytes,
 				rank,
 				resultSources: [...sources].sort(),
+				anchor: matched?.anchor ?? null,
 				relevant,
 				memoryRatio,
 			});

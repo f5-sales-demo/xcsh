@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { createGzip, gzipSync } from "node:zlib";
 import tar from "tar-stream";
+import { type DocumentationMetadata, splitHeadingPassages } from "../../src/internal-urls/documentation-metadata";
 import { createEmbeddedDocumentationRepository } from "../../src/internal-urls/documentation-repository";
 import {
 	buildDocumentationIndex,
@@ -13,6 +14,43 @@ import {
 
 function sha256(value: Uint8Array | string): string {
 	return createHash("sha256").update(value).digest("hex");
+}
+
+function fixtureMetadata(
+	source: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com",
+	canonicalUrl: string,
+	lifecycle: "current" | "deprecated" | "superseded" = source === "my-f5-com" ? "deprecated" : "current",
+	replacementUrl: string | null = null,
+): DocumentationMetadata {
+	const marketing = source === "www-f5-com";
+	const support = source === "my-f5-com";
+	return {
+		metadataSchema: 1,
+		product: marketing ? "client-side-defense" : null,
+		contentType: marketing ? "product_overview" : support ? "knowledge_article" : "how_to",
+		taskType: marketing ? "concept" : support ? "support" : "configure",
+		canonicalUrl,
+		lastUpdated: "2026-09-26",
+		language: "en",
+		aliases: marketing ? ["Client-Side Defense", "CSD"] : [],
+		lifecycle,
+		replacementUrl,
+		relatedDocuments: marketing
+			? [
+					{
+						relation: "configure",
+						title: "Protect Applications",
+						canonicalUrl: "https://docs.cloud.f5.com/docs-v2/protect-applications",
+						source: "docs-cloud-f5-com",
+						stablePath: "protect-applications",
+					},
+				]
+			: [],
+	};
+}
+
+function passages(markdown: string) {
+	return splitHeadingPassages(markdown.replace(/^---\n.*?\n---\n\n?/s, ""));
 }
 
 async function tarGz(entries: ReadonlyMap<string, Buffer>): Promise<Buffer> {
@@ -68,6 +106,8 @@ describe("embedded documentation repository", () => {
 				fileSha256: sha256(docsCloudMarkdown),
 				sizeBytes: Buffer.byteLength(docsCloudMarkdown),
 				markdown: docsCloudMarkdown,
+				metadata: fixtureMetadata("docs-cloud-f5-com", "https://docs.cloud.f5.com/docs-v2/protect-applications"),
+				passages: passages(docsCloudMarkdown),
 			},
 			{
 				source: "my-f5-com" as const,
@@ -79,6 +119,8 @@ describe("embedded documentation repository", () => {
 				fileSha256: sha256(myF5Markdown),
 				sizeBytes: Buffer.byteLength(myF5Markdown),
 				markdown: myF5Markdown,
+				metadata: fixtureMetadata("my-f5-com", "https://my.f5.com/manage/s/article/K000000001"),
+				passages: passages(myF5Markdown),
 			},
 			{
 				source: "www-f5-com" as const,
@@ -92,7 +134,35 @@ describe("embedded documentation repository", () => {
 				fileSha256: sha256(marketingMarkdown),
 				sizeBytes: Buffer.byteLength(marketingMarkdown),
 				markdown: marketingMarkdown,
+				metadata: fixtureMetadata(
+					"www-f5-com",
+					"https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+				),
+				passages: passages(marketingMarkdown),
 			},
+			...(["current", "deprecated", "superseded"] as const).map(lifecycle => {
+				const stablePath = `lifecycle-${lifecycle}`;
+				const originalUrl = `https://docs.cloud.f5.com/docs-v2/${stablePath}`;
+				const markdown = `---\ntitle: ${lifecycle} lifecycle\n---\n\n# ${lifecycle} lifecycle\n\nUnique lifecyclerank content.\n`;
+				return {
+					source: "docs-cloud-f5-com" as const,
+					stablePath,
+					archivePath: `content/docs-cloud-f5-com/${stablePath}/index.md`,
+					title: `${lifecycle} lifecycle`,
+					originalUrl,
+					bodySha256: sha256(`# ${lifecycle} lifecycle\n\nUnique lifecyclerank content.\n`),
+					fileSha256: sha256(markdown),
+					sizeBytes: Buffer.byteLength(markdown),
+					markdown,
+					metadata: fixtureMetadata(
+						"docs-cloud-f5-com",
+						originalUrl,
+						lifecycle,
+						lifecycle === "superseded" ? "https://docs.cloud.f5.com/docs-v2/lifecycle-current" : null,
+					),
+					passages: passages(markdown),
+				};
+			}),
 		];
 		const assetRows = [
 			{
@@ -176,6 +246,26 @@ describe("embedded documentation repository", () => {
 	});
 
 	it("searches all three collections with authoritative source filtering and exact reads", async () => {
+		const indexDatabase = new (await import("bun:sqlite")).Database(rawIndexPath, { readonly: true });
+		try {
+			expect(
+				(indexDatabase.query("SELECT count(*) AS count FROM documentation_passages").get() as { count: number })
+					.count,
+			).toBe(6);
+			expect(indexDatabase.query("SELECT alias FROM documentation_aliases ORDER BY alias").all()).toEqual([
+				{ alias: "CSD" },
+				{ alias: "Client-Side Defense" },
+			]);
+			expect(
+				(
+					indexDatabase.query("SELECT count(*) AS count FROM documentation_relationships").get() as {
+						count: number;
+					}
+				).count,
+			).toBe(1);
+		} finally {
+			indexDatabase.close();
+		}
 		const repository = createEmbeddedDocumentationRepository(assets, { cacheRoot });
 		const all = await repository.search("certificate", undefined, 5);
 		expect(all[0]).toMatchObject({ source: "my-f5-com", stablePath: "K000000001" });
@@ -183,6 +273,9 @@ describe("embedded documentation repository", () => {
 		const unfiltered = await repository.search("corpusmarker", undefined, 5);
 		expect(new Set(unfiltered.map(result => result.source))).toEqual(
 			new Set(["docs-cloud-f5-com", "my-f5-com", "www-f5-com"]),
+		);
+		expect(unfiltered.find(result => result.source === "my-f5-com")!.score).toBeLessThan(
+			unfiltered.find(result => result.source === "docs-cloud-f5-com")!.score,
 		);
 		expect((await repository.search("what is client side defense", undefined, 5))[0]).toMatchObject({
 			source: "www-f5-com",
@@ -199,9 +292,46 @@ describe("embedded documentation repository", () => {
 		const filtered = await repository.search("protect applications", "docs-cloud-f5-com", 1);
 		expect(filtered).toHaveLength(1);
 		expect(filtered[0]?.source).toBe("docs-cloud-f5-com");
+		expect(filtered[0]?.anchor).toBe("protect-applications");
+		expect(filtered[0]?.contentType).toBe("how_to");
+		expect(
+			await repository.search("protect applications", undefined, 5, {
+				product: "dns",
+			}),
+		).toEqual([]);
+		expect(await repository.search("CSD", undefined, 5)).toMatchObject([
+			{
+				aliases: ["Client-Side Defense", "CSD"],
+				canonicalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+				lastUpdated: "2026-09-26",
+				product: "client-side-defense",
+				source: "www-f5-com",
+			},
+		]);
+		expect(
+			await repository.search("corpusmarker", undefined, 5, {
+				contentType: "knowledge_article",
+				taskType: "support",
+				language: "en",
+				lifecycle: "deprecated",
+			}),
+		).toMatchObject([{ source: "my-f5-com", lifecycle: "deprecated" }]);
+		expect(
+			await repository.search("corpusmarker", "docs-cloud-f5-com", 5, {
+				product: "client-side-defense",
+			}),
+		).toEqual([]);
+		const lifecycle = await repository.search("lifecyclerank", undefined, 5);
+		expect(lifecycle.map(result => result.lifecycle)).toEqual(["current", "deprecated", "superseded"]);
+		expect(lifecycle[0]!.score).toBeGreaterThan(lifecycle[1]!.score);
+		expect(lifecycle[1]!.score).toBeGreaterThan(lifecycle[2]!.score);
 		expect((await repository.readDocument("docs-cloud-f5-com", "protect-applications"))?.markdown).toBe(
 			docsCloudMarkdown,
 		);
+		expect(
+			(await repository.readDocument("docs-cloud-f5-com", "protect-applications", "protect-applications"))?.markdown,
+		).toBe("# Protect Applications\n\nConfigure a web application firewall. Shared corpusmarker.\n");
+		expect(await repository.readDocument("docs-cloud-f5-com", "protect-applications", "missing-anchor")).toBeNull();
 		const marketing = await repository.search("what is client side defense", "www-f5-com", 1);
 		expect(marketing[0]).toMatchObject({
 			source: "www-f5-com",
