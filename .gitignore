@@ -115,6 +115,7 @@ projects/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .remember/
+.playwright-mcp/
 .serena/
 .auto-claude/
 claudedocs/
@@ -219,7 +220,6 @@ out.html
 pi-*.html
 packages/coding-agent/src/internal-urls/docs-index.generated.ts
 packages/coding-agent/src/internal-urls/build-info.generated.ts
-packages/coding-agent/src/internal-urls/.documentation-generated/
 packages/typescript-edit-benchmark/runs/
 
 # Local review working artifacts. No trailing slash, so symlinks match too.
