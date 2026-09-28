@@ -293,7 +293,7 @@ describe("renderAboutDoc", () => {
 		};
 		const md = renderAboutDoc(info, null, null, null);
 		expect(md).toContain("## Product knowledge");
-		expect(md).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
+		expect(md).toContain("https://f5-sales-demo.github.io/llms.txt");
 		expect(md).toContain("federated");
 	});
 
