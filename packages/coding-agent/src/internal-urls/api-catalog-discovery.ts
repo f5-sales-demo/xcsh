@@ -95,6 +95,48 @@ export function matchesBaselineCatalogDiscoveryTerm(term: string, values: readon
 	return values.some(value => normalizeApiCatalogDiscoveryTerm(value).includes(normalized));
 }
 
+function categoryDocuments(category: ApiCatalogCategory): ApiCatalogDiscoveryDocument[] {
+	const destination = `xcsh://api-catalog/${category.name}`;
+	if (category.operations.length === 0) {
+		return [
+			{
+				id: `category:${category.name}`,
+				categoryName: category.name,
+				markdown: [
+					`# ${category.displayName}`,
+					"",
+					`- Category: ${category.name}`,
+					`- Destination: ${destination}`,
+					"",
+					"## Operations",
+					"- None",
+					"",
+				].join("\n"),
+			},
+		];
+	}
+	return category.operations
+		.slice()
+		.sort((left, right) => left.operationId.localeCompare(right.operationId))
+		.map(operation => ({
+			id: `operation:${category.name}:${operation.operationId}`,
+			categoryName: category.name,
+			markdown: [
+				`# ${category.displayName}: ${operation.name}`,
+				"",
+				`- Category: ${category.name}`,
+				`- Destination: ${destination}`,
+				`- Operation: ${operation.name}`,
+				`- Alias: ${(operation.operationAliases ?? []).join(", ")}`,
+				`- Description: ${operation.description}`,
+				`- Method: ${operation.method.toUpperCase()}`,
+				`- Path: ${operation.path}`,
+				`- Operation ID: ${operation.operationId}`,
+				"",
+			].join("\n"),
+		}));
+}
+
 function categoryDocument(category: ApiCatalogCategory): ApiCatalogDiscoveryDocument {
 	const destination = `xcsh://api-catalog/${category.name}`;
 	const operations = category.operations.flatMap(operation => [
@@ -105,7 +147,6 @@ function categoryDocument(category: ApiCatalogCategory): ApiCatalogDiscoveryDocu
 		`  - Path: ${operation.path}`,
 		`  - Operation ID: ${operation.operationId}`,
 	]);
-
 	return {
 		id: `category:${category.name}`,
 		categoryName: category.name,
@@ -136,6 +177,20 @@ export function buildApiCatalogDiscoveryCorpus(
 			.slice()
 			.sort((left, right) => left.name.localeCompare(right.name))
 			.map(categoryDocument),
+	};
+}
+
+/** Candidate-only operation granularity; authoritative results remain category URLs. */
+export function buildApiOperationDiscoveryCorpus(
+	index: ApiCatalogIndex,
+	data: Readonly<Record<string, ApiCatalogCategory>>,
+): ApiCatalogDiscoveryCorpus {
+	return {
+		catalogVersion: index.version,
+		documents: Object.values(data)
+			.slice()
+			.sort((left, right) => left.name.localeCompare(right.name))
+			.flatMap(categoryDocuments),
 	};
 }
 

@@ -6,6 +6,7 @@ import path from "node:path";
 import { gzipSync } from "node:zlib";
 import {
 	buildApiCatalogDiscoveryCorpus,
+	buildApiOperationDiscoveryCorpus,
 	extractPrebuiltQmdBm25Index,
 	fingerprintApiCatalogDiscoveryCorpus,
 	rankBaselineCatalogDiscovery,
@@ -90,6 +91,10 @@ describe("API catalog discovery corpus", () => {
 		]);
 		expect(first.documents[0]?.markdown).toContain("xcsh://api-catalog/dns-zones");
 		expect(first.documents[0]?.markdown).toContain("create zone");
+		expect(buildApiOperationDiscoveryCorpus(index, categories).documents.map(document => document.id)).toEqual([
+			"operation:dns-zones:ves.io.schema.dns_zone.API.Create",
+			"category:http-loadbalancers",
+		]);
 		expect(fingerprintApiCatalogDiscoveryCorpus(first, "source-sha", "baseline-v1")).toMatch(/^[a-f0-9]{64}$/);
 	});
 
