@@ -69,6 +69,9 @@
 
 ### Fixed
 
+- Kept the checked-in documentation loader asset-free between release builds, so ordinary native
+  CI and source tests do not require release-only generated archives ([#4525](https://github.com/f5-sales-demo/xcsh/issues/4525)).
+
 - Migrated the exact generated v8 LiteLLM role defaults to the current GPT-6/Terra assignments so
   upgraded profiles keep legacy selectors resolvable without showing them in ordinary model browsing
   ([#4345](https://github.com/f5-sales-demo/xcsh/issues/4345)).

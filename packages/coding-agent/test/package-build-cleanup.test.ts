@@ -4,6 +4,16 @@ import path from "node:path";
 import { type PackageBuildOperations, runPackageBuild } from "../scripts/build-package";
 
 describe("coding-agent package build", () => {
+	test("keeps the checked-in documentation loader asset-free between release builds", async () => {
+		const loader = await readFile(
+			path.resolve(import.meta.dir, "../src/internal-urls/documentation-assets.generated.ts"),
+			"utf8",
+		);
+
+		expect(loader).toContain("EMBEDDED_DOCUMENTATION_ASSETS: EmbeddedDocumentationAssets | null = null");
+		expect(loader).not.toContain(".documentation-generated/");
+	});
+
 	test("restores generated placeholders when preparation or compilation fails", async () => {
 		for (const failure of ["prepare", "compile"] as const) {
 			const events: string[] = [];
