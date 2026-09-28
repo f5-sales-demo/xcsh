@@ -20,7 +20,7 @@ function repository(): DocumentationRepository {
 			assetCount: 1,
 		},
 		async search(query, source, limit) {
-			expect(query).toBe("protect applications");
+			expect(["protect applications", "what is client side defense"]).toContain(query);
 			expect(limit).toBe(source === undefined ? 5 : 1);
 			const rows = [
 				{
@@ -39,6 +39,14 @@ function repository(): DocumentationRepository {
 					snippet: "Support content.",
 					score: 4.5,
 				},
+				{
+					title: "Client-Side Defense",
+					source: "www-f5-com" as const,
+					originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+					stablePath: "products/distributed-cloud-services/client-side-defense",
+					snippet: "Protect web applications from malicious scripts.",
+					score: 8.5,
+				},
 			];
 			return rows.filter(row => source === undefined || row.source === source).slice(0, limit);
 		},
@@ -49,13 +57,25 @@ function repository(): DocumentationRepository {
 						title: "Protect applications",
 						originalUrl: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection",
 					}
-				: null;
+				: source === "www-f5-com" && stablePath === "products/distributed-cloud-services/client-side-defense"
+					? {
+							markdown: "# Client-Side Defense\n",
+							title: "Client-Side Defense",
+							originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+						}
+					: null;
 		},
 		async readAsset(source, stablePath, filename) {
-			return source === "docs-cloud-f5-com" &&
+			return (source === "docs-cloud-f5-com" &&
 				stablePath === "web-app-and-api-protection" &&
-				filename === `${"a".repeat(64)}.png`
-				? { data: Buffer.from("png-bytes").toString("base64"), mimeType: "image/png" }
+				filename === `${"a".repeat(64)}.png`) ||
+				(source === "www-f5-com" &&
+					stablePath === "products/distributed-cloud-services/client-side-defense" &&
+					filename === `${"b".repeat(64)}.webp`)
+				? {
+						data: Buffer.from("png-bytes").toString("base64"),
+						mimeType: filename.endsWith(".webp") ? "image/webp" : "image/png",
+					}
 				: null;
 		},
 	};
@@ -85,9 +105,32 @@ describe("xcsh://documentation", () => {
 		expect(result.content).toContain("2 documents");
 		expect(result.content).toContain("docs-cloud-f5-com");
 		expect(result.content).toContain("my-f5-com");
+		expect(result.content).toContain("www-f5-com");
 	});
 
-	it("searches both sources with five results by default and exact follow-up URLs", async () => {
+	it("searches and reads the reviewed marketing collection", async () => {
+		const result = await router().resolve(
+			"xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+		);
+		expect(result.content).toContain("Client-Side Defense");
+		expect(result.content).toContain(
+			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+		);
+		const document = await router().resolve(
+			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+		);
+		expect(document.content).toBe("# Client-Side Defense\n");
+	});
+
+	it("returns reviewed marketing image assets", async () => {
+		const result = await router().resolve(
+			`xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/assets/${"b".repeat(64)}.webp`,
+		);
+		expect(result.contentType).toBe("image/webp");
+		expect(result.encoding).toBe("base64");
+	});
+
+	it("searches all sources with five results by default and exact follow-up URLs", async () => {
 		const result = await router().resolve("xcsh://documentation/?search=protect%20applications");
 		expect(result.content).toContain("Protect applications");
 		expect(result.content).toContain("xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md");
@@ -128,6 +171,8 @@ describe("xcsh://documentation", () => {
 		"xcsh://documentation/docs-cloud-f5-com/%2fetc/index.md",
 		"xcsh://documentation/docs-cloud-f5-com/../secret/index.md",
 		"xcsh://documentation/docs-cloud-f5-com/missing/index.md",
+		"xcsh://documentation/www-f5-com/../company/index.md",
+		"xcsh://documentation/www-f5-com/company/about-us/index.md",
 	])("rejects invalid or unknown route %s", async value => {
 		await expect(router().resolve(value)).rejects.toThrow();
 	});

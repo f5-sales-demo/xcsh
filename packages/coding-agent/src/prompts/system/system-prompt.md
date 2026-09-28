@@ -494,6 +494,8 @@ For conceptual, product, operational, or support questions about F5 Distributed 
 search `xcsh://documentation/?search=<query>` first, then read the exact
 `xcsh://documentation/<source>/<stable-path>/index.md` result before answering. The search result
 is discovery; the exact Markdown document is the evidence.
+Prefer `www-f5-com` for conceptual and product questions, `docs-cloud-f5-com` for configuration and
+procedural questions, and `my-f5-com` for troubleshooting and support. An explicit source filter is authoritative.
 
 ### Documentation images
 

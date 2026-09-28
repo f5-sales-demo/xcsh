@@ -6,7 +6,11 @@ import {
 	createEmbeddedDocumentationRepository,
 	type EmbeddedDocumentationRepository,
 } from "./internal-urls/documentation-repository";
-import type { DocumentationRepository, DocumentationSearchResult } from "./internal-urls/documentation-resolve";
+import type {
+	DocumentationRepository,
+	DocumentationSearchResult,
+	DocumentationSource,
+} from "./internal-urls/documentation-resolve";
 import { convertToPng } from "./utils/image-convert";
 
 export const QMD_SMOKE_SUCCESS = "XCSH_QMD_SMOKE_OK";
@@ -17,6 +21,10 @@ const EXPECTED_CATEGORY = "dns-dns-zone-clone-from-dns-domain";
 const WAF_QUERY = "configure web application firewall";
 const WAF_PATH = "docs/how-to/app-security/web-app-firewall";
 const WAF_TITLE = "Create Web Application Firewall";
+const MARKETING_QUERY = "what is client side defense";
+const MARKETING_PATH = "products/distributed-cloud-services/client-side-defense";
+const MARKETING_TITLE = "F5 Distributed Cloud Client-Side Defense";
+const MARKETING_SOURCE = "www-f5-com" as const;
 const DNS_QUERY = "set up DNS load balancer";
 const DNS_PATH = "dns-management/how-to/configure-dns-load-balancer";
 const DNS_TITLE = "Set Up DNS Load Balancer";
@@ -31,6 +39,8 @@ const EXPECTED_EVENTS = [
 	"api-catalog-rank",
 	"documentation-search",
 	"documentation-read",
+	"documentation-marketing-search",
+	"documentation-marketing-read",
 	"documentation-search",
 	"documentation-read",
 	"documentation-follow-up-read",
@@ -47,7 +57,7 @@ export interface QmdSmokeTraceEntry {
 	readonly event: QmdSmokeEvent;
 	readonly resource?: string;
 	readonly title?: string;
-	readonly source?: typeof SOURCE;
+	readonly source?: DocumentationSource;
 	readonly category?: string;
 	readonly outcome?: string;
 }
@@ -59,12 +69,12 @@ export interface QmdSmokeOptions {
 	documentationRepository?: DocumentationRepository;
 }
 
-function searchUri(query: string): string {
-	return `xcsh://documentation/?search=${encodeURIComponent(query)}&source=${SOURCE}&limit=1`;
+function searchUri(query: string, source: DocumentationSource = SOURCE): string {
+	return `xcsh://documentation/?search=${encodeURIComponent(query)}&source=${source}&limit=1`;
 }
 
-function documentUri(stablePath: string): string {
-	return `xcsh://documentation/${SOURCE}/${stablePath}/index.md`;
+function documentUri(stablePath: string, source: DocumentationSource = SOURCE): string {
+	return `xcsh://documentation/${source}/${stablePath}/index.md`;
 }
 
 function assetUri(stablePath: string, filename: string): string {
@@ -75,11 +85,12 @@ function assertSearchResult(
 	result: DocumentationSearchResult | undefined,
 	expectedPath: string,
 	expectedTitle: string,
-): DocumentationSearchResult & { source: typeof SOURCE } {
-	if (result?.source !== SOURCE || result.stablePath !== expectedPath || result.title !== expectedTitle) {
-		throw new Error(`Documentation QMD smoke expected ${expectedTitle} at ${SOURCE}/${expectedPath}`);
+	expectedSource: DocumentationSource = SOURCE,
+): DocumentationSearchResult {
+	if (result?.source !== expectedSource || result.stablePath !== expectedPath || result.title !== expectedTitle) {
+		throw new Error(`Documentation QMD smoke expected ${expectedTitle} at ${expectedSource}/${expectedPath}`);
 	}
-	return result as DocumentationSearchResult & { source: typeof SOURCE };
+	return result;
 }
 
 /** Parse and strictly validate stdout from the installed-binary QMD smoke driver. */
@@ -109,6 +120,8 @@ export function parseQmdSmokeOutput(output: string): QmdSmokeTraceEntry[] {
 	const expectedResources = [
 		searchUri(WAF_QUERY),
 		documentUri(WAF_PATH),
+		searchUri(MARKETING_QUERY, MARKETING_SOURCE),
+		documentUri(MARKETING_PATH, MARKETING_SOURCE),
 		searchUri(DNS_QUERY),
 		documentUri(DNS_PATH),
 		documentUri(DNS_PATH),
@@ -126,16 +139,20 @@ export function parseQmdSmokeOutput(output: string): QmdSmokeTraceEntry[] {
 		if (trace[index]?.title !== WAF_TITLE || trace[index]?.source !== SOURCE)
 			throw new Error("QMD smoke trace contains unexpected WAF identity");
 	}
-	for (const index of [3, 4, 5]) {
+	for (const index of [3, 4]) {
+		if (trace[index]?.title !== MARKETING_TITLE || trace[index]?.source !== MARKETING_SOURCE)
+			throw new Error("QMD smoke trace contains unexpected marketing identity");
+	}
+	for (const index of [5, 6, 7]) {
 		if (trace[index]?.title !== DNS_TITLE || trace[index]?.source !== SOURCE)
 			throw new Error("QMD smoke trace contains unexpected DNS identity");
 	}
-	if (trace[6]?.outcome !== "no-match-no-fetch") throw new Error("QMD smoke trace did not fail closed");
-	if (trace[7]?.outcome !== DOCUMENTATION_TOOLS_DISABLED_MESSAGE)
+	if (trace[8]?.outcome !== "no-match-no-fetch") throw new Error("QMD smoke trace did not fail closed");
+	if (trace[9]?.outcome !== DOCUMENTATION_TOOLS_DISABLED_MESSAGE)
 		throw new Error("QMD smoke trace omitted the tools-disabled explanation");
-	if (trace[8]?.source !== SOURCE || trace[8].outcome !== "image/png")
+	if (trace[10]?.source !== SOURCE || trace[10].outcome !== "image/png")
 		throw new Error("QMD smoke trace contains an unexpected SVG conversion result");
-	if (trace[9]?.outcome !== "ok") throw new Error("QMD smoke trace did not confirm SQLite startup");
+	if (trace[11]?.outcome !== "ok") throw new Error("QMD smoke trace did not confirm SQLite startup");
 	return trace;
 }
 
@@ -172,6 +189,32 @@ export async function runQmdSmoke(options: QmdSmokeOptions = {}): Promise<string
 		throw new Error("Documentation QMD smoke could not read exact WAF Markdown");
 	}
 	emit({ event: "documentation-read", resource: documentUri(WAF_PATH), title: wafDocument.title, source: SOURCE });
+
+	const marketing = assertSearchResult(
+		(await documentation.search(MARKETING_QUERY, MARKETING_SOURCE, 1))[0],
+		MARKETING_PATH,
+		MARKETING_TITLE,
+		MARKETING_SOURCE,
+	);
+	emit({
+		event: "documentation-marketing-search",
+		resource: searchUri(MARKETING_QUERY, MARKETING_SOURCE),
+		title: marketing.title,
+		source: marketing.source,
+	});
+	const marketingDocument = await documentation.readDocument(MARKETING_SOURCE, MARKETING_PATH);
+	if (
+		marketingDocument?.title !== MARKETING_TITLE ||
+		!marketingDocument.markdown.includes("# F5 Client-Side Defense")
+	) {
+		throw new Error("Documentation QMD smoke could not read exact marketing Markdown");
+	}
+	emit({
+		event: "documentation-marketing-read",
+		resource: documentUri(MARKETING_PATH, MARKETING_SOURCE),
+		title: marketingDocument.title,
+		source: MARKETING_SOURCE,
+	});
 
 	const dns = assertSearchResult((await documentation.search(DNS_QUERY, SOURCE, 1))[0], DNS_PATH, DNS_TITLE);
 	emit({ event: "documentation-search", resource: searchUri(DNS_QUERY), title: dns.title, source: dns.source });

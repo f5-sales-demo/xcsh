@@ -32,7 +32,7 @@ describe("QMD compiled-binary smoke", () => {
 				archiveSha256: "2".repeat(64),
 				indexSha256: "3".repeat(64),
 				fingerprint: "4".repeat(64),
-				documentCount: 2,
+				documentCount: 3,
 				assetCount: 1,
 			},
 			async search(query) {
@@ -45,6 +45,18 @@ describe("QMD compiled-binary smoke", () => {
 							stablePath: "docs/how-to/app-security/web-app-firewall",
 							snippet: "WAF",
 							score: 9,
+						},
+					];
+				}
+				if (query === "what is client side defense") {
+					return [
+						{
+							title: "F5 Distributed Cloud Client-Side Defense",
+							source: "www-f5-com",
+							originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+							stablePath: "products/distributed-cloud-services/client-side-defense",
+							snippet: "Client-Side Defense",
+							score: 10,
 						},
 					];
 				}
@@ -63,6 +75,13 @@ describe("QMD compiled-binary smoke", () => {
 				return [];
 			},
 			async readDocument(source, stablePath) {
+				if (source === "www-f5-com" && stablePath === "products/distributed-cloud-services/client-side-defense") {
+					return {
+						markdown: "# F5 Client-Side Defense",
+						title: "F5 Distributed Cloud Client-Side Defense",
+						originalUrl: "https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+					};
+				}
 				if (source !== "docs-cloud-f5-com") return null;
 				if (stablePath === "docs/how-to/app-security/web-app-firewall") {
 					return {
@@ -110,6 +129,8 @@ describe("QMD compiled-binary smoke", () => {
 			"api-catalog-rank",
 			"documentation-search",
 			"documentation-read",
+			"documentation-marketing-search",
+			"documentation-marketing-read",
 			"documentation-search",
 			"documentation-read",
 			"documentation-follow-up-read",
@@ -122,16 +143,21 @@ describe("QMD compiled-binary smoke", () => {
 			trace.every(entry => entry.resource === undefined || entry.resource.startsWith("xcsh://documentation")),
 		).toBe(true);
 		expect(trace[1]).toMatchObject({ title: "Create Web Application Firewall", source: "docs-cloud-f5-com" });
-		expect(trace[5]).toMatchObject({
+		expect(trace[3]).toMatchObject({
+			resource: "xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+			title: "F5 Distributed Cloud Client-Side Defense",
+			source: "www-f5-com",
+		});
+		expect(trace[7]).toMatchObject({
 			resource: "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
 			title: "Set Up DNS Load Balancer",
 			source: "docs-cloud-f5-com",
 		});
-		expect(trace[7]).toMatchObject({
+		expect(trace[9]).toMatchObject({
 			event: "documentation-tools-disabled",
 			outcome: DOCUMENTATION_TOOLS_DISABLED_MESSAGE,
 		});
-		expect(() => parseQmdSmokeOutput(output.replace('"sequence":6', '"sequence":7'))).toThrow("out of order");
+		expect(() => parseQmdSmokeOutput(output.replace('"sequence":8', '"sequence":9'))).toThrow("out of order");
 
 		const database = new Database(agentDatabasePath, { readonly: true });
 		try {

@@ -35,11 +35,19 @@
 			"liveUrl": "https://my.f5.com/manage/s/article/K000151087"
 		},
 		{
+			"id": "www-f5-client-side-defense",
+			"query": "what is client side defense",
+			"source": "www-f5-com",
+			"expectedPath": "products/distributed-cloud-services/client-side-defense",
+			"maxRank": 1,
+			"liveUrl": "https://www.f5.com/products/distributed-cloud-services/client-side-defense"
+		},
+		{
 			"id": "cross-source-ambiguity",
 			"query": "DNS load balancer",
 			"expectedPath": "dns-management/how-to/configure-dns-load-balancer",
 			"maxRank": 3,
-			"requiredSources": ["docs-cloud-f5-com", "my-f5-com"],
+			"requiredSources": ["docs-cloud-f5-com", "my-f5-com", "www-f5-com"],
 			"liveUrl": "https://docs.cloud.f5.com/docs-v2/dns-management/how-to/configure-dns-load-balancer"
 		},
 		{

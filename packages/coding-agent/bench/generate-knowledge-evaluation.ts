@@ -56,13 +56,17 @@ const documentRows = database
 	.query(
 		"SELECT source, stable_path, title FROM documentation_documents WHERE stable_path NOT LIKE 'api/%' ORDER BY source, stable_path",
 	)
-	.all() as Array<{ source: "docs-cloud-f5-com" | "my-f5-com"; stable_path: string; title: string }>;
+	.all() as Array<{
+		source: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
+		stable_path: string;
+		title: string;
+	}>;
 database.close();
 
-const documentation = (["docs-cloud-f5-com", "my-f5-com"] as const).flatMap(source =>
+const documentation = (["docs-cloud-f5-com", "my-f5-com", "www-f5-com"] as const).flatMap(source =>
 	documentRows
 		.filter(row => row.source === source)
-		.slice(0, 80)
+		.slice(0, source === "www-f5-com" ? 24 : 80)
 		.map((row, index) => {
 			const familySegments = row.stable_path.split("/");
 			const family =
@@ -81,7 +85,10 @@ const documentation = (["docs-cloud-f5-com", "my-f5-com"] as const).flatMap(sour
 		}),
 );
 
-if (documentation.length < 160) throw new Error(`Documentation corpus produced only ${documentation.length} queries`);
+if (documentation.filter(row => row.source === "www-f5-com").length !== 24) {
+	throw new Error("Documentation corpus must contain all 24 reviewed marketing pages");
+}
+if (documentation.length < 184) throw new Error(`Documentation corpus produced only ${documentation.length} queries`);
 
 const resourceRows = API_SPEC_INDEX.domains
 	.flatMap(domain =>
