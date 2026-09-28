@@ -122,6 +122,7 @@ export interface SubcommandDef {
 /** Declarative builtin slash command definition used by autocomplete and help UI. */
 export interface BuiltinSlashCommand {
 	name: string;
+	aliases?: string[];
 	description: string;
 	/** Subcommands for dropdown completion. */
 	subcommands?: SubcommandDef[];
@@ -137,7 +138,6 @@ interface ParsedBuiltinSlashCommand {
 }
 
 interface BuiltinSlashCommandSpec extends BuiltinSlashCommand {
-	aliases?: string[];
 	allowArgs?: boolean;
 	/**
 	 * Handle the command. Return a string to pass remaining text through as prompt input.
@@ -2508,6 +2508,7 @@ export function getBuiltinSlashCommandInventory() {
 export const BUILTIN_SLASH_COMMAND_DEFS: ReadonlyArray<BuiltinSlashCommand> = BUILTIN_SLASH_COMMAND_REGISTRY.map(
 	command => ({
 		name: command.name,
+		aliases: command.aliases,
 		description: command.description,
 		subcommands: command.subcommands,
 		inlineHint: command.inlineHint,
