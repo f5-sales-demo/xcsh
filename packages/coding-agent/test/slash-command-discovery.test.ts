@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { getBuiltinSlashCommandDiscoveryCandidates } from "../src/extensibility/slash-commands";
 import {
 	inferSlashCommandScope,
 	resolveSlashCommandDiscovery,
@@ -55,6 +56,23 @@ describe("slash command discovery", () => {
 
 		expect(resolved?.getArgumentCompletions).toBe(getArgumentCompletions);
 		expect(resolved?.getInlineHint).toBe(getInlineHint);
+	});
+
+	it("exposes builtin aliases as native discovery candidates before extension commands", () => {
+		const status = getBuiltinSlashCommandDiscoveryCandidates().find(command => command.name === "status");
+		expect(status?.discovery).toEqual({
+			behavior: "execution",
+			provenance: "xcsh built-in",
+			scope: "native",
+		});
+		expect(status?.description).toContain("Alias for /extensions");
+
+		const [winner] = resolveSlashCommandDiscovery([
+			status!,
+			candidate("status", "prompt expansion", "MEDDPICC extension", "project"),
+		]);
+		expect(winner?.description).toContain("Execution · native scope");
+		expect(winner?.description).toContain("MEDDPICC extension (project prompt expansion)");
 	});
 
 	it("classifies native, project, user, and external paths deterministically", () => {
