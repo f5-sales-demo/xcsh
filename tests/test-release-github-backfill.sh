@@ -97,11 +97,290 @@ if XCSH_RELEASE_UPLOAD_CONCURRENCY=parallel "$script" f5-sales-demo/xcsh v1.2.3 
   fail "non-numeric upload concurrency was accepted"
 fi
 
+behavior_root=$(mktemp -d)
+fake_bin="$behavior_root/bin"
+behavior_assets="$behavior_root/assets"
+valid_jobs=
+extra_jobs=
+failed_jobs=
+failed_split_jobs=
+cleanup() {
+  rm -rf "$behavior_root" "$invalid_concurrency_assets"
+  for file in "$valid_jobs" "$extra_jobs" "$failed_jobs" "$failed_split_jobs"; do
+    if [ -n "$file" ]; then
+      rm -f "$file"
+    fi
+  done
+}
+trap cleanup EXIT
+mkdir -p "$fake_bin" "$behavior_assets"
+sed -n '/^expected_assets=(/,/^)/p' "$script" |
+  sed -n 's/^  \([A-Za-z0-9_.-][A-Za-z0-9_.-]*\)$/\1/p' |
+  while IFS= read -r name; do
+    printf 'fixture payload for %s\n' "$name" >"$behavior_assets/$name"
+  done
+
+cat >"$fake_bin/sleep" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod +x "$fake_bin/sleep"
+
+cat >"$fake_bin/gh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+state=${FAKE_GH_STATE:?}
+assets_dir=${FAKE_ASSETS_DIR:?}
+scenario=${FAKE_GH_SCENARIO:-success}
+tag=${FAKE_GH_TAG:-v1.2.3}
+
+file_size() {
+  if stat -f %z "$1" >/dev/null 2>&1; then
+    stat -f %z "$1"
+  else
+    stat -c %s "$1"
+  fi
+}
+
+file_sha256() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+lock_state() {
+  while ! mkdir "$state/lock" 2>/dev/null; do
+    /bin/sleep 0.002
+  done
+}
+
+unlock_state() {
+  rmdir "$state/lock"
+}
+
+asset_json() {
+  local file=$1
+  local name=${file##*/}
+  local digest="sha256:$(file_sha256 "$file")"
+  if [ "$scenario" = "final-mismatch" ] && [ "$name" = "pi_natives.darwin-arm64.node" ]; then
+    digest="sha256:$(printf '0%.0s' {1..64})"
+  fi
+  jq -cn \
+    --arg name "$name" \
+    --argjson size "$(file_size "$file")" \
+    --arg digest "$digest" \
+    '{name: $name, state: "uploaded", size: $size, digest: $digest}'
+}
+
+release_json() {
+  local published=false
+  local release_assets
+  if [ -f "$state/published" ]; then
+    published=true
+  fi
+  release_assets=$(
+    for file in "$assets_dir"/*; do
+      asset_json "$file"
+    done | jq -s '.'
+  )
+  jq -cn \
+    --arg tag "$tag" \
+    --argjson published "$published" \
+    --argjson assets "$release_assets" \
+    '{id: 101, tag_name: $tag, draft: ($published | not), prerelease: false, immutable: $published, assets: $assets}'
+}
+
+initial_release_list() {
+  case "$scenario" in
+    resume | resume-digest-mismatch | resume-size-mismatch | resume-state-mismatch)
+      local file="$assets_dir/pi_natives.darwin-arm64.node"
+      local digest="sha256:$(file_sha256 "$file")"
+      local size
+      local state=uploaded
+      size=$(file_size "$file")
+      if [ "$scenario" = "resume-digest-mismatch" ]; then
+        digest="sha256:$(printf 'f%.0s' {1..64})"
+      fi
+      if [ "$scenario" = "resume-size-mismatch" ]; then
+        size=$((size + 1))
+      fi
+      if [ "$scenario" = "resume-state-mismatch" ]; then
+        state=new
+      fi
+      jq -cn \
+        --arg tag "$tag" \
+        --argjson size "$size" \
+        --arg digest "$digest" \
+        --arg state "$state" \
+        '[{id: 101, tag_name: $tag, draft: true, prerelease: false, immutable: false, assets: [{name: "pi_natives.darwin-arm64.node", state: $state, size: $size, digest: $digest}]}]'
+      ;;
+    *)
+      printf '[]\n'
+      ;;
+  esac
+}
+
+begin_upload() {
+  local name=$1
+  local attempts_file="$state/attempts-$name"
+  local attempts=0
+  local active
+  local maximum
+  lock_state
+  if [ -f "$attempts_file" ]; then
+    attempts=$(<"$attempts_file")
+  fi
+  attempts=$((attempts + 1))
+  printf '%s\n' "$attempts" >"$attempts_file"
+  active=$(<"$state/active")
+  maximum=$(<"$state/maximum")
+  active=$((active + 1))
+  if [ "$active" -gt "$maximum" ]; then
+    maximum=$active
+  fi
+  printf '%s\n' "$active" >"$state/active"
+  printf '%s\n' "$maximum" >"$state/maximum"
+  printf 'upload-start\t%s\t%s\n' "$name" "$attempts" >>"$state/events"
+  unlock_state
+  printf '%s\n' "$attempts"
+}
+
+finish_upload() {
+  local name=$1
+  local result=$2
+  local active
+  lock_state
+  active=$(<"$state/active")
+  printf '%s\n' "$((active - 1))" >"$state/active"
+  printf 'upload-end\t%s\t%s\n' "$name" "$result" >>"$state/events"
+  unlock_state
+}
+
+if [ "$1" = "api" ]; then
+  if [ "${2:-}" = "--method" ]; then
+    printf 'create-draft\n' >>"$state/events"
+    jq -cn --arg tag "$tag" \
+      '{id: 101, tag_name: $tag, draft: true, prerelease: false, immutable: false, assets: []}'
+  elif [[ "${2:-}" == */immutable-releases ]]; then
+    printf '{"enabled":true}\n'
+  elif [[ "${2:-}" == *'/releases?'* ]]; then
+    initial_release_list
+  elif [[ "${2:-}" == */releases/101 ]]; then
+    printf 'inventory-read\n' >>"$state/events"
+    release_json
+  else
+    echo "unexpected gh api invocation: $*" >&2
+    exit 64
+  fi
+elif [ "$1" = "release" ] && [ "${2:-}" = "upload" ]; then
+  name=${4##*/}
+  attempt=$(begin_upload "$name")
+  if [ -n "${FAKE_EXPECTED_CONCURRENCY:-}" ]; then
+    for _ in {1..500}; do
+      if [ "$(<"$state/maximum")" -ge "$FAKE_EXPECTED_CONCURRENCY" ]; then
+        break
+      fi
+      /bin/sleep 0.002
+    done
+  fi
+  /bin/sleep 0.01
+  if [ "$scenario" = "permanent" ] && [ "$name" = "pi_natives.darwin-arm64.node" ]; then
+    finish_upload "$name" failure
+    exit 1
+  fi
+  if [ "$scenario" = "transient" ] && [ "$name" = "pi_natives.darwin-arm64.node" ] && [ "$attempt" -eq 1 ]; then
+    finish_upload "$name" failure
+    exit 1
+  fi
+  finish_upload "$name" success
+elif [ "$1" = "release" ] && [ "${2:-}" = "edit" ]; then
+  printf 'publish\n' >>"$state/events"
+  : >"$state/published"
+else
+  echo "unexpected gh invocation: $*" >&2
+  exit 64
+fi
+EOF
+chmod +x "$fake_bin/gh"
+
+run_uploader_case() {
+  local case_name=$1
+  local scenario=$2
+  local concurrency=$3
+  local expected_concurrency=$4
+  local state="$behavior_root/$case_name"
+  mkdir -p "$state"
+  printf '0\n' >"$state/active"
+  printf '0\n' >"$state/maximum"
+  : >"$state/events"
+
+  if [ "$concurrency" = default ]; then
+    env -u XCSH_RELEASE_UPLOAD_CONCURRENCY \
+      PATH="$fake_bin:$PATH" \
+      FAKE_GH_STATE="$state" \
+      FAKE_ASSETS_DIR="$behavior_assets" \
+      FAKE_GH_SCENARIO="$scenario" \
+      FAKE_EXPECTED_CONCURRENCY="$expected_concurrency" \
+      "$script" f5-sales-demo/xcsh v1.2.3 "$behavior_assets" >"$state/output" 2>&1
+  else
+    PATH="$fake_bin:$PATH" \
+      FAKE_GH_STATE="$state" \
+      FAKE_ASSETS_DIR="$behavior_assets" \
+      FAKE_GH_SCENARIO="$scenario" \
+      FAKE_EXPECTED_CONCURRENCY="$expected_concurrency" \
+      XCSH_RELEASE_UPLOAD_CONCURRENCY="$concurrency" \
+      "$script" f5-sales-demo/xcsh v1.2.3 "$behavior_assets" >"$state/output" 2>&1
+  fi
+}
+
+run_uploader_case default-concurrency success default 4 || fail "default-concurrency upload failed"
+test "$(<"$behavior_root/default-concurrency/maximum")" -eq 4 || fail "default upload concurrency was not four"
+test -f "$behavior_root/default-concurrency/published" || fail "verified default upload was not published"
+test "$(grep -c '^upload-end' "$behavior_root/default-concurrency/events")" -eq 19 ||
+  fail "publication did not wait for every upload worker"
+inventory_line=$(grep -n '^inventory-read$' "$behavior_root/default-concurrency/events" | head -1 | cut -d: -f1)
+publish_line=$(grep -n '^publish$' "$behavior_root/default-concurrency/events" | cut -d: -f1)
+test "$inventory_line" -lt "$publish_line" || fail "release was published before final inventory verification"
+
+run_uploader_case explicit-concurrency success 2 2 || fail "explicit-concurrency upload failed"
+test "$(<"$behavior_root/explicit-concurrency/maximum")" -eq 2 || fail "explicit upload concurrency was not honored"
+
+run_uploader_case transient-retry transient 4 0 || fail "transient upload failure did not recover"
+test "$(<"$behavior_root/transient-retry/attempts-pi_natives.darwin-arm64.node")" -eq 2 ||
+  fail "transient upload was not retried exactly once"
+test -f "$behavior_root/transient-retry/published" || fail "release was not published after transient recovery"
+
+if run_uploader_case permanent-failure permanent 4 0; then
+  fail "permanent worker failure unexpectedly published"
+fi
+test "$(<"$behavior_root/permanent-failure/attempts-pi_natives.darwin-arm64.node")" -eq 5 ||
+  fail "permanent upload failure did not exhaust five attempts"
+test ! -f "$behavior_root/permanent-failure/published" || fail "permanent worker failure did not preserve the draft"
+grep -Fq 'Release upload failed; preserving draft release v1.2.3' "$behavior_root/permanent-failure/output" ||
+  fail "permanent worker failure did not report draft preservation"
+
+run_uploader_case verified-resume resume 4 0 || fail "verified existing-asset resume failed"
+test ! -e "$behavior_root/verified-resume/attempts-pi_natives.darwin-arm64.node" ||
+  fail "verified existing asset was uploaded again"
+grep -Fq 'Already verified: pi_natives.darwin-arm64.node' "$behavior_root/verified-resume/output" ||
+  fail "verified existing asset was not reported as resumed"
+
+for mismatch in digest size state; do
+  run_uploader_case "resume-$mismatch-mismatch" "resume-$mismatch-mismatch" 4 0 ||
+    fail "$mismatch-mismatched existing-asset replacement failed"
+  test "$(<"$behavior_root/resume-$mismatch-mismatch/attempts-pi_natives.darwin-arm64.node")" -eq 1 ||
+    fail "$mismatch-mismatched existing asset was incorrectly resumed"
+done
+
+if run_uploader_case digest-mismatch final-mismatch 4 0; then
+  fail "release published despite a final digest mismatch"
+fi
+test ! -f "$behavior_root/digest-mismatch/published" || fail "digest mismatch did not preserve the draft"
+grep -Fq 'inventory-read' "$behavior_root/digest-mismatch/events" || fail "final inventory was not queried"
+
 valid_jobs=$(mktemp)
 extra_jobs=$(mktemp)
 failed_jobs=$(mktemp)
 failed_split_jobs=$(mktemp)
-trap 'rm -f "$valid_jobs" "$extra_jobs" "$failed_jobs" "$failed_split_jobs"' EXIT
 
 jq -n '{jobs: [
   {name: "check", conclusion: "success"},
