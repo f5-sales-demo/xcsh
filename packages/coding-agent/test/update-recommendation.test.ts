@@ -238,15 +238,15 @@ describe("installation-channel recommendation", () => {
 		});
 	});
 
-	it("recognizes a valid Windows installer receipt beside the LocalAppData executable", async () => {
-		const executable = "C:\\Users\\example\\AppData\\Local\\xcsh\\xcsh.exe";
+	it("recognizes a valid Windows installer receipt beside a custom-path executable", async () => {
+		const executable = "D:\\tools\\xcsh\\xcsh.exe";
 		const recommendation = await resolveInstallChannel(
 			dependencies({
 				platform: "win32",
 				arch: "x64",
 				execPath: executable,
 				homeDir: "C:\\Users\\example",
-				env: { LOCALAPPDATA: "C:\\Users\\example\\AppData\\Local" },
+				env: {},
 				readFile: async () => receipt("windows-installer", executable, "win32", "x64"),
 			}),
 		);
@@ -254,6 +254,21 @@ describe("installation-channel recommendation", () => {
 		expect(recommendation.command).toContain(
 			"irm https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.ps1 | iex",
 		);
+	});
+
+	it("rejects a nonnormalized Windows executable path in a schema-v2 receipt", async () => {
+		const executable = "D:\\tools\\xcsh\\xcsh.exe";
+		const recommendation = await resolveInstallChannel(
+			dependencies({
+				platform: "win32",
+				arch: "x64",
+				execPath: executable,
+				realpath: async () => executable,
+				readFile: async () =>
+					receipt("windows-installer", "D:\\tools\\xcsh\\staging\\..\\xcsh.exe", "win32", "x64"),
+			}),
+		);
+		expect(recommendation).toMatchObject({ channel: "unknown", action: "blocked" });
 	});
 
 	it.each([
