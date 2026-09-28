@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "c4c8f548ec6b199e9d5ab36fc83e555e961118f4",
-  "fingerprint": "1c04ae77d10a53470386ea9dba9995d47976dc7e91ff6d6286e9e2db2012562e",
+  "revision": "64ba69e78ed9c038974c148b6a2c3b758224d549",
+  "fingerprint": "e4de65fc99203fd012a91b5f098e33afffadd8868da7e6c51e8f953e198caad2",
   "counts": {
     "total": 238,
     "components": 96,
@@ -801,7 +801,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "extensions",
-      "sha256": "8b294da95c8eb476579e94129c773897f38598e311e241182bc32932cbdc4e1c",
+      "sha256": "fcf1b81e2fce203000deaeaae7deb9def6fe99561a45d251cab6fdffe91eaa08",
       "exports": [
         "BUILTIN_SLASH_COMMANDS",
         "FileSlashCommand",
@@ -812,6 +812,7 @@
         "SlashCommandSummary",
         "buildArgumentCompletionsForTest",
         "expandSlashCommand",
+        "getBuiltinSlashCommandDiscoveryCandidates",
         "loadSlashCommands",
         "toSlashCommandSummaries"
       ],
@@ -830,6 +831,7 @@
         "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
+        "packages/coding-agent/test/slash-command-discovery.test.ts",
         "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
         "packages/coding-agent/test/slash-command-tui-inventory.test.ts",
         "packages/coding-agent/test/slash-commands.test.ts",
@@ -838,8 +840,7 @@
         "packages/coding-agent/test/slash-commands/btw.test.ts",
         "packages/coding-agent/test/slash-commands/copy.test.ts",
         "packages/coding-agent/test/slash-commands/exit.test.ts",
-        "packages/coding-agent/test/slash-commands/fast.test.ts",
-        "packages/coding-agent/test/slash-commands/force.test.ts"
+        "packages/coding-agent/test/slash-commands/fast.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/slash-commands.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3626,7 +3627,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "120f991fa9a33397fd38f2d21e2d24b1775cd28a813824415e3cb510697fd7a9",
+      "sha256": "968f70c39bd5ac541d946874264fe0ca2af1eef1f64c195d34bc28ca43837c26",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4449,7 +4450,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "3ee59ea28c119ecd8dc32ef7143302e3797f0c4e78cfb5401c7d3caefa05f039",
+      "sha256": "1ac869836d910ceac103a7d7c03d5e7bd25ddf6308465821bf4e19c8fb5ba879",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4470,6 +4471,7 @@
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
+        "packages/coding-agent/test/slash-command-discovery.test.ts",
         "packages/coding-agent/test/slash-command-tui-inventory.test.ts",
         "packages/coding-agent/test/slash-commands.test.ts",
         "packages/coding-agent/test/slash-commands/branch.test.ts",
