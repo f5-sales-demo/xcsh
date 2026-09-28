@@ -1,0 +1,1 @@
+Use only the `read` tool and pinned offline documentation. Search `xcsh://documentation/?search=configure%20client-side%20defense&source=docs-cloud-f5-com&limit=1`, then read `xcsh://documentation/docs-cloud-f5-com/client-side-defense/how-tos/configure-csd/index.md`. Give me a short summary of how to configure Client-Side Defense.
