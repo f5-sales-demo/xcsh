@@ -5,7 +5,7 @@ Date: 2026-09-27
 ## Decision
 
 Retain the production QMD 2.8.3 BM25 implementation. Do not publish the Nomic embedding model, the
-Qwen reranker, vector indexes, or additional native payloads.
+Qwen reranker, vector indices, or additional native payloads.
 
 The vector candidate failed seven sealed promotion gates. Because vector retrieval is a prerequisite
 for reranking, the 639 MB reranker was not downloaded or evaluated.
