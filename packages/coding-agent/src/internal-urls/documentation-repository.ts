@@ -259,6 +259,10 @@ function boundedSnippet(markdown: string, query: string): string {
 	return `${prefix}${body.slice(start, start + 598 - prefix.length - suffix.length)}${suffix}`;
 }
 
+function lexicalDocumentationQuery(query: string): string {
+	return query.replace(/^\s*(?:what|who)\s+(?:is|are)\s+/i, "").trim() || query;
+}
+
 export function createEmbeddedDocumentationRepository(
 	assets: EmbeddedDocumentationAssets,
 	options: EmbeddedDocumentationRepositoryOptions = {},
@@ -297,7 +301,7 @@ export function createEmbeddedDocumentationRepository(
 		},
 		search: async (query, source, limit): Promise<readonly DocumentationSearchResult[]> => {
 			const current = await state();
-			const results = await current.store.searchLex(query, { limit, collection: source });
+			const results = await current.store.searchLex(lexicalDocumentationQuery(query), { limit, collection: source });
 			const rows: DocumentationSearchResult[] = [];
 			const lookup = current.database.query(
 				"SELECT source, stable_path, title, original_url, markdown FROM documentation_documents WHERE source = ? AND stable_path = ?",

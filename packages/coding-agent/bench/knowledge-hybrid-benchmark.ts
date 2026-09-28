@@ -28,7 +28,7 @@ interface DocumentationQuery {
 	id: string;
 	split: "tuning" | "sealed";
 	query: string;
-	source: "docs-cloud-f5-com" | "my-f5-com";
+	source: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
 	relevance: Record<string, number>;
 }
 
@@ -36,7 +36,7 @@ interface ClassifierQuery {
 	split: "tuning" | "sealed";
 	prompt: string;
 	expectedRoute: "api" | "documentation" | "none";
-	source?: "docs-cloud-f5-com" | "my-f5-com";
+	source?: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
 	resource?: KnowledgeClassifierResource;
 }
 

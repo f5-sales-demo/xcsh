@@ -12,12 +12,18 @@ const fixture = (await Bun.file(path.join(import.meta.dir, "fixtures/knowledge-e
 	schemaVersion: number;
 	seed: number;
 	api: Array<FixtureRow & { query: string; expectedCategories: string[] }>;
-	documentation: Array<FixtureRow & { query: string; source: "docs-cloud-f5-com" | "my-f5-com"; relevance: Record<string, number> }>;
+	documentation: Array<
+		FixtureRow & {
+			query: string;
+			source: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
+			relevance: Record<string, number>;
+		}
+	>;
 	classifier: Array<
 		FixtureRow & {
 			prompt: string;
 			expectedRoute: "api" | "documentation" | "none";
-			source?: "docs-cloud-f5-com" | "my-f5-com";
+			source?: "docs-cloud-f5-com" | "my-f5-com" | "www-f5-com";
 			resource?: KnowledgeClassifierResource;
 		}
 	>;
@@ -37,7 +43,8 @@ describe("frozen hybrid knowledge evaluation", () => {
 		expect(fixture.schemaVersion).toBe(2);
 		expect(fixture.seed).toBe(4496);
 		expect(fixture.api.length).toBeGreaterThanOrEqual(240);
-		expect(fixture.documentation.length).toBeGreaterThanOrEqual(160);
+		expect(fixture.documentation.length).toBeGreaterThanOrEqual(184);
+		expect(fixture.documentation.filter(row => row.source === "www-f5-com")).toHaveLength(24);
 		expect(fixture.classifier.length).toBeGreaterThanOrEqual(300);
 		expectFamilyIsolation(fixture.api);
 		expectFamilyIsolation(fixture.documentation);

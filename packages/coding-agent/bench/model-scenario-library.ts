@@ -19,6 +19,9 @@ import apiFirstOriginPoolRequiredPrompt from "./prompts/api-first-origin-pool-re
 import apiSpecResourcePrompt from "./prompts/api-spec-resource-probe.md" with { type: "text" };
 import authenticatedContextPrompt from "./prompts/authenticated-context-probe.md" with { type: "text" };
 import documentationAnswerMissingPrompt from "./prompts/documentation-answer-missing.md" with { type: "text" };
+import documentationAnswerClientSideDefensePrompt from "./prompts/documentation-answer-client-side-defense.md" with {
+	type: "text",
+};
 import documentationAnswerWafPrompt from "./prompts/documentation-answer-waf.md" with { type: "text" };
 import documentationMediaCsdPrompt from "./prompts/documentation-media-csd.md" with { type: "text" };
 import documentationMultiTurnDnsPrompt from "./prompts/documentation-multi-turn-dns.md" with { type: "text" };
@@ -342,6 +345,69 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			],
 			forbiddenResponsePatterns: [
 				{ label: "does not substitute API metadata", pattern: /xcsh:\/\/api-(?:catalog|spec)/i },
+				{ label: "does not use live fallback", pattern: /llms\.txt/i },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "documentation-answer-client-side-defense",
+		label: "Offline marketing documentation exact product evidence",
+		suite: "documentation",
+		tier: 2,
+		prompt: documentationAnswerClientSideDefensePrompt.trim(),
+		contract: {
+			requiredTools: [
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+					},
+				},
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+					},
+				},
+			],
+			requiredToolSequence: [
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+					},
+				},
+				{
+					name: "read",
+					count: 1,
+					arguments: {
+						path: "xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+					},
+				},
+			],
+			requiredKnowledgeSequence: [
+				{
+					type: "read",
+					path: "xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+				},
+				{
+					type: "read",
+					path: "xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
+				},
+			],
+			knowledgeSequenceStartsAtFirst: true,
+			exclusiveTools: true,
+			requiredResponsePatterns: [
+				{ label: "states the exact document title", pattern: /F5 Distributed Cloud Client-Side Defense/i },
+				{ label: "states the marketing source", pattern: /www-f5-com/i },
+			],
+			forbiddenResponsePatterns: [
+				{ label: "does not substitute operational docs", pattern: /docs-cloud-f5-com/i },
 				{ label: "does not use live fallback", pattern: /llms\.txt/i },
 			],
 		},

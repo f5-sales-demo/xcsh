@@ -55,6 +55,29 @@ async function tarGz(entries: ReadonlyMap<string, Buffer>): Promise<Buffer> {
 	return done;
 }
 
+const MARKETING_PAGES = [
+	[
+		"Client-Side Defense",
+		"products/distributed-cloud-services/client-side-defense",
+		"https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+	],
+	[
+		"Hybrid Multicloud Application Delivery",
+		"solutions/use-cases/hybrid-multicloud-application-delivery",
+		"https://www.f5.com/solutions/use-cases/hybrid-multicloud-application-delivery",
+	],
+	[
+		"Multi-Cloud Networking",
+		"solutions/use-cases/multi-cloud-networking",
+		"https://www.f5.com/solutions/use-cases/multi-cloud-networking",
+	],
+	[
+		"Web App and API Protection",
+		"solutions/web-app-and-api-protection",
+		"https://www.f5.com/solutions/web-app-and-api-protection",
+	],
+] as const;
+
 async function fixture(root: string, mutateManifest?: (value: Record<string, unknown>) => void) {
 	const docsCloud = document(
 		"docs-cloud-f5-com",
@@ -69,6 +92,9 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 		"K000000001",
 		"https://my.f5.com/manage/s/article/K000000001",
 		"# Support Article\n\nTroubleshoot a certificate.",
+	);
+	const marketing = MARKETING_PAGES.map(([title, slug, url]) =>
+		document("www-f5-com", title, slug, url, `# ${title}\n\nDiscover F5 Distributed Cloud products and solutions.`),
 	);
 	const png = Buffer.from("png");
 	const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>');
@@ -103,7 +129,23 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 				terminal_confirmation_count: 0,
 			},
 		},
+		...MARKETING_PAGES.map(([title, slug, url], index) => ({
+			sourceId: "www-f5-com",
+			url,
+			path: `content/www-f5-com/${slug}/index.md`,
+			body_sha256: sha256(`# ${title}\n\nDiscover F5 Distributed Cloud products and solutions.\n`),
+			file_sha256: sha256(marketing[index]!),
+			size_bytes: marketing[index]!.byteLength,
+			provenance: {
+				consecutive_failure_count: 0,
+				current_failure: null,
+				freshness: "fresh",
+				last_success_at: "2026-09-26T21:00:00Z",
+				terminal_confirmation_count: 0,
+			},
+		})),
 	];
+	const webp = Buffer.from("webp");
 	const assets = [
 		{
 			path: `content/docs-cloud-f5-com/protect-applications/assets/${sha256(png)}.png`,
@@ -117,6 +159,12 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 			media_type: "image/svg+xml",
 			size_bytes: svg.byteLength,
 		},
+		{
+			path: `content/www-f5-com/products/distributed-cloud-services/client-side-defense/assets/${sha256(webp)}.webp`,
+			sha256: sha256(webp),
+			media_type: "image/webp",
+			size_bytes: webp.byteLength,
+		},
 	];
 	const manifestValue: Record<string, unknown> = {
 		schema_version: 2,
@@ -124,6 +172,7 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 		source_roots: {
 			"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
 			"my-f5-com": "https://my.f5.com/manage/s",
+			"www-f5-com": "https://www.f5.com/products/distributed-cloud-services",
 		},
 		started_at: "2026-09-26T21:00:00Z",
 		ended_at: "2026-09-26T21:01:00Z",
@@ -131,8 +180,8 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 		asset_count: assets.length,
 		documents,
 		assets,
-		counts: { fresh: 2 },
-		quality_status_counts: { passed: 2 },
+		counts: { fresh: documents.length },
+		quality_status_counts: { passed: documents.length },
 		removals: [],
 		failures: [],
 	};
@@ -143,8 +192,10 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 	const payload = new Map<string, Buffer>([
 		[documents[0]!.path, docsCloud],
 		[documents[1]!.path, myF5],
+		...marketing.map((bytes, index) => [documents[index + 2]!.path as string, bytes] as const),
 		[assets[0]!.path, png],
 		[assets[1]!.path, svg],
+		[assets[2]!.path, webp],
 		["manifest.json", manifest],
 		["quality-report.json", qualityJson],
 		["quality-report.md", qualityMd],
@@ -204,8 +255,8 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 			),
 			manifest: {
 				schema_version: 2,
-				document_count: 2,
-				asset_count: 2,
+				document_count: documents.length,
+				asset_count: assets.length,
 				source_roots: Object.keys(JSON.parse(manifest.toString()).source_roots),
 			},
 			index: { qmd_version: "2.8.3", fingerprint: "pending", sha256: "pending", size_bytes: 0 },
@@ -249,12 +300,15 @@ describe("offline documentation release", () => {
 		);
 	});
 
-	it("verifies every archive member and generates byte-identical two-collection indexes", async () => {
+	it("verifies every archive member and generates byte-identical three-collection indexes", async () => {
 		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
 		const { pin } = await fixture(root);
 		const verified = await verifyDocumentationRelease(root, pin);
-		expect(verified.documents).toHaveLength(2);
-		expect(verified.assets).toHaveLength(2);
+		expect(verified.documents).toHaveLength(6);
+		expect(verified.assets).toHaveLength(3);
+		expect(verified.documents.filter(item => item.source === "www-f5-com").map(item => item.originalUrl)).toEqual(
+			MARKETING_PAGES.map(([, , url]) => url),
+		);
 
 		const first = path.join(root, "first.sqlite");
 		const second = path.join(root, "second.sqlite");
@@ -275,15 +329,45 @@ describe("offline documentation release", () => {
 			const collections = db.query("SELECT name FROM store_collections ORDER BY name").all() as Array<{
 				name: string;
 			}>;
-			expect(collections.map(row => row.name)).toEqual(["docs-cloud-f5-com", "my-f5-com"]);
+			expect(collections.map(row => row.name)).toEqual(["docs-cloud-f5-com", "my-f5-com", "www-f5-com"]);
 			const rows = db
 				.query("SELECT markdown, file_sha256 FROM documentation_documents ORDER BY source")
 				.all() as Array<{ markdown: string; file_sha256: string }>;
-			expect(rows).toHaveLength(2);
+			expect(rows).toHaveLength(6);
 			expect(rows.every(row => sha256(row.markdown) === row.file_sha256)).toBe(true);
 		} finally {
 			db.close();
 		}
+	});
+
+	it("rejects www.f5.com pages outside the reviewed marketing allowlist", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root, value => {
+			const documents = value.documents as Array<Record<string, unknown>>;
+			documents[2]!.url = "https://www.f5.com/company/about-us";
+		});
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("outside the declared source root");
+	});
+
+	it("binds reviewed marketing URLs and assets to their exact stable paths", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const mismatchedDocument = await fixture(root, value => {
+			const documents = value.documents as Array<Record<string, unknown>>;
+			documents[2]!.path = "content/www-f5-com/company/about-us/index.md";
+		});
+		await expect(verifyDocumentationRelease(root, mismatchedDocument.pin)).rejects.toThrow(
+			"marketing document path does not match its reviewed URL",
+		);
+
+		await rm(root, { recursive: true, force: true });
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const unattachedAsset = await fixture(root, value => {
+			const assets = value.assets as Array<Record<string, unknown>>;
+			assets[2]!.path = `content/www-f5-com/company/about-us/assets/${sha256("webp")}.webp`;
+		});
+		await expect(verifyDocumentationRelease(root, unattachedAsset.pin)).rejects.toThrow(
+			"marketing asset is not attached to a reviewed document",
+		);
 	});
 
 	it("accepts only prebuilt archive and index bytes that match the complete pin", async () => {

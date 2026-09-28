@@ -90,6 +90,8 @@ expected_events = [
     "api-catalog-rank",
     "documentation-search",
     "documentation-read",
+    "documentation-marketing-search",
+    "documentation-marketing-read",
     "documentation-search",
     "documentation-read",
     "documentation-follow-up-read",
@@ -98,13 +100,15 @@ expected_events = [
     "documentation-svg-convert",
     "sqlite-open",
 ]
-assert [entry["sequence"] for entry in trace] == list(range(1, 11)), trace
+assert [entry["sequence"] for entry in trace] == list(range(1, 13)), trace
 assert [entry["event"] for entry in trace] == expected_events, trace
 assert trace[0].get("category") == "dns-dns-zone-clone-from-dns-domain", trace[0]
 assert trace[0].get("outcome") == "rank-1", trace[0]
 expected_resources = [
     "xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
     "xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+    "xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
+    "xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
     "xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1",
     "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
     "xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md",
@@ -115,14 +119,17 @@ assert [entry["resource"] for entry in trace if "resource" in entry] == expected
 for entry in trace[1:3]:
     assert entry.get("title") == "Create Web Application Firewall", entry
     assert entry.get("source") == "docs-cloud-f5-com", entry
-for entry in trace[3:6]:
+for entry in trace[3:5]:
+    assert entry.get("title") == "F5 Distributed Cloud Client-Side Defense", entry
+    assert entry.get("source") == "www-f5-com", entry
+for entry in trace[5:8]:
     assert entry.get("title") == "Set Up DNS Load Balancer", entry
     assert entry.get("source") == "docs-cloud-f5-com", entry
-assert trace[6].get("outcome") == "no-match-no-fetch", trace[6]
-assert trace[7].get("outcome") == "Pinned offline documentation is unavailable because this session has no read tool; the answer cannot be verified.", trace[7]
-assert trace[8].get("source") == "docs-cloud-f5-com", trace[8]
-assert trace[8].get("outcome") == "image/png", trace[8]
-assert trace[9].get("outcome") == "ok", trace[9]
+assert trace[8].get("outcome") == "no-match-no-fetch", trace[8]
+assert trace[9].get("outcome") == "Pinned offline documentation is unavailable because this session has no read tool; the answer cannot be verified.", trace[9]
+assert trace[10].get("source") == "docs-cloud-f5-com", trace[10]
+assert trace[10].get("outcome") == "image/png", trace[10]
+assert trace[11].get("outcome") == "ok", trace[11]
 PY
 }
 

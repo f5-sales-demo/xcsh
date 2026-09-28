@@ -53,6 +53,7 @@ describe("model scenario library", () => {
 			"user-assistance",
 			"read-tool",
 			"documentation-answer-waf",
+			"documentation-answer-client-side-defense",
 			"documentation-answer-missing",
 			"documentation-tools-disabled",
 			"documentation-multi-turn-dns",
