@@ -505,7 +505,7 @@ screenshot collection into a timeline or slideshow.
 
 Inspect each returned image conservatively. Present its official Markdown caption with one grounded explanation.
 If image pixels are unavailable to the active model, quietly rely only on the official caption and nearby document
-prose; never invent visual details.
+prose; never invent visual details. Verify that the reported image count matches the number of successful asset reads.
 
 If the pinned snapshot is stale, missing, or the QMD lookup fails, disclose that condition before using the live
 fallback knowledge index:

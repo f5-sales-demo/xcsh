@@ -269,6 +269,7 @@ describe("system Handlebars prompt templates", () => {
 		expect(ruleText).toContain("unique Markdown image references");
 		expect(ruleText).toContain("one at a time in document order");
 		expect(ruleText).toContain("caption and nearby prose");
+		expect(ruleText).toContain("Verify that the reported image count matches");
 
 		const displayMediaPath = path.resolve(import.meta.dir, "../src/prompts/tools/display-media.md");
 		const displayMediaText = await Bun.file(displayMediaPath).text();

@@ -10,7 +10,8 @@ from the exact document, resolve relative references against its exact `xcsh://d
 read each asset one at a time in document order. Static screenshot collections are not timelines or slideshows.
 Pair every returned image with its official caption and one conservative explanation grounded in the image, its
 caption, and nearby prose. If pixels are unavailable, use only the caption and nearby prose without inventing visual
-details. Documentation assets use `read`, even when generic image-inspection guidance prefers `inspect_image`.
+details. Verify that the reported image count matches the number of successful asset reads. Documentation assets use
+`read`, even when generic image-inspection guidance prefers `inspect_image`.
 
 For API paths, methods, payload fields, required status, enums, and constraints, use the deterministic
 `api-catalog-preflight` result followed by exact `xcsh://api-catalog/` and `xcsh://api-spec/` reads first.

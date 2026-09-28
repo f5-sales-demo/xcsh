@@ -551,8 +551,11 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 					requiredResponsePatterns: [
 						{
 							label: "presents all official captions in document order",
-							pattern: /Figure: Script List[\s\S]*Figure: Protect a Root Domain[\s\S]*Figure: Enable Client-Side Defense on an HTTP Load Balancer[\s\S]*Figure: Configure a Domain Matcher[\s\S]*Figure: Configure a Path Matcher[\s\S]*Figure: Configure JavaScript Insertion/i,
+							pattern: /(?:Figure:\s*)?Script List[\s\S]*(?:Figure:\s*)?Protect a Root Domain[\s\S]*(?:Figure:\s*)?Enable Client-Side Defense on an HTTP Load Balancer[\s\S]*(?:Figure:\s*)?Configure a Domain Matcher[\s\S]*(?:Figure:\s*)?Configure a Path Matcher[\s\S]*(?:Figure:\s*)?Configure JavaScript Insertion/i,
 						},
+					],
+					forbiddenResponsePatterns: [
+						{ label: "does not report the wrong screenshot count", pattern: /\bfive screenshots\b/i },
 					],
 				},
 				quality: EXACT_CONTRACT_QUALITY,
