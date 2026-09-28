@@ -6,12 +6,13 @@ import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
-import type {
-	DocumentationAsset,
-	DocumentationDocument,
-	DocumentationRepository,
-	DocumentationSearchResult,
-	DocumentationSource,
+import {
+	DOCUMENTATION_SOURCES,
+	type DocumentationAsset,
+	type DocumentationDocument,
+	type DocumentationRepository,
+	type DocumentationSearchResult,
+	type DocumentationSource,
 } from "./documentation-resolve";
 import { extractVerifiedDocumentationAsset, type VerifiedDocumentationAsset } from "./documentation-snapshot";
 
@@ -263,6 +264,19 @@ function lexicalDocumentationQuery(query: string): string {
 	return query.replace(/^\s*(?:what|who)\s+(?:is|are)\s+/i, "").trim() || query;
 }
 
+const SUPPORT_QUERY = /\b(?:troubleshoot|support|knowledge[- ]base|error|failure|issue|K[0-9]{6,})\b/i;
+const CONFIGURATION_QUERY = /\b(?:configure|configuration|set\s*up|procedure|instructions?|how\s+(?:do|can|to))\b/i;
+const CONCEPTUAL_QUERY = /\b(?:what\s+(?:is|are)|overview|product|solution|capabilities|benefits)\b/i;
+const MARKETING_TOPIC =
+	/\b(?:client[- ]side defense|distributed cloud|web (?:app|application) and api protection|multi[- ]cloud networking|dns load balancer|bot defense|api security|app connect|appstack|content delivery network|cdn|mobile app shield|synthetic monitoring|web app scanning)\b/i;
+
+function preferredDocumentationSource(query: string): DocumentationSource | undefined {
+	if (SUPPORT_QUERY.test(query)) return "my-f5-com";
+	if (CONFIGURATION_QUERY.test(query)) return "docs-cloud-f5-com";
+	if (CONCEPTUAL_QUERY.test(query) || MARKETING_TOPIC.test(query)) return "www-f5-com";
+	return undefined;
+}
+
 export function createEmbeddedDocumentationRepository(
 	assets: EmbeddedDocumentationAssets,
 	options: EmbeddedDocumentationRepositoryOptions = {},
@@ -301,7 +315,27 @@ export function createEmbeddedDocumentationRepository(
 		},
 		search: async (query, source, limit): Promise<readonly DocumentationSearchResult[]> => {
 			const current = await state();
-			const results = await current.store.searchLex(lexicalDocumentationQuery(query), { limit, collection: source });
+			const lexicalQuery = lexicalDocumentationQuery(query);
+			const preferredSource = source ? undefined : preferredDocumentationSource(query);
+			const results = source
+				? await current.store.searchLex(lexicalQuery, { limit, collection: source })
+				: (
+						await Promise.all(
+							DOCUMENTATION_SOURCES.map(collection =>
+								current.store.searchLex(lexicalQuery, { limit, collection }),
+							),
+						)
+					).flat();
+			results.sort((left, right) => {
+				const sourceOrder =
+					Number(right.collectionName === preferredSource) - Number(left.collectionName === preferredSource);
+				return (
+					sourceOrder ||
+					right.score - left.score ||
+					left.collectionName.localeCompare(right.collectionName) ||
+					left.displayPath.localeCompare(right.displayPath)
+				);
+			});
 			const rows: DocumentationSearchResult[] = [];
 			const lookup = current.database.query(
 				"SELECT source, stable_path, title, original_url, markdown FROM documentation_documents WHERE source = ? AND stable_path = ?",
