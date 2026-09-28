@@ -1420,6 +1420,63 @@ jobs:
           printf '%s\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
           bun run ci:release:publish
 
+  verify-standalone-install:
+    name: Verify standalone installer (${{ matrix.os }})
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [create-release, publish-npm]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install, self-update, and recheck the published Unix artifact
+        if: runner.os != 'Windows'
+        env:
+          EXPECTED_VERSION: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="$RUNNER_TEMP/xcsh-standalone"
+          PI_INSTALL_DIR="$install_dir" bash scripts/install.sh --binary --ref "$EXPECTED_VERSION"
+          binary="$install_dir/xcsh"
+          receipt="$install_dir/xcsh-install.json"
+          test "$(find "$install_dir" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 2
+          jq -e --arg version "${EXPECTED_VERSION#v}" --arg executable "$(realpath "$binary")" '
+            .schemaVersion == 2 and .channel == "standalone" and
+            .version == $version and .executablePath == $executable
+          ' "$receipt" >/dev/null
+          "$binary" self-update --force
+          jq -e --arg version "${EXPECTED_VERSION#v}" --arg executable "$(realpath "$binary")" '
+            .schemaVersion == 2 and .version == $version and .executablePath == $executable
+          ' "$receipt" >/dev/null
+          "$binary" self-update --check --force
+      - name: Install, refresh, and recheck the published Windows artifact
+        if: runner.os == 'Windows'
+        env:
+          EXPECTED_VERSION: ${{ github.ref_name }}
+          PI_INSTALL_DIR: ${{ runner.temp }}\xcsh-standalone
+        shell: pwsh
+        run: |
+          & ./scripts/install.ps1 -Binary -Ref $env:EXPECTED_VERSION
+          $binary = [System.IO.Path]::GetFullPath((Join-Path $env:PI_INSTALL_DIR "xcsh.exe"))
+          $receipt = Join-Path $env:PI_INSTALL_DIR "xcsh-install.json"
+          if ((Get-ChildItem -Path $env:PI_INSTALL_DIR -File).Count -ne 2) { throw "Unexpected standalone payload" }
+          $document = Get-Content $receipt -Raw | ConvertFrom-Json
+          if ($document.schemaVersion -ne 2 -or $document.executablePath -ne $binary) { throw "Invalid receipt" }
+          & $binary self-update --force
+          if ($LASTEXITCODE -ne 0) { throw "Windows installer handoff failed" }
+          & ./scripts/install.ps1 -Binary -Ref $env:EXPECTED_VERSION
+          $document = Get-Content $receipt -Raw | ConvertFrom-Json
+          if ($document.schemaVersion -ne 2 -or $document.version -ne $env:EXPECTED_VERSION.TrimStart("v")) {
+            throw "Receipt was not refreshed"
+          }
+          & $binary self-update --check --force
+          if ($LASTEXITCODE -ne 0) { throw "Repeated Windows update check failed" }
+
   # Verify npm install works end-to-end after publishing
   verify-npm-install:
     name: Verify npm installation

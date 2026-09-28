@@ -28,6 +28,10 @@ the command prints their exact upgrade instruction or managed-install message an
 performs no update. Only a standalone Unix executable with a valid adjacent
 `xcsh-install.json` receipt can replace itself. Unknown or conflicting provenance
 exits nonzero without changing files, and `--force` does not bypass this policy.
+The standalone receipt uses schema v2 and records the canonical absolute executable
+path. Schema-v1 installations must run the documented installer once; they are not
+parsed or migrated by `self-update`. Executable and receipt replacement is one
+rollback-safe transaction.
 
 ## Which global flags does a session accept?
 

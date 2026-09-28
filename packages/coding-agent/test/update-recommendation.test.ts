@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { replaceStandaloneExecutable, runUpdateCommand, type UpdateCommandDependencies } from "../src/cli/update-cli";
 import {
+	createInstallReceipt,
 	formatUpdateRecommendation,
 	getStartupUpdateNotice,
 	type InstallChannelDependencies,
@@ -35,7 +36,7 @@ function dependencies(overrides: Partial<InstallChannelDependencies> = {}): Inst
 }
 
 function receipt(channel: "standalone" | "windows-installer", executablePath: string, platform: string, arch: string) {
-	return JSON.stringify({ schemaVersion: 1, channel, version: VERSION, executablePath, platform, arch });
+	return JSON.stringify({ schemaVersion: 2, channel, version: VERSION, executablePath, platform, arch });
 }
 
 describe("installation-channel recommendation", () => {
@@ -169,6 +170,71 @@ describe("installation-channel recommendation", () => {
 			channel: "standalone",
 			action: "self-update",
 			command: "xcsh self-update",
+		});
+	});
+
+	it("rejects schema-v1 receipts without compatibility parsing", async () => {
+		const executable = "/home/example/.local/bin/xcsh";
+		const recommendation = await resolveInstallChannel(
+			dependencies({
+				execPath: executable,
+				readFile: async () =>
+					JSON.stringify({
+						schemaVersion: 1,
+						channel: "standalone",
+						version: VERSION,
+						executablePath: executable,
+						platform: "linux",
+						arch: "x64",
+					}),
+			}),
+		);
+		expect(recommendation).toMatchObject({ channel: "unknown", action: "blocked" });
+		expect(recommendation.evidence).toContain("invalid or stale install receipt");
+	});
+
+	it("accepts the canonical target in a macOS /tmp alias receipt", async () => {
+		const canonical = "/private/tmp/xcsh-uat/bin/xcsh";
+		const recommendation = await resolveInstallChannel(
+			dependencies({
+				platform: "darwin",
+				arch: "arm64",
+				execPath: "/tmp/xcsh-uat/bin/xcsh",
+				realpath: async () => canonical,
+				readFile: async path => {
+					expect(path).toBe("/private/tmp/xcsh-uat/bin/xcsh-install.json");
+					return receipt("standalone", canonical, "darwin", "arm64");
+				},
+			}),
+		);
+		expect(recommendation).toMatchObject({ channel: "standalone", action: "self-update" });
+	});
+
+	it("rejects a noncanonical macOS /tmp alias in a schema-v2 receipt", async () => {
+		const recommendation = await resolveInstallChannel(
+			dependencies({
+				platform: "darwin",
+				arch: "arm64",
+				execPath: "/tmp/xcsh-uat/bin/xcsh",
+				realpath: async () => "/private/tmp/xcsh-uat/bin/xcsh",
+				readFile: async () => receipt("standalone", "/tmp/xcsh-uat/bin/xcsh", "darwin", "arm64"),
+			}),
+		);
+		expect(recommendation).toMatchObject({ channel: "unknown", action: "blocked" });
+	});
+
+	it("normalizes absolute Windows paths in schema-v2 receipts", () => {
+		expect(
+			createInstallReceipt(
+				"windows-installer",
+				VERSION,
+				"C:\\Users\\example\\AppData\\Local\\xcsh\\staging\\..\\xcsh.exe",
+				"win32",
+				"x64",
+			),
+		).toMatchObject({
+			schemaVersion: 2,
+			executablePath: "C:\\Users\\example\\AppData\\Local\\xcsh\\xcsh.exe",
 		});
 	});
 
@@ -396,54 +462,138 @@ describe("startup update notice", () => {
 });
 
 describe("standalone replacement rollback", () => {
-	it.each(["download", "rename", "verification"] as const)(
-		"keeps the original executable after %s failure",
-		async failure => {
-			const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-standalone-rollback-"));
-			const targetPath = path.join(tempDir, "xcsh");
-			fs.writeFileSync(targetPath, "original", { mode: 0o755 });
-			let renameCalls = 0;
-			let validateCalls = 0;
-			try {
-				await expect(
-					replaceStandaloneExecutable(VERSION, {
-						targetPath,
-						platform: "linux",
-						arch: "x64",
-						fetchImpl: async () =>
-							failure === "download" ? new Response(null, { status: 500 }) : new Response("replacement"),
-						rename: async (source, destination) => {
-							renameCalls += 1;
-							if (failure === "rename" && renameCalls === 2) throw new Error("rename failed");
-							await fs.promises.rename(source, destination);
-						},
-						validate: async () => {
-							validateCalls += 1;
-							if (failure === "verification" && validateCalls === 2) throw new Error("verification failed");
-						},
+	it.each([
+		"download",
+		"staged-binary-verification",
+		"receipt-write",
+		"binary-backup",
+		"receipt-backup",
+		"binary-install",
+		"receipt-install",
+		"final-binary-verification",
+		"final-receipt-validation",
+	] as const)("restores the executable and receipt after %s failure", async failure => {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-standalone-rollback-"));
+		const targetPath = path.join(tempDir, "xcsh");
+		const receiptPath = path.join(tempDir, "xcsh-install.json");
+		const originalReceipt = `${JSON.stringify(createInstallReceipt("standalone", "21.9.9", targetPath, "linux", "x64"))}\n`;
+		fs.writeFileSync(targetPath, "original", { mode: 0o755 });
+		fs.writeFileSync(receiptPath, originalReceipt);
+		let renameCalls = 0;
+		let validateCalls = 0;
+		let readCalls = 0;
+		try {
+			await expect(
+				replaceStandaloneExecutable(VERSION, {
+					targetPath,
+					platform: "linux",
+					arch: "x64",
+					fetchImpl: async () =>
+						failure === "download" ? new Response(null, { status: 500 }) : new Response("replacement"),
+					writeFile: async (file, contents) => {
+						if (failure === "receipt-write") throw new Error("receipt write failed");
+						await fs.promises.writeFile(file, contents, { flag: "wx" });
+					},
+					readFile: async file => {
+						readCalls += 1;
+						if (failure === "final-receipt-validation" && readCalls === 2) return "corrupt";
+						return fs.promises.readFile(file, "utf8");
+					},
+					rename: async (source, destination) => {
+						renameCalls += 1;
+						const failureCall = {
+							"binary-backup": 1,
+							"receipt-backup": 2,
+							"binary-install": 3,
+							"receipt-install": 4,
+						}[failure as string];
+						if (failureCall === renameCalls) throw new Error(`${failure} failed`);
+						await fs.promises.rename(source, destination);
+					},
+					validate: async () => {
+						validateCalls += 1;
+						if (failure === "staged-binary-verification" && validateCalls === 1)
+							throw new Error("staged verification failed");
+						if (failure === "final-binary-verification" && validateCalls === 2)
+							throw new Error("final verification failed");
+					},
+				}),
+			).rejects.toThrow();
+			expect(fs.readFileSync(targetPath, "utf8")).toBe("original");
+			expect(fs.readFileSync(receiptPath, "utf8")).toBe(originalReceipt);
+			expect(fs.readdirSync(tempDir).filter(name => name.includes(".new-") || name.includes(".bak-"))).toEqual([]);
+		} finally {
+			fs.rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("advances the receipt and remains valid across repeated forced updates", async () => {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-standalone-success-"));
+		const targetPath = path.join(tempDir, "xcsh");
+		const receiptPath = path.join(tempDir, "xcsh-install.json");
+		fs.writeFileSync(targetPath, "original", { mode: 0o755 });
+		fs.writeFileSync(
+			receiptPath,
+			`${JSON.stringify(createInstallReceipt("standalone", "21.9.9", targetPath, "linux", "x64"))}\n`,
+		);
+		try {
+			const update = () =>
+				replaceStandaloneExecutable(VERSION, {
+					targetPath,
+					platform: "linux",
+					arch: "x64",
+					fetchImpl: async () => new Response("replacement"),
+					validate: async () => {},
+				});
+			await update();
+			expect(fs.readFileSync(targetPath, "utf8")).toBe("replacement");
+			expect(JSON.parse(fs.readFileSync(receiptPath, "utf8"))).toEqual(
+				createInstallReceipt("standalone", VERSION, targetPath, "linux", "x64"),
+			);
+			expect(
+				await resolveInstallChannel(
+					dependencies({
+						execPath: targetPath,
+						version: VERSION,
+						readFile: file => fs.promises.readFile(file, "utf8"),
 					}),
-				).rejects.toThrow();
-				expect(fs.readFileSync(targetPath, "utf8")).toBe("original");
-				expect(fs.existsSync(`${targetPath}.bak`)).toBeFalse();
-				expect(fs.readdirSync(tempDir).filter(name => name.includes(".new-"))).toEqual([]);
-			} finally {
-				fs.rmSync(tempDir, { recursive: true, force: true });
-			}
-		},
-	);
+				),
+			).toMatchObject({ channel: "standalone", action: "self-update" });
+			await update();
+			expect(JSON.parse(fs.readFileSync(receiptPath, "utf8"))).toEqual(
+				createInstallReceipt("standalone", VERSION, targetPath, "linux", "x64"),
+			);
+		} finally {
+			fs.rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
 });
 
 describe("installer receipt contract", () => {
-	it("writes schema-v1 receipts only after successful Unix and Windows binary installation", () => {
+	it("writes canonical schema-v2 receipts after standalone binaries without adjacent native payloads", () => {
 		const shell = fs.readFileSync(new URL("../../../scripts/install.sh", import.meta.url), "utf8");
 		const powershell = fs.readFileSync(new URL("../../../scripts/install.ps1", import.meta.url), "utf8");
-		expect(shell).toContain('"schemaVersion":1,"channel":"standalone"');
+		expect(shell).toContain('"schemaVersion":2,"channel":"standalone"');
+		expect(shell).toContain('CANONICAL_INSTALL_DIR=$(cd -P "$INSTALL_DIR" && pwd -P)');
+		expect(shell).not.toContain("NATIVE_URL=");
 		expect(shell.indexOf('mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"')).toBeLessThan(
 			shell.indexOf('mv -f "$INSTALL_STAGE_DIR/xcsh-install.json" "$INSTALL_DIR/xcsh-install.json"'),
 		);
+		expect(powershell).toContain('[System.IO.Path]::GetFullPath((Join-Path $InstallDir "xcsh.exe"))');
+		expect(powershell).toContain("schemaVersion = 2");
 		expect(powershell).toContain('channel = "windows-installer"');
+		expect(powershell).not.toContain("$NativeAddonNames");
 		expect(powershell.indexOf("Move-Item -Force $StagedBinary $OutPath")).toBeLessThan(
 			powershell.indexOf("Move-Item -Force $StagedReceipt $ReceiptPath"),
 		);
+	});
+
+	it("qualifies published standalone installers on Linux, macOS, and Windows", () => {
+		const workflow = fs.readFileSync(new URL("../../../.github/workflows/ci.yml", import.meta.url), "utf8");
+		expect(workflow).toContain("verify-standalone-install:");
+		expect(workflow).toContain("needs: [create-release, publish-npm]");
+		expect(workflow).toContain("os: [ubuntu-22.04, macos-14, windows-latest]");
+		expect(workflow).toContain('"$binary" self-update --force');
+		expect(workflow).toContain('"$binary" self-update --check --force');
 	});
 });

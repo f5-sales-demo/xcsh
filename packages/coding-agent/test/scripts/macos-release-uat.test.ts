@@ -194,6 +194,15 @@ esac
 }
 
 describe("Homebrew immutable-baseline upgrade fixture", () => {
+	it("checks disk capacity and cleans task-owned taps on exit", async () => {
+		const script = await fs.readFile(upgradeHelper, "utf8");
+		expect(script).toContain("minimum_available_kib=2097152");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell parameter expansion
+		expect(script).toContain('df -Pk "${TMPDIR:-/tmp}"');
+		expect(script).toContain("trap cleanup EXIT INT TERM");
+		expect(script).toContain('brew untap "$baseline_tap"');
+	});
+
 	for (const layout of ["arm64", "intel"] as const) {
 		it(`resolves the ${layout} tap repository and uses qualified cask tokens`, async () => {
 			const result = await runUpgradeFixture(layout);

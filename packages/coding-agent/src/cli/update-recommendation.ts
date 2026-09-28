@@ -37,14 +37,18 @@ export interface InstallChannelDependencies {
 	run(command: string, args: string[]): Promise<CommandResult>;
 }
 
-interface InstallReceipt {
-	schemaVersion: 1;
+export const INSTALL_RECEIPT_SCHEMA_VERSION = 2;
+
+export interface InstallReceipt {
+	schemaVersion: typeof INSTALL_RECEIPT_SCHEMA_VERSION;
 	channel: "standalone" | "windows-installer";
 	version: string;
 	executablePath: string;
 	platform: string;
 	arch: string;
 }
+
+const INSTALL_RECEIPT_KEYS = ["arch", "channel", "executablePath", "platform", "schemaVersion", "version"];
 
 function platformPath(platform: NodeJS.Platform): typeof path.posix | typeof path.win32 {
 	return platform === "win32" ? path.win32 : path.posix;
@@ -53,6 +57,25 @@ function platformPath(platform: NodeJS.Platform): typeof path.posix | typeof pat
 function comparablePath(value: string, platform: NodeJS.Platform): string {
 	const normalized = platformPath(platform).resolve(value);
 	return platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
+export function createInstallReceipt(
+	channel: InstallReceipt["channel"],
+	version: string,
+	executablePath: string,
+	platform: NodeJS.Platform,
+	arch: string,
+): InstallReceipt {
+	const pathApi = platformPath(platform);
+	if (!pathApi.isAbsolute(executablePath)) throw new Error("Install receipt executable path must be absolute");
+	return {
+		schemaVersion: INSTALL_RECEIPT_SCHEMA_VERSION,
+		channel,
+		version,
+		executablePath: pathApi.normalize(executablePath),
+		platform,
+		arch,
+	};
 }
 
 function releaseAsset(platform: NodeJS.Platform, arch: string): string | undefined {
@@ -82,12 +105,15 @@ function receiptIsValid(
 	if (!value || typeof value !== "object") return false;
 	const receipt = value as Partial<InstallReceipt>;
 	if (
-		receipt.schemaVersion !== 1 ||
+		JSON.stringify(Object.keys(receipt).sort()) !== JSON.stringify(INSTALL_RECEIPT_KEYS) ||
+		receipt.schemaVersion !== INSTALL_RECEIPT_SCHEMA_VERSION ||
 		(receipt.channel !== "standalone" && receipt.channel !== "windows-installer") ||
 		receipt.version !== deps.version ||
 		receipt.platform !== deps.platform ||
 		receipt.arch !== deps.arch ||
 		typeof receipt.executablePath !== "string" ||
+		!platformPath(deps.platform).isAbsolute(receipt.executablePath) ||
+		platformPath(deps.platform).normalize(receipt.executablePath) !== receipt.executablePath ||
 		comparablePath(receipt.executablePath, deps.platform) !== comparablePath(resolvedExecPath, deps.platform)
 	) {
 		return false;
@@ -233,7 +259,7 @@ export async function resolveInstallChannel(deps: InstallChannelDependencies): P
 		if (receiptIsValid(parsed, deps, resolvedExecPath)) {
 			signals.push({
 				channel: parsed.channel,
-				evidence: `valid schema-v1 ${parsed.channel} receipt at ${receiptPath}`,
+				evidence: `valid schema-v2 ${parsed.channel} receipt at ${receiptPath}`,
 			});
 		} else {
 			diagnostics.push(`invalid or stale install receipt at ${receiptPath}`);

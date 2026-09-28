@@ -42,6 +42,10 @@
 
 ### Changed
 
+- Made standalone executable and schema-v2 receipt updates transactional, canonicalized receipt paths,
+  removed unused adjacent native payloads from standalone installs, and added published installer
+  qualification on Linux, macOS, and Windows ([#4510](https://github.com/f5-sales-demo/xcsh/issues/4510)).
+
 - Standardized executable updates on `xcsh self-update`; `xcsh update` is now reserved for strict manifest resource updates ([#4487](https://github.com/f5-sales-demo/xcsh/issues/4487)).
 
 - Added `power.sleepPrevention` with an `idle` default and cumulative `off`, `idle`, `display`, and
