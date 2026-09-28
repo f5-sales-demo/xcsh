@@ -3,18 +3,20 @@ import path from "node:path";
 import { rankQmdBm25CatalogDiscovery } from "./api-catalog-discovery";
 import { QMD_API_CATALOG_PREBUILT_INDEX } from "./api-catalog-qmd-index.generated";
 import type { ApiSpecIndex } from "./api-spec-types";
+import {
+	buildKnowledgeSearchPlan,
+	classifyKnowledgeRequest,
+	type KnowledgeClassifierResource,
+	type KnowledgeSearchPlan,
+} from "./knowledge-classifier";
 
-export interface ApiCatalogPreflightResource {
-	readonly name: string;
-	readonly aliases: readonly string[];
-	readonly domain: string;
-	readonly categories: readonly string[];
-}
+export interface ApiCatalogPreflightResource extends KnowledgeClassifierResource {}
 
 export interface ApiCatalogPreflightIntent {
 	readonly resource: string;
 	readonly domain: string;
 	readonly queries: readonly string[];
+	readonly structuredQuery?: KnowledgeSearchPlan;
 }
 
 export interface ApiCatalogPreflightDestination {
@@ -45,16 +47,6 @@ interface RunApiCatalogPreflightOptions extends ApiCatalogPreflightOptions {
 	readonly rank?: (query: string) => Promise<readonly string[]>;
 }
 
-const EXCLUDED_INTENT =
-	/\b(?:troubleshoot|debug|not working|returning\s+\d{3}|pricing|price|quote|licen[cs]ing|sales)\b/i;
-const THIRD_PARTY_SCOPE = /\b(?:aws|amazon|azure|gcp|google cloud|kubernetes)\b/i;
-const F5_XC_SCOPE = /\b(?:f5(?:\s+distributed\s+cloud)?|xc)\b/i;
-const ANAPHORIC_RESOURCE = /\b(?:its|it|that|this)\b/i;
-const DOCUMENTATION_ROUTE = /xcsh:\/\/documentation(?:\/|\?)/i;
-const API_METADATA_INTENT =
-	/\b(?:endpoint|api\s+path|http\s+method|method|payload|request\s+body|required\s+fields?|enum|allowed\s+values?|constraints?|limits?|maximum|max(?:imum)?|minimum|min(?:imum)?|how\s+many|create|creates|creating|get|gets|list|lists|update|updates|replace|replaces|delete|deletes|clone|import)\b/i;
-const EXPLICIT_API_INTENT = /\b(?:api|endpoint|method|payload|schema)\b/i;
-
 let generatedResources: readonly ApiCatalogPreflightResource[] | undefined;
 let generatedCatalogVersion: string | undefined;
 
@@ -65,10 +57,6 @@ function normalizedPhrase(value: string): string {
 		.replace(/[^a-z0-9]+/g, " ")
 		.trim()
 		.replace(/\s+/g, " ");
-}
-
-function preferredAlias(resource: { name: string; aliases: readonly string[] }): string {
-	return normalizedPhrase(resource.aliases[0] ?? resource.name);
 }
 
 function defaultAliases(name: string, descriptionShort?: string): string[] {
@@ -97,56 +85,40 @@ function loadGeneratedMetadata(): { resources: readonly ApiCatalogPreflightResou
 	return { resources: generatedResources, catalogVersion: generatedCatalogVersion };
 }
 
-function crudVerb(prompt: string): string | undefined {
-	const value = normalizedPhrase(prompt);
-	if (/\b(?:create|creates|creating)\b/.test(value)) return "create";
-	if (/\b(?:get|gets|read|fetch)\b/.test(value)) return "get";
-	if (/\b(?:list|lists)\b/.test(value)) return "list";
-	if (/\b(?:update|updates)\b/.test(value)) return "update";
-	if (/\b(?:replace|replaces)\b/.test(value)) return "replace";
-	if (/\b(?:delete|deletes|remove)\b/.test(value)) return "delete";
-	if (/\bclone\b/.test(value)) return "clone";
-	if (/\bimport\b/.test(value)) return "import";
-	return undefined;
-}
-
 export function classifyApiCatalogPreflight(
 	prompt: string,
 	options: ApiCatalogPreflightOptions,
 ): ApiCatalogPreflightIntent | null {
-	if (!options.toolsEnabled || DOCUMENTATION_ROUTE.test(prompt) || EXCLUDED_INTENT.test(prompt)) return null;
-	if (THIRD_PARTY_SCOPE.test(prompt) && !F5_XC_SCOPE.test(prompt)) return null;
-	if (/\bterraform\b/i.test(prompt) && !EXPLICIT_API_INTENT.test(prompt)) return null;
-	if (!API_METADATA_INTENT.test(prompt)) return null;
-
 	const resources = options.resources ?? loadGeneratedMetadata().resources;
-	const normalizedPrompt = ` ${normalizedPhrase(prompt)} `;
-	const matches = resources
-		.flatMap(resource =>
-			resource.aliases
-				.map(alias => normalizedPhrase(alias))
-				.filter(alias => alias && normalizedPrompt.includes(` ${alias} `))
-				.map(alias => ({ resource, alias })),
-		)
-		.sort(
-			(left, right) =>
-				right.alias.length - left.alias.length ||
-				right.resource.categories.length - left.resource.categories.length ||
-				left.resource.name.localeCompare(right.resource.name) ||
-				left.resource.domain.localeCompare(right.resource.domain),
-		);
-	const selected = matches[0]?.resource;
-	if (!selected) {
-		if (ANAPHORIC_RESOURCE.test(prompt) && options.previousResource) return options.previousResource;
-		return null;
+	const previous = options.previousResource
+		? {
+				route: "api" as const,
+				confidence: 0.99,
+				resource: options.previousResource.resource,
+				domain: options.previousResource.domain,
+				constraints: { domain: options.previousResource.domain },
+				query:
+					options.previousResource.structuredQuery ??
+					buildKnowledgeSearchPlan(
+						"api",
+						options.previousResource.queries[0] ?? options.previousResource.resource,
+					),
+			}
+		: undefined;
+	const classified = classifyKnowledgeRequest(prompt, { toolsEnabled: options.toolsEnabled, resources, previous });
+	if (classified.route !== "api" || !classified.resource || !classified.domain) return null;
+	if (
+		options.previousResource &&
+		classified.resource === options.previousResource.resource &&
+		/\b(?:its|it|that|this|those|them|the same)\b/i.test(prompt)
+	) {
+		return options.previousResource;
 	}
-
-	const alias = preferredAlias(selected);
-	const verb = crudVerb(prompt);
 	return {
-		resource: selected.name,
-		domain: selected.domain,
-		queries: verb ? [alias, `${verb} ${alias}`] : [alias],
+		resource: classified.resource,
+		domain: classified.domain,
+		queries: classified.query.lex,
+		structuredQuery: classified.query,
 	};
 }
 

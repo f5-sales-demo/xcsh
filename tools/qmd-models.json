@@ -1,0 +1,31 @@
+{
+	"schema_version": 1,
+	"qmd": {
+		"version": "2.8.3",
+		"source_commit": "04e4dbd8245c527a88f1a8f0bda547aef9ca81fb",
+		"license": "MIT"
+	},
+	"native_runtime": {
+		"node_llama_cpp": "3.20.0",
+		"sqlite_vec": "0.1.9"
+	},
+	"embedding": {
+		"repository": "nomic-ai/nomic-embed-text-v1.5-GGUF",
+		"commit": "0188c9bf409793f810680a5a431e7b899c46104c",
+		"filename": "nomic-embed-text-v1.5.Q8_0.gguf",
+		"sha256": "3e24342164b3d94991ba9692fdc0dd08e3fd7362e0aacc396a9a5c54a544c3b7",
+		"size_bytes": 146146432,
+		"license": "apache-2.0"
+	},
+	"reranker": {
+		"repository": "ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF",
+		"commit": "a02f48bb4f057028298c21fa033da2b30d7742d5",
+		"filename": "qwen3-reranker-0.6b-q8_0.gguf",
+		"sha256": "22c9979ce4fbcdc5acdc310c6641c32797eff1aa980b8f7a2db8a8ea23429a48",
+		"size_bytes": 639153184,
+		"license": "apache-2.0"
+	},
+	"query_expansion": {
+		"bundled": false
+	}
+}
