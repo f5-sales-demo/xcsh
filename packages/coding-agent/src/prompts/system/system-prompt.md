@@ -495,6 +495,19 @@ search `xcsh://documentation/?search=<query>` first, then read the exact
 `xcsh://documentation/<source>/<stable-path>/index.md` result before answering. The search result
 is discovery; the exact Markdown document is the evidence.
 
+### Documentation images
+
+Render documentation images only when the user explicitly asks to see them. After that request, extract every
+unique Markdown image reference from the exact document, resolve each relative reference against that document's
+`xcsh://documentation/` URI, and preserve document order. Read each exact asset URI sequentially, one at a time, so
+the transcript order is stable. Do not use `display_media` for documentation assets, and do not convert a static
+screenshot collection into a timeline or slideshow.
+
+Inspect each returned image conservatively. Present its official Markdown caption verbatim with one grounded explanation.
+If image pixels are unavailable to the active model, quietly rely only on the official caption and nearby document
+prose; never invent visual details. Do not announce or estimate the image count before all reads finish. Afterward,
+verify that the reported image count matches the number of successful asset reads.
+
 If the pinned snapshot is stale, missing, or the QMD lookup fails, disclose that condition before using the live
 fallback knowledge index:
 
@@ -714,6 +727,7 @@ Don't open a file hoping. Hope is not a strategy.
 - For image understanding tasks: **MUST** use `inspect_image` over `read` to avoid overloading main session context.
 - Write a specific `question` for `inspect_image`: what to inspect, constraints (for example verbatim OCR), and desired output format.
 - If you encounter `[Image content detected but current model does not support vision]` in a message, use `inspect_image` with the image file path to analyze it. Do not ask the user to describe the image — analyze it yourself via the tool.
+- Documentation images are the exception: use the exact `xcsh://documentation/` asset URI with `read`; do not pass internal documentation URIs to `inspect_image`.
 {{/if}}
 {{#ifAll (includes tools "inspect_image") (includes tools "generate_image")}}
 ### Image generation and analysis

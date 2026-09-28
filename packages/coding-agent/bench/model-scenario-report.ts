@@ -36,6 +36,7 @@ export interface ScenarioToolCall {
 	durationMs?: number;
 	isError: boolean;
 	isWarning: boolean;
+	imageContentCount?: number;
 }
 
 export interface ScenarioKnowledgeEvent {
@@ -385,6 +386,17 @@ export function evaluateScenarioContract(
 	}
 	const failedTools = toolCalls.filter(call => call.isError).map(call => call.name);
 	if (failedTools.length > 0) failures.push(`tool execution failed: ${failedTools.join(", ")}`);
+	if (contract.requiredImageContentCount !== undefined) {
+		const imageContentCount = toolCalls.reduce(
+			(count, call) => count + (call.isError ? 0 : (call.imageContentCount ?? 0)),
+			0,
+		);
+		if (imageContentCount !== contract.requiredImageContentCount) {
+			failures.push(
+				`image content count was ${imageContentCount}, expected exactly ${contract.requiredImageContentCount}`,
+			);
+		}
+	}
 	return failures;
 }
 
@@ -514,6 +526,11 @@ function buildSingleScenarioBenchmarkSample(
 				call.durationMs = round(timed.elapsedMs - call.startedAtMs);
 				call.isError = event.isError === true;
 				call.isWarning = event.isWarning === true;
+				const resultContent = record(event.result)?.content;
+				if (Array.isArray(resultContent)) {
+					const imageContentCount = resultContent.filter(block => record(block)?.type === "image").length;
+					if (imageContentCount > 0) call.imageContentCount = imageContentCount;
+				}
 			}
 		}
 	}
@@ -960,6 +977,9 @@ export function describeScenarioContract(scenario: ModelBenchmarkScenario): stri
 				: `read ${event.path ?? event.pathPattern}`,
 		),
 	);
+	if (scenario.contract.requiredImageContentCount !== undefined) {
+		descriptions.push(`exactly ${scenario.contract.requiredImageContentCount} successful image content block(s)`);
+	}
 	if (scenario.contract.exclusiveTools) descriptions.push("no unexpected tools");
 	return descriptions;
 }

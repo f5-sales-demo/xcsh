@@ -56,6 +56,7 @@ describe("model scenario library", () => {
 			"documentation-answer-missing",
 			"documentation-tools-disabled",
 			"documentation-multi-turn-dns",
+			"documentation-media-csd",
 			"api-catalog-known-resource",
 			"api-catalog-alias",
 			"api-catalog-semantic",
@@ -345,6 +346,65 @@ describe("model scenario event contracts", () => {
 				"tool execution failed: bash",
 			]),
 		);
+	});
+
+	it("counts successful ImageContent blocks returned by tools", () => {
+		const scenario = {
+			...readScenario,
+			contract: {
+				requiredTools: [{ name: "read", count: 1 }],
+				requiredImageContentCount: 1,
+				exclusiveTools: true,
+			},
+		} as any;
+		const events = [
+			{ elapsedMs: 1, event: { type: "message_start", message: { role: "user" } } },
+			{ elapsedMs: 2, event: { type: "tool_execution_start", toolCallId: "image", toolName: "read", args: { path: "fixture://image" } } },
+			{
+				elapsedMs: 3,
+				event: {
+					type: "tool_execution_end",
+					toolCallId: "image",
+					toolName: "read",
+					result: { content: [{ type: "text", text: "Read image resource" }, { type: "image", data: "abc", mimeType: "image/png" }] },
+				},
+			},
+			{ elapsedMs: 4, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "done" } } },
+			{ elapsedMs: 5, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
+		] as any;
+		const passing = buildScenarioBenchmarkSample({
+			target,
+			scenario,
+			round: 1,
+			warmup: false,
+			startedAt: "2026-09-27T00:00:00.000Z",
+			processDurationMs: 5,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: [],
+			events,
+		});
+		expect(passing.contractPassed).toBe(true);
+		expect(passing.toolCalls[0]?.imageContentCount).toBe(1);
+
+		const missing = buildScenarioBenchmarkSample({
+			target,
+			scenario,
+			round: 1,
+			warmup: false,
+			startedAt: "2026-09-27T00:00:00.000Z",
+			processDurationMs: 5,
+			exitCode: 0,
+			timedOut: false,
+			stderr: "",
+			stdoutErrors: [],
+			events: events.map((event: any) => event.event.type === "tool_execution_end"
+				? { ...event, event: { ...event.event, result: { content: [{ type: "text", text: "no image" }] } } }
+				: event),
+		});
+		expect(missing.contractPassed).toBe(false);
+		expect(missing.contractFailures).toContain("image content count was 0, expected exactly 1");
 	});
 
 	it("surfaces provider error completions as transport failures", () => {
