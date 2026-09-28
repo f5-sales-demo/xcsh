@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "f7f0d585154237eb89aac7b3120077ec16b391bd",
-  "fingerprint": "f045f5987430ab254c573805d9d46ecadd404d9836a13095aa38b70e93bcf167",
+  "revision": "d45be070bed9b3ffcf805a841a85c0a958de05ae",
+  "fingerprint": "7c3d9d257781e0da7629dec35695e3d214e8a5c33787fb67956b5475046bd066",
   "counts": {
     "total": 238,
     "components": 96,
@@ -1819,7 +1819,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "3e3be13160e7e29ba3d7060e5e492d22379d3947b5de024f48af4bab132db885",
+      "sha256": "73db5681e1017181aca034e130e630b35b364475bcaf9d0383410ee43db7524c",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",
@@ -1849,6 +1849,7 @@
         "packages/coding-agent/test/litellm-current-models.test.ts",
         "packages/coding-agent/test/model-selection-scope.test.ts",
         "packages/coding-agent/test/model-selection-session.test.ts",
+        "packages/coding-agent/test/model-selector-context-flow.test.ts",
         "packages/coding-agent/test/model-selector-openai-codex.test.ts",
         "packages/coding-agent/test/model-selector-provider-tabs.test.ts",
         "packages/coding-agent/test/model-selector-registry-integration.test.ts",
@@ -3392,7 +3393,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "foundation",
-      "sha256": "50cb217fc71b3e00969049fba0a90611642081902154789660d354b7ee8fd022",
+      "sha256": "cce7c152a61657d26531ac6ddc03a2dc654b750ffed60f3a4549708da564ee4c",
       "exports": [
         "applyModelSelection",
         "prepareModelSelection"

@@ -434,7 +434,6 @@ describe("provider-tab model selector", () => {
 
 		for (const character of "sonnet") selector.handleInput(character);
 		selector.handleInput("\r");
-		selector.handleInput("\r");
 		rendered = Bun.stripANSI(selector.render(100).join("\n"));
 		for (const effort of ["Minimal", "Low", "Medium", "High", "Extra high", "Maximum"]) {
 			expect(rendered).toContain(effort);
@@ -600,7 +599,6 @@ describe("provider-tab model selector", () => {
 		selector.handleInput("\t");
 		await Bun.sleep(0);
 		selector.handleInput("\r");
-		selector.handleInput("\r");
 		const picker = Bun.stripANSI(selector.render(100).join("\n"));
 		expect(picker).not.toContain("Minimal");
 		expect(picker).toContain("Low");
@@ -616,8 +614,9 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 		for (const character of "sol") selector.handleInput(character);
 		selector.handleInput("\r");
-		selector.handleInput("\r");
 		for (let index = 0; index < 5; index += 1) selector.handleInput("\x1b[B");
+		selector.handleInput("\r");
+		selector.handleInput("\r");
 		selector.handleInput("\r");
 		expect(onSelect).toHaveBeenCalledWith(
 			expect.objectContaining({

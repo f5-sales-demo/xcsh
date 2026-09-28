@@ -136,9 +136,9 @@ describe("default ChatGPT subscription model picker presentation", () => {
 		);
 		await Bun.sleep(0);
 		selector.handleInput("\r");
+		selector.handleInput("\x1b[B");
+		selector.handleInput("\x1b[B");
 		selector.handleInput("\r");
-		selector.handleInput("\x1b[B");
-		selector.handleInput("\x1b[B");
 		selector.handleInput("\r");
 		expect(onSelect).toHaveBeenCalledWith({
 			model: tier,

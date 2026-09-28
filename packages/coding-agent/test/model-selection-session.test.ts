@@ -23,7 +23,8 @@ async function harness(options?: { persistentSession?: boolean }) {
 	cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
 	const auth = await AuthStorage.create(join(dir, "auth.db"));
 	cleanups.push(() => auth.close());
-	for (const provider of ["anthropic", "google-vertex", "ollama"]) auth.setRuntimeApiKey(provider, "test-key");
+	for (const provider of ["anthropic", "google-vertex", "ollama", "openai-codex"])
+		auth.setRuntimeApiKey(provider, "test-key");
 	writeFileSync(
 		join(dir, "models.json"),
 		JSON.stringify({
@@ -42,6 +43,7 @@ async function harness(options?: { persistentSession?: boolean }) {
 		registry.find("anthropic", "claude-sonnet-4-5")!,
 		registry.find("google-vertex", "gemini-2.5-pro")!,
 		registry.find("ollama", "uat-local")!,
+		registry.find("openai-codex", "gpt-6-sol")!,
 	];
 	const settings = await Settings.init({ cwd: dir, agentDir: dir });
 	settings.set("modelRoles", { default: "anthropic/claude-sonnet-4-5:low" });
@@ -147,6 +149,44 @@ test("conversation switches route actual turns across providers and retain conve
 	}
 	expect(requests.map(request => request.messages)).toEqual([1, 3, 5, 7]);
 	expect(settings.getModelRole("default")).toBe("anthropic/claude-sonnet-4-5:low");
+});
+
+test("context selection persists only for its provider and is included in the review", async () => {
+	const { session, settings, models } = await harness();
+	const codex = models[3]!;
+	const proposal = prepareModelSelection(session, {
+		scope: "conversation",
+		model: codex,
+		selector: "openai-codex/gpt-6-sol",
+		thinkingLevel: ThinkingLevel.High,
+		contextTier: "codex-max",
+	});
+	expect(proposal?.review.changes).toContainEqual({
+		field: "Provider-wide context tier",
+		before: "standard",
+		after: "codex-max",
+	});
+	await applyModelSelection(session, proposal!.target);
+	expect(settings.get("providers.openaiContextTier")).toBe("codex-max");
+	expect(settings.get("providers.litellmContextTier")).toBe("standard");
+	expect(session.modelRegistry.find("openai-codex", "gpt-6-sol")?.contextWindow).toBe(872_000);
+});
+
+test("context selection rolls back settings and registry limits when session persistence fails", async () => {
+	const { session, settings, models } = await harness();
+	const flush = vi.spyOn(session.sessionManager, "flush").mockRejectedValueOnce(new Error("session disk full"));
+	await expect(
+		applyModelSelection(session, {
+			scope: "conversation",
+			model: models[3]!,
+			selector: "openai-codex/gpt-6-sol",
+			thinkingLevel: ThinkingLevel.High,
+			contextTier: "codex-max",
+		}),
+	).rejects.toThrow("session disk full");
+	expect(settings.get("providers.openaiContextTier")).toBe("standard");
+	expect(session.modelRegistry.find("openai-codex", "gpt-6-sol")?.contextWindow).toBe(272_000);
+	flush.mockRestore();
 });
 test("saved roles are independent and a failed persistence never changes the active model", async () => {
 	const { session, settings, models, dir } = await harness();

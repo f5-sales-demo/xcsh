@@ -86,6 +86,7 @@ describe("ModelSelector role badge thinking display", () => {
 		expect(rendered).not.toContain("Role Thinking:");
 
 		selector.handleInput("\r");
+		selector.handleInput("\r");
 		selector.handleInput("\x1b[B");
 		selector.handleInput("\x1b[B");
 		selector.handleInput("\r");
@@ -123,6 +124,7 @@ describe("ModelSelector role badge thinking display", () => {
 		expect(rendered).toContain("custom-fast (Low)");
 		expect(rendered).toContain("Quick (Provider default)");
 
+		selector.handleInput("\r");
 		selector.handleInput("\r");
 		selector.handleInput("\x1b[B");
 		selector.handleInput("\x1b[B");

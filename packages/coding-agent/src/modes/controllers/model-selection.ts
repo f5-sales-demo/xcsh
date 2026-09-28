@@ -17,8 +17,21 @@ export function prepareModelSelection(session: AgentSession, selection: ModelSel
 		: "None";
 	const selectedModel = formatModelSelectorValue(selection.selector, selection.thinkingLevel);
 	const role = selection.scope === "default" ? "default" : selection.role;
+	const contextSetting =
+		selection.contextTier && model.provider === "openai-codex"
+			? "providers.openaiContextTier"
+			: selection.contextTier && model.provider === "litellm"
+				? "providers.litellmContextTier"
+				: undefined;
 	const routingState = session.getRoutingState();
 	const changes: Array<{ field: string; before: string; after: string }> = [];
+	if (contextSetting) {
+		changes.push({
+			field: "Provider-wide context tier",
+			before: String(session.settings.get(contextSetting)),
+			after: selection.contextTier!,
+		});
+	}
 	if (selection.scope !== "conversation") {
 		if (!role) return undefined;
 		changes.push({
@@ -56,7 +69,7 @@ export function prepareModelSelection(session: AgentSession, selection: ModelSel
 			changes: changed,
 			consequence:
 				selection.scope === "conversation"
-					? "Switches this conversation and records a manual routing pin; user model defaults are unchanged."
+					? "Switches this conversation and records a manual routing pin; the selected provider-wide context tier is saved."
 					: selection.scope === "default"
 						? "Saves the user default role, then switches this conversation and records a manual routing pin."
 						: `Saves the ${role} role for future routed work; the active conversation model is unchanged.`,
@@ -71,6 +84,13 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 	const previousModel = session.model;
 	const previousThinking = session.thinkingLevel;
 	const previousRoles = { ...session.settings.get("modelRoles") };
+	const contextSetting =
+		selection.contextTier && model.provider === "openai-codex"
+			? "providers.openaiContextTier"
+			: selection.contextTier && model.provider === "litellm"
+				? "providers.litellmContextTier"
+				: undefined;
+	const previousContextTier = contextSetting ? session.settings.get(contextSetting) : undefined;
 	const previousRouting = session.getRoutingState();
 	let switched = false;
 	const role = scope === "default" ? "default" : selection.role;
@@ -80,9 +100,15 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 		throw new Error(`No API key for ${selector}`);
 	}
 	try {
-		if (scope !== "conversation") {
-			session.settings.setModelRole(role!, formatModelSelectorValue(selector, thinkingLevel));
+		if (scope !== "conversation" || contextSetting) {
+			if (scope !== "conversation")
+				session.settings.setModelRole(role!, formatModelSelectorValue(selector, thinkingLevel));
+			if (contextSetting) session.settings.set(contextSetting, selection.contextTier!);
 			await session.settings.flush({ throwOnError: true });
+		}
+		if (contextSetting) {
+			if (model.provider === "openai-codex") session.modelRegistry.setOpenAIContextTier(selection.contextTier!);
+			else session.modelRegistry.setLiteLLMContextTier(selection.contextTier!);
 		}
 		if (scope !== "role") {
 			switched = true;
@@ -101,9 +127,14 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 			await session.sessionManager.flush();
 		}
 	} catch (error) {
-		if (scope !== "conversation") {
+		if (scope !== "conversation" || contextSetting) {
 			session.settings.set("modelRoles", previousRoles);
+			if (contextSetting) session.settings.set(contextSetting, previousContextTier!);
 			await session.settings.flush({ throwOnError: true }).catch(() => {});
+		}
+		if (contextSetting) {
+			if (model.provider === "openai-codex") session.modelRegistry.setOpenAIContextTier(previousContextTier!);
+			else session.modelRegistry.setLiteLLMContextTier(previousContextTier!);
 		}
 		if (switched && previousModel) await session.setModelTemporary(previousModel, previousThinking);
 		session.restoreRoutingState(previousRouting);
