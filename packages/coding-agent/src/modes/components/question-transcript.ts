@@ -1,7 +1,7 @@
 import type { Component } from "@f5-sales-demo/pi-tui";
 import type { AsyncInputQuestion, AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { theme } from "../theme/theme";
-import { selectorFrame, selectorFrameContentWidth, selectorProse, selectorRow } from "./selector-frame";
+import { selectorProse, selectorTranscriptFrame } from "./selector-frame";
 
 export interface AsyncInputReply {
 	type: "user_input_reply";
@@ -97,19 +97,13 @@ export class QuestionTranscriptComponent implements Component {
 	}
 
 	render(width: number): string[] {
-		const inner = selectorFrameContentWidth(width);
 		if (this.state.kind === "pending") {
 			const count = this.state.item.questions.length;
-			return selectorFrame(
+			return selectorTranscriptFrame(
 				width,
-				Math.max(8, count + 7),
 				"Questions pending",
 				`${count} ${count === 1 ? "question" : "questions"} · Work continues while you answer`,
-				[],
-				this.state.item.questions.map((question, index) =>
-					selectorRow([`${index + 1}. ${question.title}`], [inner - 2], false),
-				),
-				[],
+				this.state.item.questions.map((question, index) => selectorProse(`${index + 1}. ${question.title}`)),
 				[`${theme.fg("contentAccent", "/questions")} to answer`],
 			);
 		}
@@ -117,16 +111,10 @@ export class QuestionTranscriptComponent implements Component {
 		const answer = question.isSecret
 			? theme.fg("muted", "Answer hidden")
 			: reply.answer.replace(/^user_note:\s*/, "");
-		return selectorFrame(
-			width,
-			8,
-			"Answer recorded",
-			`Question ${position + 1} of ${total}`,
-			[question.title],
-			[selectorProse(`${theme.symbol("checkbox.checked")} ${answer}`)],
-			[],
-			[],
-		);
+		return selectorTranscriptFrame(width, "Answer recorded", `Question ${position + 1} of ${total}`, [
+			selectorProse(question.title),
+			selectorProse(`${theme.symbol("checkbox.checked")} ${answer}`),
+		]);
 	}
 
 	invalidate(): void {}

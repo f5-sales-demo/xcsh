@@ -1,6 +1,9 @@
 {
   "version": 1,
-  "sourceRoots": ["packages/coding-agent/src", "packages/tui/src"],
+  "sourceRoots": [
+    "packages/coding-agent/src",
+    "packages/tui/src"
+  ],
   "sinkNames": [
     "selectorFrame",
     "selectorRow",
@@ -8,18 +11,134 @@
     "selectorCompactRow",
     "SelectList",
     "TruncatedText",
-    "truncateToWidth"
+    "truncateToWidth",
+    "selectorTranscriptFrame"
   ],
   "entries": [
+    {
+      "id": "complete-btw-panel",
+      "surface": "ephemeral side answers",
+      "source": "packages/coding-agent/src/modes/components/btw-panel.ts",
+      "sinks": [
+        "selectorTranscriptFrame",
+        "selectorProse"
+      ],
+      "category": "prose",
+      "policy": "wrap",
+      "detailView": true,
+      "reproductionWidth": 40,
+      "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
+      "status": "verified",
+      "issue": "#4577",
+      "tests": [
+        "packages/coding-agent/test/searchable-select-list.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
+      ],
+      "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
+      "mergedPr": "#4584"
+    },
+    {
+      "id": "complete-plan-preview",
+      "surface": "static plan previews",
+      "source": "packages/coding-agent/src/modes/components/plan-preview.ts",
+      "sinks": [
+        "selectorTranscriptFrame",
+        "selectorProse"
+      ],
+      "category": "prose",
+      "policy": "wrap",
+      "detailView": true,
+      "reproductionWidth": 40,
+      "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
+      "status": "verified",
+      "issue": "#4577",
+      "tests": [
+        "packages/coding-agent/test/searchable-select-list.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
+      ],
+      "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
+      "mergedPr": "#4584"
+    },
+    {
+      "id": "complete-transcript-notice",
+      "surface": "static transcript notices",
+      "source": "packages/coding-agent/src/modes/components/transcript-notice.ts",
+      "sinks": [
+        "selectorTranscriptFrame",
+        "selectorProse",
+        "selectorCompactRow"
+      ],
+      "category": "mixed prose and compact content",
+      "policy": "truncate-with-full-detail",
+      "detailView": true,
+      "reproductionWidth": 40,
+      "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
+      "status": "verified",
+      "issue": "#4577",
+      "tests": [
+        "packages/coding-agent/test/searchable-select-list.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
+      ],
+      "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
+      "mergedPr": "#4584"
+    },
+    {
+      "id": "complete-question-transcript",
+      "surface": "pending questions and recorded answers",
+      "source": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "sinks": [
+        "selectorTranscriptFrame",
+        "selectorProse"
+      ],
+      "category": "prose",
+      "policy": "wrap",
+      "detailView": true,
+      "reproductionWidth": 40,
+      "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
+      "status": "verified",
+      "issue": "#4577",
+      "tests": [
+        "packages/coding-agent/test/searchable-select-list.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
+      ],
+      "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
+      "mergedPr": "#4584"
+    },
+    {
+      "id": "complete-searchable-select-list",
+      "surface": "shared searchable selectors",
+      "source": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
+      "sinks": [
+        "selectorFrame",
+        "selectorRow",
+        "selectorProse"
+      ],
+      "category": "mixed prose and compact selections",
+      "policy": "truncate-with-full-detail",
+      "detailView": true,
+      "reproductionWidth": 40,
+      "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
+      "status": "verified",
+      "issue": "#4577",
+      "tests": [
+        "packages/coding-agent/test/searchable-select-list.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
+      ],
+      "terminalUat": "pass: 40x24 xterm; PgDn reaches DESCRIPTION-END and identity; PgUp restores initial purpose; selected fixture retained; source 3281dcab1 with #4577 working changes; v22.4.3",
+      "mergedPr": "#4584"
+    },
     {
       "id": "login-prose",
       "surface": "/login",
       "source": "packages/coding-agent/src/modes/components/login-dialog.ts",
-      "sinks": ["selectorFrame", "selectorProse"],
+      "sinks": [
+        "selectorFrame",
+        "selectorProse"
+      ],
       "category": "prose",
       "policy": "wrap",
       "reproductionWidth": 40,
-      "fixture": "Synthetic long authentication guidance with café, 東京, and ANSI emphasis.",
+      "fixture": "Synthetic long authentication guidance with caf\u00e9, \u6771\u4eac, and ANSI emphasis.",
       "status": "verified",
       "issue": "#4337",
       "tests": [
@@ -34,15 +153,21 @@
       "id": "models-compact-rows",
       "surface": "/models",
       "source": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "sinks": ["selectorFrame", "selectorRow", "selectorProse"],
+      "sinks": [
+        "selectorFrame",
+        "selectorRow",
+        "selectorProse"
+      ],
       "category": "mixed prose and identifiers",
       "policy": "truncate-with-full-detail",
       "detailView": true,
       "reproductionWidth": 40,
-      "fixture": "synthetic-provider/very-long-model-selector with café 東京 description and ANSI status",
+      "fixture": "synthetic-provider/very-long-model-selector with caf\u00e9 \u6771\u4eac description and ANSI status",
       "status": "verified",
       "issue": "#4338",
-      "tests": ["packages/coding-agent/test/model-selector-provider-tabs.test.ts"],
+      "tests": [
+        "packages/coding-agent/test/model-selector-provider-tabs.test.ts"
+      ],
       "terminalUat": "pass: /models; width 40; expected complete wrapped ANSI/Unicode selected details and status with paging; observed selected row retained across PgDn/PgUp, DESCRIPTION-END and STATUS-END reachable, no detail ellipses; bad93fbbf06464b4b4aaa2d0a603503282fec0aa; v21.46.1",
       "mergedPr": "#4363"
     },
@@ -50,31 +175,45 @@
       "id": "shared-selector-frame",
       "surface": "shared selector frames",
       "source": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "sinks": ["selectorFrame", "selectorRow", "selectorProse", "selectorCompactRow", "truncateToWidth"],
+      "sinks": [
+        "selectorFrame",
+        "selectorRow",
+        "selectorProse",
+        "selectorCompactRow",
+        "truncateToWidth",
+        "selectorTranscriptFrame"
+      ],
       "category": "mixed prose and compact rows",
       "policy": "truncate-with-full-detail",
       "detailView": true,
       "reproductionWidth": 40,
-      "fixture": "Synthetic long selected label plus wrapped café 東京 detail text with ANSI emphasis.",
+      "fixture": "Synthetic long selected label plus wrapped caf\u00e9 \u6771\u4eac detail text with ANSI emphasis.",
       "status": "verified",
-      "issue": "#4340",
-      "tests": ["test/selector-frame-layout.test.ts"],
-      "terminalUat": "pass: 40-column PTY; complete ANSI/Unicode prose and selected detail; 07baea76cd11d2e30f567708f61b9ed775575a2b; v21.45.1",
-      "mergedPr": "#4353"
+      "issue": "#4577",
+      "tests": [
+        "packages/coding-agent/test/selector-frame-layout.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
+      ],
+      "terminalUat": "pass: ConnectionChoiceComponent in 40x24 xterm; PgDn reaches CONNECTION-END; selected fixture remains visible; PgUp restores first details; 05e24bb9efd8c76a3f23162183f1b6a78b643b16; v22.4.3",
+      "mergedPr": "#4584"
     },
     {
       "id": "shared-select-list",
       "surface": "autocomplete and shared select lists",
       "source": "packages/tui/src/components/select-list.ts",
-      "sinks": ["truncateToWidth"],
+      "sinks": [
+        "truncateToWidth"
+      ],
       "category": "mixed labels and descriptions",
       "policy": "truncate-with-full-detail",
       "detailView": true,
       "reproductionWidth": 40,
-      "fixture": "Synthetic long completion label and café 東京 description with ANSI emphasis.",
+      "fixture": "Synthetic long completion label and caf\u00e9 \u6771\u4eac description with ANSI emphasis.",
       "status": "verified",
       "issue": "#4340",
-      "tests": ["packages/tui/test/select-list.test.ts"],
+      "tests": [
+        "packages/tui/test/select-list.test.ts"
+      ],
       "terminalUat": "pass: 40-column PTY; complete ANSI/Unicode prose and selected detail; 07baea76cd11d2e30f567708f61b9ed775575a2b; v21.45.1",
       "mergedPr": "#4353"
     },
@@ -82,14 +221,18 @@
       "id": "shared-truncated-text",
       "surface": "single-line status and label text",
       "source": "packages/tui/src/components/truncated-text.ts",
-      "sinks": ["truncateToWidth"],
+      "sinks": [
+        "truncateToWidth"
+      ],
       "category": "compact status or label",
       "policy": "intentionally-compact",
       "reproductionWidth": 24,
-      "fixture": "Synthetic compact status identifier café-東京-with-ANSI.",
+      "fixture": "Synthetic compact status identifier caf\u00e9-\u6771\u4eac-with-ANSI.",
       "status": "verified",
       "issue": "#4339",
-      "tests": ["packages/tui/test/truncated-text.test.ts"],
+      "tests": [
+        "packages/tui/test/truncated-text.test.ts"
+      ],
       "terminalUat": "not applicable to compact primitive",
       "mergedPr": "baseline in #4339"
     },
@@ -97,14 +240,20 @@
       "id": "tui-core-compact",
       "surface": "shared TUI chrome and editor",
       "source": "packages/tui/src/**",
-      "sinks": ["SelectList", "TruncatedText", "truncateToWidth"],
+      "sinks": [
+        "SelectList",
+        "TruncatedText",
+        "truncateToWidth"
+      ],
       "category": "compact controls, code, and terminal chrome",
       "policy": "intentionally-compact",
       "reproductionWidth": 40,
       "fixture": "Synthetic long command identifier and ANSI terminal chrome.",
       "status": "verified",
       "issue": "#4339",
-      "tests": ["packages/tui/test"],
+      "tests": [
+        "packages/tui/test"
+      ],
       "terminalUat": "existing component coverage",
       "mergedPr": "baseline in #4339"
     },
@@ -112,15 +261,22 @@
       "id": "sessions-compact-rows",
       "surface": "/sessions",
       "source": "packages/coding-agent/src/modes/components/session-selector.ts",
-      "sinks": ["selectorFrame", "selectorRow", "selectorProse", "selectorCompactRow"],
+      "sinks": [
+        "selectorFrame",
+        "selectorRow",
+        "selectorProse",
+        "selectorCompactRow"
+      ],
       "category": "mixed prose and identifiers",
       "policy": "truncate-with-full-detail",
       "detailView": true,
       "reproductionWidth": 40,
-      "fixture": "Synthetic long session title, identifier, path, and first message with café 東京 and ANSI emphasis.",
+      "fixture": "Synthetic long session title, identifier, path, and first message with caf\u00e9 \u6771\u4eac and ANSI emphasis.",
       "status": "verified",
       "issue": "#4364",
-      "tests": ["packages/coding-agent/test/modes/components/session-selector-readability.test.ts"],
+      "tests": [
+        "packages/coding-agent/test/modes/components/session-selector-readability.test.ts"
+      ],
       "terminalUat": "pass: /sessions; width 40; expected complete wrapped ANSI/Unicode selected details with paging; observed selected row/action retained across PgDn/PgUp, FIRST-MESSAGE-END reachable, no detail ellipses; db3cfeb7c3f8a168c0da3d85a1a00f15740cc947; v21.46.1",
       "mergedPr": "#4366"
     },
@@ -135,16 +291,19 @@
         "selectorCompactRow",
         "SelectList",
         "TruncatedText",
-        "truncateToWidth"
+        "truncateToWidth",
+        "selectorTranscriptFrame"
       ],
       "category": "mixed prose and compact selections",
       "policy": "truncate-with-full-detail",
       "detailView": false,
       "reproductionWidth": 40,
-      "fixture": "Synthetic long selected value and café 東京 explanatory detail with ANSI emphasis.",
+      "fixture": "Synthetic long selected value and caf\u00e9 \u6771\u4eac explanatory detail with ANSI emphasis.",
       "status": "finding-open",
       "issue": "#4336",
-      "tests": ["test/selector-frame-layout.test.ts"],
+      "tests": [
+        "test/selector-frame-layout.test.ts"
+      ],
       "terminalUat": "pending per child finding",
       "mergedPr": "pending per child finding"
     },
@@ -152,14 +311,18 @@
       "id": "tool-output-previews",
       "surface": "tool output previews",
       "source": "packages/coding-agent/src/tools/**",
-      "sinks": ["truncateToWidth"],
+      "sinks": [
+        "truncateToWidth"
+      ],
       "category": "code, paths, identifiers, and collapsed previews",
       "policy": "intentionally-compact",
       "reproductionWidth": 40,
       "fixture": "Synthetic long path, identifier, and code preview with Unicode.",
       "status": "verified",
       "issue": "#4339",
-      "tests": ["test/tool-result-errors.test.ts"],
+      "tests": [
+        "test/tool-result-errors.test.ts"
+      ],
       "terminalUat": "expanded tool output retains full content",
       "mergedPr": "baseline in #4339"
     },
@@ -174,7 +337,8 @@
         "selectorCompactRow",
         "SelectList",
         "TruncatedText",
-        "truncateToWidth"
+        "truncateToWidth",
+        "selectorTranscriptFrame"
       ],
       "category": "code, identifiers, status, and collapsed previews",
       "policy": "intentionally-compact",
@@ -182,7 +346,9 @@
       "fixture": "Synthetic long path, identifier, status, and ANSI preview text.",
       "status": "verified",
       "issue": "#4339",
-      "tests": ["test/output-block.test.ts"],
+      "tests": [
+        "test/output-block.test.ts"
+      ],
       "terminalUat": "expanded views retain complete source content",
       "mergedPr": "baseline in #4339"
     }
