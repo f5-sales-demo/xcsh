@@ -22,6 +22,53 @@ CHECKER = ROOT / "scripts" / "check_docs_quality.py"
 GIT_EXECUTABLE = shutil.which("git") or "git"
 
 
+class DevelopingBootstrapContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.guide = (ROOT / "DEVELOPING.md").read_text(encoding="utf-8")
+
+    def test_bootstrap_immediately_follows_worktree_creation(self) -> None:
+        commands = [
+            line.strip()
+            for line in self.guide.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        worktree_cd = 'cd ".worktrees/${BRANCH}"'
+        assert worktree_cd in commands
+        assert commands[commands.index(worktree_cd) + 1] == (
+            "bash scripts/ci-bun-install.sh"
+        )
+
+    def test_bootstrap_precedes_every_development_and_test_entry_point(self) -> None:
+        bootstrap_index = self.guide.index("bash scripts/ci-bun-install.sh")
+        entry_points = (
+            "bun scripts/ensure-dev-native.ts",
+            "bun run dev",
+            "bun run build",
+            "bun run test",
+            "bun run check",
+            "bun run lint",
+            "bun run fmt",
+            "bun run fix",
+            "bun test",
+        )
+        for entry_point in entry_points:
+            positions = [
+                match.start()
+                for match in re.finditer(
+                    rf"^(?:{re.escape(entry_point)}(?:\s|$)|"
+                    rf"\|\s*`{re.escape(entry_point)}(?:`|\s))",
+                    self.guide,
+                    re.MULTILINE,
+                )
+            ]
+            assert positions, f"missing documented entry point: {entry_point}"
+            assert all(position > bootstrap_index for position in positions), entry_point
+
+    def test_rejects_plain_bun_install_as_worktree_bootstrap(self) -> None:
+        plain_installs = re.findall(r"^\s*bun install(?:\s.*)?$", self.guide, re.MULTILINE)
+        assert plain_installs == []
+
+
 class DocsQualityCheckerTests(unittest.TestCase):
     def fixture(
         self, page: str, *, heading: str = "Do the task", evidence: bool = True
