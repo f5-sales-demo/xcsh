@@ -1448,12 +1448,23 @@ jobs:
           PI_INSTALL_DIR="$install_dir" bash scripts/install.sh --binary --ref "$EXPECTED_VERSION"
           binary="$install_dir/xcsh"
           receipt="$install_dir/xcsh-install.json"
-          test "$(find "$install_dir" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 2
+          verify_payload() {
+            expected_payload=$(printf '%s\n' xcsh xcsh-install.json | LC_ALL=C sort)
+            if [ "$RUNNER_OS" = Linux ]; then
+              artifact="xcsh-linux-$(jq -er '.arch | select(. == "x64" or . == "arm64")' "$receipt")"
+              expected_payload=$(printf '%s\n' xcsh xcsh-install.json \
+                "$artifact.sha256" "$artifact.provenance.json" "$artifact.provenance.json.sha256" | LC_ALL=C sort)
+            fi
+            actual_payload=$(find "$install_dir" -mindepth 1 -maxdepth 1 -exec basename {} \; | LC_ALL=C sort)
+            test "$actual_payload" = "$expected_payload"
+          }
+          verify_payload
           jq -e --arg version "${EXPECTED_VERSION#v}" --arg executable "$(realpath "$binary")" '
             .schemaVersion == 2 and .channel == "standalone" and
             .version == $version and .executablePath == $executable
           ' "$receipt" >/dev/null
           "$binary" self-update --force
+          verify_payload
           jq -e --arg version "${EXPECTED_VERSION#v}" --arg executable "$(realpath "$binary")" '
             .schemaVersion == 2 and .version == $version and .executablePath == $executable
           ' "$receipt" >/dev/null
