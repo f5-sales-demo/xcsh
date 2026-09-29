@@ -12,51 +12,56 @@
  * tenant in `hello_ack`, derived from `XCSH_SESSION_TENANT` (`tenant|env`).
  */
 import { afterEach, expect, test } from "bun:test";
-import { probe } from "./helpers/bridge-probe";
 import { CODING_AGENT_CLI } from "./helpers/cli-process";
 import { contextlessCliFixture } from "./helpers/contextless-cli";
+import { spawnWorkerProcess } from "./helpers/worker-process";
 
 const contextless = contextlessCliFixture();
 
-let proc: import("bun").Subprocess | undefined;
-afterEach(() => {
-	proc?.kill();
-	proc = undefined;
+const workers: Awaited<ReturnType<typeof spawnWorkerProcess>>[] = [];
+afterEach(async () => {
+	await Promise.all(workers.splice(0).map(worker => worker.stop()));
 });
 
-test("xcsh worker binds the forced port and advertises its tenant via hello_ack", async () => {
-	const port = 19239;
-	proc = Bun.spawn([process.execPath, "--no-env-file", CODING_AGENT_CLI, "worker"], {
+async function startWorker(sessionId: string) {
+	const worker = await spawnWorkerProcess([process.execPath, "--no-env-file", CODING_AGENT_CLI, "worker"], {
 		cwd: contextless.cwd,
 		env: {
 			...process.env,
 			...contextless.env,
 			XCSH_BROWSER_PROVIDER: "extension",
-			XCSH_BRIDGE_PORT: String(port),
-			XCSH_SESSION_TENANT: "probe-tenant|staging",
-			XCSH_SESSION_ID: "tab-probe",
+			XCSH_SESSION_TENANT: "example-corp|staging",
+			XCSH_SESSION_ID: sessionId,
 			XCSH_API_URL: "",
 		},
-		stdout: "ignore",
-		stderr: "ignore",
 	});
+	workers.push(worker);
+	return worker;
+}
 
-	const ack = await (async () => {
-		for (let i = 0; i < 60; i++) {
-			try {
-				return await probe(port);
-			} catch {
-				await Bun.sleep(250);
-			}
-		}
-		throw new Error("worker never came up");
-	})();
+test("xcsh worker binds the forced port and advertises its tenant via hello_ack", async () => {
+	const worker = await startWorker("tab-probe");
+	const ack = await worker.ready();
 
 	expect(ack.type).toBe("hello_ack");
 	// Contextless worker: tenant echoed from XCSH_SESSION_TENANT-derived session info.
-	expect(ack.tenant).toBe("probe-tenant");
+	expect(ack.tenant).toBe("example-corp");
 	// Worker echoes XCSH_SESSION_ID so the extension can correlate it to the provisioned tab.
 	expect(ack.sessionId).toBe("tab-probe");
 	// A contextless worker has no active context, so contextBound is false.
 	expect(ack.contextBound).toBe(false);
+}, 30_000);
+
+test("concurrent contextless workers advertise their own sessions on independent ports", async () => {
+	const pair = await Promise.all([startWorker("tab-first"), startWorker("tab-second")]);
+	expect(pair[0].port).not.toBe(pair[1].port);
+	const acknowledgments = await Promise.all(pair.map(worker => worker.ready()));
+	for (const [index, ack] of acknowledgments.entries()) {
+		expect(ack).toMatchObject({
+			type: "hello_ack",
+			tenant: "example-corp",
+			contextBound: false,
+			sessionId: index === 0 ? "tab-first" : "tab-second",
+		});
+	}
 }, 30_000);
