@@ -33,7 +33,7 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 | `gh` | 2.x | `gh auth status` |
 | `cargo` | nightly | `cargo --version` |
 
-> **Package manager: bun only.** This monorepo uses Bun workspaces. Never use `npm`, `yarn`, or `pnpm` — they cannot resolve `workspace:` protocol references and produce broken `node_modules` in worktrees.
+> **Package manager: bun only.** This monorepo uses Bun workspaces. Never use `npm`, `yarn`, or `pnpm` — they cannot resolve `workspace:` protocol references and produce broken `node_modules` in worktrees. Do not substitute a plain `bun install` for the worktree bootstrap below.
 
 ---
 
@@ -114,6 +114,11 @@ gh issue create --title "<TYPE>: <IMPERATIVE_DESCRIPTION>" --label "<LABEL>"
 
 Never commit directly to `main`. All development takes place in isolated worktrees under `.worktrees/`.
 
+Every fresh worktree starts without `node_modules`: Git worktrees do not inherit workspace
+dependencies from the primary checkout or another worktree. A new worktree is intentionally not
+ready for development evidence until its dependency bootstrap succeeds. Run the bootstrap before
+source assessment, a TDD red run, any focused or full test, `bun run dev`, a build, or a baseline.
+
 **Branch naming**: `<TYPE>/issue-<N>-<SHORT_DESCRIPTION>` (lowercase, hyphen-separated, 3–5 words).
 
 ```bash
@@ -125,8 +130,8 @@ git fetch origin
 git worktree add --no-track ".worktrees/${BRANCH}" -b "${BRANCH}" origin/main
 cd ".worktrees/${BRANCH}"
 
-# Install dependencies with Bun
-bun install
+# Bootstrap this worktree before assessing or running the source
+bash scripts/ci-bun-install.sh
 
 # Verify/build the source-matched native addon before a direct CLI invocation
 # (bun run dev, test:ts, and coding-agent tests already run this automatically)
@@ -135,6 +140,16 @@ bun scripts/ensure-dev-native.ts
 # Capture test baseline
 bun run test 2>&1 | tee .worktree-test-baseline.txt
 ```
+
+The bootstrap script enforces the repository's exact Bun version, installs from the frozen lockfile,
+creates the Bun workspace links, runs required package lifecycle setup, and rejects changes to the
+tracked tree. A successful exit is the prerequisite for trustworthy development or test evidence.
+
+Module-resolution errors before a successful bootstrap are invalid environment evidence, not test
+failures or code findings. In particular, a missing internal package such as
+`@f5-sales-demo/pi-utils` can mean the fresh worktree was never initialized; it does not prove that
+someone used npm. Run `bash scripts/ci-bun-install.sh` and reproduce the error after it succeeds
+before investigating source behavior.
 
 ---
 
@@ -189,6 +204,8 @@ The codebase uses Biome v2 for formatting and linting:
 
 | Command | Action |
 | --- | --- |
+| `bun run dev` | Start the source development CLI |
+| `bun run build` | Build all workspaces that provide a build script |
 | `bun run check` | Biome check + `tsgo` type-check (read-only) |
 | `bun run lint` | Biome lint only (read-only) |
 | `bun run fmt` | Biome format (modifies files) |
