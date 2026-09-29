@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "d0215416d1a292f96f3e30d641260730fb2233bd",
-  "fingerprint": "cb61341d0cff02013276213523fca680937e7e5ced8291f7c5924dd5ca8dae48",
+  "revision": "3281dcab162dee579c6e6b99d59e035c34e30d51",
+  "fingerprint": "c764ed42e202e8d94a603cc41758920ddd9f4361a362c753baa9bcbb768adfc8",
   "counts": {
     "total": 238,
     "components": 96,
@@ -1184,7 +1184,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "reports",
-      "sha256": "f236f5935e69061d0fcf3a29de51acd606979a5f2b36cc72078faca7013820e1",
+      "sha256": "a575bef8f298befd2f70020fa56e13ca44433152211494a08272724b85a6a935",
       "exports": [
         "BtwPanelComponent"
       ],
@@ -1891,7 +1891,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "41ca1e4a55324ededf3671e13522fa2dde87411a0de4afdae488b81ab1a233a1",
+      "sha256": "40484c694572f2b79d40bc6e94668f382775bbda280f3edebe3b8205e8fc0c67",
       "exports": [
         "PlanPreviewComponent"
       ],
@@ -1900,7 +1900,8 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
+        "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plan-preview.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2132,7 +2133,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "0183aa7689bab363285132e810ce9efb647206a0b1d1679aa1a3d6239688a17f",
+      "sha256": "5f3ab920f9d01aa0367ef4fc10a18f5c763a06047cce180414de3e02a38899a9",
       "exports": [
         "AsyncInputReply",
         "QuestionTranscriptComponent",
@@ -2146,7 +2147,8 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/question-transcript.test.ts"
+        "packages/coding-agent/test/question-transcript.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/question-transcript.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2276,7 +2278,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "712906334859f77a8654cc3139dccff6b0775a5f2e951175e2ca5cae9cc72b8d",
+      "sha256": "75332bd8d79d0dc4c9a17168a9676a7ec49658dd06293e67a798c9558af00280",
       "exports": [
         "SearchableSelectList"
       ],
@@ -2298,12 +2300,13 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "af535b6c788981e16b6d2cc0b8f83a3fc0cc17b98784bc57359ed431264e33ac",
+      "sha256": "c74a4126d6691484531e911d7ec9518c6aecef1dae99fb5c0a6a15f1fff317a6",
       "exports": [
         "ConnectionChoiceComponent",
         "ConnectionInputComponent",
         "ReportDetailsComponent",
         "SelectorChoice",
+        "SelectorDetailPager",
         "SelectorFrameLine",
         "SelectorFrameOptions",
         "SelectorFrameProse",
@@ -2317,7 +2320,8 @@
         "selectorKeys",
         "selectorNavigationHint",
         "selectorProse",
-        "selectorRow"
+        "selectorRow",
+        "selectorTranscriptFrame"
       ],
       "interactionSignals": [
         "render",
@@ -2857,7 +2861,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "08252fd8b0ba45fa40da9200c0aae16a944c73dbec0525e87c7c3ffdc49fd887",
+      "sha256": "93ef3925a1035b83a031ee665f2462aa00f40c99809da3a3970b451967c9fc23",
       "exports": [
         "TranscriptComponentFrame",
         "TranscriptNoticeComponent"
@@ -2867,7 +2871,8 @@
       ],
       "persistenceSignals": [],
       "directTests": [
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
+        "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/transcript-notice.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4791,12 +4796,12 @@
         "packages/coding-agent/test/bash-executor.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
+        "packages/coding-agent/test/cli-output-pipe.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
         "packages/coding-agent/test/headless-bridge.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
-        "packages/coding-agent/test/input-controller-escape.test.ts",
-        "packages/coding-agent/test/input-controller-llm-gate.test.ts"
+        "packages/coding-agent/test/input-controller-escape.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/bash.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
