@@ -497,8 +497,10 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(installer).toContain('if [[ "$EXTENSION" == "zip" ]]');
 		expect(installer).toContain('unzip -q -o "$ARCHIVE"');
 		expect(installer.match(/uses: actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/g)).toHaveLength(
-			2,
+			1,
 		);
+		expect(installer).toContain("uses: actions/cache/restore@");
+		expect(installer).toContain("uses: actions/cache/save@");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.16.0");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
