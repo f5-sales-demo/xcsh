@@ -2,8 +2,6 @@
 
 # pylint: disable=too-many-public-methods
 
-# ruff: noqa: INP001
-
 from __future__ import annotations
 
 import hashlib
@@ -62,10 +60,14 @@ class DevelopingBootstrapContractTests(unittest.TestCase):
                 )
             ]
             assert positions, f"missing documented entry point: {entry_point}"
-            assert all(position > bootstrap_index for position in positions), entry_point
+            assert all(position > bootstrap_index for position in positions), (
+                entry_point
+            )
 
     def test_rejects_plain_bun_install_as_worktree_bootstrap(self) -> None:
-        plain_installs = re.findall(r"^\s*bun install(?:\s.*)?$", self.guide, re.MULTILINE)
+        plain_installs = re.findall(
+            r"^\s*bun install(?:\s.*)?$", self.guide, re.MULTILINE
+        )
         assert plain_installs == []
 
 
