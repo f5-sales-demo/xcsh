@@ -243,6 +243,23 @@ export function selectorProse(content: string, tone: "text" | "muted" = "text"):
 	return { kind: "wrapped-prose", content, tone };
 }
 
+/** Static transcript content scrolls with the transcript rather than a bounded overlay. */
+export function selectorTranscriptFrame(
+	width: number,
+	title: string,
+	purpose: string,
+	body: SelectorFrameLine[],
+	footer: string[] = [],
+): string[] {
+	const prose = [...(purpose ? [selectorProse(purpose, "muted")] : []), ...body];
+	const inner = selectorFrameContentWidth(width);
+	const bodyRows = prose.reduce(
+		(count, value) => count + (value.kind === "wrapped-prose" ? wrapSection([value.content], inner).length : 1),
+		0,
+	);
+	return selectorFrame(width, bodyRows + wrapSection(footer, inner).length + 8, title, "", [], prose, [], footer);
+}
+
 export function selectorCompactRow(
 	content: string,
 	selected = false,
@@ -401,8 +418,46 @@ export class ReportDetailsComponent extends Container {
 	}
 }
 
+/** Reusable viewport for complete selected prose without changing the selected item. */
+export class SelectorDetailPager {
+	#offset = 0;
+	#capacity = 1;
+	#length = 0;
+	#source = "";
+
+	reset(): void {
+		this.#offset = 0;
+	}
+
+	render(text: string[], width: number, capacity: number): string[] {
+		const source = text.join("\n");
+		if (source !== this.#source) this.reset();
+		this.#source = source;
+		const lines = wrapSection(text, width);
+		this.#length = lines.length;
+		this.#capacity = Math.max(1, capacity);
+		this.#offset = Math.min(this.#offset, Math.max(0, lines.length - this.#capacity));
+		return lines.slice(this.#offset, this.#offset + this.#capacity);
+	}
+
+	page(direction: -1 | 1): boolean {
+		if (this.#length <= this.#capacity) return false;
+		this.#offset = Math.max(0, Math.min(this.#length - this.#capacity, this.#offset + direction * this.#capacity));
+		return true;
+	}
+
+	get hint(): string[] {
+		return this.#length > this.#capacity
+			? [
+					`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: details ${this.#offset + 1}–${Math.min(this.#length, this.#offset + this.#capacity)} of ${this.#length}`,
+				]
+			: [];
+	}
+}
+
 export class ConnectionChoiceComponent extends Container {
 	#selected = 0;
+	#details = new SelectorDetailPager();
 	constructor(
 		private title: string,
 		private purpose: string,
@@ -415,19 +470,32 @@ export class ConnectionChoiceComponent extends Container {
 	}
 	override render(width: number): string[] {
 		const contentWidth = selectorFrameContentWidth(width);
+		const rows = this.rows();
+		const choice = this.choices[this.#selected];
+		const details = this.#details.render(
+			[
+				...(wrapSection([this.purpose], contentWidth).length > 2 ? [this.purpose] : []),
+				choice?.label ?? "",
+				choice?.description ?? "",
+			],
+			contentWidth,
+			Math.max(1, Math.floor(rows / 5)),
+		);
 		return selectorFrame(
 			width,
-			this.rows(),
+			rows,
 			this.title,
 			this.purpose,
 			[],
 			this.choices.map((choice, index) => selectorRow([choice.label], [contentWidth - 2], index === this.#selected)),
-			[this.choices[this.#selected]?.description ?? ""],
-			[selectorNavigationHint(), selectorCancelHint()],
-			{ selectedBodyIndex: this.#selected },
+			details,
+			[selectorNavigationHint(), selectorCancelHint(), ...this.#details.hint],
+			{ selectedBodyIndex: this.#selected, selectedDetail: "provided" },
 		);
 	}
 	handleInput(data: string): void {
+		if (matchesSelectorKey(data, "pageUp") && this.#details.page(-1)) return;
+		if (matchesSelectorKey(data, "pageDown") && this.#details.page(1)) return;
 		if (matchesSelectorKey(data, "cancel")) this.onCancel();
 		else if (matchesSelectorKey(data, "up"))
 			this.#selected = (this.#selected - 1 + this.choices.length) % this.choices.length;

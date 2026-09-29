@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "a47b82a9",
-    "66dd0709",
-    "b2a42ece",
-    "2669d47a",
-    "d865dd51",
-    "3e88eed2",
-    "de7c0ee5",
-    "f5b31d71"
+    "3e14c22c",
+    "966942f6",
+    "1b39471c",
+    "b83570d5",
+    "7ce70290",
+    "bff7bafe",
+    "2915c8de",
+    "d46e36f6"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [
@@ -112,14 +112,14 @@
       "ce903418"
     ],
     "packages/coding-agent/src/modes/components/btw-panel.ts": [
-      "f236f593",
-      "5e69061d",
-      "0fcf3a29",
-      "de51acd6",
-      "06979a5f",
-      "2b36cc72",
-      "078faca7",
-      "013820e1"
+      "a575bef8",
+      "f298befd",
+      "2f70020f",
+      "a56e13ca",
+      "44433152",
+      "211494a0",
+      "8272724b",
+      "85a6a935"
     ],
     "packages/coding-agent/src/modes/components/context-add-wizard.ts": [
       "366539a0",
@@ -232,14 +232,14 @@
       "cd1a58c2"
     ],
     "packages/coding-agent/src/modes/components/plan-preview.ts": [
-      "41ca1e4a",
-      "55324ede",
-      "df3671e1",
-      "3522fa2d",
-      "de87411a",
-      "0de4afda",
-      "e488b81a",
-      "b1a233a1"
+      "40484c69",
+      "4572f2b7",
+      "9d40bc6e",
+      "94668f38",
+      "2775bbda",
+      "280f3ede",
+      "be3b8205",
+      "e8fc0c67"
     ],
     "packages/coding-agent/src/modes/components/plugin-settings.ts": [
       "76282665",
@@ -262,14 +262,14 @@
       "fafc7cd0"
     ],
     "packages/coding-agent/src/modes/components/question-transcript.ts": [
-      "0183aa76",
-      "89bab363",
-      "285132e8",
-      "10ce9efb",
-      "647206a0",
-      "b1d1679a",
-      "a1a3d623",
-      "9688a17f"
+      "5f3ab920",
+      "f9d01aa0",
+      "367ef4fc",
+      "10a18f5c",
+      "763a0604",
+      "7cce1804",
+      "14de3e02",
+      "a38899a9"
     ],
     "packages/coding-agent/src/modes/components/request-user-input.ts": [
       "37003796",
@@ -292,24 +292,24 @@
       "685d3042"
     ],
     "packages/coding-agent/src/modes/components/searchable-select-list.ts": [
-      "71290633",
-      "4859f77a",
-      "8654cc31",
-      "39dccff6",
-      "b0775a5f",
-      "2e951175",
-      "e2ca5cae",
-      "9cc72b8d"
+      "75332bd8",
+      "d79d0dc4",
+      "c9a17168",
+      "a9676a7e",
+      "c49658dd",
+      "06293e67",
+      "a798c955",
+      "8af00280"
     ],
     "packages/coding-agent/src/modes/components/selector-frame.ts": [
-      "af535b6c",
-      "788981e1",
-      "6b6d2cc0",
-      "b8f83a3f",
-      "c0cc17b9",
-      "8784bc57",
-      "359ed431",
-      "264e33ac"
+      "c74a4126",
+      "d6691484",
+      "531e911d",
+      "7ec9518c",
+      "6aecef1d",
+      "ae99fb5c",
+      "0a6a15f1",
+      "fff317a6"
     ],
     "packages/coding-agent/src/modes/components/session-observer-overlay.ts": [
       "66275459",
@@ -382,14 +382,14 @@
       "d81df80f"
     ],
     "packages/coding-agent/src/modes/components/transcript-notice.ts": [
-      "08252fd8",
-      "b0ba45fa",
-      "40da9200",
-      "c0aae16a",
-      "944c73db",
-      "ec0525e8",
-      "7c7c3ffd",
-      "c49fd887"
+      "93ef3925",
+      "a1035b83",
+      "a031ee66",
+      "5f2462aa",
+      "00f40c99",
+      "809da3a3",
+      "970b4519",
+      "67c9fc23"
     ],
     "packages/coding-agent/src/modes/components/tree-selector.ts": [
       "022b3227",
@@ -1049,21 +1049,21 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
-      "line": 72,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "line": 77,
+      "sink": "selectorTranscriptFrame",
+      "entry": "complete-btw-panel"
     },
     {
       "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
-      "line": 79,
+      "line": 82,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "complete-btw-panel"
     },
     {
       "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
-      "line": 80,
+      "line": 83,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "complete-btw-panel"
     },
     {
       "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
@@ -1326,14 +1326,14 @@
     {
       "file": "packages/coding-agent/src/modes/components/plan-preview.ts",
       "line": 14,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "sink": "selectorTranscriptFrame",
+      "entry": "complete-plan-preview"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plan-preview.ts",
-      "line": 20,
+      "line": 18,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "complete-plan-preview"
     },
     {
       "file": "packages/coding-agent/src/modes/components/plugin-settings.ts",
@@ -1457,27 +1457,33 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 103,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "line": 102,
+      "sink": "selectorTranscriptFrame",
+      "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 110,
-      "sink": "selectorRow",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 120,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 126,
+      "line": 106,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "complete-question-transcript"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 114,
+      "sink": "selectorTranscriptFrame",
+      "entry": "complete-question-transcript"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 115,
+      "sink": "selectorProse",
+      "entry": "complete-question-transcript"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 116,
+      "sink": "selectorProse",
+      "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
@@ -1547,25 +1553,25 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
-      "line": 77,
+      "line": 90,
       "sink": "selectorRow",
-      "entry": "selector-surfaces"
+      "entry": "complete-searchable-select-list"
     },
     {
       "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
-      "line": 79,
+      "line": 92,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "complete-searchable-select-list"
     },
     {
       "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
-      "line": 80,
+      "line": 93,
       "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "entry": "complete-searchable-select-list"
     },
     {
       "file": "packages/coding-agent/src/modes/components/searchable-select-list.ts",
-      "line": 102,
+      "line": 114,
       "sink": "truncateToWidth",
       "entry": "selector-surfaces"
     },
@@ -1607,49 +1613,61 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 269,
+      "line": 254,
+      "sink": "selectorProse",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 260,
+      "sink": "selectorFrame",
+      "entry": "shared-selector-frame"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
+      "line": 286,
       "sink": "truncateToWidth",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 274,
+      "line": 291,
       "sink": "selectorCompactRow",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 362,
+      "line": 379,
       "sink": "selectorFrame",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 368,
+      "line": 385,
       "sink": "selectorCompactRow",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 418,
+      "line": 484,
       "sink": "selectorFrame",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 424,
+      "line": 490,
       "sink": "selectorRow",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 452,
+      "line": 520,
       "sink": "selectorFrame",
       "entry": "shared-selector-frame"
     },
     {
       "file": "packages/coding-agent/src/modes/components/selector-frame.ts",
-      "line": 458,
+      "line": 526,
       "sink": "selectorProse",
       "entry": "shared-selector-frame"
     },
@@ -1799,27 +1817,27 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
-      "line": 17,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "line": 22,
+      "sink": "selectorTranscriptFrame",
+      "entry": "complete-transcript-notice"
     },
     {
       "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
-      "line": 23,
+      "line": 26,
       "sink": "selectorCompactRow",
-      "entry": "selector-surfaces"
+      "entry": "complete-transcript-notice"
     },
     {
       "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
-      "line": 45,
-      "sink": "selectorFrame",
-      "entry": "selector-surfaces"
+      "line": 44,
+      "sink": "selectorTranscriptFrame",
+      "entry": "complete-transcript-notice"
     },
     {
       "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
-      "line": 51,
+      "line": 48,
       "sink": "selectorProse",
-      "entry": "selector-surfaces"
+      "entry": "complete-transcript-notice"
     },
     {
       "file": "packages/coding-agent/src/modes/components/tree-selector.ts",

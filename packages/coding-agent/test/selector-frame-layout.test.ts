@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { visibleWidth } from "@f5-sales-demo/pi-tui";
 import {
+	ConnectionChoiceComponent,
 	selectorCompactRow,
 	selectorFrame,
 	selectorFrameContentWidth,
@@ -132,5 +133,44 @@ describe("selectorFrame", () => {
 			return selectorFrame(40, 10, "Choose", "", [], ["unclassified prose"], [], []);
 		};
 		expect(invalidUsage).toBeFunction();
+	});
+});
+
+describe("ConnectionChoiceComponent complete detail", () => {
+	test.each([16, 24])("pages every purpose and description word at %s rows", rows => {
+		const purpose = Array.from({ length: 25 }, (_, i) => `purpose${i}`).join(" ");
+		const description = Array.from({ length: 60 }, (_, i) => `description${i} café 東京`).join(" ");
+		let selected = -1;
+		const choice = new ConnectionChoiceComponent(
+			"Choose",
+			purpose,
+			[
+				{ label: "Selected fixture", description },
+				{ label: "Second", description: "Reset detail" },
+			],
+			index => {
+				selected = index;
+			},
+			() => {},
+			() => rows,
+		);
+		let pages = "";
+		for (let page = 0; page < 100; page++) {
+			const lines = choice.render(40);
+			expect(lines.length).toBeLessThanOrEqual(rows);
+			expect(lines.every(line => visibleWidth(line) <= 40)).toBe(true);
+			expect(Bun.stripANSI(lines.join("\n"))).toContain("Selected fixture");
+			pages += Bun.stripANSI(lines.join("\n"));
+			choice.handleInput("\x1b[6~");
+		}
+		for (let i = 0; i < 60; i++) expect(pages).toContain(`description${i}`);
+		for (let i = 0; i < 25; i++) expect(pages).toContain(`purpose${i}`);
+		choice.handleInput("\r");
+		expect(selected).toBe(0);
+		choice.handleInput("\x1b[B");
+		const reset = Bun.stripANSI(choice.render(100).join("\n"));
+		expect(reset).toContain("purpose0");
+		choice.handleInput("\r");
+		expect(selected).toBe(1);
 	});
 });

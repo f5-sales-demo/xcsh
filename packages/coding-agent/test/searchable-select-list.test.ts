@@ -12,6 +12,39 @@ const items: SelectItem[] = [
 ];
 
 describe("SearchableSelectList", () => {
+	it.each([16, 18, 24])("pages complete ANSI and Unicode prose in %s rows while retaining selection", rows => {
+		const previousRows = Object.getOwnPropertyDescriptor(process.stdout, "rows");
+		Object.defineProperty(process.stdout, "rows", { value: rows, configurable: true });
+		try {
+			const description = Array.from({ length: 60 }, (_, index) => `detail${index} café 東京`).join(" ");
+			const list = new SearchableSelectList(
+				"Choose fixture",
+				Array.from({ length: 20 }, (_, index) => `purpose${index}`).join(" "),
+				[{ value: "scope/example", label: "Selected fixture", description: `\x1b[31m${description}\x1b[0m` }],
+				3,
+				getSelectListTheme(),
+			);
+			let pages = "";
+			for (let page = 0; page < 80; page++) {
+				const lines = list.render(40);
+				expect(lines.length).toBeLessThanOrEqual(process.stdout.rows || 24);
+				expect(lines.every(line => visibleWidth(line) <= 40)).toBe(true);
+				expect(Bun.stripANSI(lines.join("\n"))).toContain("Selected fixture");
+				pages += Bun.stripANSI(lines.join("\n"));
+				list.handleInput("\x1b[6~");
+			}
+			for (let index = 0; index < 60; index++) expect(pages).toContain(`detail${index}`);
+			for (let index = 0; index < 20; index++) expect(pages).toContain(`purpose${index}`);
+			expect(list.getSelectedItem()?.value).toBe("scope/example");
+			list.render(100);
+			list.handleInput("\x1b[5~");
+			expect(list.render(40).every(line => visibleWidth(line) <= 40)).toBe(true);
+		} finally {
+			if (previousRows) Object.defineProperty(process.stdout, "rows", previousRows);
+			else Reflect.deleteProperty(process.stdout, "rows");
+		}
+	});
+
 	it("preserves the SelectList API while using the shared searchable bounded frame", () => {
 		const selected = vi.fn();
 		const preview = vi.fn();

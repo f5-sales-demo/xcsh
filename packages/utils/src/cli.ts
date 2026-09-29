@@ -10,6 +10,7 @@
  *   - Typed `this.parse()` output matching oclif's API shape
  */
 import { parseArgs as nodeParseArgs } from "node:util";
+import { writeCliOutput } from "./cli-output";
 
 // ---------------------------------------------------------------------------
 // Flag & Arg descriptors
@@ -305,7 +306,7 @@ export function renderRootHelp(config: CliConfig): void {
 		lines.push("");
 	}
 
-	process.stdout.write(lines.join("\n"));
+	writeCliOutput(process.stdout, lines.join("\n"));
 }
 
 /** Render help for a single command. */
@@ -318,7 +319,7 @@ export function renderCommandHelp(bin: string, id: string, Cmd: CommandCtor): vo
 	const hasFlags = Object.keys(Cmd.flags ?? {}).length > 0;
 	lines.push(`  $ ${bin} ${id}${argStr}${hasFlags ? " [FLAGS]" : ""}\n`);
 	renderCommandBody(lines, Cmd);
-	process.stdout.write(lines.join("\n"));
+	writeCliOutput(process.stdout, lines.join("\n"));
 }
 
 function renderCommandBody(lines: string[], Cmd: CommandCtor): void {
@@ -423,7 +424,7 @@ export async function run(opts: RunOptions): Promise<void> {
 
 	// Version
 	if (commandId === "--version" || commandId === "-v") {
-		process.stdout.write(`${bin}/${version}\n`);
+		writeCliOutput(process.stdout, `${bin}/${version}\n`);
 		return;
 	}
 
@@ -434,7 +435,7 @@ export async function run(opts: RunOptions): Promise<void> {
 		if (entry) {
 			renderCommandHelp(bin, entry.name, await entry.load());
 		} else {
-			process.stderr.write(`Unknown command: ${commandId}\n`);
+			writeCliOutput(process.stderr, `Unknown command: ${commandId}\n`);
 		}
 		return;
 	}
@@ -443,7 +444,7 @@ export async function run(opts: RunOptions): Promise<void> {
 	const entry = findEntry(opts.commands, commandId);
 
 	if (!entry) {
-		process.stderr.write(`Error: command ${commandId} not found\n`);
+		writeCliOutput(process.stderr, `Error: command ${commandId} not found\n`);
 		process.exitCode = 1;
 		return;
 	}
@@ -457,7 +458,7 @@ export async function run(opts: RunOptions): Promise<void> {
 		await instance.run();
 	} catch (error) {
 		if (!(error instanceof CliUsageError)) throw error;
-		process.stderr.write(`Error: ${error.message}\n`);
+		writeCliOutput(process.stderr, `Error: ${error.message}\n`);
 		process.exitCode = 2;
 	}
 }
