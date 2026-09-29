@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "433b665af56b3dd7afe8b1c55dd0bc930631ac3d",
-  "fingerprint": "e4de65fc99203fd012a91b5f098e33afffadd8868da7e6c51e8f953e198caad2",
+  "revision": "d0215416d1a292f96f3e30d641260730fb2233bd",
+  "fingerprint": "cb61341d0cff02013276213523fca680937e7e5ced8291f7c5924dd5ca8dae48",
   "counts": {
     "total": 238,
     "components": 96,
@@ -460,7 +460,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "0a9d3394df60bb3a0b51592053bf64f08d4a1e3f387d776fccd4d0b93c4f1aff",
+      "sha256": "978062c38f54324581d63050a6999a68786f2bc59bad997346a5d7751142e6d8",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -489,11 +489,11 @@
         "packages/coding-agent/test/integration-registry.test.ts",
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
+        "packages/coding-agent/test/marketplace-extension-manifest-fallback.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts",
-        "packages/coding-agent/test/person-profile-source-contract.test.ts"
+        "packages/coding-agent/test/person-extension-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6073,11 +6073,11 @@
         "packages/coding-agent/test/integration-registry.test.ts",
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
+        "packages/coding-agent/test/marketplace-extension-manifest-fallback.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts",
-        "packages/coding-agent/test/person-profile-source-contract.test.ts"
+        "packages/coding-agent/test/person-extension-contract.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

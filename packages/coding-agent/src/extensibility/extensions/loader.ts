@@ -679,13 +679,32 @@ export async function discoverAndLoadExtensions(
 	addPaths(await logger.time("ext:pluginPaths", () => getAllPluginExtensionPaths(cwd)));
 
 	// 2b. Discover extension entry points from marketplace-cached plugins
+	const marketplaceDiagnostics: Array<{ path: string; error: string }> = [];
 	await logger.time("ext:marketplaceRoots", async () => {
 		for (const root of getPreloadedPluginRoots()) {
 			try {
 				const rootPath = await fs.realpath(root.path);
-				const manifestPath = path.join(rootPath, ".xcsh-plugin", "plugin.json");
-				const manifest = await Bun.file(manifestPath).json();
-				const extensions = manifest?.extensions;
+				const canonicalPath = path.join(rootPath, ".xcsh-plugin", "plugin.json");
+				let canonical: { extensions?: unknown; lifecycle?: { integrations?: unknown } } | undefined;
+				try {
+					canonical = await Bun.file(canonicalPath).json();
+				} catch {
+					// A marketplace plugin may use package metadata only.
+				}
+
+				// The canonical manifest owns an explicitly declared extension list. Older marketplace
+				// plugins keep lifecycle metadata in that manifest and their extension declaration in
+				// package.json, so use the established package contract only when it is omitted.
+				let extensions = canonical?.extensions;
+				let declarationPath = canonicalPath;
+				if (extensions === undefined) {
+					const packagePath = path.join(rootPath, "package.json");
+					const pkg = await Bun.file(packagePath).json();
+					extensions = pkg?.xcsh?.extensions ?? pkg?.pi?.extensions;
+					declarationPath = packagePath;
+				}
+
+				let loadedEntries = 0;
 				if (Array.isArray(extensions)) {
 					for (const entry of extensions) {
 						if (typeof entry !== "string") continue;
@@ -699,10 +718,22 @@ export async function discoverAndLoadExtensions(
 						if (!resolved.startsWith(rootPath + path.sep) && resolved !== rootPath) continue;
 						if (isDisabledName(getExtensionNameFromPath(resolved))) continue;
 						addPath(resolved);
+						loadedEntries++;
 					}
 				}
-			} catch {
-				// No plugin manifest, invalid manifest, or missing entry point — skip
+
+				const integrations = canonical?.lifecycle?.integrations;
+				if (Array.isArray(integrations) && integrations.some(id => typeof id === "string") && loadedEntries === 0) {
+					marketplaceDiagnostics.push({
+						path: root.path,
+						error: `Marketplace plugin ${root.plugin} declares lifecycle integrations but no extension entrypoint could be loaded from ${declarationPath}`,
+					});
+				}
+			} catch (error) {
+				marketplaceDiagnostics.push({
+					path: root.path,
+					error: `Failed to read marketplace extension metadata: ${error instanceof Error ? error.message : String(error)}`,
+				});
 			}
 		}
 	});
@@ -737,6 +768,7 @@ export async function discoverAndLoadExtensions(
 
 	const resolvedEventBus = eventBus ?? new EventBus();
 	const result = await logger.time("ext:loadLoop", () => loadExtensions(allPaths, cwd, resolvedEventBus));
+	result.errors.push(...marketplaceDiagnostics);
 	await logger.time("ext:loadBundled", () => loadBundledExtensions(result, cwd, resolvedEventBus, isDisabledName));
 	return result;
 }
