@@ -28,14 +28,14 @@
       "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4577",
       "tests": [
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
-      "mergedPr": "pending #4577 implementation PR"
+      "mergedPr": "#4584"
     },
     {
       "id": "complete-plan-preview",
@@ -50,14 +50,14 @@
       "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4577",
       "tests": [
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
-      "mergedPr": "pending #4577 implementation PR"
+      "mergedPr": "#4584"
     },
     {
       "id": "complete-transcript-notice",
@@ -73,14 +73,14 @@
       "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4577",
       "tests": [
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
-      "mergedPr": "pending #4577 implementation PR"
+      "mergedPr": "#4584"
     },
     {
       "id": "complete-question-transcript",
@@ -95,14 +95,14 @@
       "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4577",
       "tests": [
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "terminalUat": "pass: 40x24 xterm through real ProcessTerminal/TUI; static wrapped notice preserves word0 and PURPOSE-BEGIN in scrollback and word59/PROSE-END at bottom; source 3281dcab1 with #4577 working changes; v22.4.3",
-      "mergedPr": "pending #4577 implementation PR"
+      "mergedPr": "#4584"
     },
     {
       "id": "complete-searchable-select-list",
@@ -118,14 +118,14 @@
       "detailView": true,
       "reproductionWidth": 40,
       "fixture": "Synthetic long ANSI/Unicode prose with caf\u00e9 \u6771\u4eac and end markers.",
-      "status": "finding-open",
+      "status": "verified",
       "issue": "#4577",
       "tests": [
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
       "terminalUat": "pass: 40x24 xterm; PgDn reaches DESCRIPTION-END and identity; PgUp restores initial purpose; selected fixture retained; source 3281dcab1 with #4577 working changes; v22.4.3",
-      "mergedPr": "pending #4577 implementation PR"
+      "mergedPr": "#4584"
     },
     {
       "id": "login-prose",
@@ -189,12 +189,13 @@
       "reproductionWidth": 40,
       "fixture": "Synthetic long selected label plus wrapped caf\u00e9 \u6771\u4eac detail text with ANSI emphasis.",
       "status": "verified",
-      "issue": "#4340",
+      "issue": "#4577",
       "tests": [
-        "test/selector-frame-layout.test.ts"
+        "packages/coding-agent/test/selector-frame-layout.test.ts",
+        "packages/coding-agent/test/transcript-prose-readability.test.ts"
       ],
-      "terminalUat": "pass: 40-column PTY; complete ANSI/Unicode prose and selected detail; 07baea76cd11d2e30f567708f61b9ed775575a2b; v21.45.1",
-      "mergedPr": "#4353"
+      "terminalUat": "pass: ConnectionChoiceComponent in 40x24 xterm; PgDn reaches CONNECTION-END; selected fixture remains visible; PgUp restores first details; 05e24bb9efd8c76a3f23162183f1b6a78b643b16; v22.4.3",
+      "mergedPr": "#4584"
     },
     {
       "id": "shared-select-list",
