@@ -35,7 +35,7 @@ const HISTORICAL_GENERATED_DELIVERY_PATH_SETS = [
 
 const XCSH_PACKAGES = ["@f5-sales-demo/pi-resource-management", "@f5-sales-demo/xcsh"] as const;
 
-const XCSH_RELEASE_ASSETS = [
+const PRE_LINUX_PROVENANCE_RELEASE_ASSETS = [
 	"pi_natives.darwin-arm64.node",
 	"pi_natives.darwin-x64-baseline.node",
 	"pi_natives.darwin-x64-modern.node",
@@ -53,9 +53,28 @@ const XCSH_RELEASE_ASSETS = [
 	"xcsh-windows-x64.exe",
 ] as const;
 
+const XCSH_RELEASE_ASSETS = [
+	...PRE_LINUX_PROVENANCE_RELEASE_ASSETS,
+	"pi_natives.linux-arm64.node.sha256",
+	"pi_natives.linux-x64-baseline.node.sha256",
+	"pi_natives.linux-x64-modern.node.sha256",
+	"xcsh-linux-arm64.sha256",
+	"xcsh-linux-arm64.provenance.json",
+	"xcsh-linux-arm64.provenance.json.sha256",
+	"xcsh-linux-x64.sha256",
+	"xcsh-linux-x64.provenance.json",
+	"xcsh-linux-x64.provenance.json.sha256",
+	"xcsh-darwin-arm64.pkg",
+	"xcsh-darwin-arm64.provenance.json",
+	"xcsh-darwin-x64.pkg",
+	"xcsh-darwin-x64.provenance.json",
+] as const;
+
 const HISTORICAL_XCSH_RELEASE_ASSET_SETS = [
+	PRE_LINUX_PROVENANCE_RELEASE_ASSETS,
+	[...PRE_LINUX_PROVENANCE_RELEASE_ASSETS, "xcsh-darwin-arm64.pkg", "xcsh-darwin-arm64.provenance.json", "xcsh-darwin-x64.pkg", "xcsh-darwin-x64.provenance.json"],
 	[
-		...XCSH_RELEASE_ASSETS,
+		...PRE_LINUX_PROVENANCE_RELEASE_ASSETS,
 		"xcsh-linux-arm64.tar.gz",
 		"xcsh-linux-x64.tar.gz",
 	],

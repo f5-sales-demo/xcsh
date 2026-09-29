@@ -55,7 +55,7 @@ fi
 grep -Fq 'ci-release-github-backfill.sh' "$workflow" || fail "backfill script is not invoked"
 
 expected_count=$(sed -n '/^expected_assets=(/,/^)/p' "$script" | grep -Ec '^  [A-Za-z0-9_.-]+$')
-test "$expected_count" -eq 19 || fail "expected release asset set must contain 19 names"
+test "$expected_count" -eq 28 || fail "expected release asset set must contain 28 names"
 grep -Fq 'xcsh-darwin-arm64.provenance.json' "$script" || fail "arm64 provenance sidecar is required"
 grep -Fq 'xcsh-darwin-x64.provenance.json' "$script" || fail "x64 provenance sidecar is required"
 if grep -Fq 'xcsh-linux-arm64.tar.gz' "$script" || grep -Fq 'xcsh-linux-x64.tar.gz' "$script"; then
@@ -73,7 +73,7 @@ grep -Fq 'Release upload failed; preserving draft release $tag' "$script" || fai
 grep -Fq 'Release upload complete: uploaded=' "$script" || fail "upload timing report is missing"
 grep -Fq 'diff -u "$work/expected-assets" "$work/actual-assets"' "$script" || fail "exact asset verification is missing"
 grep -Fq 'release edit "$tag" --repo "$repository" --draft=false' "$script" || fail "final publication is missing"
-grep -Fq '.immutable == true and (.assets | length) == 19' "$script" || fail "immutable final-state verification is missing"
+grep -Fq '.immutable == true and (.assets | length) == $count' "$script" || fail "immutable final-state verification is missing"
 grep -Fq 'file_size()' "$script" || fail "uploader needs portable file-size lookup"
 grep -Fq 'stat -f %z' "$script" || fail "uploader must support macOS file-size lookup"
 grep -Fq 'file_sha256()' "$script" || fail "uploader needs portable SHA-256 lookup"
@@ -335,7 +335,7 @@ run_uploader_case() {
 run_uploader_case default-concurrency success default 4 || fail "default-concurrency upload failed"
 test "$(<"$behavior_root/default-concurrency/maximum")" -eq 4 || fail "default upload concurrency was not four"
 test -f "$behavior_root/default-concurrency/published" || fail "verified default upload was not published"
-test "$(grep -c '^upload-end' "$behavior_root/default-concurrency/events")" -eq 19 ||
+test "$(grep -c '^upload-end' "$behavior_root/default-concurrency/events")" -eq 28 ||
   fail "publication did not wait for every upload worker"
 inventory_line=$(grep -n '^inventory-read$' "$behavior_root/default-concurrency/events" | head -1 | cut -d: -f1)
 publish_line=$(grep -n '^publish$' "$behavior_root/default-concurrency/events" | cut -d: -f1)

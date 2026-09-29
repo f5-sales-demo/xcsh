@@ -5,10 +5,13 @@ import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from
  * lightweight CLI runner from pi-utils.
  */
 import { CliUsageError, type CommandEntry, run } from "@f5-sales-demo/pi-utils/cli";
+import { installCliOutputHandlers, writeCliOutput } from "@f5-sales-demo/pi-utils/cli-output";
 import { validateInlineFlagSyntax } from "./cli/flag-spec";
 import { findPrefixedCommand, launchFlagScopeMessage } from "./cli/root-command-routing";
 import { sandboxArgs, sandboxFlags, validateSandboxInvocation } from "./cli/sandbox-spec";
 import { locales } from "./locales/index";
+
+installCliOutputHandlers();
 
 registerLocales(locales);
 initI18n();
@@ -97,7 +100,7 @@ async function showHelp(config: import("@f5-sales-demo/pi-utils/cli").CliConfig)
 	renderRootHelp(config);
 	const extra = getExtraHelpText();
 	if (extra.trim().length > 0) {
-		process.stdout.write(`\n${extra}\n`);
+		writeCliOutput(process.stdout, `\n${extra}\n`);
 	}
 }
 

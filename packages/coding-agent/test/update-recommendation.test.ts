@@ -585,15 +585,16 @@ describe("standalone replacement rollback", () => {
 });
 
 describe("installer receipt contract", () => {
-	it("writes canonical schema-v2 receipts after standalone binaries without adjacent native payloads", () => {
+	it("writes canonical schema-v2 receipts in a standalone transaction without adjacent native payloads", () => {
 		const shell = fs.readFileSync(new URL("../../../scripts/install.sh", import.meta.url), "utf8");
 		const powershell = fs.readFileSync(new URL("../../../scripts/install.ps1", import.meta.url), "utf8");
-		expect(shell).toContain('"schemaVersion":2,"channel":"standalone"');
+		expect(shell).toContain('schemaVersion:2,channel:"standalone"');
 		expect(shell).toContain('CANONICAL_INSTALL_DIR=$(cd -P "$INSTALL_DIR" && pwd -P)');
 		expect(shell).not.toContain("NATIVE_URL=");
-		expect(shell.indexOf('mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"')).toBeLessThan(
-			shell.indexOf('mv -f "$INSTALL_STAGE_DIR/xcsh-install.json" "$INSTALL_DIR/xcsh-install.json"'),
+		expect(shell.indexOf("for installed_file in $install_files; do")).toBeLessThan(
+			shell.lastIndexOf('mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"'),
 		);
+		expect(shell).toContain("cleanup_binary_install");
 		expect(powershell).toContain('[System.IO.Path]::GetFullPath((Join-Path $InstallDir "xcsh.exe"))');
 		expect(powershell).toContain("schemaVersion = 2");
 		expect(powershell).toContain('channel = "windows-installer"');

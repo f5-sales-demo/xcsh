@@ -5,9 +5,11 @@ import {
 	type SelectListTheme,
 	type SgrMouseEvent,
 	truncateToWidth,
+	wrapTextWithAnsi,
 } from "@f5-sales-demo/pi-tui";
 import {
 	matchesSelectorKey,
+	SelectorDetailPager,
 	selectorCancelHint,
 	selectorFrame,
 	selectorFrameContentWidth,
@@ -28,6 +30,7 @@ export class SearchableSelectList extends SelectList {
 	#searchOrigin = 0;
 	#visible = 1;
 	#hitRows = new Map<number, number>();
+	#details = new SelectorDetailPager();
 
 	constructor(
 		private readonly title: string,
@@ -71,6 +74,16 @@ export class SearchableSelectList extends SelectList {
 		const start = Math.max(0, Math.min(position - Math.floor(this.#visible / 2), filtered.length - this.#visible));
 		const visible = filtered.slice(start, start + this.#visible);
 		const selected = this.sourceItems[this.#selectedIndex];
+		const details = this.#details.render(
+			[
+				...(wrapTextWithAnsi(this.purpose, inner).length > 2 ? [this.purpose] : []),
+				selected?.label ?? "",
+				selected?.description ?? "",
+				selected && selected.value !== selected.label ? `Identity: ${selected.value}` : "",
+			],
+			inner,
+			Math.max(1, Math.floor(rows / 5)),
+		);
 		const body = visible.length
 			? visible.map(index => {
 					const item = this.sourceItems[index]!;
@@ -84,17 +97,16 @@ export class SearchableSelectList extends SelectList {
 			this.purpose,
 			[`${filtered.length} of ${this.sourceItems.length} options`, ...this.#search.render(inner)],
 			body,
-			selected
-				? [selected.description ?? "", selected.value !== selected.label ? `Identity: ${selected.value}` : ""]
-				: [],
+			details,
 			[
 				selectorNavigationHint(),
 				selectorCancelHint(this.#search.getValue() ? "clear search" : "back"),
-				...(filtered.length > this.#visible
+				...this.#details.hint,
+				...(this.#details.hint.length === 0 && filtered.length > this.#visible
 					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: options`]
 					: []),
 			],
-			{ selectedBodyIndex: visible.indexOf(this.#selectedIndex) },
+			{ selectedBodyIndex: visible.indexOf(this.#selectedIndex), selectedDetail: "provided" },
 		);
 		this.#hitRows.clear();
 		let cursor = 0;
@@ -161,7 +173,9 @@ export class SearchableSelectList extends SelectList {
 			return;
 		}
 		if (matchesSelectorKey(data, "pageUp") || matchesSelectorKey(data, "pageDown")) {
-			this.#move((matchesSelectorKey(data, "pageUp") ? -1 : 1) * this.#visible);
+			const direction = matchesSelectorKey(data, "pageUp") ? -1 : 1;
+			if (this.#details.page(direction)) return;
+			this.#move(direction * this.#visible);
 			return;
 		}
 		if (matchesSelectorKey(data, "confirm")) {

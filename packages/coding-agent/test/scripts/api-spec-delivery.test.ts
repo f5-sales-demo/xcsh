@@ -36,6 +36,20 @@ const PROVIDER_COMMIT = "b".repeat(40);
 const PROVIDER_TAG = "v9.8.7";
 
 const XCSH_RELEASE_ASSETS = [
+	"pi_natives.linux-arm64.node.sha256",
+	"pi_natives.linux-x64-baseline.node.sha256",
+	"pi_natives.linux-x64-modern.node.sha256",
+	"xcsh-linux-arm64.sha256",
+	"xcsh-linux-arm64.provenance.json",
+	"xcsh-linux-arm64.provenance.json.sha256",
+	"xcsh-linux-x64.sha256",
+	"xcsh-linux-x64.provenance.json",
+	"xcsh-linux-x64.provenance.json.sha256",
+	"xcsh-darwin-arm64.pkg",
+	"xcsh-darwin-arm64.provenance.json",
+	"xcsh-darwin-x64.pkg",
+	"xcsh-darwin-x64.provenance.json",
+
 	"pi_natives.darwin-arm64.node",
 	"pi_natives.darwin-x64-baseline.node",
 	"pi_natives.darwin-x64-modern.node",

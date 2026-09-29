@@ -16,8 +16,8 @@ workspace = true
 mimalloc = "=0.1.52"
 tokio = { version = "=1.53.1", features = ["full"] }
 tokio-util = { version = "=0.7.19", features = ["full"] }
-napi = { version = "=3.10.3", features = ["napi10", "tokio_rt", "tokio_time"] }
-napi-derive = "=3.5.9"
+napi = { version = "=3.13.0", features = ["napi10", "tokio_rt", "tokio_time"] }
+napi-derive = "=3.6.9"
 brush-core = { version = "0.5.0", path = "../brush-core-vendored" }
 brush-builtins = { version = "0.2.0", path = "../brush-builtins-vendored" }
 parking_lot = "=0.12.5"
@@ -139,6 +139,6 @@ windows-sys = { version = "=0.61.2", features = [
    "Win32_System_Power",
 ] }
 [build-dependencies]
-napi-build = "=2.4.1"
+napi-build = "=2.5.0"
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
