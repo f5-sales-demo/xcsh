@@ -116,12 +116,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh api --method PUT "repos/${REPOSITORY}/immutable-releases" >/dev/null
-          gh api "repos/${REPOSITORY}/immutable-releases" \
-            | jq -e '.enabled == true' >/dev/null || {
-            echo "::error::Repository release immutability must be enabled before tagging"
-            exit 1
-          }
+          bun scripts/enable-immutable-releases.cjs
 
       - name: Guard against duplicate tag
         id: guard
