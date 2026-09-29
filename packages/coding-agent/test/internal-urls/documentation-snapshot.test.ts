@@ -19,14 +19,28 @@ function sha256(value: Uint8Array | string): string {
 
 function document(source: string, title: string, slug: string, url: string, body: string): Buffer {
 	const normalizedBody = `${body.trim()}\n`;
+	const marketing = source === "www-f5-com";
+	const support = source === "my-f5-com";
+	const product = title === "Client-Side Defense" ? "client-side-defense" : null;
 	return Buffer.from(
 		[
 			"---",
+			"metadata_schema: 1",
 			`sourceId: ${source}`,
 			`title: ${title}`,
 			`slug: ${slug}`,
 			`url: ${url}`,
 			`content_hash: ${sha256(normalizedBody)}`,
+			`product: ${product ?? "null"}`,
+			`content_type: ${marketing ? "product_overview" : support ? "knowledge_article" : "how_to"}`,
+			`task_type: ${marketing ? "concept" : support ? "support" : "configure"}`,
+			`canonical_url: ${url}`,
+			"last_updated: '2026-09-26'",
+			"language: en",
+			...(product ? ["aliases:", "- Client-Side Defense", "- CSD"] : ["aliases: []"]),
+			"lifecycle: current",
+			"replacement_url: null",
+			"related_documents: []",
 			"---",
 			"",
 			normalizedBody,

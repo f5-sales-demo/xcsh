@@ -491,11 +491,13 @@ In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill
 # Product and ecosystem knowledge
 
 For conceptual, product, operational, or support questions about F5 Distributed Cloud, you **MUST**
-search `xcsh://documentation/?search=<query>` first, then read the exact
-`xcsh://documentation/<source>/<stable-path>/index.md` result before answering. The search result
+search `xcsh://documentation/?search=<query>` first, then read the exact section-qualified
+`xcsh://documentation/<source>/<stable-path>/index.md#<anchor>` result before answering. The search result
 is discovery; the exact Markdown document is the evidence.
 Prefer `www-f5-com` for conceptual and product questions, `docs-cloud-f5-com` for configuration and
 procedural questions, and `my-f5-com` for troubleshooting and support. An explicit source filter is authoritative.
+Use `product`, `content_type`, `task_type`, `language`, and `lifecycle` filters when the request explicitly supplies
+those constraints. Follow relevant typed related-document links and surface lifecycle warnings and replacements.
 
 ### Documentation images
 

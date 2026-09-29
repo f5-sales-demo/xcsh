@@ -43,6 +43,36 @@
 			"liveUrl": "https://www.f5.com/products/distributed-cloud-services/client-side-defense"
 		},
 		{
+			"id": "alias-csd-configuration",
+			"query": "CSD",
+			"source": "docs-cloud-f5-com",
+			"filters": {
+				"product": "client-side-defense",
+				"contentType": "how_to",
+				"taskType": "configure",
+				"language": "en",
+				"lifecycle": "current"
+			},
+			"expectedPath": "client-side-defense/how-tos/configure-csd",
+			"maxRank": 1,
+			"liveUrl": "https://docs.cloud.f5.com/docs-v2/client-side-defense/how-tos/configure-csd"
+		},
+		{
+			"id": "filtered-mcn-troubleshooting",
+			"query": "customer edge registration issues",
+			"source": "docs-cloud-f5-com",
+			"filters": {
+				"product": "multi-cloud-networking",
+				"contentType": "how_to",
+				"taskType": "troubleshoot",
+				"language": "en",
+				"lifecycle": "current"
+			},
+			"expectedPath": "multi-cloud-network-connect/troubleshooting/troubleshoot-manual-ce-deployment-registration-issues",
+			"maxRank": 1,
+			"liveUrl": "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/troubleshooting/troubleshoot-manual-ce-deployment-registration-issues"
+		},
+		{
 			"id": "cross-source-ambiguity",
 			"query": "DNS load balancer",
 			"expectedPath": "dns-management/how-to/configure-dns-load-balancer",

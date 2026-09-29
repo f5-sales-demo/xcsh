@@ -6,14 +6,15 @@ import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
-import {
-	DOCUMENTATION_SOURCES,
-	type DocumentationAsset,
-	type DocumentationDocument,
-	type DocumentationRepository,
-	type DocumentationSearchResult,
-	type DocumentationSource,
+import type {
+	DocumentationAsset,
+	DocumentationDocument,
+	DocumentationRepository,
+	DocumentationSearchFilters,
+	DocumentationSearchResult,
+	DocumentationSource,
 } from "./documentation-resolve";
+import { DOCUMENTATION_SOURCES } from "./documentation-resolve";
 import { extractVerifiedDocumentationAsset, type VerifiedDocumentationAsset } from "./documentation-snapshot";
 
 interface EmbeddedDocumentationAssetMetadata {
@@ -67,6 +68,24 @@ interface DocumentRow {
 	readonly title: string;
 	readonly original_url: string;
 	readonly markdown: string;
+	readonly canonical_url: string;
+	readonly last_updated: string | null;
+	readonly product: string | null;
+	readonly content_type: DocumentationSearchResult["contentType"];
+	readonly task_type: DocumentationSearchResult["taskType"];
+	readonly language: string;
+	readonly lifecycle: DocumentationSearchResult["lifecycle"];
+	readonly replacement_url: string | null;
+	readonly aliases_json: string;
+	readonly related_documents_json: string;
+}
+
+interface PassageRow extends DocumentRow {
+	readonly anchor: string;
+	readonly heading: string;
+	readonly passage_markdown: string;
+	readonly ordinal: number;
+	readonly score: number;
 }
 
 interface AssetRow {
@@ -219,6 +238,7 @@ function verifyDatabase(database: Database, assets: EmbeddedDocumentationAssets)
 		asset_count: String(assets.assetCount),
 		document_count: String(assets.documentCount),
 		fingerprint: assets.fingerprint,
+		index_schema: "2",
 		release_tag: assets.releaseTag,
 		source_commit: assets.sourceCommit,
 	};
@@ -232,14 +252,6 @@ function verifyDatabase(database: Database, assets: EmbeddedDocumentationAssets)
 	if (documentCount.count !== assets.documentCount || assetCount.count !== assets.assetCount) {
 		throw new Error("documentation index counts do not match embedded snapshot");
 	}
-}
-
-function stablePathFromResult(displayPath: string, source: DocumentationSource): string | null {
-	const prefix = `${source}/`;
-	const suffix = "/index.md";
-	if (!displayPath.startsWith(prefix) || !displayPath.endsWith(suffix)) return null;
-	const stablePath = displayPath.slice(prefix.length, -suffix.length);
-	return stablePath || null;
 }
 
 function boundedSnippet(markdown: string, query: string): string {
@@ -262,6 +274,122 @@ function boundedSnippet(markdown: string, query: string): string {
 
 function lexicalDocumentationQuery(query: string): string {
 	return query.replace(/^\s*(?:what|who)\s+(?:is|are)\s+/i, "").trim() || query;
+}
+
+function ftsPhrase(value: string): string {
+	return value
+		.normalize("NFKC")
+		.replace(/[^\p{L}\p{N}_-]+/gu, " ")
+		.replace(/-/g, " ")
+		.trim()
+		.replace(/\s+/g, " ");
+}
+
+function aliasGroups(database: Database): readonly (readonly string[])[] {
+	const rows = database
+		.query("SELECT product, alias FROM documentation_aliases ORDER BY product, alias")
+		.all() as Array<{
+		product: string;
+		alias: string;
+	}>;
+	const groups = new Map<string, string[]>();
+	for (const row of rows) groups.set(row.product, [...(groups.get(row.product) ?? []), row.alias]);
+	return [...groups.values()].sort(
+		(left, right) => Math.max(...right.map(value => value.length)) - Math.max(...left.map(value => value.length)),
+	);
+}
+
+function escapedFtsQuery(database: Database, query: string): string {
+	let remaining = lexicalDocumentationQuery(query);
+	const expansions: string[] = [];
+	for (const aliases of aliasGroups(database)) {
+		const matched = [...aliases]
+			.sort((left, right) => right.length - left.length)
+			.find(alias =>
+				new RegExp(
+					`(^|[^\\p{L}\\p{N}])${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\p{L}\\p{N}]|$)`,
+					"iu",
+				).test(remaining),
+			);
+		if (!matched) continue;
+		remaining = remaining.replace(new RegExp(matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "iu"), " ");
+		expansions.push(`(${aliases.map(alias => `"${ftsPhrase(alias)}"`).join(" OR ")})`);
+	}
+	const terms =
+		remaining
+			.match(/[\p{L}\p{N}_-]+/gu)
+			?.map(term => ftsPhrase(term))
+			.filter(Boolean) ?? [];
+	return [...expansions, ...terms.map(term => `"${term}"*`)].join(" AND ");
+}
+
+function searchRows(
+	database: Database,
+	query: string,
+	source: DocumentationSource | undefined,
+	filters: DocumentationSearchFilters,
+): PassageRow[] {
+	const clauses = ["documents_fts MATCH ?", "d.active = 1"];
+	const parameters: Array<string | null> = [escapedFtsQuery(database, query)];
+	const add = (column: string, value: string | undefined): void => {
+		if (value === undefined) return;
+		clauses.push(`${column} = ?`);
+		parameters.push(value);
+	};
+	add("dd.source", source);
+	add("dd.product", filters.product);
+	add("dd.content_type", filters.contentType);
+	add("dd.task_type", filters.taskType);
+	add("dd.language", filters.language);
+	add("dd.lifecycle", filters.lifecycle);
+	if (!parameters[0]) return [];
+	return database
+		.query(`WITH scored AS (
+			SELECT dd.*, p.anchor, p.heading, p.markdown AS passage_markdown, p.ordinal,
+				ABS(bm25(documents_fts, 1.5, 4.0, 1.0)) /
+				(1.0 + ABS(bm25(documents_fts, 1.5, 4.0, 1.0))) *
+				CASE dd.lifecycle WHEN 'deprecated' THEN 0.85 WHEN 'superseded' THEN 0.65 ELSE 1.0 END AS score
+			FROM documents_fts
+			JOIN documents d ON d.id = documents_fts.rowid
+			JOIN documentation_passages p ON p.source = d.collection AND p.qmd_path = d.path
+			JOIN documentation_documents dd ON dd.source = p.source AND dd.stable_path = p.stable_path
+			WHERE ${clauses.join(" AND ")}
+		), ranked AS (
+			SELECT *, ROW_NUMBER() OVER (
+				PARTITION BY source, stable_path ORDER BY score DESC, ordinal ASC
+			) AS page_rank FROM scored
+		)
+		SELECT * FROM ranked WHERE page_rank = 1`)
+		.all(...parameters) as PassageRow[];
+}
+
+function diversifySources(
+	results: readonly PassageRow[],
+	preferredSource: DocumentationSource | undefined,
+	limit: number,
+): PassageRow[] {
+	const selected: PassageRow[] = [];
+	const seen = new Set<string>();
+	const sourceOrder = preferredSource
+		? [preferredSource, ...DOCUMENTATION_SOURCES.filter(source => source !== preferredSource)]
+		: [...DOCUMENTATION_SOURCES].sort((left, right) => {
+				const leftScore = results.find(result => result.source === left)?.score ?? -1;
+				const rightScore = results.find(result => result.source === right)?.score ?? -1;
+				return rightScore - leftScore || left.localeCompare(right);
+			});
+	for (const source of sourceOrder) {
+		const result = results.find(candidate => candidate.source === source);
+		if (!result) continue;
+		selected.push(result);
+		seen.add(`${result.source}\0${result.stable_path}`);
+	}
+	for (const result of results) {
+		const key = `${result.source}\0${result.stable_path}`;
+		if (seen.has(key)) continue;
+		selected.push(result);
+		seen.add(key);
+	}
+	return selected.slice(0, limit);
 }
 
 const SUPPORT_QUERY = /\b(?:troubleshoot|support|knowledge[- ]base|error|failure|issue|K[0-9]{6,})\b/i;
@@ -313,58 +441,67 @@ export function createEmbeddedDocumentationRepository(
 		prime: async () => {
 			await state();
 		},
-		search: async (query, source, limit): Promise<readonly DocumentationSearchResult[]> => {
+		search: async (query, source, limit, filters = {}): Promise<readonly DocumentationSearchResult[]> => {
 			const current = await state();
-			const lexicalQuery = lexicalDocumentationQuery(query);
 			const preferredSource = source ? undefined : preferredDocumentationSource(query);
-			const results = source
-				? await current.store.searchLex(lexicalQuery, { limit, collection: source })
-				: (
-						await Promise.all(
-							DOCUMENTATION_SOURCES.map(collection =>
-								current.store.searchLex(lexicalQuery, { limit, collection }),
-							),
-						)
-					).flat();
+			const results = searchRows(current.database, query, source, filters);
 			results.sort((left, right) => {
-				const sourceOrder =
-					Number(right.collectionName === preferredSource) - Number(left.collectionName === preferredSource);
+				const sourceOrder = Number(right.source === preferredSource) - Number(left.source === preferredSource);
 				return (
 					sourceOrder ||
 					right.score - left.score ||
-					left.collectionName.localeCompare(right.collectionName) ||
-					left.displayPath.localeCompare(right.displayPath)
+					left.source.localeCompare(right.source) ||
+					left.stable_path.localeCompare(right.stable_path)
 				);
 			});
-			const rows: DocumentationSearchResult[] = [];
-			const lookup = current.database.query(
-				"SELECT source, stable_path, title, original_url, markdown FROM documentation_documents WHERE source = ? AND stable_path = ?",
-			);
-			for (const result of results) {
-				const resultSource = result.collectionName as DocumentationSource;
-				const stablePath = stablePathFromResult(result.displayPath, resultSource);
-				if (!stablePath) continue;
-				const row = lookup.get(resultSource, stablePath) as DocumentRow | null;
-				if (!row) continue;
-				rows.push({
-					title: row.title,
-					source: row.source,
-					originalUrl: row.original_url,
-					stablePath: row.stable_path,
-					snippet: boundedSnippet(row.markdown, query),
-					score: result.score,
-				});
-			}
-			return rows.slice(0, limit);
+			const selected = source ? results.slice(0, limit) : diversifySources(results, preferredSource, limit);
+			return selected.map(row => ({
+				title: row.title,
+				source: row.source,
+				originalUrl: row.original_url,
+				stablePath: row.stable_path,
+				snippet: boundedSnippet(row.passage_markdown, query),
+				score: Number(row.score.toFixed(12)),
+				anchor: row.anchor,
+				heading: row.heading,
+				canonicalUrl: row.canonical_url,
+				lastUpdated: row.last_updated,
+				product: row.product,
+				contentType: row.content_type,
+				taskType: row.task_type,
+				language: row.language,
+				lifecycle: row.lifecycle,
+				replacementUrl: row.replacement_url,
+				aliases: JSON.parse(row.aliases_json),
+				relatedDocuments: JSON.parse(row.related_documents_json),
+			}));
 		},
-		readDocument: async (source, stablePath): Promise<DocumentationDocument | null> => {
+		readDocument: async (source, stablePath, anchor): Promise<DocumentationDocument | null> => {
 			const current = await state();
 			const row = current.database
 				.query(
-					"SELECT title, original_url, markdown FROM documentation_documents WHERE source = ? AND stable_path = ?",
+					"SELECT title, original_url, markdown, lifecycle, replacement_url FROM documentation_documents WHERE source = ? AND stable_path = ?",
 				)
-				.get(source, stablePath) as Pick<DocumentRow, "title" | "original_url" | "markdown"> | null;
-			return row ? { markdown: row.markdown, title: row.title, originalUrl: row.original_url } : null;
+				.get(source, stablePath) as Pick<
+				DocumentRow,
+				"title" | "original_url" | "markdown" | "lifecycle" | "replacement_url"
+			> | null;
+			if (!row) return null;
+			let markdown = row.markdown;
+			if (anchor) {
+				const passage = current.database
+					.query("SELECT markdown FROM documentation_passages WHERE source = ? AND stable_path = ? AND anchor = ?")
+					.get(source, stablePath, anchor) as { markdown: string } | null;
+				if (!passage) return null;
+				markdown = passage.markdown;
+			}
+			return {
+				markdown,
+				title: row.title,
+				originalUrl: row.original_url,
+				lifecycle: row.lifecycle,
+				replacementUrl: row.replacement_url,
+			};
 		},
 		readAsset: async (source, stablePath, filename): Promise<DocumentationAsset | null> => {
 			const current = await state();
