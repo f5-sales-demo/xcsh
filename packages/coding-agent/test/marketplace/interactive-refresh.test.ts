@@ -106,14 +106,15 @@ describe("interactive marketplace refresh surfaces", () => {
 			 import { getPreloadedPluginRoots, preloadPluginRoots } from "./src/discovery/helpers";
 			 import { discoverAndLoadExtensions } from "./src/extensibility/extensions/loader";
 			 const pluginRoot = process.env.TEST_MARKETPLACE_SOURCE + "/plugins/hello-plugin";
-			 await Bun.write(pluginRoot + "/package.json", JSON.stringify({
-			   name: "hello-plugin",
-			   version: "1.0.0",
-			 }));
-			 await Bun.write(pluginRoot + "/.xcsh-plugin/plugin.json", JSON.stringify({
-			   name: "hello-plugin",
-			   version: "1.0.0",
-			   extensions: ["src/index.ts"],
+				 await Bun.write(pluginRoot + "/package.json", JSON.stringify({
+				   name: "hello-plugin",
+				   version: "1.0.0",
+				   xcsh: { extensions: ["src/index.ts"] },
+				 }));
+				 await Bun.write(pluginRoot + "/.xcsh-plugin/plugin.json", JSON.stringify({
+				   name: "hello-plugin",
+				   version: "1.0.0",
+				   lifecycle: { integrations: ["hello_ready"] },
 			 }));
 			 await Bun.write(pluginRoot + "/src/index.ts", ${JSON.stringify(extensionSource)});
 			 await preloadPluginRoots(process.env.HOME, process.cwd());
