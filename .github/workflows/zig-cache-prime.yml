@@ -1,0 +1,44 @@
+---
+name: Prime hosted Zig archives
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/setup-zig/**'
+      - 'scripts/ci-download-zig-archive.sh'
+      - '.github/workflows/zig-cache-prime.yml'
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zig-cache-prime-main
+  cancel-in-progress: false
+
+jobs:
+  prime:
+    name: Prime Zig (${{ matrix.os }})
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prime verified Zig 0.16.0 archive
+        uses: ./.github/actions/setup-zig
+        with:
+          cache-build: 'false'
+
+      - name: Verify Zig 0.16.0
+        shell: bash
+        run: test "$(zig version)" = 0.16.0
