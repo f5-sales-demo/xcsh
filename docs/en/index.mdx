@@ -54,7 +54,7 @@ import { Aside, Card, LinkCard, TabItem, Tabs } from '@astrojs/starlight/compone
   curl -fsSL https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
   ```
 
-  <p>It installs the latest prebuilt release and a schema-v2 provenance receipt into <code>~/.local/bin</code>. The native addon is embedded in the executable, so those are the only two standalone payloads. This is the only channel that <code>xcsh self-update</code> replaces in process. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
+  <p>It installs the latest prebuilt release and a schema-v2 provenance receipt into <code>~/.local/bin</code>. The native addons are embedded in the executable. On Linux, the installer also retains the published SHA-256 checksums and build provenance, and verifies them before running or replacing the binary. A failed download, validation, or replacement restores the previous installation. The binary installer requires <code>curl</code>, <code>jq</code>, and <code>sha256sum</code> or <code>shasum</code>. This is the only channel that <code>xcsh self-update</code> replaces in process. Need a managed or platform-specific channel? Compare the <a href="#installation-options">installation options</a>.</p>
 </section>
 
 ## What xcsh helps you do

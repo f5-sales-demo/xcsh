@@ -49,6 +49,15 @@ expected_assets=(
   xcsh-darwin-x64.zip
   xcsh-linux-arm64
   xcsh-linux-x64
+  pi_natives.linux-arm64.node.sha256
+  pi_natives.linux-x64-baseline.node.sha256
+  pi_natives.linux-x64-modern.node.sha256
+  xcsh-linux-arm64.sha256
+  xcsh-linux-arm64.provenance.json
+  xcsh-linux-arm64.provenance.json.sha256
+  xcsh-linux-x64.sha256
+  xcsh-linux-x64.provenance.json
+  xcsh-linux-x64.provenance.json.sha256
   xcsh-windows-x64.exe
 )
 
@@ -158,5 +167,5 @@ diff -u "$work/expected-assets" "$work/actual-assets"
 
 gh release edit "$tag" --repo "$repository" --draft=false
 gh api "repos/${repository}/releases/${release_id}" |
-  jq -e --arg tag "$tag" '.tag_name == $tag and .draft == false and .prerelease == false and .immutable == true and (.assets | length) == 19' \
+  jq -e --arg tag "$tag" --argjson count "${#expected_assets[@]}" '.tag_name == $tag and .draft == false and .prerelease == false and .immutable == true and (.assets | length) == $count' \
     >/dev/null
