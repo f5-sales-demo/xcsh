@@ -2,6 +2,11 @@
 name: Setup Zig
 description: Install the repository-pinned Zig toolchain from the official release archive
 
+inputs:
+  cache-build:
+    description: Restore and save the per-job Zig compilation cache
+    default: "true"
+
 runs:
   using: composite
   steps:
@@ -13,14 +18,15 @@ runs:
         test "$(command -v zig)" = /usr/local/bin/zig
         test "$(zig version)" = 0.16.0
     - name: Restore Zig release archive
+      id: archive
       if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/zig-downloads
         key: setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.16.0
 
     - name: Restore Zig build cache
-      if: runner.environment != 'self-hosted' || runner.os != 'Linux'
+      if: inputs.cache-build == 'true' && (runner.environment != 'self-hosted' || runner.os != 'Linux')
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ github.workspace }}/.zig-cache
@@ -85,11 +91,9 @@ runs:
           fi
         }
 
-        if [[ ! -f "$ARCHIVE" ]] || ! verify_archive >/dev/null 2>&1; then
-          curl --silent --show-error --fail --location \
-            --retry 3 --retry-all-errors --connect-timeout 15 --max-time 180 \
-            --output "$ARCHIVE" "$ZIG_URL"
-        fi
+        bash "$WORKSPACE_PATH/scripts/ci-download-zig-archive.sh" \
+          "$ZIG_URL" "$ZIG_SHA256" "$ARCHIVE" \
+          "$RUNNER_TEMP_PATH/zig-download-staging/zig-${PLATFORM}-${ZIG_VERSION}.part"
         verify_archive
 
         if [[ "$EXTENSION" == "zip" ]]; then
@@ -111,4 +115,12 @@ runs:
         echo "$ZIG_PATH" >> "$GITHUB_PATH"
         printf 'ZIG_GLOBAL_CACHE_DIR=%s\nZIG_LOCAL_CACHE_DIR=%s\n' \
           "$ZIG_CACHE_DIR" "$ZIG_CACHE_DIR" >> "$GITHUB_ENV"
+        test "$("$ZIG_BINARY" version)" = "$ZIG_VERSION"
         "$ZIG_BINARY" version
+
+    - name: Save verified Zig release archive
+      if: steps.archive.outputs.cache-hit != 'true' && (runner.environment != 'self-hosted' || runner.os != 'Linux')
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/zig-downloads
+        key: ${{ steps.archive.outputs.cache-primary-key }}
