@@ -61,6 +61,8 @@ jobs:
       # replacement image pipeline on every runtime OS without native builds.
       - name: Verify image resizing, conversion and decode limits
         run: bun test --cwd packages/coding-agent test/utils/image-resize.test.ts test/utils/image-convert.test.ts
+      - name: Verify worker fixture startup and termination on this runtime
+        run: bun test --cwd packages/coding-agent test/helpers/worker-process.test.ts
 
   check:
     name: check

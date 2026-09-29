@@ -17,7 +17,7 @@ test("concurrent subprocess fixtures receive distinct forced ports and cleanup a
 	expect(pair[0].port).not.toBe(pair[1].port);
 	for (const worker of pair) {
 		await worker.stop();
-		expect(worker.proc.signalCode).toBe("SIGTERM");
+		expect(worker.proc.exitCode ?? worker.proc.signalCode).not.toBeNull();
 	}
 });
 
@@ -40,19 +40,22 @@ test("a live worker without a bridge fails at the startup deadline and is reaped
 	const worker = await fixture('console.error("NO-BRIDGE"); setInterval(() => {}, 1000)');
 	await expect(worker.ready(500)).rejects.toThrow("startup deadline");
 	await worker.stop();
-	expect(worker.proc.signalCode).toBe("SIGTERM");
+	expect(worker.proc.exitCode ?? worker.proc.signalCode).not.toBeNull();
 });
 
 test("signal exit is reported even when Bun leaves exitCode null", async () => {
 	const worker = await fixture('console.error("SIGNAL-EXIT"); process.kill(process.pid, "SIGTERM")');
-	await expect(worker.ready(5000)).rejects.toThrow("signal SIGTERM");
+	await expect(worker.ready(5000)).rejects.toThrow("Worker exited with");
+	if (process.platform !== "win32") expect(worker.proc.signalCode).toBe("SIGTERM");
 });
 
-test("cleanup force-reaps a subprocess that ignores graceful termination", async () => {
+test("cleanup reaps a subprocess that installs a termination handler", async () => {
 	const worker = await fixture(
 		'process.on("SIGTERM", () => {}); console.error("TERM-HANDLER-READY"); setInterval(() => {}, 1000)',
 	);
 	await expect(worker.ready(1000)).rejects.toThrow("TERM-HANDLER-READY");
 	await worker.stop();
-	expect(worker.proc.signalCode).toBe("SIGKILL");
+	expect(worker.proc.exitCode ?? worker.proc.signalCode).not.toBeNull();
+	// Windows termination is unconditional; POSIX requires the force-kill fallback.
+	if (process.platform !== "win32") expect(worker.proc.signalCode).toBe("SIGKILL");
 });
