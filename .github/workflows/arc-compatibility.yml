@@ -3,6 +3,11 @@ name: ARC Compatibility
 
 on:
   workflow_dispatch:
+    inputs:
+      npm_version:
+        description: "Published npm version to verify (blank resolves latest)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -117,10 +122,14 @@ jobs:
 
       - name: Verify published npm package on Debian 12
         shell: bash
+        env:
+          NPM_VERSION: ${{ inputs.npm_version }}
         run: |
           set -euo pipefail
-          EXPECTED_VERSION=$(jq -r .version packages/coding-agent/package.json)
+          EXPECTED_VERSION=$(bun scripts/resolve-published-npm-version.ts)
           export EXPECTED_VERSION
+          echo "Verifying published npm package: $EXPECTED_VERSION"
+          echo "Published npm version: $EXPECTED_VERSION" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/ci-verify-npm-debian.sh
 
       - name: Run mocked Podman UAT harness

@@ -206,7 +206,9 @@ export function validateArtifactVersion(
 }
 
 function expectedSpecAssetNames(releaseTag: string): string[] {
+	const reportAssets = Number(releaseTag.match(/^v([0-9]+)\./)?.[1]) >= 9 ? ["upstream-contract-changes.json"] : [];
 	return [
+		...reportAssets,
 		"api-catalog.json",
 		"concurrency_contracts.json",
 		`f5xc-api-specs-${releaseTag}.zip`,

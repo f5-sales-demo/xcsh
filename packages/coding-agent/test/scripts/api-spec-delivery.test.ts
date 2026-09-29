@@ -579,6 +579,54 @@ describe("durable API spec delivery ledger", () => {
 });
 
 describe("published release identity", () => {
+	it("accepts the receipted v9 report while preserving the historical asset contract", async () => {
+		const delivery = deliveryFor("9.0.0", TARGET_COMMIT);
+		const pin = specReleasePin();
+		delete pin.assets[`f5xc-api-specs-${RELEASE_TAG}.zip`];
+		pin.assets["f5xc-api-specs-v9.0.0.zip"] = "2".repeat(64);
+		pin.assets["upstream-contract-changes.json"] = "c".repeat(64);
+		const receipt = {
+			assets: Object.fromEntries(Object.entries(pin.assets).map(([name, digest]) => [name, `sha256:${digest}`])),
+			commit: TARGET_COMMIT,
+			version: "9.0.0",
+		};
+		const release = {
+			...publishedRelease(),
+			assets: Object.entries(receipt.assets).map(([name, digest]) => ({ name, digest })),
+			body: `<!-- publication-receipt:${JSON.stringify(receipt)} -->`,
+			tag_name: "v9.0.0",
+		};
+		const fetcher = async (input: string | URL | Request): Promise<Response> =>
+			Response.json(
+				String(input).includes("/releases/tags/") ? release : { object: { sha: TARGET_COMMIT, type: "commit" } },
+			);
+		expect(await verifyReleasedTag(delivery, undefined, fetcher)).toEqual({
+			assets: pin.assets,
+			commit: TARGET_COMMIT,
+			version: "9.0.0",
+		});
+		for (const kind of ["missing", "duplicate", "unexpected", "digest"] as const) {
+			const invalid = structuredClone(release);
+			if (kind === "missing")
+				invalid.assets = invalid.assets.filter(asset => asset.name !== "upstream-contract-changes.json");
+			if (kind === "duplicate") invalid.assets.push(invalid.assets.at(-1)!);
+			if (kind === "unexpected")
+				invalid.assets.push({ name: "unexpected.json", digest: `sha256:${"d".repeat(64)}` });
+			if (kind === "digest")
+				invalid.assets.find(asset => asset.name === "upstream-contract-changes.json")!.digest =
+					`sha256:${"d".repeat(64)}`;
+			await expect(
+				verifyReleasedTag(delivery, undefined, async input =>
+					Response.json(
+						String(input).includes("/releases/tags/")
+							? invalid
+							: { object: { sha: TARGET_COMMIT, type: "commit" } },
+					),
+				),
+			).rejects.toThrow();
+		}
+	});
+
 	it("requires the exact release tag to resolve to the dispatched target commit", async () => {
 		const requested: string[] = [];
 		const fetcher = async (input: string | URL | Request): Promise<Response> => {
@@ -599,7 +647,7 @@ describe("published release identity", () => {
 		]);
 	});
 
-	it("rejects missing or extra assets outside the exact 11-asset release contract", async () => {
+	it("rejects missing or extra assets outside the exact historical 11-asset release contract", async () => {
 		const missing = publishedRelease();
 		(missing.assets as Array<Record<string, string>>).pop();
 		await expect(
