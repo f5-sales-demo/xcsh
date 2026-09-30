@@ -3,16 +3,24 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-it("authenticates only GitHub metadata without putting credentials in curl argv", async () => {
-	const root = await mkdtemp(join(tmpdir(), "xcsh-installer-auth-"));
-	const mocks = join(root, "mocks");
-	await mkdir(mocks);
-	await writeFile(join(mocks, "uname"), '#!/bin/sh\ncase "$1" in -s) echo Darwin;; -m) echo arm64;; esac\n', {
-		mode: 0o755,
-	});
-	await writeFile(
-		join(mocks, "curl"),
-		`#!/bin/sh
+const installer = resolve(import.meta.dir, "../../../../scripts/install.sh");
+
+for (const [name, token, variable = "GH_TOKEN"] of [
+	["underscore", "synthetic_test_token"],
+	["period and hyphen", "synthetic.header-signature.part"],
+	["bearer alphabet and padding", "synthetic~bearer+/token=="],
+	["GITHUB_TOKEN fallback", "synthetic.fallback-token", "GITHUB_TOKEN"],
+])
+	it(`authenticates metadata with ${name} without leaking curl argv`, async () => {
+		const root = await mkdtemp(join(tmpdir(), "xcsh-installer-auth-"));
+		const mocks = join(root, "mocks");
+		await mkdir(mocks);
+		await writeFile(join(mocks, "uname"), '#!/bin/sh\ncase "$1" in -s) echo Darwin;; -m) echo arm64;; esac\n', {
+			mode: 0o755,
+		});
+		await writeFile(
+			join(mocks, "curl"),
+			`#!/bin/sh
 config=""; output=""; url=""
 printf '%s\\n' "$@" >> "$TEST_ROOT/argv"
 while [ "$#" -gt 0 ]; do
@@ -24,13 +32,62 @@ case "$url" in
  *) if [ -n "$config" ]; then touch "$TEST_ROOT/leaked"; fi; exit 22;;
 esac
 `,
-		{ mode: 0o755 },
-	);
-	const token = "synthetic.jwt-token_~+/==";
-	try {
-		const child = Bun.spawn(
-			["sh", resolve(import.meta.dir, "../../../../scripts/install.sh"), "--binary", "--ref", "v22.4.6"],
-			{
+			{ mode: 0o755 },
+		);
+		try {
+			const child = Bun.spawn(["sh", installer, "--binary", "--ref", "v22.4.6"], {
+				env: {
+					...process.env,
+					PATH: `${mocks}:${process.env.PATH}`,
+					TEST_ROOT: root,
+					PI_INSTALL_DIR: join(root, "install"),
+					GH_TOKEN: variable === "GH_TOKEN" ? token : "",
+					GITHUB_TOKEN: variable === "GITHUB_TOKEN" ? token : "",
+				},
+				stdout: "pipe",
+				stderr: "pipe",
+			});
+			const [, stdout, stderr] = await Promise.all([
+				child.exited,
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+			]);
+			expect(await readFile(join(root, "config"), "utf8")).toContain(`Authorization: Bearer ${token}`);
+			const argv = await readFile(join(root, "argv"), "utf8");
+			expect(argv).not.toContain(token);
+			expect(argv).toContain("https://github.com/f5-sales-demo/xcsh/releases/download/v22.4.6/xcsh-darwin-arm64");
+			expect(stdout + stderr).not.toContain(token);
+			expect(await Bun.file(join(root, "leaked")).exists()).toBe(false);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+for (const [name, token] of [
+	["space", "synthetic token"],
+	["tab", "synthetic\ttoken"],
+	["newline", "synthetic\nheader = injected"],
+	["carriage return", "synthetic\rtoken"],
+	["control character", "synthetic\u0001token"],
+	["double quote", 'synthetic"token'],
+	["single quote", "synthetic'token"],
+	["backslash", "synthetic\\token"],
+	["non bearer punctuation", "synthetic!token"],
+	["non ASCII", "syntheticétoken"],
+	["leading padding", "=synthetic"],
+	["interior padding", "synthetic=token"],
+	["only padding", "=="],
+])
+	it(`rejects ${name} before invoking curl`, async () => {
+		const root = await mkdtemp(join(tmpdir(), "xcsh-installer-invalid-auth-"));
+		const mocks = join(root, "mocks");
+		await mkdir(mocks);
+		await writeFile(join(mocks, "uname"), '#!/bin/sh\ncase "$1" in -s) echo Darwin;; -m) echo arm64;; esac\n', {
+			mode: 0o755,
+		});
+		await writeFile(join(mocks, "curl"), '#!/bin/sh\ntouch "$TEST_ROOT/curl-called"\nexit 22\n', { mode: 0o755 });
+		try {
+			const child = Bun.spawn(["sh", installer, "--binary", "--ref", "v22.4.6"], {
 				env: {
 					...process.env,
 					PATH: `${mocks}:${process.env.PATH}`,
@@ -41,40 +98,17 @@ esac
 				},
 				stdout: "pipe",
 				stderr: "pipe",
-			},
-		);
-		await child.exited;
-		expect(await readFile(join(root, "config"), "utf8")).toContain(`Authorization: Bearer ${token}`);
-		expect(await readFile(join(root, "argv"), "utf8")).not.toContain(token);
-		expect(await Bun.file(join(root, "leaked")).exists()).toBe(false);
-	} finally {
-		await rm(root, { recursive: true, force: true });
-	}
-});
-
-it.each(["synthetic token", 'synthetic"token', "synthetic\ntoken", "synthetic\\token"])(
-	"rejects an unsafe API token without exposing it",
-	async token => {
-		const root = await mkdtemp(join(tmpdir(), "xcsh-installer-invalid-auth-"));
-		try {
-			const child = Bun.spawn(
-				["sh", resolve(import.meta.dir, "../../../../scripts/install.sh"), "--binary", "--ref", "v22.4.6"],
-				{
-					env: { ...process.env, PI_INSTALL_DIR: join(root, "install"), GH_TOKEN: token },
-					stdout: "pipe",
-					stderr: "pipe",
-				},
-			);
-			const [code, output, error] = await Promise.all([
+			});
+			const [code, stdout, stderr] = await Promise.all([
 				child.exited,
 				new Response(child.stdout).text(),
 				new Response(child.stderr).text(),
 			]);
 			expect(code).not.toBe(0);
-			expect(error).toContain("Invalid GitHub API token format");
-			expect(output + error).not.toContain(token);
+			expect(stderr).toContain("Invalid GitHub API token format");
+			expect(stdout + stderr).not.toContain(token);
+			expect(await Bun.file(join(root, "curl-called")).exists()).toBe(false);
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
-	},
-);
+	});

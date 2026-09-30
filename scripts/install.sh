@@ -403,7 +403,9 @@ install_binary() {
   fi
   github_api_download() {
     api_token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
-    case "$api_token" in *[!A-Za-z0-9_.~+/=-]*)
+    # RFC 6750 bearer alphabet; padding is allowed only after a nonempty token.
+    # Quotes, backslashes and control characters cannot enter curl configuration.
+    case "$api_token" in *[!A-Za-z0-9._~+/=-]* | =* | *=*[!=]*)
       echo "Invalid GitHub API token format" >&2
       return 1
       ;;
