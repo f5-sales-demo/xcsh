@@ -411,6 +411,20 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 }
 
 function applyGeneratedModelPolicy(model: ApiModel<Api>): void {
+	if (model.provider === "fireworks") {
+		const completion = model.id.includes("glm-") || model.id.includes("kimi-k3");
+		model.api = completion ? "openai-completions" : "anthropic-messages";
+		model.baseUrl = model.baseUrl.replace(/\/v1\/?$/, "") + (completion ? "/v1" : "");
+		model.compat = {
+			...model.compat,
+			supportsStore: false,
+			supportsDeveloperRole: false,
+			sendSessionAffinityHeaders: true,
+			...(!completion ? { allowEmptySignature: true, supportsCacheControlOnTools: false } : {}),
+		} as ApiModel<Api>["compat"];
+		if (!completion && model.compat?.forceAdaptiveThinking && model.thinking)
+			model.thinking = { ...model.thinking, mode: "anthropic-adaptive" };
+	}
 	if (model.provider === "xai") model.api = "openai-responses";
 	if (model.provider === "xiaomi" && /api\.xiaomimimo\.com/.test(model.baseUrl)) {
 		model.api = "openai-completions";

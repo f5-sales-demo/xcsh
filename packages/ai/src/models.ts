@@ -17,7 +17,7 @@ for (const [provider, models] of Object.entries(MODELS)) {
 	const providerModels = new Map<string, Model<Api>>();
 	for (const [id, model] of Object.entries(models)) {
 		const normalized = [model as Model<Api>];
-		if (provider === "xai" || provider === "xiaomi")
+		if (provider === "xai" || provider === "xiaomi" || provider === "fireworks")
 			applyGeneratedModelPolicies(normalized, { preserveDiscoveredThinking: true });
 		providerModels.set(
 			id,

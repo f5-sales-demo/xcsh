@@ -1788,6 +1788,38 @@ export function mapModelsDevToModels(
 			};
 
 			// Apply per-model transform
+			if (mapped.provider === "cloudflare-ai-gateway") {
+				const [upstream, ...rest] = modelId.split("/");
+				const endpoint = "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}";
+				if (upstream === "openai" || upstream === "anthropic") {
+					mapped.id = rest.join("/");
+					mapped.api = upstream === "openai" ? "openai-responses" : "anthropic-messages";
+					mapped.baseUrl = `${endpoint}/${upstream}`;
+				} else if (upstream === "workers-ai") {
+					mapped.api = "openai-completions";
+					mapped.baseUrl = `${endpoint}/compat`;
+				} else continue;
+			}
+			if (mapped.provider === "fireworks") {
+				const completion = modelId.includes("glm-") || modelId.includes("kimi-k3");
+				mapped.api = completion ? "openai-completions" : "anthropic-messages";
+				mapped.baseUrl = completion
+					? "https://api.fireworks.ai/inference/v1"
+					: "https://api.fireworks.ai/inference";
+				mapped.compat = {
+					...mapped.compat,
+					supportsStore: false,
+					supportsDeveloperRole: false,
+					sendSessionAffinityHeaders: true,
+					...(!completion
+						? {
+								allowEmptySignature: true,
+								supportsCacheControlOnTools: false,
+								forceAdaptiveThinking: m.reasoning_options?.some(option => option.type === "effort") ?? false,
+							}
+						: {}),
+				};
+			}
 			const efforts = m.reasoning_options
 				?.flatMap(option => (option.type === "effort" ? (option.values ?? []) : []))
 				.filter(

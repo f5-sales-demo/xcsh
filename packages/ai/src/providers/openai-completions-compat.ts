@@ -171,6 +171,9 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		thinkingTokenBudgetField: undefined,
 		supportsThinkingTokenBudget: false,
 		sendSessionAffinityHeaders: provider === "baseten",
+		allowEmptySignature: false,
+		supportsCacheControlOnTools: true,
+		forceAdaptiveThinking: false,
 		toolStrictMode: isCerebras ? "all_strict" : "mixed",
 	};
 }
@@ -221,6 +224,9 @@ export function resolveOpenAICompat(
 		thinkingTokenBudgetField: model.compat.thinkingTokenBudgetField ?? detected.thinkingTokenBudgetField,
 		supportsThinkingTokenBudget: model.compat.supportsThinkingTokenBudget ?? detected.supportsThinkingTokenBudget,
 		sendSessionAffinityHeaders: model.compat.sendSessionAffinityHeaders ?? detected.sendSessionAffinityHeaders,
+		allowEmptySignature: model.compat.allowEmptySignature ?? detected.allowEmptySignature,
+		supportsCacheControlOnTools: model.compat.supportsCacheControlOnTools ?? detected.supportsCacheControlOnTools,
+		forceAdaptiveThinking: model.compat.forceAdaptiveThinking ?? detected.forceAdaptiveThinking,
 		toolStrictMode: model.compat.toolStrictMode ?? detected.toolStrictMode,
 	};
 }

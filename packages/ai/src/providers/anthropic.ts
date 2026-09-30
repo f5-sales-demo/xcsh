@@ -697,6 +697,14 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 ): AssistantMessageEventStream => {
 	const stream = new AssistantMessageEventStream();
 	model = { ...model, baseUrl: resolveCloudflareEndpoint(model.provider, model.baseUrl, options) };
+	if (model.compat?.sendSessionAffinityHeaders && options?.sessionId)
+		options = {
+			...options,
+			headers: {
+				...options.headers,
+				[model.provider === "openrouter" ? "x-session-id" : "x-session-affinity"]: options.sessionId,
+			},
+		};
 
 	(async () => {
 		const startTime = Date.now();
@@ -1731,6 +1739,9 @@ function buildParams(
 	disableThinkingIfToolChoiceForced(params);
 	ensureMaxTokensForThinking(params, model);
 	applyPromptCaching(params, cacheControl);
+	if (model.compat?.supportsCacheControlOnTools === false)
+		for (const tool of params.tools ?? [])
+			delete (tool as Anthropic.Messages.Tool & { cache_control?: unknown }).cache_control;
 	enforceCacheControlLimit(params, 4);
 	normalizeCacheControlTtlOrdering(params);
 
@@ -1832,6 +1843,10 @@ export function convertAnthropicMessages(
 						text: block.text.toWellFormed(),
 					});
 				} else if (block.type === "thinking") {
+					if (model.compat?.allowEmptySignature && block.thinkingSignature === "") {
+						blocks.push({ type: "thinking", thinking: block.thinking, signature: "" });
+						continue;
+					}
 					if (hasSignedThinking) {
 						if (!block.thinkingSignature || block.thinkingSignature.trim().length === 0) {
 							if (block.thinking.trim().length === 0) continue;
