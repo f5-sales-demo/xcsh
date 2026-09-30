@@ -186,6 +186,24 @@ export async function resolveSoftware(
 	} else if (info.os === "win32") {
 		if (!recipe.winget || !info.packageManagers.winget)
 			throw new Error("The official winget package and winget are required on Windows.");
+		const packageInfo = await env.run(
+			[
+				info.packageManagers.winget,
+				"show",
+				"--exact",
+				"--id",
+				recipe.winget,
+				"--source",
+				"winget",
+				"--accept-source-agreements",
+				"--disable-interactivity",
+			],
+			signal,
+		);
+		if (packageInfo.code !== 0)
+			throw new Error(
+				`Official winget package ${recipe.winget} is unavailable. Install the current official CLI yourself and review setup again.`,
+			);
 		installer = "winget";
 		steps.push({
 			kind: "install",
@@ -297,6 +315,23 @@ export async function resolveSoftware(
 				(link && (await env.exists(link)))
 			)
 				throw new Error("Software identity or prerequisites changed; review setup again");
+			if (installer === "winget") {
+				const packageInfo = await env.run(
+					[
+						info.packageManagers.winget!,
+						"show",
+						"--exact",
+						"--id",
+						recipe.winget!,
+						"--source",
+						"winget",
+						"--accept-source-agreements",
+						"--disable-interactivity",
+					],
+					currentSignal,
+				);
+				if (packageInfo.code !== 0) throw new Error("winget prerequisites changed; review setup again");
+			}
 			if (existing) {
 				const result = await env.run([existing, ...recipe.versionArgs], currentSignal);
 				if (result.code !== 0 || !/\d+\.\d+/.test(result.stdout))
