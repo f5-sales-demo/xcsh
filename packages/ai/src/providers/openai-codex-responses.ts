@@ -169,6 +169,7 @@ interface CodexProviderSessionState extends ProviderSessionState {
 }
 
 interface CodexRequestContext {
+	model: Model<"openai-codex-responses">;
 	grammarToolInputProperties?: Map<string, string>;
 	apiKey: string;
 	accountId: string;
@@ -187,7 +188,16 @@ interface CodexRequestSetup {
 	requestAbortController: AbortController;
 }
 
+interface CodexWebSocketRequestState {
+	usedContinuation: boolean;
+	connection?: CodexWebSocketConnection;
+}
+
 interface CodexStreamRuntime {
+	websocketRequestState?: CodexWebSocketRequestState;
+	continuationRecoveryAttempt: number;
+	sawResponseAccepted: boolean;
+	sawOutputEvent: boolean;
 	grammarToolInputProperties?: Map<string, string>;
 	eventStream: AsyncGenerator<Record<string, unknown>>;
 	requestBodyForState: RequestBody;
@@ -470,6 +480,7 @@ async function buildCodexRequestContext(
 	const replacement = await options?.onPayload?.(transformedBody, model);
 	if (replacement !== undefined) transformedBody = replacement as typeof transformedBody;
 	validateFinalResponsesRequest(model, transformedBody);
+	transformedBody = structuredCloneJSON(transformedBody);
 
 	const requestHeaders = { ...(model.headers ?? {}), ...(options?.headers ?? {}) };
 	const rawRequestDump: RawHttpRequestDump = {
@@ -489,6 +500,33 @@ async function buildCodexRequestContext(
 	}
 	const websocketState =
 		sessionKey && providerSessionState ? getCodexWebSocketSessionState(sessionKey, providerSessionState) : undefined;
+
+	return {
+		model,
+		apiKey,
+		grammarToolInputProperties: new Map(
+			(context.tools ?? []).flatMap(tool =>
+				tool.constrainedSampling && tool.constrainedSampling.type === "grammar"
+					? [[tool.name, (tool.parameters as { required?: string[] }).required?.[0] ?? "input"]]
+					: [],
+			),
+		),
+		accountId,
+		baseUrl,
+		url,
+		requestHeaders,
+		providerSessionState,
+		websocketState,
+		transformedBody,
+		rawRequestDump,
+	};
+}
+
+function applyCodexCachedReasoning(
+	model: Model<"openai-codex-responses">,
+	transformedBody: RequestBody,
+	websocketState: CodexWebSocketSessionState,
+): void {
 	if (
 		model.compat?.supportsCachedReasoningUpdates &&
 		websocketState?.lastRequest?.reasoning?.effort &&
@@ -520,25 +558,6 @@ async function buildCodexRequestContext(
 			transformedBody.reasoning.effort = previous.reasoning!.effort;
 		}
 	}
-
-	return {
-		apiKey,
-		grammarToolInputProperties: new Map(
-			(context.tools ?? []).flatMap(tool =>
-				tool.constrainedSampling && tool.constrainedSampling.type === "grammar"
-					? [[tool.name, (tool.parameters as { required?: string[] }).required?.[0] ?? "input"]]
-					: [],
-			),
-		),
-		accountId,
-		baseUrl,
-		url,
-		requestHeaders,
-		providerSessionState,
-		websocketState,
-		transformedBody,
-		rawRequestDump,
-	};
 }
 
 async function buildTransformedCodexRequestBody(
@@ -626,6 +645,7 @@ async function openInitialCodexEventStream(
 	eventStream: AsyncGenerator<Record<string, unknown>>;
 	requestBodyForState: RequestBody;
 	transport: CodexTransport;
+	websocketRequestState?: CodexWebSocketRequestState;
 }> {
 	const { transformedBody, websocketState } = requestContext;
 	if (websocketState && shouldUseCodexWebSocket(model, websocketState, options?.preferWebsockets)) {
@@ -641,6 +661,7 @@ async function openInitialCodexEventStream(
 					websocketRetries,
 				);
 			} catch (error) {
+				if (requestSetup.requestSignal.aborted) throw error;
 				const websocketError = error instanceof Error ? error : new Error(String(error));
 				const isFatal = isCodexWebSocketFatalError(websocketError);
 				const activateFallback = isFatal || websocketRetries >= websocketRetryBudget;
@@ -673,55 +694,73 @@ async function openCodexWebSocketTransport(
 	eventStream: AsyncGenerator<Record<string, unknown>>;
 	requestBodyForState: RequestBody;
 	transport: CodexTransport;
+	websocketRequestState?: CodexWebSocketRequestState;
 }> {
-	let websocketRequest = buildCodexWebSocketRequest(requestContext.transformedBody, websocketState);
-	let attach = false;
+	const headers = () =>
+		createCodexHeaders(
+			requestContext.requestHeaders,
+			requestContext.accountId,
+			requestContext.apiKey,
+			options?.sessionId,
+			"websocket",
+			websocketState,
+		);
+	let connection = await getOrCreateCodexWebSocketConnection(
+		websocketState,
+		toWebSocketUrl(requestContext.url),
+		headers(),
+		requestSetup.requestSignal,
+	);
+	// Divergent accepted steering belongs to the old socket; reconnect before preparing the request.
 	if (websocketState.acceptedSteering?.length) {
-		const delta = websocketRequest.previous_response_id
-			? (websocketRequest.input as import("./openai-codex/request-transformer").InputItem[])
-			: undefined;
+		const preview = structuredCloneJSON(requestContext.transformedBody);
+		applyCodexCachedReasoning(requestContext.model, preview, websocketState);
+		const request = buildCodexWebSocketRequest(preview, { ...websocketState });
 		const plan = planSteeredRequest(
-			delta,
+			request.previous_response_id ? (request.input as InputItem[]) : undefined,
 			websocketState.acceptedSteering.flatMap(steer => steer.items),
 		);
 		if (plan.kind === "discard") {
-			websocketState.connection?.close("steering-diverged");
-			resetCodexWebSocketAppendState(websocketState);
-			websocketRequest = buildCodexWebSocketRequest(requestContext.transformedBody, websocketState);
-		} else if (plan.kind === "attach") attach = true;
-		else websocketRequest.input = plan.input;
-		websocketState.acceptedSteering = undefined;
+			connection.close("steering-diverged");
+			connection = await getOrCreateCodexWebSocketConnection(
+				websocketState,
+				toWebSocketUrl(requestContext.url),
+				headers(),
+				requestSetup.requestSignal,
+			);
+		}
 	}
-	const websocketHeaders = createCodexHeaders(
-		requestContext.requestHeaders,
-		requestContext.accountId,
-		requestContext.apiKey,
-		options?.sessionId,
-		"websocket",
-		websocketState,
-	);
 	const requestBodyForState = structuredCloneJSON(requestContext.transformedBody);
-	logCodexDebug("codex websocket request", {
-		url: toWebSocketUrl(requestContext.url),
-		model: requestContext.transformedBody.model,
-		reasoningEffort: requestContext.transformedBody.reasoning?.effort ?? null,
-		headers: redactHeaders(websocketHeaders),
-		sentTurnStateHeader: websocketHeaders.has(X_CODEX_TURN_STATE_HEADER),
-		sentModelsEtagHeader: websocketHeaders.has(X_MODELS_ETAG_HEADER),
-		requestType: websocketRequest.type,
-		retry,
-		retryBudget: getCodexWebSocketRetryBudget(),
-	});
-	const eventStream = await openCodexWebSocketEventStream(
-		toWebSocketUrl(requestContext.url),
-		websocketHeaders,
-		websocketRequest,
-		websocketState,
+	const websocketRequestState: CodexWebSocketRequestState = { usedContinuation: false, connection };
+	const eventStream = connection.streamRequest(
+		() => {
+			applyCodexCachedReasoning(requestContext.model, requestBodyForState, websocketState);
+			const request = buildCodexWebSocketRequest(requestBodyForState, websocketState);
+			let attach = false;
+			if (websocketState.acceptedSteering?.length) {
+				const plan = planSteeredRequest(
+					request.previous_response_id ? (request.input as InputItem[]) : undefined,
+					websocketState.acceptedSteering.flatMap(steer => steer.items),
+				);
+				if (plan.kind === "attach") attach = true;
+				else if (plan.kind === "create") request.input = plan.input;
+				websocketState.acceptedSteering = undefined;
+			}
+			websocketRequestState.usedContinuation =
+				typeof request.previous_response_id === "string" &&
+				request.previous_response_id === websocketState.lastResponseId;
+			logCodexDebug("codex websocket request", {
+				retry,
+				retryBudget: getCodexWebSocketRetryBudget(),
+				requestType: request.type,
+			});
+			return { request, attach };
+		},
 		requestSetup.requestSignal,
 		options?.liveSteering,
-		attach,
+		websocketState,
 	);
-	return { eventStream, requestBodyForState, transport: "websocket" };
+	return { eventStream, requestBodyForState, transport: "websocket", websocketRequestState };
 }
 
 async function openCodexSseTransport(
@@ -734,6 +773,7 @@ async function openCodexSseTransport(
 	eventStream: AsyncGenerator<Record<string, unknown>>;
 	requestBodyForState: RequestBody;
 	transport: CodexTransport;
+	websocketRequestState?: CodexWebSocketRequestState;
 }> {
 	const eventStream = requestSetup.wrapCodexSseStream(
 		await openCodexSseEventStream(
@@ -762,6 +802,7 @@ async function reopenCodexWebSocketRuntimeStream(
 		state,
 		runtime.websocketStreamRetries,
 	);
+	runtime.websocketRequestState = next.websocketRequestState;
 	runtime.eventStream = next.eventStream;
 	runtime.requestBodyForState = next.requestBodyForState;
 	runtime.transport = next.transport;
@@ -774,6 +815,7 @@ async function reopenCodexSseRuntimeStream(
 	state: CodexWebSocketSessionState | undefined,
 ): Promise<void> {
 	const next = await openCodexSseTransport(context.requestContext, context.requestSetup, context.options, state);
+	runtime.websocketRequestState = next.websocketRequestState;
 	runtime.eventStream = next.eventStream;
 	runtime.requestBodyForState = next.requestBodyForState;
 	runtime.transport = next.transport;
@@ -787,8 +829,13 @@ function createCodexStreamRuntime(initial: {
 	requestBodyForState: RequestBody;
 	transport: CodexTransport;
 	websocketState?: CodexWebSocketSessionState;
+	websocketRequestState?: CodexWebSocketRequestState;
 }): CodexStreamRuntime {
 	return {
+		websocketRequestState: initial.websocketRequestState,
+		continuationRecoveryAttempt: 0,
+		sawResponseAccepted: false,
+		sawOutputEvent: false,
 		eventStream: initial.eventStream,
 		requestBodyForState: initial.requestBodyForState,
 		transport: initial.transport,
@@ -847,6 +894,14 @@ function handleCodexStreamEvent(args: {
 	const { model, output, stream, runtime, rawEvent } = args;
 	const eventType = typeof rawEvent.type === "string" ? rawEvent.type : "";
 	if (!eventType) return args.firstTokenTime;
+	if (
+		eventType === "response.created" ||
+		eventType === "response.in_progress" ||
+		(eventType === "response.failed" && typeof asRecord(rawEvent.response)?.id === "string")
+	)
+		runtime.sawResponseAccepted = true;
+	if (/^response\.(?:output|content|reasoning|function_call|custom_tool_call)/.test(eventType))
+		runtime.sawOutputEvent = true;
 
 	if (eventType !== "response.output_item.added" && typeof rawEvent.output_index === "number") {
 		const slot = runtime.outputSlots.get(rawEvent.output_index);
@@ -1215,7 +1270,14 @@ function handleResponseCreated(
 		};
 	}
 	const state = runtime.websocketState;
-	if (runtime.transport === "websocket" && state && typeof response?.id === "string" && response.id.length > 0) {
+	if (
+		runtime.transport === "websocket" &&
+		state &&
+		state.connection === runtime.websocketRequestState?.connection &&
+		state.connection?.isOpen() &&
+		typeof response?.id === "string" &&
+		response.id.length > 0
+	) {
 		state.lastResponseId = response.id;
 	}
 }
@@ -1281,7 +1343,12 @@ function handleResponseCompleted(
 	}
 
 	const state = runtime.websocketState;
-	if (runtime.transport === "websocket" && state) {
+	if (
+		runtime.transport === "websocket" &&
+		state &&
+		state.connection === runtime.websocketRequestState?.connection &&
+		state.connection?.isOpen()
+	) {
 		state.lastRequest = structuredCloneJSON(runtime.requestBodyForState);
 		if (typeof response?.id === "string" && response.id.length > 0) {
 			state.lastResponseId = response.id;
@@ -1309,6 +1376,9 @@ async function recoverCodexStreamError(
 	runtime: CodexStreamRuntime,
 	error: unknown,
 ): Promise<boolean> {
+	if (isCodexRejectedContinuation(error)) {
+		return tryRecoverCodexContinuation(context, runtime);
+	}
 	if (await tryReconnectCodexWebSocketOnConnectionLimit(context, runtime, error)) {
 		return true;
 	}
@@ -1319,6 +1389,55 @@ async function recoverCodexStreamError(
 		return true;
 	}
 	return false;
+}
+
+function isCodexRejectedContinuation(error: unknown): boolean {
+	return (
+		error instanceof CodexProviderStreamError &&
+		(error.code === "previous_response_not_found" ||
+			(error.code === "invalid_request_error" &&
+				(error.param === "previous_response_id" || /\bprevious_response_id\b/i.test(error.providerMessage))))
+	);
+}
+
+async function tryRecoverCodexContinuation(
+	context: CodexStreamProcessingContext,
+	runtime: CodexStreamRuntime,
+): Promise<boolean> {
+	const state = runtime.websocketState;
+	if (!state || runtime.transport !== "websocket") return false;
+	const eligible =
+		runtime.websocketRequestState?.usedContinuation &&
+		runtime.continuationRecoveryAttempt === 0 &&
+		!runtime.sawResponseAccepted &&
+		!runtime.sawOutputEvent &&
+		!runtime.sawTerminalEvent &&
+		context.output.content.length === 0 &&
+		!context.requestSetup.requestSignal.aborted;
+	state.connection?.close("continuation-rejected");
+	state.connection = undefined;
+	resetCodexWebSocketAppendState(state);
+	resetCodexSessionMetadata(state);
+	if (!eligible) return false;
+	runtime.continuationRecoveryAttempt += 1;
+	logCodexDebug("codex continuation recovery", {
+		reason: "previous_response_unavailable",
+		attempt: runtime.continuationRecoveryAttempt,
+		transport: "websocket",
+	});
+	// Connection failures retain the normal WebSocket retry/SSE fallback policy, with full context.
+	const next = await openInitialCodexEventStream(
+		context.model,
+		context.options,
+		context.requestSetup,
+		context.requestContext,
+	);
+	runtime.eventStream = next.eventStream;
+	runtime.requestBodyForState = next.requestBodyForState;
+	runtime.websocketRequestState = next.websocketRequestState;
+	runtime.transport = next.transport;
+	state.lastTransport = next.transport;
+	return true;
 }
 
 /**
@@ -1586,6 +1705,7 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 					options,
 					requestSetup,
 					requestContext: {
+						model,
 						apiKey: "",
 						accountId: "",
 						baseUrl: model.baseUrl || CODEX_BASE_URL,
@@ -1684,6 +1804,7 @@ function getCodexWebSocketSessionState(
 }
 
 function resetCodexWebSocketAppendState(state: CodexWebSocketSessionState): void {
+	state.acceptedSteering = undefined;
 	state.canAppend = false;
 	state.lastRequest = undefined;
 	state.lastResponseItems = undefined;
@@ -1698,6 +1819,7 @@ function resetCodexSessionMetadata(state: CodexWebSocketSessionState): void {
 
 function recordCodexWebSocketFailure(state: CodexWebSocketSessionState, activateFallback: boolean): void {
 	resetCodexWebSocketAppendState(state);
+	resetCodexSessionMetadata(state);
 	state.connection?.close("fallback");
 	state.connection = undefined;
 	state.lastFallbackAt = Date.now();
@@ -1843,6 +1965,7 @@ interface CodexWebSocketConnectionOptions {
 	idleTimeoutMs: number;
 	firstEventTimeoutMs: number;
 	onHandshakeHeaders?: (headers: Headers) => void;
+	onClose?: () => void;
 }
 
 class CodexWebSocketConnection {
@@ -1851,6 +1974,7 @@ class CodexWebSocketConnection {
 	#idleTimeoutMs: number;
 	#firstEventTimeoutMs: number;
 	#onHandshakeHeaders?: (headers: Headers) => void;
+	#onClose?: () => void;
 	#socket: WebSocket | null = null;
 	#queue: Array<Record<string, unknown> | Error | null> = [];
 	#waiters: Array<() => void> = [];
@@ -1864,6 +1988,7 @@ class CodexWebSocketConnection {
 		this.#idleTimeoutMs = options.idleTimeoutMs;
 		this.#firstEventTimeoutMs = options.firstEventTimeoutMs;
 		this.#onHandshakeHeaders = options.onHandshakeHeaders;
+		this.#onClose = options.onClose;
 	}
 
 	isOpen(): boolean {
@@ -1882,6 +2007,7 @@ class CodexWebSocketConnection {
 			this.#socket.close(1000, reason);
 		}
 		this.#socket = null;
+		this.#onClose?.();
 		for (const waiter of this.#steerWaiters.values()) waiter.reject(new Error("Steering socket closed"));
 		this.#steerWaiters.clear();
 	}
@@ -1929,6 +2055,7 @@ class CodexWebSocketConnection {
 		}, CODEX_WEBSOCKET_CONNECT_TIMEOUT_MS);
 
 		socket.addEventListener("open", event => {
+			if (this.#socket !== socket) return;
 			if (!settled) {
 				settled = true;
 				clearPending();
@@ -1937,6 +2064,7 @@ class CodexWebSocketConnection {
 			}
 		});
 		socket.addEventListener("error", event => {
+			if (this.#socket !== socket) return;
 			const eventRecord = event as unknown as Record<string, unknown>;
 			const detail =
 				(typeof eventRecord.message === "string" && eventRecord.message) ||
@@ -1952,6 +2080,7 @@ class CodexWebSocketConnection {
 			this.#push(error);
 		});
 		socket.addEventListener("close", event => {
+			if (this.#socket !== socket) return;
 			this.close("closed");
 			if (!settled) {
 				settled = true;
@@ -1963,6 +2092,7 @@ class CodexWebSocketConnection {
 			this.#push(null);
 		});
 		socket.addEventListener("message", event => {
+			if (this.#socket !== socket) return;
 			if (typeof event.data !== "string") return;
 			try {
 				const parsed = JSON.parse(event.data) as Record<string, unknown>;
@@ -2016,11 +2146,10 @@ class CodexWebSocketConnection {
 		return promise;
 	}
 	async *streamRequest(
-		request: Record<string, unknown>,
+		prepare: () => { request: Record<string, unknown>; attach: boolean },
 		signal?: AbortSignal,
 		liveSteering?: import("../types").LiveSteering,
 		state?: CodexWebSocketSessionState,
-		attach = false,
 	): AsyncGenerator<Record<string, unknown>> {
 		if (!this.#socket || this.#socket.readyState !== WebSocket.OPEN) {
 			throw createCodexWebSocketTransportError("websocket connection is unavailable");
@@ -2050,7 +2179,9 @@ class CodexWebSocketConnection {
 				)
 			: undefined;
 		try {
-			if (!attach) this.#socket.send(JSON.stringify(request));
+			if (signal?.aborted) throw createCodexWebSocketTransportError("request was aborted");
+			const { request, attach } = prepare();
+			if (!attach) this.#socket!.send(JSON.stringify(request));
 			let sawFirstEvent = false;
 			while (true) {
 				const next = await this.#nextMessage(
@@ -2079,7 +2210,7 @@ class CodexWebSocketConnection {
 				) {
 					if (pump) {
 						const outcome = await pump.finish();
-						if (state) state.acceptedSteering = outcome.accepted;
+						if (state && state.connection === this && this.isOpen()) state.acceptedSteering = outcome.accepted;
 						if (outcome.uncertain) {
 							this.close("steering-uncertain");
 							if (state) resetCodexWebSocketAppendState(state);
@@ -2153,16 +2284,25 @@ async function getOrCreateCodexWebSocketConnection(
 	}
 	state.connection?.close("reconnect");
 	resetCodexWebSocketAppendState(state);
+	resetCodexSessionMetadata(state);
+	for (const name of [X_CODEX_TURN_STATE_HEADER, X_MODELS_ETAG_HEADER, X_REASONING_INCLUDED_HEADER])
+		delete headerRecord[name];
 	logger.time("codexWs:newSocket");
-	state.connection = new CodexWebSocketConnection(url, headerRecord, {
+	const connection = new CodexWebSocketConnection(url, headerRecord, {
 		idleTimeoutMs: getCodexWebSocketIdleTimeoutMs(),
 		firstEventTimeoutMs: getCodexWebSocketFirstEventTimeoutMs(),
 		onHandshakeHeaders: handshakeHeaders => {
-			updateCodexSessionMetadataFromHeaders(state, handshakeHeaders);
+			if (state.connection === connection) updateCodexSessionMetadataFromHeaders(state, handshakeHeaders);
+		},
+		onClose: () => {
+			if (state.connection !== connection) return;
+			resetCodexWebSocketAppendState(state);
+			resetCodexSessionMetadata(state);
 		},
 	});
-	await state.connection.connect(signal);
-	return state.connection;
+	state.connection = connection;
+	await connection.connect(signal);
+	return connection;
 }
 
 async function openCodexSseEventStream(
@@ -2214,19 +2354,6 @@ async function openCodexSseEventStream(
 		throw new Error("No response body");
 	}
 	return readSseJson<Record<string, unknown>>(response.body, signal);
-}
-
-async function openCodexWebSocketEventStream(
-	url: string,
-	headers: Headers,
-	request: Record<string, unknown>,
-	state: CodexWebSocketSessionState,
-	signal?: AbortSignal,
-	liveSteering?: import("../types").LiveSteering,
-	attach = false,
-): Promise<AsyncGenerator<Record<string, unknown>>> {
-	const connection = await getOrCreateCodexWebSocketConnection(state, url, headers, signal);
-	return connection.streamRequest(request, signal, liveSteering, state, attach);
 }
 
 function createCodexHeaders(
@@ -2579,12 +2706,16 @@ function sanitizeProviderFailureCode(value: unknown): string | undefined {
 class CodexProviderStreamError extends Error {
 	readonly retryable: boolean;
 	readonly code?: string;
+	readonly param?: string;
+	readonly providerMessage: string;
 
-	constructor(message: string, retryable: boolean, code?: string) {
+	constructor(message: string, retryable: boolean, code?: string, param?: string, providerMessage = message) {
 		super(message);
 		this.name = "CodexProviderStreamError";
 		this.retryable = retryable;
 		this.code = sanitizeProviderFailureCode(code);
+		this.param = param;
+		this.providerMessage = providerMessage;
 	}
 }
 
@@ -2595,6 +2726,7 @@ function isRetryableCodexFailureEvent(rawEvent: Record<string, unknown>): boolea
 	if (code && CODEX_RETRYABLE_EVENT_CODES.has(code.toLowerCase())) {
 		return true;
 	}
+	if (code === "invalid_request_error" || code === "previous_response_not_found") return false;
 	const message = getString(error?.message) ?? getString(rawEvent.message) ?? getString(response?.message);
 	return !!message && CODEX_RETRYABLE_EVENT_MESSAGE.test(message);
 }
@@ -2603,12 +2735,19 @@ function createCodexProviderStreamError(rawEvent: Record<string, unknown>): Code
 	const response = asRecord(rawEvent.response);
 	const providerError = asRecord(rawEvent.error) ?? (response ? asRecord(response.error) : null);
 	const code = getString(providerError?.code) ?? getString(providerError?.type) ?? getString(rawEvent.code) ?? "";
-	const message = getString(rawEvent.message) ?? "";
+	const message = getString(providerError?.message) ?? getString(rawEvent.message) ?? "";
+	const param = getString(providerError?.param) ?? getString(rawEvent.param);
 	const formattedMessage =
 		typeof rawEvent.type === "string" && rawEvent.type === "error"
 			? formatCodexErrorEvent(rawEvent, code, message)
 			: (formatCodexFailure(rawEvent) ?? "Codex response failed");
-	return new CodexProviderStreamError(formattedMessage, isRetryableCodexFailureEvent(rawEvent), code || undefined);
+	return new CodexProviderStreamError(
+		formattedMessage,
+		isRetryableCodexFailureEvent(rawEvent),
+		code || undefined,
+		param,
+		message,
+	);
 }
 
 function isRetryableCodexProviderError(error: unknown): boolean {
