@@ -277,3 +277,9 @@ it("working Mac executable reuse does not inspect irrelevant sudo ownership", as
 	await result.validate();
 	expect(result.steps).toEqual([]);
 });
+
+it("unavailable official winget package fails during preparation", async () => {
+	const env = environment("win32");
+	env.run = async () => ({ code: 1, stdout: "", stderr: "" });
+	await expect(resolveSoftware(recipe, undefined, env as never)).rejects.toThrow("winget package");
+});

@@ -32,6 +32,7 @@ export * from "./extensibility/skills";
 export { type FileSlashCommand, loadSlashCommands as discoverSlashCommands } from "./extensibility/slash-commands";
 export { type HostInfo, host } from "./host/host";
 export { type SoftwareRecipe, type SoftwareResolution, software } from "./host/software";
+export type { IntegrationDefinition, IntegrationHandle, IntegrationSetupPlan } from "./integrations/types";
 export type * from "./lsp";
 // Main entry point
 export * from "./main";
