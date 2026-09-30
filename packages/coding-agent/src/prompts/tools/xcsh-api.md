@@ -1,6 +1,6 @@
 Execute an F5 Distributed Cloud API call directly.
 
-Prefer this tool for default execution. Example-only requests must not trigger resource operations. Use catalog/schema evidence for curl examples and the shell for explicitly requested curl execution under existing controls.
+Prefer this tool for default execution. Example-only requests must not trigger resource operations. Use catalog/schema evidence for cURL examples and the shell for explicitly requested cURL execution under existing controls.
 
 Handles authentication, URL construction, and HTTP execution.
 Credentials are resolved from the active context profile (`/context`). Environment variables

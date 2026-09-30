@@ -103,7 +103,9 @@ def validate(response: str, method: str) -> None:
             ),
             "Missing JSON Content-Type",
         )
-        require(data is not None, "Missing JSON payload")
+        if data is None:
+            message = "Missing JSON payload"
+            raise SystemExit(message)
         body = json.loads(data)
         require(body["metadata"]["name"] == "curl-example", "Incorrect resource name")
         require(body["metadata"]["namespace"] == "default", "Incorrect namespace")

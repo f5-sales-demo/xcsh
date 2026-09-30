@@ -22,9 +22,9 @@ describe("requested curl policy", () => {
 				contextFiles: [],
 			});
 			expect(rendered).toContain("Prefer `xcsh_api`");
-			expect(rendered).toContain("Provide accurate curl examples when requested");
+			expect(rendered).toContain("Provide accurate cURL examples when requested");
 			expect(rendered).toContain("Generating an example does not authorize executing it");
-			expect(rendered).toContain("explicitly requests curl execution");
+			expect(rendered).toContain("explicitly requests cURL execution");
 			expect(rendered).toContain("existing context, credential, approval, and execution controls");
 			expect(rendered).toContain("$XCSH_API_URL");
 			expect(rendered).toContain("Authorization: APIToken $XCSH_API_TOKEN");
@@ -47,6 +47,6 @@ describe("requested curl policy", () => {
 	it("scopes native deletion and discovery to default execution requests", () => {
 		expect(apiToolPrompt).toContain("For default execution requests");
 		expect(apiToolPrompt).toContain("Example-only requests must not trigger resource operations");
-		expect(apiToolPrompt).toContain("explicitly requested curl execution");
+		expect(apiToolPrompt).toContain("explicitly requested cURL execution");
 	});
 });

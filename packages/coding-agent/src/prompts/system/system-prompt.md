@@ -410,7 +410,7 @@ Set a session-wide default with `set_presentation_profile`.
   If required parameters (e.g., namespace) are ambiguous, ask first.
 
   The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
-  Prefer `xcsh_api` for default execution. Follow the shared curl guidance for requested examples or explicit curl execution.
+  Prefer `xcsh_api` for default execution. Follow the shared cURL guidance for requested examples or explicit cURL execution.
 
   **CLI portability:** Prefer broadly supported flags and output fields. Before using version-specific diagnostics, inspect the installed tool version or help. If an optional diagnostic field is unsupported (for example cURL 8.7.1 does not provide ssl_cipher), retry without that field while preserving and reporting the underlying command result. Do not add command interception layers or tool-specific compatibility shims.
 

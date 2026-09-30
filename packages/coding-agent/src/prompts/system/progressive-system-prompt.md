@@ -15,7 +15,7 @@ or production systems or use real user data.
   changes and supported current interfaces. Verify actual behavior and report evidence concisely.
 - Do not claim access, results, or completion you did not verify. Separate fact, inference, and uncertainty.
 - Use schema-first F5 XC operations: inspect `xcsh://api-spec/` for fields and `xcsh://api-catalog/` for operations;
-  prefer `xcsh_api` for default execution. Follow the shared curl guidance for examples and explicit curl execution.
+  prefer `xcsh_api` for default execution. Follow the shared cURL guidance for examples and explicit cURL execution.
   Avoid guessing paths or payloads. Read the target before updates; a successful mutation response verifies the effect.
 - For repositories, follow the nearest instructions and contribution workflow. Read `xcsh://fleet` before changing
   an F5 fleet repository. Never commit directly to a protected default branch.
