@@ -130,9 +130,9 @@
 					],
 					"live": {
 						"status": "pass",
-						"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
 						"route": "Ubuntu Anthropic OAuth subscription",
-						"evidence": "startup/picker/image/read/tool/follow-up"
+						"evidence": "startup/picker/image/read/tool/follow-up",
+						"sourceCommit": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9"
 					},
 					"unsupported": [
 						"Wire steering and deferred work are not implied by shared chat transport; use only explicit route capabilities."
@@ -812,9 +812,9 @@
 					],
 					"live": {
 						"status": "pass",
-						"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
 						"route": "Ubuntu existing Vertex OAuth Gemini 3.8 Flash/high",
-						"evidence": "Herdr /login Ready, /model and synthetic read/tool/follow-up"
+						"evidence": "Herdr /login Ready, /model and synthetic read/tool/follow-up",
+						"sourceCommit": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9"
 					},
 					"unsupported": [
 						"Wire steering and deferred work are not implied by shared chat transport; use only explicit route capabilities."
@@ -1400,9 +1400,9 @@
 					],
 					"live": {
 						"status": "pass",
-						"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
 						"route": "Ubuntu ChatGPT subscription Sol PTY",
-						"evidence": "startup/picker/image/tool follow-up/efforts/Fast/steering/async"
+						"evidence": "startup/picker/image/tool follow-up/efforts/Fast/steering/async",
+						"sourceCommit": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9"
 					},
 					"unsupported": [
 						"Wire steering and deferred work are not implied by shared chat transport; use only explicit route capabilities."
@@ -2725,7 +2725,6 @@
 		}
 	],
 	"qualification": {
-		"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
 		"workspace": {
 			"checks": "pass",
 			"tests": "pass",
@@ -2756,7 +2755,8 @@
 			"LiteLLM deferred Responses HTTP 500; implicit cache key passes but observed hits zero",
 			"ChatGPT advertises steering; cached reasoning updates not advertised",
 			"Third-party providers without credentials remain live-unqualified"
-		]
+		],
+		"sourceCommit": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9"
 	},
 	"upstreamCommits": {
 		"pi": "1b347794e2a630e4359f2584f4eea388145d0ddf",
