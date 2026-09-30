@@ -9,7 +9,15 @@
 			"upstreamSource": "packages/ai/src/providers/amazon-bedrock.ts",
 			"operation": "bedrock-converse-stream",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "bedrock-converse-stream",
+					"xcshApi": "bedrock-converse-stream",
+					"implementation": "packages/ai/src/providers/amazon-bedrock.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "ant-ling",
@@ -17,7 +25,15 @@
 			"upstreamSource": "packages/ai/src/providers/ant-ling.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "anthropic",
@@ -25,7 +41,15 @@
 			"upstreamSource": "packages/ai/src/providers/anthropic.ts",
 			"operation": "anthropic-messages",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "azure-openai-responses",
@@ -33,7 +57,15 @@
 			"upstreamSource": "packages/ai/src/providers/azure-openai-responses.ts",
 			"operation": "azure-openai-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "azure-openai-responses",
+					"xcshApi": "azure-openai-responses",
+					"implementation": "packages/ai/src/providers/azure-openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "baseten",
@@ -41,7 +73,15 @@
 			"upstreamSource": "packages/ai/src/providers/baseten.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "cerebras",
@@ -49,23 +89,65 @@
 			"upstreamSource": "packages/ai/src/providers/cerebras.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "cloudflare-ai-gateway",
 			"xcshProvider": "cloudflare-ai-gateway",
 			"upstreamSource": "packages/ai/src/providers/cloudflare-ai-gateway.ts",
-			"operation": "provider-specific",
+			"operation": "anthropic-messages, openai-completions, openai-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "cloudflare-workers-ai",
 			"xcshProvider": "cloudflare-workers-ai",
 			"upstreamSource": "packages/ai/src/providers/cloudflare-workers-ai.ts",
-			"operation": "openai-completions",
+			"operation": "cloudflare-workers-ai-system-one, openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "cloudflare-workers-ai-system-one",
+					"xcshApi": "cloudflare-workers-ai-system-one",
+					"implementation": "packages/ai/src/providers/cloudflare-workers-ai-system-one.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "deepseek",
@@ -73,23 +155,65 @@
 			"upstreamSource": "packages/ai/src/providers/deepseek.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "fireworks",
 			"xcshProvider": "fireworks",
 			"upstreamSource": "packages/ai/src/providers/fireworks.ts",
-			"operation": "openai-completions, anthropic-messages",
+			"operation": "anthropic-messages, openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "github-copilot",
 			"xcshProvider": "github-copilot",
 			"upstreamSource": "packages/ai/src/providers/github-copilot.ts",
-			"operation": "anthropic-messages",
+			"operation": "anthropic-messages, openai-completions, openai-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "google",
@@ -97,7 +221,15 @@
 			"upstreamSource": "packages/ai/src/providers/google.ts",
 			"operation": "google-generative-ai",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "google-generative-ai",
+					"xcshApi": "google-generative-ai",
+					"implementation": "packages/ai/src/providers/google.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "google-vertex",
@@ -105,7 +237,15 @@
 			"upstreamSource": "packages/ai/src/providers/google-vertex.ts",
 			"operation": "google-vertex",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "google-vertex",
+					"xcshApi": "google-vertex",
+					"implementation": "packages/ai/src/providers/google-vertex.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "groq",
@@ -113,7 +253,15 @@
 			"upstreamSource": "packages/ai/src/providers/groq.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "huggingface",
@@ -121,7 +269,15 @@
 			"upstreamSource": "packages/ai/src/providers/huggingface.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "kimi-coding",
@@ -129,7 +285,15 @@
 			"upstreamSource": "packages/ai/src/providers/kimi-coding.ts",
 			"operation": "anthropic-messages",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "meta",
@@ -137,7 +301,15 @@
 			"upstreamSource": "packages/ai/src/providers/meta.ts",
 			"operation": "openai-responses",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "minimax",
@@ -145,7 +317,15 @@
 			"upstreamSource": "packages/ai/src/providers/minimax.ts",
 			"operation": "anthropic-messages",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "minimax-cn",
@@ -153,7 +333,15 @@
 			"upstreamSource": "packages/ai/src/providers/minimax-cn.ts",
 			"operation": "anthropic-messages",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "mistral",
@@ -161,7 +349,15 @@
 			"upstreamSource": "packages/ai/src/providers/mistral.ts",
 			"operation": "mistral-conversations",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "mistral-conversations",
+					"xcshApi": "mistral-conversations",
+					"implementation": "packages/ai/src/providers/mistral-conversations.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "moonshotai",
@@ -169,7 +365,15 @@
 			"upstreamSource": "packages/ai/src/providers/moonshotai.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "moonshotai-cn",
@@ -177,7 +381,15 @@
 			"upstreamSource": "packages/ai/src/providers/moonshotai-cn.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "nvidia",
@@ -185,7 +397,15 @@
 			"upstreamSource": "packages/ai/src/providers/nvidia.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "openai",
@@ -193,7 +413,15 @@
 			"upstreamSource": "packages/ai/src/providers/openai.ts",
 			"operation": "openai-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "openai-codex",
@@ -201,31 +429,117 @@
 			"upstreamSource": "packages/ai/src/providers/openai-codex.ts",
 			"operation": "openai-codex-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-codex-responses",
+					"xcshApi": "openai-codex-responses",
+					"implementation": "packages/ai/src/providers/openai-codex-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "opencode",
 			"xcshProvider": "opencode-zen",
 			"upstreamSource": "packages/ai/src/providers/opencode.ts",
-			"operation": "provider-specific",
+			"operation": "anthropic-messages, google-generative-ai, openai-completions, openai-responses, typesafe-system-one",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "google-generative-ai",
+					"xcshApi": "google-generative-ai",
+					"implementation": "packages/ai/src/providers/google.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "typesafe-system-one",
+					"xcshApi": "typesafe-system-one",
+					"implementation": "packages/ai/src/providers/typesafe-system-one.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "opencode-go",
 			"xcshProvider": "opencode-go",
 			"upstreamSource": "packages/ai/src/providers/opencode-go.ts",
-			"operation": "anthropic-messages",
+			"operation": "anthropic-messages, openai-completions, openai-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "openrouter",
 			"xcshProvider": "openrouter",
 			"upstreamSource": "packages/ai/src/providers/openrouter.ts",
-			"operation": "anthropic-messages",
+			"operation": "anthropic-messages, openai-completions, openrouter-images, typesafe-system-one",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "openrouter-images",
+					"xcshApi": "openrouter-images",
+					"implementation": "packages/ai/src/providers/openrouter-images.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "typesafe-system-one",
+					"xcshApi": "typesafe-system-one",
+					"implementation": "packages/ai/src/providers/typesafe-system-one.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "qwen-token-plan",
@@ -233,7 +547,15 @@
 			"upstreamSource": "packages/ai/src/providers/qwen-token-plan.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "qwen-token-plan-cn",
@@ -241,7 +563,15 @@
 			"upstreamSource": "packages/ai/src/providers/qwen-token-plan-cn.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "qwen-token-plan-individual",
@@ -249,7 +579,15 @@
 			"upstreamSource": "packages/ai/src/providers/qwen-token-plan-individual.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "radius",
@@ -257,7 +595,15 @@
 			"upstreamSource": "packages/ai/src/providers/radius.ts",
 			"operation": "pi-messages",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "pi-messages",
+					"xcshApi": "pi-messages",
+					"implementation": "packages/ai/src/providers/pi-messages.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "together",
@@ -265,7 +611,15 @@
 			"upstreamSource": "packages/ai/src/providers/together.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "typesafe",
@@ -273,15 +627,37 @@
 			"upstreamSource": "packages/ai/src/providers/typesafe.ts",
 			"operation": "typesafe-system-one",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "typesafe-system-one",
+					"xcshApi": "typesafe-system-one",
+					"implementation": "packages/ai/src/providers/typesafe-system-one.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "vercel-ai-gateway",
 			"xcshProvider": "vercel-ai-gateway",
 			"upstreamSource": "packages/ai/src/providers/vercel-ai-gateway.ts",
-			"operation": "anthropic-messages",
+			"operation": "anthropic-messages, typesafe-system-one",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "anthropic-messages",
+					"xcshApi": "anthropic-messages",
+					"implementation": "packages/ai/src/providers/anthropic.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				},
+				{
+					"upstreamApi": "typesafe-system-one",
+					"xcshApi": "typesafe-system-one",
+					"implementation": "packages/ai/src/providers/typesafe-system-one.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "xai",
@@ -289,7 +665,15 @@
 			"upstreamSource": "packages/ai/src/providers/xai.ts",
 			"operation": "openai-responses",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-responses",
+					"xcshApi": "openai-responses",
+					"implementation": "packages/ai/src/providers/openai-responses.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "xiaomi",
@@ -297,7 +681,15 @@
 			"upstreamSource": "packages/ai/src/providers/xiaomi.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "xiaomi-token-plan-ams",
@@ -305,7 +697,15 @@
 			"upstreamSource": "packages/ai/src/providers/xiaomi-token-plan-ams.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "xiaomi-token-plan-cn",
@@ -313,7 +713,15 @@
 			"upstreamSource": "packages/ai/src/providers/xiaomi-token-plan-cn.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "xiaomi-token-plan-sgp",
@@ -321,7 +729,15 @@
 			"upstreamSource": "packages/ai/src/providers/xiaomi-token-plan-sgp.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "zai",
@@ -329,7 +745,15 @@
 			"upstreamSource": "packages/ai/src/providers/zai.ts",
 			"operation": "openai-completions",
 			"mapping": "existing provider contract",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		},
 		{
 			"upstreamProvider": "zai-coding-cn",
@@ -337,15 +761,22 @@
 			"upstreamSource": "packages/ai/src/providers/zai-coding-cn.ts",
 			"operation": "openai-completions",
 			"mapping": "additive provider descriptor and operation dispatch",
-			"status": "implementation mapped; provider-specific qualification pending"
+			"status": "implementation mapped; provider-specific qualification pending",
+			"operations": [
+				{
+					"upstreamApi": "openai-completions",
+					"xcshApi": "openai-completions",
+					"implementation": "packages/ai/src/providers/openai-completions.ts",
+					"qualification": "Shared transport implemented; provider-specific acceptance remains to be enumerated"
+				}
+			]
 		}
 	],
 	"openGates": [
-		"remaining provider capability qualification",
-		"terminal advanced controls on final candidate",
+		"Remaining provider capability qualification",
+		"Final candidate full tests and terminal acceptance",
 		"Gemini subscription sign-in",
-		"planning and completion audits",
-		"stable full test run",
+		"Required planning and completion audits",
 		"PR CI merge release installed UAT"
 	],
 	"capabilities": [
@@ -442,14 +873,65 @@
 				"model-refresh-cancellation.test.ts",
 				"discovery-normalization.test.ts"
 			]
+		},
+		{
+			"capability": "Completion templates, provider reasoning protocols, endpoint resolution, observers and usage",
+			"implementation": [
+				"packages/ai/src/providers/openai-completions.ts",
+				"packages/ai/src/providers/openai-completions-compat.ts"
+			],
+			"tests": [
+				"completions-modernization-contract.test.ts",
+				"completions-lifecycle-contract.test.ts",
+				"completions-usage-contract.test.ts",
+				"provider-reasoning-detection-contract.test.ts"
+			]
+		},
+		{
+			"capability": "Detached encrypted reasoning replay and foreign custom tool downgrade",
+			"implementation": [
+				"packages/ai/src/providers/completions-reasoning-details.ts",
+				"packages/ai/src/providers/transform-messages.ts"
+			],
+			"tests": [
+				"completions-reasoning-replay-contract.test.ts"
+			]
+		},
+		{
+			"capability": "Azure shared Responses controls and Bedrock redacted reasoning replay",
+			"implementation": [
+				"packages/ai/src/providers/azure-openai-responses.ts",
+				"packages/ai/src/providers/amazon-bedrock.ts"
+			],
+			"tests": [
+				"azure-modernization-contract.test.ts",
+				"bedrock-modernization-contract.test.ts"
+			]
+		},
+		{
+			"capability": "xAI OAuth, discovery effort metadata, uncertainty and cancellation",
+			"implementation": [
+				"packages/ai/src/utils/oauth/xai.ts",
+				"packages/ai/src/provider-models/openai-compat.ts",
+				"packages/ai/src/model-manager.ts"
+			],
+			"tests": [
+				"xai-oauth-contract.test.ts",
+				"provider-metadata-contract.test.ts",
+				"provider-route-contract.test.ts"
+			]
 		}
 	],
 	"qualification": {
 		"aiPackage": {
-			"passed": 922,
+			"passed": 955,
 			"skipped": 456,
 			"failed": 0
 		},
-		"note": "Counts and live outcomes refer to the uncommitted candidate; required final release and installed acceptance remain pending."
+		"aiPackageCommit": "2ce34b0db64e74ca2ff58ded484f17ecd112a7cd",
+		"aiPackageHost": "macOS; CLOUDSDK_ACTIVE_CONFIG_NAME unset for the fixture suite",
+		"crossHostSourceCommit": "4b9edd3b4d25a474fc288de58de861cf61e7191f",
+		"fullWorkspacePassSeconds": 606,
+		"note": "The later overloaded Ubuntu run timed out and is not acceptance evidence. Final candidate and installed release acceptance remain pending."
 	}
 }
