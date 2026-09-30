@@ -347,12 +347,74 @@ async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | n
 	return { name: publishedName, version: publishedVersion };
 }
 
+export interface PublicationFinalizationDependencies {
+	waitForVisibility?(packageName: string, version: string): Promise<unknown>;
+	readLatest?(): Promise<string>;
+	setLatest?(version: string): Promise<void>;
+	sleep?(delayMs: number): Promise<void>;
+	maxAttempts?: number;
+}
+
+function stableVersionParts(version: string): number[] {
+	if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
+		throw new Error(`Invalid stable npm version: ${version}`);
+	}
+	const parts = version.split(".").map(Number);
+	if (!parts.every(Number.isSafeInteger)) throw new Error(`Invalid stable npm version: ${version}`);
+	return parts;
+}
+
+function versionAtLeast(candidate: string, minimum: string): boolean {
+	const left = stableVersionParts(candidate);
+	const right = stableVersionParts(minimum);
+	for (let index = 0; index < 3; index++) {
+		if (left[index] !== right[index]) return left[index] > right[index];
+	}
+	return true;
+}
+
+/** Complete exact-version visibility and canonical latest metadata without changing historical backfills. */
+export async function finalizeNpmPublication(
+	packages: PublishedPackage[],
+	distTag?: string,
+	deps: PublicationFinalizationDependencies = {},
+): Promise<void> {
+	await waitForPublishedPackages(packages, deps.waitForVisibility);
+	if (distTag !== undefined) return;
+	const xcsh = packages.find(pkg => pkg.name === "@f5-sales-demo/xcsh");
+	if (!xcsh) return;
+	stableVersionParts(xcsh.version);
+	const readLatest = deps.readLatest ?? (async () => {
+		const output = await $`npm view @f5-sales-demo/xcsh dist-tags.latest --json`.cwd(repoRoot).quiet().text();
+		const value: unknown = JSON.parse(output);
+		if (typeof value !== "string") throw new Error("npm latest tag did not contain a version");
+		stableVersionParts(value);
+		return value;
+	});
+	const setLatest = deps.setLatest ?? (async (version: string) => {
+		await $`npm dist-tag add ${`@f5-sales-demo/xcsh@${version}`} latest`.cwd(repoRoot).quiet();
+	});
+	const current = await readLatest();
+	if (versionAtLeast(current, xcsh.version)) return;
+	// Exact visibility was verified above. Read latest immediately before its write to preserve newer releases.
+	const refreshed = await readLatest();
+	if (versionAtLeast(refreshed, xcsh.version)) return;
+	await setLatest(xcsh.version);
+	const maxAttempts = deps.maxAttempts ?? 40;
+	if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new Error("maxAttempts must be a positive integer");
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		if (versionAtLeast(await readLatest(), xcsh.version)) return;
+		if (attempt + 1 < maxAttempts) await (deps.sleep ?? Bun.sleep)(15_000);
+	}
+	throw new Error(`npm latest tag did not reach ${xcsh.version}`);
+}
+
 async function main(): Promise<void> {
 	const publishedPackages = await publishInDependencyWaves(publishWaves, publishPackage);
 
 	if (publishedPackages.length > 0) {
 		console.log("\n=== Verifying final registry visibility ===");
-		await waitForPublishedPackages(publishedPackages);
+		await finalizeNpmPublication(publishedPackages, publishTag);
 	}
 }
 

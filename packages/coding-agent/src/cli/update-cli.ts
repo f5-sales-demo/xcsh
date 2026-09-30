@@ -243,6 +243,15 @@ export async function runUpdateCommand(
 	}
 
 	const comparison = compareVersions(release.version, deps.currentVersion);
+	if (comparison < 0) {
+		deps.stdout(
+			chalk.yellow(
+				`Discovered release ${release.version} is older than installed ${deps.currentVersion}; no update performed.`,
+			),
+		);
+		if (opts.check) deps.stdout(formatUpdateRecommendation(recommendation));
+		return 0;
+	}
 	if (comparison > 0) deps.stdout(chalk.cyan(`New version available: ${release.version}`));
 	else if (opts.force) deps.stdout(chalk.yellow(`Forcing update recommendation for ${release.version}`));
 	else deps.stdout(chalk.green("✓ Already up to date"));

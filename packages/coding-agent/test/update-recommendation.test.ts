@@ -385,6 +385,19 @@ function commandDependencies(
 }
 
 describe("update command channel policy", () => {
+	it.each([false, true])("does not downgrade an installed standalone version with force=%s", async force => {
+		const harness = commandDependencies(
+			{ channel: "standalone", action: "self-update", command: "xcsh self-update", evidence: "receipt" },
+			{
+				currentVersion: "22.4.11",
+				getLatestRelease: async () => ({ tag: "v22.4.10", version: "22.4.10" }),
+			},
+		);
+		expect(await runUpdateCommand({ check: false, force }, harness.deps)).toBe(0);
+		expect(harness.mutations).toEqual([]);
+		expect(harness.stdout.join("\n")).toContain("older than installed 22.4.11");
+	});
+
 	it.each([
 		{
 			channel: "homebrew-cask",
