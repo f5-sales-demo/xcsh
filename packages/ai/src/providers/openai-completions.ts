@@ -300,6 +300,8 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			const parseMiniMaxThinkTags = model.provider === "minimax-code";
 			type OpenAIStreamBlock = TextContent | ThinkingContent | (ToolCall & { partialArgs: string });
 			let currentBlock: OpenAIStreamBlock | undefined;
+			const callsByIndex = new Map<number, Extract<OpenAIStreamBlock, { type: "toolCall" }>>();
+			const finished = new Set<OpenAIStreamBlock>();
 			const reasoningDetails: ReasoningDetail[] = [];
 			const grammarProperties = new Map(
 				(context.tools ?? []).flatMap(tool =>
@@ -317,6 +319,9 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			};
 			const finishCurrentBlock = (block: OpenAIStreamBlock | undefined): void => {
 				if (!block) return;
+				if (block.type === "toolCall") return;
+				if (finished.has(block)) return;
+				finished.add(block);
 				const contentIndex = blockIndex(block);
 				if (contentIndex < 0) return;
 				if (block.type === "text") {
@@ -328,11 +333,6 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 					stream.push({ type: "thinking_end", contentIndex, content: block.thinking, partial: output });
 					return;
 				}
-				block.arguments = block.customInputProperty
-					? { [block.customInputProperty]: block.partialArgs }
-					: parseStreamingJson(block.partialArgs);
-				delete (block as { partialArgs?: string }).partialArgs;
-				stream.push({ type: "toolcall_end", contentIndex, toolCall: block, partial: output });
 			};
 			const appendText = (
 				message: AssistantMessage,
@@ -507,7 +507,8 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 					if (choice?.delta?.tool_calls) {
 						for (const toolCall of choice.delta.tool_calls) {
 							const custom = (toolCall as unknown as { custom?: { name?: string; input?: string } }).custom;
-							if (currentBlock?.type !== "toolCall" || (toolCall.id && currentBlock.id !== toolCall.id)) {
+							let callBlock = callsByIndex.get(toolCall.index);
+							if (!callBlock) {
 								finishCurrentBlock(currentBlock);
 								currentBlock = {
 									type: "toolCall",
@@ -520,6 +521,8 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 									partialArgs: "",
 								};
 								output.content.push(currentBlock);
+								callBlock = currentBlock;
+								callsByIndex.set(toolCall.index, callBlock);
 								stream.push({
 									type: "toolcall_start",
 									contentIndex: blockIndex(currentBlock),
@@ -527,6 +530,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 								});
 							}
 
+							currentBlock = callBlock;
 							if (currentBlock.type === "toolCall") {
 								if (toolCall.id) currentBlock.id = toolCall.id;
 								if (toolCall.function?.name) currentBlock.name = toolCall.function.name;
@@ -589,6 +593,18 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			}
 
 			finishCurrentBlock(currentBlock);
+			for (const block of callsByIndex.values()) {
+				block.arguments = block.customInputProperty
+					? { [block.customInputProperty]: block.partialArgs }
+					: parseStreamingJson(block.partialArgs);
+				delete (block as { partialArgs?: string }).partialArgs;
+				stream.push({
+					type: "toolcall_end",
+					contentIndex: output.content.indexOf(block),
+					toolCall: block,
+					partial: output,
+				});
+			}
 			if (reasoningDetailBlock) applyReasoningDetails(reasoningDetailBlock, reasoningDetails);
 			if (
 				getCompat(model, baseUrl).supportsFinishReason === false &&
