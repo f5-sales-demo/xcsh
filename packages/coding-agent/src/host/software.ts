@@ -125,11 +125,28 @@ export async function resolveSoftware(
 		throw new Error("Invalid software recipe");
 	const info = await env.host(signal);
 	const existing = env.find(recipe.executable);
+	const managersFor = (current: HostInfo) =>
+		existing
+			? []
+			: current.os === "darwin"
+				? [current.packageManagers.brew]
+				: current.os === "win32"
+					? [current.packageManagers.winget]
+					: recipe.archive
+						? []
+						: [
+								current.packageManagers.apt,
+								...(current.effectiveUid === 0 ? [] : [current.packageManagers.sudo]),
+							];
 	const fingerprint = async (current: HostInfo) =>
 		JSON.stringify([
 			current,
 			env.find(recipe.executable),
-			...(await Promise.all(Object.values(current.packageManagers).map(path => env.identity(path)))),
+			...(await Promise.all(
+				managersFor(current)
+					.filter((path): path is string => path !== undefined)
+					.map(path => env.identity(path)),
+			)),
 			env.find(recipe.executable) ? await env.identity(env.find(recipe.executable)!) : undefined,
 		]);
 	const initial = await fingerprint(info);

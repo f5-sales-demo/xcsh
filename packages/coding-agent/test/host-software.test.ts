@@ -266,3 +266,14 @@ it("install-authorized setup displays the prepared frozen plan before execution"
 	});
 	expect(events).toEqual(["prepare", "review", "execute"]);
 });
+
+it("working Mac executable reuse does not inspect irrelevant sudo ownership", async () => {
+	const env = environment("darwin", "managed", true);
+	env.identity = async path => {
+		if (path.includes("sudo")) throw new Error("denied");
+		return path;
+	};
+	const result = await resolveSoftware(recipe, undefined, env as never);
+	await result.validate();
+	expect(result.steps).toEqual([]);
+});
