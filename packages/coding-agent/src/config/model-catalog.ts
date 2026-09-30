@@ -12,6 +12,7 @@ function compareVersions(left: string, right: string): number {
 
 /** Present the exact model-interaction contract when each provider advertises the model. */
 const CODEX_INTERACTION_MODEL_IDS = new Set([
+	"gpt-6.1-sol",
 	"gpt-6-astra",
 	"gpt-6-sol",
 	"gpt-6-luna",

@@ -65,6 +65,7 @@ async function* responseEvents(): AsyncGenerator<any> {
 			content: [{ type: "output_text", text: "Complete.", annotations: [] }],
 		},
 	};
+	yield { type: "response.completed", response: { status: "completed", output: [] } };
 }
 
 describe("OpenAI Responses assistant phases", () => {

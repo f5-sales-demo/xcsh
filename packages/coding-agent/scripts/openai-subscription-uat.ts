@@ -9,8 +9,8 @@ interface UatTarget {
 	executable?: string;
 }
 
-export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-6-sol";
-export const OPENAI_CODEX_DEFAULT_MODEL = "openai-codex/gpt-5.6-terra";
+export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-6.1-sol";
+export const OPENAI_CODEX_DEFAULT_MODEL = "openai-codex/gpt-6.1-sol";
 export const OPENAI_CODEX_ASTRA_MODEL = "openai-codex/gpt-6-astra";
 export const OPENAI_CODEX_PICKER_MODELS = [
 	"openai-codex/gpt-6-luna",
@@ -18,7 +18,7 @@ export const OPENAI_CODEX_PICKER_MODELS = [
 	OPENAI_CODEX_SOL_MODEL,
 	OPENAI_CODEX_ASTRA_MODEL,
 ] as const;
-export const OPENAI_CODEX_SOL_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
+export const OPENAI_CODEX_SOL_EFFORTS = ["low", "medium", "high", "xhigh", "max", "ultra"] as const;
 
 const ROOT_DIR = path.resolve(import.meta.dir, "../../..");
 const STARTUP_TIMEOUT_MS = 60_000;
@@ -36,7 +36,7 @@ function parseTargets(argv: string[]): UatTarget[] {
 		if (argument === "--source") {
 			targets.push({
 				label: "Bun development xcsh",
-				argv: ["bun", "packages/coding-agent/src/cli.ts"],
+				argv: ["bun", "run", "dev"],
 			});
 			continue;
 		}
@@ -281,8 +281,8 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 				return (
 					visible.includes("ChatGPT Subscription") &&
 					normalized.includes("gpt-6-luna] SMOL (low)") &&
-					normalized.includes("gpt-5.6-terra] DEFAULT (medium)") &&
-					normalized.includes("gpt-6-sol] SLOW (high) PLAN (high)") &&
+					normalized.includes("gpt-6.1-sol] DEFAULT (medium)") &&
+					normalized.includes("gpt-6.1-sol] DEFAULT (medium) SLOW (high) PLAN (high)") &&
 					normalized.includes("gpt-6-astra]") &&
 					!normalized.includes("gpt-6-astra] SMOL") &&
 					!normalized.includes("gpt-6-astra] DEFAULT") &&
@@ -351,12 +351,14 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 				`${model} reasoning picker`,
 				STARTUP_TIMEOUT_MS,
 			);
-			const thinkingOrder = ["inherit", "off", "low", "medium", "high", "xhigh", "max"] as const;
+			const thinkingOrder = ["inherit", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
 			const pickerOutput = visibleTranscript(transcript.slice(outputStart));
-			const selectedMatches = [...pickerOutput.matchAll(/[›>]\s+(inherit|off|low|medium|high|xhigh|max)\s+—/g)];
+			const selectedMatches = [
+				...pickerOutput.matchAll(/[›>]\s+(inherit|off|low|medium|high|xhigh|max|ultra)\s+—/g),
+			];
 			const selectedEffort = selectedMatches.at(-1)?.[1];
 			if (!selectedEffort) throw new Error(`${model} reasoning picker did not expose its selected effort`);
-			const targetEffort = effort === "none" ? "off" : effort;
+			const targetEffort = effort;
 			const currentIndex = thinkingOrder.indexOf(selectedEffort as (typeof thinkingOrder)[number]);
 			const targetIndex = thinkingOrder.indexOf(targetEffort as (typeof thinkingOrder)[number]);
 			const downwardMoves = (targetIndex - currentIndex + thinkingOrder.length) % thinkingOrder.length;

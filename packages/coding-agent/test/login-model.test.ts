@@ -66,7 +66,7 @@ function makeSession(opts: {
 	};
 }
 const M = (id: string, provider = "litellm") => ({ id, provider });
-const GPT_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-6-sol")!;
+const GPT_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-6.1-sol")!;
 const OPUS_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "claude-opus-5-5")!;
 
 describe("applyModelAfterLogin", () => {
@@ -82,19 +82,19 @@ describe("applyModelAfterLogin", () => {
 		});
 		expect(setThinkingLevel).not.toHaveBeenCalled();
 	});
-	it("persists the selected model and high thinking", async () => {
+	it("persists the selected model and medium thinking", async () => {
 		const { session, setModel, setThinkingLevel } = makeSession({
 			model: undefined,
-			models: [M("gpt-6-sol")],
+			models: [M("gpt-6.1-sol")],
 		});
 		const applied = await applyModelAfterLogin(session as never, GPT_CHOICE);
 		expect(applied).toBe(true);
 		expect(setModel).toHaveBeenCalledTimes(1);
-		expect(setModel.mock.calls[0][0]).toMatchObject({ id: "gpt-6-sol", provider: "litellm" });
+		expect(setModel.mock.calls[0][0]).toMatchObject({ id: "gpt-6.1-sol", provider: "litellm" });
 		expect(setModel.mock.calls[0][1]).toBe("default");
 		expect(setModel.mock.calls[0][2]).toEqual({
-			selector: "litellm/gpt-6-sol",
-			thinkingLevel: ThinkingLevel.High,
+			selector: "litellm/gpt-6.1-sol",
+			thinkingLevel: ThinkingLevel.Medium,
 		});
 		expect(setThinkingLevel).not.toHaveBeenCalled();
 	});
@@ -177,12 +177,12 @@ describe("applyModelAfterLogin", () => {
 
 describe("getAvailableLiteLLMLoginModelChoices", () => {
 	it("returns only curated models advertised by the authenticated catalog", () => {
-		const choices = getAvailableLiteLLMLoginModelChoices(["gpt-6-sol", "unrelated-model"]);
+		const choices = getAvailableLiteLLMLoginModelChoices(["gpt-6.1-sol", "unrelated-model"]);
 		expect(choices).toEqual([GPT_CHOICE]);
 	});
 
 	it("puts the vision-capable production default first in the stable display order", () => {
-		const choices = getAvailableLiteLLMLoginModelChoices(["claude-opus-5-5", "gpt-6-sol"]);
+		const choices = getAvailableLiteLLMLoginModelChoices(["claude-opus-5-5", "gpt-6.1-sol"]);
 		expect(choices).toEqual([GPT_CHOICE, OPUS_CHOICE]);
 	});
 
@@ -195,9 +195,9 @@ describe("getLiteLLMLoginModelRoles", () => {
 	it("maps only the latest GPT-6 tier defaults onto the LiteLLM provider", () => {
 		expect(getLiteLLMLoginModelRoles(GPT_CHOICE)).toEqual({
 			smol: "litellm/gpt-6-luna:low",
-			default: "litellm/gpt-5.6-terra:medium",
-			slow: "litellm/gpt-6-sol:high",
-			plan: "litellm/gpt-6-sol:high",
+			default: "litellm/gpt-6.1-sol:medium",
+			slow: "litellm/gpt-6.1-sol:high",
+			plan: "litellm/gpt-6.1-sol:high",
 		});
 	});
 
@@ -242,7 +242,7 @@ describe("formatLoginThinkingState", () => {
 describe("applyOAuthLoginModel", () => {
 	it("persists Gemini 3.6 Flash High after Google Antigravity login", async () => {
 		const { session, setModel, setThinkingLevel, getModelRoles, getRoutingProfile } = makeSession({
-			model: M("gpt-6-sol"),
+			model: M("gpt-6.1-sol"),
 			models: [
 				M("gemini-3.6-flash-high", "google-antigravity"),
 				M("gemini-3.1-pro-high-vertex", "google-antigravity"),
@@ -267,7 +267,7 @@ describe("applyOAuthLoginModel", () => {
 
 	it("does not apply the generic Gemini profile after enterprise login", async () => {
 		const { session, setModel, setThinkingLevel } = makeSession({
-			model: M("gpt-6-sol"),
+			model: M("gpt-6.1-sol"),
 			models: [
 				M("gemini-3.6-flash-high", "google-antigravity"),
 				M("gemini-3.1-pro-high-vertex", "google-antigravity"),
@@ -283,7 +283,7 @@ describe("applyOAuthLoginModel", () => {
 
 	it("does not replace the current model when the preferred provider model is unavailable", async () => {
 		const { session, setModel, setThinkingLevel } = makeSession({
-			model: M("gpt-6-sol"),
+			model: M("gpt-6.1-sol"),
 			models: [M("gemini-3-flash", "google-antigravity")],
 		});
 
@@ -314,7 +314,7 @@ describe("applyOAuthLoginModel", () => {
 
 	it("applies the complete Anthropic subscription profile with exact discovered IDs", async () => {
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
-			model: M("gpt-6-sol"),
+			model: M("gpt-6.1-sol"),
 			models: [
 				M("claude-haiku-4-5-20251001", "anthropic"),
 				M("claude-sonnet-5", "anthropic"),
@@ -371,36 +371,40 @@ describe("applyOAuthLoginModel", () => {
 	it("applies the complete OpenAI Codex subscription profile", async () => {
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: undefined,
-			models: [M("gpt-6-luna", "openai-codex"), M("gpt-5.6-terra", "openai-codex"), M("gpt-6-sol", "openai-codex")],
+			models: [
+				M("gpt-6-luna", "openai-codex"),
+				M("gpt-5.6-terra", "openai-codex"),
+				M("gpt-6.1-sol", "openai-codex"),
+			],
 		});
 
 		const applied = await applyOAuthLoginModel(session as never, "openai-codex");
 
 		expect(applied).toEqual(OPENAI_CODEX_LOGIN_MODEL_CHOICE);
 		expect(OPENAI_CODEX_LOGIN_MODEL_CHOICE).toMatchObject({
-			label: "GPT-5.6 Terra",
-			modelId: "gpt-5.6-terra",
+			label: "GPT-6.1 Sol",
+			modelId: "gpt-6.1-sol",
 			thinkingLevel: ThinkingLevel.Medium,
 		});
-		expect(setModel).toHaveBeenCalledWith(M("gpt-5.6-terra", "openai-codex"), "default", {
-			selector: "openai-codex/gpt-5.6-terra",
+		expect(setModel).toHaveBeenCalledWith(M("gpt-6.1-sol", "openai-codex"), "default", {
+			selector: "openai-codex/gpt-6.1-sol",
 			thinkingLevel: ThinkingLevel.Medium,
 		});
 		expect(getModelRoles()).toMatchObject({
 			smol: "openai-codex/gpt-6-luna:low",
-			default: "openai-codex/gpt-5.6-terra:medium",
-			slow: "openai-codex/gpt-6-sol:high",
-			plan: "openai-codex/gpt-6-sol:high",
+			default: "openai-codex/gpt-6.1-sol:medium",
+			slow: "openai-codex/gpt-6.1-sol:high",
+			plan: "openai-codex/gpt-6.1-sol:high",
 		});
 		expect(getRoutingProfile()).toBe("openai-codex");
 		expect(getRoutingMode()).toBe("off");
 	});
 
-	it("leaves model, roles, routing, and profile intact when Terra is missing", async () => {
+	it("leaves model, roles, routing, and profile intact when Sol is missing", async () => {
 		const previousModel = M("existing", "anthropic");
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: previousModel,
-			models: [M("gpt-6-luna", "openai-codex"), M("gpt-6-sol", "openai-codex")],
+			models: [M("gpt-6-luna", "openai-codex"), M("gpt-5.6-terra", "openai-codex")],
 		});
 
 		await expect(applyOAuthLoginModel(session as never, "openai-codex")).resolves.toBeUndefined();
@@ -415,7 +419,11 @@ describe("applyOAuthLoginModel", () => {
 		const previousModel = M("existing", "anthropic");
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: previousModel,
-			models: [M("gpt-6-luna", "openai-codex"), M("gpt-5.6-terra", "openai-codex"), M("gpt-6-sol", "openai-codex")],
+			models: [
+				M("gpt-6-luna", "openai-codex"),
+				M("gpt-5.6-terra", "openai-codex"),
+				M("gpt-6.1-sol", "openai-codex"),
+			],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({ status: "cached", stale: true });
 
@@ -436,7 +444,7 @@ describe("applyOAuthLoginModel", () => {
 				models: [
 					M("gpt-6-luna", "openai-codex"),
 					M("gpt-5.6-terra", "openai-codex"),
-					M("gpt-6-sol", "openai-codex"),
+					M("gpt-6.1-sol", "openai-codex"),
 				],
 			});
 		(session as any).setModel = vi.fn(async (model: { id: string; provider: string }) => {

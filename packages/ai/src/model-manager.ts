@@ -1,5 +1,5 @@
 import { readModelCache, writeModelCache } from "./model-cache";
-import { enrichModelThinking } from "./model-thinking";
+import { applyGeneratedModelPolicies, enrichModelThinking } from "./model-thinking";
 import { type GeneratedProvider, getBundledModels } from "./models";
 import type { Api, Model, Provider } from "./types";
 import { isRecord } from "./utils";
@@ -35,7 +35,7 @@ export interface ModelManagerOptions<TApi extends Api = Api, TModelsDevPayload =
 	/** Maximum cache age in milliseconds before considered stale. Default: 24h. */
 	cacheTtlMs?: number;
 	/** Optional dynamic endpoint fetcher. */
-	fetchDynamicModels?: () => Promise<readonly Model<TApi>[] | null>;
+	fetchDynamicModels?: (signal?: AbortSignal) => Promise<readonly Model<TApi>[] | null>;
 	/** Optional models.dev fallback hook. */
 	modelsDev?: ModelsDevFallback<TApi, TModelsDevPayload>;
 	/** Clock override for deterministic tests. */
@@ -59,7 +59,7 @@ export interface ModelResolutionResult<TApi extends Api = Api> {
  * Stateful facade over provider model resolution.
  */
 export interface ModelManager<TApi extends Api = Api> {
-	refresh(strategy?: ModelRefreshStrategy): Promise<ModelResolutionResult<TApi>>;
+	refresh(strategy?: ModelRefreshStrategy, options?: { signal?: AbortSignal }): Promise<ModelResolutionResult<TApi>>;
 }
 
 /**
@@ -68,9 +68,14 @@ export interface ModelManager<TApi extends Api = Api> {
 export function createModelManager<TApi extends Api = Api, TModelsDevPayload = unknown>(
 	options: ModelManagerOptions<TApi, TModelsDevPayload>,
 ): ModelManager<TApi> {
+	let generation = 0;
 	return {
-		refresh(strategy: ModelRefreshStrategy = "online-if-uncached") {
-			return resolveProviderModels(options, strategy);
+		refresh(strategy: ModelRefreshStrategy = "online-if-uncached", request?: { signal?: AbortSignal }) {
+			const revision = ++generation;
+			return resolveProviderModels(options, strategy, {
+				signal: request?.signal,
+				isCurrent: () => generation === revision,
+			});
 		},
 	};
 }
@@ -84,7 +89,9 @@ export function createModelManager<TApi extends Api = Api, TModelsDevPayload = u
 export async function resolveProviderModels<TApi extends Api = Api, TModelsDevPayload = unknown>(
 	options: ModelManagerOptions<TApi, TModelsDevPayload>,
 	strategy: ModelRefreshStrategy = "online-if-uncached",
+	request?: { signal?: AbortSignal; isCurrent?: () => boolean },
 ): Promise<ModelResolutionResult<TApi>> {
+	request?.signal?.throwIfAborted();
 	const now = options.now ?? Date.now;
 	const ttlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
 	const dbPath = options.cacheDbPath;
@@ -103,8 +110,13 @@ export async function resolveProviderModels<TApi extends Api = Api, TModelsDevPa
 		cacheAgeMs,
 	);
 	const [fetchedModelsDevModels, fetchedDynamicModels] = shouldFetchFromNetwork
-		? await Promise.all([fetchModelsDev(options), dynamicFetcher ? fetchDynamicModels(dynamicFetcher) : null])
+		? await Promise.all([
+				fetchModelsDev(options),
+				dynamicFetcher ? fetchDynamicModels(() => dynamicFetcher(request?.signal)) : null,
+			])
 		: [null, null];
+	request?.signal?.throwIfAborted();
+	if (request?.isCurrent && !request.isCurrent()) throw new Error("Model refresh was superseded");
 	const modelsDevModels = normalizeModelList<TApi>(fetchedModelsDevModels ?? []);
 	const shouldUseFreshCacheAsAuthoritative =
 		strategy === "online-if-uncached" && (cache?.fresh ?? false) && hasAuthoritativeCache;
@@ -238,6 +250,7 @@ function mergeDynamicModel<TApi extends Api>(existingModel: Model<TApi>, dynamic
 			output: preferDiscoveryCost(dynamicModel.cost.output, existingModel.cost.output),
 			cacheRead: preferDiscoveryCost(dynamicModel.cost.cacheRead, existingModel.cost.cacheRead),
 			cacheWrite: preferDiscoveryCost(dynamicModel.cost.cacheWrite, existingModel.cost.cacheWrite),
+			tiers: dynamicModel.cost.tiers ?? existingModel.cost.tiers,
 		},
 		contextWindow: preferDiscoveryLimit(dynamicModel.contextWindow, existingModel.contextWindow),
 		maxTokens: preferDiscoveryLimit(dynamicModel.maxTokens, existingModel.maxTokens),
@@ -282,7 +295,10 @@ function normalizeModelList<TApi extends Api>(value: unknown): Model<TApi>[] {
 	const models: Model<TApi>[] = [];
 	for (const item of value) {
 		if (isModelLike(item)) {
-			models.push(enrichModelThinking(item as Model<TApi>));
+			const model = enrichModelThinking({ ...item } as Model<TApi>);
+			const normalized = [model];
+			applyGeneratedModelPolicies(normalized, { preserveDiscoveredThinking: true });
+			models.push(normalized[0]!);
 		}
 	}
 	return models;

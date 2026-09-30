@@ -260,6 +260,7 @@ export class Agent {
 	#contextMessages?: AgentLoopConfig["getContextMessages"];
 	#transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
 	#steeringQueue: AgentMessage[] = [];
+	#steeringWaiters = new Set<() => void>();
 	#followUpQueue: AgentMessage[] = [];
 	#steeringMode: "all" | "one-at-a-time";
 	#followUpMode: "all" | "one-at-a-time";
@@ -565,6 +566,7 @@ export class Agent {
 	 */
 	steer(m: AgentMessage) {
 		this.#steeringQueue.push(m);
+		for (const wake of this.#steeringWaiters) wake();
 	}
 
 	/**
@@ -839,6 +841,21 @@ export class Agent {
 				intentTracing: this.#intentTracing,
 				onAssistantMessageEvent: this.#onAssistantMessageEvent,
 				getToolChoice,
+				waitForSteeringMessages: signal => {
+					if (this.#steeringQueue.length || signal.aborted) return Promise.resolve();
+					return new Promise<void>(resolve => {
+						const wake = () => {
+							this.#steeringWaiters.delete(wake);
+							signal.removeEventListener("abort", wake);
+							resolve();
+						};
+						this.#steeringWaiters.add(wake);
+						signal.addEventListener("abort", wake, { once: true });
+					});
+				},
+				restoreSteeringMessages: messages => {
+					this.#steeringQueue.unshift(...messages);
+				},
 				getSteeringMessages: async () => {
 					if (skipInitialSteeringPoll) {
 						skipInitialSteeringPoll = false;

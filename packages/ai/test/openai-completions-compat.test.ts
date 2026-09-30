@@ -97,6 +97,8 @@ describe("openai-completions compatibility", () => {
 		};
 		const compat = {
 			supportsStore: true,
+			supportsMidConvoSystemMessages: false,
+			supportsMidConvoToolChanges: false,
 			supportsTemperature: true,
 			supportsDeveloperRole: true,
 			supportsReasoningEffort: true,

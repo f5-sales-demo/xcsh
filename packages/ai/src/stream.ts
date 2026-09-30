@@ -20,9 +20,11 @@ import { type GoogleOptions, streamGoogle } from "./providers/google";
 import { type GoogleGeminiCliOptions, streamGoogleGeminiCli } from "./providers/google-gemini-cli";
 import { type GoogleVertexOptions, streamGoogleVertex } from "./providers/google-vertex";
 import { isKimiModel, streamKimi } from "./providers/kimi";
+import { stream as streamMistral } from "./providers/mistral-conversations";
 import { streamOpenAICodexResponses } from "./providers/openai-codex-responses";
 import { type OpenAICompletionsOptions, streamOpenAICompletions } from "./providers/openai-completions";
 import { streamOpenAIResponses } from "./providers/openai-responses";
+import { stream as streamPiMessages } from "./providers/pi-messages";
 import { isSyntheticModel, streamSynthetic } from "./providers/synthetic";
 import type {
 	Api,
@@ -47,6 +49,24 @@ function isFoundryEnabled(): boolean {
 }
 
 const serviceProviderMap: Record<string, KeyResolver> = {
+	radius: "RADIUS_API_KEY",
+	"ant-ling": "ANT_LING_API_KEY",
+	baseten: "BASETEN_API_KEY",
+	deepseek: "DEEPSEEK_API_KEY",
+	fireworks: "FIREWORKS_API_KEY",
+	meta: "META_API_KEY",
+	"minimax-cn": "MINIMAX_CN_API_KEY",
+	"moonshotai-cn": "MOONSHOT_API_KEY",
+	"zai-coding-cn": "ZAI_CODING_CN_API_KEY",
+	"qwen-token-plan": "QWEN_TOKEN_PLAN_API_KEY",
+	"qwen-token-plan-cn": "QWEN_TOKEN_PLAN_CN_API_KEY",
+	"qwen-token-plan-individual": "QWEN_TOKEN_PLAN_API_KEY",
+	"xiaomi-token-plan-ams": "XIAOMI_TOKEN_PLAN_AMS_API_KEY",
+	"xiaomi-token-plan-cn": "XIAOMI_TOKEN_PLAN_CN_API_KEY",
+	"xiaomi-token-plan-sgp": "XIAOMI_TOKEN_PLAN_SGP_API_KEY",
+
+	typesafe: "TYPESAFE_API_KEY",
+	"cloudflare-workers-ai": () => $pickenv("CLOUDFLARE_API_KEY", "CLOUDFLARE_API_TOKEN"),
 	"alibaba-coding-plan": "ALIBABA_CODING_PLAN_API_KEY",
 	openai: "OPENAI_API_KEY",
 	google: "GEMINI_API_KEY",
@@ -139,6 +159,10 @@ export function stream<TApi extends Api>(
 	context: Context,
 	options?: OptionsForApi<TApi>,
 ): AssistantMessageEventStream {
+	if (model.type !== undefined && model.type !== "chat") throw new Error("stream requires a chat model");
+	if (model.api === "pi-messages") return streamPiMessages(model as Model<"pi-messages">, context, options ?? {});
+	if (model.api === "mistral-conversations")
+		return streamMistral(model as Model<"mistral-conversations">, context, options ?? {});
 	// Check custom API registry first (extension-provided APIs like "vertex-claude-api")
 	const customApiProvider = getCustomApi(model.api);
 	if (customApiProvider) {
@@ -219,6 +243,7 @@ export function streamSimple<TApi extends Api>(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
+	if (model.type !== undefined && model.type !== "chat") throw new Error("streamSimple requires a chat model");
 	// Check custom API registry first (extension-provided APIs)
 	const customApiProvider = getCustomApi(model.api);
 	if (customApiProvider) {
@@ -411,6 +436,12 @@ export function mapOptionsForApi<TApi extends Api>(
 	apiKey?: string,
 ): OptionsForApi<TApi> {
 	const base = {
+		fetch: options?.fetch,
+		onProviderStreamEvent: options?.onProviderStreamEvent,
+		liveSteering: options?.liveSteering,
+		promptCache: options?.promptCache,
+		maxRetries: options?.maxRetries,
+		onResponse: options?.onResponse,
 		temperature: options?.temperature,
 		topP: options?.topP,
 		topK: options?.topK,
@@ -432,6 +463,14 @@ export function mapOptionsForApi<TApi extends Api>(
 	};
 
 	switch (model.api) {
+		case "pi-messages":
+			return { ...base, reasoning: options?.reasoning, toolChoice: options?.toolChoice } as OptionsForApi<TApi>;
+		case "mistral-conversations":
+			return {
+				...base,
+				reasoningEffort: options?.reasoning,
+				toolChoice: options?.toolChoice,
+			} as OptionsForApi<TApi>;
 		case "anthropic-messages": {
 			// Fable requires adaptive thinking on every request. Other Anthropic models
 			// retain the caller-controlled behavior.
@@ -540,11 +579,12 @@ export function mapOptionsForApi<TApi extends Api>(
 			return castApi<"openai-responses">({
 				...base,
 				reasoning:
-					model.defaultReasoningSummary !== undefined
+					model.defaultReasoningSummary !== undefined || model.id === "gpt-6.1-sol"
 						? resolveCodexReasoningEffort(model, options)
 						: resolveOpenAiReasoningEffort(model, options),
 				toolChoice: mapOpenAiToolChoice(options?.toolChoice),
 				serviceTier: options?.serviceTier,
+				reasoningSummary: options?.reasoningSummary,
 			});
 
 		case "azure-openai-responses":
@@ -559,6 +599,7 @@ export function mapOptionsForApi<TApi extends Api>(
 			return castApi<"openai-codex-responses">({
 				...base,
 				reasoning: resolveCodexReasoningEffort(model, options),
+				reasoningSummary: options?.reasoningSummary,
 				toolChoice: mapOpenAiToolChoice(options?.toolChoice),
 				serviceTier: options?.serviceTier,
 				preferWebsockets: options?.preferWebsockets,

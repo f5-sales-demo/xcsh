@@ -1,6 +1,7 @@
 // ============================================================================
 // High-level API
 // ============================================================================
+import { UPSTREAM_PROVIDER_ROUTES } from "../../provider-models/upstream-provider-routes";
 import { refreshAnthropicToken } from "./anthropic";
 import { refreshCursorToken } from "./cursor";
 import { refreshGitHubCopilotToken } from "./github-copilot";
@@ -8,7 +9,10 @@ import { refreshGitLabDuoToken } from "./gitlab-duo";
 import { refreshAntigravityToken, refreshVertexWithAntigravityOAuth } from "./google-antigravity";
 import { refreshGoogleCloudToken } from "./google-gemini-cli";
 import { refreshKimiToken } from "./kimi";
+import { metaOAuth } from "./meta";
 import { refreshOpenAICodexToken } from "./openai-codex";
+import { openRouterOAuth } from "./openrouter";
+import { createRadiusOAuth } from "./radius";
 import type {
 	OAuthCredentials,
 	OAuthProvider,
@@ -354,7 +358,24 @@ export function registerOAuthProvider(provider: OAuthProviderInterface): void {
  * Get a custom OAuth provider by ID.
  */
 export function getOAuthProvider(id: OAuthProviderId): OAuthProviderInterface | undefined {
-	return customOAuthProviders.get(id);
+	const custom = customOAuthProviders.get(id);
+	if (custom) return custom;
+	if (id === "openrouter") return openRouterOAuth;
+	if (id === "meta") return metaOAuth;
+	if (id === "radius") return createRadiusOAuth({ name: "Radius", gateway: "https://radius.pi.dev" });
+	const route = UPSTREAM_PROVIDER_ROUTES.find(route => route.providerId === id);
+	if (!route) return undefined;
+	return {
+		id: route.providerId,
+		name: route.providerId,
+		login: async callbacks => {
+			callbacks.signal?.throwIfAborted();
+			const key = await callbacks.onPrompt({ message: `Enter ${route.providerId} API key`, secret: true });
+			callbacks.signal?.throwIfAborted();
+			if (!key.trim()) throw new Error("API key required");
+			return key.trim();
+		},
+	};
 }
 
 /**
@@ -380,6 +401,8 @@ export async function refreshOAuthToken(
 	if (!credentials) {
 		throw new Error(`No OAuth credentials found for ${provider}`);
 	}
+	const extension = getOAuthProvider(provider);
+	if (extension?.refreshToken) return extension.refreshToken(credentials, signal);
 
 	let newCredentials: OAuthCredentials;
 	switch (provider) {
@@ -543,5 +566,10 @@ export function getOAuthProviders(): OAuthProviderInfo[] {
 		name: provider.name,
 		available: true,
 	}));
-	return [...builtInOAuthProviders, ...customProviders];
+	return [
+		...builtInOAuthProviders,
+		{ id: "openrouter", name: "OpenRouter OAuth", available: true },
+		...UPSTREAM_PROVIDER_ROUTES.map(route => ({ id: route.providerId, name: route.providerId, available: true })),
+		...customProviders.filter(provider => !UPSTREAM_PROVIDER_ROUTES.some(route => route.providerId === provider.id)),
+	];
 }

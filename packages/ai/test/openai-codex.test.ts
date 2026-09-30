@@ -209,7 +209,7 @@ describe("openai-codex request transformer", () => {
 	});
 
 	it("maps Ultra to the pinned model wire effort", async () => {
-		const model = applyCodexInteractionMetadata(createCodexModel("gpt-6-astra"));
+		const model = applyCodexInteractionMetadata({ ...createCodexModel("gpt-6-astra"), thinking: undefined });
 		const transformed = await transformRequestBody({ model: "gpt-6-astra", input: [] }, model, {
 			reasoningEffort: "ultra",
 		});
@@ -308,7 +308,7 @@ describe("openai-codex request transformer", () => {
 	});
 
 	it("rejects a service tier absent from exact model metadata", async () => {
-		const model = applyCodexInteractionMetadata(createCodexModel("gpt-6-astra"));
+		const model = applyCodexInteractionMetadata({ ...createCodexModel("gpt-6-astra"), thinking: undefined });
 		await expect(transformRequestBody({ model: model.id, input: [], service_tier: "flex" }, model)).rejects.toThrow(
 			/Service tier "flex" is unavailable/,
 		);

@@ -33,6 +33,7 @@ export function transformMessages<TApi extends Api>(
 ): Message[] {
 	// Build a map of original tool call IDs to normalized IDs
 	const toolCallIdMap = new Map<string, string>();
+	const foreignCustomCalls = new Set<string>();
 
 	const latestAssistantIndex = messages.findLastIndex(msg => msg.role === "assistant");
 	// First pass: transform messages (thinking blocks, tool call ID normalization)
@@ -44,6 +45,8 @@ export function transformMessages<TApi extends Api>(
 
 		// Handle toolResult messages - normalize toolCallId if we have a mapping
 		if (msg.role === "toolResult") {
+			if (foreignCustomCalls.has(msg.toolCallId))
+				msg = { ...msg, customTool: undefined, toolSearch: undefined, tools: undefined };
 			const normalizedId = toolCallIdMap.get(msg.toolCallId);
 			if (normalizedId && normalizedId !== msg.toolCallId) {
 				return { ...msg, toolCallId: normalizedId };
@@ -103,6 +106,15 @@ export function transformMessages<TApi extends Api>(
 				if (block.type === "toolCall") {
 					const toolCall = block as ToolCall;
 					let normalizedToolCall: ToolCall = toolCall;
+					if (!isSameModel && (toolCall.customInputProperty || toolCall.toolSearch)) {
+						foreignCustomCalls.add(toolCall.id);
+						normalizedToolCall = {
+							...toolCall,
+							customInputProperty: undefined,
+							toolSearch: undefined,
+							namespace: undefined,
+						};
+					}
 
 					if (!isSameModel && toolCall.thoughtSignature) {
 						normalizedToolCall = { ...toolCall };

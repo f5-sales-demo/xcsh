@@ -11,16 +11,16 @@ import {
 
 describe("OpenAI subscription source UAT", () => {
 	it("targets current GPT-6 subscription tiers, Terra, and unassigned Astra", async () => {
-		expect(OPENAI_CODEX_DEFAULT_MODEL).toBe("openai-codex/gpt-5.6-terra");
-		expect(OPENAI_CODEX_SOL_MODEL).toBe("openai-codex/gpt-6-sol");
+		expect(OPENAI_CODEX_DEFAULT_MODEL).toBe("openai-codex/gpt-6.1-sol");
+		expect(OPENAI_CODEX_SOL_MODEL).toBe("openai-codex/gpt-6.1-sol");
 		expect(OPENAI_CODEX_ASTRA_MODEL).toBe("openai-codex/gpt-6-astra");
 		expect(OPENAI_CODEX_PICKER_MODELS).toEqual([
 			"openai-codex/gpt-6-luna",
 			"openai-codex/gpt-5.6-terra",
-			"openai-codex/gpt-6-sol",
+			"openai-codex/gpt-6.1-sol",
 			"openai-codex/gpt-6-astra",
 		]);
-		expect(OPENAI_CODEX_SOL_EFFORTS).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
+		expect(OPENAI_CODEX_SOL_EFFORTS).toEqual(["low", "medium", "high", "xhigh", "max", "ultra"]);
 		const source = await fs.readFile(new URL("../scripts/openai-subscription-uat.ts", import.meta.url), "utf8");
 		expect(source).not.toContain('"codex", ["login", "status"]');
 		expect(source).not.toContain('"codex", [');
@@ -30,8 +30,8 @@ describe("OpenAI subscription source UAT", () => {
 		expect(source).toContain('"reasoningEffort"');
 		expect(source).toContain('visible.includes("ChatGPT Subscription")');
 		expect(source).toContain('normalized.includes("gpt-6-luna] SMOL (low)")');
-		expect(source).toContain('normalized.includes("gpt-5.6-terra] DEFAULT (medium)")');
-		expect(source).toContain('normalized.includes("gpt-6-sol] SLOW (high) PLAN (high)")');
+		expect(source).toContain('normalized.includes("gpt-6.1-sol] DEFAULT (medium)")');
+		expect(source).toContain('normalized.includes("gpt-6.1-sol] DEFAULT (medium) SLOW (high) PLAN (high)")');
 		expect(source).toContain('normalized.includes("gpt-6-astra]")');
 		expect(source).toContain('!normalized.includes("gpt-6-astra] DEFAULT")');
 		expect(source).toContain("visible.includes(`Switched to ");

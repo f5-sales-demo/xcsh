@@ -37,6 +37,7 @@ import {
 	normalizeResponsesToolCallIdForTransform,
 	processResponsesStream,
 } from "./openai-responses-shared";
+import { validateFinalResponsesRequest } from "./sol-request-boundary";
 import { transformMessages } from "./transform-messages";
 
 const DEFAULT_AZURE_API_VERSION = "v1";
@@ -127,9 +128,11 @@ export const streamAzureOpenAIResponses: StreamFunction<"azure-openai-responses"
 			const apiKey = options?.apiKey || getEnvApiKey(model.provider) || "";
 			const client = createClient(model, apiKey, options);
 			const { baseUrl } = resolveAzureConfig(model, options);
-			const params = buildParams(model, context, options, deploymentName, baseUrl);
+			let params = buildParams(model, context, options, deploymentName, baseUrl);
 			const idleTimeoutMs = getOpenAIStreamIdleTimeoutMs();
-			options?.onPayload?.(params);
+			const replacement = await options?.onPayload?.(params, model);
+			if (replacement !== undefined) params = replacement as typeof params;
+			validateFinalResponsesRequest(model, params as unknown as Record<string, unknown>);
 			rawRequestDump = {
 				provider: model.provider,
 				api: output.api,
@@ -155,6 +158,7 @@ export const streamAzureOpenAIResponses: StreamFunction<"azure-openai-responses"
 				stream,
 				model,
 				{
+					signal: requestSignal,
 					onFirstToken: () => {
 						if (!firstTokenTime) firstTokenTime = Date.now();
 					},

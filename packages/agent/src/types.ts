@@ -102,6 +102,8 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * these messages are added to the context before the next LLM call.
 	 */
 	getSteeringMessages?: () => Promise<AgentMessage[]>;
+	waitForSteeringMessages?: (signal: AbortSignal) => Promise<void>;
+	restoreSteeringMessages?: (messages: AgentMessage[]) => void;
 
 	/**
 	 * Returns follow-up messages to process after the agent would otherwise stop.
@@ -198,6 +200,8 @@ export interface AgentState {
 }
 
 export interface AgentToolResult<T = any, _TInput = unknown> {
+	/** Trusted schemas loaded by client tool search. */
+	tools?: import("@f5-sales-demo/pi-ai").Tool[];
 	// Content blocks supporting text and images
 	content: (TextContent | ImageContent)[];
 	// Details to be displayed in a UI or logged
@@ -261,6 +265,8 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 	 * - "exclusive": runs alone; other tools wait until it finishes
 	 */
 	concurrency?: "shared" | "exclusive";
+	/** Opt-in host-managed asynchronous execution. Ordinary tools remain synchronous. */
+	async?: boolean;
 	/** If true, argument validation errors are non-fatal: raw args are passed to execute() instead of returning an error to the LLM. */
 	lenientArgValidation?: boolean;
 	execute: AgentToolExecFn<TParameters, TDetails, TTheme>;

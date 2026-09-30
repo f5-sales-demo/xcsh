@@ -8,6 +8,7 @@ import {
 	type OpenAICompatibleModelRecord,
 } from "../utils/discovery/openai-compatible";
 import { getGitHubCopilotBaseUrl, OPENCODE_HEADERS, parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
+import { UPSTREAM_PROVIDER_ROUTES } from "./upstream-provider-routes";
 
 const MODELS_DEV_URL = "https://models.dev/api.json";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
@@ -24,6 +25,13 @@ export interface ModelsDevModel {
 		output?: number;
 	};
 	cost?: {
+		tiers?: {
+			tier?: { type?: string; size?: number };
+			input?: number;
+			output?: number;
+			cache_read?: number;
+			cache_write?: number;
+		}[];
 		input?: number;
 		output?: number;
 		cache_read?: number;
@@ -346,8 +354,9 @@ export function openaiModelManagerOptions(config?: OpenAIModelManagerConfig): Mo
 	return {
 		providerId: "openai",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-responses",
 					provider: "openai",
 					baseUrl,
@@ -378,8 +387,9 @@ export function groqModelManagerOptions(config?: GroqModelManagerConfig): ModelM
 	return {
 		providerId: "groq",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "groq",
 					baseUrl,
@@ -411,8 +421,9 @@ export function cerebrasModelManagerOptions(
 	return {
 		providerId: "cerebras",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "cerebras",
 					baseUrl,
@@ -444,8 +455,9 @@ export function huggingfaceModelManagerOptions(
 	return {
 		providerId: "huggingface",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "huggingface",
 					baseUrl,
@@ -477,8 +489,9 @@ export function nvidiaModelManagerOptions(
 	return {
 		providerId: "nvidia",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "nvidia",
 					baseUrl,
@@ -508,8 +521,9 @@ export function xaiModelManagerOptions(config?: XaiModelManagerConfig): ModelMan
 	return {
 		providerId: "xai",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "xai",
 					baseUrl,
@@ -534,16 +548,17 @@ export interface MistralModelManagerConfig {
 
 export function mistralModelManagerOptions(
 	config?: MistralModelManagerConfig,
-): ModelManagerOptions<"openai-completions"> {
+): ModelManagerOptions<"mistral-conversations"> {
 	const apiKey = config?.apiKey;
 	const baseUrl = config?.baseUrl ?? "https://api.mistral.ai/v1";
-	const references = createBundledReferenceMap<"openai-completions">("mistral");
+	const references = createBundledReferenceMap<"mistral-conversations">("mistral");
 	return {
 		providerId: "mistral",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
-					api: "openai-completions",
+					signal,
+					api: "mistral-conversations",
 					provider: "mistral",
 					baseUrl,
 					apiKey,
@@ -575,8 +590,9 @@ function openCodeModelManagerOptions(
 	return {
 		providerId,
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: providerId,
 					baseUrl,
@@ -613,8 +629,9 @@ export function ollamaModelManagerOptions(config?: OllamaModelManagerConfig): Mo
 	const references = createBundledReferenceMap<"openai-responses">("ollama" as Parameters<typeof getBundledModels>[0]);
 	return {
 		providerId: "ollama",
-		fetchDynamicModels: async () => {
+		fetchDynamicModels: async signal => {
 			const openAiCompatible = await fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-responses",
 				provider: "ollama",
 				baseUrl,
@@ -660,8 +677,9 @@ export function openrouterModelManagerOptions(
 	const baseUrl = config?.baseUrl ?? "https://openrouter.ai/api/v1";
 	return {
 		providerId: "openrouter",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "openrouter",
 				baseUrl,
@@ -786,8 +804,9 @@ export function zenmuxModelManagerOptions(config?: ZenMuxModelManagerConfig): Mo
 	return {
 		providerId: "zenmux",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels<Api>({
+					signal,
 					api: "openai-completions",
 					provider: "zenmux",
 					baseUrl: openAiBaseUrl,
@@ -832,8 +851,9 @@ export function kiloModelManagerOptions(config?: KiloModelManagerConfig): ModelM
 	const baseUrl = config?.baseUrl ?? "https://api.kilo.ai/api/gateway";
 	return {
 		providerId: "kilo",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "kilo",
 				baseUrl,
@@ -859,8 +879,9 @@ export function alibabaCodingPlanModelManagerOptions(
 	const references = createBundledReferenceMap<"openai-completions">("alibaba-coding-plan");
 	return {
 		providerId: "alibaba-coding-plan",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "alibaba-coding-plan",
 				baseUrl,
@@ -889,8 +910,9 @@ export function vercelAiGatewayModelManagerOptions(
 	const baseUrl = config?.baseUrl ?? "https://ai-gateway.vercel.sh";
 	return {
 		providerId: "vercel-ai-gateway",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "anthropic-messages",
 				provider: "vercel-ai-gateway",
 				baseUrl,
@@ -943,8 +965,9 @@ export function kimiCodeModelManagerOptions(
 	return {
 		providerId: "kimi-code",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "kimi-code",
 					baseUrl,
@@ -995,8 +1018,9 @@ export function lmStudioModelManagerOptions(
 	const references = createBundledReferenceMap<"openai-completions">("lm-studio" as any);
 	return {
 		providerId: "lm-studio",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "lm-studio",
 				baseUrl,
@@ -1029,8 +1053,9 @@ export function syntheticModelManagerOptions(
 	return {
 		providerId: "synthetic",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "synthetic",
 					baseUrl,
@@ -1076,8 +1101,9 @@ export function veniceModelManagerOptions(
 	const references = createBundledReferenceMap<"openai-completions">("venice");
 	return {
 		providerId: "venice",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "venice",
 				baseUrl,
@@ -1112,8 +1138,9 @@ export function togetherModelManagerOptions(
 	return {
 		providerId: "together",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "together",
 					baseUrl,
@@ -1145,8 +1172,9 @@ export function moonshotModelManagerOptions(
 	return {
 		providerId: "moonshot",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "moonshot",
 					baseUrl,
@@ -1186,8 +1214,9 @@ export function qwenPortalModelManagerOptions(
 	return {
 		providerId: "qwen-portal",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "qwen-portal",
 					baseUrl,
@@ -1219,8 +1248,9 @@ export function qianfanModelManagerOptions(
 	return {
 		providerId: "qianfan",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "qianfan",
 					baseUrl,
@@ -1256,8 +1286,9 @@ export function cloudflareAiGatewayModelManagerOptions(
 	return {
 		providerId: "cloudflare-ai-gateway",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "anthropic-messages",
 					provider: "cloudflare-ai-gateway",
 					baseUrl: discoveryBaseUrl,
@@ -1295,8 +1326,9 @@ export function xiaomiModelManagerOptions(
 	return {
 		providerId: "xiaomi",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
+					signal,
 					api: "anthropic-messages",
 					provider: "xiaomi",
 					baseUrl: discoveryBaseUrl,
@@ -1332,8 +1364,9 @@ export function litellmModelManagerOptions(
 	const references = createBundledReferenceMap<"openai-completions">("litellm");
 	return {
 		providerId: "litellm",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "litellm",
 				baseUrl,
@@ -1361,8 +1394,9 @@ export function vllmModelManagerOptions(config?: VllmModelManagerConfig): ModelM
 	const references = createBundledReferenceMap<"openai-completions">("vllm" as Parameters<typeof getBundledModels>[0]);
 	return {
 		providerId: "vllm",
-		fetchDynamicModels: () =>
+		fetchDynamicModels: signal =>
 			fetchOpenAICompatibleModels({
+				signal,
 				api: "openai-completions",
 				provider: "vllm",
 				baseUrl,
@@ -1395,10 +1429,11 @@ export function nanoGptModelManagerOptions(
 	return {
 		providerId: "nanogpt",
 		...(apiKey && {
-			fetchDynamicModels: async () => {
+			fetchDynamicModels: async signal => {
 				// Track base IDs that have :thinking variants so we can mark them reasoning-capable.
 				const thinkingBaseIds = new Set<string>();
 				const models = await fetchOpenAICompatibleModels({
+					signal,
 					api: "openai-completions",
 					provider: "nanogpt",
 					baseUrl,
@@ -1484,8 +1519,9 @@ export function githubCopilotModelManagerOptions(config?: GithubCopilotModelMana
 	return {
 		providerId: "github-copilot",
 		...(apiKey && {
-			fetchDynamicModels: () =>
+			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels<Api>({
+					signal,
 					api: "openai-completions",
 					provider: "github-copilot",
 					baseUrl,
@@ -1593,13 +1629,14 @@ export function anthropicModelManagerOptions(
 			map: payload => mapAnthropicModelsDev(payload, baseUrl),
 		},
 		...(apiKey && {
-			fetchDynamicModels: async () => {
+			fetchDynamicModels: async signal => {
 				const modelsDevModels = await fetchModelsDevPayload()
 					.then(payload => mapAnthropicModelsDev(payload, baseUrl))
 					.catch(() => []);
 				const references = buildAnthropicReferenceMap(modelsDevModels);
 				return (
 					fetchOpenAICompatibleModels({
+						signal,
 						api: "anthropic-messages",
 						provider: "anthropic",
 						baseUrl: discoveryBaseUrl,
@@ -1715,6 +1752,23 @@ export function mapModelsDevToModels(
 					output: toNumber(m.cost?.output) ?? 0,
 					cacheRead: toNumber(m.cost?.cache_read) ?? 0,
 					cacheWrite: toNumber(m.cost?.cache_write) ?? 0,
+					...(m.cost?.tiers
+						? {
+								tiers: m.cost.tiers.flatMap(tier =>
+									tier.tier?.type === "context" && typeof tier.tier.size === "number"
+										? [
+												{
+													inputTokensAbove: tier.tier.size,
+													input: tier.input ?? 0,
+													output: tier.output ?? 0,
+													cacheRead: tier.cache_read ?? 0,
+													cacheWrite: tier.cache_write ?? 0,
+												},
+											]
+										: [],
+								),
+							}
+						: {}),
 				},
 				contextWindow: toPositiveNumber(m.limit?.context, desc.defaultContextWindow ?? UNK_CONTEXT_WINDOW),
 				maxTokens: toPositiveNumber(m.limit?.output, desc.defaultMaxTokens ?? UNK_MAX_TOKENS),
@@ -1986,7 +2040,7 @@ const MODELS_DEV_PROVIDER_DESCRIPTORS_SPECIALIZED: readonly ModelsDevProviderDes
 		"https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic",
 	),
 	// --- Mistral ---
-	openAiCompletionsDescriptor("mistral", "mistral", "https://api.mistral.ai/v1"),
+	simpleModelsDevDescriptor("mistral", "mistral", "mistral-conversations", "https://api.mistral.ai/v1"),
 	// --- OpenCode Zen ---
 	openAiCompletionsDescriptor("opencode", "opencode-zen", "https://opencode.ai/zen/v1", {
 		filterModel: (_id, m) => {
@@ -2070,6 +2124,14 @@ const MODELS_DEV_PROVIDER_DESCRIPTORS_SPECIALIZED: readonly ModelsDevProviderDes
 ];
 /** All provider descriptors for models.dev data mapping in generate-models.ts. */
 export const MODELS_DEV_PROVIDER_DESCRIPTORS: readonly ModelsDevProviderDescriptor[] = [
+	...UPSTREAM_PROVIDER_ROUTES.map(route =>
+		simpleModelsDevDescriptor(
+			route.modelsDevProviderId ?? route.providerId,
+			route.providerId,
+			route.api,
+			route.baseUrl,
+		),
+	),
 	...MODELS_DEV_PROVIDER_DESCRIPTORS_BEDROCK,
 	...MODELS_DEV_PROVIDER_DESCRIPTORS_CORE,
 	...MODELS_DEV_PROVIDER_DESCRIPTORS_CODING_PLANS,

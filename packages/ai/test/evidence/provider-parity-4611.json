@@ -1,0 +1,455 @@
+{
+	"xcshBaseline": "8b45242bfc5b",
+	"piRevision": "1b347794e2a630e4359f2584f4eea388145d0ddf",
+	"ohMyPiRevision": "2b023d1b80133c523d66412602d99b5427408395",
+	"providers": [
+		{
+			"upstreamProvider": "amazon-bedrock",
+			"xcshProvider": "amazon-bedrock",
+			"upstreamSource": "packages/ai/src/providers/amazon-bedrock.ts",
+			"operation": "bedrock-converse-stream",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "ant-ling",
+			"xcshProvider": "ant-ling",
+			"upstreamSource": "packages/ai/src/providers/ant-ling.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "anthropic",
+			"xcshProvider": "anthropic",
+			"upstreamSource": "packages/ai/src/providers/anthropic.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "azure-openai-responses",
+			"xcshProvider": "azure-openai-responses",
+			"upstreamSource": "packages/ai/src/providers/azure-openai-responses.ts",
+			"operation": "azure-openai-responses",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "baseten",
+			"xcshProvider": "baseten",
+			"upstreamSource": "packages/ai/src/providers/baseten.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "cerebras",
+			"xcshProvider": "cerebras",
+			"upstreamSource": "packages/ai/src/providers/cerebras.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "cloudflare-ai-gateway",
+			"xcshProvider": "cloudflare-ai-gateway",
+			"upstreamSource": "packages/ai/src/providers/cloudflare-ai-gateway.ts",
+			"operation": "provider-specific",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "cloudflare-workers-ai",
+			"xcshProvider": "cloudflare-workers-ai",
+			"upstreamSource": "packages/ai/src/providers/cloudflare-workers-ai.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "deepseek",
+			"xcshProvider": "deepseek",
+			"upstreamSource": "packages/ai/src/providers/deepseek.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "fireworks",
+			"xcshProvider": "fireworks",
+			"upstreamSource": "packages/ai/src/providers/fireworks.ts",
+			"operation": "openai-completions, anthropic-messages",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "github-copilot",
+			"xcshProvider": "github-copilot",
+			"upstreamSource": "packages/ai/src/providers/github-copilot.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "google",
+			"xcshProvider": "google",
+			"upstreamSource": "packages/ai/src/providers/google.ts",
+			"operation": "google-generative-ai",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "google-vertex",
+			"xcshProvider": "google-vertex",
+			"upstreamSource": "packages/ai/src/providers/google-vertex.ts",
+			"operation": "google-vertex",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "groq",
+			"xcshProvider": "groq",
+			"upstreamSource": "packages/ai/src/providers/groq.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "huggingface",
+			"xcshProvider": "huggingface",
+			"upstreamSource": "packages/ai/src/providers/huggingface.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "kimi-coding",
+			"xcshProvider": "kimi-code",
+			"upstreamSource": "packages/ai/src/providers/kimi-coding.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "meta",
+			"xcshProvider": "meta",
+			"upstreamSource": "packages/ai/src/providers/meta.ts",
+			"operation": "openai-responses",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "minimax",
+			"xcshProvider": "minimax",
+			"upstreamSource": "packages/ai/src/providers/minimax.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "minimax-cn",
+			"xcshProvider": "minimax-cn",
+			"upstreamSource": "packages/ai/src/providers/minimax-cn.ts",
+			"operation": "anthropic-messages",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "mistral",
+			"xcshProvider": "mistral",
+			"upstreamSource": "packages/ai/src/providers/mistral.ts",
+			"operation": "mistral-conversations",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "moonshotai",
+			"xcshProvider": "moonshot",
+			"upstreamSource": "packages/ai/src/providers/moonshotai.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "moonshotai-cn",
+			"xcshProvider": "moonshotai-cn",
+			"upstreamSource": "packages/ai/src/providers/moonshotai-cn.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "nvidia",
+			"xcshProvider": "nvidia",
+			"upstreamSource": "packages/ai/src/providers/nvidia.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "openai",
+			"xcshProvider": "openai",
+			"upstreamSource": "packages/ai/src/providers/openai.ts",
+			"operation": "openai-responses",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "openai-codex",
+			"xcshProvider": "openai-codex",
+			"upstreamSource": "packages/ai/src/providers/openai-codex.ts",
+			"operation": "openai-codex-responses",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "opencode",
+			"xcshProvider": "opencode-zen",
+			"upstreamSource": "packages/ai/src/providers/opencode.ts",
+			"operation": "provider-specific",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "opencode-go",
+			"xcshProvider": "opencode-go",
+			"upstreamSource": "packages/ai/src/providers/opencode-go.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "openrouter",
+			"xcshProvider": "openrouter",
+			"upstreamSource": "packages/ai/src/providers/openrouter.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "qwen-token-plan",
+			"xcshProvider": "qwen-token-plan",
+			"upstreamSource": "packages/ai/src/providers/qwen-token-plan.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "qwen-token-plan-cn",
+			"xcshProvider": "qwen-token-plan-cn",
+			"upstreamSource": "packages/ai/src/providers/qwen-token-plan-cn.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "qwen-token-plan-individual",
+			"xcshProvider": "qwen-token-plan-individual",
+			"upstreamSource": "packages/ai/src/providers/qwen-token-plan-individual.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "radius",
+			"xcshProvider": "radius",
+			"upstreamSource": "packages/ai/src/providers/radius.ts",
+			"operation": "pi-messages",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "together",
+			"xcshProvider": "together",
+			"upstreamSource": "packages/ai/src/providers/together.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "typesafe",
+			"xcshProvider": "typesafe",
+			"upstreamSource": "packages/ai/src/providers/typesafe.ts",
+			"operation": "typesafe-system-one",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "vercel-ai-gateway",
+			"xcshProvider": "vercel-ai-gateway",
+			"upstreamSource": "packages/ai/src/providers/vercel-ai-gateway.ts",
+			"operation": "anthropic-messages",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "xai",
+			"xcshProvider": "xai",
+			"upstreamSource": "packages/ai/src/providers/xai.ts",
+			"operation": "openai-responses",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "xiaomi",
+			"xcshProvider": "xiaomi",
+			"upstreamSource": "packages/ai/src/providers/xiaomi.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "xiaomi-token-plan-ams",
+			"xcshProvider": "xiaomi-token-plan-ams",
+			"upstreamSource": "packages/ai/src/providers/xiaomi-token-plan-ams.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "xiaomi-token-plan-cn",
+			"xcshProvider": "xiaomi-token-plan-cn",
+			"upstreamSource": "packages/ai/src/providers/xiaomi-token-plan-cn.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "xiaomi-token-plan-sgp",
+			"xcshProvider": "xiaomi-token-plan-sgp",
+			"upstreamSource": "packages/ai/src/providers/xiaomi-token-plan-sgp.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "zai",
+			"xcshProvider": "zai",
+			"upstreamSource": "packages/ai/src/providers/zai.ts",
+			"operation": "openai-completions",
+			"mapping": "existing provider contract",
+			"status": "implementation mapped; provider-specific qualification pending"
+		},
+		{
+			"upstreamProvider": "zai-coding-cn",
+			"xcshProvider": "zai-coding-cn",
+			"upstreamSource": "packages/ai/src/providers/zai-coding-cn.ts",
+			"operation": "openai-completions",
+			"mapping": "additive provider descriptor and operation dispatch",
+			"status": "implementation mapped; provider-specific qualification pending"
+		}
+	],
+	"openGates": [
+		"remaining provider capability qualification",
+		"terminal advanced controls on final candidate",
+		"Gemini subscription sign-in",
+		"planning and completion audits",
+		"stable full test run",
+		"PR CI merge release installed UAT"
+	],
+	"capabilities": [
+		{
+			"capability": "Sol generation, discovery, reasoning, limits, pricing, sampling boundary",
+			"implementation": [
+				"packages/ai/src/sol-model.ts",
+				"packages/ai/src/model-thinking.ts",
+				"packages/ai/src/utils/discovery/codex.ts",
+				"packages/ai/src/providers/sol-request-boundary.ts"
+			],
+			"tests": [
+				"gpt-61-sol.test.ts",
+				"codex-discovery-metadata.test.ts",
+				"responses-modernization.test.ts"
+			],
+			"live": "Mac LiteLLM and Ubuntu Codex source acceptance passed"
+		},
+		{
+			"capability": "stream interleaving, custom tools, encryption, replay, cross-provider isolation",
+			"implementation": [
+				"packages/ai/src/providers/openai-responses-shared.ts",
+				"packages/ai/src/providers/transform-messages.ts"
+			],
+			"tests": [
+				"responses-interleaving.test.ts",
+				"responses-provider-isolation.test.ts",
+				"codex-steering.test.ts"
+			]
+		},
+		{
+			"capability": "anchored instructions and tool changes, client tool search",
+			"implementation": [
+				"packages/ai/src/providers/openai-responses.ts",
+				"packages/ai/src/providers/anthropic.ts",
+				"packages/coding-agent/src/tools/search-tool-bm25.ts"
+			],
+			"tests": [
+				"transcript-controls.test.ts",
+				"anthropic-transcript-controls.test.ts",
+				"resume-contracts.test.ts"
+			]
+		},
+		{
+			"capability": "cached reasoning and steering",
+			"implementation": [
+				"packages/ai/src/providers/openai-codex/live-steering.ts",
+				"packages/agent/src/live-steering.ts"
+			],
+			"tests": [
+				"cached-prefix-history.test.ts",
+				"codex-steering.test.ts",
+				"tool-discovery-continuation.test.ts"
+			],
+			"live": "Ubuntu WebSocket acknowledgement and successor, cached high update passed"
+		},
+		{
+			"capability": "image and classifier operations",
+			"implementation": [
+				"packages/ai/src/operations.ts",
+				"packages/ai/src/operation-catalog.ts",
+				"packages/coding-agent/src/tools/classify.ts"
+			],
+			"tests": [
+				"operations.test.ts",
+				"operation-discovery.test.ts",
+				"llama-cpp-classify.test.ts",
+				"typesafe-system-one.test.ts"
+			]
+		},
+		{
+			"capability": "async and deferred operations",
+			"implementation": [
+				"packages/coding-agent/src/tools/async-tool.ts",
+				"packages/ai/src/deferred.ts"
+			],
+			"tests": [
+				"async-tool.test.ts",
+				"deferred.test.ts",
+				"resume-contracts.test.ts"
+			]
+		},
+		{
+			"capability": "Meta, Radius, OpenRouter auth, cancellation and discovery",
+			"implementation": [
+				"packages/ai/src/utils/oauth/meta.ts",
+				"packages/ai/src/utils/oauth/radius.ts",
+				"packages/ai/src/utils/oauth/openrouter.ts"
+			],
+			"tests": [
+				"upstream-oauth.test.ts",
+				"oauth-device-callback.test.ts",
+				"openrouter-oauth.test.ts",
+				"model-refresh-cancellation.test.ts",
+				"discovery-normalization.test.ts"
+			]
+		}
+	],
+	"qualification": {
+		"aiPackage": {
+			"passed": 922,
+			"skipped": 456,
+			"failed": 0
+		},
+		"note": "Counts and live outcomes refer to the uncommitted candidate; required final release and installed acceptance remain pending."
+	}
+}

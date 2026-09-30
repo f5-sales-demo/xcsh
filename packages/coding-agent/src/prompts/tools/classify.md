@@ -1,0 +1,1 @@
+Classify synthetic or user-selected structured state using an explicitly selected provider and classifier model. Supply named choice, score, or bool questions with instructions and criteria. Returns typed answers, probabilities, and confidence when the selected operation reports them.

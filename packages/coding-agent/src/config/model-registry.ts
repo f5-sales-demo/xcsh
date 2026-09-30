@@ -1,12 +1,15 @@
 import * as path from "node:path";
 import {
+	type AnyModel,
 	type Api,
 	type AssistantMessageEventStream,
 	applyCodexInteractionMetadata,
 	applyGeneratedModelPolicies,
+	type ClassifierModel,
 	type CodexContextTier,
 	type Context,
 	createModelManager,
+	createOperationCatalog,
 	DEFAULT_LOCAL_TOKEN,
 	enrichModelThinking,
 	getBundledModels,
@@ -14,6 +17,7 @@ import {
 	googleAntigravityModelManagerOptions,
 	googleGeminiCliModelManagerOptions,
 	googleVertexModelManagerOptions,
+	type ImageModel,
 	type Model,
 	type ModelManagerOptions,
 	type ModelRefreshStrategy,
@@ -31,7 +35,7 @@ import {
 	unregisterCustomApis,
 	unregisterOAuthProviders,
 } from "@f5-sales-demo/pi-ai";
-import { $env, $envExact, isRecord, logger } from "@f5-sales-demo/pi-utils";
+import { $env, $envExact, getModelDbPath, isRecord, logger } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { type ConfigError, ConfigFile } from "../config";
 import { hasLiteLLMEnv, probeAndUpgradeLiteLLMConfig, startupHealthCheck } from "../config/auto-config";
@@ -173,6 +177,15 @@ const OpenAICompatSchema = Type.Object({
 	vercelGatewayRouting: Type.Optional(VercelGatewayRoutingSchema),
 	extraBody: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 	supportsStrictMode: Type.Optional(Type.Boolean()),
+	supportsMidConvoSystemMessages: Type.Optional(Type.Boolean()),
+	supportsMidConvoToolChanges: Type.Optional(Type.Boolean()),
+	supportsOpenAIGrammarTools: Type.Optional(Type.Boolean()),
+	supportsAdditionalTools: Type.Optional(Type.Boolean()),
+	supportsToolSearch: Type.Optional(Type.Boolean()),
+	supportsExplicitPromptCacheMode: Type.Optional(Type.Boolean()),
+	supportsCachedReasoningUpdates: Type.Optional(Type.Boolean()),
+	supportsWebSocketSteering: Type.Optional(Type.Boolean()),
+	supportsMaxOutputTokens: Type.Optional(Type.Boolean()),
 	toolStrictMode: Type.Optional(Type.Union([Type.Literal("all_strict"), Type.Literal("none")])),
 });
 
@@ -184,6 +197,7 @@ const EffortSchema = Type.Union([
 	Type.Literal("high"),
 	Type.Literal("xhigh"),
 	Type.Literal("max"),
+	Type.Literal("ultra"),
 ]);
 
 const ThinkingControlModeSchema = Type.Union([
@@ -213,6 +227,8 @@ const ModelDefinitionSchema = Type.Object({
 	name: Type.Optional(Type.String({ minLength: 1 })),
 	api: Type.Optional(
 		Type.Union([
+			Type.Literal("pi-messages"),
+			Type.Literal("mistral-conversations"),
 			Type.Literal("openai-completions"),
 			Type.Literal("openai-responses"),
 			Type.Literal("openai-codex-responses"),
@@ -232,10 +248,22 @@ const ModelDefinitionSchema = Type.Object({
 			output: Type.Number(),
 			cacheRead: Type.Number(),
 			cacheWrite: Type.Number(),
+			tiers: Type.Optional(
+				Type.Array(
+					Type.Object({
+						inputTokensAbove: Type.Number(),
+						input: Type.Number(),
+						output: Type.Number(),
+						cacheRead: Type.Number(),
+						cacheWrite: Type.Number(),
+					}),
+				),
+			),
 		}),
 	),
 	premiumMultiplier: Type.Optional(Type.Number()),
 	contextWindow: Type.Optional(Type.Number()),
+	maxInputTokens: Type.Optional(Type.Number()),
 	maxTokens: Type.Optional(Type.Number()),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
 	compat: Type.Optional(OpenAICompatSchema),
@@ -254,10 +282,22 @@ const ModelOverrideSchema = Type.Object({
 			output: Type.Optional(Type.Number()),
 			cacheRead: Type.Optional(Type.Number()),
 			cacheWrite: Type.Optional(Type.Number()),
+			tiers: Type.Optional(
+				Type.Array(
+					Type.Object({
+						inputTokensAbove: Type.Number(),
+						input: Type.Number(),
+						output: Type.Number(),
+						cacheRead: Type.Number(),
+						cacheWrite: Type.Number(),
+					}),
+				),
+			),
 		}),
 	),
 	premiumMultiplier: Type.Optional(Type.Number()),
 	contextWindow: Type.Optional(Type.Number()),
+	maxInputTokens: Type.Optional(Type.Number()),
 	maxTokens: Type.Optional(Type.Number()),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
 	compat: Type.Optional(OpenAICompatSchema),
@@ -329,6 +369,7 @@ interface ProviderValidationModel {
 	id: string;
 	api?: Api;
 	contextWindow?: number;
+	maxInputTokens?: number;
 	maxTokens?: number;
 }
 
@@ -543,10 +584,12 @@ type OllamaDiscoveredModelMetadata = {
 	reasoning: boolean;
 	input: ("text" | "image")[];
 	contextWindow?: number;
+	maxInputTokens?: number;
 };
 
 type LlamaCppDiscoveredServerMetadata = {
 	contextWindow?: number;
+	maxInputTokens?: number;
 	input?: ("text" | "image")[];
 };
 
@@ -699,6 +742,7 @@ function applyModelOverride(model: Model<Api>, override: ModelOverride): Model<A
 	if (override.thinking !== undefined) result.thinking = override.thinking as ThinkingConfig;
 	if (override.input !== undefined) result.input = override.input as ("text" | "image")[];
 	if (override.contextWindow !== undefined) result.contextWindow = override.contextWindow;
+	if (override.maxInputTokens !== undefined) result.maxInputTokens = override.maxInputTokens;
 	if (override.maxTokens !== undefined) result.maxTokens = override.maxTokens;
 	if (override.contextPromotionTarget !== undefined) result.contextPromotionTarget = override.contextPromotionTarget;
 	if (override.premiumMultiplier !== undefined) result.premiumMultiplier = override.premiumMultiplier;
@@ -708,6 +752,7 @@ function applyModelOverride(model: Model<Api>, override: ModelOverride): Model<A
 			output: override.cost.output ?? model.cost.output,
 			cacheRead: override.cost.cacheRead ?? model.cost.cacheRead,
 			cacheWrite: override.cost.cacheWrite ?? model.cost.cacheWrite,
+			tiers: override.cost.tiers ?? model.cost.tiers,
 		};
 	}
 	if (override.headers) {
@@ -725,8 +770,9 @@ interface CustomModelDefinitionLike {
 	reasoning?: boolean;
 	thinking?: ThinkingConfig;
 	input?: ("text" | "image")[];
-	cost?: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	cost?: import("@f5-sales-demo/pi-ai").ModelCost;
 	contextWindow?: number;
+	maxInputTokens?: number;
 	maxTokens?: number;
 	headers?: Record<string, string>;
 	compat?: Model<Api>["compat"];
@@ -747,8 +793,9 @@ type CustomModelOverlay = {
 	reasoning?: boolean;
 	thinking?: ThinkingConfig;
 	input?: ("text" | "image")[];
-	cost?: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	cost?: import("@f5-sales-demo/pi-ai").ModelCost;
 	contextWindow?: number;
+	maxInputTokens?: number;
 	maxTokens?: number;
 	headers?: Record<string, string>;
 	compat?: Model<Api>["compat"];
@@ -795,6 +842,7 @@ function buildCustomModelOverlay(
 		input: modelDef.input as ("text" | "image")[] | undefined,
 		cost: modelDef.cost,
 		contextWindow: modelDef.contextWindow,
+		maxInputTokens: modelDef.maxInputTokens,
 		maxTokens: modelDef.maxTokens,
 		headers: mergeCustomModelHeaders(providerHeaders, modelDef.headers, authHeader, providerApiKey),
 		compat: mergeCompat(providerCompat, modelDef.compat),
@@ -825,6 +873,7 @@ function finalizeCustomModel(model: CustomModelOverlay, options: CustomModelBuil
 		thinking: resolvedModel.thinking,
 		input: input as ("text" | "image")[],
 		cost,
+		maxInputTokens: resolvedModel.maxInputTokens,
 		contextWindow: resolvedModel.contextWindow ?? (options.useDefaults ? 128000 : undefined),
 		maxTokens: resolvedModel.maxTokens ?? (options.useDefaults ? 16384 : undefined),
 		headers: resolvedModel.headers,
@@ -854,6 +903,7 @@ function getDisabledProviderIdsFromSettings(): Set<string> {
  * Model registry - loads and manages models, resolves API keys via AuthStorage.
  */
 export class ModelRegistry {
+	#operationCatalog: ReturnType<typeof createOperationCatalog>;
 	#models: Model<Api>[] = [];
 	#canonicalIndex: CanonicalModelIndex = { records: [], byId: new Map(), bySelector: new Map() };
 	#customProviderApiKeys: Map<string, string> = new Map();
@@ -907,6 +957,9 @@ export class ModelRegistry {
 	) {
 		this.#modelsConfigFile = ModelsConfigFile.relocate(modelsPath);
 		this.#cacheDbPath = modelsPath ? path.join(path.dirname(modelsPath), "models.db") : undefined;
+		this.#operationCatalog = createOperationCatalog({
+			cacheDbPath: this.#cacheDbPath ?? getModelDbPath(),
+		});
 		// Set up fallback resolver for custom provider API keys
 		this.authStorage.setFallbackResolver(provider => {
 			const keyConfig = this.#customProviderApiKeys.get(provider);
@@ -2066,6 +2119,7 @@ export class ModelRegistry {
 		const items: Array<{
 			id: string;
 			contextWindow?: number;
+			maxInputTokens?: number;
 			context_window?: unknown;
 			max_input_tokens?: unknown;
 			max_output_tokens?: unknown;
@@ -2231,6 +2285,42 @@ export class ModelRegistry {
 	 */
 	getAll(): Model<Api>[] {
 		return this.#models;
+	}
+
+	getImageModels(provider: string): ImageModel[] {
+		return this.#operationCatalog
+			.getImageModels(provider)
+			.map(model => ({ ...model, baseUrl: this.#providerOverrides.get(provider)?.baseUrl ?? model.baseUrl }));
+	}
+
+	getClassifierModels(provider: string): ClassifierModel[] {
+		return this.#operationCatalog
+			.getClassifierModels(provider)
+			.map(model => ({ ...model, baseUrl: this.#providerOverrides.get(provider)?.baseUrl ?? model.baseUrl }));
+	}
+
+	getAnyModels(provider: string): AnyModel[] {
+		return [
+			...this.#models.filter(model => model.provider === provider),
+			...this.getImageModels(provider),
+			...this.getClassifierModels(provider),
+		];
+	}
+
+	async refreshOperationModels(provider: string, signal?: AbortSignal): Promise<void> {
+		const apiKey = await this.getApiKeyForProvider(provider);
+		await this.#operationCatalog.refresh(provider, {
+			apiKey,
+			signal,
+			baseUrl: this.getProviderBaseUrl(provider),
+			...(provider === "llama.cpp"
+				? {
+						modelIds: this.getAll()
+							.filter(model => model.provider === provider)
+							.map(model => model.id),
+					}
+				: {}),
+		});
 	}
 
 	#isModelAvailable(model: Model<Api>): boolean {
@@ -2711,7 +2801,7 @@ export interface ProviderConfigInput {
 		reasoning: boolean;
 		thinking?: ThinkingConfig;
 		input: ("text" | "image")[];
-		cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
+		cost: import("@f5-sales-demo/pi-ai").ModelCost;
 		contextWindow: number;
 		maxTokens: number;
 		headers?: Record<string, string>;

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "bun:test";
+import type { ReasoningEffortPreset } from "../src/types";
 import { fetchCodexModels } from "../src/utils/discovery/codex";
 
-const GPT_56_LEVELS = [
+const GPT_56_LEVELS: ReasoningEffortPreset[] = [
 	{ effort: "none", description: "Fastest responses with no reasoning tokens" },
 	{ effort: "low", description: "Favors speed and fewer reasoning tokens" },
 	{ effort: "medium", description: "Balances speed and reasoning depth" },
@@ -11,6 +12,33 @@ const GPT_56_LEVELS = [
 ];
 
 describe("Codex model discovery metadata", () => {
+	it("normalizes object speed tiers and discovers cached reasoning support", async () => {
+		const fetchFn = (async () =>
+			Response.json({
+				models: [
+					{
+						slug: "gpt-6.1-sol",
+						display_name: "GPT-6.1 Sol",
+						context_window: 272000,
+						max_context_window: 872000,
+						prefer_websockets: true,
+						supports_reasoning_effort_updates: true,
+						default_reasoning_level: "low",
+						supported_reasoning_levels: [
+							{ effort: "low", description: "Discovered low" },
+							{ effort: "ultra", description: "Discovered Ultra" },
+						],
+						service_tiers: [{ id: "priority", name: "Fast" }],
+					},
+				],
+			})) as unknown as typeof fetch;
+		const model = (await fetchCodexModels({ accessToken: "synthetic", clientVersion: "0.152.1", fetchFn }))
+			?.models[0];
+		expect(model?.serviceTiers).toEqual(["default", "priority"]);
+		expect(model?.defaultServiceTier).toBe("default");
+		expect(model?.thinking?.defaultLevel).toBe("low");
+		expect(model?.compat).toMatchObject({ supportsCachedReasoningUpdates: true });
+	});
 	it("merges the pinned GPT-5.6 interaction contract with live catalog presentation", async () => {
 		const fetchFn = vi.fn(async (input: string | URL | Request) => {
 			if (String(input).includes("registry.npmjs.org")) return Response.json({ version: "0.152.1" });
@@ -56,12 +84,6 @@ describe("Codex model discovery metadata", () => {
 		const result = await fetchCodexModels({ accessToken: "test-token", fetchFn });
 
 		expect(result?.models.map(model => model.id)).toEqual(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]);
-		const expectedEfforts = {
-			"gpt-5.6-sol": ["low", "medium", "high", "xhigh", "max", "ultra"],
-			"gpt-5.6-terra": ["low", "medium", "high", "xhigh", "max", "ultra"],
-			"gpt-5.6-luna": ["low", "medium", "high", "xhigh", "max"],
-		} as const;
-		const expectedDefaults = { "gpt-5.6-sol": "low", "gpt-5.6-terra": "medium", "gpt-5.6-luna": "medium" } as const;
 		for (const model of result?.models ?? []) {
 			expect(model).toMatchObject({
 				publisher: "OpenAI",
@@ -72,10 +94,8 @@ describe("Codex model discovery metadata", () => {
 				defaultVerbosity: "low",
 				truncationPolicy: { mode: "tokens", limit: 10_000 },
 			});
-			expect(model.thinking?.defaultLevel).toBe(expectedDefaults[model.id as keyof typeof expectedDefaults]);
-			expect(model.thinking?.supportedLevels.map(level => level.effort)).toEqual([
-				...expectedEfforts[model.id as keyof typeof expectedEfforts],
-			]);
+			expect(model.thinking?.defaultLevel).toBe("medium");
+			expect(model.thinking?.supportedLevels).toEqual(GPT_56_LEVELS);
 			expect(model.tier).toBe(model.name.replace("GPT-5.6 ", ""));
 		}
 		expect(result?.models[0]?.description).toBe("Flagship model for complex professional work");

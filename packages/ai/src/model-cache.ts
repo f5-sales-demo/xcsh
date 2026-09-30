@@ -4,7 +4,7 @@
  */
 import { Database } from "bun:sqlite";
 import { getModelDbPath } from "@f5-sales-demo/pi-utils";
-import type { Api, Model } from "./types";
+import type { AnyModel, Api, Model } from "./types";
 
 const CACHE_SCHEMA_VERSION = 2;
 
@@ -94,4 +94,37 @@ export function writeModelCache<TApi extends Api>(
 	} catch {
 		// Cache writes are best-effort; failures should not break model resolution.
 	}
+}
+
+/** Operation catalogs share atomic storage but use distinct rows from chat discovery. */
+export function readOperationModelCache(provider: string, dbPath: string): AnyModel[] | undefined {
+	try {
+		const row = getDb(dbPath)
+			.query<CacheRow, [string]>("SELECT * FROM model_cache WHERE provider_id = ?")
+			.get(`operations:${provider}`);
+		if (!row || row.version !== CACHE_SCHEMA_VERSION) return undefined;
+		const models: unknown = JSON.parse(row.models);
+		if (
+			!Array.isArray(models) ||
+			!models.every(
+				model =>
+					model?.provider === provider &&
+					["image", "classifier"].includes(model.type) &&
+					typeof model.id === "string" &&
+					typeof model.api === "string" &&
+					typeof model.baseUrl === "string",
+			)
+		)
+			return undefined;
+		return models;
+	} catch {
+		return undefined;
+	}
+}
+
+export function writeOperationModelCache(provider: string, models: readonly AnyModel[], dbPath: string): void {
+	getDb(dbPath).run(
+		"INSERT OR REPLACE INTO model_cache (provider_id, version, updated_at, authoritative, models) VALUES (?, ?, ?, ?, ?)",
+		[`operations:${provider}`, CACHE_SCHEMA_VERSION, Date.now(), 1, JSON.stringify(models)],
+	);
 }

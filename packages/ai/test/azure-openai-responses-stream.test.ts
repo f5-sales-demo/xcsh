@@ -1,8 +1,42 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
+import { getBundledModel } from "../src/models";
 import { streamAzureOpenAIResponses } from "../src/providers/azure-openai-responses";
 import type { Context, Model } from "../src/types";
 
 const originalFetch = global.fetch;
+
+it("sanitizes Sol Azure replacement payloads after awaiting the hook", async () => {
+	let payload: any;
+	const model = {
+		...getBundledModel("openai", "gpt-6.1-sol"),
+		api: "azure-openai-responses",
+		provider: "azure",
+		baseUrl: azureModel.baseUrl,
+	} as Model<"azure-openai-responses">;
+	await streamAzureOpenAIResponses(
+		model,
+		{ messages: [] },
+		{
+			apiKey: "synthetic",
+			azureBaseUrl: model.baseUrl,
+			signal: AbortSignal.abort(),
+			onPayload: async () => {
+				await Promise.resolve();
+				payload = {
+					model: model.id,
+					input: [],
+					stream: true,
+					temperature: 1,
+					top_p: 0.5,
+					reasoning: { effort: "max", summary: "none" },
+				};
+				return payload;
+			},
+		},
+	).result();
+	for (const field of ["temperature", "top_p"]) expect(payload).not.toHaveProperty(field);
+	expect(payload.reasoning).toEqual({ effort: "max" });
+});
 
 const azureModel: Model<"azure-openai-responses"> = {
 	id: "gpt-5-mini",

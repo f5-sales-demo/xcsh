@@ -15,9 +15,9 @@ describe("subscription routing profiles", () => {
 		const profile = SUBSCRIPTION_ROUTING_PROFILES["openai-codex"];
 		expect(profile?.roles).toEqual({
 			smol: "openai-codex/gpt-6-luna:low",
-			default: "openai-codex/gpt-5.6-terra:medium",
-			slow: "openai-codex/gpt-6-sol:high",
-			plan: "openai-codex/gpt-6-sol:high",
+			default: "openai-codex/gpt-6.1-sol:medium",
+			slow: "openai-codex/gpt-6.1-sol:high",
+			plan: "openai-codex/gpt-6.1-sol:high",
 		});
 		expect(profile?.pool).toMatchObject({
 			id: "openai-codex/gpt-6",
@@ -88,7 +88,7 @@ describe("subscription routing profiles", () => {
 		const result = applySubscriptionProfileRoles(
 			"openai-codex",
 			{ default: "old/default", vision: "google/vision", custom: "custom/model" },
-			["openai-codex/gpt-6-luna", "openai-codex/gpt-5.6-terra", "openai-codex/gpt-6-sol"],
+			["openai-codex/gpt-6-luna", "openai-codex/gpt-5.6-terra", "openai-codex/gpt-6.1-sol"],
 		);
 
 		expect(result.applied).toBe(true);
@@ -96,19 +96,19 @@ describe("subscription routing profiles", () => {
 		expect(result.roles).toMatchObject({
 			vision: "google/vision",
 			custom: "custom/model",
-			default: "openai-codex/gpt-5.6-terra:medium",
+			default: "openai-codex/gpt-6.1-sol:medium",
 		});
 	});
 
-	it("requires Luna, Terra, and Sol before changing any OpenAI role", () => {
+	it("requires Luna and Sol before changing any OpenAI role", () => {
 		const current = { default: "anthropic/claude-sonnet-4-6:high", vision: "google/vision" };
 		const result = applySubscriptionProfileRoles("openai-codex", current, [
 			"openai-codex/gpt-6-luna",
-			"openai-codex/gpt-6-sol",
+			"openai-codex/gpt-5.6-terra",
 		]);
 
 		expect(result.applied).toBe(false);
 		expect(result.roles).toEqual(current);
-		expect(result.missingModels).toEqual(["openai-codex/gpt-5.6-terra"]);
+		expect(result.missingModels).toEqual(["openai-codex/gpt-6.1-sol"]);
 	});
 });

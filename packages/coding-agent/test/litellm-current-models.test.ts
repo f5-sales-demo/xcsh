@@ -20,6 +20,7 @@ const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 const CURRENT_OPENAI_IDS = [
 	"gpt-6-luna",
 	"gpt-5.6-terra",
+	"gpt-6.1-sol",
 	"gpt-6-sol",
 	"gpt-6-astra",
 	"gpt-5.6-luna",
@@ -61,7 +62,7 @@ describe("current internal LiteLLM model contract", () => {
 		else Bun.env.LITELLM_API_KEY = previousApiKey;
 	});
 
-	it("generates v11 with Responses routing for all OpenAI interaction models", () => {
+	it("generates v12 with Responses routing for all OpenAI interaction models", () => {
 		const document = YAML.parse(fs.readFileSync(modelsPath, "utf8")) as {
 			configVersion: number;
 			providers: {
@@ -74,8 +75,8 @@ describe("current internal LiteLLM model contract", () => {
 				};
 			};
 		};
-		expect(CURRENT_CONFIG_VERSION).toBe(11);
-		expect(document.configVersion).toBe(11);
+		expect(CURRENT_CONFIG_VERSION).toBe(12);
+		expect(document.configVersion).toBe(12);
 
 		const anthropic = document.providers.anthropic;
 		expect(anthropic.api).toBe("anthropic-messages");
@@ -100,6 +101,7 @@ describe("current internal LiteLLM model contract", () => {
 	it("exposes exact route, capability, effort, limit, and zero-cost metadata", () => {
 		const registry = new ModelRegistry(authStorage, modelsPath, { getLiteLLMContextTier: () => "provider-max" });
 		const expectedEfforts = new Map<string, ReasoningEffort[]>([
+			["gpt-6.1-sol", [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max]],
 			["gpt-6-luna", [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, ReasoningEffort.Max]],
 			[
 				"gpt-5.6-terra",
@@ -128,7 +130,7 @@ describe("current internal LiteLLM model contract", () => {
 				reasoning: true,
 				input: ["text", "image"],
 				cost: ZERO_COST,
-				contextWindow: id.startsWith("gpt-6-") ? 922_000 : 1_050_000,
+				contextWindow: /^gpt-6(?:\.1)?-/.test(id) ? 922_000 : 1_050_000,
 				maxTokens: 128_000,
 				compat: { supportsTemperature: false },
 				defaultReasoningSummary: "none",
@@ -255,7 +257,7 @@ describe("current internal LiteLLM model contract", () => {
 		expect(output).toBe(`${"a".repeat(20)}…5 tokens truncated…${"a".repeat(20)}`);
 	});
 
-	it("shows all seven provider-advertised OpenAI models", () => {
+	it("shows all eight provider-advertised OpenAI models", () => {
 		const registry = new ModelRegistry(authStorage, modelsPath);
 		const visible = filterCurrentBrowserModels(registry.getAll()).filter(
 			model => model.provider === "litellm" || model.provider === "anthropic",
@@ -283,22 +285,22 @@ describe("current internal LiteLLM model contract", () => {
 	});
 
 	it("assigns current LiteLLM login roles and native Anthropic routing", () => {
-		expect(DEFAULT_MODEL_ROLE).toBe("litellm/gpt-5.6-terra:medium");
+		expect(DEFAULT_MODEL_ROLE).toBe("litellm/gpt-6.1-sol:medium");
 		expect(SETTINGS_SCHEMA.modelRoles.default).toEqual({
 			smol: "litellm/gpt-6-luna:low",
-			default: "litellm/gpt-5.6-terra:medium",
-			slow: "litellm/gpt-6-sol:high",
-			plan: "litellm/gpt-6-sol:high",
+			default: "litellm/gpt-6.1-sol:medium",
+			slow: "litellm/gpt-6.1-sol:high",
+			plan: "litellm/gpt-6.1-sol:high",
 		});
 		expect(LITELLM_LOGIN_MODEL_CHOICES.map(choice => `${choice.provider}/${choice.modelId}`)).toEqual([
-			"litellm/gpt-6-sol",
+			"litellm/gpt-6.1-sol",
 			"anthropic/claude-opus-5-5",
 		]);
 		expect(getLiteLLMLoginModelRoles(LITELLM_LOGIN_MODEL_CHOICES[0]!)).toEqual({
 			smol: "litellm/gpt-6-luna:low",
-			default: "litellm/gpt-5.6-terra:medium",
-			slow: "litellm/gpt-6-sol:high",
-			plan: "litellm/gpt-6-sol:high",
+			default: "litellm/gpt-6.1-sol:medium",
+			slow: "litellm/gpt-6.1-sol:high",
+			plan: "litellm/gpt-6.1-sol:high",
 		});
 		expect(getLiteLLMLoginModelRoles(LITELLM_LOGIN_MODEL_CHOICES[1]!)).toEqual({
 			smol: "anthropic/claude-haiku-4-5:low",
@@ -336,7 +338,7 @@ describe("current internal LiteLLM model contract", () => {
 		}
 		registry.setLiteLLMContextTier("provider-max");
 		for (const id of CURRENT_OPENAI_IDS) {
-			expect(registry.find("litellm", id)?.contextWindow).toBe(id.startsWith("gpt-6-") ? 922_000 : 1_050_000);
+			expect(registry.find("litellm", id)?.contextWindow).toBe(/^gpt-6(?:\.1)?-/.test(id) ? 922_000 : 1_050_000);
 		}
 		expect(registry.find("anthropic", "claude-opus-5-5")?.contextWindow).toBe(1_000_000);
 	});

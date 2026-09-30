@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "2ece4d8413aca44d9c20f077bde5eaf198e6e61c",
-  "fingerprint": "b161b9dd1edad89e10f604cd3666c59d42815116e3ca2793829efe4b6a28e967",
+  "revision": "cd1f72e2ad8098cce6c6fad9046edc7df6dbefba",
+  "fingerprint": "18303c770ea07d9a16e316bbc51df9bf2bd9099a779280321a137499f58fa480",
   "counts": {
     "total": 238,
     "components": 96,
@@ -412,7 +412,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "bff33bd7757fb8507f90f7f6d12b91ac01cf80413a66101bc914a84d63e17e74",
+      "sha256": "d91d0db685d4c5b1cd86981e7b5789f6676d25ccde8fd5ca4211b01d3711371a",
       "exports": [
         "CustomTool",
         "CustomToolAPI",
@@ -547,7 +547,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "7874a3ff79bb7f66ed721dc2a6a04afce452a31ab2ebc6c82c6011e48524ef40",
+      "sha256": "8f75a4e43da72ae74f01c176d1dc889a967775e5b0fe35971bb473e2b0b69eae",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -1851,6 +1851,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/gpt-61-sol-config.test.ts",
         "packages/coding-agent/test/keybindings-escape-components.test.ts",
         "packages/coding-agent/test/litellm-current-models.test.ts",
         "packages/coding-agent/test/model-selection-scope.test.ts",
@@ -3341,7 +3342,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "foundation",
-      "sha256": "da25e886073ae3a903cb655b6363f2d3eb25190d5812389356a9eea52e9392a9",
+      "sha256": "d414602d95c229c4f3f9950efb8caebe5622ab5eec1d4861a17b62b2e7ea4bea",
       "exports": [
         "ANTHROPIC_LOGIN_MODEL_CHOICE",
         "GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE",
@@ -4296,7 +4297,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "fd2e52dbe9b92a7683c1243fcafef4ca00aa8b5be4cd9cd001987fba566dc8d9",
+      "sha256": "803335be89790d7cf718b0e945f0a29ffe1cf42bb27bba5757f87c7597d9d22a",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -5392,7 +5393,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "aa7fbd5efe3a1b759523f68aebd6084437682cdc30a2e1ecff558188b4ef9765",
+      "sha256": "c9a99e6e1c851aad69eba20aa54dfbb9f1fda2cba57f13941befbe1db502a0c1",
       "exports": [
         "SearchToolBm25Details",
         "SearchToolBm25Tool",

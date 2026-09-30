@@ -11,6 +11,9 @@ export type OAuthCredentials = {
 };
 
 export type OAuthProvider =
+	| "openrouter"
+	| "meta"
+	| "radius"
 	| "alibaba-coding-plan"
 	| "anthropic"
 	| "cerebras"

@@ -192,6 +192,20 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 
 		return {
 			content: [{ type: "text", text: buildSearchToolBm25Content(details) }],
+			tools: activated.flatMap(name => {
+				const tool = this.session.getToolDefinition?.(name);
+				return tool
+					? [
+							{
+								name: tool.name,
+								description: tool.description,
+								parameters: tool.parameters,
+								strict: tool.strict,
+								constrainedSampling: tool.constrainedSampling,
+							},
+						]
+					: [];
+			}),
 			details,
 			...(ranked.length === 0 ? { isWarning: true } : {}),
 		};

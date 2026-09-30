@@ -47,10 +47,23 @@ describe("geminiImageTool", () => {
 
 		const fetchMock: typeof fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
 			requestHeaders = init?.headers;
-			return new Response(JSON.stringify({ choices: [{ message: { role: "assistant", content: "" } }] }), {
-				status: 200,
-				headers: { "content-type": "application/json" },
-			});
+			return new Response(
+				JSON.stringify({
+					choices: [
+						{
+							message: {
+								role: "assistant",
+								content: "",
+								images: [{ image_url: { url: "data:image/png;base64,aGVsbG8=" } }],
+							},
+						},
+					],
+				}),
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+				},
+			);
 		}) as unknown as typeof fetch;
 		fetchMock.preconnect = originalFetch.preconnect;
 		global.fetch = fetchMock;
