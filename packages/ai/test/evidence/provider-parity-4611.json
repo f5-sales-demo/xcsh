@@ -1,7 +1,5 @@
 {
 	"xcshBaseline": "8b45242bfc5b",
-	"piRevision": "1b347794e2a630e4359f2584f4eea388145d0ddf",
-	"ohMyPiRevision": "2b023d1b80133c523d66412602d99b5427408395",
 	"providers": [
 		{
 			"upstreamProvider": "amazon-bedrock",
@@ -2753,5 +2751,9 @@
 			"evidence": "Herdr w6M:p2 /login Ready, /model selection and SYNTHETIC_VERTEX_4611_OK",
 			"candidate": "59b394f53825b438fd773016a4dbddc473a7b58c"
 		}
+	},
+	"upstreamCommits": {
+		"pi": "1b347794e2a630e4359f2584f4eea388145d0ddf",
+		"ohMyPi": "2b023d1b80133c523d66412602d99b5427408395"
 	}
 }

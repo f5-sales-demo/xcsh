@@ -4,11 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { clearCache as clearCapabilityFsCache } from "../src/capability/fs";
+import { ModelRegistry } from "../src/config/model-registry";
 import { registerCodingAgentPromptHelpers } from "../src/config/prompt-templates";
 import { Settings } from "../src/config/settings";
 import { clearXcshPluginRootsCache, getXcshPluginCacheGeneration } from "../src/discovery/helpers";
 import type { StartFolder } from "../src/discovery/start-folder";
 import { createAgentSession } from "../src/sdk";
+import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
 import {
 	assertPreparedSystemPromptCwd,
@@ -222,6 +224,8 @@ describe("session prompt snapshot lifecycle", () => {
 		);
 		const model = getBundledModel("openai", "gpt-4o-mini");
 		if (!model) throw new Error("Expected bundled test model");
+		const authStorage = await AuthStorage.create(":memory:");
+		const modelRegistry = new ModelRegistry(authStorage);
 		const results = await Promise.all(
 			Array.from({ length: 8 }, (_, index) =>
 				createAgentSession({
@@ -232,6 +236,10 @@ describe("session prompt snapshot lifecycle", () => {
 					model,
 					disableExtensionDiscovery: true,
 					preparedSystemPromptInputs: snapshot,
+					authStorage,
+					modelRegistry,
+					rules: [],
+					secretEnvironment: {},
 					promptTemplates: [],
 					slashCommands: [],
 					enableLsp: false,
@@ -252,6 +260,7 @@ describe("session prompt snapshot lifecycle", () => {
 			}
 		} finally {
 			await Promise.all(results.map(({ session }) => session.dispose()));
+			authStorage.close();
 		}
 	});
 
