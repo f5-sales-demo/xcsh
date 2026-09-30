@@ -117,3 +117,16 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
         run: bash scripts/ci-release-github-backfill.sh "$REPOSITORY" "$TAG" ".release-source/packages/coding-agent/binaries"
+
+      - name: Confirm immutable publication independently
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPOSITORY}/releases/tags/${TAG}?cache_bust=$(date +%s)" |
+            jq -e --arg tag "$TAG" '
+              .tag_name == $tag and .draft == false and .prerelease == false and
+              .immutable == true and (.assets | length) == 28
+            ' >/dev/null

@@ -128,6 +128,10 @@ pids=()
 upload_failed=0
 wait_for_uploads() {
   local pid
+  # Bash 3.2 treats an empty array as unset under nounset.
+  if [ "${#pids[@]}" -eq 0 ]; then
+    return 0
+  fi
   for pid in "${pids[@]}"; do
     if ! wait "$pid"; then
       upload_failed=1
