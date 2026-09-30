@@ -594,7 +594,8 @@ export function mapOptionsForApi<TApi extends Api>(
 		case "azure-openai-responses":
 			return castApi<"azure-openai-responses">({
 				...base,
-				reasoning: resolveOpenAiReasoningEffort(model, options),
+				reasoning: resolveCodexReasoningEffort(model, options),
+				reasoningSummary: options?.reasoningSummary,
 				toolChoice: mapOpenAiToolChoice(options?.toolChoice),
 				serviceTier: options?.serviceTier,
 			});
