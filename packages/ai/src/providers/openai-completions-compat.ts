@@ -60,12 +60,30 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 	const baseUrl = resolvedBaseUrl ?? model.baseUrl;
 
 	const isCerebras = provider === "cerebras" || baseUrl.includes("cerebras.ai");
-	const isZai = provider === "zai" || baseUrl.includes("api.z.ai");
+	const isZai =
+		provider === "zai" ||
+		provider === "zai-coding-cn" ||
+		baseUrl.includes("api.z.ai") ||
+		baseUrl.includes("open.bigmodel.cn");
+	const isDeepSeek = provider === "deepseek" || baseUrl.includes("deepseek.com");
+	const isTogether = provider === "together" || baseUrl.includes("api.together.");
+	const isAntLing = provider === "ant-ling" || baseUrl.includes("api.ant-ling.com");
+	const isBaseten = provider === "baseten" || baseUrl.includes("baseten.co");
+	const isNvidia = provider === "nvidia" || baseUrl.includes("integrate.api.nvidia.com");
+	const isMoonshot = provider === "moonshot" || provider === "moonshotai-cn" || baseUrl.includes("api.moonshot.");
+	const isCloudflare = provider.startsWith("cloudflare-");
 	const isKimiModel = model.id.includes("moonshotai/kimi") || /^kimi[-.]/i.test(model.id);
 	const isAlibaba = provider === "alibaba-coding-plan" || baseUrl.includes("dashscope");
 	const isQwen = model.id.toLowerCase().includes("qwen");
 
 	const isNonStandard =
+		isDeepSeek ||
+		isTogether ||
+		isAntLing ||
+		isBaseten ||
+		isNvidia ||
+		isMoonshot ||
+		isCloudflare ||
 		isCerebras ||
 		provider === "xai" ||
 		baseUrl.includes("api.x.ai") ||
@@ -80,7 +98,17 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		provider === "opencode-go" ||
 		baseUrl.includes("opencode.ai");
 
-	const useMaxTokens = provider === "mistral" || baseUrl.includes("mistral.ai") || baseUrl.includes("chutes.ai");
+	const useMaxTokens =
+		isDeepSeek ||
+		isTogether ||
+		isAntLing ||
+		isBaseten ||
+		isNvidia ||
+		isMoonshot ||
+		isZai ||
+		provider === "mistral" ||
+		baseUrl.includes("mistral.ai") ||
+		baseUrl.includes("chutes.ai");
 	const isGrok = provider === "xai" || baseUrl.includes("api.x.ai");
 	const isMistral = provider === "mistral" || baseUrl.includes("mistral.ai");
 
@@ -99,7 +127,16 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		supportsStore: !isNonStandard,
 		supportsTemperature: model.id.toLowerCase() !== "gpt-5.6-sol",
 		supportsDeveloperRole: !isNonStandard,
-		supportsReasoningEffort: !isGrok && !isZai,
+		supportsReasoningEffort:
+			!isGrok &&
+			!isZai &&
+			!isDeepSeek &&
+			!isTogether &&
+			!isAntLing &&
+			!isBaseten &&
+			!isNvidia &&
+			!isMoonshot &&
+			!isCloudflare,
 		reasoningEffortMap,
 		supportsUsageInStreaming: !isCerebras,
 		supportsFinishReason: true,
@@ -109,13 +146,19 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		requiresAssistantAfterToolResult: false,
 		requiresThinkingAsText: isMistral,
 		requiresMistralToolIds: isMistral,
-		thinkingFormat: isZai
-			? "zai"
-			: provider === "openrouter" || baseUrl.includes("openrouter.ai")
-				? "openrouter"
-				: isAlibaba || isQwen
-					? "qwen"
-					: "openai",
+		thinkingFormat: isDeepSeek
+			? "deepseek"
+			: isTogether && !["deepseek-ai/DeepSeek-R1", "MiniMaxAI/MiniMax-M2.7"].includes(model.id)
+				? "together"
+				: isAntLing
+					? "ant-ling"
+					: isZai
+						? "zai"
+						: provider === "openrouter" || baseUrl.includes("openrouter.ai")
+							? "openrouter"
+							: isAlibaba || isQwen
+								? "qwen"
+								: "openai",
 		reasoningContentField: "reasoning_content",
 		requiresReasoningContentForToolCalls: isKimiModel,
 		requiresAssistantContentForToolCalls: isKimiModel,
