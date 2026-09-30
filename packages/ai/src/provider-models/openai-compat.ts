@@ -16,6 +16,7 @@ const ANTHROPIC_OAUTH_BETA =
 	"claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,context-management-2025-06-27,prompt-caching-scope-2026-01-05";
 
 export interface ModelsDevModel {
+	reasoning_options?: { type: "toggle" | "effort" | "budget_tokens"; values?: unknown[] }[];
 	id?: string;
 	name?: string;
 	tool_call?: boolean;
@@ -60,9 +61,10 @@ function toInputCapabilities(value: unknown): ("text" | "image")[] {
 	return supportsImage ? ["text", "image"] : ["text"];
 }
 
-async function fetchModelsDevPayload(fetchImpl: typeof fetch = fetch): Promise<unknown> {
+async function fetchModelsDevPayload(signal?: AbortSignal, fetchImpl: typeof fetch = fetch): Promise<unknown> {
 	const response = await fetchImpl(MODELS_DEV_URL, {
 		method: "GET",
+		signal,
 		headers: { Accept: "application/json" },
 	});
 	if (!response.ok) {
@@ -706,12 +708,21 @@ export function openrouterModelManagerOptions(
 					return {
 						...defaults,
 						reasoning: params.includes("reasoning"),
-						input: modality.includes("image") ? ["text", "image"] : ["text"],
+						input:
+							modality.includes("image") ||
+							(entry.architecture as { input_modalities?: unknown[] } | undefined)?.input_modalities?.includes(
+								"image",
+							)
+								? ["text", "image"]
+								: ["text"],
 						cost: {
-							input: parseFloat(String(pricing?.prompt ?? "0")) * 1_000_000,
-							output: parseFloat(String(pricing?.completion ?? "0")) * 1_000_000,
-							cacheRead: parseFloat(String(pricing?.input_cache_read ?? "0")) * 1_000_000,
-							cacheWrite: parseFloat(String(pricing?.input_cache_write ?? "0")) * 1_000_000,
+							pricingKnown: !Object.values(pricing ?? {}).some(
+								value => Number(value) < 0 || !Number.isFinite(Number(value)),
+							),
+							input: Math.max(0, toNumber(pricing?.prompt) ?? 0) * 1_000_000,
+							output: Math.max(0, toNumber(pricing?.completion) ?? 0) * 1_000_000,
+							cacheRead: Math.max(0, toNumber(pricing?.input_cache_read) ?? 0) * 1_000_000,
+							cacheWrite: Math.max(0, toNumber(pricing?.input_cache_write) ?? 0) * 1_000_000,
 						},
 						contextWindow:
 							typeof entry.context_length === "number" ? entry.context_length : defaults.contextWindow,
@@ -1630,7 +1641,7 @@ export function anthropicModelManagerOptions(
 		},
 		...(apiKey && {
 			fetchDynamicModels: async signal => {
-				const modelsDevModels = await fetchModelsDevPayload()
+				const modelsDevModels = await fetchModelsDevPayload(signal)
 					.then(payload => mapAnthropicModelsDev(payload, baseUrl))
 					.catch(() => []);
 				const references = buildAnthropicReferenceMap(modelsDevModels);
@@ -1736,7 +1747,7 @@ export function mapModelsDevToModels(
 			}
 
 			// Resolve API and baseUrl (may be per-model for providers like OpenCode)
-			const resolved = desc.resolveApi?.(modelId, m) ?? { api: desc.api, baseUrl: desc.baseUrl };
+			const resolved = desc.resolveApi ? desc.resolveApi(modelId, m) : { api: desc.api, baseUrl: desc.baseUrl };
 			if (!resolved) continue;
 
 			const mapped: Model<Api> = {
@@ -1777,6 +1788,19 @@ export function mapModelsDevToModels(
 			};
 
 			// Apply per-model transform
+			const efforts = m.reasoning_options
+				?.flatMap(option => (option.type === "effort" ? (option.values ?? []) : []))
+				.filter(
+					(value): value is import("../model-thinking").ReasoningEffort =>
+						typeof value === "string" &&
+						["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(value),
+				);
+			if (mapped.reasoning && efforts?.length)
+				mapped.thinking = {
+					mode: "effort",
+					defaultLevel: efforts.includes("medium") ? "medium" : efforts[0]!,
+					supportedLevels: [...new Set(efforts)].map(effort => ({ effort, description: `${effort} reasoning` })),
+				};
 			if (desc.transformModel) {
 				const result = desc.transformModel(mapped, modelId, m);
 				if (result === null) continue;

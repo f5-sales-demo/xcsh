@@ -261,7 +261,8 @@ export function applyGeneratedModelPolicies(
 		// Subscription discovery is authoritative for the effort enum. Re-inferring
 		// it from a model family can add values rejected by the backing model.
 		const model =
-			options.preserveDiscoveredThinking && source.api === "openai-codex-responses"
+			options.preserveDiscoveredThinking &&
+			(source.api === "openai-codex-responses" || source.thinking !== undefined)
 				? enrichModelThinking(source)
 				: refreshModelThinking(source);
 		applyGeneratedModelPolicy(model);

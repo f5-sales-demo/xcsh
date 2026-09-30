@@ -17,7 +17,7 @@ export type ModelRefreshStrategy = "online" | "offline" | "online-if-uncached";
  */
 export interface ModelsDevFallback<TApi extends Api = Api, TPayload = unknown> {
 	/** Fetches raw fallback payload (for example from models.dev). */
-	fetch(): Promise<TPayload>;
+	fetch(signal?: AbortSignal): Promise<TPayload>;
 	/** Maps payload into provider models. */
 	map(payload: TPayload, providerId: Provider): readonly Model<TApi>[];
 }
@@ -111,7 +111,7 @@ export async function resolveProviderModels<TApi extends Api = Api, TModelsDevPa
 	);
 	const [fetchedModelsDevModels, fetchedDynamicModels] = shouldFetchFromNetwork
 		? await Promise.all([
-				fetchModelsDev(options),
+				fetchModelsDev(options, request?.signal),
 				dynamicFetcher ? fetchDynamicModels(() => dynamicFetcher(request?.signal)) : null,
 			])
 		: [null, null];
@@ -154,13 +154,14 @@ export async function resolveProviderModels<TApi extends Api = Api, TModelsDevPa
 
 async function fetchModelsDev<TApi extends Api, TModelsDevPayload>(
 	options: ModelManagerOptions<TApi, TModelsDevPayload>,
+	signal?: AbortSignal,
 ): Promise<Model<TApi>[] | null> {
 	if (!options.modelsDev) {
 		return null;
 	}
 
 	try {
-		const payload = await options.modelsDev.fetch();
+		const payload = await options.modelsDev.fetch(signal);
 		return normalizeModelList<TApi>(options.modelsDev.map(payload, options.providerId));
 	} catch {
 		return null;
@@ -246,6 +247,7 @@ function mergeDynamicModel<TApi extends Api>(existingModel: Model<TApi>, dynamic
 		reasoning: existingModel.reasoning || dynamicModel.reasoning,
 		input: supportsImage ? ["text", "image"] : ["text"],
 		cost: {
+			pricingKnown: dynamicModel.cost.pricingKnown ?? existingModel.cost.pricingKnown,
 			input: preferDiscoveryCost(dynamicModel.cost.input, existingModel.cost.input),
 			output: preferDiscoveryCost(dynamicModel.cost.output, existingModel.cost.output),
 			cacheRead: preferDiscoveryCost(dynamicModel.cost.cacheRead, existingModel.cost.cacheRead),
