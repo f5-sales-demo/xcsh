@@ -151,6 +151,8 @@ const ReasoningEffortMapSchema = Type.Object({
 	medium: Type.Optional(Type.String()),
 	high: Type.Optional(Type.String()),
 	xhigh: Type.Optional(Type.String()),
+	max: Type.Optional(Type.String()),
+	ultra: Type.Optional(Type.String()),
 });
 
 const OpenAICompatSchema = Type.Object({
@@ -172,9 +174,61 @@ const OpenAICompatSchema = Type.Object({
 			Type.Literal("qwen"),
 			Type.Literal("qwen-chat-template"),
 			Type.Literal("ant-ling"),
+			Type.Literal("baseten"),
+			Type.Literal("deepseek"),
+			Type.Literal("together"),
+			Type.Literal("chat-template"),
+			Type.Literal("string-thinking"),
 		]),
 	),
 	openRouterRouting: Type.Optional(OpenRouterRoutingSchema),
+	chatTemplateKwargs: Type.Optional(
+		Type.Record(
+			Type.String(),
+			Type.Union([
+				Type.String(),
+				Type.Number(),
+				Type.Boolean(),
+				Type.Null(),
+				Type.Object({
+					$var: Type.Union([
+						Type.Literal("thinking.enabled"),
+						Type.Literal("thinking.effort"),
+						Type.Literal("thinking.budget"),
+					]),
+					omitWhenOff: Type.Optional(Type.Boolean()),
+				}),
+			]),
+		),
+	),
+	chatTemplateArgs: Type.Optional(
+		Type.Record(
+			Type.String(),
+			Type.Union([
+				Type.String(),
+				Type.Number(),
+				Type.Boolean(),
+				Type.Null(),
+				Type.Object({
+					$var: Type.Union([
+						Type.Literal("thinking.enabled"),
+						Type.Literal("thinking.effort"),
+						Type.Literal("thinking.budget"),
+					]),
+					omitWhenOff: Type.Optional(Type.Boolean()),
+				}),
+			]),
+		),
+	),
+	thinkingTokenBudgetField: Type.Optional(
+		Type.Union([
+			Type.Literal("thinking_token_budget"),
+			Type.Literal("thinking_budget"),
+			Type.Literal("thinking_budget_tokens"),
+		]),
+	),
+	supportsThinkingTokenBudget: Type.Optional(Type.Boolean()),
+	sendSessionAffinityHeaders: Type.Optional(Type.Boolean()),
 	vercelGatewayRouting: Type.Optional(VercelGatewayRoutingSchema),
 	extraBody: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 	supportsStrictMode: Type.Optional(Type.Boolean()),

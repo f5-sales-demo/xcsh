@@ -436,6 +436,8 @@ export function mapOptionsForApi<TApi extends Api>(
 	apiKey?: string,
 ): OptionsForApi<TApi> {
 	const base = {
+		accountId: options?.accountId,
+		gatewayId: options?.gatewayId,
 		fetch: options?.fetch,
 		onProviderStreamEvent: options?.onProviderStreamEvent,
 		liveSteering: options?.liveSteering,
@@ -570,7 +572,9 @@ export function mapOptionsForApi<TApi extends Api>(
 		case "openai-completions":
 			return castApi<"openai-completions">({
 				...base,
-				reasoning: resolveOpenAiReasoningEffort(model, options),
+				reasoning:
+					options?.reasoning && model.reasoning ? requireSupportedEffort(model, options.reasoning) : undefined,
+				thinkingBudgets: options?.thinkingBudgets,
 				toolChoice: mapOpenAiToolChoice(options?.toolChoice),
 				serviceTier: options?.serviceTier,
 			});

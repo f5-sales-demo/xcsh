@@ -210,6 +210,9 @@ export interface DeferredHandle {
 }
 
 export interface StreamOptions {
+	/** Cloudflare account used to resolve endpoint placeholders before dispatch. */
+	accountId?: string;
+	gatewayId?: string;
 	onProviderStreamEvent?: (event: unknown, model: Model) => void | Promise<void>;
 	timeoutMs?: number;
 	onResponse?: (response: { status: number; headers: Record<string, string> }, model: Model) => void | Promise<void>;
@@ -646,7 +649,23 @@ export interface OpenAICompat {
 	/** Whether tool call IDs must be normalized to Mistral format (exactly 9 alphanumeric chars). Default: auto-detected from URL. */
 	requiresMistralToolIds?: boolean;
 	/** Format for reasoning/thinking parameter. "openai" uses reasoning_effort, "openrouter" uses reasoning: { effort }, "zai" uses thinking: { type: "enabled" }, "qwen" uses top-level enable_thinking, and "qwen-chat-template" uses chat_template_kwargs.enable_thinking. Default: "openai". */
-	thinkingFormat?: "openai" | "openrouter" | "zai" | "qwen" | "qwen-chat-template" | "ant-ling";
+	thinkingFormat?:
+		| "openai"
+		| "openrouter"
+		| "zai"
+		| "qwen"
+		| "qwen-chat-template"
+		| "ant-ling"
+		| "baseten"
+		| "deepseek"
+		| "together"
+		| "chat-template"
+		| "string-thinking";
+	chatTemplateKwargs?: Record<string, ChatTemplateValue>;
+	chatTemplateArgs?: Record<string, ChatTemplateValue>;
+	thinkingTokenBudgetField?: "thinking_token_budget" | "thinking_budget" | "thinking_budget_tokens";
+	supportsThinkingTokenBudget?: boolean;
+	sendSessionAffinityHeaders?: boolean;
 	/** Which reasoning content field to emit on assistant messages. Default: auto-detected. */
 	reasoningContentField?: "reasoning_content" | "reasoning" | "reasoning_text";
 	/** Whether assistant tool-call messages must include reasoning content. Default: false. */
@@ -678,6 +697,17 @@ export interface OpenRouterRouting {
 	/** List of provider slugs to try in order (e.g., ["anthropic", "openai"]). */
 	order?: string[];
 }
+
+/** Scalar values or substitutions resolved from the request's reasoning controls. */
+export type ChatTemplateValue =
+	| string
+	| number
+	| boolean
+	| null
+	| {
+			$var: "thinking.enabled" | "thinking.effort" | "thinking.budget";
+			omitWhenOff?: boolean;
+	  };
 
 /**
  * Vercel AI Gateway routing preferences.

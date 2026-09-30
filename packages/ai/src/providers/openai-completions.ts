@@ -9,10 +9,12 @@ import type {
 	ChatCompletionMessageParam,
 	ChatCompletionToolMessageParam,
 } from "openai/resources/chat/completions";
+import type { Effort } from "../model-thinking";
 import { calculateCost } from "../models";
 import { getEnvApiKey } from "../stream";
 import {
 	type AssistantMessage,
+	type ChatTemplateValue,
 	type Context,
 	isSpecialServiceTier,
 	type Message,
@@ -24,6 +26,7 @@ import {
 	type StreamFunction,
 	type StreamOptions,
 	type TextContent,
+	type ThinkingBudgets,
 	type ThinkingContent,
 	type Tool,
 	type ToolCall,
@@ -123,7 +126,8 @@ function hasToolHistory(messages: Message[]): boolean {
 
 export interface OpenAICompletionsOptions extends StreamOptions {
 	toolChoice?: ToolChoice;
-	reasoning?: "minimal" | "low" | "medium" | "high" | "xhigh";
+	reasoning?: `${Effort}`;
+	thinkingBudgets?: ThinkingBudgets;
 	serviceTier?: ServiceTier;
 }
 
@@ -226,14 +230,17 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 				requestHeaders,
 				getCapturedErrorResponse: captureErrorResponse,
 				clearCapturedErrorResponse,
-			} = await createClient(model, context, apiKey, options?.headers, options?.initiatorOverride);
+			} = await createClient(model, context, apiKey, options?.headers, options?.initiatorOverride, options);
 			getCapturedErrorResponse = captureErrorResponse;
 			let appliedToolStrictMode: AppliedToolStrictMode = "mixed";
 			const createCompletionsStream = async (toolStrictModeOverride?: ToolStrictModeOverride) => {
 				clearCapturedErrorResponse();
-				const { params, toolStrictMode } = buildParams(model, context, options, baseUrl, toolStrictModeOverride);
+				const built = buildParams(model, context, options, baseUrl, toolStrictModeOverride);
+				let params = built.params;
+				const { toolStrictMode } = built;
 				appliedToolStrictMode = toolStrictMode;
-				options?.onPayload?.(params);
+				const replacement = await options?.onPayload?.(params, model);
+				if (replacement !== undefined) params = replacement as OpenAICompletionsSamplingParams;
 				rawRequestDump = {
 					provider: model.provider,
 					api: output.api,
@@ -565,6 +572,7 @@ async function createClient(
 	apiKey?: string,
 	extraHeaders?: Record<string, string>,
 	initiatorOverride?: MessageAttribution,
+	options?: OpenAICompletionsOptions,
 ): Promise<{
 	client: OpenAI;
 	copilotPremiumRequests: number | undefined;
@@ -594,6 +602,22 @@ async function createClient(
 	let copilotPremiumRequests: number | undefined;
 
 	let baseUrl = model.baseUrl;
+	if (model.provider.startsWith("cloudflare-")) {
+		baseUrl = baseUrl
+			.replaceAll(
+				"{CLOUDFLARE_ACCOUNT_ID}",
+				encodeURIComponent(options?.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID ?? "{CLOUDFLARE_ACCOUNT_ID}"),
+			)
+			.replaceAll(
+				"{CLOUDFLARE_GATEWAY_ID}",
+				encodeURIComponent(options?.gatewayId ?? process.env.CLOUDFLARE_GATEWAY_ID ?? "{CLOUDFLARE_GATEWAY_ID}"),
+			);
+		if (/%7B(?:CLOUDFLARE_ACCOUNT_ID|CLOUDFLARE_GATEWAY_ID)%7D/i.test(baseUrl))
+			throw new Error("Cloudflare endpoint requires accountId/gatewayId");
+	}
+	if (getCompat(model, baseUrl).sendSessionAffinityHeaders && options?.sessionId) {
+		headers.session_id = options.sessionId;
+	}
 	if (model.provider === "github-copilot") {
 		apiKey = parseGitHubCopilotApiKey(rawApiKey).accessToken;
 		const hasImages = hasCopilotVisionInput(context.messages);
@@ -623,7 +647,7 @@ async function createClient(
 				headers.delete("Authorization");
 				fetchInit = { ...init, headers };
 			}
-			const response = await fetch(fetchInput, fetchInit);
+			const response = await (options?.fetch ?? fetch)(fetchInput, fetchInit);
 			if (response.ok) {
 				capturedErrorResponse = undefined;
 				return response;
@@ -653,7 +677,7 @@ async function createClient(
 			apiKey,
 			baseURL: baseUrl,
 			dangerouslyAllowBrowser: true,
-			maxRetries: 5,
+			maxRetries: options?.maxRetries ?? 5,
 			defaultHeaders: headers,
 			fetch: wrappedFetch,
 		}),
@@ -746,11 +770,38 @@ function buildParams(
 		// Z.ai uses binary thinking: { type: "enabled" | "disabled" }
 		// Must explicitly disable since z.ai defaults to thinking enabled
 		Reflect.set(params, "thinking", { type: options?.reasoning ? "enabled" : "disabled" });
+		if (options?.reasoning && compat.supportsReasoningEffort)
+			Reflect.set(params, "reasoning_effort", mapReasoningEffort(options.reasoning, compat.reasoningEffortMap));
 	} else if (compat.thinkingFormat === "qwen" && model.reasoning) {
 		// Qwen uses top-level enable_thinking: boolean
 		Reflect.set(params, "enable_thinking", !!options?.reasoning);
 	} else if (compat.thinkingFormat === "qwen-chat-template" && model.reasoning) {
-		Reflect.set(params, "chat_template_kwargs", { enable_thinking: !!options?.reasoning });
+		Reflect.set(params, "chat_template_kwargs", { enable_thinking: !!options?.reasoning, preserve_thinking: true });
+	} else if ((compat.thinkingFormat === "chat-template" || compat.thinkingFormat === "baseten") && model.reasoning) {
+		const template = compat.thinkingFormat === "baseten" ? compat.chatTemplateArgs : compat.chatTemplateKwargs;
+		const values = resolveChatTemplate(template, options, resolveCompletionThinkingBudget(model, options));
+		if (Object.keys(values).length)
+			Reflect.set(
+				params,
+				compat.thinkingFormat === "baseten" ? "chat_template_args" : "chat_template_kwargs",
+				values,
+			);
+		if (options?.reasoning && compat.supportsReasoningEffort)
+			Reflect.set(params, "reasoning_effort", mapReasoningEffort(options.reasoning, compat.reasoningEffortMap));
+	} else if (compat.thinkingFormat === "deepseek" && model.reasoning) {
+		Reflect.set(params, "thinking", { type: options?.reasoning ? "enabled" : "disabled" });
+		if (options?.reasoning && compat.supportsReasoningEffort)
+			Reflect.set(params, "reasoning_effort", mapReasoningEffort(options.reasoning, compat.reasoningEffortMap));
+	} else if (compat.thinkingFormat === "together" && model.reasoning) {
+		Reflect.set(params, "reasoning", { enabled: !!options?.reasoning });
+		if (options?.reasoning && compat.supportsReasoningEffort)
+			Reflect.set(params, "reasoning_effort", mapReasoningEffort(options.reasoning, compat.reasoningEffortMap));
+	} else if (compat.thinkingFormat === "string-thinking" && model.reasoning) {
+		Reflect.set(
+			params,
+			"thinking",
+			options?.reasoning ? mapReasoningEffort(options.reasoning, compat.reasoningEffortMap) : "none",
+		);
 	} else if (compat.thinkingFormat === "openrouter" && options?.reasoning && model.reasoning) {
 		// OpenRouter normalizes reasoning across providers via a nested reasoning object.
 		const openRouterParams = params as typeof params & { reasoning?: { effort?: string } };
@@ -765,6 +816,10 @@ function buildParams(
 	}
 
 	// OpenRouter provider routing preferences
+	const budgetField =
+		compat.thinkingTokenBudgetField ?? (compat.supportsThinkingTokenBudget ? "thinking_token_budget" : undefined);
+	const budget = resolveCompletionThinkingBudget(model, options);
+	if (budgetField && budget !== undefined) Reflect.set(params, budgetField, budget);
 	if (model.baseUrl.includes("openrouter.ai") && compat.openRouterRouting) {
 		Reflect.set(params, "provider", compat.openRouterRouting);
 	}
@@ -792,6 +847,45 @@ function buildParamsResult(
 	toolStrictMode: AppliedToolStrictMode,
 ): { params: OpenAICompletionsSamplingParams; toolStrictMode: AppliedToolStrictMode } {
 	return { params, toolStrictMode };
+}
+
+function resolveCompletionThinkingBudget(model: Model, options?: OpenAICompletionsOptions): number | undefined {
+	if (!model.reasoning || !options?.reasoning) return undefined;
+	const defaults: Record<Effort, number> = {
+		minimal: 1024,
+		low: 2048,
+		medium: 8192,
+		high: 16384,
+		xhigh: 16384,
+		max: 16384,
+		ultra: 16384,
+	};
+	const budget = options.thinkingBudgets?.[options.reasoning] ?? defaults[options.reasoning];
+	const ceiling = Math.min(options.maxTokens ?? model.maxTokens, model.maxTokens);
+	const clamped = Math.min(budget, Math.max(0, ceiling - 1024));
+	return clamped > 0 ? clamped : undefined;
+}
+function resolveChatTemplate(
+	values: Record<string, ChatTemplateValue>,
+	options?: OpenAICompletionsOptions,
+	budget?: number,
+): Record<string, string | number | boolean | null> {
+	const result: Record<string, string | number | boolean | null> = {};
+	for (const [key, value] of Object.entries(values)) {
+		if (value === null || typeof value !== "object") {
+			result[key] = value;
+			continue;
+		}
+		if (!options?.reasoning && value.omitWhenOff) continue;
+		const resolved =
+			value.$var === "thinking.enabled"
+				? !!options?.reasoning
+				: value.$var === "thinking.budget"
+					? budget
+					: options?.reasoning;
+		if (resolved !== undefined) result[key] = resolved;
+	}
+	return result;
 }
 
 function getOptionalNumberProperty(value: object, key: string): number | undefined {

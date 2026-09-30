@@ -211,6 +211,13 @@ export const CLOUDFLARE_FALLBACK_MODEL: ApiModel<"anthropic-messages"> = {
  * trust `model.thinking` and avoid inferring capabilities on demand.
  */
 export function enrichModelThinking<TApi extends Api>(model: ApiModel<TApi>): ApiModel<TApi> {
+	if (
+		model.provider === "baseten" &&
+		["zai-org/GLM-5.2", "zai-org/GLM-5.2-Fast", "moonshotai/Kimi-K2.6"].includes(model.id)
+	) {
+		model = { ...model };
+		applyGeneratedModelPolicy(model);
+	}
 	const normalizedThinking = normalizeThinkingConfig(model.thinking);
 	if (!model.reasoning) {
 		return normalizedThinking === undefined && model.thinking === undefined
@@ -403,6 +410,31 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 }
 
 function applyGeneratedModelPolicy(model: ApiModel<Api>): void {
+	if (
+		model.provider === "baseten" &&
+		["zai-org/GLM-5.2", "zai-org/GLM-5.2-Fast", "moonshotai/Kimi-K2.6"].includes(model.id)
+	) {
+		const glm = model.id.startsWith("zai-org/GLM-5.2");
+		model.compat = {
+			...model.compat,
+			thinkingFormat: "baseten",
+			supportsReasoningEffort: glm,
+			supportsStore: false,
+			supportsDeveloperRole: false,
+			maxTokensField: "max_tokens",
+			sendSessionAffinityHeaders: true,
+			chatTemplateArgs: { enable_thinking: { $var: "thinking.enabled" } },
+		} as ApiModel<Api>["compat"];
+		model.thinking = {
+			mode: "effort",
+			defaultLevel: "high",
+			supportedLevels: (glm ? [Effort.High, Effort.Max] : [Effort.High]).map(effort => ({
+				effort,
+				description: EFFORT_DESCRIPTIONS[effort],
+			})),
+		};
+		if (glm) model.input = ["text"];
+	}
 	if (model.provider === "ant-ling" && model.id.startsWith("Ring-")) {
 		model.thinking = {
 			mode: "effort",

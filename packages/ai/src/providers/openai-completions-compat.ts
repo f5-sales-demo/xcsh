@@ -12,12 +12,14 @@ export type ResolvedOpenAICompat = Required<
 		| "toolStrictMode"
 		| "supportsMidConvoSystemMessages"
 		| "supportsMidConvoToolChanges"
+		| "thinkingTokenBudgetField"
 	>
 > & {
 	openRouterRouting?: OpenAICompat["openRouterRouting"];
 	vercelGatewayRouting?: OpenAICompat["vercelGatewayRouting"];
 	extraBody?: OpenAICompat["extraBody"];
 	toolStrictMode: ResolvedToolStrictMode;
+	thinkingTokenBudgetField?: OpenAICompat["thinkingTokenBudgetField"];
 };
 
 function detectStrictModeSupport(provider: string, baseUrl: string): boolean {
@@ -120,6 +122,11 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		vercelGatewayRouting: undefined,
 		supportsStrictMode: detectStrictModeSupport(provider, baseUrl),
 		extraBody: undefined,
+		chatTemplateKwargs: {},
+		chatTemplateArgs: {},
+		thinkingTokenBudgetField: undefined,
+		supportsThinkingTokenBudget: false,
+		sendSessionAffinityHeaders: provider === "baseten",
 		toolStrictMode: isCerebras ? "all_strict" : "mixed",
 	};
 }
@@ -164,6 +171,11 @@ export function resolveOpenAICompat(
 		vercelGatewayRouting: model.compat.vercelGatewayRouting ?? detected.vercelGatewayRouting,
 		supportsStrictMode: model.compat.supportsStrictMode ?? detected.supportsStrictMode,
 		extraBody: model.compat.extraBody,
+		chatTemplateKwargs: model.compat.chatTemplateKwargs ?? detected.chatTemplateKwargs,
+		chatTemplateArgs: model.compat.chatTemplateArgs ?? detected.chatTemplateArgs,
+		thinkingTokenBudgetField: model.compat.thinkingTokenBudgetField ?? detected.thinkingTokenBudgetField,
+		supportsThinkingTokenBudget: model.compat.supportsThinkingTokenBudget ?? detected.supportsThinkingTokenBudget,
+		sendSessionAffinityHeaders: model.compat.sendSessionAffinityHeaders ?? detected.sendSessionAffinityHeaders,
 		toolStrictMode: model.compat.toolStrictMode ?? detected.toolStrictMode,
 	};
 }
