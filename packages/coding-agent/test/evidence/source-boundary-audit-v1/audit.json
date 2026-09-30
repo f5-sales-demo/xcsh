@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "88cedf5e2812ed04e6ce255c7a109c18f05635b7",
-  "fingerprint": "bc36cba0f0a59cb412eef1b8f961f0a9b08e4a6509a5f7970ceb82a2fe0afe31",
+  "revision": "2ece4d8413aca44d9c20f077bde5eaf198e6e61c",
+  "fingerprint": "b161b9dd1edad89e10f604cd3666c59d42815116e3ca2793829efe4b6a28e967",
   "counts": {
     "total": 238,
     "components": 96,
@@ -849,7 +849,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "57553d206ede31ce2801ca519c14374a49c9ff6080d58be3b68304557521cfe1",
+      "sha256": "b56ced906243b41317254c004a9d4b948626563275b2aa99784f777a6eae24b2",
       "exports": [
         "Container",
         "ExtensionEditorComponent",
