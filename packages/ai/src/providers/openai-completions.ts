@@ -56,6 +56,13 @@ import { extractHttpStatusFromError } from "../utils/retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
 import { mapToOpenAICompletionsToolChoice } from "../utils/tool-choice";
 import {
+	appendReasoningDetail,
+	applyReasoningDetails,
+	isReasoningDetail,
+	parseReasoningDetails,
+	type ReasoningDetail,
+} from "./completions-reasoning-details";
+import {
 	buildCopilotDynamicHeaders,
 	hasCopilotVisionInput,
 	resolveGitHubCopilotBaseUrl,
@@ -292,6 +299,8 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			const parseMiniMaxThinkTags = model.provider === "minimax-code";
 			type OpenAIStreamBlock = TextContent | ThinkingContent | (ToolCall & { partialArgs: string });
 			let currentBlock: OpenAIStreamBlock | undefined;
+			const reasoningDetails: ReasoningDetail[] = [];
+			let reasoningDetailBlock: ThinkingContent | undefined;
 			const blockIndex = (block: OpenAIStreamBlock | undefined): number => {
 				if (!block) return Math.max(0, output.content.length - 1);
 				return output.content.indexOf(block);
@@ -305,6 +314,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 					return;
 				}
 				if (block.type === "thinking") {
+					if (block === reasoningDetailBlock) applyReasoningDetails(block, reasoningDetails);
 					stream.push({ type: "thinking_end", contentIndex, content: block.thinking, partial: output });
 					return;
 				}
@@ -520,9 +530,15 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 						}
 					}
 
-					const reasoningDetails = (choice.delta as any).reasoning_details;
-					if (reasoningDetails && Array.isArray(reasoningDetails)) {
-						for (const detail of reasoningDetails) {
+					const rawDetails = (choice.delta as any).reasoning_details;
+					if (Array.isArray(rawDetails)) {
+						for (const detail of rawDetails) {
+							if (!isReasoningDetail(detail)) continue;
+							appendReasoningDetail(reasoningDetails, detail);
+							if (!reasoningDetailBlock) {
+								if (currentBlock?.type !== "thinking") appendThinking(output, stream, "");
+								reasoningDetailBlock = currentBlock as ThinkingContent;
+							}
 							if (detail.type === "reasoning.encrypted" && detail.id && detail.data) {
 								const matchingToolCall = output.content.find(
 									b => b.type === "toolCall" && b.id === detail.id,
@@ -546,6 +562,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			}
 
 			finishCurrentBlock(currentBlock);
+			if (reasoningDetailBlock) applyReasoningDetails(reasoningDetailBlock, reasoningDetails);
 			if (
 				getCompat(model, baseUrl).supportsFinishReason === false &&
 				output.content.some(block => block.type === "toolCall")
@@ -1142,6 +1159,8 @@ export function convertMessages(
 
 			// Handle thinking blocks
 			const thinkingBlocks = msg.content.filter(b => b.type === "thinking") as ThinkingContent[];
+			const signedDetails = thinkingBlocks.flatMap(block => parseReasoningDetails(block.thinkingSignature) ?? []);
+			if (signedDetails.length) Reflect.set(assistantMsg, "reasoning_details", signedDetails);
 			// Filter out empty thinking blocks to avoid API validation errors
 			const nonEmptyThinkingBlocks = thinkingBlocks.filter(b => b.thinking && b.thinking.trim().length > 0);
 			if (nonEmptyThinkingBlocks.length > 0) {
@@ -1157,13 +1176,13 @@ export function convertMessages(
 				} else {
 					// Use the signature from the first thinking block if available (for llama.cpp server + gpt-oss)
 					const signature = nonEmptyThinkingBlocks[0].thinkingSignature;
-					if (signature && signature.length > 0) {
+					if (signature && signature.length > 0 && !parseReasoningDetails(signature)) {
 						(assistantMsg as any)[signature] = nonEmptyThinkingBlocks.map(b => b.thinking).join("\n");
 					}
 				}
 			}
 
-			if (compat.thinkingFormat === "openai") {
+			if (compat.thinkingFormat === "openai" && signedDetails.length === 0) {
 				const streamedReasoningField = nonEmptyThinkingBlocks[0]?.thinkingSignature;
 				const reasoningField =
 					streamedReasoningField === "reasoning_content" ||
@@ -1222,7 +1241,7 @@ export function convertMessages(
 						}
 					})
 					.filter(Boolean);
-				if (reasoningDetails.length > 0) {
+				if (reasoningDetails.length > 0 && signedDetails.length === 0) {
 					(assistantMsg as any).reasoning_details = reasoningDetails;
 				}
 			}
@@ -1237,7 +1256,7 @@ export function convertMessages(
 			if (!hasContent && assistantMsg.tool_calls && compat.requiresAssistantContentForToolCalls) {
 				assistantMsg.content = ".";
 			}
-			if (!hasContent && !assistantMsg.tool_calls && !hasReasoningField) {
+			if (!hasContent && !assistantMsg.tool_calls && !hasReasoningField && signedDetails.length === 0) {
 				continue;
 			}
 			params.push(assistantMsg);

@@ -117,7 +117,7 @@ export function transformMessages<TApi extends Api>(
 					}
 
 					if (!isSameModel && toolCall.thoughtSignature) {
-						normalizedToolCall = { ...toolCall };
+						normalizedToolCall = { ...normalizedToolCall };
 						delete (normalizedToolCall as { thoughtSignature?: string }).thoughtSignature;
 					}
 
