@@ -26,7 +26,7 @@ esac
 `,
 		{ mode: 0o755 },
 	);
-	const token = "synthetic_test_token";
+	const token = "synthetic.jwt-token_~+/==";
 	try {
 		const child = Bun.spawn(
 			["sh", resolve(import.meta.dir, "../../../../scripts/install.sh"), "--binary", "--ref", "v22.4.6"],
@@ -51,3 +51,30 @@ esac
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+it.each(["synthetic token", 'synthetic"token', "synthetic\ntoken", "synthetic\\token"])(
+	"rejects an unsafe API token without exposing it",
+	async token => {
+		const root = await mkdtemp(join(tmpdir(), "xcsh-installer-invalid-auth-"));
+		try {
+			const child = Bun.spawn(
+				["sh", resolve(import.meta.dir, "../../../../scripts/install.sh"), "--binary", "--ref", "v22.4.6"],
+				{
+					env: { ...process.env, PI_INSTALL_DIR: join(root, "install"), GH_TOKEN: token },
+					stdout: "pipe",
+					stderr: "pipe",
+				},
+			);
+			const [code, output, error] = await Promise.all([
+				child.exited,
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+			]);
+			expect(code).not.toBe(0);
+			expect(error).toContain("Invalid GitHub API token format");
+			expect(output + error).not.toContain(token);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	},
+);
