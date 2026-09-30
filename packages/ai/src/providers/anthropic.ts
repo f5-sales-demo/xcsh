@@ -46,6 +46,7 @@ import { createFirstEventWatchdog, getStreamFirstEventTimeoutMs, markFirstStream
 import { parseStreamingJson } from "../utils/json-parse";
 import { parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
 import { adaptSchemaForStrict } from "../utils/schema";
+import { cloudflareGatewayHeaders, resolveCloudflareEndpoint } from "./cloudflare-route";
 import {
 	buildCopilotDynamicHeaders,
 	hasCopilotVisionInput,
@@ -695,6 +696,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 	options?: AnthropicOptions,
 ): AssistantMessageEventStream => {
 	const stream = new AssistantMessageEventStream();
+	model = { ...model, baseUrl: resolveCloudflareEndpoint(model.provider, model.baseUrl, options) };
 
 	(async () => {
 		const startTime = Date.now();
@@ -1284,7 +1286,7 @@ export function buildAnthropicClientOptions(args: AnthropicClientOptionsArgs): A
 		baseURL: baseUrl,
 		maxRetries: 0,
 		dangerouslyAllowBrowser: true,
-		defaultHeaders,
+		defaultHeaders: cloudflareGatewayHeaders(baseUrl ?? model.baseUrl, apiKey, defaultHeaders),
 		logLevel: ANTHROPIC_SDK_LOG_LEVEL,
 		...(tlsFetchOptions ? { fetchOptions: tlsFetchOptions } : {}),
 	};
@@ -1295,7 +1297,20 @@ function createClient(
 	args: AnthropicClientOptionsArgs,
 ): { client: Anthropic; isOAuthToken: boolean } {
 	const { isOAuthToken: oauthToken, ...clientOptions } = buildAnthropicClientOptions({ ...args, model });
-	const client = new Anthropic(clientOptions);
+	const requestFetch = globalThis.fetch;
+	const client = new Anthropic({
+		...clientOptions,
+		...(model.provider === "cloudflare-ai-gateway"
+			? {
+					fetch: (async (input, init) => {
+						const headers = new Headers(init?.headers);
+						headers.delete("authorization");
+						headers.delete("x-api-key");
+						return requestFetch(input, { ...init, headers });
+					}) as typeof globalThis.fetch,
+				}
+			: {}),
+	});
 	return { client, isOAuthToken: oauthToken };
 }
 

@@ -55,6 +55,7 @@ import { retryProviderRequest } from "../utils/provider-retry";
 import { extractHttpStatusFromError } from "../utils/retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
 import { mapToOpenAICompletionsToolChoice } from "../utils/tool-choice";
+import { cloudflareGatewayHeaders, resolveCloudflareEndpoint } from "./cloudflare-route";
 import {
 	appendReasoningDetail,
 	applyReasoningDetails,
@@ -645,19 +646,8 @@ async function createClient(
 	let copilotPremiumRequests: number | undefined;
 
 	let baseUrl = model.baseUrl;
-	if (model.provider.startsWith("cloudflare-")) {
-		baseUrl = baseUrl
-			.replaceAll(
-				"{CLOUDFLARE_ACCOUNT_ID}",
-				encodeURIComponent(options?.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID ?? "{CLOUDFLARE_ACCOUNT_ID}"),
-			)
-			.replaceAll(
-				"{CLOUDFLARE_GATEWAY_ID}",
-				encodeURIComponent(options?.gatewayId ?? process.env.CLOUDFLARE_GATEWAY_ID ?? "{CLOUDFLARE_GATEWAY_ID}"),
-			);
-		if (/%7B(?:CLOUDFLARE_ACCOUNT_ID|CLOUDFLARE_GATEWAY_ID)%7D/i.test(baseUrl))
-			throw new Error("Cloudflare endpoint requires accountId/gatewayId");
-	}
+	baseUrl = resolveCloudflareEndpoint(model.provider, baseUrl, options);
+	headers = cloudflareGatewayHeaders(baseUrl, rawApiKey, headers);
 	if (getCompat(model, baseUrl).sendSessionAffinityHeaders && options?.sessionId) {
 		headers.session_id = options.sessionId;
 	}
@@ -680,7 +670,7 @@ async function createClient(
 		async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
 			let fetchInput = input;
 			let fetchInit = init;
-			if (omitAuthorization) {
+			if (omitAuthorization || new URL(baseUrl).hostname === "gateway.ai.cloudflare.com") {
 				if (input instanceof Request) {
 					const headers = new Headers(input.headers);
 					headers.delete("Authorization");

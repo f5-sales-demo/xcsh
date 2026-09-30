@@ -51,6 +51,7 @@ import { parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
 import { retryProviderRequest } from "../utils/provider-retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
 import { mapToOpenAIResponsesToolChoice } from "../utils/tool-choice";
+import { cloudflareGatewayHeaders, resolveCloudflareEndpoint } from "./cloudflare-route";
 import {
 	buildCopilotDynamicHeaders,
 	hasCopilotVisionInput,
@@ -168,6 +169,7 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 	options?: OpenAIResponsesOptions,
 ): AssistantMessageEventStream => {
 	const stream = new AssistantMessageEventStream();
+	model = { ...model, baseUrl: resolveCloudflareEndpoint(model.provider, model.baseUrl, options) };
 
 	// Start async processing
 	(async () => {
@@ -349,7 +351,10 @@ function createClient(
 	}
 	const rawApiKey = apiKey;
 
-	const headers = { ...(model.headers ?? {}), ...(extraHeaders ?? {}) };
+	const headers = cloudflareGatewayHeaders(model.baseUrl, rawApiKey, {
+		...(model.headers ?? {}),
+		...(extraHeaders ?? {}),
+	});
 	let copilotPremiumRequests: number | undefined;
 
 	let baseUrl = model.baseUrl;
@@ -371,7 +376,15 @@ function createClient(
 		client: new OpenAI({
 			apiKey,
 			baseURL: baseUrl,
-			fetch: fetch as typeof globalThis.fetch | undefined,
+			fetch:
+				new URL(baseUrl).hostname === "gateway.ai.cloudflare.com"
+					? ((async (input, init) => {
+							const headers = new Headers(init?.headers);
+							headers.delete("authorization");
+							headers.delete("x-api-key");
+							return (fetch ?? globalThis.fetch)(input, { ...init, headers });
+						}) as typeof globalThis.fetch)
+					: (fetch as typeof globalThis.fetch | undefined),
 			dangerouslyAllowBrowser: true,
 			maxRetries: 5,
 			defaultHeaders: headers,
