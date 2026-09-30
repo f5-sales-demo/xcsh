@@ -73,6 +73,21 @@ cat >"$prefix/bin/xcsh" <<'XCSH'
 set -euo pipefail
 case "${1:-}" in
   --version)
+    case "$LAUNCHER_MODE" in
+      download-failure)
+        echo 'xcsh: Failed to download compiled xcsh v20.22.1: HTTP 404' >&2
+        exit 42
+        ;;
+      version-then-failure)
+        echo 'xcsh 20.22.1'
+        echo 'xcsh: release validation failed' >&2
+        exit 42
+        ;;
+      wrong-version) echo 'xcsh 20.22.0'; exit 0 ;;
+      malformed-version) echo 'unexpected version output'; exit 0 ;;
+      success) ;;
+      *) exit 98 ;;
+    esac
     release_binary="$XCSH_RELEASE_CACHE_DIR/v20.22.1/linux-x64/xcsh-linux-x64"
     mkdir -p "$(dirname "$release_binary")"
     case "$RELEASE_BINARY_MODE" in
@@ -125,6 +140,7 @@ SH
   export SLEEP_CALLS="$case_dir/sleep-calls"
   export BUN_BINARY="$case_dir/bun-binary"
   export RELEASE_BINARY_MODE=compiled
+  export LAUNCHER_MODE=success
 }
 
 new_case success
@@ -136,6 +152,34 @@ grep -Eq '^install --global --prefix .*/xcsh-npm-verify\.[^ ]+ @f5-sales-demo/xc
 [ -s "$BUN_BINARY" ] || fail "sandbox check did not receive the exact installed binary"
 [ ! -e "$SLEEP_CALLS" ] || fail "successful verification unexpectedly slept"
 echo "[OK] uses one isolated prefix and its exact xcsh binary"
+
+for launcher_mode in download-failure version-then-failure; do
+  new_case "$launcher_mode"
+  export NPM_MODE=success
+  export LAUNCHER_MODE="$launcher_mode"
+  verifier_status=0
+  EXPECTED_VERSION=v20.22.1 bash "$script" >"$case_dir/output" 2>&1 || verifier_status=$?
+  [ "$verifier_status" -eq 42 ] || fail "launcher failure status was not preserved"
+  grep -q 'xcsh:' "$case_dir/output" || fail "launcher error diagnostics were discarded"
+  [ "$(cat "$NPM_ATTEMPTS")" -eq 1 ] || fail "launcher failure was retried as registry propagation"
+  [ ! -e "$SLEEP_CALLS" ] || fail "launcher failure unexpectedly slept"
+  if grep -q 'reported unknown' "$case_dir/output"; then
+    fail "launcher failure was obscured by a fabricated version mismatch"
+  fi
+done
+echo "[OK] preserves launcher failure diagnostics and status even with valid-looking version output"
+
+for launcher_mode in wrong-version malformed-version; do
+  new_case "$launcher_mode"
+  export NPM_MODE=success
+  export LAUNCHER_MODE="$launcher_mode"
+  if EXPECTED_VERSION=v20.22.1 bash "$script" >"$case_dir/output" 2>&1; then
+    fail "invalid version output passed verification"
+  fi
+  grep -q 'expected 20.22.1' "$case_dir/output" || fail "version mismatch was not reported"
+  [ ! -e "$SLEEP_CALLS" ] || fail "version mismatch unexpectedly slept"
+done
+echo "[OK] rejects successful commands with wrong or malformed versions"
 
 new_case source
 export NPM_MODE=success
