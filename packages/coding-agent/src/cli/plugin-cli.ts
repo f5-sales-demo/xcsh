@@ -370,10 +370,12 @@ async function handleIntegrationSetup(
 	flags: { json?: boolean; context?: string; force?: boolean },
 ): Promise<void> {
 	if (flags.json) throw new CliUsageError("plugin setup is human-only and does not accept --json");
-	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin> [--context <name>] [--force]`);
-	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
-	const handles = await loadIntegrationHandles();
+	if (args.length !== 1)
+		throw new CliUsageError(`Usage: ${APP_NAME} plugin setup <plugin> [--context <name>] [--force]`);
+	if (!process.stdin.isTTY || !process.stdout.isTTY)
+		throw new CliUsageError("Plugin setup requires an interactive terminal");
 	try {
+		const handles = await loadIntegrationHandles();
 		await withPluginContext(flags.context, async () => {
 			const handle = selectSetupIntegration(handles, args[0]);
 			const current = await handle.get();

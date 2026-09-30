@@ -125,6 +125,10 @@ describe("MarketplaceManager", () => {
 			expect(fs.existsSync(first[0].catalogPath)).toBe(true);
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
+			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "salesforce")).toMatchObject({
+				version: "2.0.0",
+				minimumRuntimeVersion: "22.4.6",
+			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("a3644ecffc1f4b9f6789a22fdd0c2057ef35048f");
 			const discontinuedPrefix = ["F5", "XC_"].join("");
 			expect(JSON.stringify(embeddedCatalog)).not.toContain(discontinuedPrefix);

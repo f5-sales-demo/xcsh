@@ -71,6 +71,8 @@
 
 ### Fixed
 
+- Salesforce setup errors now show concise guidance, and the built-in catalog includes the published host-aware Salesforce integration. Standalone CI installation authenticates release metadata without forwarding tokens to public assets.
+
 - Migrated the exact generated v8 LiteLLM role defaults to the current GPT-6/Terra assignments so
   upgraded profiles keep legacy selectors resolvable without showing them in ordinary model browsing
   ([#4345](https://github.com/f5-sales-demo/xcsh/issues/4345)).
