@@ -20,8 +20,20 @@ export interface IntegrationProbeResult<T> {
 	readonly retryAfterMs?: number;
 }
 
+export interface ArchiveInstall {
+	readonly version: string;
+	readonly url: string;
+	readonly sha256: string;
+	readonly destination: string;
+	readonly link: string;
+	readonly baseDir: string;
+	readonly executable: string;
+	readonly versionArgs: readonly string[];
+}
+
 export interface IntegrationSetupStep {
-	readonly kind: "install" | "login";
+	readonly archive?: ArchiveInstall;
+	readonly kind: "install" | "login" | "archive-install";
 	readonly argv: readonly string[];
 	readonly timeoutMs: number;
 	/** Environment variable names inherited by this step. Values are never part of the plan. */
@@ -45,6 +57,8 @@ export interface IntegrationSetupPlan {
 	readonly steps: readonly IntegrationSetupStep[];
 	readonly verification: readonly IntegrationVerificationStep[];
 	readonly guidedAction?: IntegrationGuidedSetupAction;
+	readonly notes?: readonly string[];
+	readonly validate?: (signal?: AbortSignal) => Promise<void>;
 }
 
 export interface IntegrationDefinition<T> {
@@ -55,6 +69,7 @@ export interface IntegrationDefinition<T> {
 	readonly dependencies?: readonly string[];
 	readonly successTtlMs?: number;
 	readonly setup?: IntegrationSetupPlan;
+	readonly prepareSetup?: (signal?: AbortSignal) => Promise<IntegrationSetupPlan>;
 	readonly probe: (signal?: AbortSignal) => Promise<IntegrationProbeResult<T>>;
 	/** Optional private profile projection. The registry never persists `value` itself. */
 	readonly profile?: (value: T) => ProfileCollection;
@@ -77,6 +92,7 @@ export interface IntegrationHandle<T> {
 	readonly name: string;
 	readonly plugin?: string;
 	readonly setupPlan?: IntegrationSetupPlan;
+	prepareSetup?(signal?: AbortSignal): Promise<IntegrationSetupPlan>;
 	get(signal?: AbortSignal): Promise<IntegrationSnapshot<T>>;
 	invalidate(): void;
 	verifyAfterSetup(reviewedPlan: IntegrationSetupPlan, signal?: AbortSignal): Promise<IntegrationSnapshot<T>>;

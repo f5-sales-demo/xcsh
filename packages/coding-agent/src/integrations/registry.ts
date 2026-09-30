@@ -33,6 +33,8 @@ function freezeStrings(values: readonly string[]): readonly string[] {
 function freezePlan(plan: IntegrationSetupPlan | undefined): IntegrationSetupPlan | undefined {
 	if (!plan) return undefined;
 	const frozen: IntegrationSetupPlan = {
+		...(plan.notes ? { notes: freezeStrings(plan.notes) } : {}),
+		...(plan.validate ? { validate: plan.validate } : {}),
 		pluginDependencies: freezeStrings(plan.pluginDependencies),
 		requiredEnvironment: freezeStrings(plan.requiredEnvironment),
 		profileFields: freezeStrings(plan.profileFields),
@@ -41,6 +43,14 @@ function freezePlan(plan: IntegrationSetupPlan | undefined): IntegrationSetupPla
 				Object.freeze({
 					...step,
 					argv: freezeStrings(step.argv),
+					...(step.archive
+						? {
+								archive: Object.freeze({
+									...step.archive,
+									versionArgs: freezeStrings(step.archive.versionArgs),
+								}),
+							}
+						: {}),
 					...(step.environment ? { environment: freezeStrings(step.environment) } : {}),
 				}),
 			),
@@ -82,8 +92,13 @@ function validatePlan(plan: IntegrationSetupPlan | undefined): void {
 		plan.steps.some(
 			step =>
 				!step ||
-				!(["install", "login"] as const).includes(step.kind) ||
-				!validateArgv(step.argv) ||
+				!(["install", "login", "archive-install"] as const).includes(step.kind) ||
+				(step.kind === "archive-install"
+					? !step.archive ||
+						!/^\d+\.\d+\.\d+$/.test(step.archive.version) ||
+						!/^[a-f0-9]{64}$/.test(step.archive.sha256) ||
+						!validateArgv(step.archive.versionArgs)
+					: !validateArgv(step.argv)) ||
 				!Number.isInteger(step.timeoutMs) ||
 				step.timeoutMs < 1_000 ||
 				step.timeoutMs > MAX_SETUP_STEP_TIMEOUT_MS ||
@@ -134,7 +149,8 @@ export class IntegrationRegistry {
 		const existing = this.#entries.get(definition.id);
 		if (existing && existing.owner !== owner) throw new Error(`Integration ${definition.id} is already registered`);
 
-		const setupPlan = freezePlan(definition.setup);
+		let setupPlan = freezePlan(definition.setup);
+		let preparationRevision = 0;
 		const frozenDefinition = Object.freeze({
 			...definition,
 			dependencies: definition.dependencies ? freezeStrings(definition.dependencies) : undefined,
@@ -145,12 +161,28 @@ export class IntegrationRegistry {
 			id: definition.id,
 			name: definition.name,
 			plugin: definition.plugin,
-			setupPlan,
+			get setupPlan() {
+				return setupPlan;
+			},
+			prepareSetup: async (signal?: AbortSignal) => {
+				const revision = ++preparationRevision;
+				if (!definition.prepareSetup) {
+					if (!setupPlan) throw new Error("No setup is declared");
+					return setupPlan;
+				}
+				const prepared = await definition.prepareSetup(signal);
+				signal?.throwIfAborted();
+				validatePlan(prepared);
+				if (revision !== preparationRevision || this.#entries.get(definition.id)?.handle !== handle)
+					throw new Error("Setup preparation changed; review again");
+				setupPlan = freezePlan(prepared)!;
+				return setupPlan;
+			},
 			get: (signal?: AbortSignal) => this.#get(definition.id, false, signal) as Promise<IntegrationSnapshot<T>>,
 			invalidate: () => this.invalidate(definition.id),
 			verifyAfterSetup: (reviewedPlan: IntegrationSetupPlan, signal?: AbortSignal) => {
 				const current = this.#entries.get(definition.id);
-				if (!current?.definition.setup || reviewedPlan !== current.definition.setup)
+				if (current?.handle !== handle || reviewedPlan !== setupPlan)
 					throw new Error("Setup requires the current reviewed setup plan");
 				return this.#get(definition.id, true, signal) as Promise<IntegrationSnapshot<T>>;
 			},

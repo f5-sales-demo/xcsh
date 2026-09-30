@@ -1,3 +1,4 @@
+import { assertRuntimeRequirement } from "./runtime";
 /**
  * MarketplaceManager — orchestrates registry, fetcher, resolver, and cache.
  *
@@ -491,6 +492,8 @@ export class MarketplaceManager {
 		if (!entry) throw new Error(`Marketplace "${marketplace}" not found`);
 		const catalog = await this.#readCatalog(entry);
 		const plan = resolvePluginDependencyNames(catalog, name);
+		for (const pluginName of plan)
+			assertRuntimeRequirement(catalog.plugins.find(plugin => plugin.name === pluginName)!);
 		const retainReplacedCache = entry.sourceType === "local";
 		const registryPath = this.#registryPath(scope);
 		const before = await readInstalledPluginsRegistry(registryPath);

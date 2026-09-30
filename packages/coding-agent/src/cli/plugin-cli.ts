@@ -344,10 +344,10 @@ export async function reviewAndExecuteIntegrationSetup(
 	handle: IntegrationHandle<unknown>,
 	options: { force?: boolean } = {},
 ) {
-	const plan = handle.setupPlan;
-	if (!plan) throw new Error(`Integration ${handle.id} does not declare setup`);
+	if (!handle.setupPlan) throw new Error(`Integration ${handle.id} does not declare setup`);
 	const current = await handle.get();
 	if (shouldSkipIntegrationSetup(current.state, options.force)) return current;
+	const plan = handle.prepareSetup ? await handle.prepareSetup() : handle.setupPlan!;
 	if (plan.guidedAction?.kind === "context_wizard")
 		throw new Error(
 			`Plugin ${handle.plugin ?? handle.id} setup requires interactive xcsh; run /plugin setup ${handle.plugin ?? handle.id} in the xcsh TUI.`,
@@ -373,18 +373,22 @@ async function handleIntegrationSetup(
 	if (args.length !== 1) throw new Error(`Usage: ${APP_NAME} plugin setup <plugin> [--context <name>] [--force]`);
 	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Plugin setup requires an interactive terminal");
 	const handles = await loadIntegrationHandles();
-	await withPluginContext(flags.context, async () => {
-		const handle = selectSetupIntegration(handles, args[0]);
-		const current = await handle.get();
-		if (shouldSkipIntegrationSetup(current.state, flags.force)) {
-			process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
-			return;
-		}
-		const result = await reviewAndExecuteIntegrationSetup(handle, { force: flags.force });
-		process.stdout.write(
-			`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
-		);
-	});
+	try {
+		await withPluginContext(flags.context, async () => {
+			const handle = selectSetupIntegration(handles, args[0]);
+			const current = await handle.get();
+			if (shouldSkipIntegrationSetup(current.state, flags.force)) {
+				process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
+				return;
+			}
+			const result = await reviewAndExecuteIntegrationSetup(handle, { force: flags.force });
+			process.stdout.write(
+				`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}\n`,
+			);
+		});
+	} catch (error) {
+		throw new CliUsageError(error instanceof Error ? error.message : "Plugin setup failed");
+	}
 }
 
 async function reportMarketplaceInstallation(
@@ -411,6 +415,9 @@ async function reportMarketplaceInstallation(
 		lifecycle: entry,
 		trigger: "direct-install",
 		handles,
+		review: async handle => {
+			process.stdout.write(`${describeSetupPlan(handle)}\n`);
+		},
 	});
 	if (installSetup) await personProfileService.reconcileFromCollectors(undefined, 0);
 	const statuses = await Promise.all(

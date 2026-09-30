@@ -132,6 +132,12 @@ export function parseMarketplaceCatalog(content: string, filePath: string): Mark
 		const entry = plugins[i];
 		assertField(typeof entry === "object" && entry !== null && !Array.isArray(entry), `plugins[${i}]`, filePath);
 		const p = entry as Record<string, unknown>;
+		assertField(
+			p.minimumRuntimeVersion === undefined ||
+				(typeof p.minimumRuntimeVersion === "string" && /^\d+\.\d+\.\d+$/.test(p.minimumRuntimeVersion)),
+			`plugins[${i}].minimumRuntimeVersion`,
+			filePath,
+		);
 		assertField(typeof p.name === "string" && isValidNameSegment(p.name), `plugins[${i}].name`, filePath);
 		// source can be a string path or a typed object (github/url/git-subdir/npm)
 		// all typed objects carry a "source" discriminant string field
