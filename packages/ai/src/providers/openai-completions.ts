@@ -51,6 +51,7 @@ import {
 import { parseStreamingJson } from "../utils/json-parse";
 import { parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
 import { getKimiCommonHeaders } from "../utils/oauth/kimi";
+import { retryProviderRequest } from "../utils/provider-retry";
 import { extractHttpStatusFromError } from "../utils/retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
 import { mapToOpenAICompletionsToolChoice } from "../utils/tool-choice";
@@ -250,7 +251,26 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 					headers: requestHeaders,
 					body: params,
 				};
-				return client.chat.completions.create(params, { signal: requestSignal });
+				const response = await retryProviderRequest(
+					() =>
+						client.chat.completions
+							.create(params, {
+								signal: requestSignal,
+								maxRetries: 0,
+								...(options?.timeoutMs !== undefined ? { timeout: options.timeoutMs } : {}),
+							})
+							.withResponse(),
+					{
+						maxRetries: options?.maxRetries ?? 5,
+						maxRetryDelayMs: options?.maxRetryDelayMs,
+						signal: requestSignal,
+					},
+				);
+				await options?.onResponse?.(
+					{ status: response.response.status, headers: Object.fromEntries(response.response.headers.entries()) },
+					model,
+				);
+				return response.data;
 			};
 			let openaiStream: AsyncIterable<ChatCompletionChunk>;
 			try {
@@ -395,6 +415,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 				onIdle: () => requestAbortController.abort(),
 			})) {
 				if (!chunk || typeof chunk !== "object") continue;
+				await options?.onProviderStreamEvent?.(chunk, model);
 
 				// OpenAI documents ChatCompletionChunk.id as the unique chat completion identifier,
 				// and each chunk in a streamed completion carries the same id.
@@ -525,6 +546,11 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			}
 
 			finishCurrentBlock(currentBlock);
+			if (
+				getCompat(model, baseUrl).supportsFinishReason === false &&
+				output.content.some(block => block.type === "toolCall")
+			)
+				output.stopReason = "toolUse";
 
 			const firstEventTimeoutError = abortTracker.getLocalAbortReason();
 			if (firstEventTimeoutError) {
