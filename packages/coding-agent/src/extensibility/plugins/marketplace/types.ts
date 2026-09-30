@@ -89,6 +89,7 @@ export interface MarketplacePluginLifecycle {
 }
 
 export interface MarketplacePluginEntry {
+	minimumRuntimeVersion?: string;
 	name: string;
 	displayName?: string;
 	source: PluginSource;

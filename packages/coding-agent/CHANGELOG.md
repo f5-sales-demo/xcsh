@@ -6,6 +6,8 @@
 
 ### Added
 
+- Added shared host-aware software setup with live management probes, reviewed package-manager routes, checksum-verified per-user archives, and asynchronous CLI/TUI setup preparation ([#4598](https://github.com/f5-sales-demo/xcsh/issues/4598)).
+
 - Refreshed generated internal LiteLLM configuration with seven current GPT-6/Claude models,
   route-accurate Responses and native Messages transports, hidden legacy session resolution, and an
   independent maximum-context setting ([#4279](https://github.com/f5-sales-demo/xcsh/issues/4279)).

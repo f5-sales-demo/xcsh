@@ -1495,6 +1495,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								trigger: "direct-install",
 								handles,
 								run: activeContextSetupRunner(runtime),
+								review: async handle => {
+									showPluginStatus(describeSetupPlan(handle));
+								},
 							});
 							if (setupResult) await personProfileService.reconcileFromCollectors(undefined, 0);
 							const installed = t("commands.plugin.installed", { name, marketplace });
@@ -1742,7 +1745,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							break;
 						}
 						const handle = matches[0] as IntegrationHandle<unknown>;
-						const plan = handle.setupPlan;
+						let plan = handle.setupPlan;
 						if (!plan) {
 							runtime.ctx.showError(`Integration ${handle.id} does not declare setup.`);
 							break;
@@ -1752,6 +1755,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							showPluginStatus(`${handle.plugin ?? handle.id}: ready (setup is not required)`);
 							break;
 						}
+						if (handle.prepareSetup) plan = await handle.prepareSetup();
 						if (plan.guidedAction?.kind === "context_wizard") {
 							if (activeContextSatisfiesSetup(runtime, plan)) {
 								const refreshed = await handle.verifyAfterSetup(plan);
@@ -1775,7 +1779,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							changes: plan.steps.map((step, index) => ({
 								field: `${index + 1}. ${step.kind}`,
 								before: "not run",
-								after: `${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`,
+								after: `${JSON.stringify(step.archive ?? step.argv)} (timeout ${step.timeoutMs}ms)`,
 							})),
 							consequence: describeSetupPlan(handle),
 						};

@@ -1040,6 +1040,8 @@ export interface ExtensionAPI {
 	pi: typeof piCodingAgent;
 
 	/** Canonical, provenance-aware person profile integration. */
+	readonly host: typeof import("../../host/host").host;
+	readonly software: typeof import("../../host/software").software;
 	readonly personProfile: {
 		get(): Promise<import("../../person-profile/schema").PersonProfile>;
 		registerCollector(collector: import("../../person-profile/service").ExtensionProfileCollector): void;

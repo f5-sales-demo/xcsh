@@ -1,3 +1,5 @@
+import { installArchive } from "../host/archive";
+import { host } from "../host/host";
 import type { IntegrationHandle, IntegrationSetupPlan, IntegrationSetupStep, IntegrationSnapshot } from "./types";
 
 export type PluginSetupTrigger = "direct-install" | "bulk-install" | "upgrade" | "cache-refresh" | "dependency-install";
@@ -9,6 +11,7 @@ export interface InstallAuthorizedSetupOptions {
 	readonly handles: readonly IntegrationHandle<unknown>[];
 	readonly run?: SetupStepRunner;
 	readonly signal?: AbortSignal;
+	readonly review?: (handle: IntegrationHandle<unknown>, plan: IntegrationSetupPlan) => Promise<void>;
 }
 
 export type SetupStepRunner = (step: IntegrationSetupStep, signal?: AbortSignal) => Promise<number>;
@@ -64,12 +67,15 @@ export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 		`Required environment names: ${plan.requiredEnvironment.join(", ") || "none"}`,
 		`Person-profile categories: ${plan.profileFields.join(", ") || "none"}`,
 	];
+	lines.push(...(plan.notes ?? []));
 	if (plan.guidedAction?.kind === "context_wizard") {
 		lines.push("Guided action: native xcsh context wizard");
 	} else {
 		lines.push(
 			"Commands:",
-			...plan.steps.map(step => `  ${step.kind}: ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
+			...plan.steps.map(
+				step => `  ${step.kind}: ${JSON.stringify(step.archive ?? step.argv)} (timeout ${step.timeoutMs}ms)`,
+			),
 			"Verification:",
 			...plan.verification.map(step => `  ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
 		);
@@ -82,6 +88,11 @@ export function createSetupStepRunner(
 	options: SetupStepRunnerOptions = {},
 ): SetupStepRunner {
 	return async (step, signal) => {
+		if (step.kind === "archive-install") {
+			if (!step.archive) throw new Error("Missing archive installation specification");
+			await installArchive(step.archive, signal, step.timeoutMs);
+			return 0;
+		}
 		const environment = { ...process.env };
 		for (const name of step.environment ?? []) {
 			const value = resolveEnvironment(name);
@@ -93,7 +104,7 @@ export function createSetupStepRunner(
 		const interactiveInput = step.stdin === "inherit" || step.kind === "login";
 		const output = step.kind === "login" ? "inherit" : (options.nonInteractiveOutput ?? "inherit");
 		try {
-			const child = Bun.spawn([...step.argv], {
+			const child = Bun.spawn([host.findExecutable(step.argv[0]) ?? step.argv[0], ...step.argv.slice(1)], {
 				env: environment,
 				stdin: interactiveInput ? "inherit" : "ignore",
 				stdout: output,
@@ -117,6 +128,9 @@ export async function executeReviewedSetup<T>(
 ): Promise<IntegrationSnapshot<T>> {
 	if (reviewedPlan !== handle.setupPlan) throw new Error("Setup requires the current reviewed setup plan");
 	if (reviewedPlan.guidedAction) throw new Error("Guided setup must run through its native interactive action");
+	if (signal?.aborted) throw new Error("Integration setup cancelled");
+	await reviewedPlan.validate?.(signal);
+	if (reviewedPlan !== handle.setupPlan) throw new Error("Setup requires the current reviewed setup plan");
 	for (const step of reviewedPlan.steps) {
 		if (signal?.aborted) throw new Error("Integration setup cancelled");
 		if ((await run(step, signal)) !== 0) throw new Error(`Integration ${step.kind} step failed`);
@@ -154,5 +168,7 @@ export async function executeInstallAuthorizedSetup(
 	const handle = matches[0];
 	const current = await handle.get(options.signal);
 	if (current.state !== "setup_required" && current.state !== "degraded") return current;
-	return executeReviewedSetup(handle, handle.setupPlan!, options.run, options.signal);
+	const plan = handle.prepareSetup ? await handle.prepareSetup(options.signal) : handle.setupPlan!;
+	await options.review?.(handle, plan);
+	return executeReviewedSetup(handle, plan, options.run, options.signal);
 }

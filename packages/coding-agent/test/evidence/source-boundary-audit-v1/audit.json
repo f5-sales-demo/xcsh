@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "3281dcab162dee579c6e6b99d59e035c34e30d51",
-  "fingerprint": "c764ed42e202e8d94a603cc41758920ddd9f4361a362c753baa9bcbb768adfc8",
+  "revision": "88cedf5e2812ed04e6ce255c7a109c18f05635b7",
+  "fingerprint": "bc36cba0f0a59cb412eef1b8f961f0a9b08e4a6509a5f7970ceb82a2fe0afe31",
   "counts": {
     "total": 238,
     "components": 96,
@@ -460,7 +460,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "978062c38f54324581d63050a6999a68786f2bc59bad997346a5d7751142e6d8",
+      "sha256": "a37d919fced63f9bf395e80d77a3953de35ca809eea697f82f02e9af370c52f6",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -547,7 +547,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "ed4084d09bbdc03f2359ae73818d647b7223a505a16542b4b008e3324c32eccd",
+      "sha256": "7874a3ff79bb7f66ed721dc2a6a04afce452a31ab2ebc6c82c6011e48524ef40",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -849,7 +849,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "b50404ea2f50a4fff9a8a6fb9e157299870fa66b99fc8c93303634f2c74b8cb9",
+      "sha256": "57553d206ede31ce2801ca519c14374a49c9ff6080d58be3b68304557521cfe1",
       "exports": [
         "Container",
         "ExtensionEditorComponent",
@@ -864,9 +864,14 @@
         "VERSION",
         "discoverSlashCommands",
         "getAgentDir",
+        "host",
         "logger",
         "settings",
-        "type FileSlashCommand"
+        "software",
+        "type FileSlashCommand",
+        "type HostInfo",
+        "type SoftwareRecipe",
+        "type SoftwareResolution"
       ],
       "interactionSignals": [
         "terminal-control"
@@ -3455,7 +3460,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "2fe87cea6b347fdea0ea639bc54a193b322bb5610e3056ffe5c65a13e1e48b2d",
+      "sha256": "117eff45834bdda0f8f1c61634a99f9a112b8e41de7f29448b85700c2e23f5e8",
       "exports": [
         "SelectorController",
         "runInstallAuthorizedPluginSetup",
@@ -3859,6 +3864,7 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-python-cleanup.test.ts",
         "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
+        "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
@@ -3874,8 +3880,7 @@
         "packages/coding-agent/test/headless-bridge.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/herdr-terminal.test.ts",
-        "packages/coding-agent/test/hook-editor.test.ts",
-        "packages/coding-agent/test/hook-selector-overflow.test.ts"
+        "packages/coding-agent/test/hook-editor.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/shared.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4455,7 +4460,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "1ac869836d910ceac103a7d7c03d5e7bd25ddf6308465821bf4e19c8fb5ba879",
+      "sha256": "2f1fbb387f3445944085cb7c4d6978ecbec9e55fe7bbf0233fb5e12f85cf030a",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4930,6 +4935,7 @@
         "network"
       ],
       "directTests": [
+        "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/auth-storage-rotation.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
@@ -4948,8 +4954,7 @@
         "packages/coding-agent/test/e2e/staging-crud.test.ts",
         "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts",
         "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts",
-        "packages/coding-agent/test/e2e/stealth-workers.e2e.test.ts",
-        "packages/coding-agent/test/enterprise-oauth-login-flow.test.ts"
+        "packages/coding-agent/test/e2e/stealth-workers.e2e.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5187,6 +5192,7 @@
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
         "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
+        "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/args.test.ts",
         "packages/coding-agent/test/async-job-manager.test.ts",
         "packages/coding-agent/test/auto-config-read.test.ts",
@@ -5194,8 +5200,7 @@
         "packages/coding-agent/test/autocomplete-max-visible.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts"
+        "packages/coding-agent/test/bash-execution-outcome.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/read.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5335,9 +5340,9 @@
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
+        "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/async-job-cancellation.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts",
-        "packages/coding-agent/test/auth-profile-rpc-uat.test.ts"
+        "packages/coding-agent/test/async-job-manager.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/resolve.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5376,9 +5381,9 @@
         "packages/coding-agent/test/discovery/agent-fields.test.ts",
         "packages/coding-agent/test/extension-dashboard.test.ts",
         "packages/coding-agent/test/herdr-terminal.test.ts",
+        "packages/coding-agent/test/host-software.test.ts",
         "packages/coding-agent/test/input-controller-clipboard-review.test.ts",
-        "packages/coding-agent/test/integration-registry.test.ts",
-        "packages/coding-agent/test/interactive-mode-plan-review.test.ts"
+        "packages/coding-agent/test/integration-registry.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/review.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5536,14 +5541,14 @@
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
+        "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/auto-config-read.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/autocomplete-max-visible.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/background-terminal.test.ts",
-        "packages/coding-agent/test/bash-executor.test.ts",
-        "packages/coding-agent/test/block-images.test.ts"
+        "packages/coding-agent/test/bash-executor.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/write.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6331,11 +6336,11 @@
         "packages/coding-agent/test/cursor-generic-tool-bridge.test.ts",
         "packages/coding-agent/test/e2e/bench/multi-resource-report.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
+        "packages/coding-agent/test/host-software.test.ts",
         "packages/coding-agent/test/interaction-parity.test.ts",
         "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
         "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts",
-        "packages/coding-agent/test/modes/print-mode-json-events.test.ts"
+        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts"
       ],
       "classification": "packages/tui/src/events.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
