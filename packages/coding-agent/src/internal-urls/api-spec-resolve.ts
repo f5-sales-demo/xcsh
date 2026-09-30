@@ -393,9 +393,8 @@ function renderDomainDetail(domain: string, entry: ApiSpecDomainEntry, spec: Ope
 	if (entry.cliMetadata?.quickStart?.command) {
 		const cli = entry.cliMetadata;
 		sections.push("", "## CLI Quick Start", "");
-		// Never surface a deprecated CLI (e.g. vesctl) or raw curl against the F5 XC
-		// API as an instruction — even if the upstream spec carries one. Substitute
-		// xcsh-native guidance instead.
+		// Filter deprecated CLIs (e.g. vesctl) while preserving supported curl examples.
+		// Substitute xcsh-native guidance for deprecated commands only.
 		if (isDisallowedCliCommand(cli.quickStart.command)) {
 			sections.push(`${cli.quickStart.description} — ${XCSH_NATIVE_API_GUIDANCE}`);
 		} else {

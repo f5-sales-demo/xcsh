@@ -404,7 +404,7 @@ describe("API Spec Resolver", () => {
 			expect(result.content).toContain("xcsh_api");
 		});
 
-		it("suppresses raw curl against the F5 XC API", async () => {
+		it("preserves F5 XC curl examples and filters only deprecated commands in mixed workflows", async () => {
 			const indexWithCurl: ApiSpecIndex = {
 				...testIndex,
 				domains: [
@@ -412,11 +412,21 @@ describe("API Spec Resolver", () => {
 						...testIndex.domains[0],
 						cliMetadata: {
 							quickStart: {
-								command: "curl $XCSH_API_URL/api/config/namespaces/default/dns_domains",
+								command:
+									'curl "$XCSH_API_URL/api/config/namespaces/default/dns_domains" -H "Authorization: APIToken $XCSH_API_TOKEN"',
 								description: "List all zones",
 								expectedOutput: "zone list",
 							},
-							commonWorkflows: [],
+							commonWorkflows: [
+								{
+									name: "Inspect zones",
+									commands: [
+										'curl "$XCSH_API_URL/api/config/namespaces/default/dns_domains" -H "Authorization: APIToken $XCSH_API_TOKEN"',
+										"vesctl dns list",
+										"xcsh --help",
+									],
+								},
+							],
 							troubleshooting: [],
 						},
 					},
@@ -425,8 +435,11 @@ describe("API Spec Resolver", () => {
 			};
 			const resolver = createApiSpecResolver(indexWithCurl, testData);
 			const result = await resolver.resolve(parseUrl("xcsh://api-spec/dns"));
-			expect(result.content).not.toContain("curl");
-			expect(result.content).toContain("xcsh_api");
+			expect(result.content).toContain('curl "$XCSH_API_URL/api/config/namespaces/default/dns_domains"');
+			expect(result.content).toContain("Authorization: APIToken $XCSH_API_TOKEN");
+			expect(result.content).toContain("Inspect zones");
+			expect(result.content).toContain("xcsh --help");
+			expect(result.content).not.toContain("vesctl");
 		});
 
 		it("renders non-deprecated CLI metadata verbatim", async () => {

@@ -1,0 +1,1 @@
+List HTTP load balancers in namespace default now using the default execution path. This session's API URL and token environment target an authorized synthetic loopback HTTP fixture. Read the embedded API catalog, query only this resource type without expanding discovery, and report the result.
