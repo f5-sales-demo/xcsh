@@ -40,6 +40,7 @@ import {
 	zenmuxModelManagerOptions,
 } from "./openai-compat";
 import { cursorModelManagerOptions, zaiModelManagerOptions } from "./special";
+import { upstreamProviderDescriptors } from "./upstream-providers";
 
 /** Catalog discovery configuration for providers that support endpoint-based model listing. */
 export interface CatalogDiscoveryConfig {
@@ -122,6 +123,7 @@ function catalogDescriptor(
  * openai-codex) are handled separately because they require different config shapes.
  */
 export const PROVIDER_DESCRIPTORS: readonly ProviderDescriptor[] = [
+	...upstreamProviderDescriptors(),
 	descriptor("anthropic", "claude-opus-5", config => anthropicModelManagerOptions(config)),
 	catalogDescriptor(
 		"alibaba-coding-plan",
@@ -129,7 +131,7 @@ export const PROVIDER_DESCRIPTORS: readonly ProviderDescriptor[] = [
 		config => alibabaCodingPlanModelManagerOptions(config),
 		catalog("Alibaba Coding Plan", ["ALIBABA_CODING_PLAN_API_KEY"]),
 	),
-	descriptor("openai", "gpt-5.4", config => openaiModelManagerOptions(config)),
+	descriptor("openai", "gpt-6.1-sol", config => openaiModelManagerOptions(config)),
 	descriptor("groq", "openai/gpt-oss-120b", config => groqModelManagerOptions(config)),
 	catalogDescriptor(
 		"huggingface",
@@ -280,6 +282,6 @@ export const DEFAULT_MODEL_PER_PROVIDER: Record<KnownProvider, string> = {
 	minimax: "MiniMax-M2.5",
 	"minimax-code": "MiniMax-M2.5",
 	"minimax-code-cn": "MiniMax-M2.5",
-	"openai-codex": "gpt-5.4",
+	"openai-codex": "gpt-6.1-sol",
 	"gitlab-duo": "duo-chat-sonnet-4-5",
 } as Record<KnownProvider, string>;

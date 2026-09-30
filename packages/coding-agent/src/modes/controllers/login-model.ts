@@ -14,16 +14,16 @@ export interface LoginModelChoice {
 
 export interface LiteLLMLoginModelChoice extends LoginModelChoice {
 	provider: "anthropic" | "litellm";
-	modelId: "claude-opus-5-5" | "gpt-6-sol";
+	modelId: "claude-opus-5-5" | "gpt-6.1-sol";
 }
 
 export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
 	{
-		label: "GPT-6 Sol",
-		description: "OpenAI Responses model with high reasoning",
+		label: "GPT-6.1 Sol",
+		description: "OpenAI Responses model with medium reasoning",
 		provider: "litellm",
-		modelId: "gpt-6-sol",
-		thinkingLevel: ThinkingLevel.High,
+		modelId: "gpt-6.1-sol",
+		thinkingLevel: ThinkingLevel.Medium,
 	},
 	{
 		label: "Claude Opus 5.5",
@@ -51,10 +51,10 @@ export const GOOGLE_VERTEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 };
 
 export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
-	label: "GPT-5.6 Terra",
+	label: "GPT-6.1 Sol",
 	description: "OpenAI Codex subscription model with medium reasoning",
 	provider: "openai-codex",
-	modelId: "gpt-5.6-terra",
+	modelId: "gpt-6.1-sol",
 	thinkingLevel: ThinkingLevel.Medium,
 };
 
@@ -89,9 +89,9 @@ export function getLiteLLMLoginModelRoles(choice: LiteLLMLoginModelChoice): Reco
 	}
 	return {
 		smol: `${choice.provider}/gpt-6-luna:low`,
-		default: `${choice.provider}/gpt-5.6-terra:medium`,
-		slow: `${choice.provider}/gpt-6-sol:high`,
-		plan: `${choice.provider}/gpt-6-sol:high`,
+		default: `${choice.provider}/gpt-6.1-sol:medium`,
+		slow: `${choice.provider}/gpt-6.1-sol:high`,
+		plan: `${choice.provider}/gpt-6.1-sol:high`,
 	};
 }
 

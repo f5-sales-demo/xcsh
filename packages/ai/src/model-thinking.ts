@@ -1,4 +1,6 @@
+import { enrichCloudflareModel } from "./providers/cloudflare-route";
 import { resolveOpenAICompat } from "./providers/openai-completions-compat";
+import { SOL_API_COST, SOL_API_THINKING, SOL_MODEL_ID } from "./sol-model";
 import type { Api, Model as ApiModel, ThinkingConfig } from "./types";
 
 /**
@@ -210,6 +212,14 @@ export const CLOUDFLARE_FALLBACK_MODEL: ApiModel<"anthropic-messages"> = {
  * trust `model.thinking` and avoid inferring capabilities on demand.
  */
 export function enrichModelThinking<TApi extends Api>(model: ApiModel<TApi>): ApiModel<TApi> {
+	model = enrichCloudflareModel(model);
+	if (
+		model.provider === "baseten" &&
+		["zai-org/GLM-5.2", "zai-org/GLM-5.2-Fast", "moonshotai/Kimi-K2.6"].includes(model.id)
+	) {
+		model = { ...model };
+		applyGeneratedModelPolicy(model);
+	}
 	const normalizedThinking = normalizeThinkingConfig(model.thinking);
 	if (!model.reasoning) {
 		return normalizedThinking === undefined && model.thinking === undefined
@@ -253,11 +263,12 @@ export function applyGeneratedModelPolicies(
 		// Subscription discovery is authoritative for the effort enum. Re-inferring
 		// it from a model family can add values rejected by the backing model.
 		const model =
-			options.preserveDiscoveredThinking && source.api === "openai-codex-responses"
+			options.preserveDiscoveredThinking &&
+			(source.api === "openai-codex-responses" || source.thinking !== undefined)
 				? enrichModelThinking(source)
 				: refreshModelThinking(source);
 		applyGeneratedModelPolicy(model);
-		models[index] = model;
+		models[index] = enrichCloudflareModel(model);
 	}
 }
 
@@ -402,6 +413,66 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 }
 
 function applyGeneratedModelPolicy(model: ApiModel<Api>): void {
+	if (model.provider === "fireworks") {
+		const completion = model.id.includes("glm-") || model.id.includes("kimi-k3");
+		model.api = completion ? "openai-completions" : "anthropic-messages";
+		model.baseUrl = model.baseUrl.replace(/\/v1\/?$/, "") + (completion ? "/v1" : "");
+		model.compat = {
+			...model.compat,
+			supportsStore: false,
+			supportsDeveloperRole: false,
+			sendSessionAffinityHeaders: true,
+			...(!completion ? { allowEmptySignature: true, supportsCacheControlOnTools: false } : {}),
+		} as ApiModel<Api>["compat"];
+		if (!completion && model.compat?.forceAdaptiveThinking && model.thinking)
+			model.thinking = { ...model.thinking, mode: "anthropic-adaptive" };
+	}
+	if (model.provider === "xai") model.api = "openai-responses";
+	if (model.provider === "xiaomi" && /api\.xiaomimimo\.com/.test(model.baseUrl)) {
+		model.api = "openai-completions";
+		model.baseUrl = model.baseUrl.replace(/\/anthropic\/?$/, "/v1");
+	}
+	if (
+		model.provider === "baseten" &&
+		["zai-org/GLM-5.2", "zai-org/GLM-5.2-Fast", "moonshotai/Kimi-K2.6"].includes(model.id)
+	) {
+		const glm = model.id.startsWith("zai-org/GLM-5.2");
+		model.compat = {
+			...model.compat,
+			thinkingFormat: "baseten",
+			supportsReasoningEffort: glm,
+			supportsStore: false,
+			supportsDeveloperRole: false,
+			maxTokensField: "max_tokens",
+			sendSessionAffinityHeaders: true,
+			chatTemplateArgs: { enable_thinking: { $var: "thinking.enabled" } },
+		} as ApiModel<Api>["compat"];
+		model.thinking = {
+			mode: "effort",
+			defaultLevel: "high",
+			supportedLevels: (glm ? [Effort.High, Effort.Max] : [Effort.High]).map(effort => ({
+				effort,
+				description: EFFORT_DESCRIPTIONS[effort],
+			})),
+		};
+		if (glm) model.input = ["text"];
+	}
+	if (model.provider === "ant-ling" && model.id.startsWith("Ring-")) {
+		model.thinking = {
+			mode: "effort",
+			defaultLevel: "high",
+			supportedLevels: [
+				{ effort: "high", description: "Deep reasoning" },
+				{ effort: "xhigh", description: "Very deep reasoning" },
+			],
+		};
+		model.compat = {
+			...model.compat,
+			thinkingFormat: "ant-ling",
+			supportsReasoningEffort: false,
+		} as ApiModel<Api>["compat"];
+	}
+	if (model.provider === "mistral") model.api = "mistral-conversations";
 	const parsedModel = parseKnownModel(model.id);
 	if (parsedModel.family === "anthropic") {
 		applyAnthropicCatalogPolicy(model, parsedModel);
@@ -435,6 +506,26 @@ function applyAnthropicCatalogPolicy(model: ApiModel<Api>, parsedModel: Anthropi
 }
 
 function applyOpenAICatalogPolicy(model: ApiModel<Api>, parsedModel: OpenAIModel): void {
+	if (model.id === SOL_MODEL_ID) {
+		model.name = "GPT-6.1 Sol";
+		if (model.provider === "openai")
+			model.compat = {
+				supportsExplicitPromptCacheMode: true,
+				supportsAdditionalTools: true,
+				supportsToolSearch: true,
+				supportsOpenAIGrammarTools: true,
+				supportsCachedReasoningUpdates: true,
+				...model.compat,
+			} as ApiModel<Api>["compat"];
+		model.input = ["text", "image"];
+		model.maxInputTokens = Math.min(model.maxInputTokens ?? 922_000, 922_000);
+		model.maxTokens = Math.min(model.maxTokens, 128_000);
+		if (model.provider === "openai") {
+			model.api = "openai-responses";
+			model.contextWindow = 1_050_000;
+			model.cost = SOL_API_COST;
+		}
+	}
 	// The ChatGPT Codex subscription transport defaults to the lower-cost
 	// short-context tier. The coding-agent registry can opt Luna and Sol into
 	// their full published window without changing generated catalog defaults.
@@ -549,6 +640,7 @@ function inferOpenAISupportedEfforts<TApi extends Api>(
 	model: OpenAIModel,
 	catalogModel: ApiModel<TApi>,
 ): readonly ReasoningEffort[] {
+	if (catalogModel.id === SOL_MODEL_ID) return SOL_API_THINKING.supportedLevels.map(level => level.effort);
 	if (semverGte(model.version, "5.6") && catalogModel.api === "openai-codex-responses") {
 		return [ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max];
 	}

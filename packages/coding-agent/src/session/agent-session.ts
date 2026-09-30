@@ -142,6 +142,8 @@ import { validateCustomPools } from "../routing/presets";
 import type { RoutingMode, RoutingOutcome } from "../routing/types";
 import { deobfuscateAssistantContent, deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
+import type { ToolSession } from "../tools";
+import { wrapAsyncTool } from "../tools/async-tool";
 import { assertEditableFile } from "../tools/auto-generated-guard";
 import type { CheckpointState } from "../tools/checkpoint";
 import {
@@ -3111,7 +3113,13 @@ export class AgentSession {
 		for (const name of this.#extensionToolNames) this.#toolRegistry.delete(name);
 
 		const wrapped = wrapRegisteredTools(this.#extensionRunner.getAllRegisteredTools(), this.#extensionRunner).map(
-			tool => new ExtensionToolWrapper(tool, this.#extensionRunner!) as AgentTool,
+			tool =>
+				wrapAsyncTool(new ExtensionToolWrapper(tool, this.#extensionRunner!), {
+					settings: this.settings,
+					asyncJobManager: this.#asyncJobManager,
+					getSessionId: () => this.sessionManager.getSessionId(),
+					getActiveModelString: () => (this.model ? `${this.model.provider}/${this.model.id}` : undefined),
+				} as ToolSession) as AgentTool,
 		);
 		this.#extensionToolNames = new Set(wrapped.map(tool => tool.name));
 		for (const tool of wrapped) this.#toolRegistry.set(tool.name, tool);

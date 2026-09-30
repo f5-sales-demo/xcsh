@@ -234,11 +234,11 @@ At the xcsh prompt, open the provider picker:
 
 Choose a provider and follow its sign-in flow. You can also enter `/login PROVIDER` to open a known provider directly. Keep credentials in the provider-supported environment or subscription login—never in a prompt or committed settings file. See [model authentication](/xcsh/en/getting-started/model-authentication/) for provider-specific options.
 
-GPT-6 Luna and Sol use a 272K-token context window by default for ChatGPT subscription sessions.
-To opt in to their published 1.05M-token window, open `/settings`, select **Providers**, and enable
-**OpenAI Codex Maximum Context**. OpenAI applies higher token pricing to requests above 272K.
-Internal LiteLLM GPT routes use the same 272K default independently; enable **LiteLLM Maximum
-Context** to opt those routes into their verified 1.05M-token window.
+GPT-6 Luna, Sol, and Sol 6.1 use a 272K-token context window by default for ChatGPT subscription
+sessions. Open `/settings` and select **Providers** to choose Standard, Codex maximum, or Provider
+maximum context. Codex maximum is 872K, and each route remains clamped to its advertised input
+ceiling. Internal LiteLLM GPT routes use the same 272K default independently. Direct API pricing
+above 272K input applies to the whole request; subscription usage is reported separately.
 
 After sign-in selects a model, stay in the TUI and send a small first prompt.
 

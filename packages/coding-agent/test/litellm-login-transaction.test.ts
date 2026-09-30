@@ -24,7 +24,7 @@ function createPaths() {
 
 function createSession(options?: { failModelApply?: boolean; failRoleApply?: boolean; selectedModel?: Model }) {
 	const previousModel = { id: "previous", provider: "previous-provider" } as Model;
-	const selectedModel = options?.selectedModel ?? ({ id: "gpt-6-sol", provider: "litellm" } as Model);
+	const selectedModel = options?.selectedModel ?? ({ id: "gpt-6.1-sol", provider: "litellm" } as Model);
 	const refresh = vi.fn(async () => {});
 	let modelRoles: Record<string, string> = { default: "previous-provider/previous:medium", smol: "other/smol" };
 	let modelProviderAllowlist = ["existing-provider"];
@@ -42,7 +42,7 @@ function createSession(options?: { failModelApply?: boolean; failRoleApply?: boo
 		}),
 	};
 	const setModel = vi.fn(async () => {
-		modelRoles = { ...modelRoles, default: "litellm/gpt-6-sol:high" };
+		modelRoles = { ...modelRoles, default: "litellm/gpt-6.1-sol:high" };
 		if (options?.failModelApply) throw new Error("model apply failed");
 	});
 	const setModelTemporary = vi.fn(async () => {});
@@ -69,7 +69,7 @@ function createSession(options?: { failModelApply?: boolean; failRoleApply?: boo
 	};
 }
 
-const GPT = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-6-sol")!;
+const GPT = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-6.1-sol")!;
 const OPUS = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "claude-opus-5-5")!;
 
 describe("commitLiteLLMLogin", () => {
@@ -80,7 +80,7 @@ describe("commitLiteLLMLogin", () => {
 		await commitLiteLLMLogin({
 			...paths,
 			credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-			probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/api/v1" },
+			probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/api/v1" },
 			choice: GPT,
 			session: state.session,
 		});
@@ -94,14 +94,14 @@ describe("commitLiteLLMLogin", () => {
 		expect(fs.existsSync(paths.configPath)).toBe(true);
 		expect(state.refresh).toHaveBeenCalledWith("online");
 		expect(state.setModel).toHaveBeenCalledWith(state.selectedModel, "default", {
-			selector: "litellm/gpt-6-sol",
-			thinkingLevel: ThinkingLevel.High,
+			selector: "litellm/gpt-6.1-sol",
+			thinkingLevel: ThinkingLevel.Medium,
 		});
 		expect(state.getModelRoles()).toEqual({
 			smol: "litellm/gpt-6-luna:low",
-			default: "litellm/gpt-5.6-terra:medium",
-			slow: "litellm/gpt-6-sol:high",
-			plan: "litellm/gpt-6-sol:high",
+			default: "litellm/gpt-6.1-sol:medium",
+			slow: "litellm/gpt-6.1-sol:high",
+			plan: "litellm/gpt-6.1-sol:high",
 		});
 	});
 
@@ -112,7 +112,7 @@ describe("commitLiteLLMLogin", () => {
 		await commitLiteLLMLogin({
 			...paths,
 			credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-			probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/v1" },
+			probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/v1" },
 			choice: GPT,
 			restrictPicker: true,
 			session: state.session,
@@ -128,7 +128,7 @@ describe("commitLiteLLMLogin", () => {
 		await commitLiteLLMLogin({
 			...paths,
 			credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-			probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/v1" },
+			probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/v1" },
 			choice: GPT,
 			restrictPicker: false,
 			session: state.session,
@@ -149,16 +149,16 @@ describe("commitLiteLLMLogin", () => {
 		await commitLiteLLMLogin({
 			...paths,
 			credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-			probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/v1" },
+			probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/v1" },
 			choice: GPT,
 			session: state.session,
 		});
 
 		expect(state.getModelRoles()).toEqual({
 			smol: "litellm/gpt-6-luna:low",
-			default: "litellm/gpt-5.6-terra:medium",
-			slow: "litellm/gpt-6-sol:high",
-			plan: "litellm/gpt-6-sol:high",
+			default: "litellm/gpt-6.1-sol:medium",
+			slow: "litellm/gpt-6.1-sol:high",
+			plan: "litellm/gpt-6.1-sol:high",
 		});
 	});
 
@@ -219,7 +219,7 @@ describe("commitLiteLLMLogin", () => {
 			commitLiteLLMLogin({
 				...paths,
 				credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-				probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/v1" },
+				probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/v1" },
 				choice: GPT,
 				session: state.session,
 			}),
@@ -245,7 +245,7 @@ describe("commitLiteLLMLogin", () => {
 			commitLiteLLMLogin({
 				...paths,
 				credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-				probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/v1" },
+				probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/v1" },
 				choice: GPT,
 				session: state.session,
 			}),
@@ -265,7 +265,7 @@ describe("commitLiteLLMLogin", () => {
 			commitLiteLLMLogin({
 				...paths,
 				credentials: { baseUrl: "https://litellm.example.test", apiKey: "sk-test" },
-				probe: { reachable: true, models: ["gpt-6-sol"], apiBasePath: "/v1" },
+				probe: { reachable: true, models: ["gpt-6.1-sol"], apiBasePath: "/v1" },
 				choice: GPT,
 				session: state.session,
 			}),

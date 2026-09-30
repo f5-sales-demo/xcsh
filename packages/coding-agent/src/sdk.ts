@@ -147,6 +147,7 @@ import {
 	WriteTool,
 	warmupLspServers,
 } from "./tools";
+import { wrapAsyncTool } from "./tools/async-tool";
 import { ToolContextStore } from "./tools/context";
 import { collectDiscoverableTools } from "./tools/discoverable-tool-metadata";
 import { getGeminiImageTools } from "./tools/gemini-image";
@@ -478,6 +479,8 @@ function customToolToDefinition(tool: CustomTool): ToolDefinition {
 		label: tool.label,
 		description: tool.description,
 		parameters: tool.parameters,
+		async: tool.async,
+		constrainedSampling: tool.constrainedSampling,
 		hidden: tool.hidden,
 		deferrable: tool.deferrable,
 		execute: (toolCallId, params, signal, onUpdate, ctx) =>
@@ -1084,6 +1087,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			getTodoPhases: () => session.getTodoPhases(),
 			setTodoPhases: phases => session.setTodoPhases(phases),
 			getActiveTools: () => session.getActiveToolNames(),
+			getToolDefinition: name => session.getToolByName(name),
 			getDiscoverableTools: () => session.getDiscoverableTools(),
 			getDiscoverableToolSearchIndex: () => session.getDiscoverableToolSearchIndex(),
 			activateDiscoveredTools: toolNames => session.activateDiscoveredTools(toolNames),
@@ -1465,7 +1469,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			toolRegistry.set(tool.name, tool);
 		}
 		for (const tool of wrappedExtensionTools) {
-			toolRegistry.set(tool.name, tool);
+			toolRegistry.set(tool.name, wrapAsyncTool(tool, toolSession));
 		}
 		if (extensionRunner) {
 			for (const tool of toolRegistry.values()) {

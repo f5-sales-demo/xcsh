@@ -572,14 +572,14 @@
       "6ad26bc8"
     ],
     "packages/coding-agent/src/tools/search-tool-bm25.ts": [
-      "aa7fbd5e",
-      "fe3a1b75",
-      "9523f68a",
-      "ebd60844",
-      "37682cdc",
-      "30a2e1ec",
-      "ff558188",
-      "b4ef9765"
+      "c9a99e6e",
+      "1c851aad",
+      "69eba20a",
+      "a54dfbb9",
+      "f1fda2cb",
+      "a57f1394",
+      "1befbe1d",
+      "b502a0c1"
     ],
     "packages/coding-agent/src/tools/sqlite-reader.ts": [
       "9eeca489",
@@ -2375,7 +2375,7 @@
     },
     {
       "file": "packages/coding-agent/src/tools/search-tool-bm25.ts",
-      "line": 240,
+      "line": 254,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },

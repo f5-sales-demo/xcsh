@@ -110,6 +110,7 @@ export interface FetchOpenAICompatibleModelsOptions<TApi extends Api> {
 export async function fetchOpenAICompatibleModels<TApi extends Api>(
 	options: FetchOpenAICompatibleModelsOptions<TApi>,
 ): Promise<Model<TApi>[] | null> {
+	options.signal?.throwIfAborted();
 	const baseUrl = normalizeBaseUrl(options.baseUrl);
 	if (!baseUrl) {
 		return null;
@@ -132,6 +133,7 @@ export async function fetchOpenAICompatibleModels<TApi extends Api>(
 			signal: options.signal,
 		});
 	} catch {
+		options.signal?.throwIfAborted();
 		return null;
 	}
 
@@ -175,7 +177,7 @@ export async function fetchOpenAICompatibleModels<TApi extends Api>(
 			maxTokens: UNK_MAX_TOKENS,
 		};
 
-		const mapped = options.mapModel?.(entry, defaults, context) ?? defaults;
+		const mapped = options.mapModel ? options.mapModel(entry, defaults, context) : defaults;
 		if (!mapped || typeof mapped.id !== "string" || mapped.id.length === 0) {
 			continue;
 		}

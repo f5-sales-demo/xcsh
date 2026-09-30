@@ -58,18 +58,27 @@ import {
 	URL_PATHS,
 } from "./openai-codex/constants";
 import {
+	type CodexAcceptedSteer,
+	type CodexSteerAck,
+	CodexSteerPump,
+	planSteeredRequest,
+} from "./openai-codex/live-steering";
+import {
 	type CodexRequestOptions,
 	type InputItem,
 	type RequestBody,
 	transformRequestBody,
 } from "./openai-codex/request-transformer";
 import { parseCodexError } from "./openai-codex/response-handler";
+import { convertConversationMessages, convertTools as convertResponsesTools } from "./openai-responses";
 import {
+	convertResponsesInputContent,
 	encodeTextSignatureV1,
 	mapOpenAIResponsesStopReason,
 	parseTextSignature,
 	resolveAssistantMessagePhase,
 } from "./openai-responses-shared";
+import { validateFinalResponsesRequest } from "./sol-request-boundary";
 import { transformMessages } from "./transform-messages";
 
 export interface OpenAICodexResponsesOptions extends StreamOptions {
@@ -126,13 +135,23 @@ const CODEX_WEBSOCKET_FATAL_PATTERNS = ["websocket error:", "websocket closed be
 const CODEX_RATE_LIMIT_BUDGET_MS = 5 * 60 * 1000;
 
 type CodexTransport = "sse" | "websocket";
-type CodexEventItem = ResponseReasoningItem | ResponseOutputMessage | ResponseFunctionToolCall;
+type CodexCustomToolCall = {
+	type: "custom_tool_call";
+	id: string;
+	call_id: string;
+	name: string;
+	input: string;
+	namespace?: string;
+};
+type CodexEventItem = ResponseReasoningItem | ResponseOutputMessage | ResponseFunctionToolCall | CodexCustomToolCall;
 type CodexOutputBlock = ThinkingContent | TextContent | (ToolCall & { partialJson: string });
 
 type CodexWebSocketSessionState = {
+	acceptedSteering?: CodexAcceptedSteer[];
 	disableWebsocket: boolean;
 	lastRequest?: RequestBody;
 	lastResponseId?: string;
+	lastResponseItems?: InputItem[];
 	canAppend: boolean;
 	turnState?: string;
 	modelsEtag?: string;
@@ -150,6 +169,7 @@ interface CodexProviderSessionState extends ProviderSessionState {
 }
 
 interface CodexRequestContext {
+	grammarToolInputProperties?: Map<string, string>;
 	apiKey: string;
 	accountId: string;
 	baseUrl: string;
@@ -168,11 +188,15 @@ interface CodexRequestSetup {
 }
 
 interface CodexStreamRuntime {
+	grammarToolInputProperties?: Map<string, string>;
 	eventStream: AsyncGenerator<Record<string, unknown>>;
 	requestBodyForState: RequestBody;
 	transport: CodexTransport;
 	websocketState?: CodexWebSocketSessionState;
 	currentItem: CodexEventItem | null;
+	outputSlots: Map<number, { item: CodexEventItem | null; block: CodexOutputBlock | null; index: number }>;
+	currentIndex: number;
+	completedItemIds: Set<string>;
 	currentBlock: CodexOutputBlock | null;
 	nativeOutputItems: Array<Record<string, unknown>>;
 	websocketStreamRetries: number;
@@ -442,8 +466,10 @@ async function buildCodexRequestContext(
 	const baseUrl = model.baseUrl || CODEX_BASE_URL;
 	const baseWithSlash = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
 	const url = rewriteUrlForCodex(new URL(URL_PATHS.RESPONSES.slice(1), baseWithSlash).toString());
-	const transformedBody = await buildTransformedCodexRequestBody(model, context, options);
-	options?.onPayload?.(transformedBody);
+	let transformedBody = await buildTransformedCodexRequestBody(model, context, options);
+	const replacement = await options?.onPayload?.(transformedBody, model);
+	if (replacement !== undefined) transformedBody = replacement as typeof transformedBody;
+	validateFinalResponsesRequest(model, transformedBody);
 
 	const requestHeaders = { ...(model.headers ?? {}), ...(options?.headers ?? {}) };
 	const rawRequestDump: RawHttpRequestDump = {
@@ -463,9 +489,47 @@ async function buildCodexRequestContext(
 	}
 	const websocketState =
 		sessionKey && providerSessionState ? getCodexWebSocketSessionState(sessionKey, providerSessionState) : undefined;
+	if (
+		model.compat?.supportsCachedReasoningUpdates &&
+		websocketState?.lastRequest?.reasoning?.effort &&
+		transformedBody.reasoning?.effort
+	) {
+		const previous = websocketState.lastRequest;
+		const previousInput = previous.input ?? [];
+		const prefix = previousInput.filter(item => item.type !== "configuration_update");
+		const input = transformedBody.input ?? [];
+		if (prefix.every((item, index) => canonicalInputItem(item) === canonicalInputItem(input[index]))) {
+			const anchors: { position: number; item: InputItem }[] = [];
+			let position = 0;
+			for (const item of previousInput) {
+				if (item.type === "configuration_update") anchors.push({ position, item });
+				else position++;
+			}
+			const active =
+				(anchors.at(-1)?.item as { reasoning?: { effort?: string } } | undefined)?.reasoning?.effort ??
+				previous.reasoning!.effort;
+			if (transformedBody.reasoning.effort !== active)
+				anchors.push({
+					position: input.length,
+					item: {
+						type: "configuration_update",
+						reasoning: { effort: transformedBody.reasoning.effort },
+					} as InputItem,
+				});
+			for (const [offset, anchor] of anchors.entries()) input.splice(anchor.position + offset, 0, anchor.item);
+			transformedBody.reasoning.effort = previous.reasoning!.effort;
+		}
+	}
 
 	return {
 		apiKey,
+		grammarToolInputProperties: new Map(
+			(context.tools ?? []).flatMap(tool =>
+				tool.constrainedSampling && tool.constrainedSampling.type === "grammar"
+					? [[tool.name, (tool.parameters as { required?: string[] }).required?.[0] ?? "input"]]
+					: [],
+			),
+		),
 		accountId,
 		baseUrl,
 		url,
@@ -482,9 +546,23 @@ async function buildTransformedCodexRequestBody(
 	context: Context,
 	options: OpenAICodexResponsesOptions | undefined,
 ): Promise<RequestBody> {
+	const declared = new Map((context.tools ?? []).map(tool => [tool.name, tool]));
+	for (const message of context.messages) {
+		if (message.role !== "developer") continue;
+		for (const tool of message.toolsAdded ?? []) declared.set(tool.name, tool);
+		for (const tool of message.toolsRemoved ?? []) declared.delete(tool.name);
+	}
+	const anchored = model.compat?.supportsAdditionalTools || model.compat?.supportsToolSearch;
 	const params: RequestBody = {
 		model: model.id,
-		input: [...convertMessages(model, context)],
+		input: anchored
+			? (convertConversationMessages(
+					{ ...model, api: "openai-responses" },
+					context,
+					false,
+					undefined,
+				) as InputItem[])
+			: [...convertMessages(model, context)],
 		stream: true,
 		prompt_cache_key: options?.sessionId,
 	};
@@ -513,8 +591,10 @@ async function buildTransformedCodexRequestBody(
 	if (isSpecialServiceTier(options?.serviceTier)) {
 		params.service_tier = options.serviceTier;
 	}
-	if (context.tools && context.tools.length > 0) {
-		params.tools = convertTools(context.tools);
+	if (declared.size > 0 || context.tools) {
+		params.tools = model.compat?.supportsOpenAIGrammarTools
+			? convertResponsesTools(anchored ? (context.tools ?? []) : [...declared.values()], true, true)
+			: convertTools(anchored ? (context.tools ?? []) : [...declared.values()]);
 		if (options?.toolChoice) {
 			const toolChoice = normalizeCodexToolChoice(options.toolChoice);
 			if (toolChoice) {
@@ -594,7 +674,24 @@ async function openCodexWebSocketTransport(
 	requestBodyForState: RequestBody;
 	transport: CodexTransport;
 }> {
-	const websocketRequest = buildCodexWebSocketRequest(requestContext.transformedBody, websocketState);
+	let websocketRequest = buildCodexWebSocketRequest(requestContext.transformedBody, websocketState);
+	let attach = false;
+	if (websocketState.acceptedSteering?.length) {
+		const delta = websocketRequest.previous_response_id
+			? (websocketRequest.input as import("./openai-codex/request-transformer").InputItem[])
+			: undefined;
+		const plan = planSteeredRequest(
+			delta,
+			websocketState.acceptedSteering.flatMap(steer => steer.items),
+		);
+		if (plan.kind === "discard") {
+			websocketState.connection?.close("steering-diverged");
+			resetCodexWebSocketAppendState(websocketState);
+			websocketRequest = buildCodexWebSocketRequest(requestContext.transformedBody, websocketState);
+		} else if (plan.kind === "attach") attach = true;
+		else websocketRequest.input = plan.input;
+		websocketState.acceptedSteering = undefined;
+	}
 	const websocketHeaders = createCodexHeaders(
 		requestContext.requestHeaders,
 		requestContext.accountId,
@@ -621,6 +718,8 @@ async function openCodexWebSocketTransport(
 		websocketRequest,
 		websocketState,
 		requestSetup.requestSignal,
+		options?.liveSteering,
+		attach,
 	);
 	return { eventStream, requestBodyForState, transport: "websocket" };
 }
@@ -696,6 +795,9 @@ function createCodexStreamRuntime(initial: {
 		websocketState: initial.websocketState,
 		currentItem: null,
 		currentBlock: null,
+		outputSlots: new Map(),
+		currentIndex: -1,
+		completedItemIds: new Set(),
 		nativeOutputItems: [],
 		websocketStreamRetries: 0,
 		providerRetryAttempt: 0,
@@ -709,12 +811,14 @@ async function processCodexResponseStream(
 	runtime: CodexStreamRuntime,
 ): Promise<CodexStreamCompletion> {
 	const { output, stream } = context;
+	runtime.grammarToolInputProperties = context.requestContext.grammarToolInputProperties;
 	stream.push({ type: "start", partial: output });
 
 	while (true) {
 		try {
 			let firstTokenTime = context.firstTokenTime;
 			for await (const rawEvent of runtime.eventStream) {
+				await context.options?.onProviderStreamEvent?.(rawEvent, context.model);
 				firstTokenTime = handleCodexStreamEvent({
 					...context,
 					runtime,
@@ -744,8 +848,13 @@ function handleCodexStreamEvent(args: {
 	const eventType = typeof rawEvent.type === "string" ? rawEvent.type : "";
 	if (!eventType) return args.firstTokenTime;
 
-	const blocks = output.content;
-	const blockIndex = () => blocks.length - 1;
+	if (eventType !== "response.output_item.added" && typeof rawEvent.output_index === "number") {
+		const slot = runtime.outputSlots.get(rawEvent.output_index);
+		runtime.currentItem = slot?.item ?? null;
+		runtime.currentBlock = slot?.block ?? null;
+		runtime.currentIndex = slot?.index ?? -1;
+	}
+	const blockIndex = () => runtime.currentIndex;
 	let firstTokenTime = args.firstTokenTime;
 
 	if (eventType === "response.output_item.added") {
@@ -755,6 +864,11 @@ function handleCodexStreamEvent(args: {
 		runtime.currentBlock = createOutputBlockForItem(item);
 		if (!runtime.currentBlock) return firstTokenTime;
 		output.content.push(runtime.currentBlock);
+		runtime.currentIndex = output.content.length - 1;
+		runtime.outputSlots.set(
+			typeof rawEvent.output_index === "number" ? rawEvent.output_index : runtime.currentIndex,
+			{ item: runtime.currentItem, block: runtime.currentBlock, index: runtime.currentIndex },
+		);
 		if (runtime.currentBlock.type === "text") {
 			stream.push({
 				type: "text_start",
@@ -823,6 +937,17 @@ function handleCodexStreamEvent(args: {
 		handleToolCallArgumentsDelta(runtime.currentItem, runtime.currentBlock, rawEvent, stream, output, blockIndex);
 		return firstTokenTime;
 	}
+	if (eventType === "response.custom_tool_call_input.delta" && runtime.currentBlock?.type === "toolCall") {
+		runtime.currentBlock.arguments.input =
+			String(runtime.currentBlock.arguments.input ?? "") + String(rawEvent.delta ?? "");
+		stream.push({
+			type: "toolcall_delta",
+			contentIndex: blockIndex(),
+			delta: String(rawEvent.delta ?? ""),
+			partial: output,
+		});
+		return firstTokenTime;
+	}
 
 	if (eventType === "response.function_call_arguments.done") {
 		handleToolCallArgumentsDone(runtime.currentItem, runtime.currentBlock, rawEvent);
@@ -830,7 +955,13 @@ function handleCodexStreamEvent(args: {
 	}
 
 	if (eventType === "response.output_item.done") {
+		const itemId = (rawEvent.item as { id?: string })?.id;
+		if (itemId && runtime.completedItemIds.has(itemId)) return firstTokenTime;
+		if (itemId) runtime.completedItemIds.add(itemId);
 		handleOutputItemDone(model, output, stream, runtime, rawEvent, blockIndex);
+		runtime.outputSlots.delete(
+			typeof rawEvent.output_index === "number" ? rawEvent.output_index : runtime.currentIndex,
+		);
 		return firstTokenTime;
 	}
 
@@ -852,6 +983,16 @@ function handleCodexStreamEvent(args: {
 }
 
 function createOutputBlockForItem(item: CodexEventItem): CodexOutputBlock | null {
+	if (item.type === "custom_tool_call")
+		return {
+			type: "toolCall",
+			id: `${item.call_id}|${item.id}`,
+			name: item.name,
+			namespace: item.namespace,
+			customInputProperty: "input",
+			arguments: { input: item.input ?? "" },
+			partialJson: "",
+		};
 	if (item.type === "reasoning") {
 		return { type: "thinking", thinking: "" };
 	}
@@ -986,6 +1127,24 @@ function handleOutputItemDone(
 ): void {
 	const item = structuredCloneJSON(rawEvent.item) as CodexEventItem;
 	runtime.nativeOutputItems.push(item as unknown as Record<string, unknown>);
+	if (item.type === "custom_tool_call" && runtime.currentBlock?.type === "toolCall") {
+		const property = runtime.grammarToolInputProperties?.get(item.name) ?? "input";
+		Object.assign(runtime.currentBlock, {
+			arguments: { [property]: item.input },
+			customInputProperty: property,
+			namespace: item.namespace,
+		});
+		delete (runtime.currentBlock as { partialJson?: string }).partialJson;
+		stream.push({
+			type: "toolcall_end",
+			contentIndex: blockIndex(),
+			toolCall: runtime.currentBlock,
+			partial: output,
+		});
+		runtime.currentBlock = null;
+		runtime.canSafelyReplayWebsocketOverSse = false;
+		return;
+	}
 
 	if (item.type === "reasoning" && runtime.currentBlock?.type === "thinking") {
 		runtime.currentBlock.thinking = item.summary?.map(summary => summary.text).join("\n\n") || "";
@@ -1025,6 +1184,11 @@ function handleOutputItemDone(
 			name: item.name,
 			arguments: parseStreamingJson(item.arguments || "{}"),
 		};
+		if (runtime.currentBlock?.type === "toolCall") {
+			Object.assign(runtime.currentBlock, toolCall);
+			delete (runtime.currentBlock as { partialJson?: string }).partialJson;
+		}
+		runtime.currentBlock = null;
 		runtime.canSafelyReplayWebsocketOverSse = false;
 		stream.push({ type: "toolcall_end", contentIndex: blockIndex(), toolCall, partial: output });
 		return;
@@ -1071,21 +1235,36 @@ function handleResponseCompleted(
 					input_tokens?: number;
 					output_tokens?: number;
 					total_tokens?: number;
-					input_tokens_details?: { cached_tokens?: number };
+					input_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number };
+					output_tokens_details?: { reasoning_tokens?: number };
 				};
 				status?: string;
 				model?: string;
 			};
 		}
 	).response;
+	for (const item of (response as { output?: Record<string, unknown>[] } | undefined)?.output ?? []) {
+		if (item.type !== "reasoning" || typeof item.encrypted_content !== "string") continue;
+		for (const block of output.content) {
+			if (block.type !== "thinking" || !block.thinkingSignature) continue;
+			const signature = JSON.parse(block.thinkingSignature);
+			if (signature.id === item.id)
+				block.thinkingSignature = JSON.stringify({ ...signature, encrypted_content: item.encrypted_content });
+		}
+		const native = runtime.nativeOutputItems.find(candidate => candidate.id === item.id);
+		if (native) native.encrypted_content = item.encrypted_content;
+	}
 
 	if (response?.usage) {
 		const cachedTokens = response.usage.input_tokens_details?.cached_tokens || 0;
+		const cacheWriteTokens = response.usage.input_tokens_details?.cache_write_tokens || 0;
 		output.usage = {
-			input: (response.usage.input_tokens || 0) - cachedTokens,
+			input: Math.max(0, (response.usage.input_tokens || 0) - cachedTokens - cacheWriteTokens),
 			output: response.usage.output_tokens || 0,
 			cacheRead: cachedTokens,
-			cacheWrite: 0,
+			cacheWrite: cacheWriteTokens,
+			...(response.usage.input_tokens_details?.cache_write_tokens !== undefined ? { cacheWriteTokens } : {}),
+			reasoningTokens: response.usage.output_tokens_details?.reasoning_tokens,
 			totalTokens: response.usage.total_tokens || 0,
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		};
@@ -1107,11 +1286,19 @@ function handleResponseCompleted(
 		if (typeof response?.id === "string" && response.id.length > 0) {
 			state.lastResponseId = response.id;
 		}
-		state.canAppend = rawEvent.type === "response.done";
+		state.canAppend = true;
+		state.lastResponseItems = runtime.nativeOutputItems.map(item => {
+			const { id: _id, status: _status, ...rest } = item;
+			return rest as InputItem;
+		});
 	}
 
 	calculateCost(model, output.usage);
-	output.stopReason = mapOpenAIResponsesStopReason(response?.status as OpenAI.Responses.ResponseStatus | undefined);
+	const incompleteReason = (response as { incomplete_details?: { reason?: string } })?.incomplete_details?.reason;
+	output.stopReason =
+		incompleteReason === "steered"
+			? "stop"
+			: mapOpenAIResponsesStopReason(response?.status as OpenAI.Responses.ResponseStatus | undefined);
 	if (output.content.some(block => block.type === "toolCall") && output.stopReason === "stop") {
 		output.stopReason = "toolUse";
 	}
@@ -1164,11 +1351,14 @@ async function tryReconnectCodexWebSocketOnConnectionLimit(
 	});
 
 	if (context.output.content.length > 0) {
+		if (!runtime.canSafelyReplayWebsocketOverSse) return false;
 		// Content already emitted to the caller — cannot safely continue on a new WS.
 		// Reset and replay the full request over SSE.
 		runtime.canSafelyReplayWebsocketOverSse = true;
 		runtime.currentItem = null;
 		runtime.currentBlock = null;
+		runtime.outputSlots.clear();
+		runtime.completedItemIds.clear();
 		runtime.nativeOutputItems.length = 0;
 		resetOutputState(context.output);
 		context.firstTokenTime = undefined;
@@ -1228,6 +1418,8 @@ async function tryReplayWebsocketFailureOverSse(
 		runtime.canSafelyReplayWebsocketOverSse = true;
 		runtime.currentItem = null;
 		runtime.currentBlock = null;
+		runtime.outputSlots.clear();
+		runtime.completedItemIds.clear();
 		runtime.nativeOutputItems.length = 0;
 		resetOutputState(context.output);
 		context.firstTokenTime = undefined;
@@ -1267,6 +1459,8 @@ async function tryRetryCodexProviderError(
 
 	runtime.currentItem = null;
 	runtime.currentBlock = null;
+	runtime.outputSlots.clear();
+	runtime.completedItemIds.clear();
 	runtime.sawTerminalEvent = false;
 	resetOutputState(context.output);
 	context.firstTokenTime = undefined;
@@ -1306,6 +1500,9 @@ function finalizeCodexResponse(
 	}
 	if (output.stopReason === "aborted" || output.stopReason === "error") {
 		throw new Error("Codex response failed");
+	}
+	if (output.content.some(block => block.type === "toolCall" && "partialJson" in block)) {
+		throw new Error("Codex completed with an unfinished tool call");
 	}
 
 	output.providerPayload = createOpenAIResponsesHistoryPayload(context.model.provider, runtime.nativeOutputItems);
@@ -1489,6 +1686,7 @@ function getCodexWebSocketSessionState(
 function resetCodexWebSocketAppendState(state: CodexWebSocketSessionState): void {
 	state.canAppend = false;
 	state.lastRequest = undefined;
+	state.lastResponseItems = undefined;
 	state.lastResponseId = undefined;
 }
 
@@ -1575,7 +1773,7 @@ function buildAppendInput(previous: RequestBody | undefined, current: RequestBod
 		return null;
 	}
 	for (let index = 0; index < previous.input.length; index += 1) {
-		if (JSON.stringify(previous.input[index]) !== JSON.stringify(current.input[index])) {
+		if (canonicalInputItem(previous.input[index]) !== canonicalInputItem(current.input[index])) {
 			return null;
 		}
 	}
@@ -1586,7 +1784,15 @@ function buildCodexWebSocketRequest(
 	requestBody: RequestBody,
 	state: CodexWebSocketSessionState | undefined,
 ): Record<string, unknown> {
-	const appendInput = state?.canAppend ? buildAppendInput(state.lastRequest, requestBody) : null;
+	const appendInput = state?.canAppend
+		? buildAppendInput(
+				state.lastRequest && {
+					...state.lastRequest,
+					input: [...(state.lastRequest.input ?? []), ...(state.lastResponseItems ?? [])],
+				},
+				requestBody,
+			)
+		: null;
 	if (appendInput && appendInput.length > 0) {
 		if (state?.lastResponseId) {
 			return {
@@ -1650,6 +1856,7 @@ class CodexWebSocketConnection {
 	#waiters: Array<() => void> = [];
 	#connectPromise?: Promise<void>;
 	#activeRequest = false;
+	#steerWaiters = new Map<string, { resolve: (ack: CodexSteerAck) => void; reject: (error: Error) => void }>();
 
 	constructor(url: string, headers: Record<string, string>, options: CodexWebSocketConnectionOptions) {
 		this.#url = url;
@@ -1675,6 +1882,8 @@ class CodexWebSocketConnection {
 			this.#socket.close(1000, reason);
 		}
 		this.#socket = null;
+		for (const waiter of this.#steerWaiters.values()) waiter.reject(new Error("Steering socket closed"));
+		this.#steerWaiters.clear();
 	}
 
 	async connect(signal?: AbortSignal): Promise<void> {
@@ -1743,7 +1952,7 @@ class CodexWebSocketConnection {
 			this.#push(error);
 		});
 		socket.addEventListener("close", event => {
-			this.#socket = null;
+			this.close("closed");
 			if (!settled) {
 				settled = true;
 				clearPending();
@@ -1766,6 +1975,21 @@ class CodexWebSocketConnection {
 						parsed.message = inner.message;
 					}
 				}
+				if (parsed.type === "response.steer.accepted" || parsed.type === "response.steer.failed") {
+					const steer = parsed.steer as { id?: string; previous_response_id?: string } | undefined;
+					const requestId = steer?.previous_response_id ?? "";
+					const waiter = this.#steerWaiters.get(requestId);
+					if (waiter) {
+						this.#steerWaiters.delete(requestId);
+						waiter.resolve(
+							parsed.type === "response.steer.accepted" && steer?.id
+								? { accepted: true, id: steer.id }
+								: { accepted: false },
+						);
+					} else if (parsed.type === "response.steer.failed" && steer?.id)
+						this.#push(createCodexWebSocketTransportError("accepted steering was not committed"));
+					return;
+				}
 				this.#push(parsed);
 			} catch (error) {
 				this.#push(createCodexWebSocketTransportError(String(error)));
@@ -1780,9 +2004,23 @@ class CodexWebSocketConnection {
 		}
 	}
 
+	async steer(
+		previousResponseId: string,
+		input: import("./openai-codex/request-transformer").InputItem[],
+	): Promise<CodexSteerAck> {
+		if (!this.#socket || !this.isOpen()) throw new Error("Steering socket unavailable");
+		const id = previousResponseId;
+		const { promise, resolve, reject } = Promise.withResolvers<CodexSteerAck>();
+		this.#steerWaiters.set(id, { resolve, reject });
+		this.#socket.send(JSON.stringify({ type: "response.steer", previous_response_id: previousResponseId, input }));
+		return promise;
+	}
 	async *streamRequest(
 		request: Record<string, unknown>,
 		signal?: AbortSignal,
+		liveSteering?: import("../types").LiveSteering,
+		state?: CodexWebSocketSessionState,
+		attach = false,
 	): AsyncGenerator<Record<string, unknown>> {
 		if (!this.#socket || this.#socket.readyState !== WebSocket.OPEN) {
 			throw createCodexWebSocketTransportError("websocket connection is unavailable");
@@ -1803,8 +2041,16 @@ class CodexWebSocketConnection {
 			}
 		}
 
+		const pump = liveSteering
+			? new CodexSteerPump(liveSteering, this, messages =>
+					messages.map(message => ({
+						role: "user",
+						content: convertResponsesInputContent(message.content, true),
+					})),
+				)
+			: undefined;
 		try {
-			this.#socket.send(JSON.stringify(request));
+			if (!attach) this.#socket.send(JSON.stringify(request));
 			let sawFirstEvent = false;
 			while (true) {
 				const next = await this.#nextMessage(
@@ -1818,6 +2064,10 @@ class CodexWebSocketConnection {
 					throw createCodexWebSocketTransportError("websocket closed before response completion");
 				}
 				sawFirstEvent = true;
+				if (next.type === "response.created") {
+					const id = (next.response as { id?: string })?.id;
+					if (id) pump?.start(id);
+				}
 				yield next;
 				const eventType = typeof next.type === "string" ? next.type : "";
 				if (
@@ -1827,10 +2077,19 @@ class CodexWebSocketConnection {
 					eventType === "response.failed" ||
 					eventType === "error"
 				) {
+					if (pump) {
+						const outcome = await pump.finish();
+						if (state) state.acceptedSteering = outcome.accepted;
+						if (outcome.uncertain) {
+							this.close("steering-uncertain");
+							if (state) resetCodexWebSocketAppendState(state);
+						}
+					}
 					break;
 				}
 			}
 		} finally {
+			await pump?.finish();
 			this.#activeRequest = false;
 			if (signal) {
 				signal.removeEventListener("abort", onAbort);
@@ -1963,9 +2222,11 @@ async function openCodexWebSocketEventStream(
 	request: Record<string, unknown>,
 	state: CodexWebSocketSessionState,
 	signal?: AbortSignal,
+	liveSteering?: import("../types").LiveSteering,
+	attach = false,
 ): Promise<AsyncGenerator<Record<string, unknown>>> {
 	const connection = await getOrCreateCodexWebSocketConnection(state, url, headers, signal);
-	return connection.streamRequest(request, signal);
+	return connection.streamRequest(request, signal, liveSteering, state, attach);
 }
 
 function createCodexHeaders(
@@ -2233,10 +2494,10 @@ function convertMessages(model: Model<"openai-codex-responses">, context: Contex
 			const hasImages = msg.content.some(content => content.type === "image");
 			const normalized = normalizeResponsesToolCallId(msg.toolCallId);
 			messages.push({
-				type: "function_call_output",
+				type: msg.customTool ? "custom_tool_call_output" : "function_call_output",
 				call_id: normalized.callId,
 				output: (textResult.length > 0 ? textResult : "(see attached image)").toWellFormed(),
-			});
+			} as ResponseInput[number]);
 			if (hasImages && model.input.includes("image")) {
 				const contentParts: ResponseInputContent[] = [
 					{ type: "input_text", text: "Attached image(s) from tool result:" } satisfies ResponseInputText,
@@ -2400,4 +2661,9 @@ function formatCodexErrorEvent(rawEvent: Record<string, unknown>, code: string, 
 	} catch {
 		return "Codex error event";
 	}
+}
+
+function canonicalInputItem(item: InputItem): string {
+	const { id: _id, status: _status, ...rest } = item as InputItem & { status?: unknown };
+	return JSON.stringify(rest);
 }

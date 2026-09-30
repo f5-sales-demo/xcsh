@@ -24,7 +24,7 @@ test("empty configuration opens catalog directly and searches access description
 	selector.stopValidation();
 });
 test("recommendation is read-only and requires fresh exact catalog membership", () => {
-	const model = { provider: "openai-codex", id: "gpt-5.6-terra", name: "GPT-5.6 Terra" } as Model;
+	const model = { provider: "openai-codex", id: "gpt-6.1-sol", name: "GPT-6.1 Sol" } as Model;
 	const registry = {
 		getAll: () => [model],
 		getProviderDiscoveryState: () => ({ status: "ok", stale: false, models: [model.id] }),

@@ -21,18 +21,18 @@ describe("xcsh production model defaults", () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	test("bakes GPT-5.6 Terra Medium as the production default", () => {
-		expect(DEFAULT_MODEL_ROLE).toBe("litellm/gpt-5.6-terra:medium");
+	test("bakes GPT-6.1 Sol Medium as the production default", () => {
+		expect(DEFAULT_MODEL_ROLE).toBe("litellm/gpt-6.1-sol:medium");
 		expect(DEFAULT_MODEL_ROLE_VALUE).toBe(DEFAULT_MODEL_ROLE);
 		const settings = Settings.isolated();
 		expect(settings.getModelRole("default")).toBe(DEFAULT_MODEL_ROLE);
 	});
 
-	test("uses GPT-6 Luna Low for fast work and GPT-6 Sol High for thinking work", () => {
+	test("uses GPT-6 Luna Low for fast work and GPT-6.1 Sol High for thinking work", () => {
 		const settings = Settings.isolated();
 		expect(settings.getModelRole("smol")).toBe("litellm/gpt-6-luna:low");
-		expect(settings.getModelRole("slow")).toBe("litellm/gpt-6-sol:high");
-		expect(settings.getModelRole("plan")).toBe("litellm/gpt-6-sol:high");
+		expect(settings.getModelRole("slow")).toBe("litellm/gpt-6.1-sol:high");
+		expect(settings.getModelRole("plan")).toBe("litellm/gpt-6.1-sol:high");
 	});
 
 	test("does not persist the binary model default in generated config", () => {
@@ -47,7 +47,7 @@ describe("xcsh production model defaults", () => {
 		fs.writeFileSync(cfg, "modelRoles:\n  default: bench-instant/bench-instant\nproviders:\n  image: openai\n");
 		healConfigYmlModelRoles(cfg);
 		const out = fs.readFileSync(cfg, "utf-8");
-		expect(out).toContain("default: litellm/gpt-5.6-terra:medium");
+		expect(out).toContain("default: litellm/gpt-6.1-sol:medium");
 		expect(out).not.toContain("bench-instant");
 		expect(out).toContain("providers:");
 	});

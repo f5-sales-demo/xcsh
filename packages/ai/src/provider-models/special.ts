@@ -21,8 +21,8 @@ export function openaiCodexModelManagerOptions(
 		staticModels: [],
 		...(accessToken
 			? {
-					fetchDynamicModels: async () => {
-						const result = await fetchCodexModels({ accessToken, accountId, clientVersion });
+					fetchDynamicModels: async signal => {
+						const result = await fetchCodexModels({ accessToken, accountId, clientVersion, signal });
 						return result?.models ?? null;
 					},
 				}

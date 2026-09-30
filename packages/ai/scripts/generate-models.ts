@@ -19,6 +19,7 @@ import {
 	linkSparkPromotionTargets,
 } from "../src/model-thinking";
 import prevModelsJson from "../src/models.json" with { type: "json" };
+import previousOperationModels from "../src/operation-models.json" with { type: "json" };
 import {
 	allowsUnauthenticatedCatalogDiscovery,
 	type CatalogDiscoveryConfig,
@@ -27,11 +28,14 @@ import {
 	PROVIDER_DESCRIPTORS,
 } from "../src/provider-models/descriptors";
 import { MODELS_DEV_PROVIDER_DESCRIPTORS, mapModelsDevToModels } from "../src/provider-models/openai-compat";
+import { mirrorCloudflareWorkersModels } from "../src/providers/cloudflare-route";
 import { getGitLabDuoModels } from "../src/providers/gitlab-duo";
 import { JWT_CLAIM_PATH } from "../src/providers/openai-codex/constants";
+import { currentSolModels } from "../src/sol-model";
 import type { Model } from "../src/types";
 import { fetchAntigravityDiscoveryModels } from "../src/utils/discovery/antigravity";
 import { fetchCodexModels } from "../src/utils/discovery/codex";
+import { deduplicateOperationModels, discoverOperationModels } from "../src/utils/discovery/operations";
 import { getOAuthApiKey } from "../src/utils/oauth";
 import type { OAuthCredentials, OAuthProvider } from "../src/utils/oauth/types";
 
@@ -81,12 +85,17 @@ const CURRENT_SUBSCRIPTION_MODELS: readonly Model[] = [
 ] as const;
 
 function upsertCurrentSubscriptionModels(models: Model[]): void {
-	for (const current of CURRENT_SUBSCRIPTION_MODELS) {
+	for (const current of [...CURRENT_SUBSCRIPTION_MODELS, ...currentSolModels()]) {
 		const index = models.findIndex(model => model.provider === current.provider && model.id === current.id);
 		if (index === -1) {
 			models.push({ ...current });
 		} else {
-			models[index] = { ...models[index], ...current };
+			const discovered = models[index]!;
+			models[index] = {
+				...discovered,
+				...current,
+				...(current.provider === "openai-codex" && discovered.thinking ? { thinking: discovered.thinking } : {}),
+			};
 		}
 	}
 }
@@ -380,7 +389,8 @@ async function generateModels() {
 	allModels = applyGlobalModelsDevFallback(allModels, modelsDevModels);
 	allModels = applyPremiumMultiplierOverrides(allModels);
 	upsertCurrentSubscriptionModels(allModels);
-	applyGeneratedModelPolicies(allModels);
+	applyGeneratedModelPolicies(allModels, { preserveDiscoveredThinking: true });
+	mirrorCloudflareWorkersModels(allModels);
 	linkSparkPromotionTargets(allModels);
 
 	// Group by provider and sort each provider's models
@@ -414,6 +424,19 @@ async function generateModels() {
 	// Generate JSON file
 	await Bun.write(path.join(packageRoot, "src/models.json"), JSON.stringify(MODELS, null, "	"));
 	console.log("Generated src/models.json");
+	const operationModels = [...previousOperationModels] as import("../src/types").AnyModel[];
+	for (const provider of ["openrouter", "typesafe", "vercel-ai-gateway"]) {
+		try {
+			const discovered = await discoverOperationModels(provider);
+			operationModels.push(...discovered);
+		} catch (error) {
+			console.warn(`Operation catalog ${provider} retained bundled entries: ${String(error)}`);
+		}
+	}
+	await Bun.write(
+		path.join(packageRoot, "src/operation-models.json"),
+		JSON.stringify(deduplicateOperationModels(operationModels), null, "\t"),
+	);
 
 	// Print statistics
 	const totalModels = allModels.length;

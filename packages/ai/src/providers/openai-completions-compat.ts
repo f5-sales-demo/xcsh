@@ -4,12 +4,22 @@ type OpenAIReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 type ResolvedToolStrictMode = NonNullable<OpenAICompat["toolStrictMode"]> | "mixed";
 
 export type ResolvedOpenAICompat = Required<
-	Omit<OpenAICompat, "openRouterRouting" | "vercelGatewayRouting" | "extraBody" | "toolStrictMode">
+	Omit<
+		OpenAICompat,
+		| "openRouterRouting"
+		| "vercelGatewayRouting"
+		| "extraBody"
+		| "toolStrictMode"
+		| "supportsMidConvoSystemMessages"
+		| "supportsMidConvoToolChanges"
+		| "thinkingTokenBudgetField"
+	>
 > & {
 	openRouterRouting?: OpenAICompat["openRouterRouting"];
 	vercelGatewayRouting?: OpenAICompat["vercelGatewayRouting"];
 	extraBody?: OpenAICompat["extraBody"];
 	toolStrictMode: ResolvedToolStrictMode;
+	thinkingTokenBudgetField?: OpenAICompat["thinkingTokenBudgetField"];
 };
 
 function detectStrictModeSupport(provider: string, baseUrl: string): boolean {
@@ -50,12 +60,30 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 	const baseUrl = resolvedBaseUrl ?? model.baseUrl;
 
 	const isCerebras = provider === "cerebras" || baseUrl.includes("cerebras.ai");
-	const isZai = provider === "zai" || baseUrl.includes("api.z.ai");
+	const isZai =
+		provider === "zai" ||
+		provider === "zai-coding-cn" ||
+		baseUrl.includes("api.z.ai") ||
+		baseUrl.includes("open.bigmodel.cn");
+	const isDeepSeek = provider === "deepseek" || baseUrl.includes("deepseek.com");
+	const isTogether = provider === "together" || baseUrl.includes("api.together.");
+	const isAntLing = provider === "ant-ling" || baseUrl.includes("api.ant-ling.com");
+	const isBaseten = provider === "baseten" || baseUrl.includes("baseten.co");
+	const isNvidia = provider === "nvidia" || baseUrl.includes("integrate.api.nvidia.com");
+	const isMoonshot = provider === "moonshot" || provider === "moonshotai-cn" || baseUrl.includes("api.moonshot.");
+	const isCloudflare = provider.startsWith("cloudflare-");
 	const isKimiModel = model.id.includes("moonshotai/kimi") || /^kimi[-.]/i.test(model.id);
 	const isAlibaba = provider === "alibaba-coding-plan" || baseUrl.includes("dashscope");
 	const isQwen = model.id.toLowerCase().includes("qwen");
 
 	const isNonStandard =
+		isDeepSeek ||
+		isTogether ||
+		isAntLing ||
+		isBaseten ||
+		isNvidia ||
+		isMoonshot ||
+		isCloudflare ||
 		isCerebras ||
 		provider === "xai" ||
 		baseUrl.includes("api.x.ai") ||
@@ -70,7 +98,17 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		provider === "opencode-go" ||
 		baseUrl.includes("opencode.ai");
 
-	const useMaxTokens = provider === "mistral" || baseUrl.includes("mistral.ai") || baseUrl.includes("chutes.ai");
+	const useMaxTokens =
+		isDeepSeek ||
+		isTogether ||
+		isAntLing ||
+		isBaseten ||
+		isNvidia ||
+		isMoonshot ||
+		isZai ||
+		provider === "mistral" ||
+		baseUrl.includes("mistral.ai") ||
+		baseUrl.includes("chutes.ai");
 	const isGrok = provider === "xai" || baseUrl.includes("api.x.ai");
 	const isMistral = provider === "mistral" || baseUrl.includes("mistral.ai");
 
@@ -89,22 +127,38 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		supportsStore: !isNonStandard,
 		supportsTemperature: model.id.toLowerCase() !== "gpt-5.6-sol",
 		supportsDeveloperRole: !isNonStandard,
-		supportsReasoningEffort: !isGrok && !isZai,
+		supportsReasoningEffort:
+			!isGrok &&
+			!isZai &&
+			!isDeepSeek &&
+			!isTogether &&
+			!isAntLing &&
+			!isBaseten &&
+			!isNvidia &&
+			!isMoonshot &&
+			!isCloudflare,
 		reasoningEffortMap,
 		supportsUsageInStreaming: !isCerebras,
+		supportsFinishReason: true,
 		supportsToolChoice: true,
 		maxTokensField: useMaxTokens ? "max_tokens" : "max_completion_tokens",
 		requiresToolResultName: isMistral,
 		requiresAssistantAfterToolResult: false,
 		requiresThinkingAsText: isMistral,
 		requiresMistralToolIds: isMistral,
-		thinkingFormat: isZai
-			? "zai"
-			: provider === "openrouter" || baseUrl.includes("openrouter.ai")
-				? "openrouter"
-				: isAlibaba || isQwen
-					? "qwen"
-					: "openai",
+		thinkingFormat: isDeepSeek
+			? "deepseek"
+			: isTogether && !["deepseek-ai/DeepSeek-R1", "MiniMaxAI/MiniMax-M2.7"].includes(model.id)
+				? "together"
+				: isAntLing
+					? "ant-ling"
+					: isZai
+						? "zai"
+						: provider === "openrouter" || baseUrl.includes("openrouter.ai")
+							? "openrouter"
+							: isAlibaba || isQwen
+								? "qwen"
+								: "openai",
 		reasoningContentField: "reasoning_content",
 		requiresReasoningContentForToolCalls: isKimiModel,
 		requiresAssistantContentForToolCalls: isKimiModel,
@@ -112,6 +166,15 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		vercelGatewayRouting: undefined,
 		supportsStrictMode: detectStrictModeSupport(provider, baseUrl),
 		extraBody: undefined,
+		chatTemplateKwargs: {},
+		chatTemplateArgs: {},
+		thinkingTokenBudgetField: undefined,
+		supportsThinkingTokenBudget: false,
+		sendSessionAffinityHeaders: provider === "baseten",
+		allowEmptySignature: false,
+		supportsCacheControlOnTools: true,
+		forceAdaptiveThinking: false,
+		supportsOpenAIGrammarTools: false,
 		toolStrictMode: isCerebras ? "all_strict" : "mixed",
 	};
 }
@@ -139,6 +202,7 @@ export function resolveOpenAICompat(
 		supportsReasoningEffort: model.compat.supportsReasoningEffort ?? detected.supportsReasoningEffort,
 		reasoningEffortMap: model.compat.reasoningEffortMap ?? detected.reasoningEffortMap,
 		supportsUsageInStreaming: model.compat.supportsUsageInStreaming ?? detected.supportsUsageInStreaming,
+		supportsFinishReason: model.compat.supportsFinishReason ?? detected.supportsFinishReason,
 		supportsToolChoice: model.compat.supportsToolChoice ?? detected.supportsToolChoice,
 		maxTokensField: model.compat.maxTokensField ?? detected.maxTokensField,
 		requiresToolResultName: model.compat.requiresToolResultName ?? detected.requiresToolResultName,
@@ -156,6 +220,15 @@ export function resolveOpenAICompat(
 		vercelGatewayRouting: model.compat.vercelGatewayRouting ?? detected.vercelGatewayRouting,
 		supportsStrictMode: model.compat.supportsStrictMode ?? detected.supportsStrictMode,
 		extraBody: model.compat.extraBody,
+		chatTemplateKwargs: model.compat.chatTemplateKwargs ?? detected.chatTemplateKwargs,
+		chatTemplateArgs: model.compat.chatTemplateArgs ?? detected.chatTemplateArgs,
+		thinkingTokenBudgetField: model.compat.thinkingTokenBudgetField ?? detected.thinkingTokenBudgetField,
+		supportsThinkingTokenBudget: model.compat.supportsThinkingTokenBudget ?? detected.supportsThinkingTokenBudget,
+		sendSessionAffinityHeaders: model.compat.sendSessionAffinityHeaders ?? detected.sendSessionAffinityHeaders,
+		allowEmptySignature: model.compat.allowEmptySignature ?? detected.allowEmptySignature,
+		supportsCacheControlOnTools: model.compat.supportsCacheControlOnTools ?? detected.supportsCacheControlOnTools,
+		forceAdaptiveThinking: model.compat.forceAdaptiveThinking ?? detected.forceAdaptiveThinking,
+		supportsOpenAIGrammarTools: model.compat.supportsOpenAIGrammarTools ?? detected.supportsOpenAIGrammarTools,
 		toolStrictMode: model.compat.toolStrictMode ?? detected.toolStrictMode,
 	};
 }

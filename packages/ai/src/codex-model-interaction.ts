@@ -64,6 +64,7 @@ function metadata(
 }
 
 export const CODEX_MODEL_INTERACTION_METADATA: Readonly<Record<string, CodexModelInteractionMetadata>> = {
+	"gpt-6.1-sol": metadata("medium", ["low", "medium", "high", "xhigh", "max", "ultra"], "default", 872_000, 922_000),
 	"gpt-6-astra": metadata(
 		"low",
 		["low", "medium", "high", "xhigh", "max", "ultra"],
@@ -141,11 +142,26 @@ export function applyCodexInteractionMetadata<TApi extends Api>(
 		providerContextWindow ??
 		model.providerContextWindow ??
 		(model.provider === "openai-codex" ? interaction.maxContextWindow : model.contextWindow);
-	const advertisedLimit = Math.min(rawProviderLimit, interaction.internalProviderMaxContextWindow);
+	const advertisedLimit = Math.min(
+		rawProviderLimit,
+		model.maxInputTokens ?? Number.POSITIVE_INFINITY,
+		interaction.internalProviderMaxContextWindow,
+	);
 	const budget = resolveCodexContextBudget(model.id, "standard", advertisedLimit)!;
 	return {
 		...model,
-		thinking: interaction.thinking,
+		...(model.provider === "openai-codex" && model.id === "gpt-6.1-sol"
+			? { compat: { supportsWebSocketSteering: true, ...model.compat } as Model<TApi>["compat"] }
+			: {}),
+		thinking:
+			model.provider === "openai-codex"
+				? (model.thinking ?? interaction.thinking)
+				: model.id === "gpt-6.1-sol"
+					? {
+							...interaction.thinking,
+							supportedLevels: interaction.thinking.supportedLevels.filter(level => level.effort !== "ultra"),
+						}
+					: interaction.thinking,
 		contextWindow: budget.contextWindow,
 		maxContextWindow: interaction.maxContextWindow,
 		maxTokens: interaction.outputLimit,
@@ -156,8 +172,8 @@ export function applyCodexInteractionMetadata<TApi extends Api>(
 		autoCompactTokenLimit: budget.autoCompactTokenLimit,
 		defaultReasoningSummary: interaction.defaultReasoningSummary,
 		defaultVerbosity: interaction.defaultVerbosity,
-		serviceTiers: interaction.serviceTiers,
-		defaultServiceTier: interaction.defaultServiceTier,
+		serviceTiers: model.serviceTiers ?? interaction.serviceTiers,
+		defaultServiceTier: model.defaultServiceTier ?? interaction.defaultServiceTier,
 		truncationPolicy: interaction.truncationPolicy,
 		supportsParallelToolCalls: interaction.supportsParallelToolCalls,
 	};

@@ -57,7 +57,7 @@ class FakeModelRegistry {
 		{ provider: "litellm", id: "gpt-6-sol" },
 		{ provider: "litellm", id: "gpt-6-astra" },
 		{ provider: "litellm", id: "gpt-5.6-sol" },
-		{ provider: "litellm", id: "gpt-5.6-terra" },
+		{ provider: "litellm", id: "gpt-6.1-sol" },
 		{ provider: "anthropic", id: "claude-haiku-4-5" },
 		{ provider: "anthropic", id: "claude-sonnet-5" },
 		{ provider: "anthropic", id: "claude-opus-5-5" },
@@ -88,7 +88,7 @@ class FakeAgentSession {
 	readonly slashCommands = [];
 	modelRegistry = new FakeModelRegistry();
 	// Current default model (used when `configure` omits `model`).
-	model = { provider: "litellm", id: "gpt-5.6-terra" };
+	model = { provider: "litellm", id: "gpt-6.1-sol" };
 	agent = {
 		abort(): void {},
 		replaceMessages(): void {},
@@ -154,7 +154,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 			type: "configure",
 			baseUrl: "https://f5ai.pd.f5net.com",
 			token: "<XC_API_TOKEN>",
-			model: "gpt-5.6-terra",
+			model: "gpt-6.1-sol",
 		});
 		await flush();
 
@@ -168,12 +168,12 @@ describe("ChatHandler configure frame (#2095)", () => {
 		// No models[] → registerProvider overrides the existing LiteLLM models, not persisted.
 		expect(call.config.models).toBeUndefined();
 
-		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-6.1-sol" }]);
 		expect(session.setThinkingLevelCalls).toEqual(["medium"]);
 
 		const acks = server.ofType("configure_ack");
 		expect(acks).toHaveLength(1);
-		expect(acks[0].model).toBe("gpt-5.6-terra");
+		expect(acks[0].model).toBe("gpt-6.1-sol");
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
@@ -239,19 +239,19 @@ describe("ChatHandler configure frame (#2095)", () => {
 		await flush();
 
 		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
-		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-terra");
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-6.1-sol" }]);
+		expect(server.ofType("configure_ack")[0].model).toBe("gpt-6.1-sol");
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
-	it("model omitted after Opus was active → restores the baked GPT-5.6 Terra default", async () => {
+	it("model omitted after Opus was active → restores the baked GPT-6.1 Sol default", async () => {
 		const { server, session } = makeHandler();
 		session.model = { provider: "anthropic", id: "claude-opus-5" };
 		server.emit({ type: "configure", token: "<XC_API_TOKEN>" });
 		await flush();
 
 		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-6.1-sol" }]);
 		expect(session.setThinkingLevelCalls).toEqual(["medium"]);
 	});
 

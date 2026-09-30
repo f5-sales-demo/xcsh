@@ -46,6 +46,7 @@ import { createFirstEventWatchdog, getStreamFirstEventTimeoutMs, markFirstStream
 import { parseStreamingJson } from "../utils/json-parse";
 import { parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
 import { adaptSchemaForStrict } from "../utils/schema";
+import { cloudflareGatewayHeaders, resolveCloudflareEndpoint } from "./cloudflare-route";
 import {
 	buildCopilotDynamicHeaders,
 	hasCopilotVisionInput,
@@ -695,6 +696,15 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 	options?: AnthropicOptions,
 ): AssistantMessageEventStream => {
 	const stream = new AssistantMessageEventStream();
+	model = { ...model, baseUrl: resolveCloudflareEndpoint(model.provider, model.baseUrl, options) };
+	if (model.compat?.sendSessionAffinityHeaders && options?.sessionId)
+		options = {
+			...options,
+			headers: {
+				...options.headers,
+				[model.provider === "openrouter" ? "x-session-id" : "x-session-affinity"]: options.sessionId,
+			},
+		};
 
 	(async () => {
 		const startTime = Date.now();
@@ -737,7 +747,10 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 				const created = createClient(model, {
 					model,
 					apiKey,
-					extraBetas: normalizeExtraBetas(options?.betas),
+					extraBetas: [
+						...normalizeExtraBetas(options?.betas),
+						...(model.compat?.supportsMidConvoToolChanges ? ["mid-conversation-tool-changes-2026-07-01"] : []),
+					],
 					stream: true,
 					interleavedThinking: options?.interleavedThinking ?? true,
 					headers: options?.headers,
@@ -747,6 +760,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 				client = created.client;
 				isOAuthToken = created.isOAuthToken;
 			}
+			if (isOAuthToken) output.usage.billing = "subscription";
 			const baseUrl =
 				resolveAnthropicBaseUrl(model, options?.apiKey ?? getEnvApiKey(model.provider) ?? "") ??
 				"https://api.anthropic.com";
@@ -1025,7 +1039,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 										partial: output,
 									});
 								} else if (block.type === "toolCall") {
-									if (block.hasJsonDeltas) {
+									if (block.hasJsonDeltas && block.partialJson.trim().length > 0) {
 										try {
 											block.arguments = JSON.parse(block.partialJson) as Record<string, unknown>;
 										} catch (error) {
@@ -1281,7 +1295,7 @@ export function buildAnthropicClientOptions(args: AnthropicClientOptionsArgs): A
 		baseURL: baseUrl,
 		maxRetries: 0,
 		dangerouslyAllowBrowser: true,
-		defaultHeaders,
+		defaultHeaders: cloudflareGatewayHeaders(baseUrl ?? model.baseUrl, apiKey, defaultHeaders),
 		logLevel: ANTHROPIC_SDK_LOG_LEVEL,
 		...(tlsFetchOptions ? { fetchOptions: tlsFetchOptions } : {}),
 	};
@@ -1292,7 +1306,20 @@ function createClient(
 	args: AnthropicClientOptionsArgs,
 ): { client: Anthropic; isOAuthToken: boolean } {
 	const { isOAuthToken: oauthToken, ...clientOptions } = buildAnthropicClientOptions({ ...args, model });
-	const client = new Anthropic(clientOptions);
+	const requestFetch = globalThis.fetch;
+	const client = new Anthropic({
+		...clientOptions,
+		...(model.provider === "cloudflare-ai-gateway"
+			? {
+					fetch: (async (input, init) => {
+						const headers = new Headers(init?.headers);
+						headers.delete("authorization");
+						headers.delete("x-api-key");
+						return requestFetch(input, { ...init, headers });
+					}) as typeof globalThis.fetch,
+				}
+			: {}),
+	});
 	return { client, isOAuthToken: oauthToken };
 }
 
@@ -1557,6 +1584,44 @@ function buildParams(
 	isOAuthToken: boolean,
 	options?: AnthropicOptions,
 ): MessageCreateParamsStreaming {
+	const initialTools = [...(context.tools ?? [])];
+	const additions = context.messages.flatMap(message =>
+		message.role === "developer" ? (message.toolsAdded ?? []) : [],
+	);
+	const unique = new Set([...initialTools, ...additions].map(tool => tool.name));
+	const nativeToolChanges =
+		model.compat?.supportsMidConvoSystemMessages &&
+		model.compat?.supportsMidConvoToolChanges &&
+		initialTools.length > 0 &&
+		unique.size === initialTools.length + additions.length;
+	const declared = new Map(initialTools.map(tool => [tool.name, tool]));
+	const current = new Map(declared);
+	const updates: string[] = [];
+	for (const message of context.messages) {
+		if (message.role !== "developer") continue;
+		for (const tool of message.toolsAdded ?? []) {
+			declared.set(tool.name, tool);
+			current.set(tool.name, tool);
+		}
+		for (const name of message.toolsRemoved ?? []) current.delete(typeof name === "string" ? name : name.name);
+		if (!model.compat?.supportsMidConvoSystemMessages)
+			updates.push(
+				typeof message.content === "string"
+					? message.content
+					: message.content
+							.filter(block => block.type === "text")
+							.map(block => block.text)
+							.join("\n"),
+			);
+	}
+	context = {
+		...context,
+		tools: [...(nativeToolChanges ? declared : current).values()],
+		systemPrompt: [context.systemPrompt, ...updates].filter(Boolean).join("\n\n"),
+		messages: model.compat?.supportsMidConvoSystemMessages
+			? context.messages
+			: context.messages.filter(message => message.role !== "developer"),
+	};
 	const { cacheControl } = getCacheControl(baseUrl, options?.cacheRetention);
 	const alwaysThinking = isAnthropicAlwaysThinkingModel(model);
 	const requestedToolChoice = model.compat?.supportsToolChoice === false ? undefined : options?.toolChoice;
@@ -1568,7 +1633,11 @@ function buildParams(
 			: requestedToolChoice;
 	const params: AnthropicSamplingParams = {
 		model: model.id,
-		messages: convertAnthropicMessages(context.messages, model, isOAuthToken),
+		messages: convertAnthropicMessages(
+			context.messages,
+			nativeToolChanges ? model : { ...model, compat: { ...model.compat, supportsMidConvoToolChanges: false } },
+			isOAuthToken,
+		),
 		max_tokens: options?.maxTokens || (model.maxTokens / 3) | 0,
 		stream: true,
 	};
@@ -1592,6 +1661,17 @@ function buildParams(
 				? requestedToolChoice.name
 				: undefined;
 		params.tools = convertTools(context.tools, isOAuthToken, forcedToolName);
+		if (nativeToolChanges) {
+			const initial = new Set(initialTools.map(tool => tool.name));
+			params.tools = params.tools.map(tool => ({
+				...tool,
+				...(!initial.has(
+					isOAuthToken ? stripClaudeToolPrefix((tool as { name: string }).name) : (tool as { name: string }).name,
+				)
+					? { defer_loading: true }
+					: {}),
+			}));
+		}
 	}
 
 	if ((options?.thinkingEnabled || alwaysThinking) && model.reasoning) {
@@ -1659,6 +1739,9 @@ function buildParams(
 	disableThinkingIfToolChoiceForced(params);
 	ensureMaxTokensForThinking(params, model);
 	applyPromptCaching(params, cacheControl);
+	if (model.compat?.supportsCacheControlOnTools === false)
+		for (const tool of params.tools ?? [])
+			delete (tool as Anthropic.Messages.Tool & { cache_control?: unknown }).cache_control;
 	enforceCacheControlLimit(params, 4);
 	normalizeCacheControlTtlOrdering(params);
 
@@ -1673,9 +1756,37 @@ export function convertAnthropicMessages(
 	const params: MessageParam[] = [];
 
 	const transformedMessages = transformMessages(messages, model, normalizeToolCallId);
+	const pending: MessageParam[] = [];
+	const flushPending = () => {
+		params.push(...pending);
+		pending.length = 0;
+	};
 
 	for (let i = 0; i < transformedMessages.length; i++) {
 		const msg = transformedMessages[i];
+		if (msg.role === "developer" && model.compat?.supportsMidConvoSystemMessages) {
+			const text =
+				typeof msg.content === "string"
+					? msg.content
+					: msg.content
+							.filter(block => block.type === "text")
+							.map(block => block.text)
+							.join("\n");
+			const content: unknown[] = text ? [{ type: "text", text }] : [];
+			if (model.compat.supportsMidConvoToolChanges) {
+				const name = (value: string) => (isOAuthToken ? applyClaudeToolPrefix(value) : value);
+				for (const tool of msg.toolsRemoved ?? [])
+					content.push({
+						type: "tool_removal",
+						tool: { type: "tool_reference", name: name(typeof tool === "string" ? tool : tool.name) },
+					});
+				for (const tool of msg.toolsAdded ?? [])
+					content.push({ type: "tool_addition", tool: { type: "tool_reference", name: name(tool.name) } });
+			}
+			if (content.length) pending.push({ role: "system", content } as unknown as MessageParam);
+			continue;
+		}
+		if (msg.role === "assistant") flushPending();
 
 		if (msg.role === "user" || msg.role === "developer") {
 			if (!msg.content) continue;
@@ -1732,6 +1843,10 @@ export function convertAnthropicMessages(
 						text: block.text.toWellFormed(),
 					});
 				} else if (block.type === "thinking") {
+					if (model.compat?.allowEmptySignature && block.thinkingSignature === "") {
+						blocks.push({ type: "thinking", thinking: block.thinking, signature: "" });
+						continue;
+					}
 					if (hasSignedThinking) {
 						if (!block.thinkingSignature || block.thinkingSignature.trim().length === 0) {
 							if (block.thinking.trim().length === 0) continue;
@@ -1817,6 +1932,7 @@ export function convertAnthropicMessages(
 		}
 	}
 
+	flushPending();
 	if (params.length > 0 && params[params.length - 1]?.role === "assistant") {
 		params.push({ role: "user", content: "Continue." });
 	}

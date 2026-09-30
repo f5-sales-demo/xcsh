@@ -11,6 +11,7 @@ import {
 	validateToolArguments,
 } from "@f5-sales-demo/pi-ai";
 import { logger } from "@f5-sales-demo/pi-utils";
+import { LiveSteeringChannel } from "./live-steering";
 import emptyToolSuccess from "./prompts/empty-tool-success.md" with { type: "text" };
 import { AgentToolError } from "./tool-error";
 import type {
@@ -312,6 +313,23 @@ async function runLoop(
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	streamFn?: StreamFn,
 ): Promise<void> {
+	const completedTools = new Map<string, ToolResultMessage>();
+	const toolKey = (call: Extract<AssistantMessage["content"][number], { type: "toolCall" }>) =>
+		JSON.stringify([config.model.provider, config.model.api, config.model.id, call.id, call.name, call.arguments]);
+	const priorCalls = new Map<string, string>();
+	for (const message of currentContext.messages) {
+		if (
+			message.role === "assistant" &&
+			message.provider === config.model.provider &&
+			message.api === config.model.api &&
+			message.model === config.model.id
+		)
+			for (const call of message.content) if (call.type === "toolCall") priorCalls.set(call.id, toolKey(call));
+		if (message.role === "toolResult" && !message.isError) {
+			const key = priorCalls.get(message.toolCallId);
+			if (key) completedTools.set(key, message);
+		}
+	}
 	let firstTurn = true;
 	// Check for steering messages at start (user may have typed while waiting)
 	let pendingMessages: AgentMessage[] = (await config.getSteeringMessages?.()) || [];
@@ -344,9 +362,45 @@ async function runLoop(
 				await logger.ttftAttr("ttft.sync-context", () => config.syncContextBeforeModelCall!(currentContext));
 			}
 
-			// Stream assistant response
-			const message = await streamAssistantResponse(currentContext, newMessages, config, signal, stream, streamFn);
+			// Offer opt-in, plain user steering to the active provider without consuming other message kinds.
+			const live =
+				(config.model.compat as import("@f5-sales-demo/pi-ai").OpenAIResponsesCompat | undefined)
+					?.supportsWebSocketSteering &&
+				config.waitForSteeringMessages &&
+				config.getSteeringMessages &&
+				!exactToolName(config.getToolChoice?.() ?? config.toolChoice)
+					? new LiveSteeringChannel({
+							wait: config.waitForSteeringMessages,
+							take: () => config.getSteeringMessages!(),
+							toProvider: async messages => {
+								const converted = await config.convertToLlm(messages);
+								if (converted.some(message => message.role !== "user")) return undefined;
+								return converted as import("@f5-sales-demo/pi-ai").UserMessage[];
+							},
+						})
+					: undefined;
+			const message = await streamAssistantResponse(
+				currentContext,
+				newMessages,
+				live ? { ...config, liveSteering: live } : config,
+				signal,
+				stream,
+				streamFn,
+			);
 			newMessages.push(message);
+			if (live) {
+				if (message.stopReason === "error" || message.stopReason === "aborted")
+					config.restoreSteeringMessages?.([...live.accepted, ...live.deferred]);
+				else {
+					for (const accepted of live.accepted) {
+						currentContext.messages.push(accepted);
+						newMessages.push(accepted);
+						stream.push({ type: "message_start", message: accepted });
+						stream.push({ type: "message_end", message: accepted });
+					}
+					config.restoreSteeringMessages?.(live.deferred);
+				}
+			}
 			let steeringMessagesFromExecution: AgentMessage[] | undefined;
 
 			if (message.stopReason === "error" || message.stopReason === "aborted") {
@@ -369,10 +423,10 @@ async function runLoop(
 
 			// Check for tool calls
 			const toolCalls = message.content.filter(c => c.type === "toolCall");
-			hasMoreToolCalls = toolCalls.length > 0;
+			hasMoreToolCalls = toolCalls.length > 0 || Boolean(live?.accepted.length);
 
 			const toolResults: ToolResultMessage[] = [];
-			if (hasMoreToolCalls) {
+			if (toolCalls.length > 0) {
 				const executionResult = await executeToolCalls(
 					currentContext.tools,
 					message,
@@ -383,12 +437,15 @@ async function runLoop(
 					config.getToolContext,
 					config.transformToolCallArguments,
 					config.intentTracing,
+					completedTools,
+					toolKey,
 				);
 
 				toolResults.push(...executionResult.toolResults);
 				steeringMessagesFromExecution = executionResult.steeringMessages;
 
 				for (const result of toolResults) {
+					if (currentContext.messages.includes(result)) continue;
 					currentContext.messages.push(result);
 					newMessages.push(result);
 				}
@@ -629,9 +686,17 @@ async function executeToolCalls(
 	getToolContext?: AgentLoopConfig["getToolContext"],
 	transformToolCallArguments?: AgentLoopConfig["transformToolCallArguments"],
 	intentTracing?: AgentLoopConfig["intentTracing"],
+	completedTools = new Map<string, ToolResultMessage>(),
+	toolKey: (call: Extract<AssistantMessage["content"][number], { type: "toolCall" }>) => string = call => call.id,
 ): Promise<{ toolResults: ToolResultMessage[]; steeringMessages?: AgentMessage[] }> {
 	type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
-	const toolCalls = assistantMessage.content.filter((c): c is ToolCallContent => c.type === "toolCall");
+	const toolCalls = [
+		...new Map(
+			assistantMessage.content
+				.filter((c): c is ToolCallContent => c.type === "toolCall")
+				.map(call => [toolKey(call), call]),
+		).values(),
+	];
 	const emittedToolResults: ToolResultMessage[] = [];
 	const toolCallInfos = toolCalls.map(call => ({ id: call.id, name: call.name }));
 	const batchId = `${assistantMessage.timestamp ?? Date.now()}_${toolCalls[0]?.id ?? "batch"}`;
@@ -703,6 +768,8 @@ async function executeToolCalls(
 		});
 
 		const toolResultMessage: ToolResultMessage = {
+			...(toolCall.customInputProperty ? { customTool: true } : {}),
+			...(toolCall.toolSearch ? { toolSearch: true, tools: normalizedResult.tools ?? [] } : {}),
 			role: "toolResult",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
@@ -716,6 +783,7 @@ async function executeToolCalls(
 		record.isError = isError;
 		record.toolResultMessage = toolResultMessage;
 		record.resultEmitted = true;
+		if (!isError) completedTools.set(toolKey(toolCall), toolResultMessage);
 		emittedToolResults.push(toolResultMessage);
 
 		stream.push({ type: "message_start", message: toolResultMessage });
@@ -723,6 +791,13 @@ async function executeToolCalls(
 	};
 
 	const runTool = async (record: (typeof records)[number], index: number): Promise<void> => {
+		const completed = completedTools.get(toolKey(record.toolCall));
+		if (completed) {
+			record.toolResultMessage = completed;
+			record.resultEmitted = true;
+			emittedToolResults.push(completed);
+			return;
+		}
 		if (interruptState.triggered) {
 			record.skipped = true;
 			return;

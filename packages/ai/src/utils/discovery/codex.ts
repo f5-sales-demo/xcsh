@@ -100,6 +100,7 @@ export interface CodexModelDiscoveryResult {
  * Returns `{ models: [] }` when a route succeeds but yields no usable models.
  */
 export async function fetchCodexModels(options: CodexModelDiscoveryOptions): Promise<CodexModelDiscoveryResult | null> {
+	options.signal?.throwIfAborted();
 	const fetchFn = options.fetchFn ?? fetch;
 	const baseUrl = normalizeBaseUrl(options.baseUrl);
 	const paths = normalizePaths(options.paths);
@@ -121,6 +122,7 @@ export async function fetchCodexModels(options: CodexModelDiscoveryOptions): Pro
 				signal: options.signal,
 			});
 		} catch {
+			options.signal?.throwIfAborted();
 			continue;
 		}
 
@@ -301,6 +303,38 @@ function normalizeCodexModelEntry(entry: unknown, baseUrl: string): NormalizedCo
 				contextWindow,
 				maxTokens,
 				providerContextWindow,
+				compat: {
+					...(typeof payload.supports_websocket_steering === "boolean"
+						? { supportsWebSocketSteering: payload.supports_websocket_steering }
+						: {}),
+					...(typeof (payload.supports_cached_reasoning_updates ?? payload.supports_reasoning_effort_updates) ===
+					"boolean"
+						? {
+								supportsCachedReasoningUpdates: Boolean(
+									payload.supports_cached_reasoning_updates ?? payload.supports_reasoning_effort_updates,
+								),
+							}
+						: {}),
+				},
+				...(toPositiveInt(payload.max_input_tokens)
+					? { maxInputTokens: toPositiveInt(payload.max_input_tokens)! }
+					: {}),
+				...(Array.isArray(payload.service_tiers)
+					? {
+							serviceTiers: [
+								...new Set([
+									"default",
+									...payload.service_tiers
+										.map(tier => (isRecord(tier) ? tier.id : tier))
+										.filter(tier => ["auto", "default", "flex", "scale", "priority"].includes(String(tier))),
+								]),
+							] as import("../../types").ServiceTier[],
+						}
+					: {}),
+				...(typeof payload.default_service_tier === "string" &&
+				["auto", "default", "flex", "scale", "priority"].includes(payload.default_service_tier)
+					? { defaultServiceTier: payload.default_service_tier as import("../../types").ServiceTier }
+					: {}),
 				...(toNonEmptyString(payload.description) ? { description: toNonEmptyString(payload.description)! } : {}),
 				...(visibility ? { visibility } : {}),
 				...presentation,

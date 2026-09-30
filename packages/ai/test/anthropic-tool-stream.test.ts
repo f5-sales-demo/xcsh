@@ -106,6 +106,11 @@ afterEach(() => {
 });
 
 describe("Anthropic terminal tool input parsing", () => {
+	it("preserves inline empty arguments when the provider emits an empty JSON delta", async () => {
+		const { result } = await collect(toolEvents({ inlineInput: {}, deltas: [""] }));
+		expect(result.stopReason).toBe("toolUse");
+		expect(onlyToolCall(result).arguments).toEqual({});
+	});
 	it("preserves fragmented valid arguments, escapes, Unicode, siblings, _i, and array-valued ops", async () => {
 		const payload = {
 			_i: "Trace 漢字 🚀",

@@ -78,16 +78,21 @@ function sourceMatches(pattern: string, file: string): boolean {
 
 function findSinks(sources: Record<string, string>, sinkNames: string[]): ReadabilitySink[] {
 	const found: ReadabilitySink[] = [];
+	const matchers = sinkNames.map(sink => {
+		const escaped = sink.replace(/[.*+?^$()|[\]\\]/gu, "\\$&");
+		return {
+			sink,
+			call:
+				sink === "SelectList" || sink === "TruncatedText"
+					? new RegExp(`\\bnew\\s+${escaped}\\s*\\(`, "u")
+					: new RegExp(`\\b${escaped}\\s*\\(`, "u"),
+			declaration: new RegExp(`\\b(?:function|class)\\s+${escaped}\\b`, "u"),
+		};
+	});
 	for (const [file, source] of Object.entries(sources).sort(([left], [right]) => left.localeCompare(right))) {
 		for (const [index, line] of source.split("\n").entries()) {
-			for (const sink of sinkNames) {
-				const escaped = sink.replace(/[.*+?^$()|[\]\\]/gu, "\\$&");
-				const expression =
-					sink === "SelectList" || sink === "TruncatedText"
-						? new RegExp(`\\bnew\\s+${escaped}\\s*\\(`, "u")
-						: new RegExp(`\\b${escaped}\\s*\\(`, "u");
-				if (!expression.test(line) || new RegExp(`\\b(?:function|class)\\s+${escaped}\\b`, "u").test(line))
-					continue;
+			for (const { sink, call, declaration } of matchers) {
+				if (!call.test(line) || declaration.test(line)) continue;
 				found.push({ file, line: index + 1, sink, entry: null });
 			}
 		}

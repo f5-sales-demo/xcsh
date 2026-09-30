@@ -313,6 +313,8 @@ export interface ToolSessionEvent {
  * Tool definition for registerTool().
  */
 export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = unknown> {
+	async?: boolean;
+	constrainedSampling?: import("@f5-sales-demo/pi-ai").Tool["constrainedSampling"];
 	/** Tool name (used in LLM tool calls) */
 	name: string;
 	/** Human-readable label for UI */
@@ -1323,7 +1325,7 @@ export interface ProviderModelConfig {
 	/** Supported input types. */
 	input: ("text" | "image")[];
 	/** Cost per million tokens. */
-	cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	cost: import("@f5-sales-demo/pi-ai").ModelCost;
 	/** Premium Copilot requests charged per user-initiated request. */
 	premiumMultiplier?: number;
 	/** Maximum context window size in tokens. */

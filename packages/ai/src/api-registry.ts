@@ -15,6 +15,8 @@ import type {
 } from "./types";
 
 const BUILTIN_APIS = new Set<KnownApi>([
+	"pi-messages",
+	"mistral-conversations",
 	"openai-completions",
 	"openai-responses",
 	"openai-codex-responses",

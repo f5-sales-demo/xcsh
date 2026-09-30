@@ -9,6 +9,11 @@ import {
 import type { Model } from "../src/types";
 
 const EXPECTED = {
+	"gpt-6.1-sol": {
+		defaultEffort: "medium",
+		efforts: ["low", "medium", "high", "xhigh", "max", "ultra"],
+		tier: "default",
+	},
 	"gpt-6-astra": {
 		defaultEffort: "low",
 		efforts: ["low", "medium", "high", "xhigh", "max", "ultra"],
@@ -57,7 +62,7 @@ describe("pinned Codex model-interaction metadata", () => {
 		expect(applyCodexInteractionMetadata(model)).toEqual(model);
 	});
 
-	it("covers the exact seven-model interaction contract", () => {
+	it("covers the exact eight-model interaction contract", () => {
 		expect(Object.keys(CODEX_MODEL_INTERACTION_METADATA)).toEqual(Object.keys(EXPECTED));
 		for (const [id, expected] of Object.entries(EXPECTED)) {
 			const metadata = CODEX_MODEL_INTERACTION_METADATA[id]!;
@@ -102,7 +107,7 @@ describe("pinned Codex model-interaction metadata", () => {
 	it("covers every provider, model, and context tier", () => {
 		for (const provider of ["openai-codex", "litellm"] as const) {
 			for (const [id, interaction] of Object.entries(CODEX_MODEL_INTERACTION_METADATA)) {
-				const advertisedLimit = id.startsWith("gpt-6-") ? 922_000 : 1_050_000;
+				const advertisedLimit = /^gpt-6(?:\.1)?-/.test(id) ? 922_000 : 1_050_000;
 				const api = provider === "openai-codex" ? "openai-codex-responses" : "openai-responses";
 				const model = applyCodexInteractionMetadata(
 					{

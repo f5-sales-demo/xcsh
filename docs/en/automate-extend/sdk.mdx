@@ -8,6 +8,27 @@ sidebar:
 
 The coding-agent software development kit (SDK) embeds session creation, provider streaming, and tool registration. Use it when a host application needs in-memory control rather than a child-process transcript.
 
+Chat calls accept `Model` entries. Image generation and classification use separate `ImageModel`
+and `ClassifierModel` entries; `AnyModel` describes a mixed catalog. Use
+`getBundledImageModels()` or `getBundledClassifierModels()` for static operation discovery, or
+`createOperationCatalog()` with a host credential resolver and custom operation entries.
+`generateImages()` dispatches the OpenRouter image operation. `classify()` accepts structured
+`state` and named `choice`, `score`, or `bool` questions with instructions and criteria. Choice
+answers contain the selected key, probabilities, and confidence; score answers contain an expected
+score and confidence; bool answers contain a probability. Select the provider and model explicitly.
+The existing `generate_image` tool uses the image operation and media rendering. The `classify`
+assistant tool resolves credentials through xcsh's model registry. Wrong operation types fail
+before dispatch, and unavailable credentials or malformed service output return an operation error.
+
+Responses compatibility controls live in `OpenAIResponsesCompat`. Capable routes can preserve tool
+additions on developer-message anchors; routes without that support expose the equivalent current
+tool set in the request. Explicit cache breakpoints belong to text or image content blocks, and
+`promptCache` selects implicit or explicit caching with a `30m` lifetime. Subscription transports
+retain their separate payload restrictions. Deferred work uses `requestDeferred()`,
+`fetchDeferred()`, and `cancelDeferred()` with a handle bound to the provider, model, API, and
+endpoint. Tool background execution is opt-in through `async: true` and uses the existing job
+delivery, polling, and cancellation lifecycle when asynchronous execution is enabled.
+
 ## Which automation boundary should I choose?
 
 Use `--mode json`, `rpc`, or `acp` for a process boundary. Use the SDK for direct TypeScript integration. Use `xcsh worker` for a headless extension bridge and `xcsh manager` for the detached control server that spawns and reaps workers.

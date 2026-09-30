@@ -161,22 +161,21 @@ const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs
  * NO `~/.xcsh/agent/config.yml` — `/login` only supplies the (PII) proxy URL + key.
- * GPT-5.6 Terra Medium is the current general-purpose default through the OpenAI
- * Chat Completions route on LiteLLM. Keep the effort explicit in the role so returning
+ * GPT-6.1 Sol Medium is the default through the OpenAI Responses route on LiteLLM. Keep the effort explicit in the role so returning
  * from a lower-effort role cannot inherit that role's effort.
  */
-export const DEFAULT_MODEL_ROLE = "litellm/gpt-5.6-terra:medium";
+export const DEFAULT_MODEL_ROLE = "litellm/gpt-6.1-sol:medium";
 /** Fast role for lightweight work (commit messages, titles, memory summaries). */
 const SMOL_MODEL_ROLE = "litellm/gpt-6-luna:low";
 /**
  * Baked role map for the current internal LiteLLM catalog. Sol handles slow and
- * planning work, while Luna and Terra cover lightweight and default work.
+ * planning and default work, while Luna covers lightweight work.
  */
 export const DEFAULT_MODEL_ROLES: Record<string, string> = {
 	default: DEFAULT_MODEL_ROLE,
 	smol: SMOL_MODEL_ROLE,
-	slow: "litellm/gpt-6-sol:high",
-	plan: "litellm/gpt-6-sol:high",
+	slow: "litellm/gpt-6.1-sol:high",
+	plan: "litellm/gpt-6.1-sol:high",
 };
 const EMPTY_MODEL_TAGS_RECORD: ModelTagsSettings = {};
 export const DEFAULT_BASH_INTERCEPTOR_RULES: BashInterceptorRule[] = [

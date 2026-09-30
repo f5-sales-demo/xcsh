@@ -184,6 +184,9 @@ export interface CustomTool<TParams extends TSchema = TSchema, TDetails = any> {
 	hidden?: boolean;
 	/** If true, tool may stage deferred changes that require explicit resolve/discard. */
 	deferrable?: boolean;
+	/** Opt-in execution through the host's background job lifecycle. */
+	async?: boolean;
+	constrainedSampling?: import("@f5-sales-demo/pi-ai").Tool["constrainedSampling"];
 	/**
 	 * Execute the tool.
 	 * @param toolCallId - Unique ID for this tool call

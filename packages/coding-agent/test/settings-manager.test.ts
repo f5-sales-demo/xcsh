@@ -160,9 +160,9 @@ describe("Settings", () => {
 		const settings = await Settings.init({ cwd: projectDir, agentDir });
 		expect(settings.get("modelRoles")).toEqual({
 			smol: "litellm/gpt-6-luna:low",
-			default: "litellm/gpt-5.6-terra:medium",
-			slow: "litellm/gpt-6-sol:high",
-			plan: "litellm/gpt-6-sol:high",
+			default: "litellm/gpt-6.1-sol:medium",
+			slow: "litellm/gpt-6.1-sol:high",
+			plan: "litellm/gpt-6.1-sol:high",
 		});
 		expect((await readSettings()).modelRoles).toEqual(settings.get("modelRoles"));
 

@@ -41,7 +41,7 @@ test("isListModels accepts only list_models", () => {
 test("list_models reports the active model and only available curated provider/model pairs", () => {
 	const h = harness(
 		[
-			{ provider: "litellm", id: "gpt-6-sol" },
+			{ provider: "litellm", id: "gpt-6.1-sol" },
 			{ provider: "anthropic", id: "claude-opus-5-5" },
 			{ provider: "other", id: "claude-opus-5-5" },
 		],
@@ -54,7 +54,7 @@ test("list_models reports the active model and only available curated provider/m
 		type: "models",
 		current: "claude-opus-5-5",
 		models: [
-			{ id: "gpt-6-sol", label: "GPT-6 Sol" },
+			{ id: "gpt-6.1-sol", label: "GPT-6.1 Sol" },
 			{ id: "claude-opus-5-5", label: "Claude Opus 5.5" },
 		],
 	});

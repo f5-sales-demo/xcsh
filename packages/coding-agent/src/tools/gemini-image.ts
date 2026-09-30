@@ -1,6 +1,12 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { getAntigravityHeaders, getEnvApiKey, StringEnum } from "@f5-sales-demo/pi-ai";
+import {
+	generateImages,
+	getAntigravityHeaders,
+	getBundledImageModel,
+	getEnvApiKey,
+	StringEnum,
+} from "@f5-sales-demo/pi-ai";
 import {
 	$env,
 	isEnoent,
@@ -187,29 +193,6 @@ interface GeminiGenerateContentResponse {
 	usageMetadata?: GeminiUsageMetadata;
 }
 
-interface OpenRouterImageUrl {
-	url: string;
-}
-
-interface OpenRouterContentPart {
-	type: "text" | "image_url";
-	text?: string;
-	image_url?: OpenRouterImageUrl;
-}
-
-interface OpenRouterMessage {
-	content?: string | OpenRouterContentPart[];
-	images?: Array<string | { image_url?: OpenRouterImageUrl }>;
-}
-
-interface OpenRouterChoice {
-	message?: OpenRouterMessage;
-}
-
-interface OpenRouterResponse {
-	choices?: OpenRouterChoice[];
-}
-
 interface OpenAIImageResponseData {
 	b64_json: string;
 	revised_prompt?: string | null;
@@ -288,74 +271,6 @@ function normalizeDataUrl(data: string): { data: string; mimeType?: string } {
 
 function resolveOpenRouterModel(model: string): string {
 	return model.includes("/") ? model : `google/${model}`;
-}
-
-function toDataUrl(image: InlineImageData): string {
-	return `data:${image.mimeType};base64,${image.data}`;
-}
-
-async function loadImageFromUrl(imageUrl: string, signal?: AbortSignal): Promise<InlineImageData> {
-	if (imageUrl.startsWith("data:")) {
-		const normalized = normalizeDataUrl(imageUrl.trim());
-		if (!normalized.mimeType) {
-			throw new Error("mime_type is required when providing raw base64 data.");
-		}
-		if (!normalized.data) {
-			throw new Error("Image data is empty.");
-		}
-		return { data: normalized.data, mimeType: normalized.mimeType };
-	}
-
-	const response = await fetch(imageUrl, { signal });
-	if (!response.ok) {
-		const rawText = await response.text();
-		throw new Error(`Image download failed (${response.status}): ${rawText}`);
-	}
-	const contentType = response.headers.get("content-type")?.split(";")[0];
-	if (!contentType?.startsWith("image/")) {
-		throw new Error(`Unsupported image type from URL: ${imageUrl}`);
-	}
-	const buffer = await response.bytes();
-	return { data: buffer.toBase64(), mimeType: contentType };
-}
-
-function collectOpenRouterResponseText(message: OpenRouterMessage | undefined): string | undefined {
-	if (!message) return undefined;
-	if (typeof message.content === "string") {
-		const trimmed = message.content.trim();
-		return trimmed.length > 0 ? trimmed : undefined;
-	}
-	if (Array.isArray(message.content)) {
-		const texts = message.content
-			.filter(part => part.type === "text")
-			.map(part => part.text)
-			.filter((text): text is string => Boolean(text));
-		const combined = texts.join("\n").trim();
-		return combined.length > 0 ? combined : undefined;
-	}
-	return undefined;
-}
-
-function extractOpenRouterImageUrls(message: OpenRouterMessage | undefined): string[] {
-	const urls: string[] = [];
-	if (!message) return urls;
-	for (const image of message.images ?? []) {
-		if (typeof image === "string") {
-			urls.push(image);
-			continue;
-		}
-		if (image.image_url?.url) {
-			urls.push(image.image_url.url);
-		}
-	}
-	if (Array.isArray(message.content)) {
-		for (const part of message.content) {
-			if (part.type === "image_url" && part.image_url?.url) {
-				urls.push(part.image_url.url);
-			}
-		}
-	}
-	return urls;
 }
 
 /** Preferred provider set via settings (default: auto) */
@@ -739,48 +654,42 @@ export const geminiImageTool: CustomTool<typeof geminiImageSchema, GeminiImageTo
 			}
 
 			if (provider === "openrouter") {
-				const prompt = assemblePrompt(params);
-				const contentParts: OpenRouterContentPart[] = [{ type: "text", text: prompt }];
-				for (const image of resolvedImages) {
-					contentParts.push({ type: "image_url", image_url: { url: toDataUrl(image) } });
-				}
-
-				const requestBody = {
-					model: resolvedModel,
-					messages: [{ role: "user" as const, content: contentParts }],
-				};
-
-				const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${apiKey.apiKey}`,
-						"X-Title": "xcsh",
+				const imageModel = ctx.modelRegistry
+					?.getImageModels?.("openrouter")
+					.find(model => model.id === resolvedModel) ??
+					getBundledImageModel("openrouter", resolvedModel) ?? {
+						type: "image" as const,
+						id: resolvedModel,
+						name: resolvedModel,
+						api: "openrouter-images",
+						provider: "openrouter",
+						baseUrl: "https://openrouter.ai/api/v1",
+						input: ["text", "image"] as ("text" | "image")[],
+						output: ["text", "image"] as ("text" | "image")[],
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+					};
+				const result = await generateImages(
+					imageModel,
+					{
+						input: [
+							{ type: "text", text: assemblePrompt(params) },
+							...resolvedImages.map(image => ({
+								type: "image" as const,
+								data: image.data,
+								mimeType: image.mimeType,
+							})),
+						],
 					},
-					body: JSON.stringify(requestBody),
-					signal: requestSignal,
-				});
-
-				const rawText = await response.text();
-				if (!response.ok) {
-					let message = rawText;
-					try {
-						const parsed = JSON.parse(rawText) as { error?: { message?: string } };
-						message = parsed.error?.message ?? message;
-					} catch {
-						// Keep raw text.
-					}
-					throw new Error(`OpenRouter image request failed (${response.status}): ${message}`);
-				}
-
-				const data = JSON.parse(rawText) as OpenRouterResponse;
-				const message = data.choices?.[0]?.message;
-				const responseText = collectOpenRouterResponseText(message);
-				const imageUrls = extractOpenRouterImageUrls(message);
-				const inlineImages: InlineImageData[] = [];
-				for (const imageUrl of imageUrls) {
-					inlineImages.push(await loadImageFromUrl(imageUrl, requestSignal));
-				}
+					{ apiKey: apiKey.apiKey, signal: requestSignal, headers: { "X-Title": "xcsh" } },
+				);
+				if (result.stopReason !== "stop") throw new Error(result.errorMessage ?? "Image generation failed");
+				const responseText = result.output
+					.filter(item => item.type === "text")
+					.map(item => item.text)
+					.join("\n");
+				const inlineImages: InlineImageData[] = result.output
+					.filter(item => item.type === "image")
+					.map(item => ({ data: item.data, mimeType: item.mimeType }));
 
 				if (inlineImages.length === 0) {
 					const messageText = responseText ? `\n\n${responseText}` : "";

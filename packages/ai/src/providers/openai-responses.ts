@@ -48,8 +48,10 @@ import {
 	markFirstStreamEvent,
 } from "../utils/idle-iterator";
 import { parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
+import { retryProviderRequest } from "../utils/provider-retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
 import { mapToOpenAIResponsesToolChoice } from "../utils/tool-choice";
+import { cloudflareGatewayHeaders, resolveCloudflareEndpoint } from "./cloudflare-route";
 import {
 	buildCopilotDynamicHeaders,
 	hasCopilotVisionInput,
@@ -64,6 +66,7 @@ import {
 	normalizeResponsesToolCallIdForTransform,
 	processResponsesStream,
 } from "./openai-responses-shared";
+import { validateFinalResponsesRequest } from "./sol-request-boundary";
 import { transformMessages } from "./transform-messages";
 
 /**
@@ -82,6 +85,7 @@ function getPromptCacheRetention(baseUrl: string, cacheRetention: CacheRetention
 
 // OpenAI Responses-specific options
 export interface OpenAIResponsesOptions extends StreamOptions {
+	promptCache?: { mode: "implicit" | "explicit"; ttl?: "30m" };
 	reasoning?: ReasoningEffort;
 	reasoningSummary?: ReasoningSummary | null;
 	textVerbosity?: "low" | "medium" | "high";
@@ -100,6 +104,10 @@ const OPENAI_RESPONSES_FIRST_EVENT_TIMEOUT_MESSAGE =
 
 interface OpenAIResponsesProviderSessionState extends ProviderSessionState {
 	nativeHistoryReplayWarmed: boolean;
+	originalReasoning?: ReasoningEffort;
+	reasoningAnchors?: { position: number; effort: ReasoningEffort }[];
+	reasoningPrefix?: string[];
+	activeReasoning?: ReasoningEffort;
 }
 
 function createOpenAIResponsesProviderSessionState(): OpenAIResponsesProviderSessionState {
@@ -107,13 +115,17 @@ function createOpenAIResponsesProviderSessionState(): OpenAIResponsesProviderSes
 		nativeHistoryReplayWarmed: false,
 		close: () => {
 			state.nativeHistoryReplayWarmed = false;
+			state.originalReasoning = undefined;
+			state.reasoningAnchors = undefined;
+			state.reasoningPrefix = undefined;
+			state.activeReasoning = undefined;
 		},
 	};
 	return state;
 }
 
 function getOpenAIResponsesProviderSessionStateKey(model: Model<"openai-responses">): string {
-	return `${OPENAI_RESPONSES_PROVIDER_SESSION_STATE_PREFIX}${model.provider}`;
+	return `${OPENAI_RESPONSES_PROVIDER_SESSION_STATE_PREFIX}${JSON.stringify([model.provider, model.id, model.baseUrl])}`;
 }
 
 function getOpenAIResponsesProviderSessionState(
@@ -157,6 +169,7 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 	options?: OpenAIResponsesOptions,
 ): AssistantMessageEventStream => {
 	const stream = new AssistantMessageEventStream();
+	model = { ...model, baseUrl: resolveCloudflareEndpoint(model.provider, model.baseUrl, options) };
 
 	// Start async processing
 	(async () => {
@@ -195,11 +208,14 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 				apiKey,
 				options?.headers,
 				options?.initiatorOverride,
+				options?.fetch,
 			);
 			const providerSessionState = getOpenAIResponsesProviderSessionState(model, options?.providerSessionState);
-			const { params } = buildParams(model, context, options, providerSessionState, baseUrl);
+			let { params } = buildParams(model, context, options, providerSessionState, baseUrl);
 			const idleTimeoutMs = getOpenAIStreamIdleTimeoutMs();
-			options?.onPayload?.(params);
+			const replacement = await options?.onPayload?.(params, model);
+			if (replacement !== undefined) params = replacement as typeof params;
+			validateFinalResponsesRequest(model, params as unknown as Record<string, unknown>);
 			rawRequestDump = {
 				provider: model.provider,
 				api: output.api,
@@ -209,9 +225,21 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 				body: params,
 			};
 			// The pinned SDK schema predates the provider's `max` effort value.
-			const openaiStream = await client.responses.create(params as ResponseCreateParamsStreaming, {
-				signal: requestSignal,
-			});
+			const response = await retryProviderRequest(
+				() =>
+					client.responses
+						.create(params as ResponseCreateParamsStreaming, {
+							signal: requestSignal,
+							maxRetries: 0,
+						})
+						.withResponse(),
+				{ signal: requestSignal, maxRetries: options?.maxRetries ?? 2, maxRetryDelayMs: options?.maxRetryDelayMs },
+			);
+			await options?.onResponse?.(
+				{ status: response.response.status, headers: Object.fromEntries(response.response.headers.entries()) },
+				model,
+			);
+			const openaiStream = response.data;
 			const firstEventWatchdog = createFirstEventWatchdog(
 				options?.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs(idleTimeoutMs),
 				() => abortTracker.abortLocally(firstEventTimeoutAbortError),
@@ -230,11 +258,26 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 				stream,
 				model,
 				{
+					signal: requestSignal,
+					onProviderStreamEvent: options?.onProviderStreamEvent,
+					serviceTier: options?.serviceTier,
+					grammarToolInputProperties: new Map(
+						[...toolsForContext(context)].flatMap(tool => {
+							const config = tool.constrainedSampling;
+							const property = (tool.parameters as unknown as { required?: string[] }).required?.[0];
+							return model.compat?.supportsOpenAIGrammarTools && config && config.type === "grammar" && property
+								? [[tool.name, property]]
+								: [];
+						}),
+					),
 					onFirstToken: () => {
 						if (!firstTokenTime) firstTokenTime = Date.now();
 					},
 					onOutputItemDone: item => {
-						nativeOutputItems.push(structuredCloneJSON<unknown>(item) as unknown as Record<string, unknown>);
+						const native = structuredCloneJSON<unknown>(item) as unknown as Record<string, unknown>;
+						const existing = nativeOutputItems.findIndex(value => value.id === native.id);
+						if (existing >= 0) nativeOutputItems[existing] = native;
+						else nativeOutputItems.push(native);
 					},
 				},
 			);
@@ -253,7 +296,25 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 			}
 
 			output.providerPayload = createOpenAIResponsesHistoryPayload(model.provider, nativeOutputItems);
-			if (providerSessionState) providerSessionState.nativeHistoryReplayWarmed = true;
+			if (providerSessionState) {
+				providerSessionState.nativeHistoryReplayWarmed = true;
+				if (model.compat?.supportsCachedReasoningUpdates && params.reasoning?.effort) {
+					providerSessionState.originalReasoning = params.reasoning.effort;
+					const items = params.input as unknown as Record<string, unknown>[];
+					let position = 0;
+					const anchors: { position: number; effort: ReasoningEffort }[] = [];
+					for (const item of items) {
+						if (item.type === "configuration_update")
+							anchors.push({ position, effort: (item.reasoning as { effort: ReasoningEffort }).effort });
+						else position++;
+					}
+					providerSessionState.reasoningAnchors = anchors;
+					providerSessionState.activeReasoning = anchors.at(-1)?.effort ?? params.reasoning.effort;
+					providerSessionState.reasoningPrefix = items
+						.filter(item => item.type !== "configuration_update")
+						.map(item => JSON.stringify(item));
+				}
+			}
 
 			output.duration = Date.now() - startTime;
 			if (firstTokenTime) output.ttft = firstTokenTime - startTime;
@@ -281,6 +342,7 @@ function createClient(
 	apiKey?: string,
 	extraHeaders?: Record<string, string>,
 	initiatorOverride?: MessageAttribution,
+	fetch?: StreamOptions["fetch"],
 ): {
 	client: OpenAI;
 	copilotPremiumRequests: number | undefined;
@@ -296,7 +358,10 @@ function createClient(
 	}
 	const rawApiKey = apiKey;
 
-	const headers = { ...(model.headers ?? {}), ...(extraHeaders ?? {}) };
+	const headers = cloudflareGatewayHeaders(model.baseUrl, rawApiKey, {
+		...(model.headers ?? {}),
+		...(extraHeaders ?? {}),
+	});
 	let copilotPremiumRequests: number | undefined;
 
 	let baseUrl = model.baseUrl;
@@ -318,6 +383,15 @@ function createClient(
 		client: new OpenAI({
 			apiKey,
 			baseURL: baseUrl,
+			fetch:
+				new URL(baseUrl).hostname === "gateway.ai.cloudflare.com"
+					? ((async (input, init) => {
+							const headers = new Headers(init?.headers);
+							headers.delete("authorization");
+							headers.delete("x-api-key");
+							return (fetch ?? globalThis.fetch)(input, { ...init, headers });
+						}) as typeof globalThis.fetch)
+					: (fetch as typeof globalThis.fetch | undefined),
 			dangerouslyAllowBrowser: true,
 			maxRetries: 5,
 			defaultHeaders: headers,
@@ -327,7 +401,7 @@ function createClient(
 	};
 }
 
-function buildParams(
+export function buildParams(
 	model: Model<"openai-responses">,
 	context: Context,
 	options: OpenAIResponsesOptions | undefined,
@@ -361,7 +435,18 @@ function buildParams(
 		input: messages,
 		stream: true,
 		prompt_cache_key: promptCacheKey,
-		prompt_cache_retention: promptCacheKey ? getPromptCacheRetention(model.baseUrl, cacheRetention) : undefined,
+		...(model.compat?.supportsExplicitPromptCacheMode
+			? {
+					prompt_cache_options: options?.promptCache ?? {
+						mode: cacheRetention === "none" ? "explicit" : "implicit",
+						ttl: "30m",
+					},
+				}
+			: {
+					prompt_cache_retention: promptCacheKey
+						? getPromptCacheRetention(model.baseUrl, cacheRetention)
+						: undefined,
+				}),
 		store: false,
 	};
 
@@ -408,8 +493,30 @@ function buildParams(
 		params.service_tier = requestedServiceTier;
 	}
 
-	if (context.tools) {
-		params.tools = convertTools(context.tools, supportsStrictMode(model));
+	const anchored = supportsToolAnchors(model, context);
+	const tools = new Map((context.tools ?? []).map(tool => [tool.name, tool]));
+	if (!anchored)
+		for (const message of context.messages) {
+			if (message.role !== "developer") continue;
+			for (const tool of message.toolsAdded ?? []) tools.set(tool.name, tool);
+			for (const tool of message.toolsRemoved ?? []) tools.delete(tool.name);
+		}
+	if (tools.size > 0 || context.tools) {
+		params.tools = convertTools(
+			[...tools.values()],
+			model.compat?.supportsStrictMode ?? supportsStrictMode(model),
+			model.compat?.supportsOpenAIGrammarTools,
+		);
+		const search = tools.get("search_tool_bm25");
+		if (search && model.compat?.supportsToolSearch) {
+			params.tools = params.tools.filter(tool => !(tool.type === "function" && tool.name === search.name));
+			params.tools.push({
+				type: "tool_search",
+				execution: "client",
+				description: search.description,
+				parameters: search.parameters,
+			} as OpenAITool);
+		}
 		if (!hasCodexInteractionDefaults && options?.toolChoice) {
 			params.tool_choice = mapToOpenAIResponsesToolChoice(options.toolChoice);
 		}
@@ -461,6 +568,23 @@ function buildParams(
 		params.client_metadata = normalizeClientMetadata(options?.metadata);
 	}
 
+	if (model.compat?.supportsCachedReasoningUpdates && providerSessionState && params.reasoning?.effort) {
+		const prefix = providerSessionState.reasoningPrefix;
+		const samePrefix = !prefix || prefix.every((item, index) => JSON.stringify(messages[index]) === item);
+		const original = samePrefix ? providerSessionState.originalReasoning : undefined;
+		if (original) {
+			const requested = params.reasoning.effort;
+			const anchors = [...(providerSessionState.reasoningAnchors ?? [])];
+			if (requested !== (providerSessionState.activeReasoning ?? original))
+				anchors.push({ position: messages.length, effort: requested });
+			for (const [offset, anchor] of anchors.entries())
+				messages.splice(anchor.position + offset, 0, {
+					type: "configuration_update",
+					reasoning: { effort: anchor.effort },
+				} as unknown as ResponseInput[number]);
+			params.reasoning.effort = original as Exclude<ReasoningEffort, "ultra">;
+		}
+	}
 	return { conversationMessages, params };
 }
 
@@ -469,6 +593,7 @@ function isAzureOpenAIBaseUrl(baseUrl: string): boolean {
 }
 
 function supportsStrictMode(model: Model<"openai-responses">): boolean {
+	if (model.compat?.supportsStrictMode !== undefined) return model.compat.supportsStrictMode;
 	if (model.provider === "openai" || model.provider === "azure" || model.provider === "github-copilot") return true;
 
 	const baseUrl = model.baseUrl.toLowerCase();
@@ -492,7 +617,7 @@ export function supportsDeveloperRole(modelOrBaseUrl: Pick<Model, "provider" | "
 	);
 }
 
-function convertConversationMessages(
+export function convertConversationMessages(
 	model: Model<"openai-responses">,
 	context: Context,
 	strictResponsesPairing: boolean,
@@ -524,7 +649,38 @@ function convertConversationMessages(
 			}
 			const content = convertResponsesInputContent(msg.content, model.input.includes("image"));
 			if (!content) continue;
-			messages.push({ role: "user", content });
+			messages.push({ role: msg.role, content });
+			if (msg.role === "developer" && msg.toolsAdded?.length && supportsToolAnchors(model, context)) {
+				const compat = model.compat;
+				const tools = convertTools(
+					msg.toolsAdded,
+					supportsStrictMode(model),
+					model.compat?.supportsOpenAIGrammarTools,
+				);
+				if (compat?.supportsAdditionalTools)
+					messages.push({
+						type: "additional_tools",
+						role: "developer",
+						tools,
+					} as unknown as ResponseInput[number]);
+				else if (compat?.supportsToolSearch) {
+					const callId = `xcsh_tool_load_${Bun.hash(JSON.stringify([msg.timestamp, tools])).toString(36)}`;
+					messages.push({
+						type: "tool_search_call",
+						call_id: callId,
+						execution: "client",
+						status: "completed",
+						arguments: { query: msg.toolsAdded.map(tool => tool.name).join(" "), limit: tools.length },
+					} as unknown as ResponseInput[number]);
+					messages.push({
+						type: "tool_search_output",
+						call_id: callId,
+						execution: "client",
+						status: "completed",
+						tools,
+					} as unknown as ResponseInput[number]);
+				}
+			}
 		} else if (msg.role === "assistant") {
 			const assistantMsg = msg as AssistantMessage;
 			const providerPayload = shouldReplayNativeHistory
@@ -553,7 +709,19 @@ function convertConversationMessages(
 			if (outputItems.length === 0) continue;
 			messages.push(...outputItems);
 		} else if (msg.role === "toolResult") {
-			appendResponsesToolResultMessages(messages, msg, model, strictResponsesPairing, knownCallIds);
+			if (msg.toolSearch && model.compat?.supportsToolSearch) {
+				messages.push({
+					type: "tool_search_output",
+					call_id: msg.toolCallId.split("|")[0],
+					execution: "client",
+					status: "completed",
+					tools: convertTools(
+						msg.tools ?? [],
+						supportsStrictMode(model),
+						model.compat?.supportsOpenAIGrammarTools,
+					).map(tool => ({ ...tool, defer_loading: true })),
+				} as unknown as ResponseInput[number]);
+			} else appendResponsesToolResultMessages(messages, msg, model, strictResponsesPairing, knownCallIds);
 		}
 		msgIndex++;
 	}
@@ -561,9 +729,42 @@ function convertConversationMessages(
 	return messages;
 }
 
-function convertTools(tools: Tool[], strictMode: boolean): OpenAITool[] {
+export function convertTools(tools: Tool[], strictMode: boolean, grammar = false): OpenAITool[] {
 	return tools.map(tool => {
-		const strict = !NO_STRICT && strictMode && tool.strict !== false;
+		if (grammar && tool.constrainedSampling && tool.constrainedSampling.type === "grammar") {
+			const variants = tool.constrainedSampling.variants;
+			const format = variants.openai_lark ? "lark" : "regex";
+			const definition = variants.openai_lark ?? variants.openai_regex;
+			const schema = tool.parameters as unknown as {
+				required?: string[];
+				properties?: Record<string, { type?: string }>;
+			};
+			const property = schema.required?.[0];
+			if (
+				!definition ||
+				schema.required?.length !== 1 ||
+				!property ||
+				schema.properties?.[property]?.type !== "string"
+			)
+				throw new Error(`Invalid grammar tool ${tool.name}`);
+			return {
+				type: "custom",
+				name: tool.name,
+				description: tool.description,
+				format: { type: "grammar", syntax: format, definition },
+			} as OpenAITool;
+		}
+		if (
+			tool.constrainedSampling &&
+			tool.constrainedSampling.type === "json_schema" &&
+			tool.constrainedSampling.strict === "require" &&
+			!strictMode
+		)
+			throw new Error(`Strict tools unsupported for ${tool.name}`);
+		const strict =
+			!NO_STRICT &&
+			strictMode &&
+			(tool.constrainedSampling && tool.constrainedSampling.type === "json_schema" ? true : tool.strict !== false);
 		const baseParameters = tool.parameters as unknown as Record<string, unknown>;
 		const { schema: parameters, strict: effectiveStrict } = adaptSchemaForStrict(baseParameters, strict);
 		return {
@@ -574,4 +775,25 @@ function convertTools(tools: Tool[], strictMode: boolean): OpenAITool[] {
 			...(effectiveStrict ? { strict: true } : tool.strict === false ? { strict: false } : {}),
 		} as OpenAITool;
 	});
+}
+
+function toolsForContext(context: Context): Tool[] {
+	return [
+		...(context.tools ?? []),
+		...context.messages.flatMap(message => (message.role === "developer" ? (message.toolsAdded ?? []) : [])),
+	];
+}
+
+function supportsToolAnchors(model: Model<"openai-responses">, context: Context): boolean {
+	if (!model.compat?.supportsAdditionalTools && !model.compat?.supportsToolSearch) return false;
+	const declared = new Set((context.tools ?? []).map(tool => tool.name));
+	for (const message of context.messages) {
+		if (message.role !== "developer") continue;
+		if (message.toolsRemoved?.length) return false;
+		for (const tool of message.toolsAdded ?? []) {
+			if (declared.has(tool.name)) return false;
+			declared.add(tool.name);
+		}
+	}
+	return true;
 }

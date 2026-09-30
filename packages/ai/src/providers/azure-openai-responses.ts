@@ -1,22 +1,15 @@
 import { $env } from "@f5-sales-demo/pi-utils";
 import { AzureOpenAI } from "openai";
-import type {
-	Tool as OpenAITool,
-	ResponseCreateParamsStreaming,
-	ResponseInput,
-} from "openai/resources/responses/responses";
 import { getEnvApiKey } from "../stream";
-import {
-	type Api,
-	type AssistantMessage,
-	type Context,
-	isSpecialServiceTier,
-	type Model,
-	type ServiceTier,
-	type StreamFunction,
-	type StreamOptions,
-	type Tool,
-	type ToolChoice,
+import type {
+	Api,
+	AssistantMessage,
+	Context,
+	Model,
+	ServiceTier,
+	StreamFunction,
+	StreamOptions,
+	ToolChoice,
 } from "../types";
 import { createAbortSourceTracker } from "../utils/abort";
 import { AssistantMessageEventStream } from "../utils/event-stream";
@@ -28,16 +21,10 @@ import {
 	iterateWithIdleTimeout,
 	markFirstStreamEvent,
 } from "../utils/idle-iterator";
-import { mapToOpenAIResponsesToolChoice } from "../utils/tool-choice";
-import { supportsDeveloperRole } from "./openai-responses";
-import {
-	appendResponsesToolResultMessages,
-	convertResponsesAssistantMessage,
-	convertResponsesInputContent,
-	normalizeResponsesToolCallIdForTransform,
-	processResponsesStream,
-} from "./openai-responses-shared";
-import { transformMessages } from "./transform-messages";
+import { retryProviderRequest } from "../utils/provider-retry";
+import { buildParams as buildSharedParams } from "./openai-responses";
+import { processResponsesStream } from "./openai-responses-shared";
+import { validateFinalResponsesRequest } from "./sol-request-boundary";
 
 const DEFAULT_AZURE_API_VERSION = "v1";
 const AZURE_OPENAI_RESPONSES_FIRST_EVENT_TIMEOUT_MESSAGE =
@@ -66,8 +53,8 @@ function resolveDeploymentName(model: Model<"azure-openai-responses">, options?:
 
 // Azure OpenAI Responses-specific options
 export interface AzureOpenAIResponsesOptions extends StreamOptions {
-	reasoning?: "minimal" | "low" | "medium" | "high" | "xhigh";
-	reasoningSummary?: "auto" | "detailed" | "concise" | null;
+	reasoning?: import("../model-thinking").ReasoningEffort;
+	reasoningSummary?: "none" | "auto" | "detailed" | "concise" | null;
 	azureApiVersion?: string;
 	azureResourceName?: string;
 	azureBaseUrl?: string;
@@ -75,14 +62,6 @@ export interface AzureOpenAIResponsesOptions extends StreamOptions {
 	toolChoice?: ToolChoice;
 	serviceTier?: ServiceTier;
 }
-
-type AzureOpenAIResponsesSamplingParams = ResponseCreateParamsStreaming & {
-	top_p?: number;
-	top_k?: number;
-	min_p?: number;
-	presence_penalty?: number;
-	repetition_penalty?: number;
-};
 
 /**
  * Generate function for Azure OpenAI Responses API
@@ -127,9 +106,11 @@ export const streamAzureOpenAIResponses: StreamFunction<"azure-openai-responses"
 			const apiKey = options?.apiKey || getEnvApiKey(model.provider) || "";
 			const client = createClient(model, apiKey, options);
 			const { baseUrl } = resolveAzureConfig(model, options);
-			const params = buildParams(model, context, options, deploymentName, baseUrl);
+			let params = buildParams(model, context, options, deploymentName, baseUrl);
 			const idleTimeoutMs = getOpenAIStreamIdleTimeoutMs();
-			options?.onPayload?.(params);
+			const replacement = await options?.onPayload?.(params, model);
+			if (replacement !== undefined) params = replacement as typeof params;
+			validateFinalResponsesRequest(model, params as unknown as Record<string, unknown>);
 			rawRequestDump = {
 				provider: model.provider,
 				api: output.api,
@@ -138,7 +119,22 @@ export const streamAzureOpenAIResponses: StreamFunction<"azure-openai-responses"
 				url: `${baseUrl}/responses`,
 				body: params,
 			};
-			const openaiStream = await client.responses.create(params, { signal: requestSignal });
+			const response = await retryProviderRequest(
+				() =>
+					client.responses
+						.create(params, {
+							signal: requestSignal,
+							maxRetries: 0,
+							...(options?.timeoutMs !== undefined ? { timeout: options.timeoutMs } : {}),
+						})
+						.withResponse(),
+				{ maxRetries: options?.maxRetries ?? 5, maxRetryDelayMs: options?.maxRetryDelayMs, signal: requestSignal },
+			);
+			await options?.onResponse?.(
+				{ status: response.response.status, headers: Object.fromEntries(response.response.headers.entries()) },
+				model,
+			);
+			const openaiStream = response.data;
 			const firstEventWatchdog = createFirstEventWatchdog(
 				options?.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs(idleTimeoutMs),
 				() => abortTracker.abortLocally(firstEventTimeoutAbortError),
@@ -155,6 +151,13 @@ export const streamAzureOpenAIResponses: StreamFunction<"azure-openai-responses"
 				stream,
 				model,
 				{
+					signal: requestSignal,
+					onProviderStreamEvent: options?.onProviderStreamEvent,
+					grammarToolInputProperties: new Map(
+						(context.tools ?? [])
+							.filter(tool => tool.constrainedSampling && tool.constrainedSampling.type === "grammar")
+							.map(tool => [tool.name, (tool.parameters as { required?: string[] }).required?.[0] ?? "input"]),
+					),
 					onFirstToken: () => {
 						if (!firstTokenTime) firstTokenTime = Date.now();
 					},
@@ -257,6 +260,7 @@ function createClient(model: Model<"azure-openai-responses">, apiKey: string, op
 		maxRetries: 5,
 		defaultHeaders: headers,
 		baseURL: baseUrl,
+		fetch: options?.fetch as typeof globalThis.fetch | undefined,
 	});
 }
 
@@ -267,125 +271,17 @@ function buildParams(
 	deploymentName: string,
 	resolvedBaseUrl?: string,
 ) {
-	const messages = convertMessages(model, context, true, resolvedBaseUrl);
-
-	const params: AzureOpenAIResponsesSamplingParams = {
-		model: deploymentName,
-		input: messages,
-		stream: true,
-		prompt_cache_key: options?.sessionId,
-	};
-
-	if (options?.maxTokens) {
-		params.max_output_tokens = options?.maxTokens;
-	}
-
-	if (options?.temperature !== undefined) {
-		params.temperature = options?.temperature;
-	}
-	if (options?.topP !== undefined) {
-		params.top_p = options.topP;
-	}
-	if (options?.topK !== undefined) {
-		params.top_k = options.topK;
-	}
-	if (options?.minP !== undefined) {
-		params.min_p = options.minP;
-	}
-	if (options?.presencePenalty !== undefined) {
-		params.presence_penalty = options.presencePenalty;
-	}
-	if (options?.repetitionPenalty !== undefined) {
-		params.repetition_penalty = options.repetitionPenalty;
-	}
-	if (isSpecialServiceTier(options?.serviceTier)) {
-		params.service_tier = options.serviceTier;
-	}
-
-	if (context.tools) {
-		params.tools = convertTools(context.tools);
-		if (options?.toolChoice) {
-			params.tool_choice = mapToOpenAIResponsesToolChoice(options.toolChoice);
-		}
-	}
-
-	if (model.reasoning) {
-		// Always request encrypted reasoning content so reasoning items can be
-		// replayed in multi-turn conversations when store is false (items aren't
-		// persisted server-side, so we must include the full content).
-		// See: https://github.com/f5-sales-demo/xcsh/issues/41
-		params.include = ["reasoning.encrypted_content"];
-
-		if (options?.reasoning || options?.reasoningSummary) {
-			params.reasoning = {
-				effort: options?.reasoning || "medium",
-				summary: options?.reasoningSummary || "auto",
-			};
-		} else {
-			if (model.name.toLowerCase().startsWith("gpt-5")) {
-				// Jesus Christ, see https://community.openai.com/t/need-reasoning-false-option-for-gpt-5/1351588/7
-				messages.push({
-					role: "developer",
-					content: [
-						{
-							type: "input_text",
-							text: "# Juice: 0 !important",
-						},
-					],
-				});
-			}
-		}
-	}
-
+	const { params } = buildSharedParams(
+		model as unknown as Model<"openai-responses">,
+		context,
+		{
+			...options,
+			strictResponsesPairing: true,
+			reasoningSummary: options?.reasoningSummary ?? undefined,
+		} as import("./openai-responses").OpenAIResponsesOptions,
+		undefined,
+		resolvedBaseUrl,
+	);
+	params.model = deploymentName;
 	return params;
-}
-
-function convertMessages(
-	model: Model<"azure-openai-responses">,
-	context: Context,
-	strictResponsesPairing: boolean,
-	resolvedBaseUrl?: string,
-): ResponseInput {
-	const messages: ResponseInput = [];
-	const transformedMessages = transformMessages(context.messages, model, normalizeResponsesToolCallIdForTransform);
-	const knownCallIds = new Set<string>();
-
-	if (context.systemPrompt) {
-		const role = model.reasoning && supportsDeveloperRole(resolvedBaseUrl ?? model) ? "developer" : "system";
-		messages.push({
-			role,
-			content: context.systemPrompt.toWellFormed(),
-		});
-	}
-
-	let msgIndex = 0;
-	for (const msg of transformedMessages) {
-		if (msg.role === "user" || msg.role === "developer") {
-			const content = convertResponsesInputContent(msg.content, model.input.includes("image"));
-			if (!content) continue;
-			messages.push({
-				role: "user",
-				content: msg.role === "developer" && typeof msg.content === "string" ? msg.content.toWellFormed() : content,
-			});
-		} else if (msg.role === "assistant") {
-			const outputItems = convertResponsesAssistantMessage(msg as AssistantMessage, model, msgIndex, knownCallIds);
-			if (outputItems.length === 0) continue;
-			messages.push(...outputItems);
-		} else if (msg.role === "toolResult") {
-			appendResponsesToolResultMessages(messages, msg, model, strictResponsesPairing, knownCallIds);
-		}
-		msgIndex++;
-	}
-
-	return messages;
-}
-
-function convertTools(tools: Tool[]): OpenAITool[] {
-	return tools.map(tool => ({
-		type: "function",
-		name: tool.name,
-		description: tool.description || "",
-		parameters: tool.parameters as Record<string, unknown>,
-		strict: false,
-	}));
 }

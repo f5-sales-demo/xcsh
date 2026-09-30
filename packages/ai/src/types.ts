@@ -33,6 +33,8 @@ export type { AssistantMessageEventStream } from "./utils/event-stream";
 export const NO_AUTH_API_KEY = "N/A";
 
 export type KnownApi =
+	| "pi-messages"
+	| "mistral-conversations"
 	| "openai-completions"
 	| "openai-responses"
 	| "openai-codex-responses"
@@ -45,6 +47,8 @@ export type KnownApi =
 	| "cursor-agent";
 export type Api = KnownApi | (string & {});
 export interface ApiOptionsMap {
+	"pi-messages": import("./providers/pi-messages").PiMessagesOptions;
+	"mistral-conversations": import("./providers/mistral-conversations").MistralOptions;
 	"anthropic-messages": AnthropicOptions;
 	"bedrock-converse-stream": BedrockOptions;
 	"openai-completions": OpenAICompletionsOptions;
@@ -92,6 +96,23 @@ export interface ThinkingConfig {
 }
 
 export type KnownProvider =
+	| "typesafe"
+	| "cloudflare-workers-ai"
+	| "radius"
+	| "ant-ling"
+	| "baseten"
+	| "deepseek"
+	| "fireworks"
+	| "meta"
+	| "minimax-cn"
+	| "moonshotai-cn"
+	| "zai-coding-cn"
+	| "qwen-token-plan"
+	| "qwen-token-plan-cn"
+	| "qwen-token-plan-individual"
+	| "xiaomi-token-plan-ams"
+	| "xiaomi-token-plan-cn"
+	| "xiaomi-token-plan-sgp"
 	| "alibaba-coding-plan"
 	| "amazon-bedrock"
 	| "anthropic"
@@ -162,11 +183,43 @@ export function isSpecialServiceTier(serviceTier?: ServiceTier | null): serviceT
 	return serviceTier === "flex" || serviceTier === "scale" || serviceTier === "priority";
 }
 
+export interface LiveSteering {
+	wait(signal: AbortSignal): Promise<void>;
+	claim(signal: AbortSignal): Promise<LiveSteerClaim | undefined>;
+}
+export interface LiveSteerClaim {
+	readonly messages: readonly UserMessage[];
+	accept(): void;
+	reject(): void;
+}
+
 export interface ProviderSessionState {
 	close(): void;
 }
 
+export interface DeferredHandle {
+	/** Conversion metadata needed when polling on a fresh process. */
+	data?: JsonValue;
+	provider: string;
+	modelId: string;
+	api: string;
+	baseUrl: string;
+	id: string;
+	expiresAt?: number;
+	pollAfterMs?: number;
+}
+
 export interface StreamOptions {
+	/** Cloudflare account used to resolve endpoint placeholders before dispatch. */
+	accountId?: string;
+	gatewayId?: string;
+	onProviderStreamEvent?: (event: unknown, model: Model) => void | Promise<void>;
+	timeoutMs?: number;
+	onResponse?: (response: { status: number; headers: Record<string, string> }, model: Model) => void | Promise<void>;
+	liveSteering?: LiveSteering;
+	fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+	maxRetries?: number;
+	promptCache?: { mode: "implicit" | "explicit"; ttl?: "30m" };
 	temperature?: number;
 	topP?: number;
 	topK?: number;
@@ -227,6 +280,7 @@ export interface StreamOptions {
 
 // Unified options with reasoning passed to streamSimple() and completeSimple()
 export interface SimpleStreamOptions extends StreamOptions {
+	reasoningSummary?: "none" | "auto" | "concise" | "detailed";
 	/** Confirmed Google Cloud project for the Corporate Vertex transport. */
 	project?: string;
 	/** Google Cloud location for the Corporate Vertex transport. */
@@ -288,6 +342,7 @@ export interface WebCitation {
 
 export interface TextContent {
 	type: "text";
+	promptCacheBreakpoint?: { mode: "explicit" };
 	text: string;
 	/** Semantic role supplied by Responses. Absence has final-answer semantics. */
 	phase?: AssistantMessagePhase;
@@ -309,11 +364,16 @@ export interface RedactedThinkingContent {
 
 export interface ImageContent {
 	type: "image";
+	promptCacheBreakpoint?: { mode: "explicit" };
 	data: string; // base64 encoded image data
 	mimeType: string; // e.g., "image/jpeg", "image/png"
 }
 
 export interface ToolCall {
+	/** Client-executed Responses tool discovery, dispatched through the registered search tool. */
+	toolSearch?: boolean;
+	namespace?: string;
+	customInputProperty?: string;
 	type: "toolCall";
 	id: string;
 	name: string;
@@ -323,6 +383,14 @@ export interface ToolCall {
 }
 
 export interface Usage {
+	/** Distinguishes token reporting from API dollar estimates. */
+	billing?: "api" | "subscription" | "internal";
+	/** False when the catalog rate is dynamic or unavailable. */
+	costKnown?: boolean;
+	/** Provider-reported subset of output tokens; never added to output a second time. */
+	reasoningTokens?: number;
+	/** Provider-reported cache writes before normalization. */
+	cacheWriteTokens?: number;
 	input: number;
 	output: number;
 	cacheRead: number;
@@ -362,6 +430,8 @@ export interface UserMessage {
 }
 
 export interface DeveloperMessage {
+	toolsAdded?: Tool[];
+	toolsRemoved?: { name: string }[];
 	role: "developer";
 	content: string | (TextContent | ImageContent)[];
 	/** Who initiated this message for billing/attribution semantics. */
@@ -372,6 +442,17 @@ export interface DeveloperMessage {
 }
 
 export interface AssistantMessage {
+	/** A queued background request; poll using the same provider route. */
+	deferred?: DeferredHandle;
+	providerRewrite?: {
+		policyId: string;
+		policyVersion: number;
+		changed: boolean;
+		tokenCountChange: number;
+		messageCountChange: number;
+		systemPromptChanged: boolean;
+	};
+	providerThinkingLevel?: string;
 	role: "assistant";
 	content: (TextContent | ThinkingContent | RedactedThinkingContent | ToolCall)[];
 	api: Api;
@@ -404,6 +485,10 @@ export interface AssistantMessage {
 }
 
 export interface ToolResultMessage<TDetails = any> {
+	customTool?: boolean;
+	toolSearch?: boolean;
+	/** Trusted definitions activated by client tool discovery. */
+	tools?: Tool[];
 	role: "toolResult";
 	toolCallId: string;
 	toolName: string;
@@ -459,6 +544,11 @@ export interface CursorExecHandlers {
 }
 
 export interface Tool<TParameters extends TSchema = TSchema> {
+	constrainedSampling?:
+		| false
+		| { type: "json_schema"; strict: "prefer" | "require" }
+		| { type: "grammar"; variants: Partial<Record<"openai_lark" | "openai_regex", string>> };
+
 	name: string;
 	description: string;
 	parameters: TParameters;
@@ -533,6 +623,9 @@ export type AssistantMessageEvent =
  * Use this to override URL-based auto-detection for custom providers.
  */
 export interface OpenAICompat {
+	/** Anthropic native transcript controls. Opt in only for a qualified route. */
+	supportsMidConvoSystemMessages?: boolean;
+	supportsMidConvoToolChanges?: boolean;
 	/** Whether the provider supports the `store` field. Default: auto-detected from URL. */
 	supportsStore?: boolean;
 	/** Whether the model accepts an explicit `temperature` parameter. Default: true. */
@@ -545,6 +638,8 @@ export interface OpenAICompat {
 	reasoningEffortMap?: Partial<Record<Effort, string>>;
 	/** Whether the provider supports `stream_options: { include_usage: true }` for token usage in streaming responses. Default: true. */
 	supportsUsageInStreaming?: boolean;
+	/** Routes without finish_reason infer toolUse from completed calls at stream end. */
+	supportsFinishReason?: boolean;
 	/** Which field to use for max tokens. Default: auto-detected from URL. */
 	maxTokensField?: "max_completion_tokens" | "max_tokens";
 	/** Whether tool results require the `name` field. Default: auto-detected from URL. */
@@ -556,7 +651,28 @@ export interface OpenAICompat {
 	/** Whether tool call IDs must be normalized to Mistral format (exactly 9 alphanumeric chars). Default: auto-detected from URL. */
 	requiresMistralToolIds?: boolean;
 	/** Format for reasoning/thinking parameter. "openai" uses reasoning_effort, "openrouter" uses reasoning: { effort }, "zai" uses thinking: { type: "enabled" }, "qwen" uses top-level enable_thinking, and "qwen-chat-template" uses chat_template_kwargs.enable_thinking. Default: "openai". */
-	thinkingFormat?: "openai" | "openrouter" | "zai" | "qwen" | "qwen-chat-template";
+	thinkingFormat?:
+		| "openai"
+		| "openrouter"
+		| "zai"
+		| "qwen"
+		| "qwen-chat-template"
+		| "ant-ling"
+		| "baseten"
+		| "deepseek"
+		| "together"
+		| "chat-template"
+		| "string-thinking";
+	chatTemplateKwargs?: Record<string, ChatTemplateValue>;
+	chatTemplateArgs?: Record<string, ChatTemplateValue>;
+	thinkingTokenBudgetField?: "thinking_token_budget" | "thinking_budget" | "thinking_budget_tokens";
+	supportsThinkingTokenBudget?: boolean;
+	sendSessionAffinityHeaders?: boolean;
+	/** Anthropic-compatible gateway controls. */
+	allowEmptySignature?: boolean;
+	supportsCacheControlOnTools?: boolean;
+	forceAdaptiveThinking?: boolean;
+	supportsOpenAIGrammarTools?: boolean;
 	/** Which reasoning content field to emit on assistant messages. Default: auto-detected. */
 	reasoningContentField?: "reasoning_content" | "reasoning" | "reasoning_text";
 	/** Whether assistant tool-call messages must include reasoning content. Default: false. */
@@ -589,6 +705,17 @@ export interface OpenRouterRouting {
 	order?: string[];
 }
 
+/** Scalar values or substitutions resolved from the request's reasoning controls. */
+export type ChatTemplateValue =
+	| string
+	| number
+	| boolean
+	| null
+	| {
+			$var: "thinking.enabled" | "thinking.effort" | "thinking.budget";
+			omitWhenOff?: boolean;
+	  };
+
 /**
  * Vercel AI Gateway routing preferences.
  * Controls which upstream providers the gateway routes requests to.
@@ -603,6 +730,7 @@ export interface VercelGatewayRouting {
 
 // Model interface for the unified model system
 export interface Model<TApi extends Api = any> {
+	type?: "chat";
 	id: string;
 	name: string;
 	api: TApi;
@@ -610,15 +738,12 @@ export interface Model<TApi extends Api = any> {
 	baseUrl: string;
 	reasoning: boolean;
 	input: ("text" | "image")[];
-	cost: {
-		input: number; // $/million tokens
-		output: number; // $/million tokens
-		cacheRead: number; // $/million tokens
-		cacheWrite: number; // $/million tokens
-	};
+	cost: ModelCost;
 	/** Premium Copilot requests charged per user-initiated request (defaults to 1). */
 	premiumMultiplier?: number;
 	contextWindow: number;
+	/** Maximum route input independently of the total context and output limit. */
+	maxInputTokens?: number;
 	maxTokens: number;
 	/** Largest context accepted by the Codex interaction contract. */
 	maxContextWindow?: number;
@@ -664,5 +789,182 @@ export interface Model<TApi extends Api = any> {
 	/** Canonical thinking capability metadata for this model. */
 	thinking?: ThinkingConfig;
 	/** Provider-specific request compatibility overrides. */
-	compat?: TApi extends "openai-completions" | "anthropic-messages" ? OpenAICompat : never;
+	compat?: TApi extends "openai-completions" | "anthropic-messages"
+		? OpenAICompat
+		: TApi extends "openai-responses" | "openai-codex-responses" | "azure-openai-responses"
+			? OpenAIResponsesCompat
+			: never;
 }
+
+export interface ModelCostRates {
+	input: number; // $/million tokens
+	output: number; // $/million tokens
+	cacheRead: number; // $/million tokens
+	cacheWrite: number; // $/million tokens
+}
+
+export interface ModelCostTier extends ModelCostRates {
+	/** Use this tier for requests whose total input usage exceeds this token count. */
+	inputTokensAbove: number;
+}
+
+export interface ModelCost extends ModelCostRates {
+	/** False when a routed model advertises dynamic pricing rather than a numeric rate. */
+	pricingKnown?: boolean;
+	/** Request-wide pricing tiers. The highest matching input threshold applies to the full request. */
+	tiers?: ModelCostTier[];
+}
+
+export interface OpenAIResponsesCompat extends OpenAICompat {
+	supportsWebSocketSteering?: boolean;
+	supportsCachedReasoningUpdates?: boolean;
+	/** Whether the provider supports the `developer` role (vs `system`). Default: true. */
+	supportsDeveloperRole?: boolean;
+	/** Whether the exact model accepts developer or system messages after the conversation has started. When false, later system messages are folded into the leading system message. Default: false; the generated model catalog enables it for verified models. */
+	supportsMidConvoSystemMessages?: boolean;
+	/** Session-affinity header format: `openai` sends `session_id` and `x-client-request-id`; `openai-nosession` sends `x-client-request-id`; `openrouter` sends `x-session-id`. Does not affect the `prompt_cache_key` body param, which is governed by cache retention. Default: auto-detected. */
+	sessionAffinityFormat?: "openai" | "openai-nosession" | "openrouter";
+	/** Whether the provider supports long prompt cache retention. This uses `prompt_cache_options.ttl: "30m"` on GPT-5.6+ and `prompt_cache_retention: "24h"` on earlier models. Default: true. */
+	supportsLongCacheRetention?: boolean;
+	/** Whether the provider supports strict JSON-schema function tools. Defaults are API-specific; generated OpenAI models enable it explicitly. */
+	supportsStrictMode?: boolean;
+	/** Whether to emit OpenAI custom tools with Lark/regex grammar formats. When false, grammar-constrained tools fall back to normal function tools. Default: false; the generated model catalog enables it for capable models. */
+	supportsOpenAIGrammarTools?: boolean;
+	/** Whether the model supports message-anchored `additional_tools` input items. Default: false. */
+	supportsAdditionalTools?: boolean;
+	/** Whether the model supports client-executed tool search for transcript-anchored additions. Default: false. */
+	supportsToolSearch?: boolean;
+	/** Whether the model accepts `prompt_cache_options` (OpenAI GPT-5.6+ prompt caching). Older OpenAI models reject the parameter. Default: false. */
+	supportsExplicitPromptCacheMode?: boolean;
+	/** Whether the provider accepts the `max_output_tokens` parameter. Some Codex-protocol gateways reject it. Default: true. */
+	supportsMaxOutputTokens?: boolean;
+}
+
+export type ImagesInputContent = TextContent | ImageContent;
+export type ImagesOutputContent = TextContent | ImageContent;
+
+export interface ImagesContext {
+	input: ImagesInputContent[];
+}
+
+export type ImagesStopReason = "stop" | "error" | "aborted";
+
+export interface AssistantImages {
+	api: ImageApi;
+	provider: Provider;
+	model: string;
+	output: ImagesOutputContent[];
+	responseId?: string;
+	usage?: Usage;
+	stopReason: ImagesStopReason;
+	errorMessage?: string;
+	timestamp: number; // Unix timestamp in milliseconds
+}
+
+export interface ClassifierChoiceQuestion {
+	type: "choice";
+	instructions: string;
+	criteria: Record<string, string>;
+}
+
+export interface ClassifierScoreQuestion {
+	type: "score";
+	instructions: string;
+	criteria: string[];
+}
+
+export interface ClassifierBoolQuestion {
+	type: "bool";
+	instructions: string;
+	criteria: { true: string; false: string };
+}
+
+export type ClassifierQuestion = ClassifierChoiceQuestion | ClassifierScoreQuestion | ClassifierBoolQuestion;
+
+export interface ClassifierContext {
+	state: JsonObject;
+	questions: Record<string, ClassifierQuestion>;
+}
+
+export interface ClassifierChoiceAnswer {
+	type: "choice";
+	choice: string;
+	probabilities: Record<string, number>;
+	confidence: number;
+}
+
+export interface ClassifierScoreAnswer {
+	type: "score";
+	score: number;
+	confidence: number;
+}
+
+export interface ClassifierBoolAnswer {
+	type: "bool";
+	probability: number;
+}
+
+export type ClassifierAnswer = ClassifierChoiceAnswer | ClassifierScoreAnswer | ClassifierBoolAnswer;
+export type ClassifierStopReason = "stop" | "error" | "aborted";
+
+export interface ClassifierResult {
+	api: ClassifierApi;
+	provider: Provider;
+	model: string;
+	answers: Record<string, ClassifierAnswer>;
+	/** Token usage and its cost at the model's catalog price, when the service reports token counts. */
+	usage?: Usage;
+	stopReason: ClassifierStopReason;
+	errorMessage?: string;
+	timestamp: number; // Unix timestamp in milliseconds
+}
+
+export type ImageApi = "openrouter-images" | (string & {});
+export type ClassifierApi =
+	| "typesafe-system-one"
+	| "cloudflare-workers-ai-system-one"
+	| "llama-cpp-classify"
+	| (string & {});
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+type JsonObject = { [key: string]: JsonValue };
+export type ProviderHeaders = Record<string, string | null>;
+export interface OperationOptions {
+	accountId?: string;
+	apiKey?: string;
+	signal?: AbortSignal;
+	headers?: ProviderHeaders;
+	fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+	timeoutMs?: number;
+	maxRetries?: number;
+	maxRetryDelayMs?: number;
+	onPayload?: (payload: unknown, model: AnyModel) => unknown | undefined | Promise<unknown | undefined>;
+	onResponse?: (
+		response: { status: number; headers: Record<string, string> },
+		model: AnyModel,
+	) => void | Promise<void>;
+}
+export interface ImagesOptions extends OperationOptions {
+	metadata?: Record<string, unknown>;
+}
+export interface ClassifierOptions extends OperationOptions {
+	temperature?: number;
+}
+export type ImageModel<TApi extends ImageApi = ImageApi> = Pick<
+	Model,
+	"id" | "name" | "provider" | "baseUrl" | "input" | "cost" | "headers"
+> & { type: "image"; api: TApi; output: ("text" | "image")[] };
+export type ClassifierModel<TApi extends ClassifierApi = ClassifierApi> = Pick<
+	Model,
+	"id" | "name" | "provider" | "baseUrl" | "input" | "cost" | "headers" | "contextWindow"
+> & { type: "classifier"; api: TApi };
+export type AnyModel = Model | ImageModel | ClassifierModel;
+export type ImagesFunction<TOptions extends ImagesOptions = ImagesOptions> = (
+	model: ImageModel,
+	context: ImagesContext,
+	options?: TOptions,
+) => Promise<AssistantImages>;
+export type ClassifierFunction<TOptions extends ClassifierOptions = ClassifierOptions> = (
+	model: ClassifierModel,
+	context: ClassifierContext,
+	options?: TOptions,
+) => Promise<ClassifierResult>;

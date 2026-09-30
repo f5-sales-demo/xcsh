@@ -56,6 +56,15 @@ function createSession(
 }
 
 describe("generic progressive tool discovery", () => {
+	it("returns trusted activated schemas for client-executed tool search", async () => {
+		const session = createSession();
+		session.getToolDefinition = name =>
+			({ name, description: "Synthetic trusted tool", parameters: { type: "object", properties: {} } }) as any;
+		const result = await new SearchToolBm25Tool(session).execute("search", { query: "github issue", limit: 1 });
+		expect(result.tools).toMatchObject([
+			{ name: "github_create_issue", parameters: { type: "object", properties: {} } },
+		]);
+	});
 	it("builds deterministic BM25 metadata without source-specific fields", () => {
 		const index = buildDiscoverableToolSearchIndex(discoverableTools);
 		expect(searchDiscoverableTools(index, "github issue", 2).map(result => result.tool.name)).toEqual([

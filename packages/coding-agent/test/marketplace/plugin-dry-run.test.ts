@@ -25,19 +25,23 @@ function digest(root: string): string {
 }
 
 describe("plugin dry-run", () => {
-	it("includes the dependency plan in a successful JSON install result", () => {
+	it("includes the dependency plan in a successful JSON install result", async () => {
 		const root = mkdtempSync(join(tmpdir(), "xcsh-plugin-result-plan-"));
 		roots.push(root);
 		const repository = resolve(import.meta.dir, "../../../..");
 		const cli = join(repository, "packages/coding-agent/src/cli.ts");
 		const fixture = join(repository, "packages/coding-agent/test/marketplace/fixtures/valid-marketplace");
 		const environment = { ...process.env, HOME: root };
+		const isolatedProject = join(root, "project");
+		await Bun.write(join(isolatedProject, "placeholder"), "synthetic");
 		expect(
-			Bun.spawnSync(["bun", cli, "plugin", "marketplace", "add", fixture], { cwd: repository, env: environment })
-				.exitCode,
+			Bun.spawnSync(["bun", cli, "plugin", "marketplace", "add", fixture], {
+				cwd: isolatedProject,
+				env: environment,
+			}).exitCode,
 		).toBe(0);
 		const installed = Bun.spawnSync(["bun", cli, "plugin", "install", "hello-plugin@test-marketplace", "--json"], {
-			cwd: repository,
+			cwd: isolatedProject,
 			env: environment,
 			stdout: "pipe",
 			stderr: "pipe",

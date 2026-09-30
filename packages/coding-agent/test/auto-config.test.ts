@@ -1029,13 +1029,13 @@ describe("config schema versioning", () => {
 	);
 
 	test.skipIf(process.platform === "win32")(
-		"startupHealthCheck upgrades generated v10 config to v11 without losing its route or credential",
+		"startupHealthCheck upgrades generated v11 config to v12 without losing its route or credential",
 		() => {
 			clearEnv();
 			const v8 = generateModelsYml("https://proxy.example.com", {
 				apiBasePath: "/api/v1",
 				apiKeyLiteral: "literal-test-key",
-			}).replace("configVersion: 11", "configVersion: 10");
+			}).replace("configVersion: 12", "configVersion: 11");
 			fs.writeFileSync(modelsPath, v8, { mode: 0o644 });
 
 			const repaired = startupHealthCheck("ok", modelsPath, {
@@ -1044,7 +1044,7 @@ describe("config schema versioning", () => {
 
 			expect(repaired).toBe(true);
 			const content = fs.readFileSync(modelsPath, "utf-8");
-			expect(content).toContain("configVersion: 11");
+			expect(content).toContain("configVersion: 12");
 			expect(content).toContain('baseUrl: "https://proxy.example.com/api/v1"');
 			expect(content).toContain('baseUrl: "https://proxy.example.com/openai/v1"');
 			expect(content).toContain('apiKey: "literal-test-key"');

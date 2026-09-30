@@ -3,6 +3,26 @@ import { calculateCost, getBundledModel } from "../src/models";
 import type { Usage } from "../src/types";
 
 describe("calculateCost", () => {
+	it("distinguishes subscription, internal and unknown API dollar estimates", () => {
+		const usage: Usage = {
+			input: 10,
+			output: 1,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 11,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		};
+		for (const provider of ["openai-codex", "litellm"]) {
+			calculateCost(getBundledModel(provider as "litellm", "gpt-6.1-sol"), usage);
+			expect(usage.billing).toBe(provider === "litellm" ? "internal" : "subscription");
+			expect(usage.cost.total).toBe(0);
+		}
+		calculateCost(
+			{ provider: "openrouter", cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, pricingKnown: false } },
+			usage,
+		);
+		expect(usage.costKnown).toBe(false);
+	});
 	it("keeps token-based calculation for GitHub Copilot models", () => {
 		const model = {
 			...getBundledModel("github-copilot", "gpt-4o"),

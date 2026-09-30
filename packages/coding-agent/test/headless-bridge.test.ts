@@ -121,7 +121,7 @@ describe("startHeadlessChatBridge", () => {
 		// Sideload is deterministic even when the operator's global default or last
 		// interactive model differs. Explicit pane selections arrive later over
 		// configure and are intentionally not encoded in this bootstrap default.
-		expect(o?.modelPattern).toBe("litellm/gpt-5.6-terra:medium");
+		expect(o?.modelPattern).toBe("litellm/gpt-6.1-sol:medium");
 		expect(o?.thinkingLevel).toBe("medium");
 		expect(o?.enableLsp).toBe(false);
 		expect(o?.disableExtensionDiscovery).toBe(true);

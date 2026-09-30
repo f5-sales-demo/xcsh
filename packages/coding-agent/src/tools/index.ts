@@ -19,12 +19,14 @@ import type { EventBus } from "../utils/event-bus";
 import { SearchTool } from "../web/search";
 import { AstEditTool } from "./ast-edit";
 import { AstGrepTool } from "./ast-grep";
+import { wrapAsyncTool } from "./async-tool";
 import { BashTool } from "./bash";
 import { BrowserTool } from "./browser";
 import { CalculatorTool } from "./calculator";
 import { CancelJobTool } from "./cancel-job";
 import { CatalogWorkflowRunnerTool } from "./catalog-workflow-runner";
 import { type CheckpointState, CheckpointTool, RewindTool } from "./checkpoint";
+import { ClassifyTool } from "./classify";
 import { DebugTool } from "./debug";
 import type { DiscoverableTool, DiscoverableToolSearchIndex } from "./discoverable-tool-metadata";
 import { DisplayMediaTool } from "./display-media";
@@ -67,6 +69,7 @@ export * from "./calculator";
 export * from "./cancel-job";
 export * from "./catalog-workflow-runner";
 export * from "./checkpoint";
+export * from "./classify";
 export * from "./debug";
 export * from "./display-media";
 export * from "./find";
@@ -198,6 +201,8 @@ export interface ToolSession {
 	activateDiscoveredTools?: (toolNames: string[]) => Promise<string[]>;
 	/** Names currently advertised to the model. */
 	getActiveTools?: () => string[];
+	/** Trusted registered schema lookup for client tool-search results. */
+	getToolDefinition?: (name: string) => Tool | undefined;
 	/** The tool-choice queue used to force forthcoming tool invocations and carry invocation handlers. */
 	getToolChoiceQueue?(): ToolChoiceQueue;
 	/** Build a model-provider-specific ToolChoice that targets the named tool, or undefined if unsupported. */
@@ -221,6 +226,7 @@ export interface ToolSession {
 type ToolFactory = (session: ToolSession) => Tool | null | Promise<Tool | null>;
 
 export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
+	classify: s => new ClassifyTool(s),
 	person_profile: s => new PersonProfileTool(s),
 	xcsh_context: s => new XcshContextTool(s),
 	machine_profile: s => new MachineProfileTool(s),
@@ -437,7 +443,7 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 	const baseResults = await Promise.all(
 		baseEntries.map(async ([name, factory]) => {
 			const tool = await logger.time(`createTools:${name}`, factory, session);
-			return tool ? wrapToolWithMetaNotice(tool) : null;
+			return tool ? wrapToolWithMetaNotice(wrapAsyncTool(tool, session)) : null;
 		}),
 	);
 	const tools = baseResults.filter((r): r is Tool => r !== null);
