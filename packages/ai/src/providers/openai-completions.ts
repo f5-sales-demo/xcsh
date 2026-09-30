@@ -819,16 +819,25 @@ function parseChunkUsage(
 		getOptionalNumberProperty(rawUsage, "cached_tokens") ??
 		(promptTokenDetails ? getOptionalNumberProperty(promptTokenDetails, "cached_tokens") : undefined) ??
 		0;
-	const reasoningTokens =
-		(completionTokenDetails ? getOptionalNumberProperty(completionTokenDetails, "reasoning_tokens") : undefined) ?? 0;
-	const input = (getOptionalNumberProperty(rawUsage, "prompt_tokens") ?? 0) - cachedTokens;
-	const outputTokens = (getOptionalNumberProperty(rawUsage, "completion_tokens") ?? 0) + reasoningTokens;
+	const reasoningTokens = completionTokenDetails
+		? getOptionalNumberProperty(completionTokenDetails, "reasoning_tokens")
+		: undefined;
+	const cacheWriteTokens =
+		getOptionalNumberProperty(rawUsage, "cache_write_tokens") ??
+		(promptTokenDetails ? getOptionalNumberProperty(promptTokenDetails, "cache_write_tokens") : undefined);
+	const cacheWrite = cacheWriteTokens ?? 0;
+	const input = Math.max(0, (getOptionalNumberProperty(rawUsage, "prompt_tokens") ?? 0) - cachedTokens - cacheWrite);
+	// completion_tokens includes the reported reasoning subset.
+	const outputTokens = getOptionalNumberProperty(rawUsage, "completion_tokens") ?? 0;
 	const usage: AssistantMessage["usage"] = {
 		input,
 		output: outputTokens,
 		cacheRead: cachedTokens,
-		cacheWrite: 0,
-		totalTokens: input + outputTokens + cachedTokens,
+		cacheWrite,
+		totalTokens:
+			getOptionalNumberProperty(rawUsage, "total_tokens") ?? input + outputTokens + cachedTokens + cacheWrite,
+		...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
+		...(cacheWriteTokens !== undefined ? { cacheWriteTokens } : {}),
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		...(copilotPremiumRequests !== undefined ? { premiumRequests: copilotPremiumRequests } : {}),
 	};
