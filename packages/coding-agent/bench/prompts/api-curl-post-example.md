@@ -1,3 +1,3 @@
-Give me a cURL POST example with JSON to create HTTP load balancer cURL-example in namespace default with domain cURL-example.example.com and HTTP port 80. Ground the method, path and payload in the embedded API catalog and schema, and cite the evidence URLs. Only generate the example; do not create anything.
+Give me a cURL POST example with JSON to create HTTP load balancer cURL-example in namespace default with domain `curl-example.example.com` and HTTP port 80. Ground the method, path and payload in the embedded API catalog and schema, and cite the evidence URLs. Only generate the example; do not create anything.
 
 Use `xcsh://api-catalog/?resource=http_loadbalancer&compact=true` for endpoint evidence, then `xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.http.port` for the bounded authoritative field schema. Continue long reads with the read tool or bounded field projections. Do not use the shell to inspect metadata.
