@@ -125,7 +125,7 @@ describe("upstream completion control contracts", () => {
 			{ messages: [] },
 			{
 				apiKey: "synthetic",
-				accountId: "synthetic-account",
+				accountId: "example-account",
 				onPayload: async value => {
 					await Promise.resolve();
 					return { ...(value as object), user: "replacement" };
@@ -133,7 +133,7 @@ describe("upstream completion control contracts", () => {
 			},
 		).result();
 		expect(result.stopReason).toBe("stop");
-		expect(url).toContain("/accounts/synthetic-account/ai/v1/chat/completions");
+		expect(url).toContain("/accounts/example-account/ai/v1/chat/completions");
 		expect(payload.user).toBe("replacement");
 	});
 });
