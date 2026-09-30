@@ -1,5 +1,7 @@
 Execute an F5 Distributed Cloud API call directly.
 
+Prefer this tool for default execution. Example-only requests must not trigger resource operations. Use catalog/schema evidence for curl examples and the shell for explicitly requested curl execution under existing controls.
+
 Handles authentication, URL construction, and HTTP execution.
 Credentials are resolved from the active context profile (`/context`). Environment variables
 `XCSH_API_URL` and `XCSH_API_TOKEN` override context values when set.
@@ -26,13 +28,13 @@ Response format:
 **Error**: `{"code": <int>, "message": "…"}` — codes: 3=INVALID_ARGUMENT, 5=NOT_FOUND, 6=ALREADY_EXISTS, 7=PERMISSION_DENIED, 13=INTERNAL.
 GET requests auto-retry once on transient errors (429/503) after 1s backoff. POST/PUT/DELETE are never retried.
 API calls to the same F5 XC tenant reuse a single TLS connection — sequential calls are faster than parallel calls.
-**Namespace discovery**: When asked about resources in a namespace, you **MUST** use `paths: ["*"]` to auto-discover and batch all namespace resource types in ONE call. Do NOT enumerate types individually.
+**Namespace discovery**: For default execution requests, when asked about resources in a namespace, you **MUST** use `paths: ["*"]` to auto-discover and batch all namespace resource types in ONE call. Do NOT enumerate types individually.
 Preserve the exact confirmed-member total and the labels `External-visible results` and `Unknown-scope results` in the final answer. External-visible and unknown-scope items are not namespace members and must not be described as owned or mutation-valid.
 
 **Relationship queries**: When the batch response includes a `Resource summary:` section, the specs and relationships for confirmed namespace members in that section are already fetched. Answer directly from that evidence. Do NOT make additional GET calls to read those individual resources again. External-visible and unknown-scope count summaries are not membership, ownership, or mutation-safety evidence.
-**Tenant-wide queries**: When asked about resources across ALL namespaces (e.g. "show all LBs in the entire tenant"), use `paths: ["*"]` with `params: {namespace: "*"}` to batch every namespace in ONE call. Do NOT list namespaces first — the wildcard handles discovery automatically.
+**Tenant-wide queries**: For default execution requests, when asked about resources across ALL namespaces (e.g. "show all LBs in the entire tenant"), use `paths: ["*"]` with `params: {namespace: "*"}` to batch every namespace in ONE call. Do NOT list namespaces first — the wildcard handles discovery automatically.
 
-**Deleting resources** — when asked to delete, remove, or destroy an F5 XC resource, you **MUST** call `xcsh_api`
+**Deleting resources** — For default execution requests, when asked to delete, remove, or destroy an F5 XC resource, you **MUST** call `xcsh_api`
 with `method: "DELETE"` and `path` set to the resource's API endpoint including the resource name, e.g. `DELETE
 /api/config/namespaces/{namespace}/http_loadbalancers/{name}`. Pass `namespace` and `name` via `params`. No `payload`
 is needed for standard deletes. Do NOT respond with explanatory text instead of making the DELETE call — execute the

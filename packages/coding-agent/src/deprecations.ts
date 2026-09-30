@@ -8,6 +8,7 @@
 //   - the CLI-Quick-Start renderer (isDisallowedCliCommand / getDeprecatedClis)
 
 import { BRANDING_DEPRECATIONS } from "./internal-urls/branding-index.generated";
+import apiCurlGuidance from "./prompts/system/api-curl-guidance.md" with { type: "text" };
 
 interface DeprecationEntry {
 	deprecated: Record<string, string>;
@@ -15,22 +16,6 @@ interface DeprecationEntry {
 }
 
 const DEPRECATIONS = BRANDING_DEPRECATIONS as unknown as Record<string, DeprecationEntry>;
-
-/** Markers that identify a command as targeting the F5 XC API. */
-const XCSH_API_MARKERS = [
-	"xcsh_api_url",
-	"xcsh_api_token",
-	"apitoken",
-	".volterra.io",
-	".volterra.us",
-	"console.ves",
-	"/api/config/",
-	"/api/data/",
-	"/api/web/",
-	"/api/shape/",
-	"/api/ml/",
-	"/api/register/",
-];
 
 // xcsh-native guidance substituted wherever a deprecated command would appear.
 // Intentionally does NOT echo the deprecated tool name — the substitution exists
@@ -50,14 +35,13 @@ export function getDeprecatedClis(): string[] {
 
 /**
  * True if a command must never be surfaced as an instruction: it invokes a
- * deprecated CLI (e.g. vesctl), or it is a raw `curl` against the F5 XC API.
+ * deprecated CLI (e.g. vesctl). Supported curl examples remain visible.
  */
 export function isDisallowedCliCommand(command: string): boolean {
 	const lower = command.trim().toLowerCase();
 	if (!lower) return false;
 	const leadingToken = lower.split(/\s+/)[0] ?? "";
 	if (getDeprecatedClis().includes(leadingToken)) return true;
-	if (leadingToken === "curl" && XCSH_API_MARKERS.some(marker => lower.includes(marker))) return true;
 	return false;
 }
 
@@ -80,8 +64,10 @@ export function renderDeprecationGuardrails(): string {
 	return [
 		"These deprecations are non-negotiable. Full detail lives at `xcsh://branding` and `xcsh://branding/volterra`, but the rules below apply even when that protocol is never consulted.",
 		"",
-		`- **Never use \`${vesctl}\`.** It is the abandoned, unsupported legacy CLI; \`${xcshCmd}\` is its modern replacement. Never propose, generate, or run \`${vesctl}\`. For F5 XC API calls use the \`xcsh_api\` tool (never raw \`curl\`); for console automation use \`catalog_workflow_runner\`.`,
+		`- **Never use \`${vesctl}\`.** It is the abandoned, unsupported legacy CLI; \`${xcshCmd}\` is its modern replacement. Never propose, generate, or run \`${vesctl}\`. For console automation use \`catalog_workflow_runner\`.`,
 		`- **The legacy API docs are deprecated.** Never link or fetch \`${legacyApiUrl}\`; the canonical human-facing API documentation site is \`${enrichedUrl}\`. For your own API work you rarely need either — the enriched OpenAPI specs ship embedded in this binary: use \`xcsh://api-catalog/\` (operations/CRUD) and \`xcsh://api-spec/\` (schemas) per the routing rules above.`,
 		`- **"${deadBrand}" is a retired brand name.** The product is **${currentBrand}**; never write "${deadBrand}" as a product name or recommend ${deadBrand}-labeled tooling. BUT \`volterra_*\` API keys, \`*.volterra.io\`/\`*.volterra.us\` hostnames, and schema identifiers are **required functional identifiers** — use them verbatim, exactly as the API expects. Only the brand name is dead, not the identifiers.`,
+		"",
+		apiCurlGuidance.trim(),
 	].join("\n");
 }

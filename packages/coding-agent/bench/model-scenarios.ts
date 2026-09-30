@@ -2,10 +2,7 @@
 import * as path from "node:path";
 import { Effort } from "@f5-sales-demo/pi-ai";
 import { readLines, readStreamCappedText } from "@f5-sales-demo/pi-utils";
-import {
-	defaultModelBenchmarkOutputFile,
-	displayModelBenchmarkOutputFile,
-} from "./model-benchmark-paths";
+import { defaultModelBenchmarkOutputFile, displayModelBenchmarkOutputFile } from "./model-benchmark-paths";
 import type { ModelBenchmarkTarget, TimedJsonEvent } from "./model-matrix-report";
 import {
 	MODEL_BENCHMARK_PLUGIN_DIR,
@@ -31,8 +28,14 @@ export const DEFAULT_MODEL_SCENARIO_TARGETS: ModelBenchmarkTarget[] = [
 	{ label: "Gemini 3.8 Flash", selector: "google-vertex/gemini-3.8-flash" },
 ];
 
-export function orderedScenarioTurns(scenario: Pick<ModelBenchmarkScenario, "prompt" | "contract" | "quality" | "turns">): readonly ModelScenarioTurn[] {
-	return scenario.turns ?? [{ id: "turn-1", prompt: scenario.prompt, contract: scenario.contract, quality: scenario.quality }];
+export function orderedScenarioTurns(
+	scenario: Pick<ModelBenchmarkScenario, "prompt" | "contract" | "quality" | "turns">,
+): readonly ModelScenarioTurn[] {
+	return (
+		scenario.turns ?? [
+			{ id: "turn-1", prompt: scenario.prompt, contract: scenario.contract, quality: scenario.quality },
+		]
+	);
 }
 
 /** Stable seeded shuffle used to keep matched baseline/candidate execution order identical. */
@@ -99,7 +102,9 @@ function parseTarget(value: string): ModelBenchmarkTarget {
 }
 
 function parseSuite(value: string): ModelScenarioSuite | "all" {
-	if (["ping", "identity", "tools", "documentation", "plugins", "authenticated", "integrations", "all"].includes(value)) {
+	if (
+		["ping", "identity", "tools", "documentation", "plugins", "authenticated", "integrations", "all"].includes(value)
+	) {
 		return value as ModelScenarioSuite | "all";
 	}
 	throw new Error(`Unknown suite: ${value}`);
@@ -345,7 +350,8 @@ async function runOrderedSample(
 	let activeTurn: ReturnType<typeof Promise.withResolvers<void>> | undefined;
 	const stdoutPromise = captureEvents(child.stdout as ReadableStream<Uint8Array>, startNs, timed => {
 		liveEvents.push(timed);
-		const event = typeof timed.event === "object" && timed.event !== null ? timed.event as Record<string, unknown> : undefined;
+		const event =
+			typeof timed.event === "object" && timed.event !== null ? (timed.event as Record<string, unknown>) : undefined;
 		if (event?.type === "ready" && !readySettled) {
 			readySettled = true;
 			ready.resolve();
@@ -375,7 +381,11 @@ async function runOrderedSample(
 
 	const turnInputs: ScenarioBenchmarkTurnInput[] = [];
 	let timedOut = false;
-	const readyError = await waitForSignal(ready.promise, Math.min(timeoutMs, 30_000), "RPC process did not become ready");
+	const readyError = await waitForSignal(
+		ready.promise,
+		Math.min(timeoutMs, 30_000),
+		"RPC process did not become ready",
+	);
 	if (readyError) {
 		timedOut = readyError.includes("did not become ready");
 		for (const _turn of orderedScenarioTurns(scenario)) {
@@ -385,7 +395,11 @@ async function runOrderedSample(
 		stateResponse = Promise.withResolvers<void>();
 		child.stdin.write(`${JSON.stringify({ id: "benchmark-state", type: "get_state" })}\n`);
 		await child.stdin.flush();
-		const stateError = await waitForSignal(stateResponse.promise, Math.min(timeoutMs, 30_000), "RPC state query timed out");
+		const stateError = await waitForSignal(
+			stateResponse.promise,
+			Math.min(timeoutMs, 30_000),
+			"RPC state query timed out",
+		);
 		stateResponse = undefined;
 		if (stateError) {
 			child.kill();
@@ -415,7 +429,12 @@ async function runOrderedSample(
 				timedOut = turnError.includes("timed out");
 				child.kill();
 				for (const skipped of orderedScenarioTurns(scenario).slice(turnInputs.length)) {
-					turnInputs.push({ startedAtMs: elapsedMs(startNs), durationMs: 0, events: [], error: `turn ${skipped.id} not run` });
+					turnInputs.push({
+						startedAtMs: elapsedMs(startNs),
+						durationMs: 0,
+						events: [],
+						error: `turn ${skipped.id} not run`,
+					});
 				}
 				break;
 			}
@@ -566,6 +585,17 @@ async function main(): Promise<void> {
 		throw new Error("Selected scenarios require --context NAME");
 	}
 
+	if (scenarios.some(scenario => scenario.runtime.requiresLocalFixture)) {
+		const url = new URL(process.env.XCSH_API_URL ?? "http://invalid");
+		if (
+			process.env.XCSH_BENCHMARK_LOCAL_FIXTURE !== "1" ||
+			url.hostname !== "127.0.0.1" ||
+			url.protocol !== "http:"
+		) {
+			throw new Error("Execution scenarios require the api-curl-policy-benchmark loopback fixture wrapper");
+		}
+	}
+
 	const createdAt = new Date().toISOString();
 	const warmupSamples: ScenarioBenchmarkSample[] = [];
 	const samples: ScenarioBenchmarkSample[] = [];
@@ -579,22 +609,22 @@ async function main(): Promise<void> {
 			for (let thinkingIndex = 0; thinkingIndex < options.thinkingEfforts.length; thinkingIndex++) {
 				const thinking = options.thinkingEfforts[thinkingIndex];
 				for (const target of rotatedTargets(options.targets, overallRound + scenarioIndex + thinkingIndex)) {
-				process.stdout.write(
-					`[${warmup ? "warmup" : "run"} ${round}/${count}] ${scenario.id} · ${thinking} · ${target.label}\n`,
-				);
-				const sample = await runSample(
-					scenario,
-					target,
-					options.contextName,
-					thinking,
-					round,
-					warmup,
-					options.timeoutMs,
-					options.failFastProviderError,
-					options.binaryPath,
-				);
-				(warmup ? warmupSamples : samples).push(sample);
-				printProgress(sample);
+					process.stdout.write(
+						`[${warmup ? "warmup" : "run"} ${round}/${count}] ${scenario.id} · ${thinking} · ${target.label}\n`,
+					);
+					const sample = await runSample(
+						scenario,
+						target,
+						options.contextName,
+						thinking,
+						round,
+						warmup,
+						options.timeoutMs,
+						options.failFastProviderError,
+						options.binaryPath,
+					);
+					(warmup ? warmupSamples : samples).push(sample);
+					printProgress(sample);
 				}
 			}
 		}

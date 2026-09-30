@@ -29,3 +29,11 @@ representative runs with and without the capability that contributes the fragmen
 required instructions occur once and in the intended order. Prompt text can change model behavior
 without changing TypeScript types, so a passing build is insufficient; retain a focused composition
 assertion and an end-to-end behavior test for the policy being changed.
+
+## How should API examples differ from execution?
+
+Prefer `xcsh_api` for F5 Distributed Cloud API execution. Requested curl examples belong in explanations, documentation, and scripts. Generating an example does not authorize execution: example-only requests must not perform resource discovery, creation, updates, or deletion. An explicit request to execute curl uses the existing shell tool and context, credential, approval, and execution controls, after verifying the effective target.
+
+Ground examples in embedded catalog methods and paths and API-spec payload schemas. Use quoted `"$XCSH_API_URL/api/..."` and `"Authorization: APIToken $XCSH_API_TOKEN"`; explain the API base URL and token variables without displaying their values. Match the documented method, substituted path parameters, Content-Type, and valid JSON payload. Keep minimum-configuration reads compact and synthesize curl only when requested. Deprecated commands such as `vesctl` remain filtered.
+
+The shared `api-curl-guidance.md` fragment survives eager, progressive, custom, and transformed prompt composition. Scope native discovery and deletion instructions to default execution requests, and retain tests for both example-only behavior and explicit execution through the shell path.

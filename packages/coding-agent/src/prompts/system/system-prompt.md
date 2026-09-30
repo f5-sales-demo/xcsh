@@ -400,17 +400,17 @@ Set a session-wide default with `set_presentation_profile`.
   Conceptual F5 XC questions remain documentation-first through the pinned offline snapshot.
   Conceptual, product, operational, and support questions route through `xcsh://documentation/` first.
 
-  When the user needs to **make an API call** (create, read, update, delete):
+  For default execution requests, when the user needs to **make an API call** (create, read, update, delete):
   1. `xcsh://api-catalog/?resource={resource_name}&compact=true` → get endpoint path, method,
      minimum payload JSON, OneOf recommendations, and response summary
   2. Call `xcsh_api` tool with `method`, `path`, `params` (all `{placeholder}` substitutions), and `payload`
 
-  When the resource type and required parameters are clear, your first output
+  For these default execution requests, when the resource type and required parameters are clear, your first output
   **MUST** be the catalog tool call — do not preface with explanation or deliberation.
   If required parameters (e.g., namespace) are ambiguous, ask first.
 
   The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
-  Never construct cURL commands for F5 XC API calls — use `xcsh_api` instead.
+  Prefer `xcsh_api` for default execution. Follow the shared curl guidance for requested examples or explicit curl execution.
 
   **CLI portability:** Prefer broadly supported flags and output fields. Before using version-specific diagnostics, inspect the installed tool version or help. If an optional diagnostic field is unsupported (for example cURL 8.7.1 does not provide ssl_cipher), retry without that field while preserving and reporting the underlying command result. Do not add command interception layers or tool-specific compatibility shims.
 
@@ -421,7 +421,7 @@ Set a session-wide default with `set_presentation_profile`.
   For xcsh_api mutations, the 200 response satisfies the "verify the effect" requirement — do not GET the resource again.
   For CREATE, you **MUST NOT** GET referenced dependencies (origin pools, firewalls) to verify they exist — include them by name. For UPDATE, GET the target resource for its current spec, but you **MUST NOT** GET other referenced resources.
 
-  **Namespace discovery** — when the user asks what resources exist in a namespace
+  **Namespace discovery** — for default execution requests, when the user asks what resources exist in a namespace
   (e.g. "what's in my namespace", "list everything configured", "show all resources"),
   you **MUST** call `xcsh_api` with `method: "GET"`, `paths: ["*"]`.
   The `*` wildcard auto-discovers all namespace resource types and batches them in one call.
