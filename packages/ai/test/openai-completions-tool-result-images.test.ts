@@ -44,6 +44,7 @@ const compat: Required<OpenAICompat> = {
 	allowEmptySignature: false,
 	supportsCacheControlOnTools: true,
 	forceAdaptiveThinking: false,
+	supportsOpenAIGrammarTools: false,
 	reasoningContentField: "reasoning_content",
 	requiresReasoningContentForToolCalls: false,
 	requiresAssistantContentForToolCalls: false,

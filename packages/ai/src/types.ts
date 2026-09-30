@@ -672,6 +672,7 @@ export interface OpenAICompat {
 	allowEmptySignature?: boolean;
 	supportsCacheControlOnTools?: boolean;
 	forceAdaptiveThinking?: boolean;
+	supportsOpenAIGrammarTools?: boolean;
 	/** Which reasoning content field to emit on assistant messages. Default: auto-detected. */
 	reasoningContentField?: "reasoning_content" | "reasoning" | "reasoning_text";
 	/** Whether assistant tool-call messages must include reasoning content. Default: false. */

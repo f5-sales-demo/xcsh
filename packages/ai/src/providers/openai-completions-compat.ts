@@ -174,6 +174,7 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 		allowEmptySignature: false,
 		supportsCacheControlOnTools: true,
 		forceAdaptiveThinking: false,
+		supportsOpenAIGrammarTools: false,
 		toolStrictMode: isCerebras ? "all_strict" : "mixed",
 	};
 }
@@ -227,6 +228,7 @@ export function resolveOpenAICompat(
 		allowEmptySignature: model.compat.allowEmptySignature ?? detected.allowEmptySignature,
 		supportsCacheControlOnTools: model.compat.supportsCacheControlOnTools ?? detected.supportsCacheControlOnTools,
 		forceAdaptiveThinking: model.compat.forceAdaptiveThinking ?? detected.forceAdaptiveThinking,
+		supportsOpenAIGrammarTools: model.compat.supportsOpenAIGrammarTools ?? detected.supportsOpenAIGrammarTools,
 		toolStrictMode: model.compat.toolStrictMode ?? detected.toolStrictMode,
 	};
 }

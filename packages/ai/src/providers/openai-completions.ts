@@ -301,6 +301,15 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 			type OpenAIStreamBlock = TextContent | ThinkingContent | (ToolCall & { partialArgs: string });
 			let currentBlock: OpenAIStreamBlock | undefined;
 			const reasoningDetails: ReasoningDetail[] = [];
+			const grammarProperties = new Map(
+				(context.tools ?? []).flatMap(tool =>
+					tool.constrainedSampling &&
+					tool.constrainedSampling.type === "grammar" &&
+					(tool.parameters as { required?: string[] }).required?.[0]
+						? [[tool.name, (tool.parameters as unknown as { required: string[] }).required[0]!]]
+						: [],
+				),
+			);
 			let reasoningDetailBlock: ThinkingContent | undefined;
 			const blockIndex = (block: OpenAIStreamBlock | undefined): number => {
 				if (!block) return Math.max(0, output.content.length - 1);
@@ -319,7 +328,9 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 					stream.push({ type: "thinking_end", contentIndex, content: block.thinking, partial: output });
 					return;
 				}
-				block.arguments = parseStreamingJson(block.partialArgs);
+				block.arguments = block.customInputProperty
+					? { [block.customInputProperty]: block.partialArgs }
+					: parseStreamingJson(block.partialArgs);
 				delete (block as { partialArgs?: string }).partialArgs;
 				stream.push({ type: "toolcall_end", contentIndex, toolCall: block, partial: output });
 			};
@@ -495,12 +506,16 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 
 					if (choice?.delta?.tool_calls) {
 						for (const toolCall of choice.delta.tool_calls) {
+							const custom = (toolCall as unknown as { custom?: { name?: string; input?: string } }).custom;
 							if (currentBlock?.type !== "toolCall" || (toolCall.id && currentBlock.id !== toolCall.id)) {
 								finishCurrentBlock(currentBlock);
 								currentBlock = {
 									type: "toolCall",
 									id: toolCall.id || "",
-									name: toolCall.function?.name || "",
+									name: custom?.name ?? toolCall.function?.name ?? "",
+									...(custom
+										? { customInputProperty: grammarProperties.get(custom.name ?? "") ?? "input" }
+										: {}),
 									arguments: {},
 									partialArgs: "",
 								};
@@ -515,7 +530,18 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 							if (currentBlock.type === "toolCall") {
 								if (toolCall.id) currentBlock.id = toolCall.id;
 								if (toolCall.function?.name) currentBlock.name = toolCall.function.name;
+								if (custom?.name) {
+									currentBlock.name = custom.name;
+									currentBlock.customInputProperty = grammarProperties.get(custom.name) ?? "input";
+								}
 								let delta = "";
+								if (custom?.input !== undefined) {
+									delta = custom.input;
+									currentBlock.partialArgs += custom.input;
+									currentBlock.arguments = {
+										[currentBlock.customInputProperty ?? "input"]: currentBlock.partialArgs,
+									};
+								}
 								if (toolCall.function?.arguments) {
 									delta = toolCall.function.arguments;
 									currentBlock.partialArgs += toolCall.function.arguments;
@@ -1205,11 +1231,18 @@ export function convertMessages(
 					rememberToolCallId(tc.id, toolCallId);
 					return {
 						id: normalizeMistralToolId(toolCallId, compat.requiresMistralToolIds),
-						type: "function" as const,
-						function: {
-							name: tc.name,
-							arguments: serializeToolArguments(tc.arguments),
-						},
+						...(tc.customInputProperty && compat.supportsOpenAIGrammarTools
+							? {
+									type: "custom" as const,
+									custom: { name: tc.name, input: String(tc.arguments[tc.customInputProperty] ?? "") },
+								}
+							: {
+									type: "function" as const,
+									function: {
+										name: tc.name,
+										arguments: serializeToolArguments(tc.arguments),
+									},
+								}),
 					};
 				});
 				const reasoningDetails = toolCalls
@@ -1354,6 +1387,30 @@ function convertTools(
 
 	return {
 		tools: adaptedTools.map(({ tool, baseParameters, parameters, strict }) => {
+			const grammar = tool.constrainedSampling;
+			if (compat.supportsOpenAIGrammarTools && grammar && grammar.type === "grammar") {
+				const definition = grammar.variants.openai_lark ?? grammar.variants.openai_regex;
+				const schema = tool.parameters as { required?: string[]; properties?: Record<string, { type?: string }> };
+				const property = schema.required?.[0];
+				if (
+					!definition ||
+					schema.required?.length !== 1 ||
+					!property ||
+					schema.properties?.[property]?.type !== "string"
+				)
+					throw new Error(`Invalid grammar tool ${tool.name}`);
+				return {
+					type: "custom",
+					custom: {
+						name: tool.name,
+						description: tool.description,
+						format: {
+							type: "grammar",
+							grammar: { syntax: grammar.variants.openai_lark ? "lark" : "regex", definition },
+						},
+					},
+				} as OpenAI.Chat.Completions.ChatCompletionTool;
+			}
 			const includeStrict = toolStrictMode === "all_strict" || (toolStrictMode === "mixed" && strict);
 			return {
 				type: "function",
