@@ -175,6 +175,20 @@ try {
 		await Bun.sleep(10);
 	}
 	session.write("\r");
+	await waitFor(
+		value => value.includes("Ctrl+R: refresh") || (value.includes("model") && value.includes("native scope")),
+		"picker command admission",
+		start,
+	);
+	await Bun.sleep(500);
+	if (!visible().slice(start).includes("Ctrl+R: refresh")) {
+		if (visible().slice(start).includes("Choose reasoning for this model")) session.write("\x1b");
+		else {
+			session.write("\r");
+			await Bun.sleep(500);
+			if (visible().slice(start).includes("Choose reasoning for this model")) session.write("\x1b");
+		}
+	}
 	await waitFor(value => value.includes(launch.modelId) && value.includes("Ctrl+R: refresh"), "picker", start);
 	session.write("\x1b");
 	await Bun.sleep(500);
@@ -277,6 +291,7 @@ try {
 		}),
 	);
 } finally {
+	await writeFile(join(root, "terminal.txt"), visible());
 	if (!exited) {
 		session.write("\x03");
 		session.write("\x04");
