@@ -566,6 +566,17 @@ async function main(): Promise<void> {
 		throw new Error("Selected scenarios require --context NAME");
 	}
 
+	if (scenarios.some(scenario => scenario.runtime.requiresLocalFixture)) {
+		const url = new URL(process.env.XCSH_API_URL ?? "http://invalid");
+		if (
+			process.env.XCSH_BENCHMARK_LOCAL_FIXTURE !== "1" ||
+			url.hostname !== "127.0.0.1" ||
+			url.protocol !== "http:"
+		) {
+			throw new Error("Execution scenarios require the api-curl-policy-benchmark loopback fixture wrapper");
+		}
+	}
+
 	const createdAt = new Date().toISOString();
 	const warmupSamples: ScenarioBenchmarkSample[] = [];
 	const samples: ScenarioBenchmarkSample[] = [];

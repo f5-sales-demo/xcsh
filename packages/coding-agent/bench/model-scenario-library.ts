@@ -1,3 +1,9 @@
+import api_curl_get_examplePrompt from "./prompts/api-curl-get-example.md" with { type: "text" };
+import api_curl_post_examplePrompt from "./prompts/api-curl-post-example.md" with { type: "text" };
+import api_curl_documentation_examplePrompt from "./prompts/api-curl-documentation-example.md" with { type: "text" };
+import api_curl_repeat_examplePrompt from "./prompts/api-curl-repeat-example.md" with { type: "text" };
+import api_native_executionPrompt from "./prompts/api-native-execution.md" with { type: "text" };
+import api_curl_executionPrompt from "./prompts/api-curl-execution.md" with { type: "text" };
 import * as path from "node:path";
 import assistantIdentityPrompt from "./prompts/assistant-identity.md" with { type: "text" };
 import apiCatalogDirectCategoryPrompt from "./prompts/api-catalog-direct-category-probe.md" with { type: "text" };
@@ -94,6 +100,8 @@ export interface ModelScenarioRuntime {
 	extensions: "none" | "plugin" | "installed";
 	skills: "none" | string[];
 	requiresContext: boolean;
+	/** Execution acceptance must run via the synthetic loopback fixture wrapper. */
+	requiresLocalFixture?: boolean;
 }
 
 export interface ModelScenarioTurn {
@@ -126,6 +134,53 @@ const EXACT_CONTRACT_QUALITY: ModelScenarioQualityCriterion[] = [
 ];
 
 export const MODEL_BENCHMARK_PLUGIN_DIR = path.join(import.meta.dir, "fixtures/model-benchmark-plugin");
+
+const CURL_EVIDENCE_TOOLS: ModelScenarioToolExpectation[] = [
+	{
+		name: "read",
+		count: 1,
+		argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?resource=http_loadbalancer&compact=true$/ },
+	},
+	{
+		name: "read",
+		count: 1,
+		argumentPatterns: {
+			path: /^xcsh:\/\/api-spec\/(?:virtual|virtual-host|virtual_host)\?resource=http_loadbalancer(?:&(?:crud=true|field=[a-zA-Z0-9_.]+))*$/,
+		},
+	},
+];
+const CURL_EXAMPLE_CONTRACT: ModelScenarioContract = {
+	requiredTools: [
+		{ name: "xcsh_api", count: 0 },
+		{ name: "bash", count: 0 },
+	],
+	requiredToolSequence: CURL_EVIDENCE_TOOLS,
+	allowReadContinuations: true,
+	exclusiveTools: false,
+	requiredResponsePatterns: [
+		{ label: "curl command", pattern: /\bcurl\b/ },
+		{
+			label: "quoted API URL and correct list endpoint",
+			pattern: /"\$\{?XCSH_API_URL\}?(?:%?)\/api\/config\/namespaces\/default\/http_loadbalancers"/,
+		},
+		{ label: "quoted API token header", pattern: /"Authorization:\s*APIToken\s+\$\{?XCSH_API_TOKEN\}?"/i },
+		{ label: "catalog evidence citation", pattern: /xcsh:\/\/api-catalog\// },
+		{
+			label: "schema evidence citation",
+			pattern: /xcsh:\/\/api-spec\/(?:virtual|virtual-host|virtual_host)\?resource=http_loadbalancer/,
+		},
+	],
+	forbiddenResponsePatterns: [{ label: "deprecated CLI substitution", pattern: /\bvesctl\b/i }],
+};
+
+export const CURL_POLICY_SCENARIO_IDS = [
+	"api-curl-get-example",
+	"api-curl-post-example",
+	"api-curl-documentation-example",
+	"api-curl-repeat-example",
+	"api-native-execution",
+	"api-curl-execution",
+] as const;
 
 export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 	{
@@ -733,7 +788,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "internal-urls", label: "Cites both catalog and API-spec internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/[\s\S]*xcsh:\/\/api-spec\//i },
 			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
 			{ id: "required-fields", label: "States the required field set", weight: 15, responsePattern: /metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i },
-			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
+			{ id: "no-substitution", label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
@@ -782,7 +837,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "internal-urls", label: "Cites both internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone[\s\S]*xcsh:\/\/api-catalog\/dns-dns-zone-clone-from-dns-domain/i },
 			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
 			{ id: "required-fields", label: "States that the operation has no required fields", weight: 10, responsePattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
-			{ id: "no-substitution", label: "Avoids unsupported CLI or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
+			{ id: "no-substitution", label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
@@ -821,7 +876,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			{ id: "resource", label: "Selects BIND-import category", weight: 20, responsePattern: /dns-dns-zone-import-bind-create/i },
 			{ id: "method-path", label: "States POST path", weight: 25, responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
 			{ id: "required-fields", label: "States required file", weight: 15, responsePattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i },
-			{ id: "no-substitution", label: "Avoids unsupported substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
+			{ id: "no-substitution", label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
@@ -994,6 +1049,128 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		quality: EXACT_CONTRACT_QUALITY,
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
+	{
+		id: "api-curl-get-example",
+		label: "Requested curl GET example",
+		suite: "tools",
+		tier: 2,
+		prompt: api_curl_get_examplePrompt.trim(),
+		contract: CURL_EXAMPLE_CONTRACT,
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read", "bash", "xcsh_api"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-curl-post-example",
+		label: "Requested curl JSON POST example",
+		suite: "tools",
+		tier: 2,
+		prompt: api_curl_post_examplePrompt.trim(),
+		contract: {
+			...CURL_EXAMPLE_CONTRACT,
+			requiredResponsePatterns: [
+				...CURL_EXAMPLE_CONTRACT.requiredResponsePatterns!,
+				{ label: "explicit POST method", pattern: /(?:-X\s*|--request[= ]+)(?:["']?POST["']?)/i },
+				{ label: "JSON content type", pattern: /Content-Type:\s*application\/json/i },
+				{ label: "requested JSON metadata", pattern: /"name"\s*:\s*"curl-example"/ },
+				{ label: "requested JSON domain", pattern: /"domains"\s*:\s*\[\s*"curl-example\.example\.com"/ },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read", "bash", "xcsh_api"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-curl-documentation-example",
+		label: "Curl documentation without execution",
+		suite: "tools",
+		tier: 2,
+		prompt: api_curl_documentation_examplePrompt.trim(),
+		contract: CURL_EXAMPLE_CONTRACT,
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: { tools: ["read", "bash", "xcsh_api"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-curl-repeat-example",
+		label: "Repeated curl request stays non-executing",
+		suite: "tools",
+		tier: 2,
+		prompt: api_curl_get_examplePrompt.trim(),
+		contract: CURL_EXAMPLE_CONTRACT,
+		quality: EXACT_CONTRACT_QUALITY,
+		turns: [
+			{
+				id: "first-example",
+				prompt: api_curl_get_examplePrompt.trim(),
+				contract: CURL_EXAMPLE_CONTRACT,
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+			{
+				id: "repeat-example",
+				prompt: api_curl_repeat_examplePrompt.trim(),
+				contract: {
+					...CURL_EXAMPLE_CONTRACT,
+					requiredTools: [
+						{ name: "xcsh_api", count: 0 },
+						{ name: "bash", count: 0 },
+					],
+					requiredToolSequence: [],
+					exclusiveTools: false,
+				},
+				quality: EXACT_CONTRACT_QUALITY,
+			},
+		],
+		runtime: { tools: ["read", "bash", "xcsh_api"], extensions: "none", skills: "none", requiresContext: false },
+	},
+	{
+		id: "api-native-execution",
+		label: "Default execution uses native API",
+		suite: "tools",
+		tier: 3,
+		prompt: api_native_executionPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{
+					name: "xcsh_api",
+					count: 1,
+					arguments: { method: "GET", expandDiscovery: false },
+					argumentPatterns: {
+						path: /^\/api\/config\/namespaces\/(?:default|\{(?:metadata\.)?namespace\})\/http_loadbalancers$/,
+					},
+				},
+				{ name: "bash", count: 0 },
+			],
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: {
+			tools: ["read", "bash", "xcsh_api"],
+			extensions: "none",
+			skills: "none",
+			requiresContext: false,
+			requiresLocalFixture: true,
+		},
+	},
+	{
+		id: "api-curl-execution",
+		label: "Explicit curl execution uses shell",
+		suite: "tools",
+		tier: 3,
+		prompt: api_curl_executionPrompt.trim(),
+		contract: {
+			requiredTools: [
+				{ name: "bash", count: 1, argumentPatterns: { command: /\bcurl\b[\s\S]*http_loadbalancers/ } },
+				{ name: "xcsh_api", count: 0 },
+			],
+			requiredToolSequence: CURL_EVIDENCE_TOOLS,
+		},
+		quality: EXACT_CONTRACT_QUALITY,
+		runtime: {
+			tools: ["read", "bash", "xcsh_api"],
+			extensions: "none",
+			skills: "none",
+			requiresContext: false,
+			requiresLocalFixture: true,
+		},
+	},
+
 	{
 		id: "plugin-skill",
 		label: "Plugin skill",

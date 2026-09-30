@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "cd1f72e2ad8098cce6c6fad9046edc7df6dbefba",
+  "revision": "47c9bf2683a46efc21c911bb2c0f784fa04e704d",
   "fingerprint": "18303c770ea07d9a16e316bbc51df9bf2bd9099a779280321a137499f58fa480",
   "counts": {
     "total": 238,
@@ -4804,10 +4804,10 @@
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/cli-output-pipe.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/curl-shell-execution.test.ts",
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
         "packages/coding-agent/test/headless-bridge.test.ts",
-        "packages/coding-agent/test/highlight-languages.test.ts",
-        "packages/coding-agent/test/input-controller-escape.test.ts"
+        "packages/coding-agent/test/highlight-languages.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/bash.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4950,12 +4950,12 @@
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/python-kernel.lifecycle.test.ts",
         "packages/coding-agent/test/core/python-kernel.test.ts",
+        "packages/coding-agent/test/curl-shell-execution.test.ts",
         "packages/coding-agent/test/e2e/extension-e2e.test.ts",
         "packages/coding-agent/test/e2e/extension-panel-e2e.test.ts",
         "packages/coding-agent/test/e2e/staging-crud.test.ts",
         "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts",
-        "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts",
-        "packages/coding-agent/test/e2e/stealth-workers.e2e.test.ts"
+        "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

@@ -1,0 +1,3 @@
+Write a short documentation snippet showing cURL to list HTTP load balancers in namespace default. Use authoritative embedded API catalog and schema evidence, cite the evidence URLs and explain required environment variables. This is documentation only; do not execute the snippet.
+
+Use `xcsh://api-catalog/?resource=http_loadbalancer&compact=true` for endpoint evidence, then `xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.domains` for the bounded authoritative field schema. Continue long reads with the read tool or bounded field projections. Do not use the shell to inspect metadata.

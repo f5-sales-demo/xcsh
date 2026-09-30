@@ -23,8 +23,8 @@ describe("isDisallowedCliCommand", () => {
 		expect(isDisallowedCliCommand("vesctl dns list")).toBe(true);
 	});
 
-	test("flags a curl against the F5 XC API", () => {
-		expect(isDisallowedCliCommand("curl $XCSH_API_URL/api/config/namespaces/default/http_loadbalancers")).toBe(true);
+	test("allows a curl example against the F5 XC API", () => {
+		expect(isDisallowedCliCommand("curl $XCSH_API_URL/api/config/namespaces/default/http_loadbalancers")).toBe(false);
 	});
 
 	test("allows a normal non-F5XC command", () => {
