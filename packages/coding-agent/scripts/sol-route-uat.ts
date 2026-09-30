@@ -33,6 +33,7 @@ if (advanced || asyncTools)
 export default function(api) {
  const root = ${JSON.stringify(root)};
  const receipt = {requests: [], frames: [], events: []};
+ let expectedEffort = "medium";
  const save = () => Bun.write(root + "/transport.json", JSON.stringify(receipt));
  let pendingSteer;
  const original = globalThis.WebSocket;
@@ -48,11 +49,12 @@ export default function(api) {
  api.registerTool({name:"sol_background",label:"Synthetic background",description:"Run a synthetic background job",async:true,defaultInactive:true,parameters:{type:"object",properties:{marker:{type:"string"}},required:["marker"]},execute:async (_id,args)=>{await Bun.sleep(1500);return {content:[{type:"text",text:args.marker}]};}});
  api.registerCommand("sol-tools",{handler:async()=>{await api.setActiveTools([...api.getActiveTools(),"sol_echo","sol_background"]);}});
  api.registerCommand("sol-steer", {handler: async args => {pendingSteer="Keep the answer brief and end with "+args.trim(); api.sendUserMessage("Write a detailed 600-word explanation of binary search invariants using synthetic arrays. No tools.");}});
- api.registerCommand("sol-effort", {handler: async args => {api.setThinkingLevel(args.trim());}});
+ api.registerCommand("sol-effort", {handler: async args => {expectedEffort=args.trim(); api.setThinkingLevel(expectedEffort);}});
  api.registerCommand("sol-speed", {handler: async args => {tier=args.trim() === "fast" ? "priority" : "default";}});
  api.on("before_provider_request", event => {
   const payload = event.payload;
   payload.service_tier=tier;
+  if(payload.reasoning?.effort && payload.reasoning.effort !== (expectedEffort === "ultra" ? "max" : expectedEffort)) throw new Error("Reasoning mismatch: expected " + expectedEffort + ", received " + payload.reasoning.effort);
   receipt.requests.push({model:payload.model,effort:payload.reasoning?.effort,summary:payload.reasoning?.summary,tier,cache:payload.prompt_cache_options,inputTypes:payload.input?.map(item=>item.type??item.role),tools:payload.tools?.map(tool=>tool.name)});
   void save();
   return payload;
@@ -217,40 +219,23 @@ try {
 	session.write("\r");
 	await waitForAssistant(imageMarker);
 	rows.push({ step: "image-input", outcome: "pass" });
-	if (asyncTools) {
-		await submit("/sol-tools");
-		await Bun.sleep(500);
-		const echo = `XCSH_SOL_ECHO_${Bun.hash(root).toString(36)}_OK`;
-		await submit(`Call sol_echo with marker ${echo}, then report the returned marker.`);
-		await waitForAssistant(echo);
-		rows.push({ step: "tool-change-follow-up", outcome: "pass" });
-		const background = `XCSH_SOL_ASYNC_${Bun.hash(root).toString(36)}_OK`;
-		await submit(
-			`Call sol_background with marker ${background}. Wait for the background result and then report its marker.`,
-		);
-		await waitForAssistant(background);
-		const persisted = (
-			await Promise.all(
-				(
-					await readdir(root)
-				)
-					.filter(name => name.endsWith(".jsonl"))
-					.map(name => readFile(join(root, name), "utf8")),
-			)
-		).join("\n");
-		if (!persisted.includes("async-result") || !persisted.includes("sol_background"))
-			throw new Error("No owned async completion was persisted");
-		rows.push({ step: "async-tool-delivery", outcome: "pass" });
-	}
 	if (advanced) {
 		for (const effort of process.argv.includes("--steering-only")
 			? []
 			: ["low", "medium", "high", "xhigh", "max", ...(provider === "openai-codex" ? ["ultra"] : [])]) {
 			await submit(`/sol-effort ${effort}`);
 			await Bun.sleep(500);
+			const beforeEffort = JSON.parse(await readFile(join(root, "transport.json"), "utf8")).requests.length;
 			const marker = `XCSH_SOL_${effort.toUpperCase()}_${Bun.hash(root).toString(36)}_OK`;
 			await submit(`Answer exactly ${marker}.`);
 			await waitForAssistant(marker);
+			const effortReceipt = JSON.parse(await readFile(join(root, "transport.json"), "utf8"));
+			if (
+				!effortReceipt.requests
+					.slice(beforeEffort)
+					.some((request: any) => request.effort === (effort === "ultra" ? "max" : effort))
+			)
+				throw new Error(`Reasoning ${effort} was not observed on the request`);
 			rows.push({ step: `reasoning-${effort}`, outcome: "pass" });
 		}
 		await submit("/sol-effort medium");
@@ -275,6 +260,31 @@ try {
 		const receipt = JSON.parse(await readFile(join(root, "transport.json"), "utf8"));
 		if (!receipt.requests.some((request: any) => request.tier === "priority"))
 			throw new Error("Fast request was not observed");
+	}
+	if (asyncTools) {
+		await submit("/sol-tools");
+		await Bun.sleep(500);
+		const echo = `XCSH_SOL_ECHO_${Bun.hash(root).toString(36)}_OK`;
+		await submit(`Call sol_echo with marker ${echo}, then report the returned marker.`);
+		await waitForAssistant(echo);
+		rows.push({ step: "tool-change-follow-up", outcome: "pass" });
+		const background = `XCSH_SOL_ASYNC_${Bun.hash(root).toString(36)}_OK`;
+		await submit(
+			`Call sol_background with marker ${background}. Wait for the background result and then report its marker.`,
+		);
+		await waitForAssistant(background);
+		const persisted = (
+			await Promise.all(
+				(
+					await readdir(root)
+				)
+					.filter(name => name.endsWith(".jsonl"))
+					.map(name => readFile(join(root, name), "utf8")),
+			)
+		).join("\n");
+		if (!persisted.includes("async-result") || !persisted.includes("sol_background"))
+			throw new Error("No owned async completion was persisted");
+		rows.push({ step: "async-tool-delivery", outcome: "pass" });
 	}
 	session.write("\x04");
 	await run;
