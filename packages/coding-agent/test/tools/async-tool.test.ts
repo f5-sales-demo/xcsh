@@ -5,6 +5,32 @@ import type { Tool, ToolSession } from "../../src/tools";
 import { wrapAsyncTool } from "../../src/tools/async-tool";
 
 describe("opt-in asynchronous tool execution", () => {
+	it("separates equal call IDs after switching provider/model", async () => {
+		let model = "openai/synthetic";
+		let executions = 0;
+		const manager = new AsyncJobManager({ onJobComplete() {} });
+		const tool = {
+			name: "synthetic",
+			label: "Synthetic",
+			async: true,
+			execute: async () => {
+				executions++;
+				return { content: [] };
+			},
+		} as unknown as Tool;
+		const session = {
+			settings: Settings.isolated({ "async.enabled": true }),
+			asyncJobManager: manager,
+			getSessionId: () => "synthetic-session",
+			getModelString: () => model,
+		} as ToolSession;
+		const first = await wrapAsyncTool(tool, session).execute("same-call", { value: 1 });
+		model = "anthropic/synthetic";
+		const second = await wrapAsyncTool(tool, session).execute("same-call", { value: 1 });
+		expect(first.details.jobId).not.toBe(second.details.jobId);
+		expect(executions).toBe(2);
+		await manager.dispose();
+	});
 	it("correlates rewrapped calls with their existing job and cancels without success delivery", async () => {
 		let executions = 0;
 		const manager = new AsyncJobManager({

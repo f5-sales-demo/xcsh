@@ -42,28 +42,36 @@ async function request(
 	options.signal?.throwIfAborted();
 	const apiKey = options.apiKey ?? getEnvApiKey(model.provider);
 	if (!apiKey) throw new Error(`No API key for provider: ${model.provider}`);
-	const response = await retryProviderRequest(async () => {
-		const result = await (options.fetch ?? globalThis.fetch)(
-			`${model.baseUrl.replace(/\/+$/, "")}/responses${path}`,
-			{
-				method,
-				headers: {
-					...model.headers,
-					...options.headers,
-					Authorization: `Bearer ${apiKey}`,
-					"Content-Type": "application/json",
+	const timeoutSignal = options.timeoutMs !== undefined ? AbortSignal.timeout(options.timeoutMs) : undefined;
+	const signal =
+		options.signal && timeoutSignal
+			? AbortSignal.any([options.signal, timeoutSignal])
+			: (options.signal ?? timeoutSignal);
+	const response = await retryProviderRequest(
+		async () => {
+			const result = await (options.fetch ?? globalThis.fetch)(
+				`${model.baseUrl.replace(/\/+$/, "")}/responses${path}`,
+				{
+					method,
+					headers: {
+						...model.headers,
+						...options.headers,
+						Authorization: `Bearer ${apiKey}`,
+						"Content-Type": "application/json",
+					},
+					...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+					signal,
 				},
-				...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
-				signal: options.signal,
-			},
-		);
-		if (!result.ok)
-			throw Object.assign(new Error(`Deferred Responses HTTP ${result.status}`), {
-				status: result.status,
-				headers: result.headers,
-			});
-		return result;
-	}, options);
+			);
+			if (!result.ok)
+				throw Object.assign(new Error(`Deferred Responses HTTP ${result.status}`), {
+					status: result.status,
+					headers: result.headers,
+				});
+			return result;
+		},
+		{ ...options, signal },
+	);
 	await options.onResponse?.(
 		{ status: response.status, headers: Object.fromEntries(response.headers.entries()) },
 		model,
@@ -99,6 +107,7 @@ export async function requestDeferred(
 	const replacement = await options.onPayload?.(payload, model);
 	if (replacement !== undefined) payload = replacement as Record<string, unknown>;
 	validateFinalResponsesRequest(model, payload);
+	Object.assign(payload, { background: true, store: true, stream: false });
 	const response = await request(model, "", "POST", options, payload);
 	return {
 		provider: model.provider,

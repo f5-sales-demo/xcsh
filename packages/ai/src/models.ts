@@ -55,7 +55,12 @@ export function calculateCost<TModel extends Pick<Model, "cost"> & { provider?: 
 ): Usage["cost"] {
 	usage.costKnown = model.cost.pricingKnown !== false;
 	usage.billing =
-		model.provider === "openai-codex" ? "subscription" : model.provider === "litellm" ? "internal" : "api";
+		model.provider === "litellm"
+			? "internal"
+			: ["openai-codex", "google-gemini-cli", "google-antigravity"].includes(model.provider ?? "") ||
+					usage.billing === "subscription"
+				? "subscription"
+				: "api";
 	const totalInput = usage.input + usage.cacheRead + usage.cacheWrite;
 	let rates = model.cost;
 	let threshold = -1;

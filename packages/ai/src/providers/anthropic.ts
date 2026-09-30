@@ -752,6 +752,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 				client = created.client;
 				isOAuthToken = created.isOAuthToken;
 			}
+			if (isOAuthToken) output.usage.billing = "subscription";
 			const baseUrl =
 				resolveAnthropicBaseUrl(model, options?.apiKey ?? getEnvApiKey(model.provider) ?? "") ??
 				"https://api.anthropic.com";
