@@ -95,7 +95,7 @@ describe("shared archive installation", () => {
 	});
 	it("rejects link ancestors that redirect later link creation", async () => {
 		const { bytes, plan, root } = await fixture([
-			{ name: "sf/deep/dir", type: "symlink", linkname: "../.." },
+			{ name: "sf/deep/dir", type: "symlink", linkname: ".." },
 			{ name: "sf/deep/dir/link", type: "symlink", linkname: "../../outside" },
 		]);
 		const fetcher = spyOn(globalThis, "fetch").mockResolvedValue(new Response(bytes));
