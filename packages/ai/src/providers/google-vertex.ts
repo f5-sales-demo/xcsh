@@ -113,8 +113,9 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 			const project = await resolveGoogleVertexProject(options);
 			const location = resolveGoogleVertexLocation(options);
 			const client = createClient(model, project, location, options?.apiKey);
-			const params = buildGoogleVertexParams(model, context, options);
-			options?.onPayload?.(params);
+			let params = buildGoogleVertexParams(model, context, options);
+			const replacement = await options?.onPayload?.(params, model);
+			if (replacement !== undefined) params = replacement as typeof params;
 			rawRequestDump = {
 				provider: model.provider,
 				api: output.api,
@@ -130,6 +131,7 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 			const blocks = output.content;
 			const blockIndex = () => blocks.length - 1;
 			for await (const chunk of googleStream) {
+				await options?.onProviderStreamEvent?.(chunk, model);
 				const candidate = chunk.candidates?.[0];
 				if (candidate?.content?.parts) {
 					for (const part of candidate.content.parts) {
@@ -264,6 +266,9 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 							(chunk.usageMetadata.candidatesTokenCount || 0) + (chunk.usageMetadata.thoughtsTokenCount || 0),
 						cacheRead: cachedTokens,
 						cacheWrite: 0,
+						...(chunk.usageMetadata.thoughtsTokenCount !== undefined
+							? { reasoningTokens: chunk.usageMetadata.thoughtsTokenCount }
+							: {}),
 						totalTokens: chunk.usageMetadata.totalTokenCount || 0,
 						cost: {
 							input: 0,

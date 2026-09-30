@@ -225,14 +225,21 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 				body: params,
 			};
 			// The pinned SDK schema predates the provider's `max` effort value.
-			const openaiStream = await retryProviderRequest(
+			const response = await retryProviderRequest(
 				() =>
-					client.responses.create(params as ResponseCreateParamsStreaming, {
-						signal: requestSignal,
-						maxRetries: 0,
-					}),
+					client.responses
+						.create(params as ResponseCreateParamsStreaming, {
+							signal: requestSignal,
+							maxRetries: 0,
+						})
+						.withResponse(),
 				{ signal: requestSignal, maxRetries: options?.maxRetries ?? 2, maxRetryDelayMs: options?.maxRetryDelayMs },
 			);
+			await options?.onResponse?.(
+				{ status: response.response.status, headers: Object.fromEntries(response.response.headers.entries()) },
+				model,
+			);
+			const openaiStream = response.data;
 			const firstEventWatchdog = createFirstEventWatchdog(
 				options?.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs(idleTimeoutMs),
 				() => abortTracker.abortLocally(firstEventTimeoutAbortError),
