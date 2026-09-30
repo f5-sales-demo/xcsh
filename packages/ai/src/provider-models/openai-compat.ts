@@ -516,17 +516,17 @@ export interface XaiModelManagerConfig {
 	baseUrl?: string;
 }
 
-export function xaiModelManagerOptions(config?: XaiModelManagerConfig): ModelManagerOptions<"openai-completions"> {
+export function xaiModelManagerOptions(config?: XaiModelManagerConfig): ModelManagerOptions<"openai-responses"> {
 	const apiKey = config?.apiKey;
 	const baseUrl = config?.baseUrl ?? "https://api.x.ai/v1";
-	const references = createBundledReferenceMap<"openai-completions">("xai");
+	const references = createBundledReferenceMap<"openai-responses">("xai");
 	return {
 		providerId: "xai",
 		...(apiKey && {
 			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
 					signal,
-					api: "openai-completions",
+					api: "openai-responses",
 					provider: "xai",
 					baseUrl,
 					apiKey,
@@ -1329,21 +1329,21 @@ export interface XiaomiModelManagerConfig {
 
 export function xiaomiModelManagerOptions(
 	config?: XiaomiModelManagerConfig,
-): ModelManagerOptions<"anthropic-messages"> {
+): ModelManagerOptions<"openai-completions"> {
 	const apiKey = config?.apiKey;
-	const baseUrl = normalizeAnthropicBaseUrl(config?.baseUrl, "https://api.xiaomimimo.com/anthropic");
-	const discoveryBaseUrl = toAnthropicDiscoveryBaseUrl(baseUrl);
-	const references = createBundledReferenceMap<"anthropic-messages">("xiaomi");
+	const baseUrl = normalizeAnthropicBaseUrl(config?.baseUrl, "https://api.xiaomimimo.com/v1");
+	const discoveryBaseUrl = baseUrl;
+	const references = createBundledReferenceMap<"openai-completions">("xiaomi");
 	return {
 		providerId: "xiaomi",
 		...(apiKey && {
 			fetchDynamicModels: signal =>
 				fetchOpenAICompatibleModels({
 					signal,
-					api: "anthropic-messages",
+					api: "openai-completions",
 					provider: "xiaomi",
 					baseUrl: discoveryBaseUrl,
-					headers: buildAnthropicDiscoveryHeaders(apiKey),
+					apiKey,
 					mapModel: (entry, defaults) => {
 						const reference = references.get(defaults.id);
 						const model = mapWithBundledReference(entry, defaults, reference);
@@ -2015,14 +2015,14 @@ const MODELS_DEV_PROVIDER_DESCRIPTORS_CORE: readonly ModelsDevProviderDescriptor
 		defaultContextWindow: 131072,
 	}),
 	// --- xAI ---
-	openAiCompletionsDescriptor("xai", "xai", "https://api.x.ai/v1"),
+	simpleModelsDevDescriptor("xai", "xai", "openai-responses", "https://api.x.ai/v1"),
 ];
 
 const MODELS_DEV_PROVIDER_DESCRIPTORS_CODING_PLANS: readonly ModelsDevProviderDescriptor[] = [
 	// --- zAI ---
 	anthropicMessagesDescriptor("zai-coding-plan", "zai", "https://api.z.ai/api/anthropic"),
 	// --- Xiaomi ---
-	anthropicMessagesDescriptor("xiaomi", "xiaomi", "https://api.xiaomimimo.com/anthropic", {
+	openAiCompletionsDescriptor("xiaomi", "xiaomi", "https://api.xiaomimimo.com/v1", {
 		defaultContextWindow: 262144,
 		defaultMaxTokens: 8192,
 	}),

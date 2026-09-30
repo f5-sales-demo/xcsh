@@ -1,5 +1,5 @@
 import { applyCodexInteractionMetadata, CODEX_MODEL_INTERACTION_METADATA } from "./codex-model-interaction";
-import { enrichModelThinking } from "./model-thinking";
+import { applyGeneratedModelPolicies, enrichModelThinking } from "./model-thinking";
 import MODELS from "./models.json" with { type: "json" };
 import { currentSolModels } from "./sol-model";
 import type { Api, KnownProvider, Model, Usage } from "./types";
@@ -16,10 +16,13 @@ const modelRegistry: Map<string, Map<string, Model<Api>>> = new Map();
 for (const [provider, models] of Object.entries(MODELS)) {
 	const providerModels = new Map<string, Model<Api>>();
 	for (const [id, model] of Object.entries(models)) {
+		const normalized = [model as Model<Api>];
+		if (provider === "xai" || provider === "xiaomi")
+			applyGeneratedModelPolicies(normalized, { preserveDiscoveredThinking: true });
 		providerModels.set(
 			id,
 			applyCodexInteractionMetadata({
-				...enrichModelThinking(model as Model<Api>),
+				...enrichModelThinking(normalized[0]!),
 				...(provider === "openai-codex" && CODEX_MODEL_INTERACTION_METADATA[id] ? { thinking: undefined } : {}),
 			}),
 		);

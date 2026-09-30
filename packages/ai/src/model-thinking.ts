@@ -411,6 +411,11 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 }
 
 function applyGeneratedModelPolicy(model: ApiModel<Api>): void {
+	if (model.provider === "xai") model.api = "openai-responses";
+	if (model.provider === "xiaomi" && /api\.xiaomimimo\.com/.test(model.baseUrl)) {
+		model.api = "openai-completions";
+		model.baseUrl = model.baseUrl.replace(/\/anthropic\/?$/, "/v1");
+	}
 	if (
 		model.provider === "baseten" &&
 		["zai-org/GLM-5.2", "zai-org/GLM-5.2-Fast", "moonshotai/Kimi-K2.6"].includes(model.id)
