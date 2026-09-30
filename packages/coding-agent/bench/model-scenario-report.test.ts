@@ -2,7 +2,10 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { describe, expect, it } from "bun:test";
 import { Effort } from "@f5-sales-demo/pi-ai";
-import { defaultModelBenchmarkOutputFile, displayModelBenchmarkOutputFile } from "./model-benchmark-paths";
+import {
+	defaultModelBenchmarkOutputFile,
+	displayModelBenchmarkOutputFile,
+} from "./model-benchmark-paths";
 import type { ModelBenchmarkTarget } from "./model-matrix-report";
 import { MODEL_BENCHMARK_SCENARIOS, selectModelBenchmarkScenarios } from "./model-scenario-library";
 import {
@@ -25,12 +28,16 @@ describe("model scenario library", () => {
 		expect(displayModelBenchmarkOutputFile(outputFile)).toBe(
 			path.join("~", ".xcsh", "benchmarks", "model-scenarios-2026-08-03T21-40-26.190Z-42.json"),
 		);
-		expect(defaultModelBenchmarkOutputFile("model-scenarios", "2026-08-03T21:40:26.190Z", 43)).not.toBe(outputFile);
+		expect(defaultModelBenchmarkOutputFile("model-scenarios", "2026-08-03T21:40:26.190Z", 43)).not.toBe(
+			outputFile,
+		);
 	});
 
 	it("preserves the two initial comparison prompts verbatim", () => {
 		const assistantIdentity = MODEL_BENCHMARK_SCENARIOS.find(scenario => scenario.id === "assistant-identity");
-		expect(assistantIdentity?.prompt).toBe("Who are you and what are you good at ?");
+		expect(assistantIdentity?.prompt).toBe(
+			"Who are you and what are you good at ?",
+		);
 		expect(assistantIdentity?.contract.requiredTools).toBeUndefined();
 		expect(assistantIdentity?.runtime.tools).toEqual(["read"]);
 		expect(MODEL_BENCHMARK_SCENARIOS.find(scenario => scenario.id === "user-assistance")?.prompt).toBe(
@@ -86,21 +93,7 @@ describe("model scenario library", () => {
 			"Required fields: metadata.name, metadata.namespace, path.metadata.namespace",
 		].join("\\n");
 		expect(evaluateScenarioQuality(scenario, response, true).score).toBe(100);
-		expect(
-			buildScenarioBenchmarkSample({
-				target,
-				scenario,
-				round: 1,
-				warmup: false,
-				startedAt: "2026-08-02T00:00:00.000Z",
-				processDurationMs: 1,
-				exitCode: 0,
-				timedOut: false,
-				stderr: "",
-				stdoutErrors: [],
-				events: [],
-			}).contractFailures,
-		).toEqual(expect.arrayContaining([expect.stringContaining("tool sequence missing")]));
+		expect(buildScenarioBenchmarkSample({ target, scenario, round: 1, warmup: false, startedAt: "2026-08-02T00:00:00.000Z", processDurationMs: 1, exitCode: 0, timedOut: false, stderr: "", stdoutErrors: [], events: [] }).contractFailures).toEqual(expect.arrayContaining([expect.stringContaining("tool sequence missing")]));
 	});
 
 	it("grades identity output against the exact selected context", () => {
@@ -140,30 +133,10 @@ describe("model scenario event contracts", () => {
 					durationMs: 35,
 					events: [
 						{ elapsedMs: 6, event: { type: "message_start", message: { role: "user" } } },
-						{
-							elapsedMs: 10,
-							event: {
-								type: "tool_execution_start",
-								toolCallId: "read-1",
-								toolName: "read",
-								args: { path: "packages/coding-agent/bench/fixtures/tool-probe.txt" },
-							},
-						},
+						{ elapsedMs: 10, event: { type: "tool_execution_start", toolCallId: "read-1", toolName: "read", args: { path: "packages/coding-agent/bench/fixtures/tool-probe.txt" } } },
 						{ elapsedMs: 12, event: { type: "tool_execution_end", toolCallId: "read-1", toolName: "read" } },
-						{
-							elapsedMs: 20,
-							event: {
-								type: "message_update",
-								assistantMessageEvent: { type: "text_delta", delta: "TOOL_PROBE_OK_7F3C" },
-							},
-						},
-						{
-							elapsedMs: 30,
-							event: {
-								type: "message_end",
-								message: { role: "assistant", provider: "provider", model: "model" },
-							},
-						},
+						{ elapsedMs: 20, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "TOOL_PROBE_OK_7F3C" } } },
+						{ elapsedMs: 30, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
 						{ elapsedMs: 35, event: { type: "turn_end" } },
 					],
 				},
@@ -172,29 +145,10 @@ describe("model scenario event contracts", () => {
 					durationMs: 50,
 					error: "runtime failed after completion",
 					events: [
-						{
-							elapsedMs: 2,
-							event: {
-								type: "message_start",
-								message: {
-									role: "custom",
-									customType: "api-catalog-preflight",
-									details: { queries: ["http load balancer"] },
-								},
-							},
-						},
+						{ elapsedMs: 2, event: { type: "message_start", message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["http load balancer"] } } } },
 						{ elapsedMs: 3, event: { type: "message_start", message: { role: "user" } } },
-						{
-							elapsedMs: 20,
-							event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "256" } },
-						},
-						{
-							elapsedMs: 40,
-							event: {
-								type: "message_end",
-								message: { role: "assistant", provider: "provider", model: "model" },
-							},
-						},
+						{ elapsedMs: 20, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "256" } } },
+						{ elapsedMs: 40, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
 						{ elapsedMs: 45, event: { type: "turn_end" } },
 					],
 				},
@@ -205,11 +159,7 @@ describe("model scenario event contracts", () => {
 		expect(sample).toMatchObject({ requestedThinking: "high", effectiveThinking: "high" });
 		expect(sample.turns[0]).toMatchObject({ id: "resource", response: "TOOL_PROBE_OK_7F3C", durationMs: 35 });
 		expect(sample.turns[0].toolCalls).toHaveLength(1);
-		expect(sample.turns[1]).toMatchObject({
-			id: "follow-up",
-			response: "256",
-			error: "runtime failed after completion",
-		});
+		expect(sample.turns[1]).toMatchObject({ id: "follow-up", response: "256", error: "runtime failed after completion" });
 		expect(sample.turns[1].knowledgeEvents).toEqual([
 			expect.objectContaining({ type: "api-catalog-preflight", query: "http load balancer" }),
 		]);
@@ -240,46 +190,14 @@ describe("model scenario event contracts", () => {
 			stderr: "",
 			stdoutErrors: [],
 			events: [
-				{
-					elapsedMs: 1,
-					event: {
-						type: "message_start",
-						message: {
-							role: "custom",
-							customType: "api-catalog-preflight",
-							details: { queries: ["http load balancer"] },
-						},
-					},
-				},
+				{ elapsedMs: 1, event: { type: "message_start", message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["http load balancer"] } } } },
 				{ elapsedMs: 2, event: { type: "message_start", message: { role: "user" } } },
-				{
-					elapsedMs: 3,
-					event: {
-						type: "tool_execution_start",
-						toolCallId: "a",
-						toolName: "read",
-						args: { path: "xcsh://api-catalog/http-loadbalancers" },
-					},
-				},
+				{ elapsedMs: 3, event: { type: "tool_execution_start", toolCallId: "a", toolName: "read", args: { path: "xcsh://api-catalog/http-loadbalancers" } } },
 				{ elapsedMs: 4, event: { type: "tool_execution_end", toolCallId: "a", toolName: "read" } },
-				{
-					elapsedMs: 5,
-					event: {
-						type: "tool_execution_start",
-						toolCallId: "b",
-						toolName: "read",
-						args: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
-					},
-				},
+				{ elapsedMs: 5, event: { type: "tool_execution_start", toolCallId: "b", toolName: "read", args: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } } },
 				{ elapsedMs: 6, event: { type: "tool_execution_end", toolCallId: "b", toolName: "read" } },
-				{
-					elapsedMs: 7,
-					event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "256" } },
-				},
-				{
-					elapsedMs: 8,
-					event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } },
-				},
+				{ elapsedMs: 7, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "256" } } },
+				{ elapsedMs: 8, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
 			],
 		};
 		const passing = buildScenarioBenchmarkSample(input);
@@ -427,7 +345,7 @@ describe("model scenario event contracts", () => {
 		expect(sample.contractPassed).toBe(false);
 		expect(sample.contractFailures).toEqual(
 			expect.arrayContaining([
-				'response did not exactly match "TOOL_PROBE_OK_7F3C"',
+				"response did not exactly match \"TOOL_PROBE_OK_7F3C\"",
 				expect.stringContaining("tool read matching path="),
 				"unexpected tools called: bash",
 				"tool execution failed: bash",
@@ -446,37 +364,18 @@ describe("model scenario event contracts", () => {
 		} as any;
 		const events = [
 			{ elapsedMs: 1, event: { type: "message_start", message: { role: "user" } } },
-			{
-				elapsedMs: 2,
-				event: {
-					type: "tool_execution_start",
-					toolCallId: "image",
-					toolName: "read",
-					args: { path: "fixture://image" },
-				},
-			},
+			{ elapsedMs: 2, event: { type: "tool_execution_start", toolCallId: "image", toolName: "read", args: { path: "fixture://image" } } },
 			{
 				elapsedMs: 3,
 				event: {
 					type: "tool_execution_end",
 					toolCallId: "image",
 					toolName: "read",
-					result: {
-						content: [
-							{ type: "text", text: "Read image resource" },
-							{ type: "image", data: "abc", mimeType: "image/png" },
-						],
-					},
+					result: { content: [{ type: "text", text: "Read image resource" }, { type: "image", data: "abc", mimeType: "image/png" }] },
 				},
 			},
-			{
-				elapsedMs: 4,
-				event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "done" } },
-			},
-			{
-				elapsedMs: 5,
-				event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } },
-			},
+			{ elapsedMs: 4, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "done" } } },
+			{ elapsedMs: 5, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
 		] as any;
 		const passing = buildScenarioBenchmarkSample({
 			target,
@@ -505,11 +404,9 @@ describe("model scenario event contracts", () => {
 			timedOut: false,
 			stderr: "",
 			stdoutErrors: [],
-			events: events.map((event: any) =>
-				event.event.type === "tool_execution_end"
-					? { ...event, event: { ...event.event, result: { content: [{ type: "text", text: "no image" }] } } }
-					: event,
-			),
+			events: events.map((event: any) => event.event.type === "tool_execution_end"
+				? { ...event, event: { ...event.event, result: { content: [{ type: "text", text: "no image" }] } } }
+				: event),
 		});
 		expect(missing.contractPassed).toBe(false);
 		expect(missing.contractFailures).toContain("image content count was 0, expected exactly 1");
@@ -580,10 +477,7 @@ describe("model scenario event contracts", () => {
 				{ elapsedMs: 4, event: { type: "tool_execution_end", toolCallId: "t", toolName: "read" } },
 				{
 					elapsedMs: 5,
-					event: {
-						type: "message_update",
-						assistantMessageEvent: { type: "text_delta", delta: "TOOL_PROBE_OK_7F3C" },
-					},
+					event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "TOOL_PROBE_OK_7F3C" } },
 				},
 				{
 					elapsedMs: 6,
@@ -712,58 +606,16 @@ describe("model scenario event contracts", () => {
 			stderr: "",
 			stdoutErrors: [],
 			events: [
-				{
-					elapsedMs: 1,
-					event: {
-						type: "message_start",
-						message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["dns zone"] } },
-					},
-				},
+				{ elapsedMs: 1, event: { type: "message_start", message: { role: "custom", customType: "api-catalog-preflight", details: { queries: ["dns zone"] } } } },
 				{ elapsedMs: 2, event: { type: "message_start", message: { role: "user" } } },
-				{
-					elapsedMs: 3,
-					event: {
-						type: "tool_execution_start",
-						toolCallId: "catalog",
-						toolName: "read",
-						args: { path: "xcsh://api-catalog/?resource=dns_zone&compact=true" },
-					},
-				},
+				{ elapsedMs: 3, event: { type: "tool_execution_start", toolCallId: "catalog", toolName: "read", args: { path: "xcsh://api-catalog/?resource=dns_zone&compact=true" } } },
 				{ elapsedMs: 4, event: { type: "tool_execution_end", toolCallId: "catalog", toolName: "read" } },
-				{
-					elapsedMs: 5,
-					event: {
-						type: "tool_execution_start",
-						toolCallId: "spec",
-						toolName: "read",
-						args: { path: "xcsh://api-spec/dns?resource=dns_zone" },
-					},
-				},
+				{ elapsedMs: 5, event: { type: "tool_execution_start", toolCallId: "spec", toolName: "read", args: { path: "xcsh://api-spec/dns?resource=dns_zone" } } },
 				{ elapsedMs: 6, event: { type: "tool_execution_end", toolCallId: "spec", toolName: "read" } },
-				{
-					elapsedMs: 7,
-					event: {
-						type: "tool_execution_start",
-						toolCallId: "continuation",
-						toolName: "read",
-						args: { path: "xcsh://api-spec/dns?resource=dns_zone", sel: "L438-L700" },
-					},
-				},
+				{ elapsedMs: 7, event: { type: "tool_execution_start", toolCallId: "continuation", toolName: "read", args: { path: "xcsh://api-spec/dns?resource=dns_zone", sel: "L438-L700" } } },
 				{ elapsedMs: 8, event: { type: "tool_execution_end", toolCallId: "continuation", toolName: "read" } },
-				{
-					elapsedMs: 9,
-					event: {
-						type: "message_update",
-						assistantMessageEvent: {
-							type: "text_delta",
-							delta: "POST /api/config/dns/namespaces/{namespace}/dns_zones. No cURL or Terraform was used.",
-						},
-					},
-				},
-				{
-					elapsedMs: 10,
-					event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } },
-				},
+				{ elapsedMs: 9, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "POST /api/config/dns/namespaces/{namespace}/dns_zones. No cURL or Terraform was used." } } },
+				{ elapsedMs: 10, event: { type: "message_end", message: { role: "assistant", provider: "provider", model: "model" } } },
 			],
 		});
 
@@ -904,26 +756,8 @@ describe("model scenario event contracts", () => {
 			stdoutErrors: [],
 			events: [],
 			turnInputs: [
-				{
-					startedAtMs: 0,
-					durationMs: 10,
-					events: [
-						{
-							elapsedMs: 1,
-							event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "alpha" } },
-						},
-					],
-				},
-				{
-					startedAtMs: 10,
-					durationMs: 10,
-					events: [
-						{
-							elapsedMs: 1,
-							event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "beta" } },
-						},
-					],
-				},
+				{ startedAtMs: 0, durationMs: 10, events: [{ elapsedMs: 1, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "alpha" } } }] },
+				{ startedAtMs: 10, durationMs: 10, events: [{ elapsedMs: 1, event: { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "beta" } } }] },
 			],
 		});
 		const stale = {
@@ -943,18 +777,7 @@ describe("model scenario event contracts", () => {
 				failFastProviderError: false,
 				order: "rotating-round-robin",
 				models: [target],
-				scenarios: [
-					{
-						id: scenario.id,
-						label: scenario.label,
-						suite: scenario.suite,
-						tier: scenario.tier,
-						prompt: scenario.prompt,
-						contract: [],
-						quality: [],
-						runtime: scenario.runtime,
-					},
-				],
+				scenarios: [{ id: scenario.id, label: scenario.label, suite: scenario.suite, tier: scenario.tier, prompt: scenario.prompt, contract: [], quality: [], runtime: scenario.runtime }],
 			},
 			warmups: [],
 			samples: [stale],

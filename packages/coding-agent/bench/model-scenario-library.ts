@@ -17,12 +17,8 @@ import apiCatalogAnswerAmbiguousPrompt from "./prompts/api-catalog-answer-ambigu
 import apiCatalogAnswerNoMatchPrompt from "./prompts/api-catalog-answer-no-match.md" with { type: "text" };
 import apiCatalogAnswerWafPrompt from "./prompts/api-catalog-answer-waf.md" with { type: "text" };
 import apiCatalogAnswerCloneDnsZonePrompt from "./prompts/api-catalog-answer-clone-dns-zone.md" with { type: "text" };
-import apiCatalogAnswerImportBindDnsZonePrompt from "./prompts/api-catalog-answer-import-bind-dns-zone.md" with {
-	type: "text",
-};
-import apiCatalogAnswerValidateCloudUserAccountPrompt from "./prompts/api-catalog-answer-validate-cloud-user-account.md" with {
-	type: "text",
-};
+import apiCatalogAnswerImportBindDnsZonePrompt from "./prompts/api-catalog-answer-import-bind-dns-zone.md" with { type: "text" };
+import apiCatalogAnswerValidateCloudUserAccountPrompt from "./prompts/api-catalog-answer-validate-cloud-user-account.md" with { type: "text" };
 import apiFirstDnsZoneCreatePrompt from "./prompts/api-first-dns-zone-create.md" with { type: "text" };
 import apiFirstHttpRouteLimitPrompt from "./prompts/api-first-http-route-limit.md" with { type: "text" };
 import apiFirstOriginPoolRequiredPrompt from "./prompts/api-first-origin-pool-required.md" with { type: "text" };
@@ -265,10 +261,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: userAssistancePrompt.trim(),
 		contract: {
 			requiredResponsePatterns: [
-				{
-					label: "connects the user to F5 or the active platform context",
-					pattern: /\bF5\b|sales engineer|tenant|namespace/i,
-				},
+				{ label: "connects the user to F5 or the active platform context", pattern: /\bF5\b|sales engineer|tenant|namespace/i },
 			],
 		},
 		quality: [
@@ -276,8 +269,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 				id: "identity-boundary",
 				label: "Distinguishes session evidence from verified personal identity",
 				weight: 15,
-				responsePattern:
-					/based on|inferred|cannot verify|not verified|session (?:evidence|signals)|context (?:suggests|indicates)/i,
+				responsePattern: /based on|inferred|cannot verify|not verified|session (?:evidence|signals)|context (?:suggests|indicates)/i,
 			},
 			{
 				id: "role",
@@ -484,13 +476,12 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		tier: 2,
 		prompt: documentationAnswerMissingPrompt.trim(),
 		contract: {
-			requiredTools: [{ name: "read", count: 1, arguments: { path: "xcsh://documentation/?search=zzzxxyyqqqv" } }],
+			requiredTools: [
+				{ name: "read", count: 1, arguments: { path: "xcsh://documentation/?search=zzzxxyyqqqv" } },
+			],
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "reports no matching pinned document",
-					pattern: /no matching document|pinned snapshot has no match/i,
-				},
+				{ label: "reports no matching pinned document", pattern: /no matching document|pinned snapshot has no match/i },
 			],
 			forbiddenResponsePatterns: [{ label: "does not use live fallback", pattern: /https?:\/\/|llms\.txt/i }],
 		},
@@ -506,15 +497,10 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		contract: {
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "discloses that evidence cannot be verified",
-					pattern: /can(?:not|'t|’t) verify|unable to verify/i,
-				},
+				{ label: "discloses that evidence cannot be verified", pattern: /can(?:not|'t|’t) verify|unable to verify/i },
 				{ label: "names the unavailable offline read path", pattern: /offline documentation|read tool/i },
 			],
-			forbiddenResponsePatterns: [
-				{ label: "does not claim live evidence", pattern: /according to (?:the )?(?:live|current) documentation/i },
-			],
+			forbiddenResponsePatterns: [{ label: "does not claim live evidence", pattern: /according to (?:the )?(?:live|current) documentation/i }],
 		},
 		quality: EXACT_CONTRACT_QUALITY,
 		runtime: { tools: "none", extensions: "none", skills: "none", requiresContext: false },
@@ -571,8 +557,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			},
 			{
 				id: "follow-up",
-				prompt:
-					"Which pinned source did you use? Re-read the exact document from the previous turn and answer with its xcsh:// URL and source name. Do not search again or use live documentation.",
+				prompt: "Which pinned source did you use? Re-read the exact document from the previous turn and answer with its xcsh:// URL and source name. Do not search again or use live documentation.",
 				contract: {
 					requiredTools: [
 						{
@@ -586,11 +571,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 					exclusiveTools: true,
 					requiredResponsePatterns: [
 						{ label: "states the source", pattern: /docs-cloud-f5-com/i },
-						{
-							label: "states the exact URL",
-							pattern:
-								/xcsh:\/\/documentation\/docs-cloud-f5-com\/dns-management\/how-to\/configure-dns-load-balancer\/index\.md/i,
-						},
+						{ label: "states the exact URL", pattern: /xcsh:\/\/documentation\/docs-cloud-f5-com\/dns-management\/how-to\/configure-dns-load-balancer\/index\.md/i },
 					],
 				},
 				quality: EXACT_CONTRACT_QUALITY,
@@ -691,8 +672,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 					requiredResponsePatterns: [
 						{
 							label: "presents all official captions in document order",
-							pattern:
-								/(?:Figure:\s*)?Script List[\s\S]*(?:Figure:\s*)?Protect a Root Domain[\s\S]*(?:Figure:\s*)?Enable Client-Side Defense on an HTTP Load Balancer[\s\S]*(?:Figure:\s*)?Configure a Domain Matcher[\s\S]*(?:Figure:\s*)?Configure a Path Matcher[\s\S]*(?:Figure:\s*)?Configure JavaScript Insertion/i,
+							pattern: /(?:Figure:\s*)?Script List[\s\S]*(?:Figure:\s*)?Protect a Root Domain[\s\S]*(?:Figure:\s*)?Enable Client-Side Defense on an HTTP Load Balancer[\s\S]*(?:Figure:\s*)?Configure a Domain Matcher[\s\S]*(?:Figure:\s*)?Configure a Path Matcher[\s\S]*(?:Figure:\s*)?Configure JavaScript Insertion/i,
 						},
 					],
 					forbiddenResponsePatterns: [
@@ -789,72 +769,26 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiCatalogAnswerWafPrompt.trim(),
 		contract: {
 			requiredToolSequence: [
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=web%20application%20firewall$/ },
-				},
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=web%20application%20firewall$/ } },
 				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/[a-z0-9-]+$/ } },
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-spec\/virtual\?resource=app_firewall$/ },
-				},
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-spec\/virtual\?resource=app_firewall$/ } },
 			],
 			requiredResponsePatterns: [
 				{ label: "selects app_firewall", pattern: /\bapp[_ -]?firewall\b/i },
-				{
-					label: "states the create method and path",
-					pattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i,
-				},
-				{
-					label: "states all required fields",
-					pattern:
-						/metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i,
-				},
+				{ label: "states the create method and path", pattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
+				{ label: "states all required fields", pattern: /metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i },
 			],
 			forbiddenResponsePatterns: [
 				{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i },
 			],
 		},
 		quality: [
-			{
-				id: "evidence-sequence",
-				label: "Follows the catalog-to-schema internal URL sequence",
-				weight: 30,
-				requiresContract: true,
-			},
-			{
-				id: "resource",
-				label: "Selects the app_firewall resource",
-				weight: 15,
-				responsePattern: /\bapp[_ -]?firewall\b/i,
-			},
-			{
-				id: "internal-urls",
-				label: "Cites both catalog and API-spec internal URLs",
-				weight: 15,
-				responsePattern: /xcsh:\/\/api-catalog\/[\s\S]*xcsh:\/\/api-spec\//i,
-			},
-			{
-				id: "method-path",
-				label: "States the authoritative POST path",
-				weight: 20,
-				responsePattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i,
-			},
-			{
-				id: "required-fields",
-				label: "States the required field set",
-				weight: 15,
-				responsePattern:
-					/metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i,
-			},
-			{
-				id: "no-substitution",
-				label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions",
-				weight: 5,
-				forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i,
-			},
+			{ id: "evidence-sequence", label: "Follows the catalog-to-schema internal URL sequence", weight: 30, requiresContract: true },
+			{ id: "resource", label: "Selects the app_firewall resource", weight: 15, responsePattern: /\bapp[_ -]?firewall\b/i },
+			{ id: "internal-urls", label: "Cites both catalog and API-spec internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/[\s\S]*xcsh:\/\/api-spec\//i },
+			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST\s+\/api\/config\/namespaces\/\{(?:metadata\.)?namespace\}\/app_firewalls/i },
+			{ id: "required-fields", label: "States the required field set", weight: 15, responsePattern: /metadata\.name[\s\S]{0,200}metadata\.namespace[\s\S]{0,200}(?:path\.metadata\.namespace|path\s*:\s*`?metadata\.namespace)/i },
+			{ id: "no-substitution", label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
@@ -865,34 +799,17 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		tier: 2,
 		prompt: apiCatalogAnswerAmbiguousPrompt.trim(),
 		contract: {
-			requiredTools: [
-				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=network%20policy$/ } },
-			],
+			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=network%20policy$/ } }],
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "asks for clarification",
-					pattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i,
-				},
+				{ label: "asks for clarification", pattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i },
 			],
-			forbiddenResponsePatterns: [
-				{ label: "does not invent an API path", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
-			],
+			forbiddenResponsePatterns: [{ label: "does not invent an API path", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i }],
 		},
 		quality: [
 			{ id: "safe-discovery", label: "Uses exactly the catalog lookup", weight: 35, requiresContract: true },
-			{
-				id: "clarification",
-				label: "Requests a meaningful disambiguating choice",
-				weight: 35,
-				responsePattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i,
-			},
-			{
-				id: "no-invented-path",
-				label: "Does not invent a mutation path",
-				weight: 30,
-				forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i,
-			},
+			{ id: "clarification", label: "Requests a meaningful disambiguating choice", weight: 35, responsePattern: /\bclarif|\bwhich\b[\s\S]{0,80}\b(?:kind|scope|type|use case|namespace)\b|could mean\b/i },
+			{ id: "no-invented-path", label: "Does not invent a mutation path", weight: 30, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
@@ -904,195 +821,63 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiCatalogAnswerCloneDnsZonePrompt.trim(),
 		contract: {
 			requiredToolSequence: [
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone$/ },
-				},
+				{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone$/ } },
 				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/dns-dns-zone-clone-from-dns-domain" } },
 			],
 			requiredResponsePatterns: [
 				{ label: "selects the DNS-zone clone category", pattern: /dns-dns-zone-clone-from-dns-domain/i },
-				{
-					label: "states the clone method and path",
-					pattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i,
-				},
-				{
-					label: "states that no fields are required",
-					pattern:
-						/(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i,
-				},
+				{ label: "states the clone method and path", pattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
+				{ label: "states that no fields are required", pattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
 			],
-			forbiddenResponsePatterns: [
-				{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i },
-			],
+			forbiddenResponsePatterns: [{ label: "does not substitute curl, vesctl, or Terraform", pattern: /\b(?:curl|vesctl|terraform)\b/i }],
 		},
 		quality: [
-			{
-				id: "evidence-sequence",
-				label: "Reads the QMD-discovered category after the natural-language query",
-				weight: 30,
-				requiresContract: true,
-			},
-			{
-				id: "resource",
-				label: "Selects the DNS-zone clone category",
-				weight: 20,
-				responsePattern: /dns-dns-zone-clone-from-dns-domain/i,
-			},
-			{
-				id: "internal-urls",
-				label: "Cites both internal URLs",
-				weight: 15,
-				responsePattern:
-					/xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone[\s\S]*xcsh:\/\/api-catalog\/dns-dns-zone-clone-from-dns-domain/i,
-			},
-			{
-				id: "method-path",
-				label: "States the authoritative POST path",
-				weight: 20,
-				responsePattern:
-					/POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i,
-			},
-			{
-				id: "required-fields",
-				label: "States that the operation has no required fields",
-				weight: 10,
-				responsePattern:
-					/(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i,
-			},
-			{
-				id: "no-substitution",
-				label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions",
-				weight: 5,
-				forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i,
-			},
+			{ id: "evidence-sequence", label: "Reads the QMD-discovered category after the natural-language query", weight: 30, requiresContract: true },
+			{ id: "resource", label: "Selects the DNS-zone clone category", weight: 20, responsePattern: /dns-dns-zone-clone-from-dns-domain/i },
+			{ id: "internal-urls", label: "Cites both internal URLs", weight: 15, responsePattern: /xcsh:\/\/api-catalog\/\?search=clone%20a%20DNS%20zone[\s\S]*xcsh:\/\/api-catalog\/dns-dns-zone-clone-from-dns-domain/i },
+			{ id: "method-path", label: "States the authoritative POST path", weight: 20, responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/clone_from_dns_domain/i },
+			{ id: "required-fields", label: "States that the operation has no required fields", weight: 10, responsePattern: /(?:required fields?|required input)(?:\s+are|\s*:)?.{0,40}\bnone\b|\bno required (?:fields?|input)/i },
+			{ id: "no-substitution", label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
-		id: "api-catalog-answer-validate-cloud-user-account",
-		label: "API discovery answer quality: validate cloud user account",
-		suite: "tools",
-		tier: 2,
+		id: "api-catalog-answer-validate-cloud-user-account", label: "API discovery answer quality: validate cloud user account", suite: "tools", tier: 2,
 		prompt: apiCatalogAnswerValidateCloudUserAccountPrompt.trim(),
-		contract: {
-			requiredToolSequence: [
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=validate%20cloud%20user%20account$/ },
-				},
-				{
-					name: "read",
-					count: 1,
-					arguments: { path: "xcsh://api-catalog/cloud-data-cloud-user-accounts-validate" },
-				},
-			],
-			requiredResponsePatterns: [
-				{ label: "selects validation category", pattern: /cloud-data-cloud-user-accounts-validate/i },
-				{
-					label: "states GET path",
-					pattern:
-						/GET[\s\S]{0,200}\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i,
-				},
-				{
-					label: "states required path parameter",
-					pattern:
-						/cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i,
-				},
-			],
-			forbiddenResponsePatterns: [
-				{ label: "does not invent mutation", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
-			],
-		},
+		contract: { requiredToolSequence: [
+			{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=validate%20cloud%20user%20account$/ } },
+			{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/cloud-data-cloud-user-accounts-validate" } },
+		], requiredResponsePatterns: [
+			{ label: "selects validation category", pattern: /cloud-data-cloud-user-accounts-validate/i },
+			{ label: "states GET path", pattern: /GET[\s\S]{0,200}\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
+			{ label: "states required path parameter", pattern: /cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i },
+		], forbiddenResponsePatterns: [{ label: "does not invent mutation", pattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i }] },
 		quality: [
 			{ id: "evidence-sequence", label: "Reads QMD-discovered category", weight: 35, requiresContract: true },
-			{
-				id: "resource",
-				label: "Selects validation category",
-				weight: 20,
-				responsePattern: /cloud-data-cloud-user-accounts-validate/i,
-			},
-			{
-				id: "method-path",
-				label: "States GET path",
-				weight: 25,
-				responsePattern:
-					/GET[\s\S]{0,200}\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i,
-			},
-			{
-				id: "parameter",
-				label: "States required parameter",
-				weight: 15,
-				responsePattern:
-					/cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i,
-			},
-			{
-				id: "no-invention",
-				label: "Does not invent mutation",
-				weight: 5,
-				forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i,
-			},
-		],
-		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+			{ id: "resource", label: "Selects validation category", weight: 20, responsePattern: /cloud-data-cloud-user-accounts-validate/i },
+			{ id: "method-path", label: "States GET path", weight: 25, responsePattern: /GET[\s\S]{0,200}\/api\/cloud-data\/namespaces\/system\/cloud_user_accounts\/\{cloud_user_account_name\}\/validate/i },
+			{ id: "parameter", label: "States required parameter", weight: 15, responsePattern: /cloud_user_account_name.{0,80}(?:required|path)|(?:required|path).{0,80}cloud_user_account_name/i },
+			{ id: "no-invention", label: "Does not invent mutation", weight: 5, forbiddenResponsePattern: /\b(?:POST|PUT|PATCH|DELETE)\s+\/api\//i },
+		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
-		id: "api-catalog-answer-import-bind-dns-zone",
-		label: "API discovery answer quality: import BIND DNS zone",
-		suite: "tools",
-		tier: 2,
+		id: "api-catalog-answer-import-bind-dns-zone", label: "API discovery answer quality: import BIND DNS zone", suite: "tools", tier: 2,
 		prompt: apiCatalogAnswerImportBindDnsZonePrompt.trim(),
-		contract: {
-			requiredToolSequence: [
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=import%20bind%20DNS%20zone$/ },
-				},
-				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/dns-dns-zone-import-bind-create" } },
-			],
-			requiredResponsePatterns: [
-				{ label: "selects BIND-import category", pattern: /dns-dns-zone-import-bind-create/i },
-				{
-					label: "states POST path",
-					pattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i,
-				},
-				{
-					label: "states required file",
-					pattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i,
-				},
-			],
-			forbiddenResponsePatterns: [{ label: "does not substitute CLI", pattern: /\b(?:curl|vesctl|terraform)\b/i }],
-		},
+		contract: { requiredToolSequence: [
+			{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=import%20bind%20DNS%20zone$/ } },
+			{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/dns-dns-zone-import-bind-create" } },
+		], requiredResponsePatterns: [
+			{ label: "selects BIND-import category", pattern: /dns-dns-zone-import-bind-create/i },
+			{ label: "states POST path", pattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
+			{ label: "states required file", pattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i },
+		], forbiddenResponsePatterns: [{ label: "does not substitute CLI", pattern: /\b(?:curl|vesctl|terraform)\b/i }] },
 		quality: [
 			{ id: "evidence-sequence", label: "Reads QMD-discovered category", weight: 35, requiresContract: true },
-			{
-				id: "resource",
-				label: "Selects BIND-import category",
-				weight: 20,
-				responsePattern: /dns-dns-zone-import-bind-create/i,
-			},
-			{
-				id: "method-path",
-				label: "States POST path",
-				weight: 25,
-				responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i,
-			},
-			{
-				id: "required-fields",
-				label: "States required file",
-				weight: 15,
-				responsePattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i,
-			},
-			{
-				id: "no-substitution",
-				label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions",
-				weight: 5,
-				forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i,
-			},
-		],
-		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
+			{ id: "resource", label: "Selects BIND-import category", weight: 20, responsePattern: /dns-dns-zone-import-bind-create/i },
+			{ id: "method-path", label: "States POST path", weight: 25, responsePattern: /POST[\s\S]{0,120}\/api\/config\/dns\/namespaces\/system\/dns_zone\/import_bind_create/i },
+			{ id: "required-fields", label: "States required file", weight: 15, responsePattern: /\bfile\b[\s\S]{0,120}\brequired\b|\brequired\b[\s\S]{0,120}\bfile\b/i },
+			{ id: "no-substitution", label: "Avoids unsolicited curl, deprecated CLI, or Terraform substitutions", weight: 5, forbiddenResponsePattern: /\b(?:curl|vesctl|terraform)\b/i },
+		], runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
 	{
 		id: "api-catalog-answer-no-match",
@@ -1101,45 +886,15 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		tier: 2,
 		prompt: apiCatalogAnswerNoMatchPrompt.trim(),
 		contract: {
-			requiredTools: [
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=unmatched%20api%20intent$/ },
-				},
-			],
+			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=unmatched%20api%20intent$/ } }],
 			exclusiveTools: true,
-			requiredResponsePatterns: [
-				{
-					label: "reports no catalog match",
-					pattern:
-						/\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i,
-				},
-			],
-			forbiddenResponsePatterns: [
-				{ label: "does not invent an API method or path", pattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i },
-			],
+			requiredResponsePatterns: [{ label: "reports no catalog match", pattern: /\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i }],
+			forbiddenResponsePatterns: [{ label: "does not invent an API method or path", pattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i }],
 		},
 		quality: [
-			{
-				id: "safe-discovery",
-				label: "Uses exactly the no-match catalog lookup",
-				weight: 40,
-				requiresContract: true,
-			},
-			{
-				id: "no-match",
-				label: "Clearly reports that no supported match was found",
-				weight: 35,
-				responsePattern:
-					/\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i,
-			},
-			{
-				id: "no-invention",
-				label: "Does not invent an API method or path",
-				weight: 25,
-				forbiddenResponsePattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i,
-			},
+			{ id: "safe-discovery", label: "Uses exactly the no-match catalog lookup", weight: 40, requiresContract: true },
+			{ id: "no-match", label: "Clearly reports that no supported match was found", weight: 35, responsePattern: /\bno (?:matching )?(?:catalog )?(?:category|resource|match)\b|\b(?:catalog )?(?:cannot|did not) identify\b/i },
+			{ id: "no-invention", label: "Does not invent an API method or path", weight: 25, forbiddenResponsePattern: /\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/api\//i },
 		],
 		runtime: { tools: ["read"], extensions: "none", skills: "none", requiresContext: false },
 	},
@@ -1151,16 +906,8 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiFirstHttpRouteLimitPrompt.trim(),
 		contract: {
 			requiredTools: [
-				{
-					name: "read",
-					count: 1,
-					arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
-				},
-				{
-					name: "read",
-					count: 1,
-					arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
-				},
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
 			],
 			requiredKnowledgeSequence: [
 				{ type: "api-catalog-preflight", query: "http load balancer" },
@@ -1171,11 +918,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			allowReadContinuations: true,
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "states the route maximum",
-					pattern:
-						/(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i,
-				},
+				{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
 			],
 		},
 		quality: EXACT_CONTRACT_QUALITY,
@@ -1201,10 +944,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			allowReadContinuations: true,
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "states create metadata requirements",
-					pattern: /metadata\.name[\s\S]{0,200}metadata\.namespace/i,
-				},
+				{ label: "states create metadata requirements", pattern: /metadata\.name[\s\S]{0,200}metadata\.namespace/i },
 				{ label: "states origin server requirement", pattern: /spec\.origin_servers/i },
 			],
 		},
@@ -1219,16 +959,8 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiFirstHttpRouteLimitPrompt.trim(),
 		contract: {
 			requiredTools: [
-				{
-					name: "read",
-					count: 1,
-					arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
-				},
-				{
-					name: "read",
-					count: 1,
-					arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
-				},
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
 			],
 			requiredKnowledgeSequence: [
 				{ type: "api-catalog-preflight", query: "http load balancer" },
@@ -1239,11 +971,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			allowReadContinuations: true,
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "states the route maximum",
-					pattern:
-						/(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i,
-				},
+				{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
 			],
 		},
 		quality: EXACT_CONTRACT_QUALITY,
@@ -1253,16 +981,8 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 				prompt: apiFirstHttpRouteLimitPrompt.trim(),
 				contract: {
 					requiredTools: [
-						{
-							name: "read",
-							count: 1,
-							arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
-						},
-						{
-							name: "read",
-							count: 1,
-							arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
-						},
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
 					],
 					requiredKnowledgeSequence: [
 						{ type: "api-catalog-preflight", query: "http load balancer" },
@@ -1273,31 +993,18 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 					allowReadContinuations: true,
 					exclusiveTools: true,
 					requiredResponsePatterns: [
-						{
-							label: "states the route maximum",
-							pattern:
-								/(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i,
-						},
+						{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
 					],
 				},
 				quality: EXACT_CONTRACT_QUALITY,
 			},
 			{
 				id: "follow-up",
-				prompt:
-					"What is its maximum? Re-read the exact catalog resource from the deterministic preflight, then read xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes. Cite both internal URLs and do not use public documentation or web search.",
+				prompt: "What is its maximum? Re-read the exact catalog resource from the deterministic preflight, then read xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes. Cite both internal URLs and do not use public documentation or web search.",
 				contract: {
 					requiredTools: [
-						{
-							name: "read",
-							count: 1,
-							arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" },
-						},
-						{
-							name: "read",
-							count: 1,
-							arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" },
-						},
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer&compact=true" } },
+						{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer&field=spec.routes" } },
 					],
 					requiredKnowledgeSequence: [
 						{ type: "api-catalog-preflight", query: "http load balancer" },
@@ -1308,11 +1015,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 					allowReadContinuations: true,
 					exclusiveTools: true,
 					requiredResponsePatterns: [
-						{
-							label: "states the route maximum",
-							pattern:
-								/(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i,
-						},
+						{ label: "states the route maximum", pattern: /(?:maxItems|max(?:imum)?(?: number)? of routes|route limit)[^\n]{0,80}\b256\b|\b256\b[^\n]{0,80}(?:routes|maxItems|maximum)/i },
 					],
 				},
 				quality: EXACT_CONTRACT_QUALITY,
@@ -1340,10 +1043,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 			allowReadContinuations: true,
 			exclusiveTools: true,
 			requiredResponsePatterns: [
-				{
-					label: "states create method and path",
-					pattern: /POST[\s\S]{0,160}\/api\/config\/dns\/namespaces\/\{(?:metadata\.)?namespace\}\/dns_zones/i,
-				},
+				{ label: "states create method and path", pattern: /POST[\s\S]{0,160}\/api\/config\/dns\/namespaces\/\{(?:metadata\.)?namespace\}\/dns_zones/i },
 			],
 		},
 		quality: EXACT_CONTRACT_QUALITY,
@@ -1505,7 +1205,9 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: pluginToolPrompt.trim(),
 		contract: {
 			expectedResponse: "XCSH_PLUGIN_ECHO_OK_C91D:hello-world",
-			requiredTools: [{ name: "xcsh_plugin_echo", count: 1, arguments: { value: "hello-world" } }],
+			requiredTools: [
+				{ name: "xcsh_plugin_echo", count: 1, arguments: { value: "hello-world" } },
+			],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
@@ -1529,7 +1231,9 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 					pattern: /\[blocked\]|lower bound|\bestimat(?:e|ed|ion)\b/i,
 				},
 			],
-			requiredTools: [{ name: "xcsh_api", count: 1, arguments: { method: "GET", path: "/api/web/namespaces" } }],
+			requiredTools: [
+				{ name: "xcsh_api", count: 1, arguments: { method: "GET", path: "/api/web/namespaces" } },
+			],
 			exclusiveTools: true,
 		},
 		quality: [
@@ -1556,9 +1260,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiCatalogExactResourcePrompt.trim(),
 		contract: {
 			expectedResponse: "API_CATALOG_EXACT_RESOURCE_OK_6D18",
-			requiredTools: [
-				{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer" } },
-			],
+			requiredTools: [{ name: "read", count: 1, arguments: { path: "xcsh://api-catalog/?resource=http_loadbalancer" } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
@@ -1586,9 +1288,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiSpecResourcePrompt.trim(),
 		contract: {
 			expectedResponse: "API_SPEC_RESOURCE_OK_4B29",
-			requiredTools: [
-				{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer" } },
-			],
+			requiredTools: [{ name: "read", count: 1, arguments: { path: "xcsh://api-spec/virtual?resource=http_loadbalancer" } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
@@ -1602,13 +1302,7 @@ export const MODEL_BENCHMARK_SCENARIOS: readonly ModelBenchmarkScenario[] = [
 		prompt: apiCatalogNoMatchPrompt.trim(),
 		contract: {
 			expectedResponse: "API_CATALOG_NO_MATCH_OK_9F50",
-			requiredTools: [
-				{
-					name: "read",
-					count: 1,
-					argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=unmatched%20api%20intent$/ },
-				},
-			],
+			requiredTools: [{ name: "read", count: 1, argumentPatterns: { path: /^xcsh:\/\/api-catalog\/\?search=unmatched%20api%20intent$/ } }],
 			exclusiveTools: true,
 		},
 		quality: EXACT_CONTRACT_QUALITY,
