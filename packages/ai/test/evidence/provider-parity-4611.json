@@ -129,8 +129,10 @@
 						"anthropic-auth-resilience.test.ts"
 					],
 					"live": {
-						"status": "not-run",
-						"reason": "No authenticated live route for this provider was supplied; deterministic fixtures do not establish account availability."
+						"status": "pass",
+						"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
+						"route": "Ubuntu Anthropic OAuth subscription",
+						"evidence": "startup/picker/image/read/tool/follow-up"
 					},
 					"unsupported": [
 						"Wire steering and deferred work are not implied by shared chat transport; use only explicit route capabilities."
@@ -809,8 +811,10 @@
 						"google-antigravity-vertex.test.ts"
 					],
 					"live": {
-						"status": "not-run",
-						"reason": "No authenticated live route for this provider was supplied; deterministic fixtures do not establish account availability."
+						"status": "pass",
+						"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
+						"route": "Ubuntu existing Vertex OAuth Gemini 3.8 Flash/high",
+						"evidence": "Herdr /login Ready, /model and synthetic read/tool/follow-up"
 					},
 					"unsupported": [
 						"Wire steering and deferred work are not implied by shared chat transport; use only explicit route capabilities."
@@ -1395,8 +1399,10 @@
 						"codex-discovery-metadata.test.ts"
 					],
 					"live": {
-						"status": "not-run",
-						"reason": "No authenticated live route for this provider was supplied; deterministic fixtures do not establish account availability."
+						"status": "pass",
+						"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
+						"route": "Ubuntu ChatGPT subscription Sol PTY",
+						"evidence": "startup/picker/image/tool follow-up/efforts/Fast/steering/async"
 					},
 					"unsupported": [
 						"Wire steering and deferred work are not implied by shared chat transport; use only explicit route capabilities."
@@ -2549,10 +2555,9 @@
 		}
 	],
 	"openGates": [
-		"Final candidate checks and cross-host PTY acceptance",
-		"Gemini CLI subscription acceptance: existing user-confirmed Gemini route is Vertex",
-		"Documented final review",
-		"PR merge release and installed acceptance"
+		"Final PR CI and confirmed merge",
+		"22.5.0 immutable publication, both installed channels and installed acceptance",
+		"Task-owned cleanup after preserving evidence"
 	],
 	"capabilities": [
 		{
@@ -2720,37 +2725,38 @@
 		}
 	],
 	"qualification": {
+		"candidate": "ff9d3e3b5463d60c75fd5faa039a0974398c42c9",
+		"workspace": {
+			"checks": "pass",
+			"tests": "pass",
+			"durationSeconds": 608.04,
+			"build": "pass",
+			"documentation": "pass; 28 tests",
+			"pii": "head clean"
+		},
 		"aiPackage": {
-			"passed": 1022,
+			"passed": 1023,
 			"skipped": 456,
 			"failed": 0
 		},
-		"host": "macOS",
-		"note": "Working-tree qualification; final candidate full suite, cross-host PTY and installed-artifact results remain open.",
-		"macSourceTerminal": {
-			"status": "pass",
-			"launcher": "bun run dev",
-			"evidence": "/tmp/xcsh4611-final-mac-source-uat.log",
-			"steps": [
-				"startup",
-				"picker",
-				"read/tool-result/follow-up",
-				"synthetic image",
-				"tool changes",
-				"async completion delivery",
-				"low/medium/high/xhigh/max",
-				"Fast"
-			],
-			"candidate": "working tree; final candidate repeat required"
+		"agentCore": {
+			"passed": 48,
+			"failed": 0
 		},
-		"vertexHerdr": {
-			"status": "pass",
-			"provider": "google-vertex",
-			"model": "gemini-3.8-flash",
-			"reasoning": "high",
-			"evidence": "Herdr w6M:p2 /login Ready, /model selection and SYNTHETIC_VERTEX_4611_OK",
-			"candidate": "59b394f53825b438fd773016a4dbddc473a7b58c"
-		}
+		"sourceAcceptance": {
+			"mac": "LiteLLM Sol saved-role PTY: startup, picker, read/tool/follow-up, image, observed low/medium/high/xhigh/max, Fast, changed tools and async completion pass",
+			"ubuntu": "ChatGPT Sol saved-role PTY: startup, picker, read/tool/follow-up, image, observed efforts including Ultra mapped to max, Fast, acknowledged steering, tool changes and async completion pass",
+			"anthropic": "Ubuntu subscription startup/picker/image/read/tool/follow-up pass",
+			"google": "Existing Vertex OAuth Gemini 3.8 Flash/high, /login Ready, /model and live read/tool/follow-up pass in Herdr"
+		},
+		"googleRoute": "User explicitly selected google-vertex with existing OAuth; Gemini CLI is outside acceptance scope.",
+		"roles": "Default/SLOW/PLAN Sol 6.1 medium/high/high on both hosts; other assignments retained",
+		"review": "Final diff reviewed; reproduced Cloudflare/OpenCode/Google headers/async ownership/replay findings repaired with red-green contracts; source review preserved separately",
+		"limitations": [
+			"LiteLLM deferred Responses HTTP 500; implicit cache key passes but observed hits zero",
+			"ChatGPT advertises steering; cached reasoning updates not advertised",
+			"Third-party providers without credentials remain live-unqualified"
+		]
 	},
 	"upstreamCommits": {
 		"pi": "1b347794e2a630e4359f2584f4eea388145d0ddf",
