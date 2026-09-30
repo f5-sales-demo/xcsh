@@ -322,6 +322,54 @@ describe("codex live steering", () => {
 		expect(ScriptedWebSocket.instances).toHaveLength(1);
 	});
 
+	it("discards accepted steering and late successor frames when its socket closes", async () => {
+		installSocket((frame, socket) => {
+			if (frame.type === "response.create") {
+				socket.emit({ type: "response.created", response: { id: "resp_seed" } });
+				return;
+			}
+			socket.emit(
+				{ type: "response.steer.accepted", steer: { id: "steer_test", previous_response_id: "resp_seed" } },
+				{
+					type: "response.incomplete",
+					response: {
+						id: "resp_seed",
+						status: "incomplete",
+						incomplete_details: { reason: "steered" },
+						usage: USAGE,
+					},
+				},
+			);
+		});
+		const model = createGpt6Model();
+		const state = new Map<string, ProviderSessionState>();
+		const steering = oneShotSteering("use tabs");
+		const user: UserMessage = { role: "user", content: "Draft a plan", timestamp: 1 };
+		const first = await streamOpenAICodexResponses(
+			model,
+			{ systemPrompt: SYSTEM, messages: [user] },
+			options(state, steering.source),
+		).result();
+		expect(steering.settled()).toBe("accepted");
+		const old = ScriptedWebSocket.instances[0];
+		old.close();
+		old.onclose?.({ code: 1006 } as unknown as Event);
+		old.emit({ type: "response.created", response: { id: "resp_late" } });
+		ScriptedWebSocket.onFrame = (_frame, socket) =>
+			socket.emit({ type: "response.completed", response: { id: "resp_new", status: "completed", usage: USAGE } });
+		const second = await streamOpenAICodexResponses(
+			model,
+			{ systemPrompt: SYSTEM, messages: [user, first, { role: "user", content: "use tabs", timestamp: 2 }] },
+			options(state),
+		).result();
+		expect(second.stopReason).toBe("stop");
+		expect(second.responseId).toBe("resp_new");
+		expect(ScriptedWebSocket.instances).toHaveLength(2);
+		expect(creates()[1].previous_response_id).toBeUndefined();
+		expect(JSON.stringify(creates()[1].input)).toContain("use tabs");
+		for (const value of state.values()) value.close?.();
+	});
+
 	it("returns pending tool output without repeating steering the server already queued", async () => {
 		installSocket((frame, socket) => {
 			if (frame.type === "response.create" && creates().length === 1) {
