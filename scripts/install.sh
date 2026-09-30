@@ -401,7 +401,22 @@ install_binary() {
   else
     RELEASE_URL="https://api.github.com/repos/${REPO}/releases/latest"
   fi
-  curl -fsSL "$RELEASE_URL" -o "$INSTALL_STAGE_DIR/release.json"
+  github_api_download() {
+    api_token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    case "$api_token" in *[!A-Za-z0-9_]* )
+      echo "Invalid GitHub API token format" >&2
+      return 1
+      ;;
+    esac
+    if [ -n "$api_token" ]; then
+      # Send only API credentials via stdin configuration, never argv or public asset URLs.
+      printf 'header = "Authorization: Bearer %s"\n' "$api_token" |
+        curl --config - --proto '=https' --tlsv1.2 -fsS "$1" -o "$2"
+    else
+      curl --proto '=https' --tlsv1.2 -fsS "$1" -o "$2"
+    fi
+  }
+  github_api_download "$RELEASE_URL" "$INSTALL_STAGE_DIR/release.json"
   LATEST=$(jq -er 'select(.draft == false and .prerelease == false and .immutable == true) | .tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))' "$INSTALL_STAGE_DIR/release.json")
   [ -z "$REF" ] || [ "$LATEST" = "$REF" ] || {
     echo "Release tag identity mismatch" >&2
@@ -436,7 +451,7 @@ install_binary() {
     }
     verify_checksum_sidecar "$BINARY"
     verify_checksum_sidecar "$PROVENANCE"
-    curl -fsSL "https://api.github.com/repos/${REPO}/git/ref/tags/${LATEST}" -o "$INSTALL_STAGE_DIR/tag.json"
+    github_api_download "https://api.github.com/repos/${REPO}/git/ref/tags/${LATEST}" "$INSTALL_STAGE_DIR/tag.json"
     tag_depth=0
     while [ "$(jq -er .object.type "$INSTALL_STAGE_DIR/tag.json")" = tag ]; do
       tag_sha=$(jq -er '.object.sha | select(test("^[a-f0-9]{40}$"))' "$INSTALL_STAGE_DIR/tag.json")
@@ -445,7 +460,7 @@ install_binary() {
         echo "Release tag indirection exceeds limit" >&2
         exit 1
       }
-      curl -fsSL "https://api.github.com/repos/${REPO}/git/tags/${tag_sha}" -o "$INSTALL_STAGE_DIR/tag.json"
+      github_api_download "https://api.github.com/repos/${REPO}/git/tags/${tag_sha}" "$INSTALL_STAGE_DIR/tag.json"
     done
     release_commit=$(jq -er 'select(.object.type == "commit") | .object.sha | select(test("^[a-f0-9]{40}$"))' "$INSTALL_STAGE_DIR/tag.json")
     binary_digest=$(file_sha256 "$INSTALL_STAGE_DIR/$BINARY")

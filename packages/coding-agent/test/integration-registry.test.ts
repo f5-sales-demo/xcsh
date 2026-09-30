@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "bun:test";
 import {
 	describeIntegrationSetupNextAction,
 	reviewAndExecuteIntegrationSetup,
+	runPluginCommand,
 	selectSetupIntegration,
 	shouldSkipIntegrationSetup,
 } from "../src/cli/plugin-cli";
@@ -624,4 +625,10 @@ describe("IntegrationRegistry", () => {
 			expect(executions).toBe(0);
 		},
 	);
+});
+
+test("noninteractive Salesforce setup returns a concise usage error", async () => {
+	const error = await runPluginCommand({ action: "setup", args: ["salesforce"], flags: {} }).catch(error => error);
+	expect(error.constructor.name).toBe("CliUsageError");
+	expect(error.message).toBe("Plugin setup requires an interactive terminal");
 });
