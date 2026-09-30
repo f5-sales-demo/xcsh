@@ -106,6 +106,7 @@ function object(value: unknown): Record<string, any> | null {
 }
 const knownEventTypes = new Set([
 	"error",
+	"session.created",
 	"session.started",
 	"session.updated",
 	"input_audio_buffer.speech_started",
@@ -125,7 +126,7 @@ export function inspectVoiceEvent(input: unknown): VoiceEventDecode {
 	const eventType = diagnosticEventType(p.type);
 	let event: VoiceEvent | null = null;
 	if (p.type === "error") event = { kind: "error" };
-	else if (p.type === "session.started" || p.type === "session.updated") {
+	else if (p.type === "session.created" || p.type === "session.started" || p.type === "session.updated") {
 		const session = object(p.session);
 		event = typeof session?.id === "string" ? { kind: "sessionUpdated", id: session.id } : null;
 	} else if (p.type === "input_audio_buffer.speech_started") event = { kind: "transcriptBoundary", role: "user" };

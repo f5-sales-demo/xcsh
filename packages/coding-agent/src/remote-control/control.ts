@@ -505,6 +505,14 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 		await runSupervisor();
 		return undefined;
 	}
+	if (action === "quiesce") {
+		const store = lifecycleStore();
+		const supervisor = await store.readRuntime("supervisor");
+		const requested = await requestSupervisorShutdown();
+		if (requested && supervisor && !(await waitForProcessExit(supervisor.pid, supervisor.generation, 85_000)))
+			throw new Error("The xcsh remote supervisor did not stop after a graceful shutdown request");
+		return { stopped: requested };
+	}
 	if (action !== "enable" && action !== "restart")
 		throw new Error("Unsupported remote action in the interoperability preview");
 	return withLifecycleLock(root(), async () => {

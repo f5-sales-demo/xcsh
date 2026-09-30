@@ -7,6 +7,7 @@ import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
 import { voiceDelegation } from "./voice-delegation";
+import { type VoiceDiagnosticRuntime, voiceDiagnosticRuntimeFromEnvironment } from "./voice-diagnostics";
 import {
 	type HandoffPhase,
 	handoffChannel,
@@ -44,6 +45,7 @@ export interface VoiceDependencies {
 	record(record: Record<string, unknown>): Promise<void>;
 	title?(text: string): void;
 	delegate(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string>;
+	diagnostics?: VoiceDiagnosticRuntime;
 }
 function connectionFailure(error: unknown): "http" | "upgradeRejected" | "closed" | "timeout" | "transport" {
 	const message = error instanceof Error ? error.message : "";
@@ -101,7 +103,18 @@ export class NativeVoice {
 	#sessionReady?: { resolve: () => void; reject: (error: Error) => void };
 	#persona: VoicePersonaSnapshot = { tools: [], history: "" };
 	#handoffsRetired = false;
-	constructor(private readonly deps: VoiceDependencies) {}
+	#diagnostics?: VoiceDiagnosticRuntime;
+	constructor(private readonly deps: VoiceDependencies) {
+		this.#diagnostics = deps.diagnostics ?? voiceDiagnosticRuntimeFromEnvironment(record => deps.record(record));
+	}
+	#diagnosticQueues(): void {
+		this.#diagnostics?.queues({
+			inboundBytes: this.#pendingBytes + this.#openingBytes,
+			inboundLimit: 2_097_152,
+			outboundBytes: this.#outboundBytes + (this.#socket?.bufferedAmount ?? 0),
+			outboundLimit: 1_048_576,
+		});
+	}
 	get active(): boolean {
 		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
 	}
@@ -109,6 +122,7 @@ export class NativeVoice {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
 		this.#state = "opening";
 		this.#startedAt = Date.now();
+		this.#diagnostics?.transition("starting");
 		let callConfig: ReturnType<typeof voiceCallConfig> | undefined;
 		let config: ReturnType<typeof existingCallConfig> | ReturnType<typeof standaloneVoiceConfig> | undefined;
 		let instructions: RealtimeModeInstructions;
@@ -170,6 +184,7 @@ export class NativeVoice {
 				outcome: "succeeded",
 				elapsedMs: Date.now() - stageStartedAt,
 			});
+			this.#diagnostics?.stage(stage, Date.now() - stageStartedAt);
 			// Pinned created calls default to their owning thread; existing calls retain the client's optional identity.
 			const sessionId =
 				config?.realtimeSessionId ??
@@ -205,6 +220,7 @@ export class NativeVoice {
 					outcome: "succeeded",
 					elapsedMs: Date.now() - stageStartedAt,
 				});
+				this.#diagnostics?.stage(stage, Date.now() - stageStartedAt);
 				config = existingCallConfig({
 					version: CODEX_LIVE_VERSION,
 					realtimeSessionId: sessionId,
@@ -235,6 +251,7 @@ export class NativeVoice {
 					outcome: "succeeded",
 					elapsedMs: Date.now() - stageStartedAt,
 				});
+				this.#diagnostics?.stage(stage, Date.now() - stageStartedAt);
 			}
 			this.#config = config;
 			stage = "sideband-attach";
@@ -289,13 +306,16 @@ export class NativeVoice {
 				outcome: "succeeded",
 				elapsedMs: sidebandElapsedMs,
 			});
+			this.#diagnostics?.stage(stage, sidebandElapsedMs);
 			if (!this.active) throw new Error("Voice stopped during connection diagnostics");
 			this.#ready = true;
+			this.#diagnostics?.transition("connected");
 			const openingInputs = this.#openingInputs;
 			this.#openingInputs = [];
 			this.#openingBytes = 0;
 			for (const data of openingInputs) this.#receive(data);
 		} catch (error) {
+			this.#diagnostics?.stage(stage, Date.now() - stageStartedAt);
 			const message = safeConnectionError(error);
 			const status = message.match(/HTTP (\d{3})/)?.[1];
 			await this.deps
@@ -346,7 +366,12 @@ export class NativeVoice {
 			} catch {}
 			socket.close();
 		}
-		this.#closing = Promise.all([this.#chain, endInstructions, this.#diagnosticsTail])
+		this.#closing = Promise.all([
+			this.#chain,
+			endInstructions,
+			this.#diagnosticsTail,
+			this.#diagnostics?.close(reason === "failed" ? "failed" : "closed"),
+		])
 			.then(async () => {
 				await this.deps.record({
 					kind: "voiceEventDiagnostic",
@@ -395,6 +420,7 @@ export class NativeVoice {
 			return;
 		}
 		this.#state = "reconnecting";
+		this.#diagnostics?.reconnect(process.env.XCSH_VOICE_EXPECTED_RECONNECT === "1");
 		this.#epoch++;
 		const socket = this.#socket;
 		this.#socket = undefined;
@@ -432,6 +458,7 @@ export class NativeVoice {
 			}
 			this.#socket = socket;
 			this.#state = "open";
+			this.#diagnostics?.transition("connected");
 			this.#connectedAt = Date.now();
 			this.#drain();
 			await this.deps.record({
@@ -475,6 +502,7 @@ export class NativeVoice {
 		}
 		this.#outbound.push(data);
 		this.#outboundBytes += bytes;
+		this.#diagnosticQueues();
 		this.#drain();
 	}
 	#drain(): void {
@@ -490,6 +518,7 @@ export class NativeVoice {
 			}
 			this.#outbound.shift();
 			this.#outboundBytes -= Buffer.byteLength(data);
+			this.#diagnosticQueues();
 		}
 	}
 	appendText(text: unknown, role: unknown = "user", speakable = false): void {
@@ -569,9 +598,11 @@ export class NativeVoice {
 			}
 			this.#openingInputs.push(data);
 			this.#openingBytes += bytes;
+			this.#diagnosticQueues();
 			return;
 		}
 		this.#pendingBytes += bytes;
+		this.#diagnosticQueues();
 		this.#chain = this.#chain
 			.then(async () => {
 				if (!this.#config) return;
@@ -589,11 +620,13 @@ export class NativeVoice {
 			.catch(() => this.#fail())
 			.finally(() => {
 				this.#pendingBytes -= bytes;
+				this.#diagnosticQueues();
 			});
 	}
 	#countEvent(type: string, rejection?: VoiceEventRejection | "invalidJson" | "droppedFrame"): void {
 		this.#eventTypes.set(type, (this.#eventTypes.get(type) ?? 0) + 1);
 		if (rejection) this.#eventRejections.set(rejection, (this.#eventRejections.get(rejection) ?? 0) + 1);
+		this.#diagnostics?.event(type, rejection);
 	}
 	#inspectEvent(input: unknown): VoiceEvent | null {
 		const decoded = inspectVoiceEvent(input);
@@ -756,6 +789,7 @@ export class NativeVoice {
 			});
 		if (this.#handoffsRetired) return;
 		this.#pendingDelegations++;
+		this.#diagnostics?.delegation({ active: true, pending: this.#pendingDelegations, supersededExecutions: 0 });
 		this.#handoff?.close();
 		const handoff = this.#createHandoff(event.id);
 		this.#handoff = handoff;
@@ -798,6 +832,11 @@ export class NativeVoice {
 			.finally(() => {
 				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
 				this.#pendingDelegations--;
+				this.#diagnostics?.delegation({
+					active: this.#pendingDelegations > 0,
+					pending: this.#pendingDelegations,
+					supersededExecutions: 0,
+				});
 			});
 	}
 	#createHandoff(id: string): VoiceHandoff | CompletedVoiceHandoff | undefined {

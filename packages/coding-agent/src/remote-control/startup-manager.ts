@@ -12,7 +12,8 @@ function systemdArgument(value: string): string {
 
 export function renderSystemdUserService(input: { executablePath: string; arguments: string[] }): string {
 	const command = [input.executablePath, ...input.arguments].map(systemdArgument).join(" ");
-	return `[Unit]\nDescription=xcsh remote control supervisor\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nExecStart=${command}\nRestart=on-failure\nRestartSec=1s\nKillMode=mixed\nTimeoutStopSec=85s\nNoNewPrivileges=true\nPrivateTmp=true\n\n[Install]\nWantedBy=default.target\n`;
+	const stop = [input.executablePath, ...input.arguments.slice(0, -1), "quiesce"].map(systemdArgument).join(" ");
+	return `[Unit]\nDescription=xcsh remote control supervisor\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nExecStart=${command}\nExecStop=${stop}\nRestart=on-failure\nRestartSec=1s\nKillMode=mixed\nTimeoutStopSec=85s\nNoNewPrivileges=true\nPrivateTmp=true\n\n[Install]\nWantedBy=default.target\n`;
 }
 
 async function atomicText(path: string, content: string): Promise<void> {
