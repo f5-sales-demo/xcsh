@@ -58,7 +58,10 @@ export interface BedrockOptions extends StreamOptions {
 	interleavedThinking?: boolean;
 }
 
-type Block = (TextContent | ThinkingContent | ToolCall) & { index?: number; partialJson?: string };
+type Block = (TextContent | ThinkingContent | ToolCall | import("../types").RedactedThinkingContent) & {
+	index?: number;
+	partialJson?: string;
+};
 
 export const streamBedrock: StreamFunction<"bedrock-converse-stream"> = (
 	model: Model<"bedrock-converse-stream">,
@@ -133,7 +136,7 @@ export const streamBedrock: StreamFunction<"bedrock-converse-stream"> = (
 				}
 			}
 
-			const commandInput = {
+			let commandInput = {
 				modelId: model.id,
 				messages: convertMessages(context, model, cacheRetention),
 				system: buildSystemPrompt(context.systemPrompt, model, cacheRetention),
@@ -141,7 +144,8 @@ export const streamBedrock: StreamFunction<"bedrock-converse-stream"> = (
 				toolConfig,
 				additionalModelRequestFields,
 			};
-			options?.onPayload?.(commandInput);
+			const replacement = await options?.onPayload?.(commandInput, model);
+			if (replacement !== undefined) commandInput = replacement as typeof commandInput;
 			rawRequestDump = {
 				provider: model.provider,
 				api: output.api,
@@ -153,8 +157,16 @@ export const streamBedrock: StreamFunction<"bedrock-converse-stream"> = (
 			const command = new ConverseStreamCommand(commandInput);
 
 			const response = await client.send(command, { abortSignal: options.signal });
+			await options.onResponse?.(
+				{
+					status: response.$metadata.httpStatusCode ?? 200,
+					headers: response.$metadata.requestId ? { "x-amzn-requestid": response.$metadata.requestId } : {},
+				},
+				model,
+			);
 
 			for await (const item of response.stream!) {
+				await options.onProviderStreamEvent?.(item, model);
 				if (item.messageStart) {
 					if (item.messageStart.role !== ConversationRole.ASSISTANT) {
 						throw new Error("Unexpected assistant message start but got user message start instead");
@@ -287,6 +299,19 @@ function handleContentBlockDelta(
 		block.arguments = parseStreamingJson(block.partialJson);
 		stream.push({ type: "toolcall_delta", contentIndex: index, delta: delta.toolUse.input || "", partial: output });
 	} else if (delta?.reasoningContent) {
+		if (delta.reasoningContent.redactedContent) {
+			const bytes = Buffer.from(delta.reasoningContent.redactedContent);
+			if (block?.type === "redactedThinking")
+				block.data = Buffer.concat([Buffer.from(block.data, "base64"), bytes]).toString("base64");
+			else {
+				output.content.push({
+					type: "redactedThinking",
+					data: bytes.toString("base64"),
+					index: contentBlockIndex,
+				} as Block);
+			}
+			return;
+		}
 		let thinkingBlock = block;
 		let thinkingIndex = index;
 
@@ -326,7 +351,11 @@ function handleMetadata(
 		output.usage.output = event.usage.outputTokens || 0;
 		output.usage.cacheRead = event.usage.cacheReadInputTokens || 0;
 		output.usage.cacheWrite = event.usage.cacheWriteInputTokens || 0;
-		output.usage.totalTokens = event.usage.totalTokens || output.usage.input + output.usage.output;
+		if (event.usage.cacheWriteInputTokens !== undefined)
+			output.usage.cacheWriteTokens = event.usage.cacheWriteInputTokens;
+		output.usage.totalTokens =
+			event.usage.totalTokens ||
+			output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
 		calculateCost(model, output.usage);
 	}
 }
@@ -507,6 +536,9 @@ function convertMessages(
 								// Model requires signature but we don't have one — demote to text
 								contentBlocks.push({ text: `[Thinking]: ${c.thinking.toWellFormed()}` });
 							}
+							break;
+						case "redactedThinking":
+							contentBlocks.push({ reasoningContent: { redactedContent: Buffer.from(c.data, "base64") } });
 							break;
 						default:
 							throw new Error("Unknown assistant content type");
