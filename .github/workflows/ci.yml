@@ -63,6 +63,13 @@ jobs:
         run: bun test --cwd packages/coding-agent test/utils/image-resize.test.ts test/utils/image-convert.test.ts
       - name: Verify worker fixture startup and termination on this runtime
         run: bun test --cwd packages/coding-agent test/helpers/worker-process.test.ts
+      - name: Verify release upload and publication under macOS system Bash
+        if: runner.os == 'macOS'
+        env:
+          RELEASE_TEST_BASH: /bin/bash
+        run: |
+          /bin/bash --version
+          bash tests/test-release-github-backfill.sh
 
   check:
     name: check
@@ -1132,6 +1139,17 @@ jobs:
             "$GITHUB_REPOSITORY" \
             "$REF_NAME" \
             "packages/coding-agent/binaries"
+      - name: Confirm immutable publication independently
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${REF_NAME}?cache_bust=$(date +%s)" |
+            jq -e --arg tag "$REF_NAME" '
+              .tag_name == $tag and .draft == false and .prerelease == false and
+              .immutable == true and (.assets | length) == 28
+            ' >/dev/null
 
   # Publish the macOS binary cask from the signed archives
   update-homebrew:
