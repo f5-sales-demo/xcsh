@@ -13,6 +13,16 @@ head:
 
 xcsh resolves a requested model against available providers and credentials. A provider-qualified model name is the most explicit route.
 
+GPT-6.1 Sol uses `gpt-6.1-sol` under `openai`, `openai-codex`, or `litellm` when the account's
+discovery catalog advertises it. Direct API requests accept text and images, return text, and use
+Responses for tool calling. The API context limit is 1,050,000 tokens, with at most 922,000 input
+and 128,000 output tokens. API reasoning choices are `low`, `medium`, `high`, `xhigh`, and `max`;
+the default is `medium`. Subscription presets and their provider default come from discovery,
+including Ultra where advertised. Saved roles can override that default independently.
+
+Standard is the default speed; Fast selects `priority` where the route supports it. Sol has no
+Ultrafast option. A bundled model entry does not establish account entitlement.
+
 ## How do I confirm a route?
 
 Run `xcsh --list-models <PROVIDER>`, then pass one returned name to `--model`. Environment keys and supported subscription sessions authenticate providers; never store tokens in committed settings.
@@ -93,11 +103,14 @@ Both select `anthropic/claude-fable-5-1` deterministically.
 
 LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.
 
-Generated LiteLLM configuration exposes seven internal OpenAI models when the provider advertises
-them: GPT-6 Astra, Sol, and Luna; GPT-5.6 Sol, Terra, and Luna; and GPT-5.5. All seven use LiteLLM's
+Generated LiteLLM configuration version 12 exposes eight internal OpenAI models when the provider advertises
+them: GPT-6.1 Sol; GPT-6 Astra, Sol, and Luna; GPT-5.6 Sol, Terra, and Luna; and GPT-5.5. All eight use LiteLLM's
 OpenAI Responses endpoint (`/openai/v1/responses`). The separate generated Anthropic provider uses
 the native Messages route. Internal routes keep zero-cost metadata until the gateway publishes
 authoritative chargeback pricing.
+Managed upgrades back up the previous configuration and retain credentials and endpoint prefixes.
+User-authored configurations remain under user control. New managed roles select Sol 6.1 with
+`medium` for Default and `high` for Slow and Plan, preserving other assignments.
 
 Both ChatGPT subscription and LiteLLM routing offer three context tiers under **Providers**:
 

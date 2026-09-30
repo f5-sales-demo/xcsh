@@ -594,9 +594,19 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions"> = (
 
 			finishCurrentBlock(currentBlock);
 			for (const block of callsByIndex.values()) {
-				block.arguments = block.customInputProperty
-					? { [block.customInputProperty]: block.partialArgs }
-					: parseStreamingJson(block.partialArgs);
+				if (block.customInputProperty) block.arguments = { [block.customInputProperty]: block.partialArgs };
+				else {
+					try {
+						const value = JSON.parse(block.partialArgs || "{}");
+						if (!value || typeof value !== "object" || Array.isArray(value))
+							throw new Error("Tool arguments must be an object");
+						block.arguments = value;
+					} catch (error) {
+						throw new Error(`Provider returned malformed completed tool arguments for ${block.name}`, {
+							cause: error,
+						});
+					}
+				}
 				delete (block as { partialArgs?: string }).partialArgs;
 				stream.push({
 					type: "toolcall_end",
