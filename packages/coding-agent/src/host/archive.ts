@@ -74,6 +74,10 @@ async function unpack(file: string, stage: string, baseDir: string, signal: Abor
 		);
 	});
 	await pipeline(createReadStream(file), createGunzip(), archive, { signal });
+	// No deferred link may be an ancestor of any other entry, including another link.
+	const relativeLinks = pendingLinks.map(item => item.path.slice(stage.length + 1));
+	for (const linkPath of relativeLinks)
+		if ([...seen].some(name => name.startsWith(`${linkPath}/`))) throw new Error("Unsafe archive link ancestor");
 	// Create links only after extraction; no extracted file can traverse a symlink.
 	for (const item of pendingLinks) {
 		signal.throwIfAborted();

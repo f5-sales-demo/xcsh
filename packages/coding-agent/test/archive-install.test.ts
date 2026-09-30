@@ -93,6 +93,20 @@ describe("shared archive installation", () => {
 			}
 		}
 	});
+	it("rejects link ancestors that redirect later link creation", async () => {
+		const { bytes, plan, root } = await fixture([
+			{ name: "sf/deep/dir", type: "symlink", linkname: "../.." },
+			{ name: "sf/deep/dir/link", type: "symlink", linkname: "../../outside" },
+		]);
+		const fetcher = spyOn(globalThis, "fetch").mockResolvedValue(new Response(bytes));
+		try {
+			await expect(installArchive(plan)).rejects.toThrow("Unsafe");
+			expect(await readdir(join(root, "software"))).toEqual([]);
+		} finally {
+			fetcher.mockRestore();
+		}
+	});
+
 	it("does not replace an unrelated link path and rolls back its promotion", async () => {
 		const { bytes, plan, root } = await fixture();
 		await writeFile(join(root, "occupied"), "keep");
