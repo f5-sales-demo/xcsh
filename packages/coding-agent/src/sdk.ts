@@ -1116,6 +1116,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					return {};
 				}
 			},
+			get obfuscator() {
+				return obfuscator;
+			},
 			settings: toolSettings,
 			getContextService: async () => {
 				// The CLI owns one context per process. Never select a different SDK session's settings.

@@ -1,5 +1,9 @@
 import { isAbsolute } from "node:path";
 
+export function solUatStartupReady(visible: string): boolean {
+	return /xcsh v\d+\.\d+\.\d+/.test(visible) && visible.includes("╭─") && visible.includes("╰─");
+}
+
 export function solUatLaunch(provider: string, args: string[]) {
 	const option = (name: string) => {
 		const index = args.indexOf(name);

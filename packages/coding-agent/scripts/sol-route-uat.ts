@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PtySession } from "@f5-sales-demo/pi-natives";
-import { solUatLaunch } from "./sol-uat-launch";
+import { solUatLaunch, solUatStartupReady } from "./sol-uat-launch";
 
 const provider = process.argv[2];
 if (!provider || !["litellm", "openai-codex", "anthropic", "google-gemini-cli"].includes(provider))
@@ -162,7 +162,10 @@ const submit = async (text: string) => {
 	session.write("\r");
 };
 try {
-	await waitFor(value => value.includes(launch.modelId) && value.includes("idle"), "startup");
+	await waitFor(
+		value => solUatStartupReady(value) || (value.includes(launch.modelId) && value.includes("idle")),
+		"startup",
+	);
 	await Bun.sleep(2000);
 	rows.push({ step: "startup", outcome: "pass" });
 	console.log("Terminal startup ready");

@@ -6,6 +6,7 @@ import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
+import { SecretObfuscator } from "../secrets";
 import { type ContextEnv, createContextEnv } from "../services/context-env";
 import type { ToolSession } from ".";
 import { humanizeResourceType } from "./render-utils";
@@ -136,7 +137,7 @@ export interface XcshApiToolDetails {
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
 
-const BATCH_CACHE_VERSION = 3;
+const BATCH_CACHE_VERSION = 4;
 const BATCH_CACHE_DIR = path.join(os.tmpdir(), "xcsh", `batch-cache-v${BATCH_CACHE_VERSION}`);
 
 function sha256(value: string): string {
@@ -235,6 +236,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	readonly description: string;
 	readonly parameters = xcshApiSchema;
 	#contextEnv: ContextEnv;
+	#credentialObfuscator = new SecretObfuscator([]);
 	#getContextService?: ToolSession["getContextService"];
 	#getActiveTools?: () => string[];
 	#lastApiBase = "";
@@ -243,7 +245,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	#expandedNamespaces = new Set<string>();
 
 	constructor(
-		session: ToolSession,
+		private readonly session: ToolSession,
 		private readonly cacheDir = BATCH_CACHE_DIR,
 	) {
 		this.description = prompt.render(xcshApiDescription);
@@ -269,6 +271,13 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				headers: { Authorization: `APIToken ${apiToken}` },
 			}).catch(() => {});
 		}
+	}
+
+	#maskOutput<T>(value: T): T {
+		const obfuscator = this.session.obfuscator ?? this.#credentialObfuscator;
+		const [, apiToken] = this.#resolveCredentials();
+		obfuscator.addPlainSecrets([apiToken]);
+		return obfuscator.obfuscateObject(value);
 	}
 
 	#errorResult(text: string, details?: XcshApiToolDetails): XcshApiResult {
@@ -822,7 +831,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				? `\nPartial inventory: ${failedResults.length} request(s) failed. ${JSON.stringify(failedResults.map(result => ({ path: result.path, status: result.status })))}`
 				: "\nInventory request complete. Membership totals and resource summaries include only items with consistent namespace metadata.",
 		);
-		const text = sections.join("\n");
+		const text = this.#maskOutput(sections.join("\n"));
 		const batchSize = paths.length;
 		const errorCount = results.filter(r => r.status >= 400 || r.status === 0).length;
 		const batchSuccessCount = results.length - errorCount;
@@ -888,6 +897,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	}
 
 	async execute(_toolCallId: string, params: XcshApiParams, signal?: AbortSignal): Promise<XcshApiResult> {
+		return this.#maskOutput(await this.#execute(params, signal));
+	}
+
+	async #execute(params: XcshApiParams, signal?: AbortSignal): Promise<XcshApiResult> {
 		if (params.contextName !== undefined && params.contextName !== this.#contextEnv.getContextName()) {
 			return this.#errorResult(
 				"Context does not match the requested target. Complete xcsh_context activation and inspect its result before querying resources.\n" +
