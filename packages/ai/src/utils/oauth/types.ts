@@ -11,6 +11,7 @@ export type OAuthCredentials = {
 };
 
 export type OAuthProvider =
+	| "xai"
 	| "openrouter"
 	| "meta"
 	| "radius"

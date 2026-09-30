@@ -20,6 +20,7 @@ import type {
 	OAuthProviderInfo,
 	OAuthProviderInterface,
 } from "./types";
+import { xaiOAuth } from "./xai";
 
 /**
  * OAuth credential management for AI providers.
@@ -146,6 +147,7 @@ export { loginZai } from "./zai";
 export { loginZenMux } from "./zenmux";
 
 const builtInOAuthProviders: OAuthProviderInfo[] = [
+	{ id: "xai", name: "xAI (Grok/X subscription)", available: true },
 	{
 		id: "anthropic",
 		name: "Anthropic (Claude Pro/Max)",
@@ -362,6 +364,7 @@ export function getOAuthProvider(id: OAuthProviderId): OAuthProviderInterface | 
 	if (custom) return custom;
 	if (id === "openrouter") return openRouterOAuth;
 	if (id === "meta") return metaOAuth;
+	if (id === "xai") return xaiOAuth;
 	if (id === "radius") return createRadiusOAuth({ name: "Radius", gateway: "https://radius.pi.dev" });
 	const route = UPSTREAM_PROVIDER_ROUTES.find(route => route.providerId === id);
 	if (!route) return undefined;
