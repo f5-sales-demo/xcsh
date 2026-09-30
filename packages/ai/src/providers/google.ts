@@ -81,7 +81,7 @@ export const streamGoogle: StreamFunction<"google-generative-ai"> = (
 
 		try {
 			const apiKey = options?.apiKey || getEnvApiKey(model.provider);
-			const client = createClient(model, apiKey);
+			const client = createClient(model, apiKey, options?.headers);
 			let params = buildParams(model, context, options);
 			const replacement = await options?.onPayload?.(params, model);
 			if (replacement !== undefined) params = replacement as typeof params;
@@ -299,14 +299,18 @@ export const streamGoogle: StreamFunction<"google-generative-ai"> = (
 	return stream;
 };
 
-function createClient(model: Model<"google-generative-ai">, apiKey?: string): GoogleGenAI {
+function createClient(
+	model: Model<"google-generative-ai">,
+	apiKey?: string,
+	headers?: Record<string, string>,
+): GoogleGenAI {
 	const httpOptions: { baseUrl?: string; apiVersion?: string; headers?: Record<string, string> } = {};
 	if (model.baseUrl) {
 		httpOptions.baseUrl = model.baseUrl;
 		httpOptions.apiVersion = ""; // baseUrl already includes version path, don't append
 	}
-	if (model.headers) {
-		httpOptions.headers = model.headers;
+	if (model.headers || headers) {
+		httpOptions.headers = { ...model.headers, ...headers };
 	}
 
 	return new GoogleGenAI({

@@ -5,6 +5,31 @@ import type { Tool, ToolSession } from "../../src/tools";
 import { wrapAsyncTool } from "../../src/tools/async-tool";
 
 describe("opt-in asynchronous tool execution", () => {
+	it("uses the active model when no launch override exists", async () => {
+		let model = "openai/synthetic";
+		let executions = 0;
+		const manager = new AsyncJobManager({ onJobComplete() {} });
+		const tool = {
+			name: "synthetic",
+			label: "Synthetic",
+			async: true,
+			execute: async () => {
+				executions++;
+				return { content: [] };
+			},
+		} as unknown as Tool;
+		const session = {
+			settings: Settings.isolated({ "async.enabled": true }),
+			asyncJobManager: manager,
+			getSessionId: () => "synthetic-session",
+			getActiveModelString: () => model,
+		} as ToolSession;
+		await wrapAsyncTool(tool, session).execute("same-call", {});
+		model = "anthropic/synthetic";
+		await wrapAsyncTool(tool, session).execute("same-call", {});
+		expect(executions).toBe(2);
+		await manager.dispose();
+	});
 	it("separates equal call IDs after switching provider/model", async () => {
 		let model = "openai/synthetic";
 		let executions = 0;

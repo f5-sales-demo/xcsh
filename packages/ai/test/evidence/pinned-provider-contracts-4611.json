@@ -1,0 +1,466 @@
+[
+	{
+		"upstream": "amazon-bedrock",
+		"provider": "amazon-bedrock",
+		"api": "bedrock-converse-stream",
+		"modelId": "anthropic.claude-3-5-haiku-20241022-v1:0",
+		"baseUrl": "https://bedrock-runtime.us-east-1.amazonaws.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/amazon-bedrock.ts"
+	},
+	{
+		"upstream": "ant-ling",
+		"provider": "ant-ling",
+		"api": "openai-completions",
+		"modelId": "Ling-2.6-flash",
+		"baseUrl": "https://api.ant-ling.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/ant-ling.ts"
+	},
+	{
+		"upstream": "anthropic",
+		"provider": "anthropic",
+		"api": "anthropic-messages",
+		"modelId": "claude-fable-5",
+		"baseUrl": "https://api.anthropic.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/anthropic.ts"
+	},
+	{
+		"upstream": "azure-openai-responses",
+		"provider": "azure-openai-responses",
+		"api": "azure-openai-responses",
+		"modelId": "synthetic",
+		"baseUrl": "https://synthetic.openai.azure.com/openai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/azure-openai-responses.ts"
+	},
+	{
+		"upstream": "baseten",
+		"provider": "baseten",
+		"api": "openai-completions",
+		"modelId": "thinkingmachines/inkling-small",
+		"baseUrl": "https://inference.baseten.co/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/baseten.ts"
+	},
+	{
+		"upstream": "cerebras",
+		"provider": "cerebras",
+		"api": "openai-completions",
+		"modelId": "gpt-oss-120b",
+		"baseUrl": "https://api.cerebras.ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/cerebras.ts"
+	},
+	{
+		"upstream": "cloudflare-ai-gateway",
+		"provider": "cloudflare-ai-gateway",
+		"api": "anthropic-messages",
+		"modelId": "claude-3-5-haiku",
+		"baseUrl": "https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/cloudflare-ai-gateway.ts"
+	},
+	{
+		"upstream": "cloudflare-ai-gateway",
+		"provider": "cloudflare-ai-gateway",
+		"api": "openai-completions",
+		"modelId": "workers-ai/@cf/moonshotai/kimi-k2.5",
+		"baseUrl": "https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/compat",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/cloudflare-ai-gateway.ts"
+	},
+	{
+		"upstream": "cloudflare-ai-gateway",
+		"provider": "cloudflare-ai-gateway",
+		"api": "openai-responses",
+		"modelId": "gpt-4",
+		"baseUrl": "https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/openai",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/cloudflare-ai-gateway.ts"
+	},
+	{
+		"upstream": "cloudflare-workers-ai",
+		"provider": "cloudflare-workers-ai",
+		"api": "cloudflare-workers-ai-system-one",
+		"modelId": "typesafe/jev",
+		"baseUrl": "https://api.cloudflare.com/client/v4/accounts/{account}/ai",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/cloudflare-workers-ai.ts"
+	},
+	{
+		"upstream": "cloudflare-workers-ai",
+		"provider": "cloudflare-workers-ai",
+		"api": "openai-completions",
+		"modelId": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+		"baseUrl": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/cloudflare-workers-ai.ts"
+	},
+	{
+		"upstream": "deepseek",
+		"provider": "deepseek",
+		"api": "openai-completions",
+		"modelId": "deepseek-v4-flash-vision-exp",
+		"baseUrl": "https://api.deepseek.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/deepseek.ts"
+	},
+	{
+		"upstream": "fireworks",
+		"provider": "fireworks",
+		"api": "anthropic-messages",
+		"modelId": "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+		"baseUrl": "https://api.fireworks.ai/inference",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/fireworks.ts"
+	},
+	{
+		"upstream": "fireworks",
+		"provider": "fireworks",
+		"api": "openai-completions",
+		"modelId": "accounts/fireworks/models/kimi-k3",
+		"baseUrl": "https://api.fireworks.ai/inference/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/fireworks.ts"
+	},
+	{
+		"upstream": "github-copilot",
+		"provider": "github-copilot",
+		"api": "anthropic-messages",
+		"modelId": "claude-haiku-4.5",
+		"baseUrl": "https://api.githubcopilot.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/github-copilot.ts"
+	},
+	{
+		"upstream": "github-copilot",
+		"provider": "github-copilot",
+		"api": "openai-completions",
+		"modelId": "gemini-2.5-pro",
+		"baseUrl": "https://api.githubcopilot.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/github-copilot.ts"
+	},
+	{
+		"upstream": "github-copilot",
+		"provider": "github-copilot",
+		"api": "openai-responses",
+		"modelId": "gpt-5",
+		"baseUrl": "https://api.githubcopilot.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/github-copilot.ts"
+	},
+	{
+		"upstream": "google",
+		"provider": "google",
+		"api": "google-generative-ai",
+		"modelId": "gemini-1.5-flash",
+		"baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/google.ts"
+	},
+	{
+		"upstream": "google-vertex",
+		"provider": "google-vertex",
+		"api": "google-vertex",
+		"modelId": "gemini-3.8-flash",
+		"baseUrl": "https://{location}-aiplatform.googleapis.com",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/google-vertex.ts"
+	},
+	{
+		"upstream": "groq",
+		"provider": "groq",
+		"api": "openai-completions",
+		"modelId": "deepseek-r1-distill-llama-70b",
+		"baseUrl": "https://api.groq.com/openai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/groq.ts"
+	},
+	{
+		"upstream": "huggingface",
+		"provider": "huggingface",
+		"api": "openai-completions",
+		"modelId": "deepseek-ai/DeepSeek-R1",
+		"baseUrl": "https://router.huggingface.co/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/huggingface.ts"
+	},
+	{
+		"upstream": "kimi-coding",
+		"provider": "kimi-code",
+		"api": "anthropic-messages",
+		"modelId": "synthetic",
+		"baseUrl": "https://api.kimi.com/coding",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/kimi-coding.ts"
+	},
+	{
+		"upstream": "meta",
+		"provider": "meta",
+		"api": "openai-responses",
+		"modelId": "muse-spark-1.3",
+		"baseUrl": "https://api.meta.ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/meta.ts"
+	},
+	{
+		"upstream": "minimax",
+		"provider": "minimax",
+		"api": "anthropic-messages",
+		"modelId": "MiniMax-M2",
+		"baseUrl": "https://api.minimax.io/anthropic",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/minimax.ts"
+	},
+	{
+		"upstream": "minimax-cn",
+		"provider": "minimax-cn",
+		"api": "anthropic-messages",
+		"modelId": "MiniMax-M2",
+		"baseUrl": "https://api.minimaxi.com/anthropic",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/minimax-cn.ts"
+	},
+	{
+		"upstream": "mistral",
+		"provider": "mistral",
+		"api": "mistral-conversations",
+		"modelId": "codestral-latest",
+		"baseUrl": "https://api.mistral.ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/mistral.ts"
+	},
+	{
+		"upstream": "moonshotai",
+		"provider": "moonshot",
+		"api": "openai-completions",
+		"modelId": "kimi-k2.5",
+		"baseUrl": "https://api.moonshot.ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/moonshotai.ts"
+	},
+	{
+		"upstream": "moonshotai-cn",
+		"provider": "moonshotai-cn",
+		"api": "openai-completions",
+		"modelId": "kimi-k2.7-code",
+		"baseUrl": "https://api.moonshot.cn/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/moonshotai-cn.ts"
+	},
+	{
+		"upstream": "nvidia",
+		"provider": "nvidia",
+		"api": "openai-completions",
+		"modelId": "deepseek-ai/deepseek-coder-6.7b-instruct",
+		"baseUrl": "https://integrate.api.nvidia.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/nvidia.ts"
+	},
+	{
+		"upstream": "openai",
+		"provider": "openai",
+		"api": "openai-responses",
+		"modelId": "gpt-5.6-sol",
+		"baseUrl": "https://api.openai.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/openai.ts"
+	},
+	{
+		"upstream": "openai-codex",
+		"provider": "openai-codex",
+		"api": "openai-codex-responses",
+		"modelId": "gpt-5",
+		"baseUrl": "https://chatgpt.com/backend-api",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/openai-codex.ts"
+	},
+	{
+		"upstream": "opencode",
+		"provider": "opencode-zen",
+		"api": "anthropic-messages",
+		"modelId": "big-pickle",
+		"baseUrl": "https://opencode.ai/zen",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode.ts"
+	},
+	{
+		"upstream": "opencode",
+		"provider": "opencode-zen",
+		"api": "google-generative-ai",
+		"modelId": "gemini-3-flash",
+		"baseUrl": "https://opencode.ai/zen/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode.ts"
+	},
+	{
+		"upstream": "opencode",
+		"provider": "opencode-zen",
+		"api": "openai-completions",
+		"modelId": "glm-4.6",
+		"baseUrl": "https://opencode.ai/zen/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode.ts"
+	},
+	{
+		"upstream": "opencode",
+		"provider": "opencode-zen",
+		"api": "openai-responses",
+		"modelId": "gpt-5",
+		"baseUrl": "https://opencode.ai/zen/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode.ts"
+	},
+	{
+		"upstream": "opencode",
+		"provider": "opencode-zen",
+		"api": "typesafe-system-one",
+		"modelId": "jev-1.13",
+		"baseUrl": "https://opencode.ai/zen/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode.ts"
+	},
+	{
+		"upstream": "opencode-go",
+		"provider": "opencode-go",
+		"api": "anthropic-messages",
+		"modelId": "minimax-m2.5",
+		"baseUrl": "https://opencode.ai/zen/go",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode-go.ts"
+	},
+	{
+		"upstream": "opencode-go",
+		"provider": "opencode-go",
+		"api": "openai-completions",
+		"modelId": "glm-5",
+		"baseUrl": "https://opencode.ai/zen/go/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode-go.ts"
+	},
+	{
+		"upstream": "opencode-go",
+		"provider": "opencode-go",
+		"api": "openai-responses",
+		"modelId": "synthetic",
+		"baseUrl": "https://opencode.ai/zen/go/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/opencode-go.ts"
+	},
+	{
+		"upstream": "openrouter",
+		"provider": "openrouter",
+		"api": "anthropic-messages",
+		"modelId": "synthetic",
+		"baseUrl": "https://openrouter.ai/api/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/openrouter.ts"
+	},
+	{
+		"upstream": "openrouter",
+		"provider": "openrouter",
+		"api": "openai-completions",
+		"modelId": "ai21/jamba-large-1.7",
+		"baseUrl": "https://openrouter.ai/api/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/openrouter.ts"
+	},
+	{
+		"upstream": "openrouter",
+		"provider": "openrouter",
+		"api": "openrouter-images",
+		"modelId": "google/gemini-3-pro-image-preview",
+		"baseUrl": "https://openrouter.ai/api/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/openrouter.ts"
+	},
+	{
+		"upstream": "openrouter",
+		"provider": "openrouter",
+		"api": "typesafe-system-one",
+		"modelId": "typesafe/jev",
+		"baseUrl": "https://openrouter.ai/api/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/openrouter.ts"
+	},
+	{
+		"upstream": "qwen-token-plan",
+		"provider": "qwen-token-plan",
+		"api": "openai-completions",
+		"modelId": "qwen3.7-max",
+		"baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/qwen-token-plan.ts"
+	},
+	{
+		"upstream": "qwen-token-plan-cn",
+		"provider": "qwen-token-plan-cn",
+		"api": "openai-completions",
+		"modelId": "qwen3.7-max",
+		"baseUrl": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/qwen-token-plan-cn.ts"
+	},
+	{
+		"upstream": "qwen-token-plan-individual",
+		"provider": "qwen-token-plan-individual",
+		"api": "openai-completions",
+		"modelId": "qwen3.7-max",
+		"baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/qwen-token-plan-individual.ts"
+	},
+	{
+		"upstream": "radius",
+		"provider": "radius",
+		"api": "pi-messages",
+		"modelId": "kimi-k3",
+		"baseUrl": "https://radius.pi.dev/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/radius.ts"
+	},
+	{
+		"upstream": "together",
+		"provider": "together",
+		"api": "openai-completions",
+		"modelId": "deepseek-ai/DeepSeek-R1",
+		"baseUrl": "https://api.together.xyz/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/together.ts"
+	},
+	{
+		"upstream": "typesafe",
+		"provider": "typesafe",
+		"api": "typesafe-system-one",
+		"modelId": "jev-latest",
+		"baseUrl": "https://api.typesafe.ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/typesafe.ts"
+	},
+	{
+		"upstream": "vercel-ai-gateway",
+		"provider": "vercel-ai-gateway",
+		"api": "anthropic-messages",
+		"modelId": "alibaba/qwen-3-14b",
+		"baseUrl": "https://ai-gateway.vercel.sh",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/vercel-ai-gateway.ts"
+	},
+	{
+		"upstream": "vercel-ai-gateway",
+		"provider": "vercel-ai-gateway",
+		"api": "typesafe-system-one",
+		"modelId": "liquid/d1",
+		"baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/vercel-ai-gateway.ts"
+	},
+	{
+		"upstream": "xai",
+		"provider": "xai",
+		"api": "openai-responses",
+		"modelId": "grok-2",
+		"baseUrl": "https://api.x.ai/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/xai.ts"
+	},
+	{
+		"upstream": "xiaomi",
+		"provider": "xiaomi",
+		"api": "openai-completions",
+		"modelId": "mimo-v2-flash",
+		"baseUrl": "https://api.xiaomimimo.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/xiaomi.ts"
+	},
+	{
+		"upstream": "xiaomi-token-plan-ams",
+		"provider": "xiaomi-token-plan-ams",
+		"api": "openai-completions",
+		"modelId": "mimo-v2.6-pro",
+		"baseUrl": "https://token-plan-ams.xiaomimimo.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/xiaomi-token-plan-ams.ts"
+	},
+	{
+		"upstream": "xiaomi-token-plan-cn",
+		"provider": "xiaomi-token-plan-cn",
+		"api": "openai-completions",
+		"modelId": "mimo-v2.6-pro",
+		"baseUrl": "https://token-plan-cn.xiaomimimo.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/xiaomi-token-plan-cn.ts"
+	},
+	{
+		"upstream": "xiaomi-token-plan-sgp",
+		"provider": "xiaomi-token-plan-sgp",
+		"api": "openai-completions",
+		"modelId": "mimo-v2.6-pro",
+		"baseUrl": "https://token-plan-sgp.xiaomimimo.com/v1",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/xiaomi-token-plan-sgp.ts"
+	},
+	{
+		"upstream": "zai",
+		"provider": "zai",
+		"api": "openai-completions",
+		"modelId": "synthetic",
+		"baseUrl": "https://api.z.ai/api/coding/paas/v4",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/zai.ts"
+	},
+	{
+		"upstream": "zai-coding-cn",
+		"provider": "zai-coding-cn",
+		"api": "openai-completions",
+		"modelId": "glm-5.3-flash",
+		"baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+		"sourceUrl": "https://github.com/badlogic/pi-mono/blob/1b347794e2a630e4359f2584f4eea388145d0ddf/packages/ai/src/providers/zai-coding-cn.ts"
+	}
+]

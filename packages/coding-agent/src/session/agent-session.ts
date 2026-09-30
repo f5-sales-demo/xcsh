@@ -3118,6 +3118,7 @@ export class AgentSession {
 					settings: this.settings,
 					asyncJobManager: this.#asyncJobManager,
 					getSessionId: () => this.sessionManager.getSessionId(),
+					getActiveModelString: () => (this.model ? `${this.model.provider}/${this.model.id}` : undefined),
 				} as ToolSession) as AgentTool,
 		);
 		this.#extensionToolNames = new Set(wrapped.map(tool => tool.name));

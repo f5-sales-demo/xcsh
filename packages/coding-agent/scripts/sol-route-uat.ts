@@ -1,14 +1,32 @@
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PtySession } from "@f5-sales-demo/pi-natives";
+import { solUatLaunch } from "./sol-uat-launch";
 
 const provider = process.argv[2];
-if (provider !== "litellm" && provider !== "openai-codex") throw new Error("Select litellm or openai-codex");
+if (!provider || !["litellm", "openai-codex", "anthropic", "google-gemini-cli"].includes(provider))
+	throw new Error("Select an acceptance provider");
+const launch = solUatLaunch(provider, process.argv.slice(3));
 const root = await mkdtemp(join(tmpdir(), `xcsh-sol-uat-${provider}-`));
 const advanced = process.argv.includes("--advanced");
+const asyncTools = process.argv.includes("--async-tools");
+const projectSettings = join(process.cwd(), ".xcsh", "settings.json");
+let previousSettings: string | undefined;
+if (asyncTools) {
+	try {
+		previousSettings = await readFile(projectSettings, "utf8");
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+	}
+	await mkdir(join(process.cwd(), ".xcsh"), { recursive: true });
+	await writeFile(
+		projectSettings,
+		JSON.stringify({ ...JSON.parse(previousSettings ?? "{}"), async: { enabled: true } }),
+	);
+}
 const probeExtension = join(root, "transport-probe.ts");
-if (advanced)
+if (advanced || asyncTools)
 	await writeFile(
 		probeExtension,
 		`
@@ -26,13 +44,16 @@ export default function(api) {
   return socket;
  }});
  let tier = "default";
+ api.registerTool({name:"sol_echo",label:"Synthetic echo",description:"Return the synthetic acceptance marker",defaultInactive:true,parameters:{type:"object",properties:{marker:{type:"string"}},required:["marker"]},execute:async (_id,args)=>({content:[{type:"text",text:args.marker}]})});
+ api.registerTool({name:"sol_background",label:"Synthetic background",description:"Run a synthetic background job",async:true,defaultInactive:true,parameters:{type:"object",properties:{marker:{type:"string"}},required:["marker"]},execute:async (_id,args)=>{await Bun.sleep(1500);return {content:[{type:"text",text:args.marker}]};}});
+ api.registerCommand("sol-tools",{handler:async()=>{await api.setActiveTools([...api.getActiveTools(),"sol_echo","sol_background"]);}});
  api.registerCommand("sol-steer", {handler: async args => {pendingSteer="Keep the answer brief and end with "+args.trim(); api.sendUserMessage("Write a detailed 600-word explanation of binary search invariants using synthetic arrays. No tools.");}});
  api.registerCommand("sol-effort", {handler: async args => {api.setThinkingLevel(args.trim());}});
  api.registerCommand("sol-speed", {handler: async args => {tier=args.trim() === "fast" ? "priority" : "default";}});
  api.on("before_provider_request", event => {
   const payload = event.payload;
   payload.service_tier=tier;
-  receipt.requests.push({model:payload.model,effort:payload.reasoning?.effort,summary:payload.reasoning?.summary,tier,cache:payload.prompt_cache_options});
+  receipt.requests.push({model:payload.model,effort:payload.reasoning?.effort,summary:payload.reasoning?.summary,tier,cache:payload.prompt_cache_options,inputTypes:payload.input?.map(item=>item.type??item.role),tools:payload.tools?.map(tool=>tool.name)});
   void save();
   return payload;
  });
@@ -53,21 +74,14 @@ const session = new PtySession();
 let transcript = "";
 let exited = false;
 let callbackError: Error | undefined;
-const target = `${provider}/gpt-6.1-sol`;
 const run = session
 	.start(
 		{
 			command: [
-				"bun",
-				"run",
-				"dev",
-				"--model",
-				target,
-				"--thinking",
-				"medium",
+				...launch.argv,
 				"--session-dir",
 				root,
-				...(advanced ? ["--extension", probeExtension] : []),
+				...(advanced || asyncTools ? ["--extension", probeExtension] : []),
 			]
 				.map(shellQuote)
 				.join(" "),
@@ -119,7 +133,7 @@ async function waitForAssistant(marker: string, requireRead = false) {
 					sawRead = true;
 				if (
 					message?.role !== "assistant" ||
-					message.model !== "gpt-6.1-sol" ||
+					message.model !== launch.modelId ||
 					message.provider !== provider ||
 					message.stopReason !== "stop"
 				)
@@ -140,8 +154,15 @@ async function waitForAssistant(marker: string, requireRead = false) {
 }
 
 const rows: { step: string; outcome: string }[] = [];
+const submit = async (text: string) => {
+	session.write("\x1b[200~");
+	session.write(text);
+	session.write("\x1b[201~");
+	await Bun.sleep(200);
+	session.write("\r");
+};
 try {
-	await waitFor(value => value.includes("gpt-6.1-sol") && value.includes("idle"), "startup");
+	await waitFor(value => value.includes(launch.modelId) && value.includes("idle"), "startup");
 	await Bun.sleep(2000);
 	rows.push({ step: "startup", outcome: "pass" });
 	console.log("Terminal startup ready");
@@ -151,7 +172,7 @@ try {
 		await Bun.sleep(10);
 	}
 	session.write("\r");
-	await waitFor(value => value.includes("gpt-6.1-sol") && value.includes("Ctrl+R: refresh"), "picker", start);
+	await waitFor(value => value.includes(launch.modelId) && value.includes("Ctrl+R: refresh"), "picker", start);
 	session.write("\x1b");
 	await Bun.sleep(500);
 	if (visible().slice(-6000).includes("Ctrl+R: refresh")) {
@@ -179,14 +200,32 @@ try {
 	session.write("\r");
 	await waitForAssistant(imageMarker);
 	rows.push({ step: "image-input", outcome: "pass" });
+	if (asyncTools) {
+		await submit("/sol-tools");
+		await Bun.sleep(500);
+		const echo = `XCSH_SOL_ECHO_${Bun.hash(root).toString(36)}_OK`;
+		await submit(`Call sol_echo with marker ${echo}, then report the returned marker.`);
+		await waitForAssistant(echo);
+		rows.push({ step: "tool-change-follow-up", outcome: "pass" });
+		const background = `XCSH_SOL_ASYNC_${Bun.hash(root).toString(36)}_OK`;
+		await submit(
+			`Call sol_background with marker ${background}. Wait for the background result and then report its marker.`,
+		);
+		await waitForAssistant(background);
+		const persisted = (
+			await Promise.all(
+				(
+					await readdir(root)
+				)
+					.filter(name => name.endsWith(".jsonl"))
+					.map(name => readFile(join(root, name), "utf8")),
+			)
+		).join("\n");
+		if (!persisted.includes("async-result") || !persisted.includes("sol_background"))
+			throw new Error("No owned async completion was persisted");
+		rows.push({ step: "async-tool-delivery", outcome: "pass" });
+	}
 	if (advanced) {
-		const submit = async (text: string) => {
-			session.write("\x1b[200~");
-			session.write(text);
-			session.write("\x1b[201~");
-			await Bun.sleep(200);
-			session.write("\r");
-		};
 		for (const effort of process.argv.includes("--steering-only")
 			? []
 			: ["low", "medium", "high", "xhigh", "max", ...(provider === "openai-codex" ? ["ultra"] : [])]) {
@@ -226,8 +265,9 @@ try {
 	console.log(
 		JSON.stringify({
 			provider,
-			model: "gpt-6.1-sol",
-			launcher: "bun run dev",
+			model: launch.modelId,
+			launcher: launch.argv.slice(0, process.argv.includes("--executable") ? 1 : 3).join(" "),
+			modelOverride: launch.modelOverride,
 			terminal: "repository PtySession",
 			sessionDirectory: root,
 			rows,
@@ -238,5 +278,9 @@ try {
 		session.write("\x03");
 		session.write("\x04");
 		session.kill();
+	}
+	if (asyncTools) {
+		if (previousSettings === undefined) await rm(projectSettings);
+		else await writeFile(projectSettings, previousSettings);
 	}
 }

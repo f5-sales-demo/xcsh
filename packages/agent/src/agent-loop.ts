@@ -445,12 +445,7 @@ async function runLoop(
 				steeringMessagesFromExecution = executionResult.steeringMessages;
 
 				for (const result of toolResults) {
-					if (
-						currentContext.messages.some(
-							message => message.role === "toolResult" && message.toolCallId === result.toolCallId,
-						)
-					)
-						continue;
+					if (currentContext.messages.includes(result)) continue;
 					currentContext.messages.push(result);
 					newMessages.push(result);
 				}

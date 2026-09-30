@@ -28,6 +28,7 @@ import {
 	PROVIDER_DESCRIPTORS,
 } from "../src/provider-models/descriptors";
 import { MODELS_DEV_PROVIDER_DESCRIPTORS, mapModelsDevToModels } from "../src/provider-models/openai-compat";
+import { mirrorCloudflareWorkersModels } from "../src/providers/cloudflare-route";
 import { getGitLabDuoModels } from "../src/providers/gitlab-duo";
 import { JWT_CLAIM_PATH } from "../src/providers/openai-codex/constants";
 import { currentSolModels } from "../src/sol-model";
@@ -389,6 +390,7 @@ async function generateModels() {
 	allModels = applyPremiumMultiplierOverrides(allModels);
 	upsertCurrentSubscriptionModels(allModels);
 	applyGeneratedModelPolicies(allModels, { preserveDiscoveredThinking: true });
+	mirrorCloudflareWorkersModels(allModels);
 	linkSparkPromotionTargets(allModels);
 
 	// Group by provider and sort each provider's models

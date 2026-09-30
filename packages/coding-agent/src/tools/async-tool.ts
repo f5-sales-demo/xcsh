@@ -15,7 +15,13 @@ export function wrapAsyncTool(tool: Tool, session: ToolSession): Tool {
 	return Object.assign(Object.create(tool), {
 		async execute(id: string, args: unknown, signal?: AbortSignal, onUpdate?: unknown, context?: unknown) {
 			signal?.throwIfAborted();
-			const key = JSON.stringify([session.getSessionId?.(), session.getModelString?.(), tool.name, id, args]);
+			const key = JSON.stringify([
+				session.getSessionId?.(),
+				session.getActiveModelString?.() ?? session.getModelString?.(),
+				tool.name,
+				id,
+				args,
+			]);
 			const previous = calls.get(key);
 			if (previous)
 				return {

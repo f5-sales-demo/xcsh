@@ -33,6 +33,57 @@ const assistant = (calls: boolean): AssistantMessage => ({
 });
 
 describe("client tool discovery continuation", () => {
+	it("persists a fresh result when a provider reuses a call ID with different arguments", async () => {
+		let requests = 0;
+		let seen: Message[] = [];
+		const changed = { ...call, arguments: { query: "write" } };
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [
+				assistant(true),
+				{
+					role: "toolResult",
+					toolName: call.name,
+					toolCallId: call.id,
+					content: [{ type: "text", text: "old" }],
+					isError: false,
+					timestamp: 1,
+				},
+			],
+			tools: [
+				{
+					name: call.name,
+					label: "Search",
+					description: "Search",
+					parameters: Type.Object({ query: Type.String() }),
+					execute: async () => ({ content: [{ type: "text", text: "fresh" }] }),
+				},
+			],
+		};
+		const run = agentLoopContinue(
+			context,
+			{ model, convertToLlm: messages => messages as Message[] },
+			undefined,
+			(_model, context) => {
+				seen = context.messages;
+				const response = new AssistantMessageEventStream();
+				const message = requests++ === 0 ? { ...assistant(true), content: [changed] } : assistant(false);
+				queueMicrotask(() =>
+					response.push({ type: "done", reason: message.stopReason as "stop" | "toolUse", message }),
+				);
+				return response;
+			},
+		);
+		for await (const _ of run) {
+		}
+		expect(
+			seen.some(
+				message =>
+					message.role === "toolResult" &&
+					message.content.some(part => part.type === "text" && part.text === "fresh"),
+			),
+		).toBe(true);
+	});
 	it("continues accepted live steering and accepts normalized user content blocks", async () => {
 		let requests = 0;
 		let queued = false;

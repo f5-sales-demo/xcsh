@@ -1,6 +1,7 @@
 import { applyCodexInteractionMetadata, CODEX_MODEL_INTERACTION_METADATA } from "./codex-model-interaction";
 import { applyGeneratedModelPolicies, enrichModelThinking } from "./model-thinking";
 import MODELS from "./models.json" with { type: "json" };
+import { mirrorCloudflareWorkersModels } from "./providers/cloudflare-route";
 import { currentSolModels } from "./sol-model";
 import type { Api, KnownProvider, Model, Usage } from "./types";
 
@@ -34,6 +35,12 @@ for (const model of currentSolModels()) {
 }
 
 export type GeneratedProvider = keyof typeof MODELS;
+const cloudflareModels = [
+	...(modelRegistry.get("cloudflare-workers-ai")?.values() ?? []),
+	...(modelRegistry.get("cloudflare-ai-gateway")?.values() ?? []),
+];
+mirrorCloudflareWorkersModels(cloudflareModels);
+for (const model of cloudflareModels) modelRegistry.get(model.provider)?.set(model.id, model);
 
 export function getBundledModel(provider: GeneratedProvider, modelId: string): Model<Api> {
 	const providerModels = modelRegistry.get(provider);

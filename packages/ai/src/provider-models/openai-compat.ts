@@ -1,5 +1,11 @@
 import type { ModelManagerOptions } from "../model-manager";
 import { getBundledModels, getBundledProviders } from "../models";
+import {
+	cloudflareGatewayHeaders,
+	enrichCloudflareModel,
+	mirrorCloudflareWorkersModels,
+	resolveCloudflareEndpoint,
+} from "../providers/cloudflare-route";
 import type { Api, Model } from "../types";
 import { isAnthropicOAuthToken, isRecord, toNumber, toPositiveNumber } from "../utils";
 import {
@@ -1286,32 +1292,32 @@ export interface CloudflareAiGatewayModelManagerConfig {
 
 export function cloudflareAiGatewayModelManagerOptions(
 	config?: CloudflareAiGatewayModelManagerConfig,
-): ModelManagerOptions<"anthropic-messages"> {
+): ModelManagerOptions<Api> {
 	const apiKey = config?.apiKey;
 	const baseUrl = normalizeAnthropicBaseUrl(
 		config?.baseUrl,
 		"https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic",
 	);
 	const discoveryBaseUrl = toAnthropicDiscoveryBaseUrl(baseUrl);
-	const references = createBundledReferenceMap<"anthropic-messages">("cloudflare-ai-gateway");
+	const references = createBundledReferenceMap<Api>("cloudflare-ai-gateway");
 	return {
 		providerId: "cloudflare-ai-gateway",
 		...(apiKey && {
 			fetchDynamicModels: signal =>
-				fetchOpenAICompatibleModels({
+				fetchOpenAICompatibleModels<Api>({
 					signal,
 					api: "anthropic-messages",
 					provider: "cloudflare-ai-gateway",
-					baseUrl: discoveryBaseUrl,
-					headers: buildAnthropicDiscoveryHeaders(apiKey),
+					baseUrl: resolveCloudflareEndpoint("cloudflare-ai-gateway", discoveryBaseUrl),
+					headers: cloudflareGatewayHeaders(baseUrl, apiKey, buildAnthropicDiscoveryHeaders(apiKey)),
 					mapModel: (entry, defaults) => {
 						const reference = references.get(defaults.id);
 						const model = mapWithBundledReference(entry, defaults, reference);
-						return {
+						return enrichCloudflareModel({
 							...model,
 							name: toModelName(entry.display_name, model.name),
 							baseUrl,
-						};
+						});
 					},
 				}),
 		}),
@@ -1846,7 +1852,9 @@ export function mapModelsDevToModels(
 			}
 		}
 	}
-	return models;
+	const enriched = models.map(enrichCloudflareModel);
+	mirrorCloudflareWorkersModels(enriched);
+	return enriched;
 }
 
 // Bedrock cross-region prefix helpers

@@ -41,6 +41,16 @@ import type {
 
 type KeyResolver = string | (() => string | undefined);
 
+function withProviderSessionHeader<T extends StreamOptions>(model: Model, options: T | undefined): T | undefined {
+	if (
+		!model.provider.startsWith("opencode") ||
+		!options?.sessionId ||
+		Object.keys(options.headers ?? {}).some(key => key.toLowerCase() === "x-opencode-session")
+	)
+		return options;
+	return { ...options, headers: { ...options.headers, "x-opencode-session": options.sessionId } };
+}
+
 function isFoundryEnabled(): boolean {
 	const value = $env.CLAUDE_CODE_USE_FOUNDRY;
 	if (!value) return false;
@@ -159,6 +169,7 @@ export function stream<TApi extends Api>(
 	context: Context,
 	options?: OptionsForApi<TApi>,
 ): AssistantMessageEventStream {
+	options = withProviderSessionHeader(model, options);
 	if (model.type !== undefined && model.type !== "chat") throw new Error("stream requires a chat model");
 	if (model.api === "pi-messages") return streamPiMessages(model as Model<"pi-messages">, context, options ?? {});
 	if (model.api === "mistral-conversations")
@@ -243,6 +254,7 @@ export function streamSimple<TApi extends Api>(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
+	options = withProviderSessionHeader(model, options);
 	if (model.type !== undefined && model.type !== "chat") throw new Error("streamSimple requires a chat model");
 	// Check custom API registry first (extension-provided APIs)
 	const customApiProvider = getCustomApi(model.api);

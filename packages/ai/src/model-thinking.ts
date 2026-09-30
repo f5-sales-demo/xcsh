@@ -1,3 +1,4 @@
+import { enrichCloudflareModel } from "./providers/cloudflare-route";
 import { resolveOpenAICompat } from "./providers/openai-completions-compat";
 import { SOL_API_COST, SOL_API_THINKING, SOL_MODEL_ID } from "./sol-model";
 import type { Api, Model as ApiModel, ThinkingConfig } from "./types";
@@ -211,6 +212,7 @@ export const CLOUDFLARE_FALLBACK_MODEL: ApiModel<"anthropic-messages"> = {
  * trust `model.thinking` and avoid inferring capabilities on demand.
  */
 export function enrichModelThinking<TApi extends Api>(model: ApiModel<TApi>): ApiModel<TApi> {
+	model = enrichCloudflareModel(model);
 	if (
 		model.provider === "baseten" &&
 		["zai-org/GLM-5.2", "zai-org/GLM-5.2-Fast", "moonshotai/Kimi-K2.6"].includes(model.id)
@@ -266,7 +268,7 @@ export function applyGeneratedModelPolicies(
 				? enrichModelThinking(source)
 				: refreshModelThinking(source);
 		applyGeneratedModelPolicy(model);
-		models[index] = model;
+		models[index] = enrichCloudflareModel(model);
 	}
 }
 
