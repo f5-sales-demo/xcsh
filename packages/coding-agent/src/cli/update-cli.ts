@@ -5,6 +5,7 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { APP_NAME, isEnoent, VERSION } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
+import { type LinuxInstallerInput, updateLinuxStandalone } from "./linux-standalone-update";
 import {
 	createInstallReceipt,
 	defaultInstallChannelDependencies,
@@ -76,6 +77,7 @@ export interface StandaloneReplacementOptions {
 	writeFile?(file: string, contents: string): Promise<void>;
 	unlink?(file: string): Promise<void>;
 	validate?(executable: string, expectedVersion: string): Promise<void>;
+	runLinuxInstaller?(input: LinuxInstallerInput): Promise<void>;
 }
 
 async function ignoreMissing(unlink: (file: string) => Promise<void>, file: string): Promise<void> {
@@ -94,6 +96,15 @@ export async function replaceStandaloneExecutable(
 	const targetPath = options.targetPath;
 	const platform = options.platform ?? process.platform;
 	const arch = options.arch ?? process.arch;
+	if (platform === "linux") {
+		if (arch !== "x64" && arch !== "arm64") throw new Error("Unsupported Linux standalone update architecture");
+		return updateLinuxStandalone(expectedVersion, {
+			targetPath,
+			arch,
+			fetchImpl: options.fetchImpl,
+			runInstaller: options.runLinuxInstaller,
+		});
+	}
 	const binaryName = getBinaryName(platform, arch);
 	const url = `https://github.com/${REPO}/releases/download/v${expectedVersion}/${binaryName}`;
 	const tempPath = `${targetPath}.new-${process.pid}`;

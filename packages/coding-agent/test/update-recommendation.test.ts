@@ -476,7 +476,7 @@ describe("startup update notice", () => {
 	});
 });
 
-describe("standalone replacement rollback", () => {
+describe("macOS standalone replacement rollback", () => {
 	it.each([
 		"download",
 		"staged-binary-verification",
@@ -491,7 +491,7 @@ describe("standalone replacement rollback", () => {
 		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-standalone-rollback-"));
 		const targetPath = path.join(tempDir, "xcsh");
 		const receiptPath = path.join(tempDir, "xcsh-install.json");
-		const originalReceipt = `${JSON.stringify(createInstallReceipt("standalone", "21.9.9", targetPath, "linux", "x64"))}\n`;
+		const originalReceipt = `${JSON.stringify(createInstallReceipt("standalone", "21.9.9", targetPath, "darwin", "x64"))}\n`;
 		fs.writeFileSync(targetPath, "original", { mode: 0o755 });
 		fs.writeFileSync(receiptPath, originalReceipt);
 		let renameCalls = 0;
@@ -501,7 +501,7 @@ describe("standalone replacement rollback", () => {
 			await expect(
 				replaceStandaloneExecutable(VERSION, {
 					targetPath,
-					platform: "linux",
+					platform: "darwin",
 					arch: "x64",
 					fetchImpl: async () =>
 						failure === "download" ? new Response(null, { status: 500 }) : new Response("replacement"),
@@ -549,13 +549,13 @@ describe("standalone replacement rollback", () => {
 		fs.writeFileSync(targetPath, "original", { mode: 0o755 });
 		fs.writeFileSync(
 			receiptPath,
-			`${JSON.stringify(createInstallReceipt("standalone", "21.9.9", targetPath, "linux", "x64"))}\n`,
+			`${JSON.stringify(createInstallReceipt("standalone", "21.9.9", targetPath, "darwin", "x64"))}\n`,
 		);
 		try {
 			const update = () =>
 				replaceStandaloneExecutable(VERSION, {
 					targetPath,
-					platform: "linux",
+					platform: "darwin",
 					arch: "x64",
 					fetchImpl: async () => new Response("replacement"),
 					validate: async () => {},
@@ -563,11 +563,12 @@ describe("standalone replacement rollback", () => {
 			await update();
 			expect(fs.readFileSync(targetPath, "utf8")).toBe("replacement");
 			expect(JSON.parse(fs.readFileSync(receiptPath, "utf8"))).toEqual(
-				createInstallReceipt("standalone", VERSION, targetPath, "linux", "x64"),
+				createInstallReceipt("standalone", VERSION, targetPath, "darwin", "x64"),
 			);
 			expect(
 				await resolveInstallChannel(
 					dependencies({
+						platform: "darwin",
 						execPath: targetPath,
 						version: VERSION,
 						readFile: file => fs.promises.readFile(file, "utf8"),
@@ -576,7 +577,7 @@ describe("standalone replacement rollback", () => {
 			).toMatchObject({ channel: "standalone", action: "self-update" });
 			await update();
 			expect(JSON.parse(fs.readFileSync(receiptPath, "utf8"))).toEqual(
-				createInstallReceipt("standalone", VERSION, targetPath, "linux", "x64"),
+				createInstallReceipt("standalone", VERSION, targetPath, "darwin", "x64"),
 			);
 		} finally {
 			fs.rmSync(tempDir, { recursive: true, force: true });
