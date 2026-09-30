@@ -403,6 +403,21 @@ export function mapEffortToAnthropicAdaptiveEffort<TApi extends Api>(
 }
 
 function applyGeneratedModelPolicy(model: ApiModel<Api>): void {
+	if (model.provider === "ant-ling" && model.id.startsWith("Ring-")) {
+		model.thinking = {
+			mode: "effort",
+			defaultLevel: "high",
+			supportedLevels: [
+				{ effort: "high", description: "Deep reasoning" },
+				{ effort: "xhigh", description: "Very deep reasoning" },
+			],
+		};
+		model.compat = {
+			...model.compat,
+			thinkingFormat: "ant-ling",
+			supportsReasoningEffort: false,
+		} as ApiModel<Api>["compat"];
+	}
 	if (model.provider === "mistral") model.api = "mistral-conversations";
 	const parsedModel = parseKnownModel(model.id);
 	if (parsedModel.family === "anthropic") {

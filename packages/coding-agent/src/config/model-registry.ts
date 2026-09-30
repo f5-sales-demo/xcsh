@@ -171,6 +171,7 @@ const OpenAICompatSchema = Type.Object({
 			Type.Literal("zai"),
 			Type.Literal("qwen"),
 			Type.Literal("qwen-chat-template"),
+			Type.Literal("ant-ling"),
 		]),
 	),
 	openRouterRouting: Type.Optional(OpenRouterRoutingSchema),

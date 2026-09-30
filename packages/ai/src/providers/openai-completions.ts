@@ -757,6 +757,8 @@ function buildParams(
 		openRouterParams.reasoning = {
 			effort: mapReasoningEffort(options.reasoning, compat.reasoningEffortMap),
 		};
+	} else if (compat.thinkingFormat === "ant-ling" && options?.reasoning && model.reasoning) {
+		Reflect.set(params, "reasoning", { effort: options.reasoning });
 	} else if (options?.reasoning && model.reasoning && compat.supportsReasoningEffort) {
 		// OpenAI-style reasoning_effort
 		Reflect.set(params, "reasoning_effort", mapReasoningEffort(options.reasoning, compat.reasoningEffortMap));

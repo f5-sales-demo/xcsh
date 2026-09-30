@@ -3230,7 +3230,22 @@
 				"supportsStore": false,
 				"supportsDeveloperRole": false,
 				"supportsReasoningEffort": false,
-				"maxTokensField": "max_tokens"
+				"maxTokensField": "max_tokens",
+				"thinkingFormat": "ant-ling"
+			},
+			"thinking": {
+				"mode": "effort",
+				"defaultLevel": "high",
+				"supportedLevels": [
+					{
+						"effort": "high",
+						"description": "Deep reasoning"
+					},
+					{
+						"effort": "xhigh",
+						"description": "Very deep reasoning"
+					}
+				]
 			}
 		}
 	},
