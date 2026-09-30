@@ -403,7 +403,7 @@ install_binary() {
   fi
   github_api_download() {
     api_token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
-    case "$api_token" in *[!A-Za-z0-9_]*)
+    case "$api_token" in *[!A-Za-z0-9_.~+/=-]*)
       echo "Invalid GitHub API token format" >&2
       return 1
       ;;
