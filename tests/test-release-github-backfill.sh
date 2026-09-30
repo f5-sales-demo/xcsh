@@ -7,6 +7,7 @@ ci_workflow="$repo_root/.github/workflows/ci.yml"
 npm_workflow="$repo_root/.github/workflows/release-npm-backfill.yml"
 script="$repo_root/scripts/ci-release-github-backfill.sh"
 job_validator="$repo_root/scripts/ci-release-source-jobs.jq"
+uploader_bash=${RELEASE_TEST_BASH:-bash}
 
 fail() {
   echo "FAIL: $1" >&2
@@ -36,6 +37,14 @@ fi
 update_homebrew=$(sed -n '/^  update-homebrew:/,/^  verify-homebrew-install:/p' "$ci_workflow")
 grep -Fq 'runs-on: macos-14' <<<"$update_homebrew" || fail "Homebrew publisher must run on macOS"
 grep -Fq 'environment: release' "$workflow" || fail "backfill must use the release environment"
+for release_workflow in "$workflow" "$ci_workflow"; do
+  grep -Fq 'name: Confirm immutable publication independently' "$release_workflow" ||
+    fail "release workflow must independently reject false successful draft uploads"
+  grep -Fq '.immutable == true and (.assets | length) == 28' "$release_workflow" ||
+    fail "release workflow must require the complete immutable publication"
+done
+grep -Fq 'RELEASE_TEST_BASH: /bin/bash' "$ci_workflow" || fail "macOS system Bash regression is missing"
+
 grep -Fq 'SOURCE_RUN_ID: ${{ inputs.source_run_id }}' "$workflow" || fail "source run input is not wired"
 grep -Fq '.event == "push" and .head_branch == $tag and .head_sha == $tag_sha' "$workflow" || fail "tag/run identity validation is missing"
 grep -Fq '/attempts/1/jobs?per_page=100' "$workflow" || fail "original attempt validation is missing"
@@ -90,10 +99,10 @@ if grep -Fq 'gh release create "$tag"' "$script"; then
 fi
 
 invalid_concurrency_assets=$(mktemp -d)
-if XCSH_RELEASE_UPLOAD_CONCURRENCY=5 "$script" f5-sales-demo/xcsh v1.2.3 "$invalid_concurrency_assets" >/dev/null 2>&1; then
+if XCSH_RELEASE_UPLOAD_CONCURRENCY=5 "$uploader_bash" "$script" f5-sales-demo/xcsh v1.2.3 "$invalid_concurrency_assets" >/dev/null 2>&1; then
   fail "out-of-range upload concurrency was accepted"
 fi
-if XCSH_RELEASE_UPLOAD_CONCURRENCY=parallel "$script" f5-sales-demo/xcsh v1.2.3 "$invalid_concurrency_assets" >/dev/null 2>&1; then
+if XCSH_RELEASE_UPLOAD_CONCURRENCY=parallel "$uploader_bash" "$script" f5-sales-demo/xcsh v1.2.3 "$invalid_concurrency_assets" >/dev/null 2>&1; then
   fail "non-numeric upload concurrency was accepted"
 fi
 
@@ -173,9 +182,14 @@ asset_json() {
 
 release_json() {
   local published=false
+  local immutable
   local release_assets
   if [ -f "$state/published" ]; then
     published=true
+  fi
+  immutable=$published
+  if [ "$scenario" = published-mutable ]; then
+    immutable=false
   fi
   release_assets=$(
     for file in "$assets_dir"/*; do
@@ -185,12 +199,16 @@ release_json() {
   jq -cn \
     --arg tag "$tag" \
     --argjson published "$published" \
+    --argjson immutable "$immutable" \
     --argjson assets "$release_assets" \
-    '{id: 101, tag_name: $tag, draft: ($published | not), prerelease: false, immutable: $published, assets: $assets}'
+    '{id: 101, tag_name: $tag, draft: ($published | not), prerelease: false, immutable: $immutable, assets: $assets}'
 }
 
 initial_release_list() {
   case "$scenario" in
+    full-resume)
+      release_json | jq '[.]'
+      ;;
     resume | resume-digest-mismatch | resume-size-mismatch | resume-state-mismatch)
       local file="$assets_dir/pi_natives.darwin-arm64.node"
       local digest="sha256:$(file_sha256 "$file")"
@@ -320,7 +338,7 @@ run_uploader_case() {
       FAKE_ASSETS_DIR="$behavior_assets" \
       FAKE_GH_SCENARIO="$scenario" \
       FAKE_EXPECTED_CONCURRENCY="$expected_concurrency" \
-      "$script" f5-sales-demo/xcsh v1.2.3 "$behavior_assets" >"$state/output" 2>&1
+      "$uploader_bash" "$script" f5-sales-demo/xcsh v1.2.3 "$behavior_assets" >"$state/output" 2>&1
   else
     PATH="$fake_bin:$PATH" \
       FAKE_GH_STATE="$state" \
@@ -328,7 +346,7 @@ run_uploader_case() {
       FAKE_GH_SCENARIO="$scenario" \
       FAKE_EXPECTED_CONCURRENCY="$expected_concurrency" \
       XCSH_RELEASE_UPLOAD_CONCURRENCY="$concurrency" \
-      "$script" f5-sales-demo/xcsh v1.2.3 "$behavior_assets" >"$state/output" 2>&1
+      "$uploader_bash" "$script" f5-sales-demo/xcsh v1.2.3 "$behavior_assets" >"$state/output" 2>&1
   fi
 }
 
@@ -343,6 +361,11 @@ test "$inventory_line" -lt "$publish_line" || fail "release was published before
 
 run_uploader_case explicit-concurrency success 2 2 || fail "explicit-concurrency upload failed"
 test "$(<"$behavior_root/explicit-concurrency/maximum")" -eq 2 || fail "explicit upload concurrency was not honored"
+
+run_uploader_case partial-final-batch success 3 3 || fail "partial final upload batch failed"
+test -f "$behavior_root/partial-final-batch/published" || fail "partial final batch was not published"
+test "$(grep -c '^upload-end' "$behavior_root/partial-final-batch/events")" -eq 28 ||
+  fail "partial final batch did not join all upload workers"
 
 run_uploader_case transient-retry transient 4 0 || fail "transient upload failure did not recover"
 test "$(<"$behavior_root/transient-retry/attempts-pi_natives.darwin-arm64.node")" -eq 2 ||
@@ -364,6 +387,14 @@ test ! -e "$behavior_root/verified-resume/attempts-pi_natives.darwin-arm64.node"
 grep -Fq 'Already verified: pi_natives.darwin-arm64.node' "$behavior_root/verified-resume/output" ||
   fail "verified existing asset was not reported as resumed"
 
+run_uploader_case complete-resume full-resume 4 0 || fail "complete uploaded draft resume failed"
+test -f "$behavior_root/complete-resume/published" || fail "complete uploaded draft was not published"
+if grep -q '^upload-start' "$behavior_root/complete-resume/events"; then
+  fail "complete uploaded draft unnecessarily uploaded existing assets"
+fi
+test "$(grep -c '^Already verified:' "$behavior_root/complete-resume/output")" -eq 28 ||
+  fail "complete draft resume did not verify all 28 existing assets"
+
 for mismatch in digest size state; do
   run_uploader_case "resume-$mismatch-mismatch" "resume-$mismatch-mismatch" 4 0 ||
     fail "$mismatch-mismatched existing-asset replacement failed"
@@ -376,6 +407,11 @@ if run_uploader_case digest-mismatch final-mismatch 4 0; then
 fi
 test ! -f "$behavior_root/digest-mismatch/published" || fail "digest mismatch did not preserve the draft"
 grep -Fq 'inventory-read' "$behavior_root/digest-mismatch/events" || fail "final inventory was not queried"
+
+if run_uploader_case mutable-publication published-mutable 4 0; then
+  fail "mutable publication unexpectedly reported success"
+fi
+test -f "$behavior_root/mutable-publication/published" || fail "mutable final-state regression never reached publication"
 
 valid_jobs=$(mktemp)
 extra_jobs=$(mktemp)
