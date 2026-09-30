@@ -733,7 +733,6 @@ function buildParams(
 ): { params: OpenAICompletionsSamplingParams; toolStrictMode: AppliedToolStrictMode } {
 	const compat = getCompat(model, resolvedBaseUrl);
 	const messages = convertMessages(model, context, compat);
-	maybeAddOpenRouterAnthropicCacheControl(model, messages);
 
 	// Kimi (including via OpenRouter) calculates TPM rate limits based on max_tokens, not actual output.
 	// Always send max_tokens to avoid their high default causing rate limit issues.
@@ -868,6 +867,8 @@ function buildParams(
 		}
 	}
 
+	maybeAddOpenRouterAnthropicCacheControl(model, messages, params.tools, options?.cacheRetention);
+
 	if (compat.extraBody) {
 		Object.assign(params, compat.extraBody);
 	}
@@ -982,34 +983,24 @@ function mapReasoningEffort(
 function maybeAddOpenRouterAnthropicCacheControl(
 	model: Model<"openai-completions">,
 	messages: ChatCompletionMessageParam[],
+	tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
+	retention?: import("../types").CacheRetention,
 ): void {
-	if (model.provider !== "openrouter" || !model.id.startsWith("anthropic/")) return;
-
-	// Anthropic-style caching requires cache_control on a text part. Add a breakpoint
-	// on the last user/assistant message (walking backwards until we find text content).
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const msg = messages[i];
-		if (msg.role !== "user" && msg.role !== "assistant" && msg.role !== "developer") continue;
-
-		const content = msg.content;
-		if (typeof content === "string") {
-			msg.content = [
-				Object.assign({ type: "text" as const, text: content }, { cache_control: { type: "ephemeral" } }),
-			];
-			return;
+	if (model.provider !== "openrouter" || !/^~?anthropic\//.test(model.id) || retention === "none") return;
+	const cacheControl = { type: "ephemeral", ...(retention === "long" ? { ttl: "1h" } : {}) };
+	const mark = (message: ChatCompletionMessageParam) => {
+		if (typeof message.content === "string" && message.content.length)
+			message.content = [{ type: "text", text: message.content, cache_control: cacheControl }] as any;
+		else if (Array.isArray(message.content)) {
+			const part = message.content.findLast(part => part.type === "text");
+			if (part) Object.assign(part, { cache_control: cacheControl });
 		}
-
-		if (!Array.isArray(content)) continue;
-
-		// Find last text part and add cache_control
-		for (let j = content.length - 1; j >= 0; j--) {
-			const part = content[j];
-			if (part?.type === "text") {
-				Object.assign(part, { cache_control: { type: "ephemeral" } });
-				return;
-			}
-		}
-	}
+	};
+	const system = messages.find(message => message.role === "system" || message.role === "developer");
+	if (system) mark(system);
+	const conversation = messages.findLast(message => ["user", "assistant", "tool"].includes(message.role));
+	if (conversation) mark(conversation);
+	if (tools?.length) Object.assign(tools.at(-1)!, { cache_control: cacheControl });
 }
 
 export function convertMessages(
