@@ -1457,6 +1457,17 @@ jobs:
             fi
             actual_payload=$(find "$install_dir" -mindepth 1 -maxdepth 1 -exec basename {} \; | LC_ALL=C sort)
             test "$actual_payload" = "$expected_payload"
+            if [ "$RUNNER_OS" = Linux ]; then
+              binary_digest=$(sha256sum "$binary" | awk '{print $1}')
+              provenance="$install_dir/$artifact.provenance.json"
+              provenance_digest=$(sha256sum "$provenance" | awk '{print $1}')
+              test "$(cat "$install_dir/$artifact.sha256")" = "$binary_digest  $artifact"
+              test "$(cat "$provenance.sha256")" = "$provenance_digest  $artifact.provenance.json"
+              jq -e --arg version "${EXPECTED_VERSION#v}" --arg digest "$binary_digest" --arg asset "$artifact" '
+                .schemaVersion == 1 and .version == $version and .platform == "linux" and
+                .binary.name == $asset and .binary.sha256 == $digest and .natives.mode == "embedded"
+              ' "$provenance" >/dev/null
+            fi
           }
           verify_payload
           jq -e --arg version "${EXPECTED_VERSION#v}" --arg executable "$(realpath "$binary")" '
