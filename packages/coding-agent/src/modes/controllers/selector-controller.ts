@@ -25,7 +25,12 @@ import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
 import type { UserPromptKind } from "../../extensibility/extensions/types";
 import type { MarketplacePluginLifecycle } from "../../extensibility/plugins/marketplace/types";
-import { createSetupStepRunner, executeInstallAuthorizedSetup, type SetupStepRunner } from "../../integrations";
+import {
+	createSetupStepRunner,
+	describeSetupPlan,
+	executeInstallAuthorizedSetup,
+	type SetupStepRunner,
+} from "../../integrations";
 import { describeInstallSetupOutcome } from "../../integrations/setup";
 import {
 	getAvailableThemes,
@@ -107,7 +112,7 @@ export function submitPluginSetupFromDashboard(
 }
 
 export async function runInstallAuthorizedPluginSetup(
-	ctx: Pick<InteractiveModeContext, "settings" | "session">,
+	ctx: Pick<InteractiveModeContext, "settings" | "session"> & Partial<Pick<InteractiveModeContext, "showStatus">>,
 	pluginName: string,
 	lifecycle: Pick<MarketplacePluginLifecycle, "setupRequired" | "setupAuthorization">,
 	run?: SetupStepRunner,
@@ -119,6 +124,9 @@ export async function runInstallAuthorizedPluginSetup(
 		trigger: "direct-install",
 		handles: ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? [],
 		run: run ?? createSetupStepRunner(name => contextEnv.get(name) ?? process.env[name]),
+		review: async handle => {
+			ctx.showStatus?.(describeSetupPlan(handle));
+		},
 	});
 }
 

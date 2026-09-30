@@ -1,7 +1,8 @@
 import * as os from "node:os";
 import { $which } from "@f5-sales-demo/pi-utils";
+import { probeManagement } from "../host/management";
 import { runCli } from "./collectors";
-import type { MachineFacts, ManagementStatus, SecurityPosture } from "./machine-profile";
+import type { MachineFacts, SecurityPosture } from "./machine-profile";
 
 // Adapted from the historical computer collector. All subprocesses are now bounded and cancellable.
 function getTerminalName(): string | undefined {
@@ -186,93 +187,10 @@ async function collectInstalledTools(): Promise<string[]> {
 	return found;
 }
 
-/** Detect MDM vendor from profiles status output or binary presence. */
-export function detectMdmVendor(profilesOutput: string): string | undefined {
-	const lower = profilesOutput.toLowerCase();
-	if (lower.includes("jamf")) return "Jamf";
-	if (lower.includes("intune") || lower.includes("microsoft")) return "Intune";
-	if (lower.includes("mosyle")) return "Mosyle";
-	if (lower.includes("kandji")) return "Kandji";
-	if (lower.includes("workspace one") || lower.includes("airwatch")) return "Workspace ONE";
-	if (lower.includes("addigy")) return "Addigy";
-	if (lower.includes("simplemdm")) return "SimpleMDM";
-	if (lower.includes("hexnode")) return "Hexnode";
-	return undefined;
-}
+export { detectMdmVendor } from "../host/management";
 
 async function collectManagement(signal?: AbortSignal): Promise<Partial<MachineFacts>> {
-	if (process.platform !== "darwin") {
-		// Linux: check for Puppet, Chef, Salt, Ansible
-		const agents = ["puppet", "chef-client", "salt-minion", "ansible"];
-		for (const agent of agents) {
-			if ($which(agent)) {
-				return {
-					management: { isManaged: true, mdmVendor: agent },
-				};
-			}
-		}
-		return { management: { isManaged: false } };
-	}
-
-	const mgmt: ManagementStatus = { isManaged: false };
-
-	try {
-		// profiles status -type enrollment (works without sudo)
-		const profilesRes = await runCli(["profiles", "status", "-type", "enrollment"], undefined, signal);
-		if (profilesRes.exitCode === 0) {
-			const output = profilesRes.stdout.toString();
-			const mdmMatch = output.match(/MDM enrollment:\s*(Yes|No)/i);
-			if (mdmMatch && mdmMatch[1].toLowerCase() === "yes") {
-				mgmt.isManaged = true;
-				mgmt.userApproved = output.includes("User Approved");
-			}
-			const depMatch = output.match(/Enrolled via DEP:\s*(Yes|No)/i);
-			if (depMatch) mgmt.depEnrolled = depMatch[1].toLowerCase() === "yes";
-
-			// Detect vendor from the profiles output line containing server URL (don't store URL itself)
-			const serverLine = output.match(/MDM server:\s*(.+)/i);
-			if (serverLine) {
-				mgmt.mdmVendor = detectMdmVendor(serverLine[1]);
-			}
-		}
-	} catch {
-		/* non-fatal */
-	}
-
-	// Fallback vendor detection from binary presence
-	if (!mgmt.mdmVendor) {
-		if ($which("jamf") || $which("/usr/local/bin/jamf")) mgmt.mdmVendor = "Jamf";
-	}
-
-	// Jamf version if Jamf detected
-	if (mgmt.mdmVendor === "Jamf") {
-		try {
-			const jamfRes = await runCli(["jamf", "version"], undefined, signal);
-			if (jamfRes.exitCode === 0) {
-				const verMatch = jamfRes.stdout.toString().match(/version=([\d.]+)/);
-				if (verMatch) mgmt.mdmVersion = verMatch[1];
-			}
-		} catch {
-			/* non-fatal */
-		}
-	}
-
-	// mdmclient DumpManagementStatus for supervised + org name
-	if (mgmt.isManaged) {
-		try {
-			const mdmRes = await runCli(["/usr/libexec/mdmclient", "DumpManagementStatus"], undefined, signal);
-			if (mdmRes.exitCode === 0) {
-				const mdmOutput = mdmRes.stdout.toString();
-				if (mdmOutput.includes("DeviceIsSupervised = 1")) mgmt.isSupervised = true;
-				const orgMatch = mdmOutput.match(/OrganizationName\s*=\s*"?([^"\n;]+)"?/);
-				if (orgMatch) mgmt.organizationName = orgMatch[1].trim();
-			}
-		} catch {
-			/* non-fatal */
-		}
-	}
-
-	return { management: mgmt };
+	return { management: (await probeManagement(signal)).details };
 }
 
 async function collectSecurity(signal?: AbortSignal): Promise<Partial<MachineFacts>> {

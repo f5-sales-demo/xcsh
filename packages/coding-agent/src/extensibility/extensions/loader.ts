@@ -21,12 +21,15 @@ import {
 } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
+import { host } from "../../host/host";
+import { software } from "../../host/software";
 import { integrationRegistry } from "../../integrations/registry";
 import type { IntegrationDefinition, IntegrationHandle } from "../../integrations/types";
 import { personProfileService } from "../../person-profile/service";
 import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
+import { assertRuntimeRequirement } from "../plugins/marketplace/runtime";
 import { resolvePath } from "../utils";
 import herdrReporter from "./bundled/herdr-reporter";
 import herdrTerminal from "./bundled/herdr-terminal";
@@ -130,6 +133,8 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 		config: import("./types").ProviderConfig;
 		sourceId: string;
 	}> = [];
+	readonly host = host;
+	readonly software = software;
 	readonly personProfile: ExtensionAPI["personProfile"];
 	readonly integrations: ExtensionAPI["integrations"];
 	readonly advisories: ExtensionAPI["advisories"];
@@ -301,7 +306,7 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 	}
 
 	exec(command: string, args: string[], options?: ExecOptions) {
-		return execCommand(command, args, options?.cwd ?? this.cwd, options);
+		return execCommand(host.findExecutable(command) ?? command, args, options?.cwd ?? this.cwd, options);
 	}
 
 	getActiveTools(): string[] {
@@ -692,6 +697,9 @@ export async function discoverAndLoadExtensions(
 					// A marketplace plugin may use package metadata only.
 				}
 
+				const minimumRuntimeVersion = (canonical as { minimumRuntimeVersion?: string } | undefined)
+					?.minimumRuntimeVersion;
+				if (minimumRuntimeVersion) assertRuntimeRequirement({ name: root.plugin, minimumRuntimeVersion });
 				// The canonical manifest owns an explicitly declared extension list. Older marketplace
 				// plugins keep lifecycle metadata in that manifest and their extension declaration in
 				// package.json, so use the established package contract only when it is omitted.
