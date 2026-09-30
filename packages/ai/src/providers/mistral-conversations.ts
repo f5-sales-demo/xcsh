@@ -275,7 +275,7 @@ async function requestMistralStream(
 	options?: MistralOptions,
 ): Promise<AsyncIterable<MistralCompletionEvent>> {
 	const baseUrl = new URL(model.baseUrl);
-	baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/u, "")}/`;
+	baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/u, "").replace(/\/v1$/u, "")}/`;
 	const url = new URL("v1/chat/completions", baseUrl);
 	const headers = buildMistralHeaders(model, apiKey, options);
 	const timeoutSignal = AbortSignal.timeout(options?.timeoutMs ?? 60_000);
