@@ -12,6 +12,8 @@ max_delay=60
 
 install_prefix=$(mktemp -d "$RUNNER_TEMP/xcsh-npm-verify.XXXXXX")
 install_log="$install_prefix/npm-install.log"
+version_stdout="$install_prefix/xcsh-version.stdout"
+version_stderr="$install_prefix/xcsh-version.stderr"
 binary="$install_prefix/bin/xcsh"
 release_cache="$install_prefix/release-cache"
 trap 'rm -rf -- "$install_prefix"' EXIT
@@ -37,7 +39,15 @@ for attempt in $(seq 1 "$max_attempts"); do
       exit 1
     fi
 
-    installed=$("$binary" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    version_status=0
+    "$binary" --version >"$version_stdout" 2>"$version_stderr" || version_status=$?
+    cat "$version_stderr" >&2
+    if [ "$version_status" -ne 0 ]; then
+      cat "$version_stdout"
+      echo "ERROR: installed command failed during version verification (exit $version_status)" >&2
+      exit "$version_status"
+    fi
+    installed=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$version_stdout" || echo "unknown")
     echo "Installed version: $installed"
 
     if [ "$installed" = "$expected" ]; then
