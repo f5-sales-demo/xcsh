@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "9bc4a8518cfbbd80eb02f4200dbb6855ea2e918b",
+  "revision": "937531e895cfc4be221c4b46b03931df60a42f83",
   "fingerprint": "00790bebc7b0cdde047c4d7363881d645e6d9ccbe5687740026c5ecbbd4a4480",
   "counts": {
     "total": 238,
@@ -356,9 +356,9 @@
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
+        "packages/coding-agent/test/internal-urls/terraform-documentation.test.ts",
         "packages/coding-agent/test/join-patch.test.ts",
-        "packages/coding-agent/test/marketplace/recommended.test.ts",
-        "packages/coding-agent/test/model-registry.test.ts"
+        "packages/coding-agent/test/marketplace/recommended.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
