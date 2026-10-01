@@ -29,11 +29,24 @@ describe("Terraform documentation", () => {
 	test("resolves internal links across directories and retains external links", () => {
 		expect(
 			rewriteTerraformLinks(
-				"[Parent](../resources/http_loadbalancer.md#https) [External](https://example.com/)",
-				"docs/guides/reference--part-2.md",
+				"[Parent](../resources/http_loadbalancer/index.md#https) [External](https://example.com/)",
+				"documentation/guides/reference.md",
 			),
 		).toBe(
-			"[Parent](xcsh://terraform-documentation/docs/resources/http_loadbalancer.md#https) [External](https://example.com/)",
+			"[Parent](xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#https) [External](https://example.com/)",
+		);
+	});
+	test("maps canonical Pages links and rejects Registry projection paths", () => {
+		expect(
+			rewriteTerraformLinks(
+				"[HTTPS](https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/http_loadbalancer/properties/https/#section)",
+				"documentation/index.md",
+			),
+		).toBe(
+			"[HTTPS](xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#section)",
+		);
+		expect(() => rewriteTerraformLinks("[Old](../docs/resources/example.md)", "documentation/index.md")).toThrow(
+			"Unsafe Terraform document path",
 		);
 	});
 	test("rejects unpinned snapshot identities", () => {

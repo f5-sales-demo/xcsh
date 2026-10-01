@@ -9,13 +9,13 @@ const scenarios = [
 	{
 		id: "login",
 		prompt: "In Terraform, how do I tell Bot Defense that a login succeeded?",
-		leaf: "transaction_result--success_conditions.md",
+		leaf: "transaction_result/success_conditions/index.md",
 		expected: ["success_conditions", "regex_values", "status"],
 	},
 	{
 		id: "tls",
 		prompt: "Help me set up HTTPS on my Terraform load balancer using a certificate I already have.",
-		leaf: "https--tls_cert_params--certificates.md",
+		leaf: "https/tls_cert_params/certificates/index.md",
 		expected: ["certificate", "namespace"],
 	},
 	{ id: "control", prompt: "How do I tell Bot Defense that a login succeeded?", leaf: undefined, expected: [] },

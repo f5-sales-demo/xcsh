@@ -1,8 +1,8 @@
 # Terraform documentation corpus delivery
 
-The provider publishes exact Markdown from `docs/` at a published stable provider
-tag. Canonical `documentation/` source pages are excluded. Snapshot releases use
-`docs-vN.N.N`, immutable assets, and `latest=false`.
+The provider publishes exact Markdown from `documentation/` at a published stable provider
+tag. Registry `docs/` projections are excluded. Snapshot releases use
+`documentation-vN.N.N`, immutable assets, and `latest=false`.
 
 The reviewed consumer contract is `tools/terraform-documentation-release.json`.
 Refresh it only after verifying the published snapshot receipt, every asset,
@@ -14,7 +14,7 @@ before committing the pin.
 
 - Inventory: `xcsh://terraform-documentation/`
 - Search: `xcsh://terraform-documentation/?search=<query>&provider_type=<type>&provider_name=<name>&role=<role>&limit=<1-10>`
-- Exact read: `xcsh://terraform-documentation/docs/<path>.md`
+- Exact read: `xcsh://terraform-documentation/documentation/<path>/index.md`
 - Section read: append a heading anchor or explicit schema anchor.
 
 Inventory lists accepted provider metadata values. Filters combine with AND.
@@ -24,8 +24,7 @@ property anchors. Ambiguous resource choices require clarification.
 
 Search defaults to five results and rejects duplicate or unknown parameters,
 invalid limits, and queries outside 1–512 UTF-8 bytes. Each result is the best
-passage from one repository-relative document. Continuation files retain their
-canonical identity and distinct path and projection-part metadata.
+passage from one repository-relative document. Canonical pages retain their identity, hierarchy, and exact path.
 
 The Terraform corpus has its own QMD SQLite index. Its compressed artifact is
 bundled with packages and binaries, verified before use, and materialized only
@@ -46,7 +45,7 @@ bun packages/coding-agent/scripts/terraform-documentation-acceptance.ts
 The installed binary accepts `XCSH_SMOKE_TEST_TERRAFORM_DOCUMENTATION=1` and must
 emit `XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK`. Run it in a clean home with network
 access disabled. It verifies provenance, filtered discovery, complete explicit
-property reads, continuation navigation, and negative search behavior.
+property reads, deep leaf navigation, and negative search behavior.
 
 Installed model guidance must search this namespace and read relevant
 fundamentals, property references, lifecycle guidance, and examples. Verify exact
