@@ -1,12 +1,16 @@
 import { afterEach, expect, it, vi } from "bun:test";
+import { streamProxy } from "../../agent/src/proxy";
 import { enrichModelThinking } from "../src/model-thinking";
 import { streamOpenAICodexResponses } from "../src/providers/openai-codex-responses";
 import type { Model } from "../src/types";
 import { isRetryableError } from "../src/utils/retry";
 
 const originalFetch = global.fetch;
+const originalIdle = process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS;
 afterEach(() => {
 	global.fetch = originalFetch;
+	if (originalIdle === undefined) delete process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS;
+	else process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = originalIdle;
 	vi.restoreAllMocks();
 });
 const socketMessage =
@@ -105,6 +109,8 @@ it("recovers metadata and 22 empty reasoning blocks without abandoned history", 
 	expect(capture.headers[1].get("authorization")).toBe(capture.headers[0].get("authorization"));
 	expect(events.filter(e => e.type === "done" || e.type === "error")).toHaveLength(1);
 	expect(events.filter(e => e.type === "text_delta")).toHaveLength(1);
+	expect(events.filter(e => e.type.startsWith("thinking_"))).toHaveLength(0);
+	expect(events.filter(e => e.type === "start")).toHaveLength(1);
 });
 it("exhausts exactly two restarts with increasing backoff and original detail", async () => {
 	const capture = setup(Array.from({ length: 3 }, () => response([], new Error(socketMessage))));
@@ -140,11 +146,18 @@ for (const [name, prefix] of [
 		expect(capture.bodies).toHaveLength(1);
 	});
 it("cancels during backoff without reopening", async () => {
+	const setTimer = vi.spyOn(globalThis, "setTimeout");
+	const clearTimer = vi.spyOn(globalThis, "clearTimeout");
 	const capture = setup([response([], new Error(socketMessage))]);
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), 100);
 	try {
-		expect((await run(controller.signal)).result.stopReason).toBe("aborted");
+		const { result, events } = await run(controller.signal);
+		expect(result.stopReason).toBe("aborted");
+		expect(events.filter(e => e.type === "error" || e.type === "done")).toHaveLength(1);
+		const backoffIndex = setTimer.mock.calls.findIndex(call => call[1] === 500);
+		expect(backoffIndex).toBeGreaterThanOrEqual(0);
+		expect(clearTimer.mock.calls.some(call => call[0] === setTimer.mock.results[backoffIndex].value)).toBe(true);
 	} finally {
 		clearTimeout(timer);
 	}
@@ -243,4 +256,209 @@ it("replays completed tool context without emitting or executing the tool again"
 	expect(capture.bodies[1]).toBe(capture.bodies[0]);
 	expect(capture.bodies[1]).toContain("Already completed");
 	expect(events.filter(event => event.type.startsWith("toolcall"))).toHaveLength(0);
+});
+
+it("serializes recovered provider events through streamProxy without abandoned placeholders", async () => {
+	setup([response(placeholders, new Error(socketMessage)), response(success)]);
+	const { events } = await run();
+	const wire = events.map(event => {
+		if (event.type === "done") return { type: event.type, reason: event.reason, usage: event.message.usage };
+		if (event.type === "error") return { type: event.type, reason: event.reason, usage: event.error.usage };
+		const { partial, ...rest } = event;
+		return rest;
+	});
+	setup([response(wire)]);
+	const proxy = streamProxy(model, context, { authToken: "synthetic", proxyUrl: "https://proxy.example" });
+	const forwarded = [];
+	for await (const event of proxy) forwarded.push(event);
+	expect((await proxy.result()).content).toEqual([
+		{ type: "text", text: "Recovered", phase: "final_answer", textSignature: undefined },
+	]);
+	expect(forwarded.filter(e => e.type === "text_delta")).toHaveLength(1);
+	expect(forwarded.filter(e => e.type === "done" || e.type === "error")).toHaveLength(1);
+});
+
+function hangingResponse(events: object[] = [], onCancel?: () => void) {
+	return new Response(
+		new ReadableStream<Uint8Array>({
+			start(controller) {
+				for (const event of events) controller.enqueue(frame(event));
+			},
+			cancel() {
+				onCancel?.();
+			},
+		}),
+	);
+}
+for (const [name, prefix] of [
+	["first event", []],
+	["metadata", placeholders.slice(0, 1)],
+	["empty placeholders", placeholders],
+] as const)
+	it(`recovers idle timeout after ${name} with a fresh attempt signal`, async () => {
+		process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "20";
+		let cancelled = 0;
+		const abandoned = hangingResponse([...prefix], () => cancelled++);
+		const capture = setup([abandoned, response(success)]);
+		const caller = new AbortController();
+		const { result, events } = await run(caller.signal);
+		expect(result.stopReason).toBe("stop");
+		expect(result.content).toHaveLength(1);
+		expect(caller.signal.aborted).toBe(false);
+		expect(capture.bodies).toHaveLength(2);
+		expect(abandoned.body?.locked).toBe(false);
+		expect(cancelled).toBe(1);
+		expect(events.filter(e => e.type.startsWith("thinking_"))).toHaveLength(0);
+	});
+it("cancels a pending first read with the watchdog disabled and unlocks its reader", async () => {
+	process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "0";
+	const abandoned = hangingResponse();
+	const capture = setup([abandoned]);
+	const caller = new AbortController();
+	const timer = setTimeout(() => caller.abort(), 20);
+	try {
+		const { result, events } = await run(caller.signal);
+		expect(result.stopReason).toBe("aborted");
+		expect(events.filter(e => e.type === "error")).toHaveLength(1);
+		expect(capture.bodies).toHaveLength(1);
+		expect(abandoned.body?.locked).toBe(false);
+	} finally {
+		clearTimeout(timer);
+	}
+});
+
+it("preserves successful empty encrypted reasoning and interleaved content indices", async () => {
+	const reasoning = { type: "reasoning", id: "encrypted", summary: [], encrypted_content: "synthetic-cipher" };
+	setup([
+		response([
+			{ type: "response.output_item.added", output_index: 7, item: reasoning },
+			{ ...success[0], output_index: 3 },
+			{ ...success[1], output_index: 3 },
+			{ ...success[2], output_index: 3 },
+			{ type: "response.output_item.done", output_index: 7, item: reasoning },
+			{ ...success[3], output_index: 3 },
+			success[4],
+		]),
+	]);
+	const { result, events } = await run();
+	expect(result.content).toHaveLength(2);
+	expect(result.content[0]).toMatchObject({ type: "thinking", thinking: "" });
+	expect(JSON.stringify(result.providerPayload)).toContain("synthetic-cipher");
+	expect(events.filter(e => "contentIndex" in e).map(e => e.contentIndex)).toEqual([0, 1, 1, 0, 1]);
+});
+it("flushes successful empty text and reasoning on terminal completion", async () => {
+	setup([response([...placeholders.slice(1, 3), ...success.slice(0, 2), success[4]])]);
+	const { result, events } = await run();
+	expect(result.content).toHaveLength(2);
+	expect(events.map(e => e.type)).toEqual(["start", "thinking_start", "thinking_end", "text_start", "done"]);
+});
+it("shares exhaustion budget between socket, idle and reopening failures", async () => {
+	process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "20";
+	const capture = setup([
+		response(placeholders, new Error(socketMessage)),
+		hangingResponse(placeholders),
+		Object.assign(new Error("reopen reset"), { code: "ECONNRESET" }),
+	]);
+	const { result, events } = await run();
+	expect(result.errorMessage).toContain(socketMessage);
+	expect(capture.bodies).toHaveLength(3);
+	expect(events.filter(e => e.type === "error")).toHaveLength(1);
+});
+it("does not replay a terminal event followed by socket closure", async () => {
+	const capture = setup([response([success[4]], new Error(socketMessage))]);
+	expect((await run()).result.stopReason).toBe("error");
+	expect(capture.bodies).toHaveLength(1);
+});
+it("does not request when already cancelled", async () => {
+	const capture = setup([]);
+	const caller = new AbortController();
+	caller.abort();
+	const { result, events } = await run(caller.signal);
+	expect(result.stopReason).toBe("aborted");
+	expect(capture.bodies).toHaveLength(0);
+	expect(events.filter(e => e.type === "error")).toHaveLength(1);
+});
+it("cancels during reopening without any later request", async () => {
+	const caller = new AbortController();
+	let requests = 0;
+	global.fetch = vi.fn(async (_input: unknown, init?: RequestInit) => {
+		requests++;
+		if (requests === 1) return response([], new Error(socketMessage));
+		return new Promise<Response>((_resolve, reject) => {
+			init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+			caller.abort();
+		});
+	}) as unknown as typeof fetch;
+	const { result, events } = await run(caller.signal);
+	expect(result.stopReason).toBe("aborted");
+	expect(requests).toBe(2);
+	expect(events.filter(e => e.type === "error")).toHaveLength(1);
+});
+it("cleanup cannot hang on an upstream cancel hook", async () => {
+	process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "20";
+	const abandoned = new Response(
+		new ReadableStream<Uint8Array>({
+			cancel() {
+				return new Promise(() => {});
+			},
+		}),
+	);
+	setup([abandoned, response(success)]);
+	expect((await run()).result.stopReason).toBe("stop");
+	expect(abandoned.body?.locked).toBe(false);
+});
+
+it("does not time out while a raw event callback is processing", async () => {
+	process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "20";
+	const capture = setup([response(success)]);
+	const provider = streamOpenAICodexResponses(model, context, {
+		apiKey: token,
+		preferWebsockets: false,
+		onProviderStreamEvent: async () => {
+			await new Promise(resolve => setTimeout(resolve, 30));
+		},
+	});
+	for await (const _event of provider) {
+		/* Consume the actual stream. */
+	}
+	expect((await provider.result()).stopReason).toBe("stop");
+	expect(capture.bodies).toHaveLength(1);
+});
+for (const [name, prefix] of [
+	["visible text", success.slice(0, 3)],
+	[
+		"visible reasoning",
+		[
+			{ type: "response.output_item.added", item: { type: "reasoning", id: "r", summary: [] } },
+			{ type: "response.reasoning_summary_text.delta", delta: "Visible" },
+		],
+	],
+	["tool activity", [{ type: "response.web_search_call.in_progress" }]],
+	["terminal completion", [success[4]]],
+] as const)
+	it(`does not replay idle timeout after ${name}`, async () => {
+		process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "20";
+		const abandoned = hangingResponse([...prefix]);
+		const capture = setup([abandoned]);
+		expect((await run()).result.stopReason).toBe("error");
+		expect(capture.bodies).toHaveLength(1);
+		expect(abandoned.body?.locked).toBe(false);
+	});
+it("cancellation during cleanup prevents reopening without waiting for cancel hooks", async () => {
+	process.env.PI_OPENAI_STREAM_IDLE_TIMEOUT_MS = "20";
+	const caller = new AbortController();
+	const abandoned = new Response(
+		new ReadableStream<Uint8Array>({
+			cancel() {
+				caller.abort();
+				return new Promise(() => {});
+			},
+		}),
+	);
+	const capture = setup([abandoned]);
+	const { result, events } = await run(caller.signal);
+	expect(result.stopReason).toBe("aborted");
+	expect(capture.bodies).toHaveLength(1);
+	expect(abandoned.body?.locked).toBe(false);
+	expect(events.filter(e => e.type === "error")).toHaveLength(1);
 });
