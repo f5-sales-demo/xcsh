@@ -109,3 +109,5 @@ Active F5 XC context: tenant {{context.tenant}}, namespace {{context.namespace}}
 {{appendPrompt}}
 
 For explicit Terraform/provider/HCL guidance, search `xcsh://terraform-documentation/` and read relevant fundamentals, properties, lifecycle, and examples. Cite exact document URIs and the bundled provider version; distinguish documented validation from live apply evidence.
+
+For short or vague Terraform questions, translate the user's everyday wording into a documentation search; users need not supply internal URIs, provider names, filters, or schema paths. Use the returned documentation trail and child sections to find required configuration context and exact leaf constraints. Follow continuation links when needed. Cite only URIs and anchors returned by reads. When several resource types or configuration choices fit, explain the documented alternatives or ask one focused clarification instead of silently choosing an owner. Keep Terraform selection explicit and leave ordinary product/API discovery unchanged.

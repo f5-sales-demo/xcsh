@@ -18,6 +18,10 @@ before committing the pin.
 - Section read: append a heading anchor or explicit schema anchor.
 
 Inventory lists accepted provider metadata values. Filters combine with AND.
+Ask everyday Terraform questions without namespace names, filters, or schema
+paths. Search results supply ancestry and child links; exact reads list real
+property anchors. Ambiguous resource choices require clarification.
+
 Search defaults to five results and rejects duplicate or unknown parameters,
 invalid limits, and queries outside 1–512 UTF-8 bytes. Each result is the best
 passage from one repository-relative document. Continuation files retain their
@@ -55,3 +59,5 @@ Provider correction PR and release precede the first immutable snapshot. Consume
 pin and integration PR follow that snapshot. Complete consumer CI, merge, release,
 Mac Homebrew acceptance, Ubuntu installed acceptance, and model-assisted scenarios
 before reporting delivery complete.
+
+Run minimal-prompt model UAT with `bun packages/coding-agent/scripts/terraform-natural-language-uat.ts --binary <installed-xcsh> --model <model> --output-dir <trace-directory>`. It tests vague login-success and existing-certificate questions, checks exact leaf reads and citations, and verifies a non-Terraform control. No namespace, filters, or schema paths are supplied in the prompts.

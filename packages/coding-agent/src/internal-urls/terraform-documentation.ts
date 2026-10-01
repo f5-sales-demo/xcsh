@@ -393,8 +393,47 @@ export interface TerraformEmbeddedAssets {
 	indexGzipPath: string;
 	pin: TerraformPin & { index: NonNullable<TerraformPin["index"]> };
 }
+const TERRAFORM_QUERY_STOPWORDS = new Set(
+	"a an the and how where what do does i we you my me our your can could should would please help tell know put already have that to for of in on with using use configure setup set up terraform provider documentation document".split(
+		" ",
+	),
+);
+const TERRAFORM_QUERY_VARIANTS: Record<string, string> = {
+	succeeded: "success",
+	successful: "success",
+	succeeds: "success",
+	failed: "failure",
+	fails: "failure",
+	cert: "certificate",
+	certs: "certificate",
+};
+
+export function terraformSearchQuery(query: string): string {
+	const terms =
+		query
+			.normalize("NFKC")
+			.toLowerCase()
+			.match(/[\p{L}\p{N}]+/gu) ?? [];
+	return [...new Set(terms.filter(term => !TERRAFORM_QUERY_STOPWORDS.has(term)))]
+		.map(term => {
+			const variant = TERRAFORM_QUERY_VARIANTS[term];
+			return variant ? `("${term}"* OR "${variant}"*)` : `"${term}"*`;
+		})
+		.join(" AND ");
+}
+
+interface TerraformNavigationNode {
+	path: string;
+	id: string;
+	parent: string | null;
+	children: string;
+	label: string;
+	part: number | null;
+}
+
 export class TerraformDocumentationRepository {
 	#ready: Promise<Database> | undefined;
+	#navigation: Map<string, TerraformNavigationNode> | undefined;
 	constructor(
 		readonly assets: TerraformEmbeddedAssets,
 		readonly cacheRoot: string,
@@ -440,6 +479,37 @@ export class TerraformDocumentationRepository {
 		}
 		return db;
 	}
+	#trace(db: Database, documentPath: string): string {
+		if (!this.#navigation) {
+			const nodes = db
+				.query(
+					"SELECT path,json_extract(metadata,'$.id') id,json_extract(metadata,'$.parent_id') parent,json_extract(metadata,'$.child_ids') children,json_extract(metadata,'$.summary') label,json_extract(metadata,'$.projection_part') part FROM terraform_documents ORDER BY path COLLATE BINARY",
+				)
+				.all() as TerraformNavigationNode[];
+			this.#navigation = new Map(nodes.map(node => [node.path, node]));
+			for (const node of nodes) if (!node.part || node.part === 1) this.#navigation.set(node.id, node);
+		}
+		const selected = this.#navigation.get(documentPath);
+		if (!selected) return "";
+		const trail: TerraformNavigationNode[] = [];
+		const seen = new Set<string>();
+		let current: TerraformNavigationNode | undefined = selected;
+		while (current && !seen.has(current.path)) {
+			seen.add(current.path);
+			trail.unshift(current);
+			current = current.parent ? this.#navigation.get(current.parent) : undefined;
+		}
+		const link = (node: TerraformNavigationNode) => `- [${node.label}](xcsh://terraform-documentation/${node.path})`;
+		const children = (JSON.parse(selected.children) as string[])
+			.map(id => this.#navigation!.get(id))
+			.filter((node): node is TerraformNavigationNode => Boolean(node));
+		return [
+			"Documentation trail:",
+			...trail.map(link),
+			...(children.length ? ["Child sections:", ...children.map(link)] : []),
+		].join("\n");
+	}
+
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const allowed = new Set(["search", "provider_type", "provider_name", "role", "limit"]);
 		for (const key of url.searchParams.keys())
@@ -472,16 +542,20 @@ export class TerraformDocumentationRepository {
 				body: string;
 			} | null;
 			if (!row) throw new Error(`Terraform document not found: ${documentPath}`);
+			const sections = terraformPassages(splitMarkdown(row.markdown).body);
+			const sectionLinks = sections
+				.filter(p => p.anchor.startsWith("schema-"))
+				.map(p => `- [${p.heading}](xcsh://terraform-documentation/${documentPath}#${p.anchor})`)
+				.join("\n");
+			const navigation = `${this.#trace(db, documentPath)}${sectionLinks ? `\nProperty sections:\n${sectionLinks}` : ""}`;
 			const anchor = decodeURIComponent(url.hash.slice(1));
-			const passage = anchor
-				? terraformPassages(splitMarkdown(row.markdown).body).find(p => p.anchor === anchor)
-				: undefined;
+			const passage = anchor ? sections.find(p => p.anchor === anchor) : undefined;
 			if (anchor && !passage) throw new Error(`Terraform anchor not found: ${anchor}`);
-			content = `${provenance}\nDocument: ${documentPath}\nMetadata: ${row.metadata}\nPinned source: https://github.com/${this.assets.pin.source_repository}/blob/${this.assets.pin.source_commit}/${documentPath}\n\n${rewriteTerraformLinks(passage?.markdown ?? row.markdown, documentPath)}`;
+			content = `${provenance}\nDocument: ${documentPath}\nMetadata: ${row.metadata}\n${navigation}\nPinned source: https://github.com/${this.assets.pin.source_repository}/blob/${this.assets.pin.source_commit}/${documentPath}\n\n${rewriteTerraformLinks(passage?.markdown ?? row.markdown, documentPath)}`;
 		} else if (search) {
 			const clauses = ["documents_fts MATCH ?", "d.active=1"];
-			const terms = search.normalize("NFKC").match(/[\p{L}\p{N}_]+/gu) ?? [];
-			const args: Array<string | number> = [terms.map(v => `"${v}"*`).join(" OR ")];
+			const query = terraformSearchQuery(search);
+			const args: Array<string | number> = [query];
 			for (const key of ["provider_type", "provider_name", "role"]) {
 				const value = url.searchParams.get(key);
 				if (value === null) continue;
@@ -489,50 +563,36 @@ export class TerraformDocumentationRepository {
 				clauses.push(`json_extract(td.metadata,'$.${key}')=?`);
 				args.push(value);
 			}
-			if (!url.searchParams.has("provider_name")) {
-				const names = db
-					.query(
-						"SELECT DISTINCT json_extract(metadata,'$.provider_name') name FROM terraform_documents ORDER BY length(name) DESC,name",
-					)
-					.all() as Array<{ name: string }>;
-				const normalized = search.toLowerCase().replace(/[_-]+/g, " ");
-				const owner = names.find(
-					({ name }) =>
-						name !== "xcsh" &&
-						(name.includes("_") || normalized.trim() === name) &&
-						normalized.includes(name.replace(/_/g, " ").replace(/loadbalancer/g, "load balancer")),
-				);
-				if (owner) {
-					clauses.push("json_extract(td.metadata,'$.provider_name')=?");
-					args.push(owner.name);
-				}
-			}
 			args.push(limitValue === null ? 5 : Number(limitValue));
-			const rows = terms.length
-				? (db
-						.query(`WITH scored AS (
+			const statement = db.query(`WITH scored AS (
 				SELECT td.path,td.metadata,p.anchor,p.heading,c.doc AS markdown,p.ordinal,
 				ABS(bm25(documents_fts,1.5,4.0,1.0))/(1+ABS(bm25(documents_fts,1.5,4.0,1.0))) score
 				FROM documents_fts JOIN documents d ON d.id=documents_fts.rowid
 				JOIN content c ON c.hash=d.hash JOIN terraform_passages p ON p.qmd_path=d.path JOIN terraform_documents td ON td.path=p.path
 				WHERE ${clauses.join(" AND ")}), ranked AS (
 				SELECT *,ROW_NUMBER() OVER(PARTITION BY path ORDER BY score DESC,ordinal ASC) rank FROM scored)
-				SELECT * FROM ranked WHERE rank=1 ORDER BY score DESC,path COLLATE BINARY,ordinal LIMIT ?`)
-						.all(...args) as Array<{
-						path: string;
-						metadata: string;
-						anchor: string;
-						heading: string;
-						markdown: string;
-						score: number;
-					}>)
-				: [];
-			content = `${provenance}\n\n# Terraform search: ${search}\n\n${
+				SELECT * FROM ranked WHERE rank=1 ORDER BY score DESC,path COLLATE BINARY,ordinal LIMIT ?`);
+			type SearchRow = {
+				path: string;
+				metadata: string;
+				anchor: string;
+				heading: string;
+				markdown: string;
+				score: number;
+			};
+			let rows = query ? (statement.all(...args) as SearchRow[]) : [];
+			let broadened = false;
+			if (!rows.length && query.includes(" AND ")) {
+				args[0] = query.replaceAll(" AND ", " OR ");
+				rows = statement.all(...args) as SearchRow[];
+				broadened = rows.length > 0;
+			}
+			content = `${provenance}\n\n# Terraform search: ${search}\n${broadened ? "Broader word matching was needed; verify the candidate and clarify ambiguous configuration choices.\n" : ""}\n${
 				rows.length
 					? rows
 							.map(r => {
 								const m = JSON.parse(r.metadata) as TerraformMetadata;
-								return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nDocument: ${r.path}\nIdentity: ${m.id}\nCanonical: ${m.canonical_id}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\nRead: xcsh://terraform-documentation/${r.path}#${r.anchor}\n\n${r.markdown.replace(/\s+/g, " ").slice(0, 600)}`;
+								return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nDocument: ${r.path}\nIdentity: ${m.id}\nCanonical: ${m.canonical_id}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\nRead: xcsh://terraform-documentation/${r.path}#${r.anchor}\n${this.#trace(db, r.path)}\n\n${rewriteTerraformLinks(r.markdown, r.path).replace(/\s+/g, " ").slice(0, 600)}`;
 							})
 							.join("\n\n")
 					: "No results."
