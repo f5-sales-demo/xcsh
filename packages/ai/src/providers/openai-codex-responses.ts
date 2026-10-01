@@ -49,6 +49,7 @@ import { AssistantMessageEventStream } from "../utils/event-stream";
 import { finalizeErrorMessage, type RawHttpRequestDump } from "../utils/http-inspector";
 import { getOpenAIStreamIdleTimeoutMs, iterateWithIdleTimeout } from "../utils/idle-iterator";
 import { parseStreamingJson } from "../utils/json-parse";
+import { isTransportClosureError } from "../utils/retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
 import {
 	CODEX_BASE_URL,
@@ -211,6 +212,8 @@ interface CodexStreamRuntime {
 	nativeOutputItems: Array<Record<string, unknown>>;
 	websocketStreamRetries: number;
 	providerRetryAttempt: number;
+	transportRestartAttempt: number;
+	sawReplayUnsafeActivity: boolean;
 	sawTerminalEvent: boolean;
 	canSafelyReplayWebsocketOverSse: boolean;
 }
@@ -769,6 +772,7 @@ async function openCodexSseTransport(
 	options: OpenAICodexResponsesOptions | undefined,
 	state: CodexWebSocketSessionState | undefined,
 	body = requestContext.transformedBody,
+	retryFetch = true,
 ): Promise<{
 	eventStream: AsyncGenerator<Record<string, unknown>>;
 	requestBodyForState: RequestBody;
@@ -785,6 +789,7 @@ async function openCodexSseTransport(
 			body,
 			state,
 			requestSetup.requestSignal,
+			retryFetch,
 		),
 	);
 	return { eventStream, requestBodyForState: structuredCloneJSON(body), transport: "sse" };
@@ -848,6 +853,8 @@ function createCodexStreamRuntime(initial: {
 		nativeOutputItems: [],
 		websocketStreamRetries: 0,
 		providerRetryAttempt: 0,
+		transportRestartAttempt: 0,
+		sawReplayUnsafeActivity: false,
 		sawTerminalEvent: false,
 		canSafelyReplayWebsocketOverSse: true,
 	};
@@ -873,6 +880,11 @@ async function processCodexResponseStream(
 					firstTokenTime,
 				});
 			}
+			if (!runtime.sawTerminalEvent) {
+				throw Object.assign(new Error("Codex stream ended before terminal completion event"), {
+					code: "ERR_STREAM_PREMATURE_CLOSE",
+				});
+			}
 			return { firstTokenTime };
 		} catch (error) {
 			const recovered = await recoverCodexStreamError(context, runtime, error);
@@ -894,6 +906,27 @@ function handleCodexStreamEvent(args: {
 	const { model, output, stream, runtime, rawEvent } = args;
 	const eventType = typeof rawEvent.type === "string" ? rawEvent.type : "";
 	if (!eventType) return args.firstTokenTime;
+	// Tool activity is unsafe from its first event, even if no arguments or tool result exists yet.
+	const item = asRecord(rawEvent.item);
+	const part = asRecord(rawEvent.part);
+	const hasText = (value: unknown): boolean => typeof value === "string" && value.length > 0;
+	if (
+		/^response\.(?:function_call|custom_tool_call|.*_call\.)/.test(eventType) ||
+		(item && typeof item.type === "string" && item.type !== "message" && item.type !== "reasoning") ||
+		hasText(rawEvent.delta) ||
+		hasText(rawEvent.text) ||
+		hasText(part?.text) ||
+		hasText(part?.refusal) ||
+		(item &&
+			[item.content, item.summary].some(
+				parts =>
+					Array.isArray(parts) &&
+					parts.some(value => hasText(asRecord(value)?.text) || hasText(asRecord(value)?.refusal)),
+			))
+	) {
+		runtime.sawReplayUnsafeActivity = true;
+	}
+
 	if (
 		eventType === "response.created" ||
 		eventType === "response.in_progress" ||
@@ -1376,6 +1409,9 @@ async function recoverCodexStreamError(
 	runtime: CodexStreamRuntime,
 	error: unknown,
 ): Promise<boolean> {
+	if (runtime.transport === "sse" && isTransportClosureError(error)) {
+		return tryRestartCodexSseTransport(context, runtime, error);
+	}
 	if (isCodexRejectedContinuation(error)) {
 		return tryRecoverCodexContinuation(context, runtime);
 	}
@@ -1389,6 +1425,80 @@ async function recoverCodexStreamError(
 		return true;
 	}
 	return false;
+}
+
+async function tryRestartCodexSseTransport(
+	context: CodexStreamProcessingContext,
+	runtime: CodexStreamRuntime,
+	originalError: unknown,
+): Promise<boolean> {
+	let error = originalError;
+	while (true) {
+		const replayEligible =
+			!runtime.sawReplayUnsafeActivity &&
+			!runtime.sawTerminalEvent &&
+			!context.requestSetup.requestSignal.aborted &&
+			context.output.content.every(
+				block =>
+					(block.type === "text" && block.text.length === 0) ||
+					(block.type === "thinking" && block.thinking.length === 0),
+			);
+		logCodexDebug("codex SSE transport recovery", {
+			transport: runtime.transport,
+			model: context.model.id,
+			elapsedMs: Date.now() - context.startTime,
+			attempt: runtime.transportRestartAttempt,
+			terminalEventSeen: runtime.sawTerminalEvent,
+			replayEligible,
+		});
+		if (!replayEligible || !isTransportClosureError(error)) {
+			if (error !== originalError) throw error;
+			return false;
+		}
+		if (runtime.transportRestartAttempt >= 2) throw originalError;
+		runtime.transportRestartAttempt += 1;
+		await runtime.eventStream.return(undefined);
+		runtime.currentItem = null;
+		runtime.currentBlock = null;
+		runtime.currentIndex = -1;
+		runtime.outputSlots.clear();
+		runtime.completedItemIds.clear();
+		runtime.nativeOutputItems.length = 0;
+		runtime.sawResponseAccepted = false;
+		runtime.sawOutputEvent = false;
+		runtime.sawTerminalEvent = false;
+		resetOutputState(context.output);
+		delete context.output.responseId;
+		delete context.output.providerPayload;
+		delete context.output.duration;
+		delete context.output.ttft;
+		delete context.output.errorMessage;
+		context.output.responseAttribution = { requestedModel: context.model.id };
+		context.firstTokenTime = undefined;
+		const state = context.requestContext.websocketState;
+		if (state) {
+			resetCodexWebSocketAppendState(state);
+			resetCodexSessionMetadata(state);
+		}
+		await abortableSleep(500 * runtime.transportRestartAttempt, context.requestSetup.requestSignal);
+		try {
+			const next = await openCodexSseTransport(
+				context.requestContext,
+				context.requestSetup,
+				context.options,
+				state,
+				context.requestContext.transformedBody,
+				false,
+			);
+			runtime.eventStream = next.eventStream;
+			runtime.requestBodyForState = next.requestBodyForState;
+			runtime.websocketRequestState = undefined;
+			return true;
+		} catch (reopenError) {
+			if (context.requestSetup.requestSignal.aborted) throw reopenError;
+			error = reopenError;
+		}
+	}
 }
 
 function isCodexRejectedContinuation(error: unknown): boolean {
@@ -2314,6 +2424,7 @@ async function openCodexSseEventStream(
 	body: RequestBody,
 	state: CodexWebSocketSessionState | undefined,
 	signal?: AbortSignal,
+	retryFetch = true,
 ): Promise<AsyncGenerator<Record<string, unknown>>> {
 	const headers = createCodexHeaders(requestHeaders, accountId, apiKey, sessionId, "sse", state);
 	logCodexDebug("codex request", {
@@ -2332,6 +2443,7 @@ async function openCodexSseEventStream(
 			body: JSON.stringify(body),
 		},
 		signal,
+		retryFetch,
 	);
 	logCodexDebug("codex response", {
 		url: response.url,
@@ -2437,13 +2549,13 @@ function getRetryDelayMs(
 	return { delay: CODEX_RETRY_DELAY_MS * (attempt + 1), serverProvided: false };
 }
 
-async function fetchWithRetry(url: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, signal?: AbortSignal, retry = true): Promise<Response> {
 	let attempt = 0;
 	let rateLimitTimeSpent = 0;
 	while (true) {
 		try {
 			const response = await fetch(url, { ...init, signal: signal ?? init.signal });
-			if (!CODEX_RETRYABLE_STATUS.has(response.status)) {
+			if (!retry || !CODEX_RETRYABLE_STATUS.has(response.status)) {
 				return response;
 			}
 			if (signal?.aborted) return response;
@@ -2465,7 +2577,7 @@ async function fetchWithRetry(url: string, init: RequestInit, signal?: AbortSign
 			}
 			await abortableSleep(delay, signal);
 		} catch (error) {
-			if (attempt >= CODEX_MAX_RETRIES || signal?.aborted) {
+			if (!retry || attempt >= CODEX_MAX_RETRIES || signal?.aborted) {
 				throw error;
 			}
 			const delay = CODEX_RETRY_DELAY_MS * (attempt + 1);
