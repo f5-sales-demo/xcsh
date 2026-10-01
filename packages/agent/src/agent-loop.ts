@@ -547,7 +547,12 @@ async function runLoop(
 					newMessages.push(result);
 					toolResults.push(result);
 				}
-				stream.push({ type: "turn_end", message, toolResults });
+				stream.push({
+					type: "turn_end",
+					message,
+					toolResults,
+					...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
+				});
 				stream.push({ type: "agent_end", messages: newMessages });
 				stream.end(newMessages);
 				return;
@@ -559,7 +564,12 @@ async function runLoop(
 
 			const toolResults = dispatchedResults;
 
-			stream.push({ type: "turn_end", message, toolResults });
+			stream.push({
+				type: "turn_end",
+				message,
+				toolResults,
+				...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
+			});
 
 			pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
 		}

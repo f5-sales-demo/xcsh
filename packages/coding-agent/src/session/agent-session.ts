@@ -1369,7 +1369,10 @@ export class AgentSession {
 			const msg = event.message as AssistantMessage;
 			if (
 				(msg.stopReason === "aborted" || msg.stopReason === "error") &&
-				!(msg.interruption && (event.toolResults.length > 0 || msg.interruption.toolChoiceServed))
+				!(
+					event.toolChoiceServed ||
+					(msg.interruption && (event.toolResults.length > 0 || msg.interruption.toolChoiceServed))
+				)
 			) {
 				this.#toolChoiceQueue.reject(msg.stopReason === "error" ? "error" : "aborted");
 			} else {
