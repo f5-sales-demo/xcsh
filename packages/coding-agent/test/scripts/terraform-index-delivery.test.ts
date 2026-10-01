@@ -8,6 +8,10 @@ const EXACT_URL = `https://raw.githubusercontent.com/f5-sales-demo/terraform-pro
 const GENERATOR_PATH = path.resolve(import.meta.dir, "../../scripts/generate-terraform-index.ts");
 
 describe("Terraform index exact provider delivery", () => {
+	it("keeps the reviewed bundled catalog during ordinary package preparation", async () => {
+		const pkg = await Bun.file(path.resolve(import.meta.dir, "../../package.json")).json();
+		expect(pkg.scripts.prepack).not.toContain("generate-terraform-index.ts");
+	});
 	it("bypasses mutable local/main sources for the immutable provider tag", async () => {
 		const requested: string[] = [];
 		const document = { provider: { source: "f5-sales-demo/xcsh" }, version: "0.1.0" };
