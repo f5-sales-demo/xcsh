@@ -219,7 +219,7 @@ export function createCompactionSummaryMessage(
 
 export function sanitizeRehydratedOpenAIResponsesAssistantMessage(message: AssistantMessage): AssistantMessage {
 	// Codex completed native items support full-history replay after reconnect and reload.
-	if (message.api === "openai-codex-responses") return message;
+	if (message.api === "openai-codex-responses" && message.interruption) return message;
 	if (message.providerPayload?.type !== "openaiResponsesHistory") {
 		return message;
 	}
