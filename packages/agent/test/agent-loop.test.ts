@@ -1378,3 +1378,62 @@ it("serves a named tool once and continues interruption without forcing a fresh 
 	expect(choices).toBe(1);
 	expect(requests).toBe(2);
 });
+
+it("retains served forced choice through later empty interruption exhaustion", async () => {
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	let request = 0;
+	let executions = 0;
+	const call = { type: "toolCall" as const, id: "forced", name: "synthetic", arguments: {} };
+	const loop = agentLoop(
+		[createUserMessage("Synthetic forced exhaustion")],
+		{
+			systemPrompt: "Synthetic",
+			messages: [],
+			tools: [
+				{
+					name: "synthetic",
+					label: "Synthetic",
+					description: "Synthetic",
+					parameters: Type.Object({}),
+					async execute() {
+						executions++;
+						return { content: [{ type: "text", text: "Served" }], details: {} };
+					},
+				},
+			],
+		},
+		{ model, toolChoice: { type: "tool", name: "synthetic" }, convertToLlm: identityConverter },
+		undefined,
+		() => {
+			const response = new MockAssistantStream();
+			const first = request++ === 0;
+			queueMicrotask(() => {
+				const partial = { ...createAssistantMessage(first ? [call] : []), api: model.api };
+				response.push({ type: "start", partial });
+				if (first) response.push({ type: "toolcall_end", contentIndex: 0, toolCall: call, partial });
+				response.push({
+					type: "error",
+					reason: "error",
+					error: {
+						...partial,
+						stopReason: "error",
+						interruption: {
+							transport: "sse",
+							classification: "socket_closed",
+							providerRetriesConsumed: 0,
+							completedContentIndices: first ? [0] : [],
+						},
+					},
+				});
+			});
+			return response;
+		},
+	);
+	const events: AgentEvent[] = [];
+	for await (const event of loop) events.push(event);
+	expect(executions).toBe(1);
+	expect(request).toBe(3);
+	const terminal = events.find(e => e.type === "turn_end") as Extract<AgentEvent, { type: "turn_end" }>;
+	expect(terminal.message).toMatchObject({ stopReason: "error", interruption: { toolChoiceServed: true } });
+	expect(terminal.toolResults).toHaveLength(0);
+});
