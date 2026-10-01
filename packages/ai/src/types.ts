@@ -442,6 +442,14 @@ export interface DeveloperMessage {
 }
 
 export interface AssistantMessage {
+	/** Completed content retained after a typed transport interruption. */
+	interruption?: {
+		transport: "sse" | "websocket";
+		classification: "socket_closed" | "premature_eof" | "idle_timeout";
+		providerRetriesConsumed: number;
+		toolChoiceServed?: boolean;
+		completedContentIndices: number[];
+	};
 	/** A queued background request; poll using the same provider route. */
 	deferred?: DeferredHandle;
 	providerRewrite?: {

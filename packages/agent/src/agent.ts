@@ -138,6 +138,7 @@ export interface AgentOptions {
 	 * Inspect assistant streaming events before they are emitted to subscribers.
 	 * Use this when abort decisions must happen before buffered events continue flowing.
 	 */
+	onAssistantCheckpoint?: (message: AssistantMessage) => Promise<void>;
 	onAssistantMessageEvent?: (message: AssistantMessage, event: AssistantMessageEvent) => void;
 	/**
 	 * Custom token budgets for thinking levels (token-based providers only).
@@ -288,6 +289,8 @@ export class Agent {
 	#getToolChoice?: () => ToolChoice | undefined;
 	#onPayload?: SimpleStreamOptions["onPayload"];
 	#onFinalPayload?: SimpleStreamOptions["onPayload"];
+	#checkpointTimestamps = new Set<number>();
+	#onAssistantCheckpoint?: (message: AssistantMessage) => Promise<void>;
 	#onAssistantMessageEvent?: (message: AssistantMessage, event: AssistantMessageEvent) => void;
 
 	/** Buffered Cursor tool results with text length at time of call (for correct ordering) */
@@ -327,6 +330,7 @@ export class Agent {
 		this.#intentTracing = opts.intentTracing === true;
 		this.#getToolChoice = opts.getToolChoice;
 		this.#onAssistantMessageEvent = opts.onAssistantMessageEvent;
+		this.#onAssistantCheckpoint = opts.onAssistantCheckpoint;
 	}
 
 	/**
@@ -458,6 +462,10 @@ export class Agent {
 		return () => this.#listeners.delete(fn);
 	}
 
+	setAssistantCheckpointHandler(fn: (message: AssistantMessage) => Promise<void>): void {
+		this.#onAssistantCheckpoint = fn;
+	}
+
 	setAssistantMessageEventInterceptor(
 		fn: ((message: AssistantMessage, event: AssistantMessageEvent) => void) | undefined,
 	): void {
@@ -470,10 +478,29 @@ export class Agent {
 			case "message_update":
 				this.#state.streamMessage = event.message;
 				break;
-			case "message_end":
-				this.#state.streamMessage = null;
-				this.appendMessage(event.message);
+			case "assistant_checkpoint": {
+				this.#checkpointTimestamps.add(event.message.timestamp);
+				const index = this.#state.messages.findIndex(
+					m => m.role === "assistant" && m.timestamp === event.message.timestamp,
+				);
+				if (index >= 0) this.#state.messages[index] = event.message;
+				else this.appendMessage(event.message);
 				break;
+			}
+			case "message_end": {
+				this.#state.streamMessage = null;
+				const index =
+					event.message.role === "assistant" &&
+					(this.#checkpointTimestamps.has(event.message.timestamp) || !!event.message.interruption)
+						? this.#state.messages.findIndex(
+								m => m.role === "assistant" && m.timestamp === event.message.timestamp,
+							)
+						: -1;
+				if (index >= 0) this.#state.messages[index] = event.message;
+				else this.appendMessage(event.message);
+				this.#checkpointTimestamps.delete(event.message.timestamp);
+				break;
+			}
 			case "tool_execution_start": {
 				const pending = new Set(this.#state.pendingToolCalls);
 				pending.add(event.toolCallId);
@@ -840,6 +867,7 @@ export class Agent {
 				transformToolCallArguments: this.#transformToolCallArguments,
 				intentTracing: this.#intentTracing,
 				onAssistantMessageEvent: this.#onAssistantMessageEvent,
+				onAssistantCheckpoint: this.#onAssistantCheckpoint,
 				getToolChoice,
 				waitForSteeringMessages: signal => {
 					if (this.#steeringQueue.length || signal.aborted) return Promise.resolve();
@@ -889,6 +917,15 @@ export class Agent {
 						this.#state.streamMessage = event.message;
 						break;
 
+					case "assistant_checkpoint": {
+						this.#checkpointTimestamps.add(event.message.timestamp);
+						const index = this.#state.messages.findIndex(
+							m => m.role === "assistant" && m.timestamp === event.message.timestamp,
+						);
+						if (index >= 0) this.#state.messages[index] = event.message;
+						else this.appendMessage(event.message);
+						break;
+					}
 					case "message_end":
 						partial = null;
 						// Check if this is an assistant message with buffered Cursor tool results.
@@ -898,7 +935,27 @@ export class Agent {
 							continue; // Skip default emit - split method handles everything
 						}
 						this.#state.streamMessage = null;
-						this.appendMessage(event.message);
+						if (event.message.role === "assistant") {
+							const index =
+								this.#checkpointTimestamps.has(event.message.timestamp) || event.message.interruption
+									? this.#state.messages.findIndex(
+											m => m.role === "assistant" && m.timestamp === event.message.timestamp,
+										)
+									: -1;
+							const message = event.message.interruption
+								? {
+										...event.message,
+										content: event.message.content.filter(
+											(_c, i) =>
+												event.message.role === "assistant" &&
+												event.message.interruption!.completedContentIndices.includes(i),
+										),
+									}
+								: event.message;
+							if (index >= 0) this.#state.messages[index] = message;
+							else this.appendMessage(message);
+						} else this.appendMessage(event.message);
+						this.#checkpointTimestamps.delete(event.message.timestamp);
 						break;
 
 					case "tool_execution_start": {

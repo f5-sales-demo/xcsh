@@ -802,6 +802,10 @@ export class AgentSession {
 		this.#syncRoutingStateFromBranch();
 		this.#ttsrManager = config.ttsrManager;
 		this.#obfuscator = config.obfuscator;
+		this.agent.setAssistantCheckpointHandler(async message => {
+			this.sessionManager.appendAssistantCheckpoint(message);
+			await this.sessionManager.flush();
+		});
 		this.agent.setAssistantMessageEventInterceptor((message, assistantMessageEvent) => {
 			const event: AgentEvent = {
 				type: "message_update",
@@ -1363,7 +1367,10 @@ export class AgentSession {
 		// run during tool execution, which happens between message_end and turn_end.
 		if (event.type === "turn_end" && this.#toolChoiceQueue.hasInFlight) {
 			const msg = event.message as AssistantMessage;
-			if (msg.stopReason === "aborted" || msg.stopReason === "error") {
+			if (
+				(msg.stopReason === "aborted" || msg.stopReason === "error") &&
+				!(msg.interruption && (event.toolResults.length > 0 || msg.interruption.toolChoiceServed))
+			) {
 				this.#toolChoiceQueue.reject(msg.stopReason === "error" ? "error" : "aborted");
 			} else {
 				this.#toolChoiceQueue.resolve();
@@ -6723,7 +6730,7 @@ export class AgentSession {
 	 * Usage-limit errors are retryable because the retry handler performs credential switching.
 	 */
 	#isRetryableError(message: AssistantMessage): boolean {
-		if (message.stopReason !== "error" || !message.errorMessage) return false;
+		if (message.interruption || message.stopReason !== "error" || !message.errorMessage) return false;
 
 		// Context overflow is handled by compaction, not retry
 		const contextWindow = this.model ? getModelEffectiveContextWindow(this.model) : 0;

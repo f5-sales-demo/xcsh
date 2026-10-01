@@ -967,3 +967,414 @@ describe("agentLoopContinue with AgentMessage", () => {
 		expect(messages[0].role).toBe("assistant");
 	});
 });
+
+describe("Codex interrupted streaming dispatch", () => {
+	it("dispatches a completed five-assignment task before disconnect and retains failed results", async () => {
+		const model = { ...createModel(), api: "openai-codex-responses" as const, provider: "openai-codex" };
+		const children: number[] = [];
+		const started = Promise.withResolvers<void>();
+		let requests = 0;
+		const tool: AgentTool = {
+			name: "task",
+			label: "Synthetic task",
+			description: "Synthetic assignments",
+			parameters: Type.Object({ assignments: Type.Array(Type.Number()) }),
+			async execute(_id, args) {
+				children.push(...(args as { assignments: number[] }).assignments);
+				started.resolve();
+				throw new Error("Synthetic child failure retained");
+			},
+		};
+		const call = {
+			type: "toolCall" as const,
+			id: "call|item",
+			name: "task",
+			arguments: { assignments: [1, 2, 3, 4, 5] },
+		};
+		const streamFn = (_model: Model<any>, ctx: Context) => {
+			const response = new MockAssistantStream();
+			const request = requests++;
+			void (async () => {
+				const message = {
+					...createAssistantMessage(
+						request === 0
+							? [...Array.from({ length: 6 }, () => ({ type: "thinking" as const, thinking: "" })), call]
+							: request === 1
+								? [call]
+								: [{ type: "text" as const, text: "Recovered" }],
+					),
+					api: model.api,
+					provider: model.provider,
+				};
+				response.push({ type: "start", partial: message });
+				if (request === 0) {
+					response.push({ type: "toolcall_end", contentIndex: 6, toolCall: call, partial: message });
+					await Promise.race([started.promise, new Promise(resolve => setTimeout(resolve, 100))]);
+					expect(children).toEqual([1, 2, 3, 4, 5]);
+					message.stopReason = "error";
+					message.errorMessage = "Synthetic socket interruption";
+					Object.assign(message, {
+						interruption: {
+							transport: "sse",
+							classification: "socket_closed",
+							providerRetriesConsumed: 0,
+							completedContentIndices: [0, 1, 2, 3, 4, 5, 6],
+						},
+					});
+					response.push({ type: "error", reason: "error", error: message });
+				} else {
+					expect(
+						ctx.messages.some(
+							m =>
+								m.role === "toolResult" &&
+								m.isError &&
+								JSON.stringify(m.content).includes("Synthetic child failure retained"),
+						),
+					).toBe(true);
+					message.stopReason = request === 1 ? "toolUse" : "stop";
+					response.push({ type: "done", reason: message.stopReason, message });
+				}
+			})().catch(error =>
+				response.push({
+					type: "error",
+					reason: "error",
+					error: { ...createAssistantMessage([], "error"), errorMessage: String(error) },
+				}),
+			);
+			return response;
+		};
+		const events: AgentEvent[] = [];
+		const stream = agentLoop(
+			[createUserMessage("Run synthetic assignments")],
+			{ systemPrompt: "Synthetic test", messages: [], tools: [tool] },
+			{ model, convertToLlm: identityConverter },
+			undefined,
+			streamFn,
+		);
+		for await (const event of stream) events.push(event);
+		const result = await stream.result();
+		expect(children).toEqual([1, 2, 3, 4, 5]);
+		expect(requests).toBe(3);
+		expect(events.filter(e => e.type === "tool_execution_start")).toHaveLength(1);
+		expect(result.filter(m => m.role === "toolResult")).toHaveLength(1);
+		expect(result.at(-1)).toMatchObject({ stopReason: "stop" });
+	});
+});
+
+it("shares mixed provider and agent interruption budget without another session attempt", async () => {
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	const allowances: Array<number | undefined> = [];
+	const stream = agentLoop(
+		[createUserMessage("Synthetic interruption")],
+		{ systemPrompt: "Synthetic", messages: [], tools: [] },
+		{ model, convertToLlm: identityConverter },
+		undefined,
+		(_model, _context, options) => {
+			allowances.push(options?.maxRetries);
+			const response = new MockAssistantStream();
+			const failure = {
+				...createAssistantMessage([], "error"),
+				api: model.api,
+				interruption: {
+					transport: "sse" as const,
+					classification: "socket_closed" as const,
+					providerRetriesConsumed: allowances.length === 1 ? 1 : 0,
+					completedContentIndices: [],
+				},
+				errorMessage: "Synthetic socket interruption",
+			};
+			queueMicrotask(() => response.push({ type: "error", reason: "error", error: failure }));
+			return response;
+		},
+	);
+	const events: AgentEvent[] = [];
+	for await (const event of stream) events.push(event);
+	expect(allowances).toEqual([2, 0]);
+	expect(events.filter(e => e.type === "agent_end")).toHaveLength(1);
+	expect(events.filter(e => e.type === "turn_end")).toHaveLength(1);
+});
+
+it("cancels during recovery backoff without reopening or a second settlement", async () => {
+	const controller = new AbortController();
+	let requests = 0;
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	const stream = agentLoop(
+		[createUserMessage("Synthetic cancellation")],
+		{ systemPrompt: "Synthetic", messages: [], tools: [] },
+		{ model, convertToLlm: identityConverter },
+		controller.signal,
+		() => {
+			requests++;
+			const response = new MockAssistantStream();
+			queueMicrotask(() => {
+				response.push({
+					type: "error",
+					reason: "error",
+					error: {
+						...createAssistantMessage([], "error"),
+						api: model.api,
+						interruption: {
+							transport: "sse",
+							classification: "socket_closed",
+							providerRetriesConsumed: 0,
+							completedContentIndices: [],
+						},
+					},
+				});
+				setTimeout(() => controller.abort(), 20);
+			});
+			return response;
+		},
+	);
+	const events: AgentEvent[] = [];
+	for await (const event of stream) events.push(event);
+	expect(requests).toBe(1);
+	expect(events.filter(e => e.type === "agent_end")).toHaveLength(1);
+	expect(events.filter(e => e.type === "turn_end")).toHaveLength(1);
+	expect((await stream.result()).at(-1)).toMatchObject({ stopReason: "aborted" });
+});
+
+it("retains noncontiguous completed content once in quiet recovery and subsequent history", async () => {
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	let requests = 0;
+	const call = { type: "toolCall" as const, id: "completed", name: "synthetic", arguments: {} };
+	const events: AgentEvent[] = [];
+	const loop = agentLoop(
+		[createUserMessage("Synthetic interleaved completion")],
+		{
+			systemPrompt: "Synthetic",
+			messages: [],
+			tools: [
+				{
+					name: "synthetic",
+					label: "Synthetic",
+					description: "Synthetic",
+					parameters: Type.Object({}),
+					async execute() {
+						return { content: [{ type: "text", text: "Retained" }], details: {} };
+					},
+				},
+			],
+		},
+		{ model, convertToLlm: identityConverter },
+		undefined,
+		(_model, context) => {
+			const response = new MockAssistantStream();
+			const request = requests++;
+			queueMicrotask(() => {
+				if (request === 0) {
+					const partial = {
+						...createAssistantMessage([{ type: "thinking" as const, thinking: "unfinished" }, call]),
+						api: model.api,
+					};
+					response.push({ type: "start", partial });
+					response.push({ type: "toolcall_end", contentIndex: 1, toolCall: call, partial });
+					response.push({
+						type: "error",
+						reason: "error",
+						error: {
+							...partial,
+							stopReason: "error",
+							errorMessage: "Synthetic socket",
+							interruption: {
+								transport: "sse",
+								classification: "socket_closed",
+								providerRetriesConsumed: 0,
+								completedContentIndices: [1],
+							},
+						},
+					});
+				} else {
+					const retained = context.messages.find(m => m.role === "assistant") as AssistantMessage;
+					expect(retained.content).toEqual([call]);
+					expect(retained.interruption?.completedContentIndices).toEqual([0]);
+					response.push({
+						type: "done",
+						reason: "stop",
+						message: { ...createAssistantMessage([{ type: "text", text: "Done" }]), api: model.api },
+					});
+				}
+			});
+			return response;
+		},
+	);
+	for await (const event of loop) events.push(event);
+	const quiet = events.find(e => e.type === "message_end" && e.message.role === "assistant") as Extract<
+		AgentEvent,
+		{ type: "message_end" }
+	>;
+	expect(quiet.message).toMatchObject({ stopReason: "toolUse", content: [call] });
+	expect(JSON.stringify(quiet.message)).not.toContain("unfinished");
+	expect(requests).toBe(2);
+});
+
+it("preserves prototype tool execution and private receiver state", async () => {
+	class SyntheticTool {
+		#value = "Private receiver retained";
+		name = "synthetic";
+		label = "Synthetic";
+		description = "Synthetic class tool";
+		parameters = Type.Object({});
+		async execute() {
+			return { content: [{ type: "text" as const, text: this.#value }], details: {} };
+		}
+	}
+	let request = 0;
+	const loop = agentLoop(
+		[createUserMessage("Synthetic class execution")],
+		{ systemPrompt: "Synthetic", messages: [], tools: [new SyntheticTool()] },
+		{ model: createModel(), convertToLlm: identityConverter },
+		undefined,
+		() => {
+			const response = new MockAssistantStream();
+			const message = createAssistantMessage(
+				request++ === 0
+					? [{ type: "toolCall", id: "class-call", name: "synthetic", arguments: {} }]
+					: [{ type: "text", text: "Done" }],
+				request === 1 ? "toolUse" : "stop",
+			);
+			queueMicrotask(() =>
+				response.push({ type: "done", reason: message.stopReason as "stop" | "toolUse", message }),
+			);
+			return response;
+		},
+	);
+	for await (const _event of loop) {
+		/* drain */
+	}
+	expect((await loop.result()).find(m => m.role === "toolResult")).toMatchObject({
+		isError: false,
+		content: [{ type: "text", text: "Private receiver retained" }],
+	});
+});
+
+it("drains admitted tools and settles when a later checkpoint cannot persist", async () => {
+	let checkpoints = 0;
+	let finished = false;
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	const first = { type: "toolCall" as const, id: "first", name: "synthetic", arguments: {} };
+	const second = { ...first, id: "second" };
+	const loop = agentLoop(
+		[createUserMessage("Synthetic checkpoint failure")],
+		{
+			systemPrompt: "Synthetic",
+			messages: [],
+			tools: [
+				{
+					name: "synthetic",
+					label: "Synthetic",
+					description: "Synthetic",
+					nonAbortable: true,
+					parameters: Type.Object({}),
+					async execute() {
+						await new Promise(resolve => setTimeout(resolve, 20));
+						finished = true;
+						return { content: [{ type: "text", text: "Drained" }], details: {} };
+					},
+				},
+			],
+		},
+		{
+			model,
+			convertToLlm: identityConverter,
+			onAssistantCheckpoint: async () => {
+				if (++checkpoints === 2) throw new Error("Synthetic persistence failure");
+			},
+		},
+		undefined,
+		(_model, _ctx, options) => {
+			const response = new MockAssistantStream();
+			queueMicrotask(() => {
+				const partial = { ...createAssistantMessage([first, second]), api: model.api };
+				response.push({ type: "start", partial });
+				response.push({ type: "toolcall_end", contentIndex: 0, toolCall: first, partial });
+				response.push({ type: "toolcall_end", contentIndex: 1, toolCall: second, partial });
+			});
+			options?.signal?.addEventListener("abort", () => response.end(), { once: true });
+			return response;
+		},
+	);
+	const events: AgentEvent[] = [];
+	for await (const event of loop) events.push(event);
+	expect(finished).toBe(true);
+	expect(events.filter(e => e.type === "agent_end")).toHaveLength(1);
+	expect(events.filter(e => e.type === "tool_execution_end" && !e.isError)).toHaveLength(1);
+	expect((await loop.result()).filter(m => m.role === "toolResult" && !m.isError)).toHaveLength(1);
+});
+
+it("serves a named tool once and continues interruption without forcing a fresh call", async () => {
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	let choices = 0;
+	let requests = 0;
+	let executions = 0;
+	const call = { type: "toolCall" as const, id: "named", name: "synthetic", arguments: {} };
+	const loop = agentLoop(
+		[createUserMessage("Synthetic named interruption")],
+		{
+			systemPrompt: "Synthetic",
+			messages: [],
+			tools: [
+				{
+					name: "synthetic",
+					label: "Synthetic",
+					description: "Synthetic",
+					parameters: Type.Object({}),
+					async execute() {
+						executions++;
+						return { content: [{ type: "text", text: "Served" }], details: {} };
+					},
+				},
+			],
+		},
+		{
+			model,
+			convertToLlm: identityConverter,
+			getToolChoice: () => {
+				choices++;
+				return { type: "tool", name: "synthetic" };
+			},
+		},
+		undefined,
+		(_model, context, options) => {
+			const response = new MockAssistantStream();
+			const request = requests++;
+			queueMicrotask(() => {
+				if (request === 0) {
+					expect(options?.toolChoice).toEqual({ type: "tool", name: "synthetic" });
+					const partial = { ...createAssistantMessage([call]), api: model.api };
+					response.push({ type: "start", partial });
+					response.push({ type: "toolcall_end", contentIndex: 0, toolCall: call, partial });
+					response.push({
+						type: "error",
+						reason: "error",
+						error: {
+							...partial,
+							stopReason: "error",
+							interruption: {
+								transport: "sse",
+								classification: "socket_closed",
+								providerRetriesConsumed: 0,
+								completedContentIndices: [0],
+							},
+						},
+					});
+				} else {
+					expect(options?.toolChoice).toBe("none");
+					expect(context.messages[0]).toMatchObject({ role: "user" });
+					response.push({
+						type: "done",
+						reason: "stop",
+						message: { ...createAssistantMessage([{ type: "text", text: "Done" }]), api: model.api },
+					});
+				}
+			});
+			return response;
+		},
+	);
+	for await (const _event of loop) {
+		/* drain */
+	}
+	expect(executions).toBe(1);
+	expect(choices).toBe(1);
+	expect(requests).toBe(2);
+});
