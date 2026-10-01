@@ -26,6 +26,7 @@ import { getEnvApiKey } from "../stream";
 import {
 	type Api,
 	type AssistantMessage,
+	type AssistantMessageEvent,
 	type Context,
 	isSpecialServiceTier,
 	type Model,
@@ -47,7 +48,7 @@ import {
 } from "../utils";
 import { AssistantMessageEventStream } from "../utils/event-stream";
 import { finalizeErrorMessage, type RawHttpRequestDump } from "../utils/http-inspector";
-import { getOpenAIStreamIdleTimeoutMs, iterateWithIdleTimeout } from "../utils/idle-iterator";
+import { getOpenAIStreamIdleTimeoutMs } from "../utils/idle-iterator";
 import { parseStreamingJson } from "../utils/json-parse";
 import { isTransportClosureError } from "../utils/retry";
 import { adaptSchemaForStrict, NO_STRICT } from "../utils/schema";
@@ -185,7 +186,6 @@ interface CodexRequestContext {
 
 interface CodexRequestSetup {
 	requestSignal: AbortSignal;
-	wrapCodexSseStream: (source: AsyncGenerator<Record<string, unknown>>) => AsyncGenerator<Record<string, unknown>>;
 	requestAbortController: AbortController;
 }
 
@@ -195,6 +195,8 @@ interface CodexWebSocketRequestState {
 }
 
 interface CodexStreamRuntime {
+	stagedEvents: AssistantMessageEvent[];
+	firstTransportFailure?: unknown;
 	websocketRequestState?: CodexWebSocketRequestState;
 	continuationRecoveryAttempt: number;
 	sawResponseAccepted: boolean;
@@ -453,15 +455,7 @@ function createRequestSetup(options: OpenAICodexResponsesOptions | undefined): C
 	const requestSignal = options?.signal
 		? AbortSignal.any([options.signal, requestAbortController.signal])
 		: requestAbortController.signal;
-	const wrapCodexSseStream = (
-		source: AsyncGenerator<Record<string, unknown>>,
-	): AsyncGenerator<Record<string, unknown>> =>
-		iterateWithIdleTimeout(source, {
-			idleTimeoutMs: getOpenAIStreamIdleTimeoutMs(),
-			errorMessage: "OpenAI Codex SSE stream stalled while waiting for the next event",
-			onIdle: () => requestAbortController.abort(),
-		});
-	return { requestAbortController, requestSignal, wrapCodexSseStream };
+	return { requestAbortController, requestSignal };
 }
 
 async function buildCodexRequestContext(
@@ -766,6 +760,60 @@ async function openCodexWebSocketTransport(
 	return { eventStream, requestBodyForState, transport: "websocket", websocketRequestState };
 }
 
+class CodexSseIdleTimeoutError extends Error {
+	constructor() {
+		super("OpenAI Codex SSE stream stalled while waiting for the next event");
+		this.name = "CodexSseIdleTimeoutError";
+	}
+}
+
+async function* iterateCodexSseAttempt(
+	source: AsyncGenerator<Record<string, unknown>>,
+	attempt: AbortController,
+	cleanup: () => void,
+): AsyncGenerator<Record<string, unknown>> {
+	const timeoutMs = getOpenAIStreamIdleTimeoutMs();
+	try {
+		while (true) {
+			attempt.signal.throwIfAborted();
+			let timer: NodeJS.Timeout | undefined;
+			try {
+				const next = source.next();
+				const result =
+					timeoutMs === undefined
+						? await next
+						: await Promise.race([
+								next,
+								new Promise<never>((_resolve, reject) => {
+									timer = setTimeout(() => {
+										const error = new CodexSseIdleTimeoutError();
+										reject(error);
+										attempt.abort(error);
+									}, timeoutMs);
+								}),
+							]);
+				if (timer !== undefined) {
+					clearTimeout(timer);
+					timer = undefined;
+				}
+				attempt.signal.throwIfAborted();
+				if (result.done) return;
+				yield result.value;
+			} finally {
+				if (timer !== undefined) clearTimeout(timer);
+			}
+		}
+	} finally {
+		attempt.abort();
+		cleanup();
+		try {
+			await source.return(undefined);
+		} catch {
+			/* Preserve the original stream failure. */
+		}
+	}
+}
+
 async function openCodexSseTransport(
 	requestContext: CodexRequestContext,
 	requestSetup: CodexRequestSetup,
@@ -779,8 +827,16 @@ async function openCodexSseTransport(
 	transport: CodexTransport;
 	websocketRequestState?: CodexWebSocketRequestState;
 }> {
-	const eventStream = requestSetup.wrapCodexSseStream(
-		await openCodexSseEventStream(
+	const attempt = new AbortController();
+	const signal = requestSetup.requestSignal;
+	const onAbort = () => attempt.abort(signal.reason);
+	const cleanup = () => signal.removeEventListener("abort", onAbort);
+	signal.addEventListener("abort", onAbort, { once: true });
+	if (signal.aborted) onAbort();
+	let source: AsyncGenerator<Record<string, unknown>>;
+	try {
+		attempt.signal.throwIfAborted();
+		source = await openCodexSseEventStream(
 			requestContext.url,
 			requestContext.requestHeaders,
 			requestContext.accountId,
@@ -788,10 +844,16 @@ async function openCodexSseTransport(
 			options?.sessionId,
 			body,
 			state,
-			requestSetup.requestSignal,
+			attempt.signal,
 			retryFetch,
-		),
-	);
+		);
+	} catch (error) {
+		attempt.abort();
+		cleanup();
+		throw error;
+	}
+	const eventStream = iterateCodexSseAttempt(source, attempt, cleanup);
+
 	return { eventStream, requestBodyForState: structuredCloneJSON(body), transport: "sse" };
 }
 
@@ -837,6 +899,7 @@ function createCodexStreamRuntime(initial: {
 	websocketRequestState?: CodexWebSocketRequestState;
 }): CodexStreamRuntime {
 	return {
+		stagedEvents: [],
 		websocketRequestState: initial.websocketRequestState,
 		continuationRecoveryAttempt: 0,
 		sawResponseAccepted: false,
@@ -860,6 +923,30 @@ function createCodexStreamRuntime(initial: {
 	};
 }
 
+// Empty normalized blocks belong to the attempt until replay becomes unsafe.
+class CodexAttemptEventStream extends AssistantMessageEventStream {
+	constructor(
+		private readonly target: AssistantMessageEventStream,
+		private readonly runtime: CodexStreamRuntime,
+	) {
+		super();
+	}
+
+	override push(event: AssistantMessageEvent): void {
+		if (this.runtime.sawReplayUnsafeActivity || this.runtime.sawTerminalEvent) {
+			this.flush();
+			this.target.push(event);
+		} else {
+			this.runtime.stagedEvents.push(structuredCloneJSON(event));
+		}
+	}
+
+	flush(): void {
+		for (const event of this.runtime.stagedEvents) this.target.push(event);
+		this.runtime.stagedEvents.length = 0;
+	}
+}
+
 async function processCodexResponseStream(
 	context: CodexStreamProcessingContext,
 	runtime: CodexStreamRuntime,
@@ -867,6 +954,7 @@ async function processCodexResponseStream(
 	const { output, stream } = context;
 	runtime.grammarToolInputProperties = context.requestContext.grammarToolInputProperties;
 	stream.push({ type: "start", partial: output });
+	const attemptStream = new CodexAttemptEventStream(stream, runtime);
 
 	while (true) {
 		try {
@@ -875,10 +963,12 @@ async function processCodexResponseStream(
 				await context.options?.onProviderStreamEvent?.(rawEvent, context.model);
 				firstTokenTime = handleCodexStreamEvent({
 					...context,
+					stream: attemptStream,
 					runtime,
 					rawEvent,
 					firstTokenTime,
 				});
+				if (runtime.sawReplayUnsafeActivity || runtime.sawTerminalEvent) attemptStream.flush();
 			}
 			if (!runtime.sawTerminalEvent) {
 				throw Object.assign(new Error("Codex stream ended before terminal completion event"), {
@@ -1409,7 +1499,7 @@ async function recoverCodexStreamError(
 	runtime: CodexStreamRuntime,
 	error: unknown,
 ): Promise<boolean> {
-	if (runtime.transport === "sse" && isTransportClosureError(error)) {
+	if (runtime.transport === "sse" && (error instanceof CodexSseIdleTimeoutError || isTransportClosureError(error))) {
 		return tryRestartCodexSseTransport(context, runtime, error);
 	}
 	if (isCodexRejectedContinuation(error)) {
@@ -1427,11 +1517,27 @@ async function recoverCodexStreamError(
 	return false;
 }
 
+async function sleepBeforeCodexSseRestart(delayMs: number, signal: AbortSignal): Promise<void> {
+	signal.throwIfAborted();
+	const { promise, resolve, reject } = Promise.withResolvers<void>();
+	const timer = setTimeout(resolve, delayMs);
+	const onAbort = () => reject(signal.reason);
+	signal.addEventListener("abort", onAbort, { once: true });
+	try {
+		await promise;
+		signal.throwIfAborted();
+	} finally {
+		clearTimeout(timer);
+		signal.removeEventListener("abort", onAbort);
+	}
+}
+
 async function tryRestartCodexSseTransport(
 	context: CodexStreamProcessingContext,
 	runtime: CodexStreamRuntime,
 	originalError: unknown,
 ): Promise<boolean> {
+	runtime.firstTransportFailure ??= originalError;
 	let error = originalError;
 	while (true) {
 		const replayEligible =
@@ -1451,13 +1557,17 @@ async function tryRestartCodexSseTransport(
 			terminalEventSeen: runtime.sawTerminalEvent,
 			replayEligible,
 		});
-		if (!replayEligible || !isTransportClosureError(error)) {
+		if (!replayEligible || !(error instanceof CodexSseIdleTimeoutError || isTransportClosureError(error))) {
 			if (error !== originalError) throw error;
 			return false;
 		}
-		if (runtime.transportRestartAttempt >= 2) throw originalError;
+		if (runtime.transportRestartAttempt >= 2) throw runtime.firstTransportFailure;
 		runtime.transportRestartAttempt += 1;
-		await runtime.eventStream.return(undefined);
+		try {
+			await runtime.eventStream.return(undefined);
+		} catch {
+			/* Preserve the recovery failure. */
+		}
 		runtime.currentItem = null;
 		runtime.currentBlock = null;
 		runtime.currentIndex = -1;
@@ -1467,6 +1577,7 @@ async function tryRestartCodexSseTransport(
 		runtime.sawResponseAccepted = false;
 		runtime.sawOutputEvent = false;
 		runtime.sawTerminalEvent = false;
+		runtime.stagedEvents.length = 0;
 		resetOutputState(context.output);
 		delete context.output.responseId;
 		delete context.output.providerPayload;
@@ -1480,7 +1591,7 @@ async function tryRestartCodexSseTransport(
 			resetCodexWebSocketAppendState(state);
 			resetCodexSessionMetadata(state);
 		}
-		await abortableSleep(500 * runtime.transportRestartAttempt, context.requestSetup.requestSignal);
+		await sleepBeforeCodexSseRestart(500 * runtime.transportRestartAttempt, context.requestSetup.requestSignal);
 		try {
 			const next = await openCodexSseTransport(
 				context.requestContext,
@@ -1589,6 +1700,7 @@ async function tryReconnectCodexWebSocketOnConnectionLimit(
 		runtime.outputSlots.clear();
 		runtime.completedItemIds.clear();
 		runtime.nativeOutputItems.length = 0;
+		runtime.stagedEvents.length = 0;
 		resetOutputState(context.output);
 		context.firstTokenTime = undefined;
 		recordCodexWebSocketFailure(websocketState, true);
@@ -1650,6 +1762,7 @@ async function tryReplayWebsocketFailureOverSse(
 		runtime.outputSlots.clear();
 		runtime.completedItemIds.clear();
 		runtime.nativeOutputItems.length = 0;
+		runtime.stagedEvents.length = 0;
 		resetOutputState(context.output);
 		context.firstTokenTime = undefined;
 	}
@@ -1691,6 +1804,7 @@ async function tryRetryCodexProviderError(
 	runtime.outputSlots.clear();
 	runtime.completedItemIds.clear();
 	runtime.sawTerminalEvent = false;
+	runtime.stagedEvents.length = 0;
 	resetOutputState(context.output);
 	context.firstTokenTime = undefined;
 	await abortableSleep(CODEX_RETRY_DELAY_MS * runtime.providerRetryAttempt, context.requestSetup.requestSignal);
@@ -2465,7 +2579,39 @@ async function openCodexSseEventStream(
 	if (!response.body) {
 		throw new Error("No response body");
 	}
-	return readSseJson<Record<string, unknown>>(response.body, signal);
+	signal?.throwIfAborted();
+	const reader = response.body.getReader();
+	let closed = false;
+	const close = () => {
+		if (closed) return;
+		closed = true;
+		// Cancel settles pending reads synchronously; do not await an upstream cancel hook.
+		void reader.cancel().catch(() => {});
+		reader.releaseLock();
+	};
+	const onAbort = () => close();
+	signal?.addEventListener("abort", onAbort, { once: true });
+	const owned = new ReadableStream<Uint8Array>({
+		async pull(controller) {
+			try {
+				const result = await reader.read();
+				if (result.done) controller.close();
+				else controller.enqueue(result.value);
+			} catch (error) {
+				controller.error(error);
+			}
+		},
+		cancel: close,
+	});
+	async function* events(): AsyncGenerator<Record<string, unknown>> {
+		try {
+			yield* readSseJson<Record<string, unknown>>(owned);
+		} finally {
+			close();
+			signal?.removeEventListener("abort", onAbort);
+		}
+	}
+	return events();
 }
 
 function createCodexHeaders(
@@ -2554,6 +2700,7 @@ async function fetchWithRetry(url: string, init: RequestInit, signal?: AbortSign
 	let rateLimitTimeSpent = 0;
 	while (true) {
 		try {
+			signal?.throwIfAborted();
 			const response = await fetch(url, { ...init, signal: signal ?? init.signal });
 			if (!retry || !CODEX_RETRYABLE_STATUS.has(response.status)) {
 				return response;
