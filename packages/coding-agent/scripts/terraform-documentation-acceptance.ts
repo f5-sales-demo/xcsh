@@ -28,38 +28,50 @@ const scenarios = [
 	[
 		"How do I tell Bot Defense that a login succeeded?",
 		"",
-		"http_loadbalancer--properties--bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions.md",
+		"http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md",
 	],
-	["where do I put login success rules", "", "transaction_result--success_conditions.md"],
-	["how do I use a certificate I already have for HTTPS", "", "resources--http_loadbalancer--properties--https.md"],
-	["configure HTTP load balancer", "", "docs/resources/http_loadbalancer.md"],
-	["authentication certificate API token", "", "docs/index.md"],
+	["where do I put login success rules", "", "transaction_result/success_conditions/index.md"],
+	[
+		"how do I use a certificate I already have for my HTTP load balancer HTTPS",
+		"",
+		"resources/http_loadbalancer/properties/https/index.md",
+	],
+	["configure HTTP load balancer", "", "documentation/resources/http_loadbalancer/index.md"],
+	["xcsh provider documentation", "provider_type=provider", "documentation/index.md"],
 	[
 		"TLS invalid configuration",
 		"provider_type=resources&provider_name=http_loadbalancer&role=example",
-		"http_loadbalancer--example",
+		"http_loadbalancer/examples",
 	],
 	[
 		"http_loadbalancer",
 		"provider_type=resources&provider_name=http_loadbalancer&role=fundamentals",
-		"docs/resources/http_loadbalancer.md",
+		"documentation/resources/http_loadbalancer/index.md",
 	],
 	[
 		"https port TLS",
 		"provider_type=resources&provider_name=http_loadbalancer&role=properties",
-		"http_loadbalancer--properties--https",
+		"http_loadbalancer/properties/https",
 	],
-	["import", "provider_type=resources&provider_name=http_loadbalancer&role=import", "http_loadbalancer--import"],
-	["timeouts", "provider_type=resources&provider_name=http_loadbalancer&role=timeouts", "http_loadbalancer--timeouts"],
+	[
+		"import",
+		"provider_type=resources&provider_name=http_loadbalancer&role=import",
+		"http_loadbalancer/lifecycle/import",
+	],
+	[
+		"timeouts",
+		"provider_type=resources&provider_name=http_loadbalancer&role=timeouts",
+		"http_loadbalancer/lifecycle/timeouts",
+	],
 	[
 		"http_loadbalancer",
 		"provider_type=data-sources&provider_name=http_loadbalancer&role=fundamentals",
-		"docs/data-sources/http_loadbalancer.md",
+		"documentation/data-sources/http_loadbalancer/index.md",
 	],
 	[
 		"terminate",
 		"provider_type=actions&provider_name=access_active_session_terminate",
-		"docs/actions/access_active_session_terminate.md",
+		"documentation/actions/access_active_session_terminate/index.md",
 	],
 	[
 		"kubernetes manifests",
@@ -77,7 +89,7 @@ for (const [query, filters, expected] of scenarios) {
 	if (!passed) throw new Error(`Relevance scenario failed: ${query}`);
 }
 const section = await resolve(
-	"xcsh://terraform-documentation/docs/guides/resources--http_loadbalancer--properties--https.md#schema-https--port",
+	"xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port",
 );
 if (!section.includes("port")) throw new Error("Explicit anchor read failed");
 console.log(JSON.stringify({ event: "anchor", passed: true, content: section }));

@@ -27,26 +27,25 @@ export async function runTerraformDocumentationSmoke(): Promise<string> {
 	const search = await read(
 		"xcsh://terraform-documentation/?search=http_loadbalancer&provider_type=resources&provider_name=http_loadbalancer&role=fundamentals&limit=5",
 	);
-	if (!search.includes("Document: docs/resources/http_loadbalancer.md"))
+	if (!search.includes("Document: documentation/resources/http_loadbalancer/index.md"))
 		throw new Error("Terraform filtered search smoke failed");
 	trace.push({ event: "terraform-filtered-search", outcome: "top-five" });
 	const section = await read(
-		"xcsh://terraform-documentation/docs/guides/resources--http_loadbalancer--properties--https.md#schema-https--port",
+		"xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port",
 	);
 	if (!section.includes("### port") || !section.includes("Validators"))
 		throw new Error("Terraform explicit-anchor smoke failed");
 	trace.push({ event: "terraform-explicit-anchor", outcome: "complete-property" });
 	const database = await repository.database();
-	const continuation = database
-		.query(
-			"SELECT path FROM terraform_documents WHERE json_extract(metadata,'$.projection_part')=2 ORDER BY path LIMIT 1",
-		)
-		.get() as { path: string } | null;
-	if (!continuation) throw new Error("Terraform smoke requires a continuation document");
-	const complete = await read(`xcsh://terraform-documentation/${continuation.path}`);
-	if (!complete.includes("xcsh://terraform-documentation/"))
-		throw new Error("Terraform continuation navigation smoke failed");
-	trace.push({ event: "terraform-continuation", path: continuation.path, outcome: "read-and-navigation" });
+	const leaf =
+		"documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md";
+	const complete = await read(`xcsh://terraform-documentation/${leaf}`);
+	if (
+		!complete.includes("regex_values") ||
+		!complete.includes("xcsh://terraform-documentation/documentation/resources/")
+	)
+		throw new Error("Canonical deep leaf navigation smoke failed");
+	trace.push({ event: "terraform-deep-leaf", path: leaf, outcome: "read-and-navigation" });
 	const missing = await read("xcsh://terraform-documentation/?search=nonexistent_xyz_4649");
 	if (!missing.includes("No results.")) throw new Error("Terraform missing smoke failed");
 	trace.push({ event: "terraform-missing", outcome: "no-match-no-fetch" });

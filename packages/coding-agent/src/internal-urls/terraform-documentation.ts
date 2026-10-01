@@ -36,7 +36,8 @@ export interface TerraformDocument {
 	body: string;
 }
 export interface TerraformPin {
-	schema_version: 1;
+	schema_version: 2;
+	source_root: "documentation";
 	source_repository: "f5-sales-demo/terraform-provider-xcsh";
 	provider_version: string;
 	release_tag: string;
@@ -53,7 +54,7 @@ export function terraformHash(data: Uint8Array | string): string {
 }
 function safePath(value: string): void {
 	if (
-		!/^docs\/(?:[A-Za-z0-9_~-]+\/)*[A-Za-z0-9_.~-]+\.md$/.test(value) ||
+		!/^documentation\/(?:[A-Za-z0-9_~-]+\/)*[A-Za-z0-9_.~-]+\.md$/.test(value) ||
 		value.split("/").some(v => v === "." || v === "..")
 	)
 		throw new Error(`Unsafe Terraform document path: ${value}`);
@@ -61,10 +62,11 @@ function safePath(value: string): void {
 export function parseTerraformPin(value: unknown): TerraformPin {
 	const pin = value as TerraformPin;
 	if (
-		pin?.schema_version !== 1 ||
+		pin?.schema_version !== 2 ||
+		pin.source_root !== "documentation" ||
 		pin.source_repository !== "f5-sales-demo/terraform-provider-xcsh" ||
 		!/^v\d+\.\d+\.\d+$/.test(pin.provider_version) ||
-		pin.release_tag !== `docs-${pin.provider_version}` ||
+		pin.release_tag !== `documentation-${pin.provider_version}` ||
 		!/^[a-f0-9]{40}$/.test(pin.source_commit) ||
 		!/^[a-f0-9]{64}$/.test(pin.receipt_sha256) ||
 		!Number.isSafeInteger(pin.document_count) ||
@@ -125,6 +127,7 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 	const receipt = JSON.parse(files.get("publication.json")!.toString());
 	for (const key of [
 		"schema_version",
+		"source_root",
 		"source_repository",
 		"provider_version",
 		"release_tag",
@@ -155,6 +158,7 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 	const manifest = JSON.parse(files.get("manifest.json")!.toString());
 	for (const key of [
 		"schema_version",
+		"source_root",
 		"source_repository",
 		"provider_version",
 		"source_commit",
@@ -232,7 +236,8 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 						if (
 							m.body_sha256 !== `sha256:${entry.body_sha256}` ||
 							m.body_bytes !== Buffer.byteLength(parsed.body) ||
-							JSON.stringify(Object.entries(m).sort()) !== JSON.stringify(Object.entries(entry.metadata).sort())
+							JSON.stringify(Object.entries({ ...m, canonical_id: m.canonical_id ?? m.id }).sort()) !==
+								JSON.stringify(Object.entries(entry.metadata).sort())
 						)
 							throw new Error("Terraform enriched metadata mismatch");
 					}
@@ -260,18 +265,12 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 	for (const document of documents) {
 		const prose = document.body.replace(/```[^\n]*\n[\s\S]*?```/g, "");
 		for (const match of prose.matchAll(/\[[^\]\n]+\]\(([^)\n]+)\)/g)) {
-			const href = match[1]!;
-			if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(href) || href.startsWith("//")) continue;
-			const [target, anchor] = href.split("#");
-			if (target && !target.endsWith(".md")) continue;
-			const resolved = target
-				? path.posix.normalize(path.posix.join(path.posix.dirname(document.path), target))
-				: document.path;
-			safePath(resolved);
-			const destination = paths.get(resolved);
-			if (!destination) throw new Error(`Missing Terraform internal link: ${resolved}`);
-			if (anchor && !terraformPassages(destination.body).some(p => p.anchor === anchor))
-				throw new Error(`Missing Terraform internal anchor: ${resolved}#${anchor}`);
+			const destination = terraformLinkPath(match[1]!, document.path);
+			if (!destination) continue;
+			const target = paths.get(destination.path);
+			if (!target) throw new Error(`Missing Terraform internal link: ${destination.path}`);
+			if (destination.anchor && !terraformPassages(target.body).some(p => p.anchor === destination.anchor))
+				throw new Error(`Missing Terraform internal anchor: ${destination.path}#${destination.anchor}`);
 		}
 	}
 	return documents.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
@@ -394,7 +393,7 @@ export interface TerraformEmbeddedAssets {
 	pin: TerraformPin & { index: NonNullable<TerraformPin["index"]> };
 }
 const TERRAFORM_QUERY_STOPWORDS = new Set(
-	"a an the and how where what do does i we you my me our your can could should would please help tell know put already have that to for of in on with using use configure setup set up terraform provider documentation document".split(
+	"a an the and how where what do does i we you my me our your can could should would please help tell know put already have that to for of in on with using use configure configuration setup set up terraform provider documentation document".split(
 		" ",
 	),
 );
@@ -413,7 +412,9 @@ export function terraformSearchQuery(query: string): string {
 		query
 			.normalize("NFKC")
 			.toLowerCase()
-			.match(/[\p{L}\p{N}]+/gu) ?? [];
+			.replace(/http load balancer/g, "http_loadbalancer")
+			.replace(/cdn load balancer/g, "cdn_loadbalancer")
+			.match(/[\p{L}\p{N}_]+/gu) ?? [];
 	return [...new Set(terms.filter(term => !TERRAFORM_QUERY_STOPWORDS.has(term)))]
 		.map(term => {
 			const variant = TERRAFORM_QUERY_VARIANTS[term];
@@ -583,9 +584,16 @@ export class TerraformDocumentationRepository {
 			let rows = query ? (statement.all(...args) as SearchRow[]) : [];
 			let broadened = false;
 			if (!rows.length && query.includes(" AND ")) {
-				args[0] = query.replaceAll(" AND ", " OR ");
-				rows = statement.all(...args) as SearchRow[];
-				broadened = rows.length > 0;
+				const knownTerms = query
+					.split(" AND ")
+					.every(term =>
+						Boolean(db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(term)),
+					);
+				if (knownTerms) {
+					args[0] = query.replaceAll(" AND ", " OR ");
+					rows = statement.all(...args) as SearchRow[];
+					broadened = rows.length > 0;
+				}
 			}
 			content = `${provenance}\n\n# Terraform search: ${search}\n${broadened ? "Broader word matching was needed; verify the candidate and clarify ambiguous configuration choices.\n" : ""}\n${
 				rows.length
@@ -608,7 +616,7 @@ export class TerraformDocumentationRepository {
 				)
 					.map(r => r.value)
 					.join(", ");
-			content = `${provenance}\n\n# Offline Terraform documentation\n${this.assets.pin.document_count} Markdown documents from docs/.\n\nSearch: xcsh://terraform-documentation/?search=<query>&provider_type=<type>&provider_name=<name>&role=<role>&limit=<1-10>\nDefault limit: five. Filters combine with AND.\nprovider_type: ${values("provider_type")}\nprovider_name: ${values("provider_name")}\nrole: ${values("role")}\n\nExact reads: xcsh://terraform-documentation/docs/<path>.md#<heading-or-explicit-anchor>\nGuidance reflects documented schema validation; it is not live-apply evidence.`;
+			content = `${provenance}\n\n# Offline Terraform documentation\n${this.assets.pin.document_count} Markdown documents from documentation/.\n\nSearch: xcsh://terraform-documentation/?search=<query>&provider_type=<type>&provider_name=<name>&role=<role>&limit=<1-10>\nDefault limit: five. Filters combine with AND.\nprovider_type: ${values("provider_type")}\nprovider_name: ${values("provider_name")}\nrole: ${values("role")}\n\nExact reads: xcsh://terraform-documentation/documentation/<path>/index.md#<heading-or-explicit-anchor>\nGuidance reflects documented schema validation; it is not live-apply evidence.`;
 		}
 		return {
 			url: url.href,
@@ -620,16 +628,33 @@ export class TerraformDocumentationRepository {
 	}
 }
 
+export function terraformLinkPath(href: string, source: string): { path: string; anchor: string } | null {
+	let target = href;
+	if (/^https?:\/\//.test(href)) {
+		const url = new URL(href);
+		const base = "/terraform-provider-xcsh/";
+		if (url.hostname !== "f5-sales-demo.github.io" || !url.pathname.startsWith(base)) return null;
+		let relative = url.pathname.slice(base.length);
+		if (relative.startsWith("_data/") || relative.endsWith(".json") || relative.endsWith(".txt")) return null;
+		if (relative.endsWith("/") || !relative) relative += "index.md";
+		target = `documentation/${relative}${url.hash}`;
+	} else if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(href) || href.startsWith("//")) return null;
+	const [relative, anchor = ""] = target.split("#");
+	const resolved = relative?.startsWith("documentation/")
+		? relative
+		: relative
+			? path.posix.normalize(path.posix.join(path.posix.dirname(source), relative))
+			: source;
+	if (!resolved.endsWith(".md")) return null;
+	safePath(resolved);
+	return { path: resolved, anchor };
+}
+
 export function rewriteTerraformLinks(markdown: string, source: string): string {
 	return markdown.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (whole, title: string, href: string) => {
-		if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(href) || href.startsWith("//")) return whole;
-		const [target, anchor] = href.split("#");
-		const resolved = target ? path.posix.normalize(path.posix.join(path.posix.dirname(source), target)) : source;
-		try {
-			safePath(resolved);
-		} catch {
-			return whole;
-		}
-		return `[${title}](xcsh://terraform-documentation/${resolved}${anchor ? `#${anchor}` : ""})`;
+		const destination = terraformLinkPath(href, source);
+		return destination
+			? `[${title}](xcsh://terraform-documentation/${destination.path}${destination.anchor ? `#${destination.anchor}` : ""})`
+			: whole;
 	});
 }

@@ -1,35 +1,36 @@
 {
-	"document_count": 18967,
-	"provider_schema_digest": "sha256:63e4fbb3e2007c78e36dc243aa3840076ce8a32eff8e7120cacece30bcdd2cd6",
-	"provider_version": "v12.0.5",
-	"release_tag": "docs-v12.0.5",
-	"schema_version": 1,
-	"source_commit": "a2ce72095a5efd4007db3fbcaf2ad675287b03e0",
+	"document_count": 18951,
+	"provider_schema_digest": "sha256:e63a07e98b4893c041a6f79be7e19c64babfe543fc6847c17641037e084e1c7c",
+	"provider_version": "v12.0.6",
+	"release_tag": "documentation-v12.0.6",
+	"schema_version": 2,
+	"source_commit": "0fd1299c89d9a7277f7550823a521e257dd9a480",
 	"source_repository": "f5-sales-demo/terraform-provider-xcsh",
+	"source_root": "documentation",
 	"spec_pin_digest": "sha256:5236cddd67bd603b0ce9bb70d82e356a161a3be971d90fc60eb8119dfb833774",
-	"receipt_sha256": "3e8e1759cdc3d74cb9db34f96a9c688a19484902b95a0dfef80ec76c018e5602",
+	"receipt_sha256": "72502ecb9b9b7cf50772b7731e9fcb8a7ee57b0114cd60d637f22f1095bcc72c",
 	"assets": {
 		"SHA256SUMS": {
-			"sha256": "83ae9081ab039158393656b648e00898eb61db857c55ab9d60ff5e185ef34c07",
+			"sha256": "ab63e19b584e1002193650e67fcc1f2c80b76e90826103a34616b755f3c2dcda",
 			"size_bytes": 251
 		},
 		"publication.json": {
-			"sha256": "3e8e1759cdc3d74cb9db34f96a9c688a19484902b95a0dfef80ec76c018e5602",
-			"size_bytes": 662
+			"sha256": "72502ecb9b9b7cf50772b7731e9fcb8a7ee57b0114cd60d637f22f1095bcc72c",
+			"size_bytes": 701
 		},
 		"manifest.json": {
-			"sha256": "06e59b8c0927cc665f70e6128efe22e090e5751b8bfd2e17565e256313c4347c",
-			"size_bytes": 37138271
+			"sha256": "e97e8e8156e3f6d9eb56c48317ccdcc94d8e622fbf3c87049524c5ef28605a75",
+			"size_bytes": 36524677
 		},
 		"terraform-docs.tar.gz": {
-			"sha256": "10d7fbde8bf5b83e2aa63140f33e654e2a2f027e0f72b5bd8b96a6a39461244b",
-			"size_bytes": 7673318
+			"sha256": "2db824253adb1058f6aeeaa873227c30e0776049b6597ec013a2148489522e97",
+			"size_bytes": 7867214
 		}
 	},
 	"index": {
-		"sha256": "d74fd6b9191253d07d9b459c7e239cc63b751985d2950d0e2324be2225d20081",
-		"size_bytes": 659873792,
-		"gzip_sha256": "f757eee2a24370f2fd37caf8c54f7cc9fd8a7f86a44803eb2186cba1516eb7c4",
-		"gzip_size_bytes": 68086719
+		"sha256": "db8f8c2d31633e89ae20584fd0c32da31c4b5f985a7e16c69647332141262b8a",
+		"size_bytes": 698335232,
+		"gzip_sha256": "d3e69b3b16a015487e08bcf42d5241a0f62055d0c098ff8f87ace9546c46f468",
+		"gzip_size_bytes": 70227673
 	}
 }

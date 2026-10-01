@@ -21,7 +21,7 @@ async function fixture(
 	const meta = {
 		id: "fixture",
 		canonical_id: "fixture",
-		path: "docs/resources/fixture.md",
+		path: "documentation/resources/fixture/index.md",
 		provider_type: "resources",
 		provider_name: "fixture",
 		role: "fundamentals",
@@ -33,7 +33,8 @@ async function fixture(
 	};
 	const members = new Map([[meta.path, Buffer.from(body)]]);
 	const manifest = {
-		schema_version: 1,
+		schema_version: 2,
+		source_root: "documentation",
 		source_repository: "f5-sales-demo/terraform-provider-xcsh",
 		provider_version: "v1.0.0",
 		source_commit: "a".repeat(40),
@@ -67,10 +68,11 @@ async function fixture(
 		"manifest.json": Buffer.from(JSON.stringify(manifest)),
 	};
 	const identity = {
-		schema_version: 1 as const,
+		schema_version: 2 as const,
 		source_repository: "f5-sales-demo/terraform-provider-xcsh" as const,
 		provider_version: manifest.provider_version,
-		release_tag: "docs-v1.0.0",
+		source_root: "documentation" as const,
+		release_tag: "documentation-v1.0.0",
 		source_commit: manifest.source_commit,
 		document_count: manifest.document_count,
 		provider_schema_digest: manifest.provider_schema_digest,
@@ -102,7 +104,7 @@ describe("Terraform snapshot ingestion", () => {
 			const documents = await verifyTerraformSnapshot(root, pin);
 			expect(documents).toHaveLength(1);
 			const parent = structuredClone(documents[0]!);
-			parent.path = "docs/guides/parent.md";
+			parent.path = "documentation/guides/parent/index.md";
 			parent.metadata = {
 				...parent.metadata,
 				id: "parent",
@@ -148,22 +150,24 @@ describe("Terraform snapshot ingestion", () => {
 						"xcsh://terraform-documentation/?search=fixture&provider_type=resources&provider_name=fixture&role=fundamentals",
 					)
 				).content,
-			).toContain("docs/resources/fixture.md");
+			).toContain("documentation/resources/fixture/index.md");
 			expect(
 				(await resolve("xcsh://terraform-documentation/?search=fixture&provider_type=data-sources")).content,
 			).toContain("No results.");
 			expect(
-				(await resolve("xcsh://terraform-documentation/docs/resources/fixture.md#schema-value")).content,
+				(await resolve("xcsh://terraform-documentation/documentation/resources/fixture/index.md#schema-value"))
+					.content,
 			).toContain("Complete value.");
 			const result = (await resolve("xcsh://terraform-documentation/?search=fixture")).content;
 			expect(result).toContain("Documentation trail:");
-			expect(result).toContain("xcsh://terraform-documentation/docs/guides/parent.md");
+			expect(result).toContain("xcsh://terraform-documentation/documentation/guides/parent/index.md");
 			const broadened = (await resolve("xcsh://terraform-documentation/?search=fixture%20nonexistent")).content;
-			expect(broadened).toContain("Broader word matching");
+			expect(broadened).toContain("No results.");
 			expect((await resolve("xcsh://terraform-documentation/?search=how%20do%20I")).content).toContain(
 				"No results.",
 			);
-			const exact = (await resolve("xcsh://terraform-documentation/docs/resources/fixture.md")).content;
+			const exact = (await resolve("xcsh://terraform-documentation/documentation/resources/fixture/index.md"))
+				.content;
 			expect(exact).toContain("Property sections:");
 			expect(exact).toContain("#schema-value");
 			for (const request of [
@@ -173,7 +177,7 @@ describe("Terraform snapshot ingestion", () => {
 				"?role=fundamentals",
 				"?unknown=x",
 				"/docs/%2e%2e/outside.md",
-				"/docs/resources/fixture.md?search=x",
+				"/documentation/resources/fixture/index.md?search=x",
 			])
 				await expect(resolve(`xcsh://terraform-documentation/${request}`)).rejects.toThrow();
 			(await repository.database()).close();
@@ -208,7 +212,7 @@ describe("Terraform snapshot ingestion", () => {
 		try {
 			const pin = await fixture(root, (manifest, members) => {
 				const entry = structuredClone(manifest.documents[0]);
-				entry.path = "docs/guides/shortened--part-2.md";
+				entry.path = "documentation/guides/continuation/index.md";
 				entry.metadata.path = entry.path;
 				entry.metadata.projection_part = 2;
 				manifest.documents.push(entry);
