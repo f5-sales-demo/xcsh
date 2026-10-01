@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "937531e895cfc4be221c4b46b03931df60a42f83",
+  "revision": "5a78af9dd274e915c4fc29ecb32fd9d8f443e12d",
   "fingerprint": "00790bebc7b0cdde047c4d7363881d645e6d9ccbe5687740026c5ecbbd4a4480",
   "counts": {
     "total": 238,
@@ -4936,6 +4936,7 @@
         "network"
       ],
       "directTests": [
+        "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/auth-storage-rotation.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
@@ -4954,8 +4955,7 @@
         "packages/coding-agent/test/e2e/extension-e2e.test.ts",
         "packages/coding-agent/test/e2e/extension-panel-e2e.test.ts",
         "packages/coding-agent/test/e2e/staging-crud.test.ts",
-        "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts",
-        "packages/coding-agent/test/e2e/stealth-user-agent.e2e.test.ts"
+        "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
