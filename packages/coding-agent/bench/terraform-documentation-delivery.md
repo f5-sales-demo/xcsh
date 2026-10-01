@@ -26,7 +26,7 @@ canonical identity and distinct path and projection-part metadata.
 The Terraform corpus has its own QMD SQLite index. Its compressed artifact is
 bundled with packages and binaries, verified before use, and materialized only
 when the Terraform namespace is requested. Ordinary documentation and API
-discovery use their existing indexes.
+discovery use their existing indices.
 
 ## Verification commands
 
