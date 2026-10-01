@@ -49,6 +49,7 @@ describe("EventController idle compaction teardown", () => {
 		const subscribe = vi.fn((_listener: unknown, _options?: unknown) => unsubscribe);
 		const context = {
 			session: { subscribe },
+			sessionManager: {},
 		} as unknown as InteractiveModeContext;
 		const controller = new EventController(context);
 
@@ -56,7 +57,9 @@ describe("EventController idle compaction teardown", () => {
 
 		expect(subscribe).toHaveBeenCalledTimes(1);
 		expect(subscribe.mock.calls[0]?.[1]).toEqual({ waitForTurnSettlement: true });
-		expect(context.unsubscribe).toBe(unsubscribe);
+		expect(context.unsubscribe).toBeFunction();
+		context.unsubscribe?.();
+		expect(unsubscribe).toHaveBeenCalledTimes(1);
 	});
 
 	it("cancels scheduled idle compaction when disposed", async () => {

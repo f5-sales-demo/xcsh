@@ -1,5 +1,6 @@
 import { HerdrClient } from "../herdr/client";
 import { HerdrInteractionBridge } from "../herdr/interactions";
+import { coordinateSessionTitle } from "../utils/title-generator";
 /**
  * AgentSession - Core abstraction for agent lifecycle and session management.
  *
@@ -131,7 +132,6 @@ import { getCurrentThemeName, theme } from "../modes/theme/theme";
 import type { PlanModeState } from "../plan-mode/state";
 import autoHandoffThresholdFocusPrompt from "../prompts/system/auto-handoff-threshold-focus.md" with { type: "text" };
 import defaultModePrompt from "../prompts/system/default-mode-active.md" with { type: "text" };
-import eagerTodoPrompt from "../prompts/system/eager-todo.md" with { type: "text" };
 import handoffDocumentPrompt from "../prompts/system/handoff-document.md" with { type: "text" };
 import planModeActivePrompt from "../prompts/system/plan-mode-active.md" with { type: "text" };
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
@@ -621,8 +621,7 @@ export class AgentSession {
 	#retryPromise: Promise<void> | undefined = undefined;
 	#retryResolve: (() => void) | undefined = undefined;
 	#activeRetryFallback: ActiveRetryFallbackState | undefined = undefined;
-	// Todo completion reminder state
-	#todoReminderCount = 0;
+	// Session progress tracking
 	#todoPhases: TodoPhase[] = [];
 	#todoClearTimers = new Map<string, Timer>();
 	#toolChoiceQueue = new ToolChoiceQueue();
@@ -1589,7 +1588,7 @@ export class AgentSession {
 				if (toolName === "todo_write" && !isError && Array.isArray(details?.phases)) {
 					this.setTodoPhases(details.phases);
 				}
-				if (toolName === "todo_write" && isError) {
+				if (toolName === "todo_write" && isError && !this.#planModeState?.enabled) {
 					const errorText = content?.find(part => part.type === "text")?.text;
 					const reminderText = [
 						"<system-reminder>",
@@ -1667,7 +1666,7 @@ export class AgentSession {
 			const compactionTask = this.#checkCompaction(msg);
 			this.#trackPostPromptTask(compactionTask);
 			await compactionTask;
-			// Check for incomplete todos only after a final assistant stop, not intermediate tool-use turns.
+			// Name only completed exchanges, never intermediate tool-use turns.
 			const hasToolCalls = msg.content.some(content => content.type === "toolCall");
 			if (hasToolCalls) {
 				return;
@@ -1676,7 +1675,7 @@ export class AgentSession {
 				if (this.#enforceRewindBeforeYield()) {
 					return;
 				}
-				await this.#checkTodoCompletion();
+				if (this.#promptInFlightCount === 0) void coordinateSessionTitle(this);
 			}
 		}
 	};
@@ -3447,14 +3446,6 @@ export class AgentSession {
 			}
 		}
 
-		// Skip eager todo prelude when the user has already queued a directive
-		const pendingDirectives = this.#toolChoiceQueue.inspect();
-		const hasPendingUserDirective = pendingDirectives.includes("user-force");
-		const eagerTodoPrelude =
-			!options?.synthetic && !hasPendingUserDirective && !pendingDirectives.includes("context-selection")
-				? this.#createEagerTodoPrelude(expandedText)
-				: undefined;
-
 		const userContent: (TextContent | ImageContent)[] = [{ type: "text", text: expandedText }];
 		if (options?.images) {
 			userContent.push(...options.images);
@@ -3488,22 +3479,7 @@ export class AgentSession {
 			}
 		}
 
-		if (eagerTodoPrelude) {
-			this.#toolChoiceQueue.pushOnce(eagerTodoPrelude.toolChoice, {
-				label: "eager-todo",
-			});
-		}
-
-		try {
-			await this.#promptWithMessage(message, expandedText, {
-				...options,
-				prependMessages: eagerTodoPrelude ? [eagerTodoPrelude.message] : undefined,
-			});
-		} finally {
-			// Clean up residual eager-todo directive if the prompt never consumed it
-			// (e.g., compaction aborted, validation failed).
-			this.#toolChoiceQueue.removeByLabel("eager-todo");
-		}
+		await this.#promptWithMessage(message, expandedText, options);
 	}
 
 	async promptCustomMessage<T = unknown>(
@@ -3847,9 +3823,6 @@ export class AgentSession {
 			this.#flushPendingBashMessages();
 			this.#flushPendingPythonMessages();
 
-			// Reset todo reminder count on new user prompt
-			this.#todoReminderCount = 0;
-
 			// Classified F5 XC API/schema intent is discovered locally before any
 			// compaction or provider inference. A QMD/index error is deliberately
 			// terminal for this turn so the model cannot substitute web search or a guess.
@@ -3996,6 +3969,15 @@ export class AgentSession {
 			if (!options?.skipPostPromptRecoveryWait) {
 				await this.#waitForPostPromptRecovery();
 			}
+			const finalAssistant = this.#findLastAssistantMessage();
+			if (
+				this.#isPromptCurrent(generation) &&
+				finalAssistant &&
+				finalAssistant.stopReason !== "error" &&
+				finalAssistant.stopReason !== "aborted" &&
+				!finalAssistant.content.some(part => part.type === "toolCall")
+			)
+				void coordinateSessionTitle(this);
 		} catch (error) {
 			this.#turnPhase.settle(this.#findLastAssistantMessage()?.stopReason === "aborted" ? "aborted" : "error");
 			settled = true;
@@ -4769,7 +4751,6 @@ export class AgentSession {
 			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 			this.sessionManager.appendThinkingLevelChange(this.thinkingLevel);
 			this.sessionManager.appendServiceTierChange(this.serviceTier ?? null);
-			this.#todoReminderCount = 0;
 			this.#reconnectToAgent();
 
 			// Emit session_switch event with reason "new" to hooks
@@ -5662,7 +5643,6 @@ export class AgentSession {
 			this.#followUpMessages = [];
 			this.#pendingNextTurnMessages = [];
 			this.#scheduledHiddenNextTurnGeneration = undefined;
-			this.#todoReminderCount = 0;
 		} else if (
 			this.sessionManager.getSessionId() !== preview.targetSessionId ||
 			this.sessionManager.getSessionFile() !== preview.targetSessionFile
@@ -5837,161 +5817,6 @@ export class AgentSession {
 		this.sessionManager.appendCustomMessageEntry("rewind-report", report, false, details, "agent");
 		this.#checkpointState = undefined;
 		this.#pendingRewindReport = undefined;
-	}
-
-	#createEagerTodoPrelude(promptText: string): { message: AgentMessage; toolChoice: ToolChoice } | undefined {
-		const eagerTodosEnabled = this.settings.get("todo.eager");
-		const todosEnabled = this.settings.get("todo.enabled");
-		if (!eagerTodosEnabled || !todosEnabled) {
-			return undefined;
-		}
-
-		if (this.#planModeState?.enabled) {
-			return undefined;
-		}
-		if (this.getTodoPhases().length > 0) {
-			return undefined;
-		}
-
-		// Only inject on the first user message of the conversation. Subsequent user
-		// turns must not receive the eager todo reminder — they often correct, clarify,
-		// or redirect the prior task, and forcing a brand-new todo list there is wrong.
-		const hasPriorUserMessage = this.agent.state.messages.some(m => m.role === "user");
-		if (hasPriorUserMessage) {
-			return undefined;
-		}
-
-		const trimmedPromptText = promptText.trim();
-		if (trimmedPromptText.endsWith("?") || trimmedPromptText.endsWith("!")) {
-			return undefined;
-		}
-		const normalizedPromptText = trimmedPromptText.toLowerCase();
-		const startsWithQuestionWord = /^(?:who|what|when|where|why|how)\b/.test(normalizedPromptText);
-		const startsWithConversationalQuestion = /^(?:am|are|do|have) you\b/.test(normalizedPromptText);
-		const isConversationalGreeting =
-			/^(?:hello|hi|hey|thanks|thank you|good (?:morning|afternoon|evening))\b/.test(normalizedPromptText) ||
-			/^tell me about yourself\b/.test(normalizedPromptText);
-		const hasSubstantiveAction =
-			/\b(?:add|build|change|create|debug|deploy|fix|implement|inspect|investigate|modify|refactor|remove|repair|review|run|test|update|verify|write)\b/.test(
-				normalizedPromptText,
-			);
-		if (
-			!hasSubstantiveAction &&
-			(startsWithQuestionWord || startsWithConversationalQuestion || isConversationalGreeting)
-		) {
-			return undefined;
-		}
-
-		if (!this.agent.state.tools.some(tool => tool.name === "todo_write")) {
-			logger.warn("Eager todo enforcement skipped because todo_write is unavailable", {
-				activeToolNames: this.agent.state.tools.map(tool => tool.name),
-			});
-			return undefined;
-		}
-
-		const todoWriteToolChoice = buildNamedToolChoice("todo_write", this.model);
-		if (!todoWriteToolChoice) {
-			logger.warn("Eager todo enforcement skipped because the current model does not support forcing todo_write", {
-				modelApi: this.model?.api,
-				modelId: this.model?.id,
-			});
-			return undefined;
-		}
-
-		const eagerTodoReminder = prompt.render(eagerTodoPrompt);
-
-		return {
-			message: {
-				role: "custom",
-				customType: "eager-todo-prelude",
-				content: eagerTodoReminder,
-				display: false,
-				attribution: "agent",
-				timestamp: Date.now(),
-			},
-			toolChoice: todoWriteToolChoice,
-		};
-	}
-	/**
-	 * Check if agent stopped with incomplete todos and prompt to continue.
-	 */
-	async #checkTodoCompletion(): Promise<void> {
-		// Skip todo reminders when the most recent turn was driven by an explicit user force —
-		// the user wanted exactly that tool, not a follow-up nag about incomplete todos.
-		const lastServedLabel = this.#toolChoiceQueue.consumeLastServedLabel();
-		if (lastServedLabel === "user-force") {
-			return;
-		}
-
-		const remindersEnabled = this.settings.get("todo.reminders");
-		const todosEnabled = this.settings.get("todo.enabled");
-		if (!remindersEnabled || !todosEnabled) {
-			this.#todoReminderCount = 0;
-			return;
-		}
-
-		const remindersMax = this.settings.get("todo.reminders.max");
-		if (this.#todoReminderCount >= remindersMax) {
-			logger.debug("Todo completion: max reminders reached", { count: this.#todoReminderCount });
-			return;
-		}
-
-		const phases = this.getTodoPhases();
-		if (phases.length === 0) {
-			this.#todoReminderCount = 0;
-			return;
-		}
-
-		const incompleteByPhase = phases
-			.map(phase => ({
-				name: phase.name,
-				tasks: phase.tasks
-					.filter(
-						(task): task is TodoItem & { status: "pending" | "in_progress" } =>
-							task.status === "pending" || task.status === "in_progress",
-					)
-					.map(task => ({ id: task.id, content: task.content, status: task.status })),
-			}))
-			.filter(phase => phase.tasks.length > 0);
-		const incomplete = incompleteByPhase.flatMap(phase => phase.tasks);
-		if (incomplete.length === 0) {
-			this.#todoReminderCount = 0;
-			return;
-		}
-
-		// Build reminder message
-		this.#todoReminderCount++;
-		const todoList = incompleteByPhase
-			.map(phase => `- ${phase.name}\n${phase.tasks.map(task => `  - ${task.content}`).join("\n")}`)
-			.join("\n");
-		const reminder =
-			`<system-reminder>\n` +
-			`You stopped with ${incomplete.length} incomplete todo item(s):\n${todoList}\n\n` +
-			`Please continue working on these tasks or mark them complete if finished.\n` +
-			`(Reminder ${this.#todoReminderCount}/${remindersMax})\n` +
-			`</system-reminder>`;
-
-		logger.debug("Todo completion: sending reminder", {
-			incomplete: incomplete.length,
-			attempt: this.#todoReminderCount,
-		});
-
-		// Emit event for UI to render notification
-		await this.#emitSessionEvent({
-			type: "todo_reminder",
-			todos: incomplete,
-			attempt: this.#todoReminderCount,
-			maxAttempts: remindersMax,
-		});
-
-		// Inject reminder and continue the conversation
-		this.agent.appendMessage({
-			role: "developer",
-			content: [{ type: "text", text: reminder }],
-			attribution: "agent",
-			timestamp: Date.now(),
-		});
-		this.#scheduleAgentContinue({ generation: this.#promptGeneration });
 	}
 
 	/**

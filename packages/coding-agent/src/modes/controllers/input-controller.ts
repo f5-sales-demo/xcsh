@@ -1,8 +1,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { type AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { type AutocompleteProvider, ChordDispatcher, type SlashCommand } from "@f5-sales-demo/pi-tui";
-import { $env, t } from "@f5-sales-demo/pi-utils";
+import { t } from "@f5-sales-demo/pi-utils";
 import { settings } from "../../config/settings";
 import { createStreamingAssistantGutter } from "../../modes/components/gutter-block";
 import { createPromptActionAutocompleteProvider } from "../../modes/prompt-action-autocomplete";
@@ -18,7 +18,6 @@ import { readImageFromClipboard } from "../../utils/clipboard";
 import { getEditorCommand, openInEditor } from "../../utils/external-editor";
 import { ensureSupportedImageInput } from "../../utils/image-loading";
 import { resizeImage } from "../../utils/image-resize";
-import { coordinateSessionTitle, setSessionTerminalTitle } from "../../utils/title-generator";
 import { detachStandardStreamsForBackground } from "../background-terminal";
 
 interface Expandable {
@@ -427,19 +426,6 @@ export class InputController {
 			// Normal message submission
 			// First, move any pending bash components to chat
 			this.ctx.flushPendingBashComponents();
-
-			// Generate session title on first message
-			const hasUserMessages = this.ctx.session.messages.some((m: AgentMessage) => m.role === "user");
-			if (!hasUserMessages && !this.ctx.sessionManager.getSessionName() && !$env.PI_NO_TITLE) {
-				void coordinateSessionTitle(this.ctx.session, text, () => {
-					setSessionTerminalTitle(
-						this.ctx.sessionManager.getSessionName()!,
-						this.ctx.sessionManager.getCwd(),
-						this.ctx.sessionManager.titleSource,
-					);
-					this.ctx.updateEditorBorderColor();
-				});
-			}
 
 			if (this.ctx.onInputCallback) {
 				// Include any pending images from clipboard paste

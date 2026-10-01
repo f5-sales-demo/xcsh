@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "58b08f61f1ce6d6399c0e6b5224195ec1992e566",
-  "fingerprint": "581789d3df9a65622536720911ed08f6aef17be0b768c1718ecfabb1d7ed8440",
+  "revision": "fb6e63af2545331d0ae899f6faae6588af086b92",
+  "fingerprint": "9d8d3feae83da48dd4759265c3cb8119d6c1575389f40d1e9d77616ed5f73006",
   "counts": {
     "total": 238,
     "components": 96,
@@ -2417,7 +2417,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "bbcda8c0a43cbbd02b237938f6253ce55fb8ed6a23afe09cd3b7b3a76878fe32",
+      "sha256": "7f7e4531b6ff6ccc17245b168ede5d1ed2032d2839f27f3e59ad8957c1958ccc",
       "exports": [
         "BooleanSettingDef",
         "EnumSettingDef",
@@ -3217,7 +3217,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "6720c00953d7b1f5feba04502f422b28f5dd230808b93643ccd9815666124269",
+      "sha256": "2315fb32df3602f9c001adae254853282ba5fda3b0933ffebc92ab6ccc5ce474",
       "exports": [
         "EventController"
       ],
@@ -3266,7 +3266,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "a8b4b97f9c968707051eac3722cf72b5347060bff1ea68ef6970d97859892d05",
+      "sha256": "f5e396500d625d80bede63b013823b15b97de22a7d70df1aa6c4e7f6e10bd008",
       "exports": [
         "InputController"
       ],
@@ -4363,9 +4363,10 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "96948aadddb2b6e9310be40efed730b65bbda1b46ba1754e38fde0d88b469a3c",
+      "sha256": "10012e8a181cba43f0d7e23a86850c663ca15e26f3c6f9d69576dd12f9bac603",
       "exports": [
         "AssistantCheckpointEntry",
+        "AutomaticTitleState",
         "BranchSummaryEntry",
         "CURRENT_SESSION_VERSION",
         "CompactionEntry",
@@ -5454,7 +5455,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "ebb2827fd0eb5f1e1360eada550683908792d8223cbef5e20c174a2ca175cefc",
+      "sha256": "e34af31bc0a5e237552ecd1e0009b6b2b08810cd979552e1ad1fff2cad29b94b",
       "exports": [
         "TodoItem",
         "TodoPhase",

@@ -102,7 +102,7 @@ function getMessageText(message: AgentMessage): string {
 		.join("\n");
 }
 
-describe("AgentSession eager todo enforcement", () => {
+describe("AgentSession natural openings", () => {
 	let tempDir: TempDir;
 	let session: AgentSession;
 	let streamCallCount = 0;
@@ -125,8 +125,7 @@ describe("AgentSession eager todo enforcement", () => {
 		const settings = Settings.isolated({
 			"compaction.enabled": false,
 			"todo.enabled": true,
-			"todo.eager": true,
-			"todo.reminders": false,
+			...{ "todo.eager": true, "todo.reminders": true },
 		});
 		const sessionManager = SessionManager.inMemory(tempDir.path());
 
@@ -205,150 +204,50 @@ describe("AgentSession eager todo enforcement", () => {
 		tempDir.removeSync();
 	});
 
-	it("prepends a hidden eager todo reminder without repeating the prompt text", async () => {
-		await session.prompt("list all work trees");
-
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]).toEqual({
-			toolChoice: "todo_write",
-			toolNames: ["todo_write", "bash"],
-			messageRoles: ["user"],
-			messageTexts: [expect.stringContaining("Before doing substantive work on the upcoming user request")],
-			lastMessageRole: "user",
-			lastMessageText: expect.stringContaining("Before doing substantive work on the upcoming user request"),
-		});
-		expect(observedCalls[0]?.messageTexts[0]).toContain("list all work trees");
-		expect(session.formatSessionAsText()).not.toContain("<user-request>");
-	});
-
-	it("does not force todo_write when the tool is registered but inactive", async () => {
-		session.agent.setTools(session.agent.state.tools.filter(tool => tool.name !== "todo_write"));
-
-		await session.prompt("list all work trees");
-
-		expect(observedCalls).toEqual([
-			{
-				toolChoice: undefined,
-				toolNames: ["bash"],
-				messageRoles: ["user"],
-				messageTexts: ["list all work trees"],
-				lastMessageRole: "user",
-				lastMessageText: "list all work trees",
-			},
-		]);
-	});
-
-	it("initializes todos once, then continues within the same user turn", async () => {
-		scriptedResponses = [
-			createToolCallAssistantMessage("todo_write", {
-				ops: [
-					{
-						op: "replace",
-						phases: [
-							{
-								name: "List worktrees",
-								tasks: [{ content: "List all git worktrees in the current repository", status: "in_progress" }],
-							},
-						],
-					},
-				],
-			}),
-			createAssistantMessage("real user turn handled"),
-		];
-
-		await session.prompt("list all work trees");
-
-		expect(streamCallCount).toBe(2);
-		expect(observedCalls).toHaveLength(2);
-		expect(observedCalls[0]).toEqual({
-			toolChoice: "todo_write",
-			toolNames: ["todo_write", "bash"],
-			messageRoles: ["user"],
-			messageTexts: [expect.stringContaining("Before doing substantive work on the upcoming user request")],
-			lastMessageRole: "user",
-			lastMessageText: expect.stringContaining("Before doing substantive work on the upcoming user request"),
-		});
-		expect(observedCalls[1]?.toolChoice).toBeUndefined();
-		expect(observedCalls[1]?.lastMessageRole).toBe("toolResult");
-		expect(observedCalls[1]?.messageRoles.slice(-2)).toEqual(["assistant", "toolResult"]);
-		expect(session.getTodoPhases()).toHaveLength(1);
-		expect(session.getTodoPhases()[0]?.tasks[0]?.content).toBe("List all git worktrees in the current repository");
-	});
-
-	it("skips eager todo enforcement for prompts ending with a question mark", async () => {
-		await session.prompt("list all work trees?");
-
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]).toEqual({
-			toolChoice: undefined,
-			toolNames: ["todo_write", "bash"],
-			messageRoles: ["user"],
-			messageTexts: ["list all work trees?"],
-			lastMessageRole: "user",
-			lastMessageText: "list all work trees?",
-		});
-	});
-
-	it("skips eager todo enforcement for prompts ending with an exclamation mark", async () => {
-		await session.prompt("list all work trees!");
-
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]).toEqual({
-			toolChoice: undefined,
-			toolNames: ["todo_write", "bash"],
-			messageRoles: ["user"],
-			messageTexts: ["list all work trees!"],
-			lastMessageRole: "user",
-			lastMessageText: "list all work trees!",
-		});
-	});
-
-	for (const promptText of [
-		"who are you and what can you do",
-		"what can you do",
-		"how are you",
+	for (const text of [
+		"hello",
+		"help me",
 		"why is the sky blue",
+		"list all work trees",
+		"list all work trees?",
+		"list all work trees!",
+		"列出所有工作树",
+		"wypisz wszystkie drzewa robocze",
+		"refactor the parser and add regression tests",
+		"please create a TODO list",
 	]) {
-		it(`skips eager todo enforcement for punctuation-free question: ${promptText}`, async () => {
-			await session.prompt(promptText);
-
+		it(`leaves opening tool choice to the model: ${text}`, async () => {
+			await session.prompt(text);
 			expect(observedCalls).toHaveLength(1);
 			expect(observedCalls[0]?.toolChoice).toBeUndefined();
-			expect(observedCalls[0]?.lastMessageText).toBe(promptText);
+			expect(observedCalls[0]?.messageTexts).toEqual([text]);
+			expect(session.getTodoPhases()).toEqual([]);
 		});
 	}
 
-	it("still forces todo_write for a substantive punctuation-free request", async () => {
-		await session.prompt("refactor the parser module and add regression tests");
-
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]?.toolChoice).toBe("todo_write");
+	it("keeps model-selected TODOs without restarting solely for incomplete tasks", async () => {
+		scriptedResponses = [
+			createToolCallAssistantMessage("todo_write", {
+				ops: [{ op: "replace", phases: [{ name: "Work", tasks: [{ content: "Await a material decision" }] }] }],
+			}),
+			createAssistantMessage("Which repository should I use?"),
+		];
+		await session.prompt("help implement the changes");
+		await session.waitForIdle();
+		expect(streamCallCount).toBe(2);
+		expect(observedCalls.every(call => call.toolChoice === undefined)).toBe(true);
+		expect(session.getTodoPhases()).toHaveLength(1);
+		expect(session.messages.some(message => getMessageText(message).includes("You stopped with"))).toBe(false);
 	});
-
-	it("still forces todo_write when a substantive request starts conversationally", async () => {
-		await session.prompt("how should we refactor the parser and add regression tests");
-
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]?.toolChoice).toBe("todo_write");
-	});
-
-	it("skips eager todo enforcement for subsequent user messages", async () => {
-		// First prompt: eager todo fires
-		await session.prompt("refactor the parser module");
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]?.toolChoice).toBe("todo_write");
-
-		// Second prompt: eager todo must NOT fire
-		observedCalls.length = 0;
-		await session.prompt("actually skip that, just fix the typo");
-		expect(observedCalls).toHaveLength(1);
-		expect(observedCalls[0]).toEqual({
-			toolChoice: undefined,
-			toolNames: ["todo_write", "bash"],
-			messageRoles: expect.arrayContaining(["user"]),
-			messageTexts: expect.arrayContaining(["actually skip that, just fix the typo"]),
-			lastMessageRole: "user",
-			lastMessageText: "actually skip that, just fix the typo",
-		});
+	it("defaults to Default mode, honors explicit Plan Mode, and returns to implementation", async () => {
+		expect(session.getPlanModeState()?.enabled ?? false).toBe(false);
+		session.setPlanModeState({ enabled: true });
+		await session.prompt("plan the parser repair");
+		expect(observedCalls[0]?.toolChoice).toBeUndefined();
+		expect(session.getPlanModeState()?.enabled).toBe(true);
+		session.setPlanModeState(undefined);
+		await session.prompt("implement the approved repair");
+		expect(observedCalls[1]?.toolChoice).toBeUndefined();
+		expect(session.getPlanModeState()).toBeUndefined();
 	});
 });

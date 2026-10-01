@@ -390,15 +390,22 @@ test("transcripts persist with provenance but never execute; delegation executes
 	});
 	f.voice.stop();
 });
-test("completed user speech requests one title without requiring delegation", async () => {
+test("completed voice exchange requests one title after both sides without requiring delegation", async () => {
 	const f = fixture();
 	await f.voice.start(start);
 	const userDone = { type: "turn.done", turn: { id: "quick-user", role: "user", transcript: "quick answer" } };
 	f.receive(userDone);
 	f.receive(userDone);
-	f.receive({ type: "turn.done", turn: { id: "quick-assistant", role: "assistant", transcript: "response" } });
 	await Bun.sleep(0);
-	expect(f.titles).toEqual(["quick answer"]);
+	expect(f.titles).toEqual([]);
+	const assistantDone = {
+		type: "turn.done",
+		turn: { id: "quick-assistant", role: "assistant", transcript: "response" },
+	};
+	f.receive(assistantDone);
+	f.receive(assistantDone);
+	await Bun.sleep(0);
+	expect(f.titles).toEqual(["response"]);
 	expect(f.delegated).toEqual([]);
 	await f.voice.stop();
 });

@@ -26,6 +26,7 @@ import type { InteractiveModeContext, TodoPhase } from "../../modes/types";
 import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome-aggregator";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import { calculatePromptTokens } from "../../session/compaction/compaction";
+import { setSessionTerminalTitle, subscribeSessionTitle } from "../../utils/title-generator";
 import { HookSelectorComponent } from "../components/hook-selector";
 
 export class EventController {
@@ -136,12 +137,25 @@ export class EventController {
 	}
 
 	subscribeToAgent(): void {
-		this.ctx.unsubscribe = this.ctx.session.subscribe(
+		const unsubscribeTitle = subscribeSessionTitle(this.ctx.sessionManager, () => {
+			setSessionTerminalTitle(
+				this.ctx.sessionManager.getSessionName(),
+				this.ctx.sessionManager.getCwd(),
+				this.ctx.sessionManager.titleSource,
+			);
+			this.ctx.updateEditorBorderColor();
+			this.ctx.ui.requestRender();
+		});
+		const unsubscribeAgent = this.ctx.session.subscribe(
 			async (event: AgentSessionEvent) => {
 				await this.handleEvent(event);
 			},
 			{ waitForTurnSettlement: true },
 		);
+		this.ctx.unsubscribe = () => {
+			unsubscribeAgent();
+			unsubscribeTitle();
+		};
 	}
 
 	async handleEvent(event: AgentSessionEvent): Promise<void> {

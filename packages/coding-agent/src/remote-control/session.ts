@@ -1088,12 +1088,8 @@ export class RemoteSession {
 						this.target.sessionManager.appendCustomEntry("remote-realtime", record);
 						await this.target.sessionManager.flush();
 					}),
-				title: text => {
-					if (
-						!this.target.messages.some(message => message.role === "user") &&
-						!this.target.sessionManager.getSessionName?.()
-					)
-						void coordinateSessionTitle(this.target, text);
+				title: () => {
+					if (epoch === this.#epoch) void coordinateSessionTitle(this.target);
 				},
 				delegate: (id, text, output) => {
 					try {
@@ -1461,9 +1457,6 @@ export class RemoteSession {
 		else this.#applyEffort(params.effort);
 		if (params.approvalPolicy != null || params.approvalsReviewer != null || params.sandboxPolicy != null)
 			applyRemotePermissionProfile(this.target.settings, permissionProfile);
-		const hadUserMessages = this.target.messages.some(message => message.role === "user");
-		if (!hadUserMessages && !this.target.sessionManager.getSessionName?.())
-			void coordinateSessionTitle(this.target, text);
 		const active = this.#beginTurn();
 		if (this.#durable) {
 			try {
@@ -1665,6 +1658,7 @@ export class RemoteSession {
 				status,
 				completedAtMs: Date.now(),
 			});
+			if (status === "completed") void coordinateSessionTitle(this.target);
 			this.#active = undefined;
 			this.#pendingClients = [];
 			this.#emitTokenUsage(id);
@@ -1676,6 +1670,7 @@ export class RemoteSession {
 		const latest = this.history().at(-1);
 		if (status === "completed" && (latest?.status === "failed" || latest?.status === "interrupted"))
 			status = latest.status;
+		if (status === "completed") void coordinateSessionTitle(this.target);
 		this.#active = undefined;
 		this.#emitTokenUsage(active.id);
 		this.#emitThreadStatus("idle");

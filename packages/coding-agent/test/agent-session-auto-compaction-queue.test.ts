@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { getBundledModel } from "@f5-sales-demo/pi-ai/models";
-import { getProjectAgentDir, TempDir, withTimeout } from "@f5-sales-demo/pi-utils";
+import { getProjectAgentDir, TempDir } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
 import { loadExtensions } from "../src/extensibility/extensions/loader";
@@ -116,8 +116,7 @@ describe("AgentSession auto-compaction queue resume", () => {
 			sessionManager,
 			settings: Settings.isolated({
 				"compaction.autoContinue": false,
-				"todo.reminders": true,
-				"todo.reminders.max": 3,
+				...{ "todo.reminders": true, "todo.reminders.max": 3 },
 			}),
 			modelRegistry,
 			extensionRunner,
@@ -197,7 +196,7 @@ describe("AgentSession auto-compaction queue resume", () => {
 		expect(runtimeSignals.some(signal => signal.startsWith("compaction:end:"))).toBe(true);
 	});
 
-	it("forwards todo reminder lifecycle signals to extensions", async () => {
+	it("does not continue or notify extensions solely for unfinished TODOs", async () => {
 		const continueSpy = vi.spyOn(session.agent, "continue").mockResolvedValue();
 
 		session.setTodoPhases([
@@ -207,11 +206,6 @@ describe("AgentSession auto-compaction queue resume", () => {
 				tasks: [{ id: "task-1", content: "Finish pending task", status: "in_progress" }],
 			},
 		]);
-
-		const { promise: reminderDone, resolve: onReminderDone } = Promise.withResolvers<void>();
-		session.subscribe(event => {
-			if (event.type === "todo_reminder") onReminderDone();
-		});
 
 		const assistantMsg = {
 			role: "assistant" as const,
@@ -234,11 +228,11 @@ describe("AgentSession auto-compaction queue resume", () => {
 		session.agent.emitExternalEvent({ type: "message_end", message: assistantMsg });
 		session.agent.emitExternalEvent({ type: "agent_end", messages: [assistantMsg] });
 
-		await withTimeout(reminderDone, 1000, "Todo reminder timed out");
+		await session.waitForIdle();
 		await Promise.resolve();
 
-		expect(getRuntimeSignals()).toContain("todo:1/3");
-		expect(continueSpy).toHaveBeenCalledTimes(1);
+		expect(getRuntimeSignals()).not.toContain("todo:1/3");
+		expect(continueSpy).not.toHaveBeenCalled();
 		await session.waitForIdle();
 	});
 });
