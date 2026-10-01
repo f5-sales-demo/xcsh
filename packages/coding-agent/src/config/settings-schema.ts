@@ -1436,33 +1436,6 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "tools", label: "Todos", description: "Enable the todo_write tool for task tracking" },
 	},
 
-	"todo.reminders": {
-		type: "boolean",
-		default: true,
-		ui: { tab: "tools", label: "Todo Reminders", description: "Remind agent to complete todos before stopping" },
-	},
-
-	"todo.reminders.max": {
-		type: "number",
-		default: 3,
-		ui: {
-			tab: "tools",
-			label: "Todo Reminder Limit",
-			description: "Maximum reminders to complete todos before giving up",
-			submenu: true,
-		},
-	},
-
-	"todo.eager": {
-		type: "boolean",
-		default: true,
-		ui: {
-			tab: "tools",
-			label: "Create Todos Automatically",
-			description: "Automatically create a comprehensive todo list after the first message",
-		},
-	},
-
 	"todo.verbose": {
 		type: "boolean",
 		default: false,

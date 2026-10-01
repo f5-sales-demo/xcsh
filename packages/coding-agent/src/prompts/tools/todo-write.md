@@ -1,21 +1,10 @@
 Manages a phased task list. Submit an `ops` array — each op mutates state incrementally.
 **Primary op: `update`.** Use it to mark tasks `in_progress` or `completed`. Only reach for other ops when the structure itself needs to change.
 
-<critical>
-You **MUST** call this tool twice per task:
-1. Before beginning — `{op: "update", id: "task-N", status: "in_progress"}`
-2. Immediately after finishing — `{op: "update", id: "task-N", status: "completed"}`
-
-You **MUST** keep exactly one task `in_progress` at all times. Mark `completed` immediately — no batching.
-</critical>
-
-<conditions>
-Create a todo list when:
-1. Task requires 3+ distinct steps
-2. User explicitly requests one
-3. User provides a set of tasks to complete
-4. New instructions arrive mid-task — capture before proceeding
-</conditions>
+Use progress tracking selectively for substantial work or when the user explicitly requests it.
+Respond or act directly for clear, simple requests. Ask a concise clarification only for material missing decisions.
+Update tracking when task state materially changes; there is no mandatory call count per task.
+Progress tracking is separate from Plan Mode. This tool is unavailable while Plan Mode is active.
 
 <protocol>
 ## Operations
@@ -39,9 +28,8 @@ Create a todo list when:
 
 ## Rules
 
-- You **MUST** mark `in_progress` **before** starting work, not after
-- You **MUST** mark `completed` **immediately** — never defer
-- You **MUST** keep exactly **one** task `in_progress`
+- Keep task statuses accurate as work progresses.
+- The task store keeps one active task while work remains.
 - You **MUST** complete phases in order — do not mark later tasks `completed` while earlier ones are `pending`
 - On blockers: keep `in_progress`, add a new task describing the blocker
 - Multiple ops can be batched in one call (e.g., complete current + start next)

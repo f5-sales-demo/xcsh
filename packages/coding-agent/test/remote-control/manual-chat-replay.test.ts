@@ -112,9 +112,21 @@ test("zero-worker folderless manual chat completes, titles, and deduplicates the
 	let selectedMode = "default";
 	let selectedEffort = "high";
 	const messages: any[] = [];
+	let automaticTitle: { status: "provisional" | "refined"; exchangeId: string } | undefined;
+	let titleRevision = 0;
 	const manager = {
 		getCwd: () => workspace,
 		getSessionName: () => sessionName,
+		get titleRevision() {
+			return titleRevision;
+		},
+		getAutomaticTitleState: () => automaticTitle,
+		setAutomaticSessionName: async (name: string, state: typeof automaticTitle) => {
+			titleRevision++;
+			sessionName = name;
+			automaticTitle = state;
+			return true;
+		},
 	};
 	const target = {
 		sessionId: "manual-chat",
@@ -208,7 +220,7 @@ test("zero-worker folderless manual chat completes, titles, and deduplicates the
 				type: "toolCall",
 				id: "title",
 				name: "submit_title",
-				arguments: { title: "Why the Sky Is Blue" },
+				arguments: { title: "Why the Sky Is Blue", provisional: false },
 			},
 		],
 	} as never);

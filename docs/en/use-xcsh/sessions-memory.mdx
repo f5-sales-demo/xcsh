@@ -8,6 +8,12 @@ sidebar:
 
 Sessions persist conversation and tool events. Use `--continue` for the latest directory session, `--resume` to select one, and `--fork` to create an independent continuation.
 
+## When does a session get a name?
+
+Automatic naming runs in the background after the first completed user/assistant exchange, using both sides of the conversation. A generic opening name can receive one refinement when a concrete purpose emerges. Terminal, phone text, and finalized voice exchanges share this behavior. Partial speech, interrupted responses, and naming failures do not create a completed exchange.
+
+Use `/rename` or the phone rename control to choose your own name. Manual names take precedence, and names in older saved sessions remain unchanged.
+
 ## How do I branch or compact a long conversation?
 
 In the terminal user interface (TUI), `/tree` shows the conversation structure, `/branch` or `/fork` creates another path, and `/compact` replaces older context with a summary. Inspect the summary before relying on it.

@@ -98,3 +98,26 @@ describe("session title source persistence", () => {
 		expect(session.titleSource).toBeUndefined();
 	});
 });
+
+it("persists provisional title state through reconnect and clears it on manual rename", async () => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "title-refinement-"));
+	try {
+		const manager = SessionManager.create(dir, path.join(dir, "sessions"));
+		manager.appendMessage({ role: "user", content: "hello", timestamp: 1 });
+		manager.appendMessage(makeAssistantMessage());
+		const state = { status: "provisional" as const, exchangeId: "opening" };
+		expect(
+			await manager.setAutomaticSessionName("Opening", state, manager.getSessionId(), manager.titleRevision),
+		).toBe(true);
+		await manager.flush();
+		const reopened = await SessionManager.open(manager.getSessionFile()!);
+		expect(reopened.getAutomaticTitleState()).toEqual(state);
+		await reopened.setSessionName("My session", "user");
+		await reopened.flush();
+		const renamed = await SessionManager.open(manager.getSessionFile()!);
+		expect(renamed.getAutomaticTitleState()).toBeUndefined();
+		expect(renamed.getSessionName()).toBe("My session");
+	} finally {
+		fs.rmSync(dir, { recursive: true, force: true });
+	}
+});

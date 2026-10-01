@@ -2,7 +2,9 @@ import { describe, expect, test, vi } from "bun:test";
 import * as ai from "@f5-sales-demo/pi-ai";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { logger } from "@f5-sales-demo/pi-utils";
+import { SessionManager } from "../src/session/session-manager";
 import {
+	completedTitleExchanges,
 	coordinateSessionTitle,
 	generateSessionTitle,
 	sanitizeGeneratedSessionTitle,
@@ -29,7 +31,7 @@ describe("session title generation", () => {
 	test("uses strict JSON and bounds source text to 960 UTF-8 bytes", async () => {
 		const complete = vi.spyOn(ai, "completeSimple").mockResolvedValue({
 			stopReason: "end_turn",
-			content: [{ type: "text", text: '{"title":"Fix ABC-123 parser"}' }],
+			content: [{ type: "text", text: '{"title":"Fix ABC-123 parser","provisional":false}' }],
 		} as never);
 		const { registry, settings } = titleDependencies();
 		const title = await generateSessionTitle(
@@ -66,7 +68,7 @@ describe("session title generation", () => {
 					type: "toolCall",
 					id: "title-1",
 					name: "submit_title",
-					arguments: { title: "Validate session titles" },
+					arguments: { title: "Validate session titles", provisional: false },
 				},
 			],
 		} as never);
@@ -99,7 +101,7 @@ describe("session title generation", () => {
 	test("falls back to the current model and treats credential or provider failures as non-fatal", async () => {
 		const complete = vi.spyOn(ai, "completeSimple").mockResolvedValue({
 			stopReason: "end_turn",
-			content: [{ type: "text", text: '{"title":"Use current model"}' }],
+			content: [{ type: "text", text: '{"title":"Use current model","provisional":false}' }],
 		} as never);
 		const settings = titleDependencies().settings;
 		const fallbackRegistry = {
@@ -124,11 +126,27 @@ describe("session title generation", () => {
 		const currentModel = { ...model, provider: "openai-codex", id: "gpt-5.6-luna" } as typeof model;
 		const complete = vi
 			.spyOn(ai, "completeSimple")
-			.mockResolvedValueOnce({ stopReason: "stop", content: [{ type: "text", text: "```json fenced```" }] } as never)
+			.mockResolvedValueOnce({
+				stopReason: "stop",
+				usage: {
+					input: 0,
+					output: 0,
+					cacheRead: 0,
+					cacheWrite: 0,
+					totalTokens: 0,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				},
+				content: [{ type: "text", text: "```json fenced```" }],
+			} as never)
 			.mockResolvedValueOnce({
 				stopReason: "toolUse",
 				content: [
-					{ type: "toolCall", id: "title-2", name: "submit_title", arguments: { title: "Use current model" } },
+					{
+						type: "toolCall",
+						id: "title-2",
+						name: "submit_title",
+						arguments: { title: "Use current model", provisional: false },
+					},
 				],
 			} as never);
 		const registry = {
@@ -150,102 +168,217 @@ describe("session title generation", () => {
 	});
 });
 
-test("title coordination is per-session single-flight and manual names win races", async () => {
-	let resolve!: (value: string | null) => void;
-	let calls = 0;
-	let name: string | undefined;
-	let source: "auto" | "user" | undefined;
-	const manager = {
-		getSessionName: () => name,
-		get titleSource() {
-			return source;
+function exchangeEntries(user = "hello", assistant = "Hello!", id = "opening") {
+	return [
+		{ type: "message", id, message: { role: "user", content: user } },
+		{
+			type: "message",
+			id: `${id}-answer`,
+			message: {
+				role: "assistant",
+				content: [{ type: "text", text: assistant }],
+				stopReason: "stop",
+				usage: {
+					input: 0,
+					output: 0,
+					cacheRead: 0,
+					cacheWrite: 0,
+					totalTokens: 0,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				},
+			},
 		},
-		setSessionName: async (value: string, next: "auto" | "user") => {
-			if (source === "user" && next === "auto") return false;
-			name = value;
-			source = next;
-			return true;
-		},
-	};
+	];
+}
+
+function titleTarget() {
+	const manager = SessionManager.inMemory("/tmp/title-fixture");
 	const target = {
-		sessionId: "fixture",
+		get sessionId() {
+			return manager.getSessionId();
+		},
 		model,
 		modelRegistry: titleDependencies().registry,
 		settings: titleDependencies().settings,
 		sessionManager: manager,
-		setSessionName: manager.setSessionName,
+		setSessionName: manager.setSessionName.bind(manager),
 	};
-	const generate = async () => {
+	const append = (user = "hello", assistant = "Hello!") => {
+		for (const entry of exchangeEntries(user, assistant)) manager.appendMessage(entry.message as never);
+	};
+	return { target, manager, append };
+}
+
+test("waits for both sides of a completed exchange and shares one flight", async () => {
+	const { target, manager } = titleTarget();
+	let calls = 0;
+	let finish!: (result: { title: string; provisional: boolean }) => void;
+	const generate = async (source: string) => {
 		calls++;
-		return await new Promise<string | null>(done => {
-			resolve = done;
+		expect(source).toContain("hello");
+		expect(source).toContain("Hello!");
+		return new Promise<{ title: string; provisional: boolean }>(resolve => {
+			finish = resolve;
 		});
 	};
-	const updates: string[] = [];
-	const first = coordinateSessionTitle(target as never, "first", title => updates.push(title), generate);
-	const second = coordinateSessionTitle(target as never, "second", title => updates.push(title), generate);
-	expect(first).toBe(second);
-	expect(calls).toBe(1);
-	await manager.setSessionName("Manual winner", "user");
-	resolve("Generated loser");
-	expect(await first).toBeNull();
-	expect(name).toBe("Manual winner");
-	expect(updates).toEqual([]);
-});
-
-test("shared title subscribers observe one accepted automatic title", async () => {
-	let name: string | undefined;
-	const manager = { getSessionName: () => name };
-	const target = {
-		sessionId: "shared",
-		model,
-		modelRegistry: titleDependencies().registry,
-		settings: titleDependencies().settings,
-		sessionManager: manager,
-		setSessionName: async (value: string) => {
-			name = value;
-			return true;
-		},
-	};
+	expect(await coordinateSessionTitle(target as never, generate)).toBeNull();
+	manager.appendMessage(exchangeEntries()[0]!.message as never);
+	expect(await coordinateSessionTitle(target as never, generate)).toBeNull();
+	manager.appendMessage(exchangeEntries()[1]!.message as never);
 	const updates: string[] = [];
 	const unsubscribe = subscribeSessionTitle(manager, title => updates.push(title));
-	await coordinateSessionTitle(target as never, "fixture", undefined, async () => "Generated once");
-	expect(updates).toEqual(["Generated once"]);
+	const first = coordinateSessionTitle(target as never, generate);
+	expect(coordinateSessionTitle(target as never, generate)).toBe(first);
+	finish({ title: "Opening chat", provisional: true });
+	expect(await first).toBe("Opening chat");
+	expect(calls).toBe(1);
+	expect(await coordinateSessionTitle(target as never, generate)).toBeNull();
+	expect(updates).toEqual(["Opening chat"]);
 	unsubscribe();
 });
 
-test("manual names win before and after generation, and a reused manager gets a new per-thread flight", async () => {
-	let name: string | undefined = "Named first";
-	let source: "auto" | "user" | undefined = "user";
+test("model judgment refines a provisional name once and keeps established names", async () => {
+	const { target, manager, append } = titleTarget();
+	append();
+	await coordinateSessionTitle(target as never, async () => ({ title: "Opening chat", provisional: true }));
+	append("help me", "What would you like to do?");
+	await coordinateSessionTitle(target as never, async () => ({ title: "Still opening", provisional: true }));
+	expect(manager.getSessionName()).toBe("Opening chat");
+	append("Fix ABC-123 parser", "I will inspect the parser and repair it.");
+	await coordinateSessionTitle(target as never, async source => {
+		expect(source).toContain("Opening chat");
+		expect(source).toContain("repair it");
+		return { title: "Fix ABC-123 parser", provisional: false };
+	});
+	expect(manager.getAutomaticTitleState()?.status).toBe("refined");
+	append("Change task", "OK");
 	let calls = 0;
-	const manager = { getSessionName: () => name };
-	const target = {
-		sessionId: "first-thread",
-		model,
-		modelRegistry: titleDependencies().registry,
-		settings: titleDependencies().settings,
-		sessionManager: manager,
-		setSessionName: async (value: string, next: "auto" | "user") => {
-			if (source === "user" && next === "auto") return false;
-			name = value;
-			source = next;
-			return true;
-		},
-	};
-	const generate = async () => `Generated ${++calls}`;
-	expect(await coordinateSessionTitle(target as never, "ignored", undefined, generate)).toBeNull();
+	await coordinateSessionTitle(target as never, async () => {
+		calls++;
+		return { title: "Other", provisional: false };
+	});
 	expect(calls).toBe(0);
+	expect(manager.getSessionName()).toBe("Fix ABC-123 parser");
+});
 
-	name = undefined;
-	source = undefined;
-	target.sessionId = "second-thread";
-	expect(await coordinateSessionTitle(target as never, "second", undefined, generate)).toBe("Generated 1");
-	await target.setSessionName("Manual after", "user");
-	expect(manager.getSessionName()).toBe("Manual after");
+test("rejects late results after manual renames and session switches including switching back", async () => {
+	for (const transition of ["rename", "switch", "switch-back"]) {
+		const { target, manager, append } = titleTarget();
+		append();
+		let finish!: (result: { title: string; provisional: boolean }) => void;
+		const pending = coordinateSessionTitle(
+			target as never,
+			async () =>
+				new Promise(resolve => {
+					finish = resolve;
+				}),
+		);
+		if (transition === "rename") await manager.setSessionName("Manual", "user");
+		else {
+			const snapshot = manager.captureState();
+			await manager.newSession();
+			if (transition === "switch-back") manager.restoreState(snapshot);
+		}
+		finish({ title: "Stale", provisional: false });
+		expect(await pending).toBeNull();
+		expect(manager.getSessionName()).not.toBe("Stale");
+	}
+});
 
-	name = undefined;
-	source = undefined;
-	target.sessionId = "third-thread";
-	expect(await coordinateSessionTitle(target as never, "third", undefined, generate)).toBe("Generated 2");
+test("legacy saved names stay unchanged and naming failures remain nonfatal", async () => {
+	const { target, manager, append } = titleTarget();
+	append();
+	expect(
+		await coordinateSessionTitle(target as never, async () => {
+			throw new Error("offline");
+		}),
+	).toBeNull();
+	await manager.setSessionName("Existing", "auto");
+	let calls = 0;
+	await coordinateSessionTitle(target as never, async () => {
+		calls++;
+		return { title: "New", provisional: false };
+	});
+	expect(calls).toBe(0);
+	expect(manager.getSessionName()).toBe("Existing");
+});
+
+test("uses finalized voice exchanges while ignoring deltas, interrupted turns, tails and delegated wrappers", () => {
+	const entries = [
+		...exchangeEntries("failed", "failure", "failed").map(entry =>
+			entry.message.role === "assistant"
+				? { ...entry, message: { ...entry.message, stopReason: "aborted" } }
+				: entry,
+		),
+		{
+			type: "custom",
+			id: "voice-user",
+			customType: "remote-realtime",
+			data: { kind: "transcript", role: "user", text: "bonjour" },
+		},
+		{
+			type: "custom",
+			id: "tail",
+			customType: "remote-realtime",
+			data: { kind: "transcriptTail", transcript: [{ role: "assistant", text: "partial" }] },
+		},
+		...exchangeEntries("<realtime_delegation>wrapper</realtime_delegation>", "Backend complete", "backend"),
+		{
+			type: "custom",
+			id: "voice-answer",
+			customType: "remote-realtime",
+			data: { kind: "transcript", role: "assistant", text: "Bonjour!" },
+		},
+	];
+	const result = completedTitleExchanges(entries as never);
+	expect(result).toEqual([{ id: "voice-user", user: "bonjour", assistant: "Bonjour!" }]);
+});
+
+test("does not name failed or interrupted first exchanges", async () => {
+	for (const stopReason of ["error", "aborted"]) {
+		const { target, manager } = titleTarget();
+		const entries = exchangeEntries();
+		manager.appendMessage(entries[0]!.message as never);
+		manager.appendMessage({ ...entries[1]!.message, stopReason } as never);
+		let calls = 0;
+		await coordinateSessionTitle(target as never, async () => {
+			calls++;
+			return { title: "Invalid", provisional: false };
+		});
+		expect(calls).toBe(0);
+		expect(manager.getSessionName()).toBeUndefined();
+	}
+});
+
+test("a second completed exchange during inference receives its own refinement", async () => {
+	const { target, manager, append } = titleTarget();
+	append();
+	let resolve!: (value: { title: string; provisional: boolean }) => void;
+	let calls = 0;
+	const generate = async () => {
+		calls++;
+		if (calls === 1)
+			return new Promise<{ title: string; provisional: boolean }>(done => {
+				resolve = done;
+			});
+		return { title: "Fix parser", provisional: false };
+	};
+	const pending = coordinateSessionTitle(target as never, generate);
+	append("Fix parser", "I will fix it.");
+	resolve({ title: "Opening", provisional: true });
+	await pending;
+	await Bun.sleep(0);
 	expect(calls).toBe(2);
+	expect(manager.getSessionName()).toBe("Fix parser");
+});
+
+test("bounds serialized long exchanges without discarding either speaker", async () => {
+	const { target, append } = titleTarget();
+	append(`user-start ${'"'.repeat(500)}`, `assistant-start ${'"'.repeat(500)}`);
+	await coordinateSessionTitle(target as never, async source => {
+		expect(Buffer.byteLength(source)).toBeLessThanOrEqual(960);
+		expect(source).toContain("user-start");
+		expect(source).toContain("assistant-start");
+		return { title: "Long conversation", provisional: false };
+	});
 });

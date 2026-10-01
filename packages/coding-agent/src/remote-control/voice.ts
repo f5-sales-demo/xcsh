@@ -703,7 +703,7 @@ export class NativeVoice {
 					role: event.role,
 					text: event.text,
 				});
-				if (event.role === "user" && event.text.trim())
+				if (event.role === "assistant" && event.text.trim())
 					try {
 						this.deps.title?.(event.text);
 					} catch {

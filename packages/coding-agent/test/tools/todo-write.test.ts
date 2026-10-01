@@ -357,3 +357,20 @@ describe("todoWriteToolRenderer phase indentation", () => {
 		}
 	});
 });
+
+describe("TodoWriteTool Plan Mode boundary", () => {
+	it("rejects all checklist mutations in Plan Mode and resumes them in Default mode", async () => {
+		const session = createSession();
+		let enabled = true;
+		session.getPlanModeState = () => ({ enabled });
+		const tool = new TodoWriteTool(session);
+		const params = {
+			ops: [{ op: "replace" as const, phases: [{ name: "Execution", tasks: [{ content: "Edit source" }] }] }],
+		};
+		await expect(tool.execute("plan", params)).rejects.toThrow("Plan Mode");
+		expect(session.getTodoPhases?.()).toEqual([]);
+		enabled = false;
+		await tool.execute("default", params);
+		expect(session.getTodoPhases?.()).toHaveLength(1);
+	});
+});

@@ -3066,6 +3066,14 @@
       "headings": [
         {
           "evidence": [
+            "source-authority"
+          ],
+          "purpose": "Explain completed-exchange naming, one purpose refinement, and manual-name precedence.",
+          "readerQuestion": "When does a session get a name?",
+          "text": "When does a session get a name?"
+        },
+        {
+          "evidence": [
             "source-authority",
             "candidate-cli",
             "legacy-enrichment"
@@ -3124,7 +3132,10 @@
       "sourceAuthority": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
-        "packages/coding-agent/test"
+        "packages/coding-agent/test",
+        "packages/coding-agent/src/utils/title-generator.ts",
+        "packages/coding-agent/src/session/session-manager.ts",
+        "packages/coding-agent/test/title-generator.test.ts"
       ]
     },
     {

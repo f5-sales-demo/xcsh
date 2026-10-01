@@ -56,11 +56,17 @@ import { FileSessionStorage, MemorySessionStorage } from "./session-storage";
 export const CURRENT_SESSION_VERSION = 3;
 const DRAFT_ONLY_SESSION_MARKER = ".draft-only-session";
 
+export interface AutomaticTitleState {
+	status: "provisional" | "refined";
+	exchangeId: string;
+}
+
 export interface SessionHeader {
 	type: "session";
 	version?: number; // v1 sessions don't have this
 	id: string;
-	title?: string; // Auto-generated title from first message
+	title?: string; // Session display name
+	automaticTitle?: AutomaticTitleState;
 	titleSource?: "auto" | "user";
 	timestamp: string;
 	cwd: string;
@@ -1497,6 +1503,7 @@ interface SessionManagerStateSnapshot {
 
 export class SessionManager {
 	#sessionId: string = "";
+	#titleRevision = 0;
 	#sessionName: string | undefined;
 	#titleSource: "auto" | "user" | undefined;
 	#sessionFile: string | undefined;
@@ -1567,6 +1574,7 @@ export class SessionManager {
 	}
 
 	restoreState(snapshot: SessionManagerStateSnapshot): void {
+		this.#titleRevision++;
 		this.#sessionId = snapshot.sessionId;
 		this.#sessionName = snapshot.sessionName;
 		this.#titleSource = snapshot.titleSource;
@@ -1599,6 +1607,7 @@ export class SessionManager {
 
 	/** Switch to a different session file (used for resume and branching) */
 	async setSessionFile(sessionFile: string): Promise<void> {
+		this.#titleRevision++;
 		await this.#closePersistWriter();
 		this.#persistError = undefined;
 		this.#persistErrorReported = false;
@@ -1607,6 +1616,7 @@ export class SessionManager {
 		this.#fileEntries = await loadEntriesFromFile(this.#sessionFile, this.storage);
 		if (this.#fileEntries.length > 0) {
 			const header = this.#fileEntries.find(e => e.type === "session") as SessionHeader | undefined;
+			this.#titleRevision++;
 			this.#sessionId = header?.id ?? Snowflake.next();
 			this.#sessionName = header?.title;
 			this.#titleSource = header?.titleSource;
@@ -1632,6 +1642,7 @@ export class SessionManager {
 
 	/** Start a new session. Closes any existing writer first. */
 	async newSession(options?: NewSessionOptions, preview?: SessionNewPreview): Promise<string | undefined> {
+		this.#titleRevision++;
 		await this.#closePersistWriter();
 		return this.#newSessionSync(options, preview);
 	}
@@ -1727,6 +1738,7 @@ export class SessionManager {
 		this.#persistErrorReported = false;
 
 		// Create new session ID and header
+		this.#titleRevision++;
 		this.#sessionId = preview.targetSessionId;
 		const timestamp = preview.timestamp;
 		this.#sessionFile = preview.targetSessionFile;
@@ -1739,6 +1751,7 @@ export class SessionManager {
 			id: this.#sessionId,
 			title: oldHeader?.title ?? this.#sessionName,
 			titleSource: oldHeader?.titleSource ?? this.#titleSource,
+			automaticTitle: oldHeader?.automaticTitle,
 			timestamp,
 			cwd: this.cwd,
 			parentSession: oldSessionId,
@@ -1904,6 +1917,7 @@ export class SessionManager {
 		this.#persistChain = Promise.resolve();
 		this.#persistError = undefined;
 		this.#persistErrorReported = false;
+		this.#titleRevision++;
 		this.#sessionId = preview?.targetSessionId ?? Snowflake.next();
 		this.#sessionName = options?.title ? SessionManager.#sanitizeName(options.title) || undefined : undefined;
 		this.#titleSource = this.#sessionName ? options?.titleSource : undefined;
@@ -2336,6 +2350,25 @@ export class SessionManager {
 		return this.#sessionName;
 	}
 
+	get titleRevision(): number {
+		return this.#titleRevision;
+	}
+
+	getAutomaticTitleState(): AutomaticTitleState | undefined {
+		return this.getHeader()?.automaticTitle;
+	}
+
+	/** Validate before mutation so late requests cannot overwrite a rename or a session transition. */
+	setAutomaticSessionName(
+		name: string,
+		state: AutomaticTitleState,
+		sessionId: string,
+		revision: number,
+	): Promise<boolean> {
+		if (sessionId !== this.#sessionId || revision !== this.#titleRevision) return Promise.resolve(false);
+		return this.setSessionName(name, "auto", state);
+	}
+
 	/** Strip C0/C1 control characters (includes ESC, so removes ANSI sequences) and collapse whitespace. */
 	static #sanitizeName(name: string): string {
 		return name
@@ -2349,7 +2382,11 @@ export class SessionManager {
 	 * @param source - "user" for explicit renames (/rename command, RPC); "auto" for generated titles.
 	 *   Auto-generated titles are silently ignored when the user has already set a name.
 	 */
-	async setSessionName(name: string, source: "auto" | "user" = "auto"): Promise<boolean> {
+	async setSessionName(
+		name: string,
+		source: "auto" | "user" = "auto",
+		automaticTitle?: AutomaticTitleState,
+	): Promise<boolean> {
 		if (name === "New Realtime Voice Chat") return false;
 		// User-set names take permanent precedence over auto-generated ones.
 		if (this.#titleSource === "user" && source === "auto") return false;
@@ -2357,6 +2394,7 @@ export class SessionManager {
 		const sanitized = SessionManager.#sanitizeName(name);
 		if (!sanitized) return false;
 
+		this.#titleRevision++;
 		this.#sessionName = sanitized;
 		this.#titleSource = source;
 
@@ -2365,6 +2403,7 @@ export class SessionManager {
 		if (header) {
 			header.title = sanitized;
 			header.titleSource = source;
+			header.automaticTitle = source === "auto" ? automaticTitle : undefined;
 		}
 
 		// Update the session file header with the title (if already flushed)
@@ -2911,6 +2950,7 @@ export class SessionManager {
 		if (!this.#byId.has(branchFromId)) {
 			throw new Error(`Entry ${branchFromId} not found`);
 		}
+		this.#titleRevision++;
 		this.#leafId = branchFromId;
 	}
 
@@ -2920,6 +2960,7 @@ export class SessionManager {
 	 * Use this when navigating to re-edit the first user message.
 	 */
 	resetLeaf(): void {
+		this.#titleRevision++;
 		this.#leafId = null;
 	}
 
@@ -2932,6 +2973,7 @@ export class SessionManager {
 		if (branchFromId !== null && !this.#byId.has(branchFromId)) {
 			throw new Error(`Entry ${branchFromId} not found`);
 		}
+		this.#titleRevision++;
 		this.#leafId = branchFromId;
 		const entry: BranchSummaryEntry = {
 			type: "branch_summary",
@@ -3044,6 +3086,7 @@ export class SessionManager {
 			}
 			this.storage.writeTextSync(newSessionFile, `${lines.join("\n")}\n`);
 			this.#fileEntries = [header, ...pathWithoutLabels, ...labelEntries];
+			this.#titleRevision++;
 			this.#sessionId = newSessionId;
 			this.#sessionFile = newSessionFile;
 			this.#flushed = true;
@@ -3067,6 +3110,7 @@ export class SessionManager {
 			parentId = labelEntry.id;
 		}
 		this.#fileEntries = [header, ...pathWithoutLabels, ...labelEntries];
+		this.#titleRevision++;
 		this.#sessionId = newSessionId;
 		this.#buildIndex();
 		return undefined;
@@ -3116,6 +3160,7 @@ export class SessionManager {
 		const newHeader = manager.#fileEntries[0] as SessionHeader;
 		newHeader.title = sourceHeader?.title;
 		newHeader.titleSource = sourceHeader?.titleSource;
+		newHeader.automaticTitle = sourceHeader?.automaticTitle;
 		manager.#fileEntries = [newHeader, ...historyEntries];
 		manager.#sessionName = newHeader.title;
 		manager.#titleSource = newHeader.titleSource;
@@ -3145,6 +3190,7 @@ export class SessionManager {
 		const newHeader = manager.#fileEntries[0] as SessionHeader;
 		newHeader.title = sourceHeader?.title;
 		newHeader.titleSource = sourceHeader?.titleSource;
+		newHeader.automaticTitle = sourceHeader?.automaticTitle;
 		manager.#fileEntries = [newHeader, ...historyEntries];
 		manager.#sessionName = newHeader.title;
 		manager.#titleSource = newHeader.titleSource;

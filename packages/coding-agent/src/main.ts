@@ -96,10 +96,6 @@ async function checkForNewVersion(currentVersion: string): Promise<string | unde
 }
 
 const RPC_DEFAULTED_SETTING_PATHS: SettingPath[] = [
-	"todo.enabled",
-	"todo.reminders",
-	"todo.reminders.max",
-	"todo.eager",
 	"async.enabled",
 	"async.maxJobs",
 	"bash.autoBackground.enabled",

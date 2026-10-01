@@ -368,6 +368,11 @@ export class TodoWriteTool implements AgentTool<typeof todoWriteSchema, TodoWrit
 		_onUpdate?: AgentToolUpdateCallback<TodoWriteToolDetails>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<TodoWriteToolDetails>> {
+		if (this.session.getPlanModeState?.()?.enabled) {
+			throw new Error(
+				"todo_write is unavailable in Plan Mode. Discuss the proposed plan in the conversation; execution tracking resumes in Default mode.",
+			);
+		}
 		const previousPhases = this.session.getTodoPhases?.() ?? [];
 		const current = fileFromPhases(previousPhases);
 		const { file: updated, errors } = applyOps(current, params.ops);
