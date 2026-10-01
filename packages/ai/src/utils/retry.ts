@@ -1,6 +1,7 @@
 type ErrorLike = {
 	message?: string;
 	name?: string;
+	code?: string;
 	status?: number;
 	statusCode?: number;
 	response?: { status?: number };
@@ -12,6 +13,31 @@ const TRANSIENT_MESSAGE_PATTERN =
 
 const VALIDATION_MESSAGE_PATTERN =
 	/invalid|validation|bad request|unsupported|schema|missing required|not found|unauthorized|forbidden/i;
+
+const BUN_SOCKET_CLOSE_MESSAGE =
+	"The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()";
+
+/** Recognize transport closures without interpreting arbitrary provider failure text as replay-safe. */
+export function isTransportClosureError(error: unknown, depth = 0): boolean {
+	if (!error || typeof error !== "object" || depth > 2) return false;
+	const info = error as ErrorLike;
+	const message = info.message ?? "";
+	const status = extractHttpStatusFromError(error);
+	if (
+		info.name === "AbortError" ||
+		/aborted|cancelled|canceled/i.test(message) ||
+		VALIDATION_MESSAGE_PATTERN.test(message) ||
+		(status !== undefined && status >= 400 && status < 500)
+	)
+		return false;
+	return (
+		message === BUN_SOCKET_CLOSE_MESSAGE ||
+		info.code === "ECONNRESET" ||
+		info.code === "ERR_STREAM_PREMATURE_CLOSE" ||
+		/\b(?:ECONNRESET|ERR_STREAM_PREMATURE_CLOSE)\b/.test(message) ||
+		isTransportClosureError(info.cause, depth + 1)
+	);
+}
 
 /**
  * Identify errors that should be retried (timeouts, 5xx, 408, 429, transient network failures).
@@ -31,7 +57,7 @@ export function isRetryableError(error: unknown): boolean {
 
 	if (VALIDATION_MESSAGE_PATTERN.test(message)) return false;
 
-	return TRANSIENT_MESSAGE_PATTERN.test(message);
+	return isTransportClosureError(error) || TRANSIENT_MESSAGE_PATTERN.test(message);
 }
 
 export function extractHttpStatusFromError(error: unknown): number | undefined {

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
 import { Agent, type AgentTool } from "@f5-sales-demo/pi-agent-core";
 import { type AssistantMessage, Effort, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
+import { streamOpenAICodexResponses } from "@f5-sales-demo/pi-ai/providers/openai-codex-responses";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { TempDir } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
@@ -96,6 +97,59 @@ describe("AgentSession retry fallback", () => {
 		}
 		authStorage.close();
 		tempDir.removeSync();
+	});
+
+	it("recovers Codex transport inside a session with auto-retry disabled", async () => {
+		const model = getBundledModel("openai-codex", "gpt-6.1-sol");
+		if (!model) throw new Error("Expected Sol model");
+		const originalFetch = global.fetch;
+		const token = `test.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "synthetic" } })).toBase64()}.test`;
+		authStorage.setRuntimeApiKey("openai-codex", token);
+		let attempts = 0;
+		const bodies: string[] = [];
+		const failure =
+			"The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()";
+		const agent = new Agent({
+			getApiKey: () => token,
+			initialState: { model, systemPrompt: "Synthetic", tools: [], messages: [] },
+			streamFn: (requestedModel, context, options) =>
+				streamOpenAICodexResponses(requestedModel as Model<"openai-codex-responses">, context, {
+					...options,
+					apiKey: token,
+					preferWebsockets: false,
+				}),
+		});
+		const settings = Settings.isolated({ "compaction.enabled": false, "retry.enabled": false });
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const retryEvents = trackRetryEvents(session);
+		global.fetch = (async (_url: unknown, init?: RequestInit) => {
+			attempts += 1;
+			bodies.push(String(init?.body));
+			if (attempts === 1)
+				return new Response(
+					new ReadableStream({
+						start(controller) {
+							controller.error(new Error(failure));
+						},
+					}),
+				);
+			return new Response(
+				`data: ${JSON.stringify({ type: "response.output_item.added", item: { type: "message", id: "answer", role: "assistant", content: [] } })}\n\ndata: ${JSON.stringify({ type: "response.output_item.done", item: { type: "message", id: "answer", role: "assistant", content: [{ type: "output_text", text: "Recovered" }] } })}\n\ndata: ${JSON.stringify({ type: "response.completed", response: { status: "completed" } })}\n\n`,
+			);
+		}) as typeof fetch;
+		try {
+			await session.prompt("Synthetic request");
+			await session.waitForIdle();
+			expect(attempts).toBe(2);
+			expect(bodies[1]).toBe(bodies[0]);
+			expect(getLastAssistantMessage(session)).toMatchObject({ model: "gpt-6.1-sol", stopReason: "stop" });
+			expect(session.messages.filter(message => message.role === "assistant")).toHaveLength(1);
+			expect(retryEvents.retryStartEvents).toHaveLength(0);
+			expect(settings.get("retry.enabled")).toBe(false);
+		} finally {
+			global.fetch = originalFetch;
+		}
 	});
 
 	it("advances through a role-keyed fallback chain across retries", async () => {
@@ -379,6 +433,77 @@ describe("AgentSession retry fallback", () => {
 		expect(getLastAssistantMessage(session).content).toContainEqual({
 			type: "text",
 			text: "Recovered after LiteLLM mid-stream fallback",
+		});
+	});
+
+	it("auto-retries the exact Bun socket-close transport error", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini");
+		if (!model) {
+			throw new Error("Expected bundled OpenAI test model to exist");
+		}
+
+		const midStreamFallbackError =
+			"The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()";
+		const requestedModels: string[] = [];
+		let attemptCount = 0;
+
+		const agent = new Agent({
+			getApiKey: provider => `${provider}-test-key`,
+			initialState: {
+				model,
+				systemPrompt: "Test",
+				tools: [],
+				messages: [],
+			},
+			streamFn: requestedModel => {
+				requestedModels.push(`${requestedModel.provider}/${requestedModel.id}`);
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					attemptCount += 1;
+					if (attemptCount === 1) {
+						const message = createAssistantMessage(requestedModel, {
+							stopReason: "error",
+							errorMessage: midStreamFallbackError,
+						});
+						stream.push({ type: "start", partial: message });
+						stream.push({ type: "error", reason: "error", error: message });
+						return;
+					}
+					const message = createAssistantMessage(requestedModel, {
+						text: "Recovered after Bun socket close",
+						stopReason: "stop",
+					});
+					stream.push({ type: "start", partial: createAssistantMessage(requestedModel, { stopReason: "stop" }) });
+					stream.push({ type: "done", reason: "stop", message });
+				});
+				return stream;
+			},
+		});
+
+		const settings = Settings.isolated({
+			"compaction.enabled": false,
+			"retry.baseDelayMs": 5,
+			"retry.maxRetries": 1,
+		});
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const { retryStartEvents, retryEndEvents } = trackRetryEvents(session);
+
+		await session.prompt("Retry Bun socket close");
+		await session.waitForIdle();
+
+		expect(requestedModels).toEqual([`${model.provider}/${model.id}`, `${model.provider}/${model.id}`]);
+		expect(retryStartEvents).toHaveLength(1);
+		expect(retryStartEvents[0]).toMatchObject({
+			attempt: 1,
+			maxAttempts: 1,
+			errorMessage: midStreamFallbackError,
+		});
+		expect(retryEndEvents).toHaveLength(1);
+		expect(retryEndEvents[0]).toMatchObject({ success: true, attempt: 1 });
+		expect(getLastAssistantMessage(session).content).toContainEqual({
+			type: "text",
+			text: "Recovered after Bun socket close",
 		});
 	});
 
