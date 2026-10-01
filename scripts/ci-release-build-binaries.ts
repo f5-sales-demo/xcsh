@@ -128,8 +128,10 @@ async function generateDocumentationIndex(): Promise<void> {
 	}
 	if (usePrebuilt) {
 		await $`bun --cwd=packages/coding-agent run generate-documentation-index --use-existing`.cwd(repoRoot);
+		await $`bun --cwd=packages/coding-agent run generate-terraform-documentation-index --use-existing`.cwd(repoRoot);
 	} else {
 		await $`bun --cwd=packages/coding-agent run generate-documentation-index`.cwd(repoRoot);
+		await $`bun --cwd=packages/coding-agent run generate-terraform-documentation-index`.cwd(repoRoot);
 	}
 }
 
@@ -145,6 +147,7 @@ async function resetArtifacts(): Promise<void> {
 	await $`bun --cwd=packages/stats scripts/generate-client-bundle.ts --reset`.cwd(repoRoot);
 	await $`bun --cwd=packages/office-pane scripts/generate-client-bundle.ts --reset`.cwd(repoRoot);
 	await $`bun --cwd=packages/coding-agent run generate-documentation-index --reset`.cwd(repoRoot);
+	await $`bun --cwd=packages/coding-agent run generate-terraform-documentation-index --reset`.cwd(repoRoot);
 }
 
 async function smokeTestHostBinary(): Promise<void> {
@@ -221,6 +224,20 @@ async function smokeTestHostBinary(): Promise<void> {
 			throw new Error("Compiled binary QMD BM25 smoke test failed");
 		}
 		console.log(`  ${qmdStdout}`);
+		const terraformResult = Bun.spawnSync([binaryPath], {
+			stdout: "pipe",
+			stderr: "pipe",
+			env: { ...Bun.env, HOME: qmdHome, PI_DEV: "1", XCSH_SMOKE_TEST_TERRAFORM_DOCUMENTATION: "1" },
+		});
+		const terraformOutput = terraformResult.stdout.toString().trim();
+		if (
+			terraformResult.exitCode !== 0 ||
+			terraformResult.stderr.length ||
+			!terraformOutput.endsWith("XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK")
+		) {
+			throw new Error(`Compiled Terraform documentation smoke failed: ${terraformResult.stderr.toString()}`);
+		}
+		console.log(`  ${terraformOutput}`);
 	} finally {
 		await fs.rm(qmdHome, { recursive: true, force: true });
 	}

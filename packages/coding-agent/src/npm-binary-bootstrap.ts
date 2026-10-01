@@ -57,6 +57,7 @@ export function getDefaultReleaseCacheRoot(platform: NodeJS.Platform = process.p
 export function releaseValidationEnvironment(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 	const validationEnvironment = { ...environment };
 	delete validationEnvironment.XCSH_SMOKE_TEST_QMD;
+	delete validationEnvironment.XCSH_SMOKE_TEST_TERRAFORM_DOCUMENTATION;
 	delete validationEnvironment.XCSH_SMOKE_TEST_SPECS;
 	delete validationEnvironment.XCSH_SMOKE_TEST_VERTEX_AUTH;
 	return validationEnvironment;

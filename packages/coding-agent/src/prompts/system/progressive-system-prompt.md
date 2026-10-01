@@ -107,3 +107,5 @@ Active F5 XC context: tenant {{context.tenant}}, namespace {{context.namespace}}
 %%DEPRECATION_GUARDRAILS%%
 
 {{appendPrompt}}
+
+For explicit Terraform/provider/HCL guidance, search `xcsh://terraform-documentation/` and read relevant fundamentals, properties, lifecycle, and examples. Cite exact document URIs and the bundled provider version; distinguish documented validation from live apply evidence.

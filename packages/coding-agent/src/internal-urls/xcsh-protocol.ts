@@ -73,6 +73,8 @@ import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
 import { createRegistryResolver, type RegistryResolver, type RegistryResolverDeps } from "./registry-resolve";
 import { createSourceResolver, type SourceResolver } from "./source-resolve";
+import { TerraformDocumentationRepository } from "./terraform-documentation";
+import { EMBEDDED_TERRAFORM_DOCUMENTATION } from "./terraform-documentation-assets.generated";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
@@ -82,6 +84,7 @@ const ABOUT_ROUTE = "about";
 const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 const DOCUMENTATION_HOST = "documentation";
+const TERRAFORM_DOCUMENTATION_HOST = "terraform-documentation";
 const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
 const REGISTRY_HOST = "registry";
@@ -365,6 +368,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#documentationResolver: DocumentationResolver | null;
+	#terraformDocumentation: TerraformDocumentationRepository | null;
 	#terraformResolver: TerraformResolver | null;
 	#registryResolver: RegistryResolver | null = null;
 	#consoleResolver: ConsoleResolver | null = null;
@@ -400,6 +404,12 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		if (documentationRepository && "prime" in documentationRepository) {
 			void (documentationRepository as EmbeddedDocumentationRepository).prime().catch(() => undefined);
 		}
+		this.#terraformDocumentation = EMBEDDED_TERRAFORM_DOCUMENTATION
+			? new TerraformDocumentationRepository(
+					EMBEDDED_TERRAFORM_DOCUMENTATION,
+					path.join(os.homedir(), ".xcsh", "cache", "terraform-documentation"),
+				)
+			: null;
 		this.#terraformResolver = null;
 		this.#getPluginRoots = options.getPluginRoots;
 		this.#fleetDeps = options.fleetDeps;
@@ -529,6 +539,12 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#getApiCatalogResolver().resolve(url);
 		}
 
+		if (host === TERRAFORM_DOCUMENTATION_HOST) {
+			if (!this.#terraformDocumentation)
+				throw new Error("Embedded Terraform documentation is unavailable in this build");
+			return this.#terraformDocumentation.resolve(url);
+		}
+
 		if (host === DOCUMENTATION_HOST) {
 			if (!this.#documentationResolver) throw new Error("Embedded documentation is unavailable in this build");
 			return this.#documentationResolver.resolve(url);
@@ -625,6 +641,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			apiSpecEntry,
 			apiCatalogEntry,
 			documentationEntry,
+			`- [terraform-documentation/](xcsh://terraform-documentation/) — pinned offline Terraform provider documentation and HCL guidance`,
 			brandingEntry,
 			terraformEntry,
 			registryEntry,
