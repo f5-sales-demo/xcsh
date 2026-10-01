@@ -197,3 +197,67 @@ describe("SessionManager signature persistence", () => {
 		await reloaded.close();
 	});
 });
+
+it("flushes checkpoints before tools and reloads one assistant with exact native arguments", async () => {
+	using tempDir = TempDir.createSync("@pi-synthetic-checkpoint-");
+	const session = SessionManager.create(tempDir.path(), tempDir.path());
+	const argumentsText = '{ "value" : 1 }';
+	const native = {
+		type: "openaiResponsesHistory" as const,
+		provider: "openai-codex",
+		dt: true,
+		items: [
+			{ type: "reasoning", id: "reason", summary: [], encrypted_content: "synthetic-encrypted" },
+			{ type: "function_call", id: "item", call_id: "call", name: "synthetic", arguments: argumentsText },
+		],
+	};
+	const assistant: AssistantMessage = {
+		role: "assistant",
+		api: "openai-codex-responses",
+		provider: "openai-codex",
+		model: "synthetic",
+		content: [{ type: "toolCall", id: "call|item", name: "synthetic", arguments: { value: 1 } }],
+		providerPayload: native,
+		timestamp: 2,
+		stopReason: "toolUse",
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+	};
+	session.appendMessage({ role: "user", content: "Synthetic checkpoint", timestamp: 1 });
+	session.appendAssistantCheckpoint(assistant);
+	await session.flush();
+	const before = await SessionManager.open(session.getSessionFile()!);
+	expect(before.buildSessionContext().messages.map(m => m.role)).toEqual(["user", "assistant"]);
+	await before.close();
+	session.appendMessage({
+		role: "toolResult",
+		toolCallId: "call|item",
+		toolName: "synthetic",
+		content: [{ type: "text", text: "Retained" }],
+		isError: false,
+		timestamp: 3,
+	});
+	session.appendMessage({
+		...assistant,
+		stopReason: "error",
+		interruption: {
+			transport: "sse",
+			classification: "socket_closed",
+			providerRetriesConsumed: 0,
+			completedContentIndices: [0],
+		},
+	});
+	await session.flush();
+	const reloaded = await SessionManager.open(session.getSessionFile()!);
+	const messages = reloaded.buildSessionContext().messages;
+	expect(messages.map(m => m.role)).toEqual(["user", "assistant", "toolResult"]);
+	expect((messages[1] as AssistantMessage).providerPayload).toEqual(native);
+	await reloaded.close();
+	await session.close();
+});

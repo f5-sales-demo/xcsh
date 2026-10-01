@@ -43,17 +43,26 @@ export type ProxyAssistantMessageEvent =
 	| { type: "thinking_end"; contentIndex: number; contentSignature?: string }
 	| { type: "toolcall_start"; contentIndex: number; id: string; toolName: string }
 	| { type: "toolcall_delta"; contentIndex: number; delta: string }
-	| { type: "toolcall_end"; contentIndex: number }
+	| {
+			type: "toolcall_end";
+			contentIndex: number;
+			toolCall?: ToolCall;
+			providerPayload?: AssistantMessage["providerPayload"];
+	  }
 	| {
 			type: "done";
 			reason: Extract<StopReason, "stop" | "length" | "toolUse">;
 			usage: AssistantMessage["usage"];
+			providerPayload?: AssistantMessage["providerPayload"];
+			interruption?: AssistantMessage["interruption"];
 	  }
 	| {
 			type: "error";
 			reason: Extract<StopReason, "aborted" | "error">;
 			errorMessage?: string;
 			usage: AssistantMessage["usage"];
+			providerPayload?: AssistantMessage["providerPayload"];
+			interruption?: AssistantMessage["interruption"];
 	  };
 
 export interface ProxyStreamOptions extends SimpleStreamOptions {
@@ -135,6 +144,7 @@ export function streamProxy(model: Model, context: Context, options: ProxyStream
 						repetitionPenalty: options.repetitionPenalty,
 						maxTokens: options.maxTokens,
 						reasoning: options.reasoning,
+						maxRetries: options.maxRetries,
 					},
 				}),
 				signal: options.signal,
@@ -307,6 +317,8 @@ function processProxyEvent(
 		}
 
 		case "toolcall_end": {
+			if (proxyEvent.providerPayload) partial.providerPayload = proxyEvent.providerPayload;
+			if (proxyEvent.toolCall) partial.content[proxyEvent.contentIndex] = proxyEvent.toolCall;
 			const content = partial.content[proxyEvent.contentIndex];
 			if (content?.type === "toolCall") {
 				delete (content as any).partialJson;
@@ -323,12 +335,16 @@ function processProxyEvent(
 		case "done":
 			partial.stopReason = proxyEvent.reason;
 			partial.usage = proxyEvent.usage;
+			partial.providerPayload = proxyEvent.providerPayload ?? partial.providerPayload;
+			partial.interruption = proxyEvent.interruption;
 			return { type: "done", reason: proxyEvent.reason, message: partial };
 
 		case "error":
 			partial.stopReason = proxyEvent.reason;
 			partial.errorMessage = proxyEvent.errorMessage;
 			partial.usage = proxyEvent.usage;
+			partial.providerPayload = proxyEvent.providerPayload ?? partial.providerPayload;
+			partial.interruption = proxyEvent.interruption;
 			return { type: "error", reason: proxyEvent.reason, error: partial };
 	}
 }

@@ -210,6 +210,7 @@ interface CodexStreamRuntime {
 	outputSlots: Map<number, { item: CodexEventItem | null; block: CodexOutputBlock | null; index: number }>;
 	currentIndex: number;
 	completedItemIds: Set<string>;
+	completedContentIndices: Set<number>;
 	currentBlock: CodexOutputBlock | null;
 	nativeOutputItems: Array<Record<string, unknown>>;
 	websocketStreamRetries: number;
@@ -221,6 +222,7 @@ interface CodexStreamRuntime {
 }
 
 interface CodexStreamProcessingContext {
+	runtime?: CodexStreamRuntime;
 	model: Model<"openai-codex-responses">;
 	output: AssistantMessage;
 	stream: AssistantMessageEventStream;
@@ -300,7 +302,13 @@ function getCodexProviderSessionState(
 }
 
 function createCodexWebSocketTransportError(message: string): Error {
-	return new Error(`${CODEX_WEBSOCKET_TRANSPORT_ERROR_PREFIX}: ${message}`);
+	return Object.assign(new Error(`${CODEX_WEBSOCKET_TRANSPORT_ERROR_PREFIX}: ${message}`), {
+		codexTransportInterruption: message.startsWith("websocket closed")
+			? "socket_closed"
+			: message === "idle timeout waiting for websocket" || message === "timeout waiting for first websocket event"
+				? "idle_timeout"
+				: undefined,
+	});
 }
 
 function isCodexWebSocketFatalError(error: Error): boolean {
@@ -913,6 +921,7 @@ function createCodexStreamRuntime(initial: {
 		outputSlots: new Map(),
 		currentIndex: -1,
 		completedItemIds: new Set(),
+		completedContentIndices: new Set(),
 		nativeOutputItems: [],
 		websocketStreamRetries: 0,
 		providerRetryAttempt: 0,
@@ -1137,6 +1146,7 @@ function handleCodexStreamEvent(args: {
 		if (itemId && runtime.completedItemIds.has(itemId)) return firstTokenTime;
 		if (itemId) runtime.completedItemIds.add(itemId);
 		handleOutputItemDone(model, output, stream, runtime, rawEvent, blockIndex);
+		if (runtime.currentIndex >= 0) runtime.completedContentIndices.add(runtime.currentIndex);
 		runtime.outputSlots.delete(
 			typeof rawEvent.output_index === "number" ? rawEvent.output_index : runtime.currentIndex,
 		);
@@ -1305,6 +1315,7 @@ function handleOutputItemDone(
 ): void {
 	const item = structuredCloneJSON(rawEvent.item) as CodexEventItem;
 	runtime.nativeOutputItems.push(item as unknown as Record<string, unknown>);
+	output.providerPayload = createOpenAIResponsesHistoryPayload(model.provider, runtime.nativeOutputItems);
 	if (item.type === "custom_tool_call" && runtime.currentBlock?.type === "toolCall") {
 		const property = runtime.grammarToolInputProperties?.get(item.name) ?? "input";
 		Object.assign(runtime.currentBlock, {
@@ -1360,7 +1371,7 @@ function handleOutputItemDone(
 			type: "toolCall",
 			id: `${item.call_id}|${item.id}`,
 			name: item.name,
-			arguments: parseStreamingJson(item.arguments || "{}"),
+			arguments: JSON.parse(item.arguments || "{}"),
 		};
 		if (runtime.currentBlock?.type === "toolCall") {
 			Object.assign(runtime.currentBlock, toolCall);
@@ -1561,7 +1572,8 @@ async function tryRestartCodexSseTransport(
 			if (error !== originalError) throw error;
 			return false;
 		}
-		if (runtime.transportRestartAttempt >= 2) throw runtime.firstTransportFailure;
+		if (runtime.transportRestartAttempt >= Math.max(0, context.options?.maxRetries ?? 2))
+			throw runtime.firstTransportFailure;
 		runtime.transportRestartAttempt += 1;
 		try {
 			await runtime.eventStream.return(undefined);
@@ -1573,6 +1585,7 @@ async function tryRestartCodexSseTransport(
 		runtime.currentIndex = -1;
 		runtime.outputSlots.clear();
 		runtime.completedItemIds.clear();
+		runtime.completedContentIndices.clear();
 		runtime.nativeOutputItems.length = 0;
 		runtime.sawResponseAccepted = false;
 		runtime.sawOutputEvent = false;
@@ -1591,7 +1604,10 @@ async function tryRestartCodexSseTransport(
 			resetCodexWebSocketAppendState(state);
 			resetCodexSessionMetadata(state);
 		}
-		await sleepBeforeCodexSseRestart(500 * runtime.transportRestartAttempt, context.requestSetup.requestSignal);
+		await sleepBeforeCodexSseRestart(
+			500 * (runtime.transportRestartAttempt + Math.max(0, 2 - (context.options?.maxRetries ?? 2))),
+			context.requestSetup.requestSignal,
+		);
 		try {
 			const next = await openCodexSseTransport(
 				context.requestContext,
@@ -1640,6 +1656,14 @@ async function tryRecoverCodexContinuation(
 	resetCodexWebSocketAppendState(state);
 	resetCodexSessionMetadata(state);
 	if (!eligible) return false;
+	if (context.options?.maxRetries !== undefined) {
+		if (runtime.transportRestartAttempt >= context.options.maxRetries) return false;
+		runtime.transportRestartAttempt += 1;
+		await sleepBeforeCodexSseRestart(
+			500 * (runtime.transportRestartAttempt + Math.max(0, 2 - (context.options?.maxRetries ?? 2))),
+			context.requestSetup.requestSignal,
+		);
+	}
 	runtime.continuationRecoveryAttempt += 1;
 	logCodexDebug("codex continuation recovery", {
 		reason: "previous_response_unavailable",
@@ -1681,6 +1705,14 @@ async function tryReconnectCodexWebSocketOnConnectionLimit(
 	}
 
 	// Close the stale connection so getOrCreateCodexWebSocketConnection creates a fresh one.
+	if (context.options?.maxRetries !== undefined) {
+		if (runtime.transportRestartAttempt >= context.options.maxRetries) return false;
+		runtime.transportRestartAttempt += 1;
+		await sleepBeforeCodexSseRestart(
+			500 * (runtime.transportRestartAttempt + Math.max(0, 2 - (context.options?.maxRetries ?? 2))),
+			context.requestSetup.requestSignal,
+		);
+	}
 	websocketState.connection?.close("connection_limit");
 	websocketState.connection = undefined;
 	resetCodexWebSocketAppendState(websocketState);
@@ -1699,6 +1731,7 @@ async function tryReconnectCodexWebSocketOnConnectionLimit(
 		runtime.currentBlock = null;
 		runtime.outputSlots.clear();
 		runtime.completedItemIds.clear();
+		runtime.completedContentIndices.clear();
 		runtime.nativeOutputItems.length = 0;
 		runtime.stagedEvents.length = 0;
 		resetOutputState(context.output);
@@ -1728,6 +1761,14 @@ async function tryReplayWebsocketFailureOverSse(
 		!runtime.sawTerminalEvent &&
 		!context.options?.signal?.aborted;
 	if (!canReplay) return false;
+	if (context.options?.maxRetries !== undefined) {
+		if (runtime.transportRestartAttempt >= context.options.maxRetries) return false;
+		runtime.transportRestartAttempt += 1;
+		await sleepBeforeCodexSseRestart(
+			500 * (runtime.transportRestartAttempt + Math.max(0, 2 - (context.options?.maxRetries ?? 2))),
+			context.requestSetup.requestSignal,
+		);
+	}
 
 	const state = websocketState;
 	const streamError = error instanceof Error ? error : new Error(String(error));
@@ -1761,6 +1802,7 @@ async function tryReplayWebsocketFailureOverSse(
 		runtime.currentBlock = null;
 		runtime.outputSlots.clear();
 		runtime.completedItemIds.clear();
+		runtime.completedContentIndices.clear();
 		runtime.nativeOutputItems.length = 0;
 		runtime.stagedEvents.length = 0;
 		resetOutputState(context.output);
@@ -1803,6 +1845,7 @@ async function tryRetryCodexProviderError(
 	runtime.currentBlock = null;
 	runtime.outputSlots.clear();
 	runtime.completedItemIds.clear();
+	runtime.completedContentIndices.clear();
 	runtime.sawTerminalEvent = false;
 	runtime.stagedEvents.length = 0;
 	resetOutputState(context.output);
@@ -1866,6 +1909,37 @@ async function handleCodexStreamFailure(
 		resetCodexWebSocketAppendState(context.requestContext.websocketState);
 		resetCodexSessionMetadata(context.requestContext.websocketState);
 	}
+	const runtime = context.runtime;
+	const interrupted =
+		!context.requestSetup.requestSignal.aborted &&
+		runtime &&
+		!runtime.sawTerminalEvent &&
+		!(error instanceof CodexProviderStreamError) &&
+		(error instanceof CodexSseIdleTimeoutError ||
+			isTransportClosureError(error) ||
+			(error as { codexTransportInterruption?: string })?.codexTransportInterruption);
+	if (interrupted) {
+		output.interruption = {
+			transport: runtime.transport,
+			classification:
+				error instanceof CodexSseIdleTimeoutError ||
+				(error as { codexTransportInterruption?: string }).codexTransportInterruption === "idle_timeout"
+					? "idle_timeout"
+					: (error as { code?: string }).code === "ERR_STREAM_PREMATURE_CLOSE"
+						? "premature_eof"
+						: "socket_closed",
+			providerRetriesConsumed: runtime.transportRestartAttempt,
+			completedContentIndices: [...runtime.completedContentIndices].sort((a, b) => a - b),
+		};
+		output.providerPayload = createOpenAIResponsesHistoryPayload(context.model.provider, runtime.nativeOutputItems);
+	}
+	if (runtime) {
+		try {
+			await runtime.eventStream.return(undefined);
+		} catch {
+			/* Preserve the original failure. */
+		}
+	}
 	output.stopReason = context.options?.signal?.aborted ? "aborted" : "error";
 	output.errorMessage = await finalizeErrorMessage(error, context.requestContext.rawRequestDump);
 	output.providerFailureCode = sanitizeProviderFailureCode(
@@ -1905,6 +1979,7 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 			}
 
 			processingContext = {
+				runtime,
 				model,
 				output,
 				stream,
@@ -2828,7 +2903,7 @@ function convertMessages(model: Model<"openai-codex-responses">, context: Contex
 
 			const outputItems: ResponseInput = [];
 			for (const block of msg.content) {
-				if (block.type === "thinking" && msg.stopReason !== "error") {
+				if (block.type === "thinking" && (msg.stopReason !== "error" || !!assistantMsg.interruption)) {
 					if (block.thinkingSignature) {
 						outputItems.push(JSON.parse(block.thinkingSignature) as ResponseReasoningItem);
 					}

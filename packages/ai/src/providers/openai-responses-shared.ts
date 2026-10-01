@@ -135,7 +135,7 @@ export function convertResponsesAssistantMessage<TApi extends Api>(
 		assistantMsg.model !== model.id && assistantMsg.provider === model.provider && assistantMsg.api === model.api;
 
 	for (const block of assistantMsg.content) {
-		if (block.type === "thinking" && assistantMsg.stopReason !== "error") {
+		if (block.type === "thinking" && (assistantMsg.stopReason !== "error" || !!assistantMsg.interruption)) {
 			if (!includeThinkingSignatures) {
 				continue;
 			}

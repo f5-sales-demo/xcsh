@@ -1,4 +1,6 @@
 import { afterEach, expect, it, vi } from "bun:test";
+import { Type } from "@sinclair/typebox";
+import { agentLoop } from "../../agent/src/agent-loop";
 import { streamProxy } from "../../agent/src/proxy";
 import { enrichModelThinking } from "../src/model-thinking";
 import { streamOpenAICodexResponses } from "../src/providers/openai-codex-responses";
@@ -461,4 +463,171 @@ it("cancellation during cleanup prevents reopening without waiting for cancel ho
 	expect(capture.bodies).toHaveLength(1);
 	expect(abandoned.body?.locked).toBe(false);
 	expect(events.filter(e => e.type === "error")).toHaveLength(1);
+});
+
+for (const interruptionKind of ["socket", "eof"] as const)
+	it(`continues completed five-child task after ${interruptionKind} interruption with exact native history`, async () => {
+		const assignments = [1, 2, 3, 4, 5];
+		const argumentsText = '{ "assignments" : [1,2,3,4,5] }';
+		const call = {
+			type: "function_call",
+			id: "task-item",
+			call_id: "task-call",
+			name: "task",
+			arguments: argumentsText,
+		};
+		const prefix = Array.from({ length: 6 }, (_, i) => [
+			{
+				type: "response.output_item.added",
+				output_index: i,
+				item: { type: "reasoning", id: `reason-${i}`, summary: [] },
+			},
+			{
+				type: "response.output_item.done",
+				output_index: i,
+				item: { type: "reasoning", id: `reason-${i}`, summary: [], encrypted_content: `synthetic-encrypted-${i}` },
+			},
+		]).flat();
+		const capture = setup([
+			response(
+				[
+					...prefix,
+					{ type: "response.output_item.added", output_index: 6, item: { ...call, arguments: "" } },
+					{ type: "response.output_item.done", output_index: 6, item: call },
+					{ type: "response.output_item.done", output_index: 6, item: call },
+					{
+						type: "response.output_item.added",
+						output_index: 7,
+						item: {
+							type: "function_call",
+							id: "unfinished",
+							call_id: "unfinished-call",
+							name: "task",
+							arguments: "",
+						},
+					},
+					{ type: "response.function_call_arguments.delta", output_index: 7, delta: argumentsText },
+					{ type: "response.function_call_arguments.done", output_index: 7, arguments: argumentsText },
+				],
+				interruptionKind === "eof" ? undefined : new Error(socketMessage),
+			),
+			response(success),
+		]);
+		const children: number[] = [];
+		const checkpointCalls: number[] = [];
+		const loop = agentLoop(
+			context.messages,
+			{
+				systemPrompt: "Synthetic test",
+				messages: [],
+				tools: [
+					{
+						name: "task",
+						label: "Synthetic task",
+						description: "Start synthetic children",
+						parameters: Type.Object({ assignments: Type.Array(Type.Number()) }),
+						async execute(_id, args: { assignments: number[] }) {
+							expect(checkpointCalls).toContain(7);
+							children.push(...args.assignments);
+							return { content: [{ type: "text", text: "Five synthetic children complete" }], details: {} };
+						},
+					},
+				],
+			},
+			{
+				model,
+				apiKey: token,
+				preferWebsockets: false,
+				convertToLlm: messages => messages as import("../src/types").Message[],
+				onAssistantCheckpoint: async message => {
+					checkpointCalls.push(message.content.length);
+				},
+			},
+			undefined,
+			(selected, ctx, options) =>
+				streamOpenAICodexResponses(selected as Model<"openai-codex-responses">, ctx, options ?? {}),
+		);
+		const events = [];
+		for await (const event of loop) events.push(event);
+		const messages = await loop.result();
+		expect(children).toEqual(assignments);
+		expect(events.filter(e => e.type === "tool_execution_start")).toHaveLength(1);
+		expect(events.filter(e => e.type === "agent_end")).toHaveLength(1);
+		expect(messages.filter(m => m.role === "toolResult")).toHaveLength(1);
+		expect(messages.at(-1)).toMatchObject({ stopReason: "stop" });
+		const continuation = JSON.parse(capture.bodies[1]);
+		expect(continuation.input.filter((i: { type: string }) => i.type === "reasoning")).toHaveLength(6);
+		expect(continuation.input.find((i: { type: string }) => i.type === "function_call").arguments).toBe(
+			argumentsText,
+		);
+		expect(JSON.stringify(continuation)).not.toContain("unfinished");
+		expect(continuation.input.filter((i: { type: string }) => i.type === "function_call_output")).toHaveLength(1);
+	});
+
+it("reports typed exhausted interruptions and honors remaining allowance", async () => {
+	const capture = setup([response([], new Error(socketMessage)), response([], new Error(socketMessage))]);
+	const stream = streamOpenAICodexResponses(model, context, { apiKey: token, maxRetries: 1 });
+	for await (const _event of stream) {
+		/* drain */
+	}
+	expect((await stream.result()).interruption).toEqual({
+		transport: "sse",
+		classification: "socket_closed",
+		providerRetriesConsumed: 1,
+		completedContentIndices: [],
+	});
+	expect(capture.bodies).toHaveLength(2);
+});
+
+it("reconstructs proxy interruptions with native history and remaining allowance", async () => {
+	const native = {
+		type: "openaiResponsesHistory" as const,
+		provider: model.provider,
+		dt: true,
+		items: [
+			{
+				type: "function_call",
+				id: "proxy-item",
+				call_id: "proxy-call",
+				name: "synthetic",
+				arguments: '{ "value" : 1 }',
+			},
+		],
+	};
+	const call = { type: "toolCall" as const, id: "proxy-call|proxy-item", name: "synthetic", arguments: { value: 1 } };
+	const interruption = {
+		transport: "sse" as const,
+		classification: "socket_closed" as const,
+		providerRetriesConsumed: 1,
+		completedContentIndices: [0],
+	};
+	const usage = {
+		input: 0,
+		output: 0,
+		cacheRead: 0,
+		cacheWrite: 0,
+		totalTokens: 0,
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	};
+	const capture = setup([
+		response([
+			{ type: "start" },
+			{ type: "toolcall_start", contentIndex: 0, id: call.id, toolName: call.name },
+			{ type: "toolcall_end", contentIndex: 0, toolCall: call, providerPayload: native },
+			{ type: "error", reason: "error", errorMessage: socketMessage, usage, interruption, providerPayload: native },
+		]),
+	]);
+	const proxy = streamProxy(model, context, {
+		proxyUrl: "https://proxy.example.invalid",
+		authToken: "synthetic",
+		maxRetries: 1,
+	});
+	const events = [];
+	for await (const event of proxy) events.push(event);
+	const result = await proxy.result();
+	expect(result.interruption).toEqual(interruption);
+	expect(result.providerPayload).toEqual(native);
+	expect(result.content).toEqual([call]);
+	expect(JSON.parse(capture.bodies[0]).options.maxRetries).toBe(1);
+	expect(events.filter(e => e.type === "toolcall_end")).toHaveLength(1);
 });

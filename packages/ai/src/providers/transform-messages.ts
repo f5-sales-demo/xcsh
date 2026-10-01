@@ -69,7 +69,9 @@ export function transformMessages<TApi extends Api>(
 			// Aborted/errored messages may have partially-streamed thinking signatures.
 			// A partial signature is invalid and will be rejected by the API, so we must
 			// strip signatures from thinking blocks in these messages.
-			const hasInvalidSignatures = assistantMsg.stopReason === "aborted" || assistantMsg.stopReason === "error";
+			const hasInvalidSignatures =
+				assistantMsg.stopReason === "aborted" ||
+				(assistantMsg.stopReason === "error" && !assistantMsg.interruption);
 
 			const transformedContent = assistantMsg.content.flatMap(block => {
 				if (block.type === "thinking") {
@@ -205,7 +207,10 @@ export function transformMessages<TApi extends Api>(
 			const assistantMsg = msg as AssistantMessage;
 			const toolCalls = assistantMsg.content.filter(b => b.type === "toolCall") as ToolCall[];
 
-			if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
+			if (
+				(assistantMsg.stopReason === "error" && !assistantMsg.interruption) ||
+				assistantMsg.stopReason === "aborted"
+			) {
 				// Keep the assistant message with tool calls intact. If real tool results follow, preserve them;
 				// otherwise synthesize aborted results before the next turn boundary.
 				result.push(msg);

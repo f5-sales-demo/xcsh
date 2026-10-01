@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type {
+	AssistantMessage,
 	ImageContent,
 	Message,
 	MessageAttribution,
@@ -238,7 +239,13 @@ export interface CustomMessageEntry<T = unknown> extends SessionEntryBase {
 }
 
 /** Session entry - has id/parentId for tree structure (returned by "read" methods in SessionManager) */
+export interface AssistantCheckpointEntry extends SessionEntryBase {
+	type: "assistant_checkpoint";
+	message: AssistantMessage;
+}
+
 export type SessionEntry =
+	| AssistantCheckpointEntry
 	| SessionMessageEntry
 	| ThinkingLevelChangeEntry
 	| ModelChangeEntry
@@ -670,9 +677,28 @@ export function buildSessionContext(
 	// 3. Emit messages after compaction
 	const messages: AgentMessage[] = [];
 
+	const checkpointTimestamps = new Set(
+		path.filter(e => e.type === "assistant_checkpoint").map(e => (e as AssistantCheckpointEntry).message.timestamp),
+	);
 	const appendMessage = (entry: SessionEntry) => {
-		if (entry.type === "message") {
-			messages.push(entry.message);
+		if (entry.type === "message" || entry.type === "assistant_checkpoint") {
+			const message = entry.message;
+			if (message.role === "assistant") {
+				const retained = message.interruption
+					? {
+							...message,
+							content: message.content.filter((_c, i) =>
+								message.interruption!.completedContentIndices.includes(i),
+							),
+						}
+					: message;
+				const previous =
+					checkpointTimestamps.has(message.timestamp) || message.interruption
+						? messages.findIndex(m => m.role === "assistant" && m.timestamp === message.timestamp)
+						: -1;
+				if (previous >= 0) messages[previous] = retained;
+				else messages.push(retained);
+			} else messages.push(message);
 		} else if (entry.type === "custom_message") {
 			messages.push(
 				createCustomMessage(
@@ -1859,7 +1885,9 @@ export class SessionManager {
 		// hadSessionFile: file existed before move → must rewrite to update cwd
 		// hasAssistant: assistant messages in memory but file missing → recreate from memory
 		// Neither true → fresh session, never written → preserve lazy-persist
-		const hasAssistant = this.#fileEntries.some(e => e.type === "message" && e.message.role === "assistant");
+		const hasAssistant = this.#fileEntries.some(
+			e => (e.type === "message" || e.type === "assistant_checkpoint") && e.message.role === "assistant",
+		);
 		if (this.persist && this.#sessionFile && (hadSessionFile || hasAssistant)) {
 			await this.#rewriteFile();
 		}
@@ -2355,7 +2383,9 @@ export class SessionManager {
 		// creating files for sessions that never produce output. Once ensureOnDisk() has
 		// been called, the session is already on disk and every entry must be flushed.
 		if (!this.#ensuredOnDisk) {
-			const hasAssistant = this.#fileEntries.some(e => e.type === "message" && e.message.role === "assistant");
+			const hasAssistant = this.#fileEntries.some(
+				e => (e.type === "message" || e.type === "assistant_checkpoint") && e.message.role === "assistant",
+			);
 			if (!hasAssistant) {
 				// Mark as not flushed so when assistant arrives, all entries get written.
 				this.#flushed = false;
@@ -2411,6 +2441,18 @@ export class SessionManager {
 	 * so it is easier to find them.
 	 * These need to be appended via appendCompaction() and appendBranchSummary() methods.
 	 */
+	appendAssistantCheckpoint(message: AssistantMessage): string {
+		const entry: AssistantCheckpointEntry = {
+			type: "assistant_checkpoint",
+			id: generateId(this.#byId),
+			parentId: this.#leafId,
+			timestamp: new Date().toISOString(),
+			message: structuredClone(message),
+		};
+		this.#appendEntry(entry);
+		return entry.id;
+	}
+
 	appendMessage(
 		message:
 			| Message

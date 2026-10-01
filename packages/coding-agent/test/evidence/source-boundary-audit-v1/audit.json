@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "72fca0c9c820382ced59f8437bf56100f2671760",
-  "fingerprint": "00790bebc7b0cdde047c4d7363881d645e6d9ccbe5687740026c5ecbbd4a4480",
+  "revision": "58b08f61f1ce6d6399c0e6b5224195ec1992e566",
+  "fingerprint": "581789d3df9a65622536720911ed08f6aef17be0b768c1718ecfabb1d7ed8440",
   "counts": {
     "total": 238,
     "components": 96,
@@ -4363,8 +4363,9 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "f1c43096ac1974a771750cdeb517a81558cf8bd7d803e859e635601114134a7a",
+      "sha256": "96948aadddb2b6e9310be40efed730b65bbda1b46ba1754e38fde0d88b469a3c",
       "exports": [
+        "AssistantCheckpointEntry",
         "BranchSummaryEntry",
         "CURRENT_SESSION_VERSION",
         "CompactionEntry",

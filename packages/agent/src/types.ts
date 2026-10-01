@@ -143,6 +143,7 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * Inspect assistant streaming events before they are published to the outer agent event stream.
 	 * Callers may abort synchronously to stop consuming buffered provider events.
 	 */
+	onAssistantCheckpoint?: (message: AssistantMessage) => Promise<void>;
 	onAssistantMessageEvent?: (message: AssistantMessage, event: AssistantMessageEvent) => void;
 
 	/**
@@ -299,12 +300,13 @@ export type AgentEvent =
 	| { type: "agent_end"; messages: AgentMessage[] }
 	// Turn lifecycle - a turn is one assistant response + any tool calls/results
 	| { type: "turn_start" }
-	| { type: "turn_end"; message: AgentMessage; toolResults: ToolResultMessage[] }
+	| { type: "turn_end"; message: AgentMessage; toolResults: ToolResultMessage[]; toolChoiceServed?: boolean }
 	// Message lifecycle - emitted for user, assistant, and toolResult messages
 	| { type: "message_start"; message: AgentMessage }
 	// Only emitted for assistant messages during streaming
 	| { type: "message_update"; message: AgentMessage; assistantMessageEvent: AssistantMessageEvent }
 	| { type: "message_end"; message: AgentMessage }
+	| { type: "assistant_checkpoint"; message: AssistantMessage }
 	// Tool execution lifecycle
 	| {
 			type: "tool_execution_start";

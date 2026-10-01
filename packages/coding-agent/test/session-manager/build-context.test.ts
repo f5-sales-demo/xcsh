@@ -374,3 +374,39 @@ describe("buildSessionContext", () => {
 		});
 	});
 });
+
+it("supersedes append-only assistant checkpoints before correlated tool results", () => {
+	const manager = SessionManager.inMemory();
+	const assistant = msg("a", null, "assistant", "Completed")
+		.message as import("@f5-sales-demo/pi-ai").AssistantMessage;
+	assistant.content = [{ type: "toolCall", id: "call", name: "synthetic", arguments: {} }];
+	manager.appendAssistantCheckpoint(assistant);
+	manager.appendMessage({
+		role: "toolResult",
+		toolCallId: "call",
+		toolName: "synthetic",
+		content: [{ type: "text", text: "Retained result" }],
+		isError: false,
+		timestamp: 2,
+	});
+	manager.appendAssistantCheckpoint({
+		...assistant,
+		content: [...assistant.content, { type: "text", text: "Completed suffix" }],
+	});
+	manager.appendMessage({
+		...assistant,
+		stopReason: "error",
+		interruption: {
+			transport: "sse",
+			classification: "socket_closed",
+			providerRetriesConsumed: 0,
+			completedContentIndices: [0],
+		},
+		content: [...assistant.content, { type: "toolCall", id: "unfinished", name: "synthetic", arguments: {} }],
+	});
+	expect(manager.getEntries().filter(e => e.type === "assistant_checkpoint")).toHaveLength(2);
+	const rebuilt = manager.buildSessionContext().messages;
+	expect(rebuilt.map(m => m.role)).toEqual(["assistant", "toolResult"]);
+	expect(rebuilt[0]).toMatchObject({ content: assistant.content, stopReason: "error" });
+	expect(JSON.stringify(rebuilt)).not.toContain("unfinished");
+});

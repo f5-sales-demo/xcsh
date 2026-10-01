@@ -188,10 +188,16 @@ async function bufferAssistantResponse(
 	response: Awaited<ReturnType<StreamFn>>,
 	model: AgentLoopConfig["model"],
 	signal: AbortSignal | undefined,
+	onConfirmed?: (
+		message: AssistantMessage,
+		call: Extract<AssistantMessage["content"][number], { type: "toolCall" }>,
+	) => Promise<void>,
+	requiredName?: string,
 ): Promise<BufferedAssistantResponse> {
 	const events: BufferedAssistantResponse["events"] = [];
 	let partialMessage: AssistantMessage | null = null;
 	let addedPartial = false;
+	const completed = new Set<number>();
 
 	for await (const event of response) {
 		if (signal?.aborted) {
@@ -224,11 +230,25 @@ async function bufferAssistantResponse(
 			case "server_tool_end":
 				if (partialMessage) {
 					partialMessage = event.partial;
+					if (event.type === "toolcall_end" || event.type === "thinking_end" || event.type === "text_end")
+						completed.add(event.contentIndex);
 					events.push({
 						type: "message_update",
 						assistantMessageEvent: event,
 						message: { ...partialMessage } as AssistantMessage,
 					});
+					if (
+						event.type === "toolcall_end" &&
+						onConfirmed &&
+						event.toolCall.name === requiredName &&
+						event.partial.content.filter(c => c.type === "toolCall").length === 1
+					) {
+						await onConfirmed(
+							{ ...event.partial, content: event.partial.content.filter((_c, i) => completed.has(i)) },
+							event.toolCall,
+						);
+						onConfirmed = undefined;
+					}
 				}
 				break;
 			case "done":
@@ -325,11 +345,14 @@ async function runLoop(
 			message.model === config.model.id
 		)
 			for (const call of message.content) if (call.type === "toolCall") priorCalls.set(call.id, toolKey(call));
-		if (message.role === "toolResult" && !message.isError) {
+		if (message.role === "toolResult") {
 			const key = priorCalls.get(message.toolCallId);
 			if (key) completedTools.set(key, message);
 		}
 	}
+	let recoveryAttempts = 0;
+	let recoveryToolChoiceServed = false;
+	let recoveryToolChoice: { value: AgentLoopConfig["toolChoice"] } | undefined;
 	let firstTurn = true;
 	// Check for steering messages at start (user may have typed while waiting)
 	let pendingMessages: AgentMessage[] = (await config.getSteeringMessages?.()) || [];
@@ -362,13 +385,17 @@ async function runLoop(
 				await logger.ttftAttr("ttft.sync-context", () => config.syncContextBeforeModelCall!(currentContext));
 			}
 
+			const selectedToolChoice = recoveryToolChoice
+				? recoveryToolChoice.value
+				: (config.getToolChoice?.() ?? config.toolChoice);
+
 			// Offer opt-in, plain user steering to the active provider without consuming other message kinds.
 			const live =
 				(config.model.compat as import("@f5-sales-demo/pi-ai").OpenAIResponsesCompat | undefined)
 					?.supportsWebSocketSteering &&
 				config.waitForSteeringMessages &&
 				config.getSteeringMessages &&
-				!exactToolName(config.getToolChoice?.() ?? config.toolChoice)
+				!exactToolName(selectedToolChoice)
 					? new LiveSteeringChannel({
 							wait: config.waitForSteeringMessages,
 							take: () => config.getSteeringMessages!(),
@@ -379,15 +406,89 @@ async function runLoop(
 							},
 						})
 					: undefined;
-			const message = await streamAssistantResponse(
-				currentContext,
-				newMessages,
-				live ? { ...config, liveSteering: live } : config,
+			const scheduler = createToolScheduler(
+				currentContext.tools,
 				signal,
 				stream,
-				streamFn,
+				config.getSteeringMessages,
+				config.interruptMode,
+				config.getToolContext,
+				config.transformToolCallArguments,
+				config.intentTracing,
+				completedTools,
+				toolKey,
 			);
-			newMessages.push(message);
+			const streamingDispatch = config.model.api === "openai-codex-responses";
+			const responseController = new AbortController();
+			const responseSignal = signal
+				? AbortSignal.any([signal, responseController.signal])
+				: responseController.signal;
+			const responseStartIndex = currentContext.messages.length;
+			let message: AssistantMessage;
+			let lastCheckpoint: AssistantMessage | undefined;
+			try {
+				message = await streamAssistantResponse(
+					currentContext,
+					newMessages,
+					{
+						...config,
+						...(live ? { liveSteering: live } : {}),
+						onAssistantCheckpoint: async checkpoint => {
+							await config.onAssistantCheckpoint?.(checkpoint);
+							lastCheckpoint = checkpoint;
+						},
+						getToolChoice: undefined,
+						toolChoice: selectedToolChoice,
+						...(streamingDispatch ? { maxRetries: Math.max(0, 2 - recoveryAttempts) } : {}),
+					},
+					responseSignal,
+					stream,
+					streamFn,
+					streamingDispatch ? (partial, call) => scheduler.admit(partial, [call]) : undefined,
+				);
+			} catch (error) {
+				responseController.abort();
+				const prior =
+					lastCheckpoint ?? currentContext.messages.slice(responseStartIndex).find(m => m.role === "assistant");
+				message =
+					prior?.role === "assistant"
+						? {
+								...prior,
+								stopReason: signal?.aborted ? "aborted" : "error",
+								errorMessage: error instanceof Error ? error.message : String(error),
+							}
+						: {
+								...sanitizedForcedToolMessage(config.model, signal?.aborted ? "aborted" : "error"),
+								errorMessage: String(error),
+							};
+				const ownedIndex = currentContext.messages.findIndex(
+					(m, index) => index >= responseStartIndex && m.role === "assistant" && m.timestamp === message.timestamp,
+				);
+				if (ownedIndex >= 0) currentContext.messages[ownedIndex] = message;
+				else currentContext.messages.push(message);
+				stream.push({ type: "message_end", message });
+			}
+			newMessages.push(retainedAssistant(message));
+			if (message.stopReason !== "error" && message.stopReason !== "aborted") {
+				recoveryAttempts = 0;
+				recoveryToolChoice = undefined;
+				recoveryToolChoiceServed = false;
+				const required = exactToolName(selectedToolChoice);
+				scheduler.admit(
+					message,
+					message.content.filter(
+						(c): c is Extract<AssistantMessage["content"][number], { type: "toolCall" }> =>
+							c.type === "toolCall" && (!required || c.name === required),
+					),
+				);
+			}
+			const executionResult = await scheduler.drain();
+			const dispatchedResults = executionResult.toolResults;
+			for (const result of dispatchedResults) {
+				if (currentContext.messages.includes(result)) continue;
+				currentContext.messages.push(result);
+				newMessages.push(result);
+			}
 			if (live) {
 				if (message.stopReason === "error" || message.stopReason === "aborted")
 					config.restoreSteeringMessages?.([...live.accepted, ...live.deferred]);
@@ -401,21 +502,57 @@ async function runLoop(
 					config.restoreSteeringMessages?.(live.deferred);
 				}
 			}
-			let steeringMessagesFromExecution: AgentMessage[] | undefined;
+			const steeringMessagesFromExecution = executionResult.steeringMessages;
 
+			if (streamingDispatch && message.interruption && message.stopReason === "error" && !signal?.aborted) {
+				recoveryToolChoiceServed ||= !!exactToolName(selectedToolChoice) && dispatchedResults.length > 0;
+				if (recoveryToolChoiceServed) message.interruption.toolChoiceServed = true;
+				recoveryAttempts += message.interruption.providerRetriesConsumed;
+				if (recoveryAttempts < 2) {
+					recoveryAttempts += 1;
+					try {
+						await recoveryBackoff(500 * recoveryAttempts, signal);
+					} catch {
+						message.stopReason = "aborted";
+						const retained = retainedAssistant(message);
+						const index = newMessages.findIndex(m => m.role === "assistant" && m.timestamp === message.timestamp);
+						if (index >= 0) newMessages[index] = retained;
+						const contextIndex = currentContext.messages.findIndex(
+							m => m.role === "assistant" && m.timestamp === message.timestamp,
+						);
+						if (contextIndex >= 0) currentContext.messages[contextIndex] = retained;
+						stream.push({ type: "message_end", message: retained });
+					}
+					if (!signal?.aborted) {
+						pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
+						hasMoreToolCalls = true;
+						recoveryToolChoice = {
+							value:
+								exactToolName(selectedToolChoice) && dispatchedResults.length > 0 ? "none" : selectedToolChoice,
+						};
+						continue;
+					}
+				}
+			}
 			if (message.stopReason === "error" || message.stopReason === "aborted") {
 				// Create placeholder tool results for any tool calls in the aborted message
 				// This maintains the tool_use/tool_result pairing that the API requires
 				type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
 				const toolCalls = message.content.filter((c): c is ToolCallContent => c.type === "toolCall");
-				const toolResults: ToolResultMessage[] = [];
+				const toolResults: ToolResultMessage[] = [...dispatchedResults];
 				for (const toolCall of toolCalls) {
+					if (scheduler.has(toolCall) || message.interruption) continue;
 					const result = createAbortedToolResult(toolCall, stream, message.stopReason, message.errorMessage);
 					currentContext.messages.push(result);
 					newMessages.push(result);
 					toolResults.push(result);
 				}
-				stream.push({ type: "turn_end", message, toolResults });
+				stream.push({
+					type: "turn_end",
+					message,
+					toolResults,
+					...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
+				});
 				stream.push({ type: "agent_end", messages: newMessages });
 				stream.end(newMessages);
 				return;
@@ -425,33 +562,14 @@ async function runLoop(
 			const toolCalls = message.content.filter(c => c.type === "toolCall");
 			hasMoreToolCalls = toolCalls.length > 0 || Boolean(live?.accepted.length);
 
-			const toolResults: ToolResultMessage[] = [];
-			if (toolCalls.length > 0) {
-				const executionResult = await executeToolCalls(
-					currentContext.tools,
-					message,
-					signal,
-					stream,
-					config.getSteeringMessages,
-					config.interruptMode,
-					config.getToolContext,
-					config.transformToolCallArguments,
-					config.intentTracing,
-					completedTools,
-					toolKey,
-				);
+			const toolResults = dispatchedResults;
 
-				toolResults.push(...executionResult.toolResults);
-				steeringMessagesFromExecution = executionResult.steeringMessages;
-
-				for (const result of toolResults) {
-					if (currentContext.messages.includes(result)) continue;
-					currentContext.messages.push(result);
-					newMessages.push(result);
-				}
-			}
-
-			stream.push({ type: "turn_end", message, toolResults });
+			stream.push({
+				type: "turn_end",
+				message,
+				toolResults,
+				...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
+			});
 
 			pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
 		}
@@ -483,6 +601,10 @@ async function streamAssistantResponse(
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	streamFn?: StreamFn,
+	onCompletedCall?: (
+		message: AssistantMessage,
+		call: Extract<AssistantMessage["content"][number], { type: "toolCall" }>,
+	) => void,
 ): Promise<AssistantMessage> {
 	// Apply context transform if configured (AgentMessage[] → AgentMessage[])
 	let messages = context.messages;
@@ -533,17 +655,68 @@ async function streamAssistantResponse(
 					signal,
 				}),
 			);
-			const buffered = await bufferAssistantResponse(response, config.model, signal);
+			let confirmed: AssistantMessage | undefined;
+			const buffered = await bufferAssistantResponse(
+				response,
+				config.model,
+				signal,
+				onCompletedCall
+					? async (partial, call) => {
+							confirmed = structuredClone({
+								...partial,
+								content: partial.content.filter(c => c.type !== "toolCall" || c.id === call.id),
+							});
+							await config.onAssistantCheckpoint?.(confirmed);
+							stream.push({ type: "assistant_checkpoint", message: confirmed });
+							onCompletedCall(confirmed, call);
+						}
+					: undefined,
+				requiredToolName,
+			);
+			if (confirmed && (buffered.message.stopReason === "error" || buffered.message.stopReason === "aborted")) {
+				const failure = {
+					...buffered.message,
+					content: confirmed.content,
+					providerPayload: confirmed.providerPayload,
+				};
+				if (failure.interruption)
+					failure.interruption = {
+						...failure.interruption,
+						completedContentIndices: failure.content.map((_c, i) => i),
+					};
+				context.messages.push(retainedAssistant(failure));
+				stream.push({
+					type: "message_end",
+					message: quietAssistant(failure, !!onCompletedCall, config.maxRetries ?? 2, signal),
+				});
+				return failure;
+			}
 			if (buffered.message.stopReason === "aborted") {
 				context.messages.push(buffered.message);
 				for (const event of buffered.events) stream.push(event);
 				return buffered.message;
 			}
-			if (buffered.message.stopReason === "error") break;
+			if (buffered.message.stopReason === "error") {
+				if (onCompletedCall && buffered.message.interruption) {
+					context.messages.push(retainedAssistant(buffered.message));
+					stream.push({
+						type: "message_end",
+						message: quietAssistant(buffered.message, !!onCompletedCall, config.maxRetries ?? 2, signal),
+					});
+					return buffered.message;
+				}
+				break;
+			}
 
 			const toolCalls = buffered.message.content.filter(content => content.type === "toolCall");
 			const exactInvocation = toolCalls.length === 1 && toolCalls[0]?.name === requiredToolName;
 			if (exactInvocation) {
+				if (onCompletedCall && !confirmed) {
+					const checkpoint = structuredClone(buffered.message);
+					await config.onAssistantCheckpoint?.(checkpoint);
+					stream.push({ type: "assistant_checkpoint", message: checkpoint });
+					onCompletedCall(checkpoint, toolCalls[0]);
+				}
 				context.messages.push(buffered.message);
 				for (const event of buffered.events) {
 					if (event.type === "message_update") {
@@ -554,6 +727,19 @@ async function streamAssistantResponse(
 				return buffered.message;
 			}
 
+			if (confirmed) {
+				const failure = {
+					...confirmed,
+					stopReason: "error" as const,
+					errorMessage: "Required tool invocation failed after a completed call.",
+				};
+				context.messages.push(failure);
+				stream.push({
+					type: "message_end",
+					message: quietAssistant(failure, !!onCompletedCall, config.maxRetries ?? 2, signal),
+				});
+				return failure;
+			}
 			if (attempt === 0 && buffered.message.stopReason === "length" && toolCalls.length === 0) continue;
 			break;
 		}
@@ -576,7 +762,10 @@ async function streamAssistantResponse(
 
 	let partialMessage: AssistantMessage | null = null;
 	let addedPartial = false;
+	let assistantIndex = -1;
+	const completedIndices = new Set<number>();
 	let firstDeltaMarked = false;
+	let namedCallAdmitted = false;
 
 	for await (const event of response) {
 		if (!firstDeltaMarked && event.type === "text_delta") {
@@ -607,7 +796,7 @@ async function streamAssistantResponse(
 						timestamp: Date.now(),
 					};
 			if (addedPartial) {
-				context.messages[context.messages.length - 1] = abortedMessage;
+				context.messages[assistantIndex] = abortedMessage;
 			} else {
 				context.messages.push(abortedMessage);
 				stream.push({ type: "message_start", message: { ...abortedMessage } });
@@ -619,6 +808,7 @@ async function streamAssistantResponse(
 		switch (event.type) {
 			case "start":
 				partialMessage = event.partial;
+				assistantIndex = context.messages.length;
 				context.messages.push(partialMessage);
 				addedPartial = true;
 				stream.push({ type: "message_start", message: { ...partialMessage } });
@@ -640,8 +830,28 @@ async function streamAssistantResponse(
 			case "server_tool_end":
 				if (partialMessage) {
 					partialMessage = event.partial;
-					context.messages[context.messages.length - 1] = partialMessage;
+					context.messages[assistantIndex] = partialMessage;
 					config.onAssistantMessageEvent?.(partialMessage, event);
+					if (
+						onCompletedCall &&
+						(event.type === "toolcall_end" || event.type === "thinking_end" || event.type === "text_end")
+					) {
+						completedIndices.add(event.contentIndex);
+						const checkpoint = structuredClone({
+							...partialMessage,
+							content: partialMessage.content.filter((_c, i) => completedIndices.has(i)),
+						});
+						await config.onAssistantCheckpoint?.(checkpoint);
+						stream.push({ type: "assistant_checkpoint", message: checkpoint });
+						if (
+							event.type === "toolcall_end" &&
+							!signal?.aborted &&
+							(!requiredToolName || (event.toolCall.name === requiredToolName && !namedCallAdmitted))
+						) {
+							namedCallAdmitted = true;
+							onCompletedCall(checkpoint, event.toolCall);
+						}
+					}
 					if (signal?.aborted) {
 						continue;
 					}
@@ -657,14 +867,17 @@ async function streamAssistantResponse(
 			case "error": {
 				const finalMessage = await response.result();
 				if (addedPartial) {
-					context.messages[context.messages.length - 1] = finalMessage;
+					context.messages[assistantIndex] = retainedAssistant(finalMessage);
 				} else {
-					context.messages.push(finalMessage);
+					context.messages.push(retainedAssistant(finalMessage));
 				}
 				if (!addedPartial) {
 					stream.push({ type: "message_start", message: { ...finalMessage } });
 				}
-				stream.push({ type: "message_end", message: finalMessage });
+				stream.push({
+					type: "message_end",
+					message: quietAssistant(finalMessage, !!onCompletedCall, config.maxRetries ?? 2, signal),
+				});
 				return finalMessage;
 			}
 		}
@@ -676,9 +889,8 @@ async function streamAssistantResponse(
 /**
  * Execute tool calls from an assistant message.
  */
-async function executeToolCalls(
+function createToolScheduler(
 	tools: AgentTool<any>[] | undefined,
-	assistantMessage: AssistantMessage,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	getSteeringMessages?: AgentLoopConfig["getSteeringMessages"],
@@ -688,18 +900,28 @@ async function executeToolCalls(
 	intentTracing?: AgentLoopConfig["intentTracing"],
 	completedTools = new Map<string, ToolResultMessage>(),
 	toolKey: (call: Extract<AssistantMessage["content"][number], { type: "toolCall" }>) => string = call => call.id,
-): Promise<{ toolResults: ToolResultMessage[]; steeringMessages?: AgentMessage[] }> {
+) {
 	type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
-	const toolCalls = [
-		...new Map(
-			assistantMessage.content
-				.filter((c): c is ToolCallContent => c.type === "toolCall")
-				.map(call => [toolKey(call), call]),
-		).values(),
-	];
+	const advertisedTools = tools?.map(tool => ({
+		...tool,
+		name: tool.name,
+		label: tool.label,
+		description: tool.description,
+		concurrency: tool.concurrency,
+		nonAbortable: tool.nonAbortable,
+		lenientArgValidation: tool.lenientArgValidation,
+		executionKind: tool.executionKind,
+		parameters: structuredClone(tool.parameters),
+		execute: tool.execute.bind(tool),
+		getExecutionKind: tool.getExecutionKind?.bind(tool),
+	}));
+	const toolCalls: ToolCallContent[] = [];
+	const admitted = new Set<string>();
+	const toolCallInfos: Array<{ id: string; name: string }> = [];
+	let batchId = "";
+
 	const emittedToolResults: ToolResultMessage[] = [];
-	const toolCallInfos = toolCalls.map(call => ({ id: call.id, name: call.name }));
-	const batchId = `${assistantMessage.timestamp ?? Date.now()}_${toolCalls[0]?.id ?? "batch"}`;
+
 	const shouldInterruptImmediately = interruptMode !== "wait";
 	const steeringAbortController = new AbortController();
 	const toolSignal = signal
@@ -709,9 +931,9 @@ async function executeToolCalls(
 	let steeringMessages: AgentMessage[] | undefined;
 	let steeringCheck: Promise<void> | null = null;
 
-	const records = toolCalls.map(toolCall => ({
+	const makeRecord = (toolCall: ToolCallContent) => ({
 		toolCall,
-		tool: tools?.find(t => t.name === toolCall.name),
+		tool: advertisedTools?.find(t => t.name === toolCall.name),
 		args: toolCall.arguments as Record<string, unknown>,
 		started: false,
 		result: undefined as AgentToolResult<any> | undefined,
@@ -719,7 +941,8 @@ async function executeToolCalls(
 		skipped: false,
 		toolResultMessage: undefined as ToolResultMessage | undefined,
 		resultEmitted: false,
-	}));
+	});
+	const records: ReturnType<typeof makeRecord>[] = [];
 
 	const checkSteering = async (): Promise<void> => {
 		if (!shouldInterruptImmediately || !getSteeringMessages || interruptState.triggered) {
@@ -783,7 +1006,7 @@ async function executeToolCalls(
 		record.isError = isError;
 		record.toolResultMessage = toolResultMessage;
 		record.resultEmitted = true;
-		if (!isError) completedTools.set(toolKey(toolCall), toolResultMessage);
+		completedTools.set(toolKey(toolCall), toolResultMessage);
 		emittedToolResults.push(toolResultMessage);
 
 		stream.push({ type: "message_start", message: toolResultMessage });
@@ -798,7 +1021,7 @@ async function executeToolCalls(
 			emittedToolResults.push(completed);
 			return;
 		}
-		if (interruptState.triggered) {
+		if (interruptState.triggered || signal?.aborted) {
 			record.skipped = true;
 			return;
 		}
@@ -888,30 +1111,49 @@ async function executeToolCalls(
 	let sharedTasks: Promise<void>[] = [];
 	const tasks: Promise<void>[] = [];
 
-	for (let index = 0; index < records.length; index++) {
-		const record = records[index];
-		const concurrency = record.tool?.concurrency ?? "shared";
-		const start = concurrency === "exclusive" ? Promise.all([lastExclusive, ...sharedTasks]) : lastExclusive;
-		const task = start.then(() => runTool(record, index));
-		tasks.push(task);
-		if (concurrency === "exclusive") {
-			lastExclusive = task;
-			sharedTasks = [];
-		} else {
-			sharedTasks.push(task);
+	const admit = (
+		assistant: AssistantMessage,
+		calls = assistant.content.filter((c): c is ToolCallContent => c.type === "toolCall"),
+	) => {
+		if (signal?.aborted || interruptState.triggered) return;
+		batchId ||= `${assistant.timestamp}_${calls[0]?.id ?? "batch"}`;
+		for (const original of calls) {
+			const key = toolKey(original);
+			if (admitted.has(key)) continue;
+			admitted.add(key);
+			const call = structuredClone(original);
+			if (intentTracing) {
+				const { intent } = extractIntent(call.arguments);
+				if (intent) original.intent = call.intent = intent;
+			}
+			toolCalls.push(call);
+			toolCallInfos.push({ id: call.id, name: call.name });
+			const record = makeRecord(call);
+			const index = records.length;
+			records.push(record);
+			const concurrency = record.tool?.concurrency ?? "shared";
+			const start = concurrency === "exclusive" ? Promise.all([lastExclusive, ...sharedTasks]) : lastExclusive;
+			const task = start.then(() => runTool(record, index));
+			tasks.push(task);
+			if (concurrency === "exclusive") {
+				lastExclusive = task;
+				sharedTasks = [];
+			} else sharedTasks.push(task);
 		}
-	}
+	};
+	const drain = async () => {
+		await Promise.allSettled(tasks);
 
-	await Promise.allSettled(tasks);
-
-	for (const record of records) {
-		if (!record.toolResultMessage) {
-			record.skipped = true;
-			emitToolResult(record, createSkippedToolResult(), true);
+		for (const record of records) {
+			if (!record.toolResultMessage) {
+				record.skipped = true;
+				emitToolResult(record, createSkippedToolResult(), true);
+			}
 		}
-	}
 
-	return { toolResults: emittedToolResults, steeringMessages };
+		return { toolResults: emittedToolResults, steeringMessages };
+	};
+	return { admit, drain, has: (call: ToolCallContent) => admitted.has(toolKey(call)) };
 }
 
 /**
@@ -924,7 +1166,7 @@ function createAbortedToolResult(
 	reason: "aborted" | "error",
 	errorMessage?: string,
 ): ToolResultMessage {
-	const message = reason === "aborted" ? "Tool execution was aborted" : "Tool execution failed due to an error";
+	const message = reason === "aborted" ? "Tool execution was aborted" : "Response interrupted before tool execution";
 	const result: AgentToolResult<any> = {
 		content: [{ type: "text", text: errorMessage ? `${message}: ${errorMessage}` : `${message}.` }],
 		details: {},
@@ -977,4 +1219,45 @@ function normalizeToolResult<T>(result: AgentToolResult<T>, isError: boolean): A
 		...result,
 		content: [{ type: "text", text: emptyToolSuccess.trim() }],
 	};
+}
+
+function retainedAssistant(message: AssistantMessage): AssistantMessage {
+	if (!message.interruption) return message;
+	const indices = new Set(message.interruption.completedContentIndices);
+	const content = message.content.filter((_c, i) => indices.has(i));
+	return {
+		...message,
+		content,
+		interruption: { ...message.interruption, completedContentIndices: content.map((_c, i) => i) },
+	};
+}
+
+async function recoveryBackoff(delay: number, signal?: AbortSignal): Promise<void> {
+	signal?.throwIfAborted();
+	const { promise, resolve, reject } = Promise.withResolvers<void>();
+	const timer = setTimeout(resolve, delay);
+	const abort = () => reject(signal?.reason);
+	signal?.addEventListener("abort", abort, { once: true });
+	try {
+		await promise;
+		signal?.throwIfAborted();
+	} finally {
+		clearTimeout(timer);
+		signal?.removeEventListener("abort", abort);
+	}
+}
+
+function quietAssistant(
+	message: AssistantMessage,
+	streaming: boolean,
+	allowance: number,
+	signal?: AbortSignal,
+): AssistantMessage {
+	const recoverable =
+		streaming &&
+		message.stopReason === "error" &&
+		message.interruption &&
+		!signal?.aborted &&
+		message.interruption.providerRetriesConsumed < allowance;
+	return recoverable ? { ...retainedAssistant(message), stopReason: "toolUse", errorMessage: undefined } : message;
 }
