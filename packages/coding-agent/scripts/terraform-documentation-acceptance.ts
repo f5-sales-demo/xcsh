@@ -25,6 +25,13 @@ console.log(
 	}),
 );
 const scenarios = [
+	[
+		"How do I tell Bot Defense that a login succeeded?",
+		"",
+		"http_loadbalancer--properties--bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions.md",
+	],
+	["where do I put login success rules", "", "transaction_result--success_conditions.md"],
+	["how do I use a certificate I already have for HTTPS", "", "resources--http_loadbalancer--properties--https.md"],
 	["configure HTTP load balancer", "", "docs/resources/http_loadbalancer.md"],
 	["authentication certificate API token", "", "docs/index.md"],
 	[

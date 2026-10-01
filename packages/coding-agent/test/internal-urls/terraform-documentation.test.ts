@@ -3,9 +3,18 @@ import {
 	parseTerraformPin,
 	rewriteTerraformLinks,
 	terraformPassages,
+	terraformSearchQuery,
 } from "../../src/internal-urls/terraform-documentation";
 
 describe("Terraform documentation", () => {
+	test("normalizes conversational questions without dropping domain constraints", () => {
+		expect(terraformSearchQuery("How do I tell Bot Defense that a login succeeded?")).toBe(
+			'"bot"* AND "defense"* AND "login"* AND ("succeeded"* OR "success"*)',
+		);
+		expect(terraformSearchQuery("login failed")).toContain('"failure"*');
+		expect(terraformSearchQuery("How do I configure HTTPS?")).toBe('"https"*');
+		expect(terraformSearchQuery("the and how")).toBe("");
+	});
 	test("preserves explicit schema anchors, nested property sections and fences", () => {
 		const body =
 			'# TLS\n\n<a id="schema-https--port"></a>\n\n### port\n\n```hcl\n# Code heading\nport = 443\n```\n\n#### Validation\nRange 1-65535.\n\n### port\nSecond heading.\n';

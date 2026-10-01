@@ -101,6 +101,17 @@ describe("Terraform snapshot ingestion", () => {
 			const pin = await fixture(root);
 			const documents = await verifyTerraformSnapshot(root, pin);
 			expect(documents).toHaveLength(1);
+			const parent = structuredClone(documents[0]!);
+			parent.path = "docs/guides/parent.md";
+			parent.metadata = {
+				...parent.metadata,
+				id: "parent",
+				canonical_id: "parent",
+				path: parent.path,
+				child_ids: ["fixture"],
+			};
+			documents[0]!.metadata.parent_id = "parent";
+			documents.push(parent);
 			await buildTerraformIndex(documents, pin, path.join(root, "first.sqlite"));
 			await buildTerraformIndex(documents, pin, path.join(root, "second.sqlite"));
 			expect(terraformHash(await readFile(path.join(root, "first.sqlite")))).toBe(
@@ -144,6 +155,17 @@ describe("Terraform snapshot ingestion", () => {
 			expect(
 				(await resolve("xcsh://terraform-documentation/docs/resources/fixture.md#schema-value")).content,
 			).toContain("Complete value.");
+			const result = (await resolve("xcsh://terraform-documentation/?search=fixture")).content;
+			expect(result).toContain("Documentation trail:");
+			expect(result).toContain("xcsh://terraform-documentation/docs/guides/parent.md");
+			const broadened = (await resolve("xcsh://terraform-documentation/?search=fixture%20nonexistent")).content;
+			expect(broadened).toContain("Broader word matching");
+			expect((await resolve("xcsh://terraform-documentation/?search=how%20do%20I")).content).toContain(
+				"No results.",
+			);
+			const exact = (await resolve("xcsh://terraform-documentation/docs/resources/fixture.md")).content;
+			expect(exact).toContain("Property sections:");
+			expect(exact).toContain("#schema-value");
 			for (const request of [
 				"?search=",
 				"?search=x&limit=11",
