@@ -35,6 +35,7 @@ async function prepare(): Promise<void> {
 	await run(["bun", "run", "generate-extension-capabilities"]);
 	await run(["bun", "run", "generate-api-catalog-qmd-index"]);
 	await run(["bun", "run", "generate-documentation-index"]);
+	await run(["bun", "run", "generate-terraform-documentation-index"]);
 	if (!(await Bun.file(path.join(packageRoot, "src/internal-urls/api-spec-index.generated.ts")).exists())) {
 		throw new Error("generated API specification index is missing");
 	}
@@ -53,6 +54,7 @@ async function reset(): Promise<void> {
 		["bun", "--cwd=../stats", "scripts/generate-client-bundle.ts", "--reset"],
 		["bun", "--cwd=../office-pane", "scripts/generate-client-bundle.ts", "--reset"],
 		["bun", "run", "generate-documentation-index", "--reset"],
+		["bun", "run", "generate-terraform-documentation-index", "--reset"],
 	];
 	const failures: unknown[] = [];
 	for (const command of commands) {
