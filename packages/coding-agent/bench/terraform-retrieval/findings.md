@@ -198,3 +198,20 @@ than the broad passage route but insufficiently accurate; no path is shipped.
 Both standalone semantic and simple section-BM25 experiments fail to establish
 the required precision. Further retrieval redesign and fresh independent
 qualification remain required; PR #4687 remains draft.
+
+## Independent collision-label audit
+
+A fresh source-only reviewer rechecked11 suspected sibling-path collisions and
+found answerable-label defects. Discovery mode and cookie nesting context were
+missing in several prompts, so the intended exact destination was not unique.
+The frozen suite and first-run failure remain unchanged. This suite cannot
+qualify a future release; label-defect review does not retroactively pass retrieval.
+A new valid independently reviewed suite remains required after retrieval redesign.
+
+## Deterministic provenance repair
+
+Container CI reproduced index digest drift when formatting reordered pin JSON.
+Index provenance is now recursively key-sorted; a regression first failed then
+passed when building with reversed equivalent pin keys. Two complete published
+index builds now match after formatting, sha067e04c33404d29a13318624bcc768947673a4732c504d4e43754f69baa11ade.
+Receipt payloads compacted without dropping records or changing frozen prompts.

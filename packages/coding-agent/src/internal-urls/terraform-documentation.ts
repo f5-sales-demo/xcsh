@@ -421,6 +421,20 @@ export function terraformPassages(body: string, complete = true): DocumentationP
 		.concat(starts.length ? [] : [{ anchor: "document", heading: "Document", markdown: body, ordinal: 0 }]);
 }
 
+function canonicalTerraformJson(value: unknown): string {
+	const normalize = (item: unknown): unknown => {
+		if (Array.isArray(item)) return item.map(normalize);
+		if (item !== null && typeof item === "object")
+			return Object.fromEntries(
+				Object.entries(item)
+					.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+					.map(([key, child]) => [key, normalize(child)]),
+			);
+		return item;
+	};
+	return JSON.stringify(normalize(value));
+}
+
 export async function buildTerraformIndex(
 	documents: TerraformDocument[],
 	pin: TerraformPin,
@@ -455,7 +469,7 @@ export async function buildTerraformIndex(
             CREATE TABLE terraform_provenance(pin TEXT NOT NULL);
         `);
 		const { index: _index, ...snapshotPin } = pin;
-		db.prepare("INSERT INTO terraform_provenance VALUES (?)").run(JSON.stringify(snapshotPin));
+		db.prepare("INSERT INTO terraform_provenance VALUES (?)").run(canonicalTerraformJson(snapshotPin));
 		const insertDoc = db.prepare("INSERT INTO terraform_documents VALUES (?,?,?,?,?,?,?,?,?,?)");
 		const insertPassage = db.prepare("INSERT INTO terraform_passages VALUES (?,?,?,?,?)");
 		const insertSection = db.prepare("INSERT INTO terraform_sections VALUES (?,?,?,?,?,?,?)");

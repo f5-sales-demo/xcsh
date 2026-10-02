@@ -121,7 +121,11 @@ describe("Terraform snapshot ingestion", () => {
 			documents[0]!.metadata.parent_id = "parent";
 			documents.push(parent);
 			await buildTerraformIndex(documents, pin, path.join(root, "first.sqlite"));
-			await buildTerraformIndex(documents, pin, path.join(root, "second.sqlite"));
+			await buildTerraformIndex(
+				documents,
+				Object.fromEntries(Object.entries(pin).reverse()) as TerraformPin,
+				path.join(root, "second.sqlite"),
+			);
 			expect(terraformHash(await readFile(path.join(root, "first.sqlite")))).toBe(
 				terraformHash(await readFile(path.join(root, "second.sqlite"))),
 			);
