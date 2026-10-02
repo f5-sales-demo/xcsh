@@ -692,6 +692,21 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	if (/\bminimal\s+configuration\b|\bminimal\s+(?:hcl\s+)?example\b/i.test(query))
 		return { role: "fundamentals", anchor: "minimal-configuration" };
 	if (/\broot\s+configuration\b/i.test(query)) return { role: "fundamentals", anchor: "root-configuration" };
+	if (!/\b(?:field|attribute|property|properties|parameter|schema path)\b/i.test(query)) {
+		if (
+			/\b(?:which|what)\s+resource\b.*\b(?:manage|manages|create|creates|represent|represents|provide|provides)\b|\bresource\b.*\b(?:documented|specification)\b/i.test(
+				query,
+			)
+		)
+			return { role: "fundamentals", anchor: "minimal-configuration" };
+		if (
+			/\b(?:which|what)\s+data[ -]source\b.*\b(?:read|reads|query|queries|provide|provides|inspect|inspects)\b|\bdata[ -]source\b.*\bdocumented\b/i.test(
+				query,
+			)
+		)
+			return { role: "fundamentals", anchor: "root-configuration" };
+	}
+
 	if (
 		/\btimeouts?\b/i.test(query) &&
 		/\blifecycle\b|\busage\b|\bduration string format\b|\bguidance\b/i.test(query) &&

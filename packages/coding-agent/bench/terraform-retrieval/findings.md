@@ -370,3 +370,8 @@ deduplicated.466URLtests+workspacechecks pass. Post-analysis regression top5
 Bounded50-passage reranking experiment:11/14development first,13/14top5,
 p95192.794ms. Integration test retains same-file fields and deterministic output.
 Kept bench-only;no accuracy/latency qualification or production promotion.
+
+Resource/data-source definition questions route exact fundamentals sections rather
+than incidental fields. Field/attribute/path requests preserve property retrieval.
+466URLtests+workspacechecks pass. Regression35/140selected(25%),45%top5,
+discovery202.981ms remains failed;no qualification or modified frozen labels.

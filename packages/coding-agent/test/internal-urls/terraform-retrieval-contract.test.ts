@@ -142,6 +142,20 @@ test("task destination distinguishes usage pages from schema fields", () => {
 	expect(terraformTaskDestination("Which create and delete timeout attributes are in the schema?")).toBeUndefined();
 	expect(terraformTaskDestination("Set HTTP connection idle timeout")).toBeUndefined();
 	expect(terraformTaskDestination("Set TLS certificate name")).toBeUndefined();
+	expect(terraformTaskDestination("Which resource manages WAF exclusion policies?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("Where is the resource documented for creating a rate limiter?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("Which data source reads configured servers of an existing origin pool?")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+	expect(terraformTaskDestination("Which resource field defines timeout duration?")).toBeUndefined();
+
 	expect(terraformTaskDestination("Which action removes a cryptokey?")).toEqual({
 		role: "fundamentals",
 		anchor: "minimal-configuration",
