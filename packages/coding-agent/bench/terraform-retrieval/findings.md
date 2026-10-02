@@ -855,3 +855,22 @@ p95;original8/14first and12/14topfive before refinement/lifecycle routing.
 Ambiguous-query candidate differences are retained and prevent broad parity
 claims. Prototype remains outside production;complete targeted route,filters,
 continuations,installed artifact and valid held-out qualification remain required.
+
+ 
+## Targeted complete route and prepared-index provenance
+
+The complete property experiment now queries prepared terms and only requested
+provider weights with indexed SQL. It uses targeted source metadata, timeout
+destinations, collision queries and exact section reads rather than preparing
+whole-corpus metadata at runtime. Complete-route p95 is28.201msrevised and
+29.537msoriginal over five repetitions; outcomes remain27/58and9/14correct
+selections with zero observed false leaf. These development sets remain
+defective and cannot qualify release.
+
+AND category/task facet and descendant-node constraints pass a red/green index
+test. Prepared index version1binds the exact source commit and source SQLite
+digest; mismatches fail closed. The source-bound side index is56,631,296bytes,
+SHA2567aae0c725d33ce1d012e571c74ec68f464b913a742366c188a7d8d39e1a42785.
+This is a prototype artifact outside the reviewed bundled pin. Bundled generation
+integration, cross-platform complete responses and installed qualification remain
+unfinished. Twenty-two ranking/selection/index tests and workspace checks pass.

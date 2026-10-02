@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
-import { populatePropertyIndex, searchPropertyIndex } from "./property-index";
+import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./property-index";
 import { preparePropertyScope, rankPropertyScope } from "./contrastive-ranking";
 test("indexed prepared property terms preserve provider-scoped ranking", () => {
 	const db = new Database(":memory:");
@@ -57,4 +57,59 @@ test("property index generations have deterministic contents and scope counts", 
 	]);
 	a.close();
 	b.close();
+});
+
+test("facets combine with AND and node descendants constrain indexed candidates", () => {
+	const db = new Database(":memory:");
+	db.exec(
+		"CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); CREATE TABLE terraform_documents(id,parent_id,path); CREATE TABLE terraform_facets(path,facet,value);",
+	);
+	const insert = db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+	const pathA = "documentation/resources/fixture/a/index.md",
+		pathB = "documentation/resources/fixture/b/index.md";
+	for (const [path, name] of [
+		[pathA, "a"],
+		[pathB, "b"],
+	])
+		insert.run("resources", "fixture", name + ".port", path, "schema-" + name + "--port", "Listening port");
+	db.prepare("INSERT INTO terraform_documents VALUES(?,?,?)").run("root", null, "documentation/index.md");
+	db.prepare("INSERT INTO terraform_documents VALUES(?,?,?)").run("branch-a", "root", pathA);
+	db.prepare("INSERT INTO terraform_documents VALUES(?,?,?)").run("branch-b", null, pathB);
+	const facet = db.prepare("INSERT INTO terraform_facets VALUES(?,?,?)");
+	facet.run(pathA, "category", "networking");
+	facet.run(pathA, "task", "configuration");
+	facet.run(pathB, "category", "networking");
+	facet.run(pathB, "task", "troubleshooting");
+	populatePropertyIndex(db);
+	const scope = {
+		providerType: "resources",
+		providerName: "fixture",
+		filters: [
+			{ key: "category", value: "networking" },
+			{ key: "task", value: "configuration" },
+		],
+		node: "root",
+	};
+	expect(searchPropertyIndex(db, "listening port", scope).map(row => row.path)).toEqual([pathA]);
+	expect(
+		searchPropertyIndex(db, "listening port", { ...scope, filters: [{ key: "task", value: "troubleshooting" }] }),
+	).toEqual([]);
+	db.close();
+});
+
+test("prepared index rejects mismatched source provenance and format", () => {
+	const db = new Database(":memory:");
+	db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");
+	populatePropertyIndex(db, { sourceCommit: "a".repeat(40), sourceIndexSha256: "b".repeat(64) });
+	expect(() =>
+		validatePropertyIndex(db, { sourceCommit: "a".repeat(40), sourceIndexSha256: "b".repeat(64) }),
+	).not.toThrow();
+	expect(() => validatePropertyIndex(db, { sourceCommit: "c".repeat(40), sourceIndexSha256: "b".repeat(64) })).toThrow(
+		"source mismatch",
+	);
+	db.exec("UPDATE property_index_provenance SET schema_version=99");
+	expect(() => validatePropertyIndex(db, { sourceCommit: "a".repeat(40), sourceIndexSha256: "b".repeat(64) })).toThrow(
+		"version",
+	);
+	db.close();
 });

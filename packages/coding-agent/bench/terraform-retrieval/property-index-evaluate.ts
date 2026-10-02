@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { readFile, writeFile, stat } from "node:fs/promises";
-import { populatePropertyIndex, searchPropertyIndex } from "./property-index";
+import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./property-index";
 import {
 	terraformProviderMention,
 	terraformQueryIdentity,
@@ -18,6 +18,11 @@ const sourcePath = arg("--source"),
 	output = arg("--output");
 if (!sourcePath || !indexPath || !suitePath || !output) throw new Error("Required source, index, suite, output");
 const source = new Database(sourcePath, { readonly: true });
+const sourcePin = JSON.parse((source.query("SELECT pin FROM terraform_provenance").get() as { pin: string }).pin);
+const sourceBinding = {
+	sourceCommit: sourcePin.source_commit,
+	sourceIndexSha256: terraformHash(await readFile(sourcePath)),
+};
 const start = performance.now();
 const db = new Database(indexPath, { create: true });
 if (!db.query("SELECT 1 FROM sqlite_master WHERE name='property_terms'").get()) {
@@ -34,9 +39,10 @@ if (!db.query("SELECT 1 FROM sqlite_master WHERE name='property_terms'").get()) 
 		for (const r of rows)
 			insert.run(r.provider_type, r.provider_name, r.schema_path, r.path, r.anchor, r.description);
 	})();
-	populatePropertyIndex(db);
+	populatePropertyIndex(db, sourceBinding);
 	db.exec("VACUUM");
 }
+validatePropertyIndex(db, sourceBinding);
 const buildMs = performance.now() - start;
 const names = source
 	.query("SELECT DISTINCT provider_type,provider_name FROM terraform_documents ORDER BY provider_type,provider_name")
