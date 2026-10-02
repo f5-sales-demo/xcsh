@@ -139,3 +139,8 @@ Exact answerable selection still requires the first destination and exact anchor
 Leaf context read bytes now count in total response bytes. Two focused scorer
 tests pass. These rules were set before freezing or running the independent suite.
 No prior benchmark qualification result is recalculated or upgraded.
+
+Before the independent freeze, latency measurement also repeats every selected
+context read five times and reports discovery, context, complete response and
+combined route p95 separately. Complete context bytes are included in totals.
+Workspace type/lint checks and scorer tests pass; no held-out run has occurred.
