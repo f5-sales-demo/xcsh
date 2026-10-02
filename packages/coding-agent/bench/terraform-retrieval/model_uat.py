@@ -16,13 +16,16 @@ parser.add_argument("--freeze", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--provider-version", required=True)
 parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
+parser.add_argument("--partition-index", type=int, default=0)
+parser.add_argument("--partition-count", type=int, default=1)
 args = parser.parse_args()
 freeze = json.loads(args.freeze.read_text())
 suite_bytes = args.suite.read_bytes()
 if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json"]:
     HASH_MISMATCH = "Frozen model subset hash mismatch"
     raise ValueError(HASH_MISMATCH)
-cases = json.loads(suite_bytes)
+all_cases = json.loads(suite_bytes)
+cases = all_cases[args.partition_index :: args.partition_count]
 args.output.mkdir(parents=True, exist_ok=True)
 results = []
 for case in cases:
@@ -49,10 +52,13 @@ for case in cases:
         result = subprocess.run(  # noqa: S603 - caller selects an installed binary; argv is never evaluated by a shell
             command, capture_output=True, text=True, timeout=180, check=False
         )
+        (args.output / (case["id"] + ".ndjson")).write_text(result.stdout)
+        (args.output / (case["id"] + ".stderr.txt")).write_text(result.stderr)
         events = [
             json.loads(line) for line in result.stdout.splitlines() if line.strip()
         ]
         (args.output / (case["id"] + ".ndjson")).write_text(result.stdout)
+        events = [event for event in events if isinstance(event, dict)]
         messages = [
             message
             for event in events
@@ -122,10 +128,16 @@ for case in cases:
                 re.IGNORECASE,
             )
         )
+        claim_text = re.sub(
+            r"not verified by (?:a )?live apply|not (?:live[- ]?)?apply evidence|not successfully applied",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        )
         false_live = bool(
             re.search(
                 r"(?<!not )successfully applied|confirmed.*(?:your tenant|your account)|verified.*live apply",
-                text,
+                claim_text,
                 re.IGNORECASE,
             )
         )
@@ -147,7 +159,7 @@ for case in cases:
                 result.returncode == 0
                 and bool(
                     re.search(
-                        r"not (?:supported|documented)|unsupported|no (?:such|documented)|does not|cannot",
+                        r"not (?:a )?(?:supported|documented)|unsupported|no (?:such|documented)|does not|cannot",
                         text,
                         re.IGNORECASE,
                     )
@@ -207,6 +219,8 @@ for case in cases:
                 "suite_sha256": hashlib.sha256(suite_bytes).hexdigest(),
                 "accuracy": sum(r["passed"] for r in results) / len(results),
                 "complete": len(results) == len(cases),
+                "partition_index": args.partition_index,
+                "partition_count": args.partition_count,
                 "hcl_review_required": any(r.get("hcl_fences", 0) for r in results),
                 "results": results,
             },

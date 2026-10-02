@@ -89,6 +89,12 @@ export function classifyApiCatalogPreflight(
 	prompt: string,
 	options: ApiCatalogPreflightOptions,
 ): ApiCatalogPreflightIntent | null {
+	if (
+		/\b(?:terraform|hcl)\b/i.test(prompt) ||
+		/\bxcsh[ _].*\b(?:action|resource|data[ -]source|ephemeral)\b/i.test(prompt) ||
+		prompt.includes("xcsh://terraform-documentation/")
+	)
+		return null;
 	const resources = options.resources ?? loadGeneratedMetadata().resources;
 	const previous = options.previousResource
 		? {
