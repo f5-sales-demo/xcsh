@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	boundedTerraformResponse,
+	scoreTerraformAliasContext,
 	selectTerraformCandidate,
 	type TerraformMetadata,
 	terraformProviderMention,
@@ -94,4 +95,28 @@ test("provider mention normalizes ordinary multiword names and keeps longest con
 	expect(terraformProviderMention("Use the Bot Endpoint Policy data source", names)).toBe("bot_endpoint_policy");
 	expect(terraformProviderMention("Backend servers under xcsh_origin_pool", names)).toBe("origin_pool");
 	expect(terraformProviderMention("No known provider resource mentioned", names)).toBeUndefined();
+});
+
+test("alias context preserves exact snake-case leaf identity and branch evidence", () => {
+	const query = "bot endpoint policy transaction success cookie_or";
+	const exact = scoreTerraformAliasContext(
+		query,
+		"endpoint_policy_content.transaction_result_success.cookie_v2.cookies_none.cookie_operator.cookie.cookie_or",
+		["bot", "endpoint", "policy"],
+	);
+	const parent = scoreTerraformAliasContext(query, "endpoint_policy_content.transaction_result_success", [
+		"bot",
+		"endpoint",
+		"policy",
+	]);
+	expect(exact).toBeGreaterThan(parent);
+	const failure = scoreTerraformAliasContext(
+		query,
+		"endpoint_policy_content.transaction_result_failure.cookie_v2.cookies_none.cookie_operator.cookie.cookie_or",
+		["bot", "endpoint", "policy"],
+	);
+	expect(exact).toBeGreaterThan(failure);
+	expect(
+		scoreTerraformAliasContext("stateful auto_host_rewrite", "stateful_service.routes.auto_host_rewrite", []),
+	).toBeGreaterThan(scoreTerraformAliasContext("stateful auto_host_rewrite", "service.routes.auto_host_rewrite", []));
 });

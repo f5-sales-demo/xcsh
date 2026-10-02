@@ -635,6 +635,51 @@ const TERRAFORM_QUERY_VARIANTS: Record<string, string> = {
 	certs: "certificate",
 };
 
+export function scoreTerraformAliasContext(
+	query: string,
+	schemaPath: string,
+	providerTerms: readonly string[],
+): number {
+	const words = (query.toLowerCase().match(/[a-z0-9_]+/g) ?? []).flatMap(word => word.split("_"));
+	const provider = new Set(providerTerms);
+	const ignored = new Set([
+		"xcsh",
+		"resource",
+		"data",
+		"source",
+		"refer",
+		"which",
+		"lists",
+		"for",
+		"terraform",
+		"where",
+		"do",
+		"i",
+		"the",
+		"in",
+		"is",
+		"documented",
+	]);
+	const variants: Record<string, string> = {
+		succeeded: "success",
+		successful: "success",
+		succeeds: "success",
+		failed: "failure",
+		stateful: "stateful",
+	};
+	const terms = [
+		...new Set(words.filter(term => !provider.has(term) && !ignored.has(term)).map(term => variants[term] ?? term)),
+	];
+	const pathTerms = new Set(schemaPath.split(/[._]+/));
+	let score = terms.filter(term => pathTerms.has(term)).length * 20 - schemaPath.split(".").length * 3;
+	const identifiers = (query.match(/[a-z][a-z0-9]*_[a-z0-9_]+/gi) ?? []).filter(term => !term.startsWith("xcsh_"));
+	const leaf = schemaPath.split(".").at(-1);
+	if (identifiers.some(term => term.toLowerCase() === leaf)) score += 80;
+	if (terms.includes("success") && pathTerms.has("failure") && !pathTerms.has("success")) score -= 40;
+	if (terms.includes("failure") && pathTerms.has("success") && !pathTerms.has("failure")) score -= 40;
+	return score;
+}
+
 export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
 	const exact = [
 		...new Set([...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)].map(match => match[1]!.toLowerCase())),
@@ -1127,7 +1172,7 @@ export class TerraformDocumentationRepository {
 				}
 				let aliasRows = db
 					.query(
-						`SELECT a.path,td.metadata,a.anchor,s.heading,s.context_markdown markdown,length(a.alias) specificity FROM terraform_aliases a JOIN terraform_documents td ON td.path=a.path JOIN terraform_sections s ON s.path=a.path AND s.anchor=a.anchor WHERE ${aliasClauses.join(" AND ")} ORDER BY specificity DESC,a.path COLLATE BINARY LIMIT ?`,
+						`SELECT a.path,td.metadata,a.anchor,s.heading,s.context_markdown markdown,length(a.alias) specificity,dest.schema_path destination_schema_path FROM terraform_aliases a JOIN terraform_documents td ON td.path=a.path JOIN terraform_sections s ON s.path=a.path AND s.anchor=a.anchor LEFT JOIN terraform_destinations dest ON dest.path=a.path AND dest.anchor=a.anchor WHERE ${aliasClauses.join(" AND ")} ORDER BY specificity DESC,a.path COLLATE BINARY LIMIT ?`,
 					)
 					.all(...aliasArgs, 300) as Array<{
 					path: string;
@@ -1136,21 +1181,22 @@ export class TerraformDocumentationRepository {
 					heading: string;
 					markdown: string;
 					specificity: number;
+					destination_schema_path: string | null;
 				}>;
-				const providerTerms = new Set(providerFilter.value.split("_"));
-				const terms = (terraformSearchQuery(search).match(/"([a-z0-9_]+)"/g) ?? [])
-					.map(t => t.slice(1, -1))
-					.filter(
-						t =>
-							!providerTerms.has(t) &&
-							!["xcsh", "resource", "data", "source", "refer", "which", "lists", "for"].includes(t),
-					);
+				const providerTerms = providerFilter.value.split("_");
 				aliasRows = aliasRows
-					.map(r => {
-						const m = JSON.parse(r.metadata) as TerraformMetadata;
-						const pathTerms = new Set(m.schema_path.join(" ").split(/[_ ]+/));
-						const matches = terms.filter(t => pathTerms.has(t)).length;
-						return { ...r, specificity: r.specificity + matches * 20 - m.schema_path.length * 3 };
+					.map(row => {
+						const metadata = JSON.parse(row.metadata) as TerraformMetadata;
+						return {
+							...row,
+							specificity:
+								row.specificity +
+								scoreTerraformAliasContext(
+									search,
+									row.destination_schema_path ?? metadata.schema_path.join("."),
+									providerTerms,
+								),
+						};
 					})
 					.sort((a, b) => b.specificity - a.specificity || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 				if (aliasRows.length && (!rows.length || aliasRows[0]!.specificity > 10)) {

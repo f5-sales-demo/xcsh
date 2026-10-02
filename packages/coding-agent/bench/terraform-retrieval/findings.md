@@ -272,3 +272,13 @@ The independently audited frozen suite is explicitly ineligible for qualificatio
 An eligibility sidecar binds its unchanged suite digest and lists11 invalid unique
 labels. Runner rejects qualification use, permits explicit --regression, and rejects
 sidecar hash mismatch. New independently reviewed valid benchmark still required.
+
+## Exact alias path identity
+
+Alias ranking now normalizes snake-case query fields consistently with schema
+segments, retains exact leaf identifiers and success/failure branch context, and
+uses the indexed destination path for scalar aliases instead of its parent page.
+Focused exact queries select Bot Defense success status and stateful custom-route
+host rewrite; unspecified cookie nesting yields three meaningful sibling choices.
+Full preceding alias-context regression top5 improves to30%, leaf accuracy remains
+18/140; it is explicitly regression only. No qualification claim follows.
