@@ -20,8 +20,8 @@ args = parser.parse_args()
 freeze = json.loads(args.freeze.read_text())
 suite_bytes = args.suite.read_bytes()
 if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json"]:
-    message = "Frozen model subset hash mismatch"
-    raise ValueError(message)
+    HASH_MISMATCH = "Frozen model subset hash mismatch"
+    raise ValueError(HASH_MISMATCH)
 cases = json.loads(suite_bytes)
 args.output.mkdir(parents=True, exist_ok=True)
 results = []

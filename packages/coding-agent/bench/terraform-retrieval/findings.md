@@ -31,3 +31,7 @@ A second frozen set has no prior prompt or answerable-destination overlap. It pa
 ## Complete response budget audit
 
 All 18,953 documents and their property/section context destinations were read through the repository resolver. Zero errors; maximum hint4,084bytes (<=4096), maximum context11,321bytes (<=16384). Invalid after/cursor combinations rejected; compact prerequisite hints preserve destination links.
+
+## Latest metadata preview
+
+Provider1beecf718d adds list-object prerequisites/conflicts and word-boundary summaries. Preview index389bdb4dfe12947d7f079e3d7c71f2ec5aa94dffdbd845ffb862a82997d85490; 903,282,688 SQLite bytes / 78,346,730 gzip bytes. Original-suite regression: 98.5714% answerable leaf, 99.2857% top5, scored98.9474%; Ubuntu p95144.740ms, Mac106.572ms; identical rankings/anchors, maximum discovery2,904bytes. Complete 18,953-document hint/context audit passes, max4,084/11,321bytes. Both untouched frozen first runs remain failures; no overall or installed qualification claimed.
