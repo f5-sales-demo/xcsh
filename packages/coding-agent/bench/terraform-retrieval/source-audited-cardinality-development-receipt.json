@@ -1,0 +1,37 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "provider_version": "v12.3.1",
+  "answerable_cases": 48,
+  "answerable_correct_leaf": 36,
+  "answerable_false_leaf": 0,
+  "ambiguous_cases": 24,
+  "ambiguous_leaf_selections": 0,
+  "control_cases": 8,
+  "control_leaf_selections": 0,
+  "property_cases": 46,
+  "correct_leaf": 34,
+  "false_leaf": 0,
+  "clarifications": 12,
+  "property_first": 45,
+  "property_top5": 46,
+  "preparation_ms": 0.05391600000000096,
+  "experimental_complete_route_p95_ms": 28.9276890000001,
+  "limitations": [
+    "Measured route includes candidate query, provider/task identity, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+    "Development labels have known defects and unresolved same-role ambiguities.",
+    "Experimental route uses prepared terms and scope weights via targeted indexed SQL, with exact source reads. Bundled index integration, cold materialization and installed acceptance remain unverified."
+  ],
+  "raw_sha256": "b61d6207d2b28e2cd150743e9af6ad150889190713884533e8eccc76f0ab8e9b",
+  "gzip_sha256": "6680e32590eb080dcc38890314cd144ed27a4aaa13571db6b817178710c71590",
+  "report_file": "source-audited-cardinality-development.json.gz",
+  "source_files": {
+    "indexed-task-route.ts": "3975c2a9e4334aee60dcf38cffe28e2ba816584201534fed2f41020859ccb3ad",
+    "property-selection.ts": "6ecebe3da7d9225e2a0c37bde397d10f082237adaeb80ef4de1e8d3061fa45d3",
+    "contrastive-ranking.ts": "3f281bc98196b2889ea9f95626ec76e803900c91577b7be3ccdf3b4a9ea30f98",
+    "targeted-complete-property-route.ts": "005432675415ebe97e14ccc8bab62fab51845ceefbe1d3a3ac235d44e20dd597"
+  }
+}

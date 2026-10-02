@@ -49,8 +49,18 @@ export function resolveIndexedTask(
 	} else {
 		if (!scope.providerName)
 			return { kind: "choices", destinations: [], reason: "Missing provider identity for task" };
-		clauses.push("d.provider_name=?", "d.role=?");
-		values.push(scope.providerName, task!.role);
+		const words = scope.providerName.split("_");
+		const variants = words.map((word, index) => {
+			const variant = [...words];
+			variant[index] = word.endsWith("s") ? word.slice(0, -1) : `${word}s`;
+			return variant.join("_");
+		});
+		const cardinalityMissing = scope.inferredIdentity && scope.providerType === "actions" &&
+			!/\bxcsh_[a-z][a-z0-9_]*\b/i.test(query) &&
+			!/\b(?:single|one|multiple|many|bulk|all|batch)\b/i.test(query);
+		const names = cardinalityMissing ? [scope.providerName, ...variants] : [scope.providerName];
+		clauses.push(`d.provider_name IN (${names.map(() => "?").join(",")})`, "d.role=?");
+		values.push(...names, task!.role);
 		if (task!.anchor) {
 			clauses.push("s.anchor=?");
 			values.push(task!.anchor);

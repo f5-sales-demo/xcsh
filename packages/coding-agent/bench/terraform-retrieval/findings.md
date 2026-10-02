@@ -970,3 +970,13 @@ leaves and zero control leaf selections. One ambiguous action still selects a
 leaf: singular versus bulk termination is missing. This is development only,
 not 95% qualification; frozen replacement and installed model acceptance remain
 unstarted. Exact output is source-audited-indexed-development.json.gz.
+
+A red/green action cardinality fixture prevents inferred singular/plural provider
+identity from resolving an omitted single-versus-bulk action choice. Explicit
+provider identifiers and explicit multiple/bulk terms still route directly.
+Audited development remains 36/48 selected, with zero observed answerable wrong
+leaves, zero ambiguous leaf selections and zero control leaf selections. All
+46 property expected destinations remain top-five. Thirty-five focused tests
+pass. p95 is 28.928 ms Ubuntu. Raw synthetic results and source hashes are
+source-audited-cardinality-development*. Production integration and the retained
+95% qualification gate remain unfinished.

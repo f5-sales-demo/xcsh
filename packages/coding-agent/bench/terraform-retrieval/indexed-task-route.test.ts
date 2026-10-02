@@ -126,3 +126,17 @@ test("authentication clarification offers exact compatible method destinations",
 	expect(resolveIndexedTask(db, "set up provider authentication", {})?.destinations).toHaveLength(3);
 	db.close();
 });
+
+test("inferred action plurality requires explicit cardinality or provider identifier", () => {
+	const db = fixture();
+	for (const name of ["access_active_session_terminate", "access_active_sessions_terminate"]) {
+		const path = `documentation/actions/${name}/index.md`;
+		db.prepare("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?,?)").run(name, null, path, "actions", name, "fundamentals", "Terminate access sessions");
+		db.prepare("INSERT INTO terraform_sections VALUES(?,?,?,?,?)").run(path, "minimal-configuration", 0, "Minimal configuration", "Complete documented action.");
+	}
+	const scope = { providerName: "access_active_sessions_terminate", providerType: "actions", inferredIdentity: true };
+	expect(resolveIndexedTask(db, "Which action revokes active user access sessions?", scope)?.kind).toBe("choices");
+	expect(resolveIndexedTask(db, "Which action revokes multiple active user access sessions?", scope)?.kind).toBe("leaf");
+	expect(resolveIndexedTask(db, "How do I invoke xcsh_access_active_sessions_terminate action?", scope)?.kind).toBe("leaf");
+	db.close();
+});
