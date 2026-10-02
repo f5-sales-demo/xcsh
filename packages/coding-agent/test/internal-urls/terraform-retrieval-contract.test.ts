@@ -519,3 +519,28 @@ test("singular property requests retain exact data-source field routing", () => 
 		anchor: "root-configuration",
 	});
 });
+
+test("autonomous system number wording identifies the asn field over routing prose", () => {
+	const field = {
+		schema_path: ["peers", "external", "asn"],
+		document_id: "peer",
+		anchor: "schema-asn",
+		description: "Autonomous System Number for BGP peer.",
+		aliases: [],
+		relationships: [],
+		flags: [],
+	};
+	const other = {
+		...field,
+		schema_path: ["peers", "external", "routing"],
+		anchor: "schema-routing",
+		description: "Configure BGP routing resource for external peer.",
+	};
+	expect(
+		rankTerraformDirectProperties(
+			"In a managed BGP routing resource which property configures the autonomous system number for an external BGP peer",
+			["peers", "external"],
+			[field, other],
+		)[0]?.anchor,
+	).toBe("schema-asn");
+});

@@ -692,7 +692,12 @@ export function rankTerraformDirectProperties(
 	if (/\b(?:block|object|schema path)\b/i.test(query) && !/\b(?:field|attribute|property)\b/i.test(query)) return [];
 	const terms = (value: string) => [
 		...new Set(
-			(value.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+			(
+				value
+					.toLowerCase()
+					.replace(/autonomous system number/g, "asn")
+					.match(/[a-z0-9]+/g) ?? []
+			)
 				.filter(term => !TERRAFORM_QUERY_STOPWORDS.has(term))
 				.map(
 					term =>
@@ -722,7 +727,7 @@ export function rankTerraformDirectProperties(
 				(total, term) => total + (leaf.has(term) ? 4 : description.has(term) && !parentTerms.has(term) ? 1 : 0),
 				0,
 			);
-			return { section, score };
+			return { section, score: score + (leaf.has("asn") && /autonomous system number/i.test(query) ? 8 : 0) };
 		})
 		.filter(row => row.score >= 4)
 		.sort(
