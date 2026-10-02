@@ -188,3 +188,13 @@ General first-run failure repairs preserve full exact provider mentions and
 concrete HCL resource intent, and stop role-choice fallback overwriting existing
 precise candidates.458 internal-URL tests pass. Any frozen-suite rerun after
 these repairs is regression only; untouched first-run failure stays authoritative.
+
+Identity repair regression remains insufficient:16/140 answerable (11.4286%),
+top5 25.7143%, discovery p95588.721ms. This is post-analysis regression only.
+
+Separate direct-section FTS5 experiment on39,557 destinations scored only1/6
+known development cases first/top5, with roughly54-59ms queries. It is faster
+than the broad passage route but insufficiently accurate; no path is shipped.
+Both standalone semantic and simple section-BM25 experiments fail to establish
+the required precision. Further retrieval redesign and fresh independent
+qualification remain required; PR #4687 remains draft.

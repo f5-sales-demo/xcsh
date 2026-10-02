@@ -1,0 +1,209 @@
+{
+  "experiment_only": true,
+  "suite": "six known development cases",
+  "properties": 39557,
+  "materialization_ms": 592.616599984467,
+  "results": [
+    {
+      "id": "development-001",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        [
+          "documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/tls_parameters/tls_certificates/private_key/index.md",
+          "section",
+          -16.065867966729666
+        ],
+        [
+          "documentation/data-sources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/tls_parameters/tls_certificates/private_key/index.md",
+          "section",
+          -16.02772284808858
+        ],
+        [
+          "documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/index.md",
+          "schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--https--append_server_name",
+          -16.010609188053117
+        ],
+        [
+          "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/https/tls_parameters/tls_certificates/private_key/index.md",
+          "section",
+          -15.989825862473726
+        ],
+        [
+          "documentation/data-sources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/index.md",
+          "schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--https--append_server_name",
+          -15.959803465374673
+        ]
+      ],
+      "latency_ms": 59.12964406888932
+    },
+    {
+      "id": "development-002",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        [
+          "documentation/resources/origin_pool/properties/index.md",
+          "schema-port",
+          -22.227230579333426
+        ],
+        [
+          "documentation/data-sources/origin_pool/properties/index.md",
+          "schema-port",
+          -22.180130970661835
+        ],
+        [
+          "documentation/resources/origin_pool/properties/index.md",
+          "schema-annotations",
+          -20.118970380813707
+        ],
+        [
+          "documentation/data-sources/origin_pool/properties/index.md",
+          "schema-annotations",
+          -20.054271397705975
+        ],
+        [
+          "documentation/resources/origin_pool/properties/index.md",
+          "schema-id",
+          -19.965170095161522
+        ]
+      ],
+      "latency_ms": 57.60881700553
+    },
+    {
+      "id": "development-003",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        [
+          "documentation/resources/namespace/properties/index.md",
+          "schema-annotations",
+          -12.687066632903594
+        ],
+        [
+          "documentation/data-sources/namespace/properties/index.md",
+          "schema-annotations",
+          -12.629168078082216
+        ],
+        [
+          "documentation/resources/namespace/properties/index.md",
+          "schema-id",
+          -12.294316141181547
+        ],
+        [
+          "documentation/data-sources/namespace/properties/index.md",
+          "schema-id",
+          -12.227102163308201
+        ],
+        [
+          "documentation/resources/cloud_link/properties/aws/byoc/connections/index.md",
+          "schema-aws--byoc--connections--user_assigned_name",
+          -12.016486212676032
+        ]
+      ],
+      "latency_ms": 53.72371093835682
+    },
+    {
+      "id": "development-004",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        [
+          "documentation/resources/certificate/properties/index.md",
+          "schema-annotations",
+          -14.29953820297483
+        ],
+        [
+          "documentation/data-sources/certificate/properties/index.md",
+          "schema-annotations",
+          -14.239866160625908
+        ],
+        [
+          "documentation/resources/certificate_chain/properties/index.md",
+          "schema-annotations",
+          -14.180946753135569
+        ],
+        [
+          "documentation/data-sources/certificate_chain/properties/index.md",
+          "schema-annotations",
+          -14.122764409873167
+        ],
+        [
+          "documentation/resources/certificate/properties/index.md",
+          "schema-id",
+          -13.961870412352631
+        ]
+      ],
+      "latency_ms": 53.65108291152865
+    },
+    {
+      "id": "development-005",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        [
+          "documentation/data-sources/network_secondary_dns_zone_transfer/properties/index.md",
+          "schema-source_url",
+          -24.683268901563757
+        ],
+        [
+          "documentation/data-sources/network_secondary_dns_zone_transfer/properties/index.md",
+          "schema-source_entries",
+          -24.483180642961585
+        ],
+        [
+          "documentation/data-sources/network_secondary_dns_zone_transfer/properties/index.md",
+          "schema-source_sha256",
+          -24.425464761289092
+        ],
+        [
+          "documentation/data-sources/network_secondary_dns_zone_transfer/properties/index.md",
+          "schema-id",
+          -23.083039524252868
+        ],
+        [
+          "documentation/resources/dns_zone/properties/primary/rr_set_group/metadata/index.md",
+          "schema-primary--rr_set_group--metadata--name",
+          -20.11483833157306
+        ]
+      ],
+      "latency_ms": 56.707879062741995
+    },
+    {
+      "id": "development-006",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        [
+          "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/mobile_only/mobile/index.md",
+          "section",
+          -34.50018303985922
+        ],
+        [
+          "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/web_only/web/index.md",
+          "section",
+          -34.50018303985922
+        ],
+        [
+          "documentation/data-sources/http_loadbalancer/properties/bot_defense_advanced_protection/mobile_only/mobile/index.md",
+          "section",
+          -34.45150935441329
+        ],
+        [
+          "documentation/data-sources/http_loadbalancer/properties/bot_defense_advanced_protection/web_only/web/index.md",
+          "section",
+          -34.45150935441329
+        ],
+        [
+          "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/both_web_and_mobile/mobile/index.md",
+          "section",
+          -34.30692636752187
+        ]
+      ],
+      "latency_ms": 57.52033903263509
+    }
+  ],
+  "top1": 1,
+  "top5": 1,
+  "qualified": false
+}
