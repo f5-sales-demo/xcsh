@@ -110,3 +110,23 @@ Development-only top1 0/6, top5 1/6; warm p95240.378ms; vector storage56,116,352
 embedding generation157.333seconds. This experiment excludes direct-property passages
 and is too narrow to disqualify hybrid retrieval generally. It provides no basis to
 ship semantic retrieval; passage/hybrid evaluation remains separate from frozen suites.
+
+## Separate property-passage semantic experiment
+
+39,557 direct-property passages, 768 dimensions, embeddinggemma:300m, same model
+manifest as the document experiment. Six development cases: exact destination
+top1 2/6 and top5 3/6; warm p95 228.934 ms including local query embedding and
+dense ranking. Generation 280.386 seconds; vector storage 121,519,232 bytes.
+The receipt now distinguishes document-only scoring from exact anchor scoring.
+This is a known-development experiment with no confidence/clarification route,
+not qualification and not a basis for shipping a semantic retrieval path.
+
+## Retained qualification gate and independent review
+
+The user retained the >=95% qualification gate. All three untouched synthetic
+suites remain failed; repairs and candidate UAT do not satisfy release acceptance.
+PR #4687 stays draft. A fresh Antigravity author workspace receives documentation
+and benchmark requirements only, followed by a separate verifier session. Neither
+receives retrieval code or prior results. Candidate authoring is not freezing or
+qualification. Final freeze binds the published immutable documentation snapshot;
+review must verify coverage, exact anchors, depth, ambiguity and source evidence.
