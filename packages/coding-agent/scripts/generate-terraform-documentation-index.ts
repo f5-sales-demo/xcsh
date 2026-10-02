@@ -10,6 +10,8 @@ import {
 	verifyTerraformSnapshot,
 } from "../src/internal-urls/terraform-documentation";
 
+import { fetchTerraformSnapshot } from "./terraform-snapshot-download";
+
 const root = path.join(import.meta.dir, "../../..");
 const generated = path.join(import.meta.dir, "../src/internal-urls/.documentation-generated/terraform");
 const loader = path.join(import.meta.dir, "../src/internal-urls/terraform-documentation-assets.generated.ts");
@@ -28,7 +30,7 @@ async function main(): Promise<void> {
 	const inputIndex = process.argv.indexOf("--input-dir");
 	const input = inputIndex < 0 ? generated : process.argv[inputIndex + 1]!;
 	if (inputIndex < 0 && !process.argv.includes("--use-existing")) {
-		const identityResponse = await fetch(
+		const identityResponse = await fetchTerraformSnapshot(
 			`https://api.github.com/repos/${pin.source_repository}/releases/tags/${pin.release_tag}`,
 			{ headers: { Accept: "application/vnd.github+json" } },
 		);
@@ -51,7 +53,7 @@ async function main(): Promise<void> {
 			)
 				throw new Error("Terraform GitHub asset provenance mismatch");
 		for (const name of Object.keys(pin.assets)) {
-			const response = await fetch(
+			const response = await fetchTerraformSnapshot(
 				`https://github.com/${pin.source_repository}/releases/download/${pin.release_tag}/${name}`,
 			);
 			if (!response.ok) throw new Error(`Terraform snapshot download failed: ${name}: ${response.status}`);
