@@ -1083,3 +1083,11 @@ three ambiguous selections on unaudited labels. 494 internal-URL tests pass.
 These are development measurements, never held-out qualification. Fresh
 source-only Antigravity authoring for an entirely new 200-case candidate is
 started; no candidate is inspected, frozen or run yet.
+
+The actual production resolver matches all 80 audited development destinations,
+selections, context sizes and complete discovery/context hashes across Mac arm64
+and Ubuntu x64 with networking disabled, over five repetitions. Warm p95 is
+32.604 ms Mac and 35.826 ms Ubuntu. Cold measurements are not matched: Ubuntu
+reused verified cache while Mac created a new cache. Raw synthetic reports and
+digests: production-offline-parity.json. 49 focused rank/index/selection/task
+tests pass. This is development parity, not held-out or installed acceptance.
