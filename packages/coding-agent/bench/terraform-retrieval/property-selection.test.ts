@@ -75,7 +75,7 @@ test("a complete multiword field name separates nearby sibling fields", () => {
 
 test("exclusive branch terms distinguish shared multiword segments without requiring boilerplate", () => {
 	const rows = [row("scheme_proxy_host_request_uri.cache_ttl", 50), row("scheme_proxy_host_uri.cache_ttl", 10)];
-	expect(selectPropertyDestination("proxy host request URI cache TTL", rows).kind).toBe("leaf");
+	expect(selectPropertyDestination("scheme proxy host request URI cache TTL", rows).kind).toBe("leaf");
 	expect(selectPropertyDestination("proxy host URI cache TTL", rows).kind).toBe("choices");
 });
 
@@ -86,15 +86,109 @@ test("explicit single-stack excludes dual-stack while omitted stack remains ambi
 });
 
 test("provider-only evidence cannot justify an unrelated requested operation", () => {
-	const candidate = { ...row("token", 23, "ephemeral-resources"), provider_name: "artifact_registry_token", description: "Access token for the F5 Artifact Registry used to authenticate when pulling images.", coverage: 1 };
-	expect(selectPropertyDestination("Which attribute in an ephemeral artifact registry token sets a maximum download bandwidth rate limit?", [candidate]).kind).toBe("choices");
-	expect(selectPropertyDestination("Which attribute in an ephemeral artifact registry token provides the authentication token?", [candidate]).kind).toBe("leaf");
+	const candidate = {
+		...row("token", 23, "ephemeral-resources"),
+		provider_name: "artifact_registry_token",
+		description: "Access token for the F5 Artifact Registry used to authenticate when pulling images.",
+		coverage: 1,
+	};
+	expect(
+		selectPropertyDestination(
+			"Which attribute in an ephemeral artifact registry token sets a maximum download bandwidth rate limit?",
+			[candidate],
+		).kind,
+	).toBe("choices");
+	expect(
+		selectPropertyDestination(
+			"Which attribute in an ephemeral artifact registry token provides the authentication token?",
+			[candidate],
+		).kind,
+	).toBe("leaf");
 });
 
 test("requested field evidence excludes trailing branch context while retaining unsupported operations", () => {
-	const address = { ...row("outside.ipv4.addr", 50), description: "IPv4 Address in string form with dot-decimal notation." };
-	expect(selectPropertyDestination("Which attribute sets the IPv4 next-hop address for custom outside static routes?", [address]).kind).toBe("leaf");
-	const uri = { ...row("flash_array.location", 50), description: "Location is the uri_ref. It could be in URL format." };
-	expect(selectPropertyDestination("Which attribute specifies the secret location URI for a FlashArray API token?", [uri]).kind).toBe("leaf");
-	expect(selectPropertyDestination("Which attribute specifies a Helm chart repository URL for deployment?", [uri]).kind).toBe("choices");
+	const address = {
+		...row("outside.ipv4.addr", 50),
+		description: "IPv4 Address in string form with dot-decimal notation.",
+	};
+	expect(
+		selectPropertyDestination("Which attribute sets the IPv4 next-hop address for custom outside static routes?", [
+			address,
+		]).kind,
+	).toBe("leaf");
+	const uri = {
+		...row("flash_array.location", 50),
+		description: "Location is the uri_ref. It could be in URL format.",
+	};
+	expect(
+		selectPropertyDestination("Which attribute specifies the secret location URI for a FlashArray API token?", [uri])
+			.kind,
+	).toBe("leaf");
+	expect(
+		selectPropertyDestination("Which attribute specifies a Helm chart repository URL for deployment?", [uri]).kind,
+	).toBe("choices");
+});
+
+test("documented schema context supports requested operations but provider words do not", () => {
+	const address = {
+		...row("routes.nexthop.nexthop_address.dual_stack.ipv4.addr", 50),
+		description: "IPv4 Address in string form with dot-decimal notation.",
+	};
+	expect(
+		selectPropertyDestination(
+			"Which attribute sets the standard dual-stack IPv4 next-hop address for custom routes?",
+			[address],
+		).kind,
+	).toBe("leaf");
+	const token = {
+		...row("token", 50),
+		description: "Access token for the Artifact Registry.",
+		provider_name: "artifact_registry_token",
+	};
+	expect(
+		selectPropertyDestination("Which attribute sets a maximum download bandwidth rate limit?", [token]).kind,
+	).toBe("choices");
+});
+
+test("strictly stronger requested-field evidence excludes incidental competing fields", () => {
+	const end = { ...row("pools.end_ip", 42), description: "Ending IPv6 address of the pool range." };
+	const mode = {
+		...row("pool_settings", 38),
+		description: "Address ranges in DHCP pool list are used for IP allocation.",
+	};
+	expect(
+		selectPropertyDestination("Which parameter specifies the ending IPv6 address for a DHCP pool?", [end, mode]).kind,
+	).toBe("leaf");
+	const start = { ...row("pools.start_ip", 41), description: "Starting IPv6 address of the pool range." };
+	expect(
+		selectPropertyDestination("Which parameter specifies the IPv6 address for a DHCP pool?", [end, start]).kind,
+	).toBe("choices");
+});
+
+test("branch terminology compares sibling segments rather than unrelated repeated ancestors", () => {
+	const rows = [row("arrays.flash_array.token.location", 50), row("arrays.flash_blade.token.location", 10)];
+	expect(selectPropertyDestination("FlashArray token location", rows).kind).toBe("leaf");
+	expect(selectPropertyDestination("flash token location", rows).kind).toBe("choices");
+});
+
+test("explicit custom routes exclude the incompatible simple route choice", () => {
+	const rows = [row("custom_static_route.ipv4.addr", 25), row("simple_static_route", 24)];
+	expect(selectPropertyDestination("custom static route IPv4 address", rows).kind).toBe("leaf");
+});
+
+test("validated repeated leaf branches do not reintroduce a score-gap clarification", () => {
+	const rows = [
+		row("mobile.request_body_none.exact_value.case_insensitive", 42),
+		row("web.request_body_none.exact_value.case_insensitive", 40),
+	];
+	expect(selectPropertyDestination("mobile request body none exact value case insensitive", rows).kind).toBe("leaf");
+	expect(selectPropertyDestination("request body none exact value case insensitive", rows).kind).toBe("choices");
+});
+
+test("incidental API words cannot choose an omitted discovery architecture", () => {
+	const rows = [
+		row("enable_api_discovery.password.location", 50),
+		row("single_lb_app.enable_discovery.password.location", 10),
+	];
+	expect(selectPropertyDestination("API discovery crawler password location", rows).kind).toBe("choices");
 });

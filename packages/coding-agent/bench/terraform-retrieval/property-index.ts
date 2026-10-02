@@ -1,6 +1,6 @@
 // Development index prototype. Production still uses its reviewed bundled index.
 import type { Database } from "bun:sqlite";
-import { preparePropertyScope, rankPropertyScope, propertyTerms, type PropertyCandidate } from "./contrastive-ranking";
+import { type PropertyCandidate, preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
 export interface PropertyIndexSource {
 	sourceCommit: string;
 	sourceIndexSha256: string;
@@ -9,7 +9,7 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 	const row = db
 		.query("SELECT schema_version,source_commit,source_index_sha256 FROM property_index_provenance")
 		.get() as { schema_version: number; source_commit: string; source_index_sha256: string } | null;
-	if (!row || row.schema_version !== 1) throw new Error("Unsupported property index version");
+	if (!row || row.schema_version !== 2) throw new Error("Unsupported property index version");
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
 }
@@ -20,7 +20,7 @@ export function populatePropertyIndex(db: Database, source?: PropertyIndexSource
  CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
-		1,
+		2,
 		source?.sourceCommit ?? "",
 		source?.sourceIndexSha256 ?? "",
 	);

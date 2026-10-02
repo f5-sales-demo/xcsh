@@ -980,3 +980,28 @@ leaves, zero ambiguous leaf selections and zero control leaf selections. All
 pass. p95 is 28.928 ms Ubuntu. Raw synthetic results and source hashes are
 source-audited-cardinality-development*. Production integration and the retained
 95% qualification gate remain unfinished.
+
+
+## Prepared terminology v2 and conservative selection evidence
+
+Reviewed-schema terminology canonicalizes gateway/gw, request bodies/body,
+FlashArray/flash_array, FlashBlade/flash_blade and session identifiers/ids.
+Prepared property index version 2 rejects stale v1 vocabulary. Two builds are
+byte-identical: 56,610,816 bytes, SHA256
+b2bab5d3164837a39cd345fc0d40041bd464029082c68612c24b1400f61666f1.
+
+Requested-operation evidence includes exact schema context, while provider
+identity words cannot justify an unrelated requested operation. Strictly stronger
+local requested-field evidence separates incidental competing fields. Explicit
+custom static routes exclude simple-static-route choices. Full branch terminology
+is required for repeated-leaf collisions; an experiment using exclusive tokens
+selected an audited ambiguous crawler leaf and is rejected. Its raw output is
+preserved alongside final output in property-terms-v2-receipt.json.
+
+Final audited development: 39/48 answerable selected, zero answerable wrong leaves,
+zero leaf selections on 24 ambiguous/eight control cases. Property top-five is
+46/46, first 44/46. Original remains 9/14 selected and 13/14 top-five. Complete
+experimental p95 is 28.326 ms audited; original 44.496 ms ran with source checks
+and is not final performance qualification. Forty-two focused tests and workspace
+checks pass. Production imports remain unchanged, frozen qualification remains
+unstarted, and the 95% gate is unmet.

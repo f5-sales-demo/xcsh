@@ -91,3 +91,10 @@ test("provider names cannot erase a requested field sharing their vocabulary", (
 	expect(ranked[0]?.schema_path).toBe("token");
 	expect(ranked[0]?.score).toBeGreaterThan(0);
 });
+
+test("documented compound names and schema abbreviations share branch terms", () => {
+	expect(propertyTerms("ingress egress gateway")).toEqual(propertyTerms("ingress_egress_gw"));
+	expect(propertyTerms("FlashArray")).toEqual(propertyTerms("flash_array"));
+	expect(propertyTerms("request bodies")).toEqual(propertyTerms("request_body"));
+	expect(propertyTerms("session identifiers")).toEqual(propertyTerms("session_ids"));
+});

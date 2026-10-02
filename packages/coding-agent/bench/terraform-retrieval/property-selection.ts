@@ -12,6 +12,13 @@ const contradictoryPairs = [
 ] as const;
 function contradicts(query: Set<string>, candidate: PropertyCandidate) {
 	const path = new Set(propertyTerms(candidate.schema_path));
+	if (
+		query.has("custom") &&
+		query.has("static") &&
+		query.has("route") &&
+		candidate.schema_path.split(".").includes("simple_static_route")
+	)
+		return true;
 	if (query.has("single") && !query.has("dual") && path.has("dual")) return true;
 	return contradictoryPairs.some(
 		([a, b]) =>
@@ -52,14 +59,21 @@ export function selectPropertyDestination(
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
 	if (first.coverage < 0.35 || first.score <= 0)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient query coverage" };
-	const intent = queryText.match(/\b(?:sets?|provides?|enables?|accepts?|specifies|specify|specifying|holds?|retrieves?)\b\s+(.+)/i)?.[1];
+	let requestedTerms: string[] = [];
+	const intent = queryText.match(
+		/\b(?:sets?|provides?|enables?|accepts?|specifies|specify|specifying|holds?|retrieves?)\b\s+(.+)/i,
+	)?.[1];
 	if (intent && /\b(?:attribute|field|property|parameter|option)\b/i.test(queryText)) {
 		const generic = new Set(["option", "native", "directly", "allow", "added"]);
-		const requestedTerms = propertyTerms(intent.split(/\bfor\b/i)[0]!).filter(term => !generic.has(term));
-		const local = new Set(propertyTerms(`${first.schema_path.split(".").at(-1)} ${first.description}`));
+		requestedTerms = propertyTerms(intent.split(/\bfor\b/i)[0]!).filter(term => !generic.has(term));
+		const local = new Set(propertyTerms(`${first.schema_path} ${first.description}`));
 		const matches = requestedTerms.filter(term => local.has(term)).length;
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)
-			return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient requested operation evidence" };
+			return {
+				kind: "choices",
+				destinations: ranked.slice(0, 5),
+				reason: "Insufficient requested operation evidence",
+			};
 	}
 	const parts = first.schema_path.split(".");
 	const collisions = [
@@ -85,10 +99,10 @@ export function selectPropertyDestination(
 		}
 		if (a < 0 && b < 0) continue;
 		const differing = parts.slice(0, a + 1).filter(part => !otherParts.includes(part));
-		const otherTerms = new Set(propertyTerms(other.schema_path));
 		if (
 			!differing.some(part => {
-				const terms = propertyTerms(part).filter(term => !otherTerms.has(term));
+				const full = propertyTerms(part);
+				const terms = full;
 				return terms.length > 0 && terms.every(term => query.has(term));
 			})
 		)
@@ -112,22 +126,23 @@ export function selectPropertyDestination(
 		}
 
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
+		if (requestedTerms.length) {
+			const matched = (row: PropertyCandidate) => {
+				const terms = new Set(propertyTerms(`${row.schema_path.split(".").at(-1)} ${row.description}`));
+				return new Set(requestedTerms.filter(term => terms.has(term)));
+			};
+			const firstMatches = matched(first),
+				otherMatches = matched(other);
+			if (firstMatches.size > otherMatches.size && [...otherMatches].every(term => firstMatches.has(term)))
+				return false;
+		}
 		if (
 			other.schema_path.split(".").at(-1) !== parts.at(-1) ||
 			propertyTerms(other.description).join(" ") !== propertyTerms(first.description).join(" ")
 		)
 			return true;
-		const otherParts = other.schema_path.split(".");
-		const named = (segments: string[], compared: string[]) => {
-			const comparedTerms = new Set(propertyTerms(compared.join(" ")));
-			return segments
-				.filter(segment => !compared.includes(segment))
-				.some(segment => {
-					const terms = propertyTerms(segment).filter(term => !comparedTerms.has(term));
-					return terms.length > 0 && terms.every(term => query.has(term));
-				});
-		};
-		return !named(parts, otherParts) || named(otherParts, parts);
+		// All identical leaf/description branches were checked against full-scope collisions above.
+		return false;
 	});
 	if (second && first.score < second.score * 1.3)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Close competing destinations" };

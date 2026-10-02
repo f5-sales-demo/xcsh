@@ -14,6 +14,11 @@ const stop = new Set(
 );
 const variants: Record<string, string> = {
 	addr: "address",
+	gateway: "gw",
+	gateways: "gw",
+	bodies: "body",
+	identifier: "ids",
+	identifiers: "ids",
 	timestamp: "time",
 	hostname: "dns",
 	expression: "regex",
@@ -39,6 +44,8 @@ export function propertyTerms(text: string): string[] {
 			.replace(/fully qualified domain names/g, "domains")
 			.replace(/next[ -]hop/g, "nexthop")
 			.replace(/app stack/g, "voltstack")
+			.replace(/flasharray/g, "flash array")
+			.replace(/flashblade/g, "flash blade")
 			.replace(/assisted routing/g, "ar")
 			.replace(/regular expression/g, "regex")
 			.match(/[a-z0-9]+/g) ?? [];
