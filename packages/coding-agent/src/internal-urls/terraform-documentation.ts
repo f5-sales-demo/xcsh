@@ -702,6 +702,7 @@ export function rankTerraformDirectProperties(
 							listening: "listen",
 							listener: "listen",
 							addresses: "address",
+							addr: "address",
 						})[term] ?? term,
 				),
 		),

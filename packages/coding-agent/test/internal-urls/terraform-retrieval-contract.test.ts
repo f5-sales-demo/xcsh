@@ -467,3 +467,23 @@ test("cloud resource credentials retain their provider scope instead of setup gu
 		"option-1-api-token-authentication",
 	);
 });
+
+test("direct field descriptions recognize ordinary address wording", () => {
+	const section = {
+		schema_path: ["dual_stack", "ipv6", "addr"],
+		document_id: "ipv6",
+		anchor: "schema-addr",
+		description: "IPv6 Address in form of string.",
+		aliases: [],
+		relationships: [],
+		flags: [],
+	};
+	expect(
+		rankTerraformDirectProperties(
+			"which attribute sets the IPv6 next-hop address string",
+			["dual_stack", "ipv6"],
+			[section],
+		)[0]?.anchor,
+	).toBe("schema-addr");
+	expect(rankTerraformDirectProperties("configure IPv6 block", ["dual_stack", "ipv6"], [section])).toEqual([]);
+});
