@@ -192,3 +192,35 @@ test("incidental API words cannot choose an omitted discovery architecture", () 
 	];
 	expect(selectPropertyDestination("API discovery crawler password location", rows).kind).toBe("choices");
 });
+
+test("parallel named segments accept their distinguishing qualified term", () => {
+	const mobile = row("protected_mobile_endpoints.request_body.exact_value.case_insensitive", 40);
+	const web = row("protected_web_endpoints.request_body.exact_value.case_insensitive", 39);
+	expect(selectPropertyDestination("protected mobile endpoints request body exact case insensitive", [mobile,web]).kind).toBe("leaf");
+	const v6 = row("slo.static_v6_routes.interface.name", 40);
+	const plain = row("slo.static_routes.interface.name", 39);
+	expect(selectPropertyDestination("SLO static IPv6 routes interface name", [v6,plain]).kind).toBe("leaf");
+	const cache = row("scheme_proxy_host_request_uri.cache_ttl", 40);
+	const other = row("scheme_proxy_host_uri.cache_ttl", 39);
+	expect(selectPropertyDestination("proxy host request URI cache TTL", [cache,other]).kind).toBe("leaf");
+	expect(selectPropertyDestination("proxy host URI cache TTL", [cache,other]).kind).toBe("choices");
+});
+
+test("commuted combinators retain missing nesting choice", () => {
+	const a=row("cookies_none.cookie_operator.cookie.cookie_or.match.case_sensitive",40);
+	const b=row("cookies_or.cookie_operator.cookie.cookie_none.match.case_sensitive",39);
+	expect(selectPropertyDestination("cookies none using OR combination case sensitive",[a,b]).kind).toBe("choices");
+});
+
+test("named scalar field excludes its enclosing ancestor blocks", () => {
+	const block={...row("dual_stack",45),anchor:"section",description:"IPv4 and IPv6 address together."};
+	const addr={...row("dual_stack.ipv4.addr",35),description:"IPv4 address."};
+	expect(selectPropertyDestination("Which attribute sets the dual-stack IPv4 address?",[block,addr]).destinations[0]?.schema_path).toBe("dual_stack.ipv4.addr");
+	expect(selectPropertyDestination("Which block selects dual stack?",[block,addr]).destinations[0]?.schema_path).toBe("dual_stack");
+});
+
+test("reference-name intent excludes trailing usage context", () => {
+	const named={...row("receivers.name",40),description:"Name holds the referred object name."};
+	const root={...row("name",39),description:"Unique name of this configuration object."};
+	expect(selectPropertyDestination("Which property specifies the receiver name referenced in alert delivery rules?",[named,root]).kind).toBe("leaf");
+});

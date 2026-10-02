@@ -1053,3 +1053,21 @@ and are development measurements only, not cross-platform qualification. Raw
 reports and source digests are in production-adaptive-receipt.json. The retained
 95% gate, fresh independent frozen 200 cases, 40 installed model cases and release
 acceptance remain incomplete; PR stays draft without auto-merge.
+
+
+## Qualified branch and scalar evidence in production selection
+
+Parallel equally deep schema segments can share boilerplate while a unique
+qualified term distinguishes them. Path vocabulary permutations with identical
+leaf descriptions now retain missing nesting order; the rejected broader rule
+selected an ambiguous cookie combinator and is preserved as rejected evidence.
+Named scalar descendants exclude enclosing blocks. Reference-name requests
+exclude trailing usage context and compare field evidence with schema context.
+
+Actual production audited development reaches 44/48 leaves (91.67%), with zero
+wrong answerable leaves and zero ambiguous/control leaf selections; 48/48 expected
+destinations remain top-five. Original remains 9/14 selected, zero wrong leaves,
+three ambiguous selections on labels not yet audited and 13/14 top-five.
+494 internal URL tests pass. Source and raw-output hashes are retained in
+production-branch-evidence-receipt.json. Development is not qualification;
+fresh held-out/installed gates and four audited answerable misses remain open.

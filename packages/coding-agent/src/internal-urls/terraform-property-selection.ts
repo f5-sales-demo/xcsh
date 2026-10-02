@@ -49,6 +49,26 @@ export function selectPropertyDestination(
 	}
 	const ranked = [...unique.values()]
 		.filter(row => !contradicts(query, row))
+		.filter(
+			row =>
+				!(
+					row.anchor === "section" &&
+					/\b(?:field|attribute|property|parameter)\b/i.test(queryText) &&
+					!/\bblock\b/i.test(queryText) &&
+					[...unique.values()].some(other => {
+						const terms = propertyTerms(other.schema_path.split(".").at(-1) ?? "");
+						return (
+							other.provider_type === row.provider_type &&
+							other.provider_name === row.provider_name &&
+							other.anchor.startsWith("schema-") &&
+							other.schema_path.startsWith(`${row.schema_path}.`) &&
+							terms.length > 0 &&
+							terms.every(term => query.has(term)) &&
+							!contradicts(query, other)
+						);
+					})
+				),
+		)
 		.sort(
 			(a, b) =>
 				b.score - a.score ||
@@ -65,7 +85,7 @@ export function selectPropertyDestination(
 	)?.[1];
 	if (intent && /\b(?:attribute|field|property|parameter|option)\b/i.test(queryText)) {
 		const generic = new Set(["option", "native", "directly", "allow", "added"]);
-		requestedTerms = propertyTerms(intent.split(/\bfor\b/i)[0]!).filter(term => !generic.has(term));
+		requestedTerms = propertyTerms(intent.split(/\bfor\b|\breferenced in\b/i)[0]!).filter(term => !generic.has(term));
 		const local = new Set(propertyTerms(`${first.schema_path} ${first.description}`));
 		const matches = requestedTerms.filter(term => local.has(term)).length;
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)
@@ -91,6 +111,10 @@ export function selectPropertyDestination(
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name)
 			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing provider identity or role" };
 		const otherParts = other.schema_path.split(".");
+		const firstVocabulary = propertyTerms(first.schema_path).sort().join(" ");
+		const otherVocabulary = propertyTerms(other.schema_path).sort().join(" ");
+		if (first.schema_path !== other.schema_path && firstVocabulary === otherVocabulary)
+			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing schema nesting order" };
 		let a = parts.length - 1,
 			b = otherParts.length - 1;
 		while (a >= 0 && b >= 0 && parts[a] === otherParts[b]) {
@@ -102,7 +126,13 @@ export function selectPropertyDestination(
 		if (
 			!differing.some(part => {
 				const full = propertyTerms(part);
-				const terms = full;
+				const index = parts.indexOf(part);
+				const peer = parts.length === otherParts.length ? propertyTerms(otherParts[index] ?? "") : [];
+				const common = full.filter(term => peer.includes(term));
+				const difference = full.filter(term => !peer.includes(term));
+				// Parallel equally deep segments can share descriptive boilerplate.
+				const otherVocabulary = new Set(propertyTerms(other.schema_path));
+				const terms = common.length >= 1 && difference.some(term => !otherVocabulary.has(term)) ? difference : full;
 				return terms.length > 0 && terms.every(term => query.has(term));
 			})
 		)
@@ -128,7 +158,7 @@ export function selectPropertyDestination(
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
 		if (requestedTerms.length) {
 			const matched = (row: PropertyCandidate) => {
-				const terms = new Set(propertyTerms(`${row.schema_path.split(".").at(-1)} ${row.description}`));
+				const terms = new Set(propertyTerms(`${row.schema_path} ${row.description}`));
 				return new Set(requestedTerms.filter(term => terms.has(term)));
 			};
 			const firstMatches = matched(first),
