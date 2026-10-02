@@ -868,6 +868,7 @@ export function boundedTerraformResponse(prefix: string, entries: string[], budg
 export function selectTerraformCandidate(
 	candidates: Array<{ path: string; anchor: string; metadata: TerraformMetadata; ranking: number }>,
 	broadened: boolean,
+	query?: string,
 ): "leaf" | "choices" {
 	const destinations = new Map<string, (typeof candidates)[number]>();
 	for (const candidate of candidates) {
@@ -893,6 +894,42 @@ export function selectTerraformCandidate(
 			))
 	)
 		return "choices";
+	if (query) {
+		const normalize = (value: string) =>
+			value
+				.toLowerCase()
+				.replace(/[^a-z0-9]+/g, " ")
+				.trim();
+		const question = ` ${normalize(query)} `;
+		const firstPath = first.anchor.startsWith("schema-")
+			? first.anchor.slice(7).split("--")
+			: first.metadata.schema_path;
+		for (const other of candidates.slice(1)) {
+			if (
+				first.metadata.provider_name !== other.metadata.provider_name ||
+				first.metadata.provider_type !== other.metadata.provider_type
+			)
+				continue;
+			const otherPath = other.anchor.startsWith("schema-")
+				? other.anchor.slice(7).split("--")
+				: other.metadata.schema_path;
+			if (firstPath.at(-1) !== otherPath.at(-1) || !firstPath.length || !otherPath.length) continue;
+			const sharedSuffix: string[] = [];
+			let a = firstPath.length - 1,
+				b = otherPath.length - 1;
+			while (a >= 0 && b >= 0 && firstPath[a] === otherPath[b]) {
+				sharedSuffix.unshift(firstPath[a]!);
+				a--;
+				b--;
+			}
+			if (a < 0 && b < 0) continue;
+			// Require a phrase identifying the branch, not merely its common leaf.
+			const firstBranch = firstPath.slice(0, a + 1).filter(segment => !otherPath.includes(segment));
+
+			const named = (segments: string[]) => segments.some(segment => question.includes(` ${normalize(segment)} `));
+			if (!named(firstBranch)) return "choices";
+		}
+	}
 	const second = candidates[1];
 	// A missing provider role or competing TLS/choice branch needs real clarification.
 	if (
@@ -1547,6 +1584,7 @@ export class TerraformDocumentationRepository {
 					ranking: r.raw_score,
 				})),
 				broadened,
+				search,
 			);
 			const prefix = `${provenance}\n\n# Terraform search: ${search}\n${selection === "leaf" ? "Selected leaf; read its complete section before drafting." : rows.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\n${broadened ? "Broader word matching was needed; verify candidates.\n" : ""}Scores are ranking values, not probabilities.`;
 			content = boundedTerraformResponse(

@@ -375,3 +375,11 @@ Resource/data-source definition questions route exact fundamentals sections rath
 than incidental fields. Field/attribute/path requests preserve property retrieval.
 466URLtests+workspacechecks pass. Regression35/140selected(25%),45%top5,
 discovery202.981ms remains failed;no qualification or modified frozen labels.
+
+## Repeated schema branch selection guard
+
+Candidates sharing the same leaf across different nesting branches require query
+context identifying the top branch even when scores differ. Missing discovery
+mode or cookie nesting yields choices; naming a lower-ranked alternative cannot
+justify selecting the wrong top branch. Same-destination aliases remain merged.
+467URLtests+workspacechecks pass;no qualification or benchmark expectation changes.

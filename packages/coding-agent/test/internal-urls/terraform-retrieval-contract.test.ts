@@ -221,3 +221,28 @@ test("operation timeouts are distinct from transport timeouts and general usage"
 	expect(terraformTimeoutOperations("show lifecycle timeout usage guidance")).toEqual([]);
 	expect(terraformTimeoutOperations("configure backend request timeout")).toEqual([]);
 });
+
+test("repeated schema branches require deciding context even with unequal scores", () => {
+	const branch = (path: string, ranking: number) => ({
+		path: `documentation/resources/fixture/${path}/index.md`,
+		anchor: "section",
+		metadata: { ...metadata(), schema_path: path.split(".") },
+		ranking,
+	});
+	const choices = [
+		branch("single_lb_app.enable_discovery.password", 100),
+		branch("enable_api_discovery.password", 20),
+	];
+	expect(selectTerraformCandidate(choices, false, "configure discovery password")).toBe("choices");
+	expect(selectTerraformCandidate(choices, false, "single_lb_app enable_discovery password")).toBe("leaf");
+	expect(selectTerraformCandidate(choices, false, "enable_api_discovery password")).toBe("choices");
+	const cookies = [
+		branch("cookies_none.cookie_operator.cookie_or", 100),
+		branch("cookies_and.cookie_operator.cookie_or", 20),
+	];
+	expect(selectTerraformCandidate(cookies, false, "cookie operator cookie_or")).toBe("choices");
+	expect(selectTerraformCandidate(cookies, false, "cookies_none cookie operator cookie_or")).toBe("leaf");
+	expect(selectTerraformCandidate([branch("tls.name", 100), branch("routing.port", 20)], false, "tls name")).toBe(
+		"leaf",
+	);
+});
