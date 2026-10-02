@@ -420,3 +420,13 @@ an explicitly estimated route with separate lexical time. Matrix single-thread
 ranking reduces ranking p95 to9.840ms,but embedding181.677ms still exceeds target.
 Measured semantic/fusion p95182.719ms;estimated combined route599.558ms.
 12/14development first,14/14top5;no production route or qualification claim.
+
+## Unique passage ranking optimization
+
+Complete indexed corpus has no repeated path/anchor passage pairs. Removed
+redundant ROW_NUMBER partition over that identity while preserving indexed BM25
+order and post-ranking content loading. Paired24development complete responses
+identical,p95148.863ms to117.772ms. Full post-analysis discovery p95149.606ms,
+complete response143.319ms. Regression remains29/140leaf,45.7143%top5;no accuracy
+qualification.468URLtests+workspacechecks pass. Phrase equality lookup experiment
+did not improve full regression and was discarded before commit.
