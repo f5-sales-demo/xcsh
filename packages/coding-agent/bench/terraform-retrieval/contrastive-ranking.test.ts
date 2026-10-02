@@ -98,3 +98,12 @@ test("documented compound names and schema abbreviations share branch terms", ()
 	expect(propertyTerms("request bodies")).toEqual(propertyTerms("request_body"));
 	expect(propertyTerms("session identifiers")).toEqual(propertyTerms("session_ids"));
 });
+
+test("where-to-specify field requests prefer scalar destinations over enclosing blocks", () => {
+	const scope = preparePropertyScope([
+		row("dual_stack", "Dual-stack address represents IPv4 and IPv6 together.", "section"),
+		row("dual_stack.ipv4.addr", "IPv4 Address in string form with dot-decimal notation."),
+	]);
+	expect(rankPropertyScope("Where do I specify the IPv4 address for dual-stack routing?", scope)[0]?.schema_path).toBe("dual_stack.ipv4.addr");
+	expect(rankPropertyScope("Which configuration block selects dual stack?", scope)[0]?.schema_path).toBe("dual_stack");
+});

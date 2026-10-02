@@ -84,7 +84,8 @@ export function rankPropertyScope(
 ) {
 	const providerTerms = new Set(propertyTerms(scope.rows[0]?.provider_name ?? ""));
 	const ask = queryText.split(/\b(?:which|what)\s+(?:\w+\s+)?(?:field|attribute|property|parameter)\b/i).at(-1)!;
-	const asksField = /\b(field|attribute|property|parameter)\b/i.test(queryText);
+	const asksField = /\b(field|attribute|property|parameter)\b/i.test(queryText) ||
+		(!/\bblock\b/i.test(queryText) && /\bwhere\b.*\b(?:specify|set)\b/i.test(queryText));
 	const requested = asksField ? new Set(propertyTerms(ask)) : new Set<string>();
 	const query = propertyTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
 	const target = propertyTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));

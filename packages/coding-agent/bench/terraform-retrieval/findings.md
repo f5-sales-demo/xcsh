@@ -1005,3 +1005,12 @@ experimental p95 is 28.326 ms audited; original 44.496 ms ran with source checks
 and is not final performance qualification. Forty-two focused tests and workspace
 checks pass. Production imports remain unchanged, frozen qualification remains
 unstarted, and the 95% gate is unmet.
+
+Where-to-specify/set questions without an explicit block request now
+receive the existing scalar-field intent treatment. A red/green fixture checks
+scalar IPv4 destination versus enclosing dual-stack block and preserves explicit
+block intent. Audited development improves to 40/48 selected, zero answerable
+wrong leaves and zero ambiguous/control leaf selections. Property first/top-five
+is 45/46 and 46/46. Original remains 9/14 selected. Forty-three focused tests
+pass. Exact development raw reports and source hashes are retained in
+where-field-development-receipt.json. No production promotion or qualification.
