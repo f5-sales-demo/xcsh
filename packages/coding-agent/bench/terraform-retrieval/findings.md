@@ -598,3 +598,13 @@ corpus regression remains40/140selected,50.7143%top5,discovery155.102ms,complete
 146.691ms;pre-enrichment source lacks new aliases. This is not qualification.
 Provider153108c50c lint/security pass,but requiredCI37009759185remains pending
 without jobs and no deployment approvals;no retry or restart inferred from delay.
+
+
+## Whole-segment context experiment rejected
+
+Whole-segment bonuses improved enriched-preview development from10/14to12/14
+selected,but full preview selected41/140and published top5lost valid block
+destinations. Bonuses and Kubernetes rescue mapping were discarded before commit.
+Full preview is explicitly unpublished with baseline provenance;no pin update or
+qualification claim. ProviderCI37009759185has begun jobs after pending wait;
+constitution,mock,shell,and example checks pass,build/docs checks remain active.
