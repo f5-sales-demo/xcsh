@@ -565,7 +565,7 @@ jobs:
 
   prepare-documentation-index:
     name: Prepare canonical documentation index
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)
     needs: [check, test, install_methods]
     runs-on: xcsh-compute
     timeout-minutes: 15
@@ -609,7 +609,7 @@ jobs:
   build-release:
     environment: release
     name: Build Linux and Windows release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)
     needs: [check, native, test, install_methods, prepare-documentation-index]
     runs-on: xcsh-compute
     steps:
@@ -720,7 +720,7 @@ jobs:
   build-sign-macos:
     environment: release
     name: Build and sign macOS (${{ matrix.arch }})
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)
     needs: [check, native, test, install_methods, prepare-documentation-index]
     strategy:
       fail-fast: false

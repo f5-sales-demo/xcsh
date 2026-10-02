@@ -42,3 +42,15 @@ describe("Corporate Vertex release build credentials", () => {
 		}
 	});
 });
+
+it("full native qualification builds licensed candidate binaries without publishing", async () => {
+	const workflow = await Bun.file(workflowPath).text();
+	for (const name of ["prepare-documentation-index", "build-release", "build-sign-macos"]) {
+		const job = workflow.split(`  ${name}:`)[1]!.split(/\n {2}[a-z][a-z0-9-]*:/)[0]!;
+		expect(job).toContain("github.event_name == 'workflow_dispatch' && inputs.full_native_matrix");
+	}
+	for (const name of ["create-release", "publish-npm"]) {
+		const job = workflow.split(`  ${name}:`)[1]!.split(/\n {2}[a-z][a-z0-9-]*:/)[0]!;
+		expect(job).not.toContain("inputs.full_native_matrix");
+	}
+});

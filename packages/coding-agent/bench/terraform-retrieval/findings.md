@@ -1111,3 +1111,10 @@ used. Terraform regeneration completed byte-identically to reviewed index before
 the build failed. Task index/loader restored from verified bytes; build-generated
 API files were preserved outside worktree then restored to HEAD. CI has the
 licensed inputs configured and is the next available compiled artifact route.
+
+Existing full_native_matrix workflow dispatch now also prepares pinned canonical
+indexes and runs licensed Linux/Windows and signed Mac candidate builds. All
+publication jobs retain tag-only gates. This supplies the compiled candidate
+route when local licensed Vertex inputs are absent. Red/green workflow tests
+verify build qualification activation and publication exclusion; four focused
+workflow tests, eleven CI capacity/outcome tests and actionlint pass.
