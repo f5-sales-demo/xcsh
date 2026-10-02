@@ -8,6 +8,7 @@ import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
+import { populatePropertyIndex } from "./terraform-property-index";
 import type { InternalResource, InternalUrl } from "./types";
 
 export const TERRAFORM_ASSETS = ["terraform-docs.tar.gz", "manifest.json", "publication.json", "SHA256SUMS"] as const;
@@ -621,6 +622,8 @@ export async function buildTerraformIndex(
 				}
 			}
 		})();
+		// Bundled tables share the outer index digest; only a separate side index can bind a source digest.
+		populatePropertyIndex(db, { sourceCommit: pin.source_commit, sourceIndexSha256: "" });
 		db.exec("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; VACUUM");
 	} finally {
 		await store.close();

@@ -1014,3 +1014,18 @@ wrong leaves and zero ambiguous/control leaf selections. Property first/top-five
 is 45/46 and 46/46. Original remains 9/14 selected. Forty-three focused tests
 pass. Exact development raw reports and source hashes are retained in
 where-field-development-receipt.json. No production promotion or qualification.
+
+
+## Bundled prepared-property tables integration
+
+The production index builder now generates prepared property tables with exact
+canonical destinations; ranking/index modules are moved to src and bench imports
+re-export them. Search routing is still unchanged and qualification is incomplete.
+A red/green snapshot test requires table version 2, one row per canonical
+destination and deterministic generated indexes. Runtime SQLite integrity is ok;
+all 39,565 destinations are prepared. The reviewed v12.3.1 index is rebuilt from
+verified immutable snapshot assets: 781,434,880 bytes, gzip 70,980,995 bytes.
+Exact digests and source hashes: bundled-property-index-integration.json.
+493 internal-URL tests and focused snapshot/index/delivery tests pass. Bundled
+prebuilt verification passes. The outer immutable index digest binds the integrated
+tables; the separate source-index digest is used only for side-index experiments.

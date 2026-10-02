@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -155,6 +156,14 @@ describe("Terraform snapshot ingestion", () => {
 			expect(terraformHash(await readFile(path.join(root, "first.sqlite")))).toBe(
 				terraformHash(await readFile(path.join(root, "second.sqlite"))),
 			);
+			const prepared = new Database(path.join(root, "first.sqlite"), { readonly: true });
+			expect(prepared.query("SELECT schema_version FROM property_index_provenance").get()).toEqual({
+				schema_version: 2,
+			});
+			expect(prepared.query("SELECT COUNT(*) count FROM property_terms").get()).toEqual(
+				prepared.query("SELECT COUNT(*) count FROM terraform_destinations").get(),
+			);
+			prepared.close();
 			const bytes = await readFile(path.join(root, "first.sqlite"));
 			const compressed = gzipSync(bytes);
 			await writeFile(path.join(root, "index.gz"), compressed);
