@@ -366,3 +366,7 @@ to a single page result. A fixture reproduces hidden retry count/interval fields
 both exact anchors are now discoverable and same-destination aliases remain
 deduplicated.466URLtests+workspacechecks pass. Post-analysis regression top5
 42.8571%,selected32/140,p95202.774ms;qualification still failed,labels unchanged.
+
+Bounded50-passage reranking experiment:11/14development first,13/14top5,
+p95192.794ms. Integration test retains same-file fields and deterministic output.
+Kept bench-only;no accuracy/latency qualification or production promotion.
