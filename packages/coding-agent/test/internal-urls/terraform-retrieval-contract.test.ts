@@ -437,3 +437,22 @@ test("indexed provider filters remove redundant identity words from passage quer
 	expect(terraformScopedSearchQuery("xcsh_origin_pool", "origin_pool")).toBe("");
 	expect(terraformScopedSearchQuery("HTTP load balancer TLS", undefined)).toContain('"http_loadbalancer"*');
 });
+
+test("provider ownership phrases outrank incidental nested provider names", () => {
+	const names = ["cdn_loadbalancer", "secret_management_access", "workload", "http_loadbalancer"];
+	expect(
+		terraformProviderMention(
+			"When creating a CDN load balancer resource, set the secret management access decryption provider",
+			names,
+		),
+	).toBe("cdn_loadbalancer");
+	expect(
+		terraformProviderMention(
+			"Which block inside a distributed workload resource defines HTTP load balancer routes?",
+			names,
+		),
+	).toBe("workload");
+	expect(
+		terraformProviderMention("Compare a workload resource versus an HTTP load balancer resource", names),
+	).toBeUndefined();
+});

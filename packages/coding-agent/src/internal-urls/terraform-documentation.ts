@@ -950,12 +950,22 @@ export function terraformProviderMention(search: string, names: readonly string[
 		.filter(name => query.includes(` ${normalize(name)} `))
 		.sort((a, b) => normalize(b).length - normalize(a).length || (a < b ? -1 : a > b ? 1 : 0));
 	if (found.length > 1) {
+		if (/\b(?:compare|versus|vs|between)\b/.test(query)) return undefined;
+		const declaredOwners = found.filter(name => {
+			const phrase = normalize(name);
+			return (
+				query.includes(` ${phrase} resource `) ||
+				query.includes(` ${phrase} managed resource `) ||
+				query.includes(` ${phrase} data source `) ||
+				query.includes(` ${phrase} action `)
+			);
+		});
+		if (declaredOwners.length === 1) return declaredOwners[0];
 		const owners = found.filter(name => {
 			const phrase = normalize(name);
 			return new RegExp(`\\b(?:in|under) (?:a |an |the |our |my )?(?:managed |stateful )?${phrase}\\b`).test(query);
 		});
 		if (owners.length === 1) return owners[0];
-		if (/\b(?:compare|versus|vs|between)\b/.test(query)) return undefined;
 	}
 	return found[0] && (!found[1] || normalize(found[0]).length > normalize(found[1]).length) ? found[0] : undefined;
 }
