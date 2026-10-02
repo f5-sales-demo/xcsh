@@ -44,8 +44,8 @@ for parent in index["pages"]:
                 "anchor": section["anchor"],
             }
         )
-fingerprint = hashlib.sha256(corpus.read_bytes()).hexdigest()
-vector_path = root / ("published-passage-vectors-" + fingerprint + ".npy")
+CORPUS_FINGERPRINT = hashlib.sha256(corpus.read_bytes()).hexdigest()
+vector_path = root / ("published-passage-vectors-" + CORPUS_FINGERPRINT + ".npy")
 if vector_path.exists():
     vectors = np.load(vector_path)
 else:
@@ -212,7 +212,7 @@ report = {
     "development_only": True,
     "qualification_passed": False,
     "model": "embeddinggemma:300m",
-    "corpus_sha256": fingerprint,
+    "corpus_sha256": CORPUS_FINGERPRINT,
     "answerable": 14,
     "top1": sum(r["top1"] for r in results if r["kind"] == "answerable"),
     "top5": sum(r["top5"] for r in results if r["kind"] == "answerable"),
