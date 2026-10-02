@@ -28,9 +28,9 @@
 		}
 	},
 	"index": {
-		"sha256": "db8f8c2d31633e89ae20584fd0c32da31c4b5f985a7e16c69647332141262b8a",
-		"size_bytes": 698335232,
-		"gzip_sha256": "d3e69b3b16a015487e08bcf42d5241a0f62055d0c098ff8f87ace9546c46f468",
-		"gzip_size_bytes": 70227673
+		"sha256": "2e8b45ea0d052a915809b6e97176e7b78af6333351fb3cc41ad6743572a5fa33",
+		"size_bytes": 688635904,
+		"gzip_sha256": "cfff309379448cdaf9fc7b79ab0229e6886214264156b694dd40ff31b758c7d3",
+		"gzip_size_bytes": 59748792
 	}
 }

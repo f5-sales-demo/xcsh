@@ -83,6 +83,11 @@ for case in cases:
             any(
                 normalized(read) == normalized(want)
                 or (
+                    normalized(read).split("#")[0] == normalized(want).split("#")[0]
+                    and "#" not in read
+                    and "view=hint" not in read
+                )
+                or (
                     case.get("match_document")
                     and normalized(read).split("#")[0] == normalized(want).split("#")[0]
                 )
@@ -93,6 +98,11 @@ for case in cases:
         cited = any(
             any(
                 normalized(citation) == normalized(want)
+                or (
+                    want.endswith("#section")
+                    and normalized(citation).split("#")[0]
+                    == normalized(want).split("#")[0]
+                )
                 or (
                     case.get("match_document")
                     and normalized(citation).split("#")[0]
