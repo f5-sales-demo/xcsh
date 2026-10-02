@@ -608,3 +608,13 @@ destinations. Bonuses and Kubernetes rescue mapping were discarded before commit
 Full preview is explicitly unpublished with baseline provenance;no pin update or
 qualification claim. ProviderCI37009759185has begun jobs after pending wait;
 constitution,mock,shell,and example checks pass,build/docs checks remain active.
+
+
+## Direct property BM25 rejection
+
+Separate leaf/path/description/ancestor column weights evaluated on14development
+answerables. Best10first,12top5;fixed8/5/2/1weights then evaluated full regression.
+88property cases:17first,62top5;52task cases outside property-index scope. Ranking
+p9540.531ms excludes full responses and startup. Low exact accuracy prevents
+promotion;no production or reviewed artifact change. Raw task-local digests retained.
+ProviderCIaggregate job names match protection;build,vet,lint pass,race/docs live.
