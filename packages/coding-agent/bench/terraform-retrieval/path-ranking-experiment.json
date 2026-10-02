@@ -79,10 +79,22 @@
       "p95": 38.851826000000074
     }
   ],
-  "conclusion": "Candidate recall76/140within200 prevents95percent accuracy regardless of reranking. Best development11/14first13/14top5does not generalize. No production integration.",
+  "conclusion": "Property-only candidate pool covers76/88property destinations;52task destinations are outside scope. Full provider-scope scoring preserves59/88property top5versus bounded200,so candidate volume alone does not repair ranking. No production integration.",
   "source_inconsistency": {
     "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
     "description": "Choice for selecting HTTP proxy with bring your own certificates.",
     "retained_unchanged": true
+  },
+  "candidate_scope": {
+    "property_cases": 88,
+    "property_candidate200": 76,
+    "property_top5": 59,
+    "task_cases_excluded": 52
+  },
+  "full_scope": {
+    "top1_all140": 15,
+    "top5_all140": 59,
+    "ranking_p95_ms": 249.4073759999992,
+    "production_promoted": false
   }
 }

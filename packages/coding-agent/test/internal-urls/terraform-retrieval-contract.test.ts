@@ -285,3 +285,26 @@ test("provider credentials route to maintained setup options without confusing a
 	expect(terraformProviderSetupDestination("configure xcsh_authentication resource JWT validation")).toBeUndefined();
 	expect(terraformProviderSetupDestination("TLS certificates on HTTP load balancer resource")).toBeUndefined();
 });
+
+test("task and role identity accepts ordinary grammatical variants", () => {
+	expect(terraformTaskDestination("What command imports an existing xcsh_dns_zone resource?")).toEqual({
+		role: "import",
+	});
+	expect(terraformTaskDestination("Where is the action documented to modify an existing cryptokey?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformQueryIdentity("minimal example for creating a new xcsh_app_firewall policy").providerType).toBe(
+		"resources",
+	);
+	expect(terraformQueryIdentity("root configuration for deploying a TCP load balancer").providerType).toBe(
+		"resources",
+	);
+	expect(terraformProviderSetupDestination("PKCS#12 bundle authentication in the provider")).toBe(
+		"option-2-p12-certificate-authentication",
+	);
+	expect(terraformProviderSetupDestination("environment variables for API credentials in the provider")).toBe(
+		"argument-reference",
+	);
+	expect(terraformTaskDestination("Which attributes are exported by this action?")).toBeUndefined();
+});

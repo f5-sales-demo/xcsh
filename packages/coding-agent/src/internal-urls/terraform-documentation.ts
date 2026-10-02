@@ -684,19 +684,20 @@ export function terraformProviderSetupDestination(query: string): string | undef
 	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
 	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
 		return undefined;
+	if (/\benvironment\b.*\bvariables?\b/i.test(query)) return "argument-reference";
 	const methods = [
 		{ present: /\bapi[ -]token\b/i.test(query), anchor: "option-1-api-token-authentication" },
-		{ present: /\bp12\b|\bpkcs[ -]?12\b/i.test(query), anchor: "option-2-p12-certificate-authentication" },
+		{ present: /\bp12\b|\bpkcs[ #_-]?12\b/i.test(query), anchor: "option-2-p12-certificate-authentication" },
 		{ present: /\bpem\b/i.test(query), anchor: "option-3-pem-certificate-authentication" },
 	].filter(method => method.present);
 	return methods.length === 1 ? methods[0]!.anchor : "authentication-options";
 }
 
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
-	if (/\bimport\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	if (
 		/\baction\b/i.test(query) &&
-		!/\b(?:field|attribute|property|properties|id|ids|namespace|parameter)\b/i.test(query) &&
+		!/\b(?:fields?|attributes?|propert(?:y|ies)|ids?|namespace|parameters?)\b/i.test(query) &&
 		/\b(?:which|declare|invoke|trigger|where|how)\b/i.test(query)
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
@@ -847,7 +848,9 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 					? "actions"
 					: /\bresource\b/i.test(search) ||
 							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-							/\b(?:configure|provision|create|deploy|set|enable|disable|attach|register)\b/i.test(search)
+							/\b(?:configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|disabl(?:e|ing)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+								search,
+							)
 						? "resources"
 						: /\b(?:inspect|query|look up|lookup|read existing|retrieve existing)\b/i.test(search)
 							? "data-sources"
@@ -912,6 +915,7 @@ export function selectTerraformCandidate(
 				first.metadata.provider_type === "provider" &&
 				[
 					"authentication-options",
+					"argument-reference",
 					"option-1-api-token-authentication",
 					"option-2-p12-certificate-authentication",
 					"option-3-pem-certificate-authentication",

@@ -479,3 +479,18 @@ A fresh independent source-only reviewer is auditing all200existing labels in
 an isolated task workspace. No retrieval code/results or prior review findings
 were supplied. This audit does not replace or modify the frozen benchmark and
 cannot confer runtime qualification.
+
+
+## Grammatical task identity and experiment scope correction
+
+Task identity now recognizes imports/importing,creating/deploying and PKCS#12
+without replacing action attribute queries with usage pages. Provider environment
+credential requests target argument-reference. Red fixtures reproduced parser
+misses;472URLtests+workspacechecks pass. Post-analysis regression35/140selected,
+49.2857%top5,discovery148.570ms,complete144.676ms;qualification remains failed.
+
+Property-ranking diagnostics previously compared a property-only index against all
+140answerable cases. Correct scope:88property cases,76within200candidates,59top5;
+52task pages cannot be returned by that experimental index. Scoring every scoped
+property yields the same59top5at249.407ms ranking p95. Increasing candidate volume
+alone is not sufficient. This correction does not change production or qualification.
