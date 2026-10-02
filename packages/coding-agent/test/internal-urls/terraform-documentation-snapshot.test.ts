@@ -219,6 +219,8 @@ describe("Terraform snapshot ingestion", () => {
 				"?search=x&limit=1&limit=2",
 				"?role=fundamentals",
 				"?unknown=x",
+				"/documentation/resources/fixture/index.md?view=hint&after=schema-value",
+				"/documentation/resources/fixture/index.md?view=hint&cursor=fixture",
 				"/docs/%2e%2e/outside.md",
 				"/documentation/resources/fixture/index.md?search=x",
 			])

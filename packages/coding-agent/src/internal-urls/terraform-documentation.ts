@@ -772,6 +772,8 @@ export class TerraformDocumentationRepository {
 		const facetNames = ["provider_type", "provider_name", "role", "category", "capability", "task"];
 		if (facet !== null && !facetNames.includes(facet)) throw new Error("Invalid Terraform facet");
 		if (documentPath) safePath(documentPath);
+		if (url.searchParams.has("after") && view !== "context") throw new Error("Terraform after requires context view");
+		if (url.searchParams.has("cursor") && documentPath) throw new Error("Terraform cursor requires discovery");
 		if (documentPath && (search || node || facet || limitValue || facetNames.some(k => url.searchParams.has(k))))
 			throw new Error("Terraform discovery requires the inventory path");
 		if (facet && (search || node || view || url.hash || url.searchParams.has("after")))
@@ -797,7 +799,7 @@ export class TerraformDocumentationRepository {
 			(
 				db
 					.query(
-						"SELECT type,target_path,target_anchor,enforcement FROM terraform_relationships WHERE path=? AND anchor=? ORDER BY type,target_path,target_anchor LIMIT 4",
+						"SELECT type,target_path,target_anchor,enforcement FROM terraform_relationships WHERE path=? AND anchor=? ORDER BY type,target_path,target_anchor LIMIT 2",
 					)
 					.all(p, a) as Array<{ type: string; target_path: string; target_anchor: string; enforcement: string }>
 			)

@@ -27,3 +27,7 @@ Broader internal URL suite: 454 tests pass after required source-matched native 
 ## Disjoint v2 first run
 
 A second frozen set has no prior prompt or answerable-destination overlap. It passes 140/140 answerable destinations but fails all 40 role ambiguities because navigation wording collides with read timeout fields. Scored accuracy 78.9474%; first-run p95 Ubuntu12.897ms/Mac8.271ms. This FAILED qualification and is preserved. Navigation detection repair regression: 139/140 answerable and 40/40 ambiguous; scored99.4737%, Ubuntu97.180ms. This remains post-analysis regression.
+
+## Complete response budget audit
+
+All 18,953 documents and their property/section context destinations were read through the repository resolver. Zero errors; maximum hint4,084bytes (<=4096), maximum context11,321bytes (<=16384). Invalid after/cursor combinations rejected; compact prerequisite hints preserve destination links.
