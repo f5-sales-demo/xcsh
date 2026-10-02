@@ -275,7 +275,7 @@ sidecar hash mismatch. New independently reviewed valid benchmark still required
 
 ## Exact alias path identity
 
-Alias ranking now normalizes snake-case query fields consistently with schema
+Alias ranking now normalizes snake_case query fields consistently with schema
 segments, retains exact leaf identifiers and success/failure branch context, and
 uses the indexed destination path for scalar aliases instead of its parent page.
 Focused exact queries select Bot Defense success status and stateful custom-route
