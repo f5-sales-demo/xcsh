@@ -17,3 +17,8 @@ development review and no experiment is promoted.
 
 The candidate and baseline outputs precede any label changes. Compressed raw
 results are bound by SHA-256 and byte counts in their JSON summaries.
+
+A follow-up source collision check found repeated same-role suffix destinations
+for four audit-accepted cases (014, 016, 027, 028). Concrete alternatives are
+retained in same-role-collision-review.json; fresh source-only adjudication is
+active. The candidate must not be treated as semantically validated.
