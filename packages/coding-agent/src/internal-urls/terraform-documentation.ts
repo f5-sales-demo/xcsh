@@ -635,6 +635,25 @@ const TERRAFORM_QUERY_VARIANTS: Record<string, string> = {
 	certs: "certificate",
 };
 
+export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
+	const exact = [
+		...new Set([...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)].map(match => match[1]!.toLowerCase())),
+	];
+	if (exact.length === 1 && names.includes(exact[0]!)) return exact[0];
+	if (exact.length > 1) return undefined;
+	const normalize = (value: string) =>
+		value
+			.toLowerCase()
+			.replace(/load\s+balancer/g, "loadbalancer")
+			.replace(/[^a-z0-9]+/g, " ")
+			.trim();
+	const query = ` ${normalize(search)} `;
+	const found = names
+		.filter(name => query.includes(` ${normalize(name)} `))
+		.sort((a, b) => normalize(b).length - normalize(a).length || (a < b ? -1 : a > b ? 1 : 0));
+	return found[0] && (!found[1] || normalize(found[0]).length > normalize(found[1]).length) ? found[0] : undefined;
+}
+
 export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
@@ -988,11 +1007,6 @@ export class TerraformDocumentationRepository {
 			const identity = terraformQueryIdentity(search);
 			if (!filters.some(f => f.key === "provider_type") && identity.providerType)
 				filters.push({ key: "provider_type", value: identity.providerType });
-			const providerMention = identity.providerPhrase ?? search;
-			const providerSearch = ` ${providerMention
-				.toLowerCase()
-				.replace(/[^a-z0-9]+/g, " ")
-				.trim()} `;
 			const propertyMention = /where is (.*?) documented/i.exec(search)?.[1];
 			const propertySearch = propertyMention
 				? ` ${propertyMention
@@ -1005,13 +1019,16 @@ export class TerraformDocumentationRepository {
 				.replace(/[^a-z0-9]+/g, " ")
 				.trim()} `;
 			if (!filters.some(f => f.key === "provider_name")) {
-				const named = db
+				const names = db
 					.query(
-						"SELECT value FROM terraform_facets WHERE facet='provider_name' AND value!='xcsh' AND instr(?, ' ' || replace(value,'_',' ') || ' ')>0 GROUP BY value ORDER BY length(value) DESC,value COLLATE BINARY LIMIT 2",
+						"SELECT DISTINCT provider_name value FROM terraform_documents WHERE provider_name!='xcsh' ORDER BY provider_name",
 					)
-					.all(providerSearch) as Array<{ value: string }>;
-				if (named[0] && (!named[1] || named[0].value.length > named[1].value.length))
-					filters.push({ key: "provider_name", value: named[0].value });
+					.all() as Array<{ value: string }>;
+				const named = terraformProviderMention(
+					search,
+					names.map(name => name.value),
+				);
+				if (named) filters.push({ key: "provider_name", value: named });
 			}
 			const clauses = ["documents_fts MATCH ?", "d.active=1"];
 			const args: Array<string | number> = [query];

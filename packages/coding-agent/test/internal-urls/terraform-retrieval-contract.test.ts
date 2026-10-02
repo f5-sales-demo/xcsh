@@ -3,6 +3,7 @@ import {
 	boundedTerraformResponse,
 	selectTerraformCandidate,
 	type TerraformMetadata,
+	terraformProviderMention,
 	terraformQueryIdentity,
 	validateTerraformRetrievalMetadata,
 } from "../../src/internal-urls/terraform-documentation";
@@ -85,4 +86,12 @@ test("query identity keeps exact provider mentions anywhere and concrete HCL res
 	expect(terraformQueryIdentity("Read xcsh_origin_pool data source properties").providerType).toBe("data-sources");
 	expect(terraformQueryIdentity("Should this be a resource or a data source?")).not.toHaveProperty("providerType");
 	expect(terraformQueryIdentity("HTTP body payload name")).not.toHaveProperty("providerPhrase");
+});
+
+test("provider mention normalizes ordinary multiword names and keeps longest contextual identity", () => {
+	const names = ["http_loadbalancer", "certificate", "origin_pool", "bot_endpoint_policy", "authentication"];
+	expect(terraformProviderMention("Set TLS certificates on my HTTP load balancer", names)).toBe("http_loadbalancer");
+	expect(terraformProviderMention("Use the Bot Endpoint Policy data source", names)).toBe("bot_endpoint_policy");
+	expect(terraformProviderMention("Backend servers under xcsh_origin_pool", names)).toBe("origin_pool");
+	expect(terraformProviderMention("No known provider resource mentioned", names)).toBeUndefined();
 });

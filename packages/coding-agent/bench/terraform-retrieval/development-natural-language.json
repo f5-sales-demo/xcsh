@@ -1,0 +1,211 @@
+{
+  "cases": [
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md#schema-private_key--blindfold_secret_info--location"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "We are storing our private key in a managed certificate resource using Blindfold secret management, and need to set the URI location pointing to our encrypted secret string."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md#schema-private_key--clear_secret_info--url"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "For our managed certificate resource, where do we supply the base64 encoded string secret URL when using clear secret private key information?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--http_redirect"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In our managed HTTP load balancer resource configuration, how do we enable automatic redirection of incoming unencrypted HTTP requests over to HTTPS?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "We need to override the default listening TCP port for HTTPS downstream traffic on our managed HTTP load balancer resource to a non-standard port."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md#section"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "We want our managed HTTP load balancer to automatically provision and manage TLS certificates for our domains instead of providing our own custom certificates."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/use_server_verification/trusted_ca/index.md#schema-use_tls--use_server_verification--trusted_ca--name"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When enabling upstream server TLS verification on our managed origin pool resource, which attribute defines the name of the trusted CA object used to validate the backend servers?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/volterra_trusted_ca/index.md#section"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "How do we instruct our managed origin pool resource to validate backend server certificates using the platform's default Volterra trusted CA bundle?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_name/index.md#schema-origin_servers--public_name--dns_name"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a managed origin pool resource, where do we configure the public DNS hostname for an upstream origin server destination?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#schema-origin_servers--public_ip--ip"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Where do we specify the public IP address when adding an externally routable origin server to our managed origin pool resource?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md#schema-origin_servers--k8s_service--service_name"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "We are attaching internal cluster workloads to our managed origin pool resource and need to specify the Kubernetes service name for endpoint discovery."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In our managed HTTP load balancer resource, how do we configure the expected HTTP response status code that indicates a user login transaction succeeded in the bot defense authentication policy?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/timeouts/index.md#schema-timeouts--create"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "How can we increase the maximum allowable timeout duration for the initial creation operation of our managed HTTP load balancer resource?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md#schema-id"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "We need to invoke the single active session termination action to invalidate a specific user session and need to specify the target session ID."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md#schema-token"
+      ],
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Using the ephemeral artifact registry token resource, which computed sensitive attribute yields the short-lived FAR access token for pulling container images?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on provider authentication method: whether to use an API token (api_token), a PKCS#12 certificate bundle with password (api_p12_file, p12_password), or individual PEM certificate and key files (api_cert, api_key).",
+      "prompt": "I need to set up authentication in our Terraform configuration so the xcsh provider can manage resources in our Distributed Cloud tenant."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#section"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on TLS certificate architecture: whether to use automated certificate management via Let's Encrypt (https_auto_cert) or custom bring-your-own certificates with explicit parameters (https).",
+      "prompt": "We want to configure TLS encryption on our HTTP load balancer frontend to terminate HTTPS customer traffic."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md#section"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on private key secret protection: whether the secret is encrypted via F5XC Blindfold Secret Management (blindfold_secret_info) or supplied as unencrypted base64-encoded cleartext URL (clear_secret_info).",
+      "prompt": "We have an existing SSL private key that we want to supply to our managed certificate resource, but need to know which storage block to configure."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/use_server_verification/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/volterra_trusted_ca/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/skip_server_verification/index.md#section"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on backend server certificate verification policy: whether to validate against a custom trusted CA reference (use_server_verification), use the platform default Volterra trusted CA bundle (volterra_trusted_ca), or disable backend verification entirely (skip_server_verification).",
+      "prompt": "How do we configure server certificate validation for encrypted backend connections in our origin pool?"
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_name/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/private_ip/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/private_name/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md#section"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on origin server network addressing mode: whether upstream endpoints are addressed by public IP (public_ip), public DNS name (public_name), private IP on a site (private_ip), private DNS name (private_name), or cluster Kubernetes service (k8s_service).",
+      "prompt": "We need to register upstream application servers into our origin pool to handle incoming requests."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--regex_values"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on login success evaluation criteria: whether success should be evaluated by HTTP response status code (status), HTTP header name presence (name), or regex value matching against headers (regex_values).",
+      "prompt": "We want to define when a user login transaction is considered successful in our load balancer bot defense flow."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--update",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--delete"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on lifecycle operation: whether the timeout adjustment applies to resource creation (create), state refresh (read), resource modification (update), or destruction (delete).",
+      "prompt": "Our origin pool deployment takes a while to synchronize, so we need to adjust the lifecycle operation timeout in Terraform."
+    },
+    {
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md#schema-id",
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md#schema-ids"
+      ],
+      "kind": "ambiguous",
+      "missing_context": "Missing decision on action execution scope: whether to terminate a single active session by ID (xcsh_access_active_session_terminate) or perform batch termination across multiple session IDs (xcsh_access_active_sessions_terminate).",
+      "prompt": "We need to run an automated action to terminate compromised user access sessions in our tenant."
+    },
+    {
+      "expected": [],
+      "kind": "control",
+      "missing_context": "This is an ordinary documentation and architecture discovery inquiry regarding external F5 network reference documentation and IP allowlists. It asks for informational reference material rather than configuring or managing an HCL resource, data source, action, or ephemeral block in Terraform.",
+      "prompt": "Where can I find the public F5 Distributed Cloud network reference guide and IP allowlists for cloud egress?"
+    },
+    {
+      "expected": [],
+      "kind": "control",
+      "missing_context": "WireGuard VPN tunneling and peer public key parameters are unsupported across the entire provider schema and documentation corpus. Site tunneling in F5 Distributed Cloud uses IPsec/IKE (e.g. ike1, ike_phase2_profile) and GRE, not WireGuard.",
+      "prompt": "How do I configure the WireGuard VPN tunnel interface and peer public key parameters on our managed securemesh site?"
+    }
+  ],
+  "limitations": [
+    "Authored strictly from canonical documentation/ and source.json without inspecting prior frozen benchmark cases, results, or retrieval code.",
+    "Provider authentication guidance is consolidated at documentation/provider/setup/index.md without property sub-anchors.",
+    "Schema collisions between resource and data-source variants (e.g., origin_pool, http_loadbalancer) require explicit resource role context in prompts."
+  ]
+}

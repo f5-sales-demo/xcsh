@@ -221,3 +221,11 @@ its ignored SQLite file. Restored tracked null placeholder; normal builds genera
 and verify the immutable assets. Workspace checks pass after this repair.
 Four exact full-suite control retries still fail (2 invalid JSON,2 timeouts);
 original failures and retries remain explicit, and no overall pass is claimed.
+
+Separate24-case natural-language development set (14 answerable,8 ambiguous,
+2 controls) produced source-only, outside the frozen qualification suite.
+Unified path/description scorer experiment reaches8/14 first destinations and
+11/14 top5 with provider-scoped queries roughly0.2-30ms. Kept in bench only;
+not imported by production retrieval. Further accuracy work remains required.
+Provider-name normalization for ordinary 'HTTP load balancer' wording is a
+separate tested production repair. Local duplication check5.38% passes.
