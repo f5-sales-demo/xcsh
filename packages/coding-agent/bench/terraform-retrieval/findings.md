@@ -494,3 +494,23 @@ Property-ranking diagnostics previously compared a property-only index against a
 52task pages cannot be returned by that experimental index. Scoring every scoped
 property yields the same59top5at249.407ms ranking p95. Increasing candidate volume
 alone is not sufficient. This correction does not change production or qualification.
+
+## Completed source-label audit and CI repair
+
+Fresh independent source-only audit returned SUCCESS with200unique case records,
+verdict label-defects. It rejects3answerable block/property labels and6ambiguity
+role labels,but approves11cases rejected by the earlier collision audit. Both
+reviews are preserved;fresh20case adjudication remains active. Frozen prompts,
+first results,and eligibility status are unchanged. No runtime qualification follows.
+
+Exact identifier precedence safeguard was evaluated and discarded:full regression
+results unchanged,and the proposed integration fixture also passed the baseline.
+No unsupported change was promoted from this experiment.
+
+CI spelling fragments rewritten without behavior changes;repeated snapshot test
+repository setup extracted into one fixture helper. Complete task-owned regression
+results are now losslessly gzip-compressed with byte counts and SHA256binding in
+JSON summaries.16artifacts verify exactly:3,335,699original bytes,368,377compressed.
+Frozen suites/first-run evidence remain unchanged. Exact CI jscpd5.0.10passes9.53%
+against unchanged10%threshold. Current unversioned jscpd differs;CIversion is the
+relevant verification authority. Workspace checks and focused snapshot tests pass.

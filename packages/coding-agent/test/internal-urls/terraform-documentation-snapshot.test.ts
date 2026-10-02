@@ -102,6 +102,32 @@ async function fixture(
 	return { ...identity, assets: pins(), receipt_sha256: terraformHash(assets["publication.json"]!) };
 }
 
+async function fixtureRepository(
+	root: string,
+	pin: TerraformPin,
+	indexPath: string,
+): Promise<TerraformDocumentationRepository> {
+	const bytes = await readFile(indexPath);
+	const compressed = gzipSync(bytes);
+	const indexGzipPath = path.join(root, "index.gz");
+	await writeFile(indexGzipPath, compressed);
+	return new TerraformDocumentationRepository(
+		{
+			indexGzipPath,
+			pin: {
+				...pin,
+				index: {
+					sha256: terraformHash(bytes),
+					size_bytes: bytes.length,
+					gzip_sha256: terraformHash(compressed),
+					gzip_size_bytes: compressed.length,
+				},
+			},
+		},
+		path.join(root, "cache"),
+	);
+}
+
 describe("Terraform snapshot ingestion", () => {
 	test("plain Markdown is fully covered and produces deterministic QMD indexes", async () => {
 		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-fixture-"));
@@ -254,24 +280,7 @@ describe("Terraform snapshot ingestion", () => {
 			docs[0]!.body_sha256 = terraformHash(body);
 			docs[0]!.metadata.role = "reference";
 			await buildTerraformIndex(docs, pin, path.join(root, "index.sqlite"));
-			const bytes = await readFile(path.join(root, "index.sqlite"));
-			const compressed = gzipSync(bytes);
-			await writeFile(path.join(root, "index.gz"), compressed);
-			const repo = new TerraformDocumentationRepository(
-				{
-					indexGzipPath: path.join(root, "index.gz"),
-					pin: {
-						...pin,
-						index: {
-							sha256: terraformHash(bytes),
-							size_bytes: bytes.length,
-							gzip_sha256: terraformHash(compressed),
-							gzip_size_bytes: compressed.length,
-						},
-					},
-				},
-				path.join(root, "cache"),
-			);
+			const repo = await fixtureRepository(root, pin, path.join(root, "index.sqlite"));
 			const url = Object.assign(
 				new URL("xcsh://terraform-documentation/?search=fixture%20retry&provider_type=resources&role=reference"),
 				{ rawHost: "terraform-documentation" },
@@ -330,24 +339,7 @@ describe("Terraform snapshot ingestion", () => {
 				},
 			);
 			await buildTerraformIndex(docs, pin, path.join(root, "index.sqlite"));
-			const bytes = await readFile(path.join(root, "index.sqlite")),
-				compressed = gzipSync(bytes);
-			await writeFile(path.join(root, "index.gz"), compressed);
-			const repo = new TerraformDocumentationRepository(
-				{
-					indexGzipPath: path.join(root, "index.gz"),
-					pin: {
-						...pin,
-						index: {
-							sha256: terraformHash(bytes),
-							size_bytes: bytes.length,
-							gzip_sha256: terraformHash(compressed),
-							gzip_size_bytes: compressed.length,
-						},
-					},
-				},
-				path.join(root, "cache"),
-			);
+			const repo = await fixtureRepository(root, pin, path.join(root, "index.sqlite"));
 			const read = (suffix: string) =>
 				repo.resolve(
 					Object.assign(
@@ -381,24 +373,7 @@ describe("Terraform snapshot ingestion", () => {
 			docs[0]!.sha256 = terraformHash(body);
 			docs[0]!.body_sha256 = terraformHash(body);
 			await buildTerraformIndex(docs, pin, path.join(root, "index.sqlite"));
-			const bytes = await readFile(path.join(root, "index.sqlite"));
-			const compressed = gzipSync(bytes);
-			await writeFile(path.join(root, "index.gz"), compressed);
-			const repository = new TerraformDocumentationRepository(
-				{
-					indexGzipPath: path.join(root, "index.gz"),
-					pin: {
-						...pin,
-						index: {
-							sha256: terraformHash(bytes),
-							size_bytes: bytes.length,
-							gzip_sha256: terraformHash(compressed),
-							gzip_size_bytes: compressed.length,
-						},
-					},
-				},
-				path.join(root, "cache"),
-			);
+			const repository = await fixtureRepository(root, pin, path.join(root, "index.sqlite"));
 			const read = (uri: string) =>
 				repository.resolve(Object.assign(new URL(uri), { rawHost: "terraform-documentation" }) as InternalUrl);
 			const base = "xcsh://terraform-documentation/documentation/resources/fixture/index.md";
@@ -494,25 +469,7 @@ test("provider setup resolves exact maintained authentication sections and honor
 		});
 		const file = path.join(root, "index.sqlite");
 		await buildTerraformIndex(docs, pin, file);
-		const bytes = await readFile(file);
-		const compressed = gzipSync(bytes);
-		const gzipPath = path.join(root, "index.gz");
-		await writeFile(gzipPath, compressed);
-		const repository = new TerraformDocumentationRepository(
-			{
-				indexGzipPath: gzipPath,
-				pin: {
-					...pin,
-					index: {
-						sha256: terraformHash(bytes),
-						size_bytes: bytes.length,
-						gzip_sha256: terraformHash(compressed),
-						gzip_size_bytes: compressed.length,
-					},
-				},
-			},
-			path.join(root, "cache"),
-		);
+		const repository = await fixtureRepository(root, pin, file);
 		const resolve = (query: string, extra = "") =>
 			repository.resolve(
 				Object.assign(new URL(`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}${extra}`), {

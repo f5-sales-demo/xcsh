@@ -697,7 +697,7 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	if (
 		/\baction\b/i.test(query) &&
-		!/\b(?:fields?|attributes?|propert(?:y|ies)|ids?|namespace|parameters?)\b/i.test(query) &&
+		!/\b(?:fields?|attributes?|(?:property|properties)|ids?|namespace|parameters?)\b/i.test(query) &&
 		/\b(?:which|declare|invoke|trigger|where|how)\b/i.test(query)
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
@@ -723,7 +723,7 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	if (
 		/\btimeouts?\b/i.test(query) &&
 		/\blifecycle\b|\busage\b|\bduration string format\b|\bguidance\b/i.test(query) &&
-		!/\battributes?\b|\bschema\b|\bpropert(?:y|ies)\b/i.test(query)
+		!/\battributes?\b|\bschema\b|\b(?:property|properties)\b/i.test(query)
 	)
 		return { role: "timeouts" };
 	return undefined;
@@ -848,7 +848,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 					? "actions"
 					: /\bresource\b/i.test(search) ||
 							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-							/\b(?:configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|disabl(?:e|ing)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+							/\b(?:configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
 								search,
 							)
 						? "resources"

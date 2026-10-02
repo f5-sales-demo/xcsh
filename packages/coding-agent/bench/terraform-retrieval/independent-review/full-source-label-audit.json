@@ -1,0 +1,1884 @@
+{
+  "cases": [
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-001",
+      "reason": "Prompt uniquely determines schema attribute anchor #schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status under documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md. Provider role 'properties', nesting hierarchy, and property destination strictly match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:209: <a id=\"schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-002",
+      "reason": "Prompt uniquely determines schema attribute anchor #schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--regex_values under documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md. Provider role 'properties', nesting hierarchy, and property destination strictly match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:167: <a id=\"schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--regex_values\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-003",
+      "reason": "Prompt uniquely determines schema attribute anchor #schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name under documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md. Provider role 'properties', nesting hierarchy, and property destination strictly match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:81: <a id=\"schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-004",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-005",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-006",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-007",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-008",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-009",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-010",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-011",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-012",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_and/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_and/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-013",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_none/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_none/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-014",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_anything/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_anything/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-015",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-016",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/disable_host_rewrite/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/disable_host_rewrite/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-017",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-018",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_inherit/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_inherit/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-019",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/headers/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/headers/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix"
+      ],
+      "id": "ans-deep-020",
+      "reason": "Prompt explicitly targets the path match 'prefix' attribute ('prefix \"/api/v1\"'), which is a direct property on this page with its own schema anchor. The frozen label erroneously points to the enclosing block anchor #section without justification.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:28: <a id=\"section\"></a>",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124: <a id=\"schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-021",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-022",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-023",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_inherit/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_inherit/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-024",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/route_ref/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/route_ref/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-025",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/direct_response_route/headers/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/direct_response_route/headers/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-026",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-027",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-028",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-029",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-030",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-031",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-032",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/last_address/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/last_address/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-033",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/first_address/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/first_address/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-034",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-035",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-036",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-037",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-038",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-039",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-040",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-041",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-042",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-043",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-044",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-045",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-046",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-047",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/aws_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-048",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-049",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/azure_vnet_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-050",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-051",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-052",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/clear_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--clear_secret_info--url"
+      ],
+      "id": "ans-deep-053",
+      "reason": "Prompt explicitly requests configuring the 'clear secret URL' attribute for Pure Storage FlashArray API tokens. The direct property 'url' is defined on this page with anchor #schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--clear_secret_info--url. Labeling the case with the enclosing block anchor #section is an unjustified property-to-block defect.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/clear_secret_info/index.md:27: <a id=\"section\"></a>",
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/clear_secret_info/index.md:71: <a id=\"schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--clear_secret_info--url\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-054",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-055",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/data-sources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-056",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-001",
+      "reason": "Prompt uniquely resolves to documentation/provider/setup/index.md#option-1-api-token-authentication. Provider role 'overview' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:103: ### Option 1: API Token Authentication"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-002",
+      "reason": "Prompt uniquely resolves to documentation/provider/setup/index.md#option-2-p12-certificate-authentication. Provider role 'overview' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:123: ### Option 2: P12 Certificate Authentication"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-003",
+      "reason": "Prompt uniquely resolves to documentation/provider/setup/index.md#option-3-pem-certificate-authentication. Provider role 'overview' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:143: ### Option 3: PEM Certificate Authentication"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-004",
+      "reason": "Prompt uniquely resolves to documentation/provider/setup/index.md#argument-reference. Provider role 'overview' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83: ## Argument Reference"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-005",
+      "reason": "Prompt uniquely resolves to documentation/resources/http_loadbalancer/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-006",
+      "reason": "Prompt uniquely resolves to documentation/resources/origin_pool/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-007",
+      "reason": "Prompt uniquely resolves to documentation/resources/app_firewall/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-008",
+      "reason": "Prompt uniquely resolves to documentation/resources/certificate/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/certificate/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-009",
+      "reason": "Prompt uniquely resolves to documentation/resources/namespace/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/namespace/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-010",
+      "reason": "Prompt uniquely resolves to documentation/resources/rate_limiter/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-011",
+      "reason": "Prompt uniquely resolves to documentation/resources/tcp_loadbalancer/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-012",
+      "reason": "Prompt uniquely resolves to documentation/resources/dns_zone/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-013",
+      "reason": "Prompt uniquely resolves to documentation/resources/service_policy/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/service_policy/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-014",
+      "reason": "Prompt uniquely resolves to documentation/resources/alert_policy/lifecycle/import/index.md#import. Provider role 'import' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-015",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/http_loadbalancer/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-016",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/origin_pool/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-017",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/service_policy/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-018",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/tcp_loadbalancer/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-019",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/cdn_loadbalancer/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-020",
+      "reason": "Prompt uniquely resolves to documentation/resources/healthcheck/lifecycle/timeouts/index.md#timeouts. Provider role 'timeouts' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/healthcheck/lifecycle/timeouts/index.md:12: # Timeouts"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-021",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/dns_zone/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-022",
+      "reason": "Prompt queries multiple operation timeout duration attributes collectively in documentation/resources/app_firewall/properties/timeouts/index.md. Labeling with enclosing block anchor #section is justified as no single attribute anchor covers all requested operations.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/timeouts/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-023",
+      "reason": "Prompt uniquely resolves to documentation/actions/dns_zone_add_cryptokey/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-024",
+      "reason": "Prompt uniquely resolves to documentation/actions/dns_zone_edit_cryptokey/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_edit_cryptokey/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-025",
+      "reason": "Prompt uniquely resolves to documentation/actions/dns_zone_delete_cryptokey/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_delete_cryptokey/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-026",
+      "reason": "Prompt uniquely resolves to documentation/actions/access_active_session_terminate/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-027",
+      "reason": "Prompt uniquely resolves to documentation/actions/access_active_sessions_terminate/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/access_active_sessions_terminate/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-028",
+      "reason": "Prompt uniquely resolves to documentation/actions/device_intelligence_subscribe/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/device_intelligence_subscribe/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-029",
+      "reason": "Prompt uniquely resolves to documentation/actions/device_intelligence_unsubscribe/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/device_intelligence_unsubscribe/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-030",
+      "reason": "Prompt uniquely resolves to documentation/actions/infraprotect_synchronize_configuration/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/infraprotect_synchronize_configuration/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-031",
+      "reason": "Prompt uniquely resolves to documentation/actions/site_signatures_update/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/site_signatures_update/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-032",
+      "reason": "Prompt uniquely resolves to documentation/actions/site_upgrade_os/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-033",
+      "reason": "Prompt uniquely resolves to documentation/ephemeral-resources/artifact_registry_token/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-034",
+      "reason": "Prompt queries output attributes collectively under documentation/ephemeral-resources/artifact_registry_token/properties/index.md. Anchor #direct-properties precisely maps to the documented direct properties section.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:19: ## Direct properties"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-035",
+      "reason": "Prompt uniquely resolves to documentation/ephemeral-resources/kubernetes_manifests/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-036",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-037",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/https/tls_cert_params/use_mtls/crl/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_cert_params/use_mtls/crl/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-038",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/https/tls_cert_params/certificates/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_cert_params/certificates/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-039",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/https/tls_parameters/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_parameters/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-040",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/use_tls/use_server_verification/trusted_ca/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/use_tls/use_server_verification/trusted_ca/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-041",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/use_tls/use_mtls/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/use_tls/use_mtls/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-042",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_parameters/use_mtls/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_parameters/use_mtls/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-043",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-044",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/https_auto_cert/use_mtls/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https_auto_cert/use_mtls/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-045",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/certificate/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/certificate/index.md:47: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-046",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/certificate/properties/certificate_chain/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/certificate_chain/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-047",
+      "reason": "Prompt uniquely resolves to documentation/resources/certificate_chain/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/certificate_chain/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-048",
+      "reason": "Prompt uniquely resolves to documentation/resources/crl/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/crl/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-049",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/origin_servers/private_ip/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/private_ip/index.md:21: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-050",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/origin_servers/public_name/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/public_name/index.md:21: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-051",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md:21: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md#schema-origin_servers--vn_private_ip--ip"
+      ],
+      "id": "ans-std-052",
+      "reason": "Prompt requests configuration of 'private IP addresses' residing inside a virtual network for origin servers. The scalar property representing the IP address is 'ip' (#schema-origin_servers--vn_private_ip--ip). The frozen expected label improperly points to the enclosing block anchor #section without justification.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md:21: <a id=\"section\"></a>",
+        "documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md:51: <a id=\"schema-origin_servers--vn_private_ip--ip\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-053",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/healthcheck/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/healthcheck/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-054",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/origin_pool/properties/advanced_options/circuit_breaker/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/advanced_options/circuit_breaker/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-055",
+      "reason": "Prompt uniquely resolves to documentation/resources/cloud_credentials/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-056",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-057",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/cloud_credentials/properties/azure_client_secret/client_secret/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/azure_client_secret/client_secret/blindfold_secret_info/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-058",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/cloud_credentials/properties/gcp_cred_file/credential_file/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/gcp_cred_file/credential_file/blindfold_secret_info/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-059",
+      "reason": "Prompt uniquely resolves to documentation/resources/token/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/token/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-060",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/api_crawler/properties/domains/simple_login/password/blindfold_secret_info/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/api_crawler/properties/domains/simple_login/password/blindfold_secret_info/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-061",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/routes/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-062",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/http_loadbalancer/properties/default_pool/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/default_pool/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-063",
+      "reason": "Prompt uniquely resolves to documentation/resources/tcp_loadbalancer/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/index.md:31: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-064",
+      "reason": "Prompt uniquely resolves to documentation/resources/cdn_loadbalancer/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/index.md:31: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-065",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/origin_pool/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/origin_pool/index.md:60: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-066",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/http_loadbalancer/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/http_loadbalancer/index.md:73: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-067",
+      "reason": "Prompt uniquely resolves to documentation/resources/app_firewall/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/index.md:31: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-068",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/app_firewall/properties/blocking/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-069",
+      "reason": "Prompt uniquely resolves to documentation/resources/service_policy/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/service_policy/index.md:31: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-070",
+      "reason": "Prompt uniquely requests the configuration block defined at documentation/resources/service_policy/properties/rule_list/index.md#section. Provider role 'properties', block nesting hierarchy, and block-level destination match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/rule_list/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-071",
+      "reason": "Prompt uniquely resolves to documentation/resources/waf_exclusion_policy/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/waf_exclusion_policy/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-072",
+      "reason": "Prompt uniquely resolves to documentation/resources/rate_limiter/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/index.md:31: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-073",
+      "reason": "Prompt uniquely resolves to documentation/resources/malicious_user_mitigation/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/malicious_user_mitigation/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-074",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/app_firewall/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/app_firewall/index.md:47: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-075",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/service_policy/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/service_policy/index.md:47: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-076",
+      "reason": "Prompt uniquely resolves to documentation/resources/virtual_network/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/virtual_network/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-077",
+      "reason": "Prompt uniquely resolves to documentation/resources/network_policy/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/network_policy/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-078",
+      "reason": "Prompt uniquely resolves to documentation/resources/network_interface/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/network_interface/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-079",
+      "reason": "Prompt uniquely resolves to documentation/resources/route/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/route/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-080",
+      "reason": "Prompt uniquely resolves to documentation/resources/bgp/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/resources/bgp/index.md:26: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-081",
+      "reason": "Prompt uniquely resolves to documentation/guides/network-allowlists/index.md#release-pinned-network-allowlists. Provider role 'overview' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/guides/network-allowlists/index.md:10: ## Release-pinned network allowlists"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-082",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/network_regional_edges/index.md#minimal-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/network_regional_edges/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-083",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/virtual_network/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/virtual_network/index.md:47: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-084",
+      "reason": "Prompt uniquely resolves to documentation/data-sources/site/index.md#root-configuration. Provider role 'fundamentals' and documented section heading anchor match canonical documentation.",
+      "source_evidence": [
+        "documentation/data-sources/site/index.md:47: ## Root configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-001",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (blindfold_secret_info for Blindfold encrypted secret storage, clear_secret_info for unencrypted Base64 secret storage). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/certificate/properties/private_key/clear_secret_info/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-002",
+      "reason": "Case contains a provider_role metadata defect: frozen label states provider_role: 'properties', but both destination documents are fundamentals/import specifications with headings ['minimal-configuration', 'root-configuration']. The architectural ambiguity itself is genuine, but provider_role is defectively labeled.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/index.md:31: ## Minimal configuration",
+        "documentation/data-sources/origin_pool/index.md:60: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-003",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (blocking block for active traffic mitigation, monitoring block for passive inspection and alerting). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/app_firewall/properties/monitoring/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-004",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (any_server block for universal server rule matching, server_name_matcher block for specific server name pattern matching). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/any_server/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/service_policy/properties/server_name_matcher/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-005",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (global_network block for multi-site global interconnection, site_local_network block for site-isolated local network routing). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/virtual_network/properties/global_network/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/virtual_network/properties/site_local_network/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-006",
+      "reason": "Case contains a provider_role metadata defect: frozen label states provider_role: 'properties', but both destination documents are fundamentals/import specifications with headings ['minimal-configuration', 'root-configuration']. The architectural ambiguity itself is genuine, but provider_role is defectively labeled.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/index.md:31: ## Minimal configuration",
+        "documentation/data-sources/dns_zone/index.md:73: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-007",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (token_bucket block for burst-tolerant rate limiting, leaky_bucket block for steady continuous traffic smoothing). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/properties/limits/token_bucket/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/rate_limiter/properties/limits/leaky_bucket/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-008",
+      "reason": "Case contains a provider_role metadata defect: frozen label states provider_role: 'properties', but both destination documents are fundamentals/import specifications with headings ['minimal-configuration', 'root-configuration']. The architectural ambiguity itself is genuine, but provider_role is defectively labeled.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/index.md:26: ## Minimal configuration",
+        "documentation/data-sources/alert_policy/index.md:55: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-009",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (ethernet_interface block for standard switch port configuration, dedicated_interface block for dedicated single-link gateway interfaces). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/ethernet_interface/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/network_interface/properties/dedicated_interface/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-010",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (azure_client_secret block for password-based authentication, azure_pfx_certificate block for PKCS#12 certificate-based authentication). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/azure_client_secret/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/cloud_credentials/properties/azure_pfx_certificate/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-011",
+      "reason": "Case contains a provider_role metadata defect: frozen label states provider_role: 'properties', but both destination documents are fundamentals/import specifications with headings ['minimal-configuration', 'root-configuration']. The architectural ambiguity itself is genuine, but provider_role is defectively labeled.",
+      "source_evidence": [
+        "documentation/resources/container_registry/index.md:27: ## Minimal configuration",
+        "documentation/data-sources/container_registry/index.md:56: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-012",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (tcp block for plain unencrypted TCP forwarding, tls_tcp block for TLS terminated proxying, tls_passthrough block for encrypted TLS pass-through). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/tcp/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/tcp_loadbalancer/properties/tls_tcp/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/tcp_loadbalancer/properties/tls_passthrough/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-013",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (round_robin block for equal distribution across origin servers, least_active block for dynamic connection-based routing, random block for randomized pool server distribution). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/round_robin/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/least_active/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/random/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-014",
+      "reason": "Case contains a provider_role metadata defect: frozen label states provider_role: 'properties', but both destination documents are fundamentals/import specifications with headings ['minimal-configuration', 'root-configuration']. The architectural ambiguity itself is genuine, but provider_role is defectively labeled.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/index.md:31: ## Minimal configuration",
+        "documentation/data-sources/aws_vpc_site/index.md:60: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-015",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (http_health_check block for layer 7 HTTP endpoint status probes, tcp_health_check block for layer 4 socket connectivity probes). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/healthcheck/properties/http_health_check/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/healthcheck/properties/tcp_health_check/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-016",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (use_http block for unencrypted upstream pool communication, use_tls block for encrypted upstream pool TLS). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/use_http/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/origin_pool/properties/use_tls/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-017",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (primary block for authoritative zone hosting, secondary block for replicated secondary DNS hosting). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/dns_zone/properties/secondary/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-018",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (simple_login block for username and password crawler authentication, cookie_login block for session cookie crawler authentication). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/api_crawler/properties/domains/simple_login/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/api_crawler/properties/domains/cookie_login/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-019",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (allow block to permit traffic, deny block to reject traffic). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/network_policy/properties/rules/allow/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/network_policy/properties/rules/deny/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-020",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (ingress_gw block for inbound edge gateway topology, ingress_egress_gw block for bidirectional edge gateway topology, voltstack_cluster block for container compute deployment). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_gw/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/aws_vpc_site/properties/voltstack_cluster/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-021",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (exact_value block for strict match, regex_value block for regex pattern match). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/rule_list/rules/client_name/exact_value/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/service_policy/properties/rule_list/rules/client_name/regex_value/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-022",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (simple_route block for direct upstream path forwarding, redirect_route block for HTTP redirect responses, direct_response_route block for direct static status and body payload returns). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/routes/redirect_route/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/routes/direct_response_route/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-023",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (prefix block for URI prefix matching, path block for exact path matching, regex block for regular expression path matching). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/path/prefix/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/path/path/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/path/regex/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-024",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (https block for custom certificate HTTPS listeners, https_auto_cert block for automated Let's Encrypt TLS certificates, http block for plain unencrypted HTTP traffic). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/http/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-025",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (default_route_pools block for multiple weighted origin pools, default_pool_list block for legacy single pool cluster routing). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/default_route_pools/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/default_pool_list/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-026",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (app_firewall block to attach a WAF policy, waf_exclusion block to specify firewall bypass rules, disable_waf block to opt out of WAF inspection). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/app_firewall/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/waf_exclusion/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/disable_waf/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-027",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (enable_ip_reputation block to enforce IP threat intelligence filtering, disable_ip_reputation block to bypass IP reputation scoring). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_ip_reputation/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/disable_ip_reputation/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-028",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (enable_threat_mesh block for coordinated cross-application threat intelligence, disable_threat_mesh block to operate without Threat Mesh sharing). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_threat_mesh/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/disable_threat_mesh/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-029",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (allow_all_requests block to permit unmatched requests, deny_all_requests block to drop unmatched requests). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/allow_all_requests/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/service_policy/properties/deny_all_requests/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-030",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (aws_assume_role block for STS role assumption, aws_secret_key block for static access key credentials). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_assume_role/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-031",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (xcsh_dns_zone_add_cryptokey action to create and attach a key, xcsh_dns_zone_edit_cryptokey action to update an existing key). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/index.md:24: ## Minimal configuration",
+        "documentation/actions/dns_zone_edit_cryptokey/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-032",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (xcsh_access_active_session_terminate action for targeted individual session termination, xcsh_access_active_sessions_terminate action for tenant-wide session revocation). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/index.md:24: ## Minimal configuration",
+        "documentation/actions/access_active_sessions_terminate/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-033",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (xcsh_device_intelligence_subscribe action to start a subscription, xcsh_device_intelligence_unsubscribe action to cancel a subscription). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/actions/device_intelligence_subscribe/index.md:24: ## Minimal configuration",
+        "documentation/actions/device_intelligence_unsubscribe/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-034",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (xcsh_site_upgrade_os action for operating system updates, xcsh_site_upgrade_sw action for platform software updates). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/index.md:24: ## Minimal configuration",
+        "documentation/actions/site_upgrade_sw/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-035",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (xcsh_site_signatures_update action for application security signatures, xcsh_infraprotect_synchronize_configuration action for firewall and threat rule updates). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/actions/site_signatures_update/index.md:24: ## Minimal configuration",
+        "documentation/actions/infraprotect_synchronize_configuration/index.md:24: ## Minimal configuration"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-036",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (blindfold_secret_info block for Blindfold managed credentials, clear_secret_info block for unencrypted Base64 secret strings). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/container_registry/properties/password/blindfold_secret_info/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/container_registry/properties/password/clear_secret_info/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-037",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (service block for stateless workload services, stateful_service block for stateful workload services). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/service/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/workload/properties/stateful_service/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-038",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (single_lb_app block for dedicated standalone application ingress, multi_lb_app block for multi-tenant coordinated application ingress). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/multi_lb_app/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-039",
+      "reason": "Prompt exhibits genuine schema ambiguity between mutually exclusive alternatives (lb_port block for explicit static destination port forwarding, same_as_endpoint_port block to match downstream listener port, automatic_port block to infer port from discovery metadata). Permitted choices are complete, meaningful, and uniquely resolve to the expected anchors.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/lb_port/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/origin_pool/properties/same_as_endpoint_port/index.md:20: <a id=\"section\"></a>",
+        "documentation/resources/origin_pool/properties/automatic_port/index.md:20: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-040",
+      "reason": "Case contains a provider_role metadata defect: frozen label states provider_role: 'properties', but both destination documents are fundamentals/import specifications with headings ['minimal-configuration', 'import']. The architectural ambiguity itself is genuine, but provider_role is defectively labeled.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/index.md:41: ## Minimal configuration",
+        "documentation/resources/http_loadbalancer/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-001",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-002",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-003",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-004",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-005",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-006",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-007",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-008",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-009",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-disc-010",
+      "reason": "Verified out-of-scope control query targeting non-Terraform operational concepts outside provider HCL configuration. Corpus index documents provider scope as strictly Terraform infrastructure as code.",
+      "source_evidence": [
+        "documentation/index.md:1-25: Canonical XCSH Terraform Provider Documentation index; covers declarative HCL resources and data sources only.",
+        "documentation/provider/setup/index.md:8-12: The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-unsupp-001",
+      "reason": "Verified unsupported control: requested capability is absent from provider schema and canonical documentation. Provider setup and schema references confirm no documentation support exists.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100: Argument Reference documents all supported provider arguments (api_token, api_p12_file, api_cert, api_key, api_url, p12_password, api_ca_cert); requested attribute is absent.",
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; verified absent across documentation corpus."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-unsupp-002",
+      "reason": "Verified unsupported control: requested capability is absent from provider schema and canonical documentation. Provider setup and schema references confirm no documentation support exists.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100: Argument Reference documents all supported provider arguments (api_token, api_p12_file, api_cert, api_key, api_url, p12_password, api_ca_cert); requested attribute is absent.",
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; verified absent across documentation corpus."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-unsupp-003",
+      "reason": "Verified unsupported control: requested capability is absent from provider schema and canonical documentation. Provider setup and schema references confirm no documentation support exists.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100: Argument Reference documents all supported provider arguments (api_token, api_p12_file, api_cert, api_key, api_url, p12_password, api_ca_cert); requested attribute is absent.",
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; verified absent across documentation corpus."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-unsupp-004",
+      "reason": "Verified unsupported control: requested capability is absent from provider schema and canonical documentation. Provider setup and schema references confirm no documentation support exists.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100: Argument Reference documents all supported provider arguments (api_token, api_p12_file, api_cert, api_key, api_url, p12_password, api_ca_cert); requested attribute is absent.",
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; verified absent across documentation corpus."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-unsupp-005",
+      "reason": "Verified unsupported control: requested capability is absent from provider schema and canonical documentation. Provider setup and schema references confirm no documentation support exists.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100: Argument Reference documents all supported provider arguments (api_token, api_p12_file, api_cert, api_key, api_url, p12_password, api_ca_cert); requested attribute is absent.",
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; verified absent across documentation corpus."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-unsupp-006",
+      "reason": "Verified unsupported control: requested capability is absent from provider schema and canonical documentation. Provider setup and schema references confirm no documentation support exists.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100: Argument Reference documents all supported provider arguments (api_token, api_p12_file, api_cert, api_key, api_url, p12_password, api_ca_cert); requested attribute is absent.",
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; verified absent across documentation corpus."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-claim-001",
+      "reason": "Verified no-live-claim control: source.json records static review snapshot commit and provider documentation confirms schema validation is static within local provider binary, not live apply-time repository verification.",
+      "source_evidence": [
+        "source.json:1-6: source_commit 183149e97a049ed8b5803251fb10ddc9c34f1480; provider_version pending normal release; status review preparation only.",
+        "documentation/provider/setup/index.md:83-100: Provider configuration defines static authentication and API connection parameters without live repository source validation."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-claim-002",
+      "reason": "Verified no-live-claim control: action documentation confirms actions operate as one-way API execution invocations without automated cross-resource transaction rollback.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/index.md:24-46: Action minimal configuration and execution model documents one-way action execution without transactional rollback across graph resources."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-claim-003",
+      "reason": "Verified no-live-claim control: provider setup documentation mandates live credentials for provider configuration; state-cached authentication without live credentials is not supported.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:85-92: Required (one of the following authentication methods): api_token, api_p12_file, api_cert and api_key."
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ctrl-claim-004",
+      "reason": "Verified no-live-claim control: canonical documentation explicitly states that the provider does not define provider functions.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:20: ~> **Note:** This provider includes first-class actions, which require Terraform 1.14 or later. The provider does not define provider functions."
+      ],
+      "valid": true
+    }
+  ],
+  "limitations": [
+    "Audit conducted independently using strictly canonical documentation/ and source.json without inspecting retrieval implementations, external workspaces, or GitHub.",
+    "Frozen benchmark labels and source files were not modified; defects are reported candidly without creating a replacement benchmark.",
+    "Runtime qualification cannot pass due to verified label defects in block-versus-property anchoring and provider_role metadata."
+  ],
+  "verdict": "label-defects"
+}
