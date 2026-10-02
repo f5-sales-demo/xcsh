@@ -1159,3 +1159,9 @@ TypeScript source imports failed on the missing ignored Terraform gzip asset.
 That source shard now resets the optional loader before tests; compiled candidate
 preparation still regenerates/verifies the pinned index. Red/green workflow
 regression and actionlint pass. No candidate binaries were produced by that run.
+
+Revision independent candidate verifies 45 deep cases but retains ten malformed
+workload TLS paths; fresh verifier returns needs-attention with four findings on
+those paths/depth/subset entries. It remains unfrozen and unrun. Final source-only
+author correction and another fresh verifier handoff are active. Candidate build
+run 37075887687 includes source-loader preparation fix; no release publication.
