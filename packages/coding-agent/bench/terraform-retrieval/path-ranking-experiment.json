@@ -1,0 +1,88 @@
+{
+  "development_only": true,
+  "production_promoted": false,
+  "qualification_passed": false,
+  "source_provider_version": "v12.2.0",
+  "source_commit": "b53aad4062cce8c72c387720a614043232d129b9",
+  "timing_scope": "warm ranking and candidate queries only; excludes source loading, initial token preparation and full response rendering",
+  "algorithm": "IDF over schema and description vocabulary; weighted path, leaf, description and ancestor coverage; indexed200 BM25 candidate pool; block/field request distinction",
+  "reports": [
+    {
+      "file": "progressive-terraform-path-ranker-dev.json",
+      "sha256": "fea3fbf2e166595cdcfccb50d53bee5540836d11d72ab05ee51a564ae89acf9d",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 14,
+      "top1": 9,
+      "top5": 13,
+      "p95": 603.1616749999998
+    },
+    {
+      "file": "progressive-terraform-path-ranker-cached-dev.json",
+      "sha256": "e788ec43597d45f7bbd86a949cb0e370e7b7209de90e43950ed4b20824f605d4",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 14,
+      "top1": 11,
+      "top5": 13,
+      "p95": 258.95669599999974
+    },
+    {
+      "file": "progressive-terraform-path-ranker-bounded-dev.json",
+      "sha256": "64576c6ba2449e44f35463effe5ee8eff8075e02ecb627deeb323906144824e1",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 14,
+      "top1": 11,
+      "top5": 13,
+      "p95": 33.6578999999997
+    },
+    {
+      "file": "progressive-terraform-path-ranker-full-regression.json",
+      "sha256": "65ed8b107f5d3debcb8c73290f05bea1c72398c5efeeec4fca4925f0642bde52",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 140,
+      "top1": 15,
+      "top5": 56,
+      "p95": 38.38273200000185
+    },
+    {
+      "file": "progressive-terraform-path-target-dev.json",
+      "sha256": "a9ee714150fb07322068f0505fd832f5919d2c78c58ff5962b0817e47a7637cc",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 14,
+      "top1": 9,
+      "top5": 13,
+      "p95": 33.31554899999992
+    },
+    {
+      "file": "progressive-terraform-path-target-full-regression.json",
+      "sha256": "356ef2ec773fbb28c7c017d869f15d0b0e7ce157f3f1cd68317d9e7ada7bbe48",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 140,
+      "top1": 15,
+      "top5": 59,
+      "p95": 38.468902000000526
+    },
+    {
+      "file": "progressive-terraform-candidate-stage-diagnostic.json",
+      "sha256": "6bd79d8bd058958caf1fb3446764b477f50c175c4731f57e923f9d6710d147e8",
+      "development_only": true,
+      "qualification_passed": false,
+      "answerable": 140,
+      "candidate_top200": 76,
+      "top1": 15,
+      "top5": 59,
+      "p95": 38.851826000000074
+    }
+  ],
+  "conclusion": "Candidate recall76/140within200 prevents95percent accuracy regardless of reranking. Best development11/14first13/14top5does not generalize. No production integration.",
+  "source_inconsistency": {
+    "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
+    "description": "Choice for selecting HTTP proxy with bring your own certificates.",
+    "retained_unchanged": true
+  }
+}

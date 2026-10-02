@@ -462,3 +462,85 @@ describe("Terraform snapshot ingestion", () => {
 		}
 	});
 });
+
+test("provider setup resolves exact maintained authentication sections and honors caller facets", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-setup-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const original = docs[0]!;
+		const body =
+			"# Provider setup\n\n## Authentication Options\nChoose documented credentials.\n\n## Option 1: API Token Authentication\napi_token is the credential.\n\n## Option 2: P12 Certificate Authentication\np12_file is the credential.\n\n## Option 3: PEM Certificate Authentication\ncert and key are credentials.\n";
+		const setupPath = "documentation/provider/setup/index.md";
+		docs.push({
+			...original,
+			path: setupPath,
+			body,
+			sha256: terraformHash(body),
+			metadata: {
+				...original.metadata,
+				id: "setup",
+				canonical_id: "setup",
+				path: setupPath,
+				provider_type: "provider",
+				provider_name: "setup",
+				role: "overview",
+				category: "administration",
+				capabilities: ["administration"],
+				tasks: ["authentication"],
+				aliases: ["credential setup"],
+				summary: "Provider authentication.",
+			},
+		});
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const bytes = await readFile(file);
+		const compressed = gzipSync(bytes);
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repository = new TerraformDocumentationRepository(
+			{
+				indexGzipPath: gzipPath,
+				pin: {
+					...pin,
+					index: {
+						sha256: terraformHash(bytes),
+						size_bytes: bytes.length,
+						gzip_sha256: terraformHash(compressed),
+						gzip_size_bytes: compressed.length,
+					},
+				},
+			},
+			path.join(root, "cache"),
+		);
+		const resolve = (query: string, extra = "") =>
+			repository.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}${extra}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const token = (await resolve("API token authentication in the xcsh provider block")).content;
+		expect(token).toContain("Selected leaf;");
+		expect(token).toContain("#option-1-api-token-authentication");
+		expect(Buffer.byteLength(token)).toBeLessThanOrEqual(4096);
+		expect((await resolve("credential setup for provider using P12 certificate")).content).toContain(
+			"#option-2-p12-certificate-authentication",
+		);
+		expect((await resolve("provider authentication using PEM certificate")).content).toContain(
+			"#option-3-pem-certificate-authentication",
+		);
+		expect((await resolve("set up provider authentication")).content).toContain("#authentication-options");
+		expect((await resolve("provider API token authentication impossible_credential_flag")).content).toContain(
+			"No results.",
+		);
+		expect((await resolve("provider API token authentication", "&category=security")).content).toContain(
+			"No results.",
+		);
+		expect((await resolve("provider API token authentication", "&provider_type=resources")).content).toContain(
+			"No results.",
+		);
+		(await repository.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

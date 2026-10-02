@@ -7,6 +7,7 @@ import {
 	type TerraformMetadata,
 	terraformKnownQueryTerms,
 	terraformProviderMention,
+	terraformProviderSetupDestination,
 	terraformQueryIdentity,
 	terraformTaskDestination,
 	terraformTimeoutOperations,
@@ -266,4 +267,21 @@ test("provider identity follows the named owner instead of nested schema nouns",
 	expect(terraformProviderMention("xcsh_workload HTTP load balancer fields", ["workload", "http_loadbalancer"])).toBe(
 		"workload",
 	);
+});
+
+test("provider credentials route to maintained setup options without confusing authentication resources", () => {
+	expect(terraformProviderSetupDestination("configure API token authentication in the xcsh provider block")).toBe(
+		"option-1-api-token-authentication",
+	);
+	expect(terraformProviderSetupDestination("credential setup for the provider with a P12 certificate")).toBe(
+		"option-2-p12-certificate-authentication",
+	);
+	expect(terraformProviderSetupDestination("provider authentication using PEM certificate and private key")).toBe(
+		"option-3-pem-certificate-authentication",
+	);
+	expect(terraformProviderSetupDestination("set up authentication so the xcsh provider can manage resources")).toBe(
+		"authentication-options",
+	);
+	expect(terraformProviderSetupDestination("configure xcsh_authentication resource JWT validation")).toBeUndefined();
+	expect(terraformProviderSetupDestination("TLS certificates on HTTP load balancer resource")).toBeUndefined();
 });

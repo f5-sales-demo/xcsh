@@ -454,3 +454,28 @@ remain undecided. Red fixture reproduced protected-application/CDN confusion;
 469 internal URL tests and workspace TypeScript checks pass after repair.
 Full post-analysis regression:29/140selected,46.4286%top5,discovery150.848ms,
 complete response144.425ms. Accuracy remains failed;this is no qualification.
+
+
+## Provider credential setup routing
+
+Provider authentication intent resolves maintained API token,P12,PEM or method
+choice headings rather than the unrelated authentication resource. Caller facets
+and node scope apply;unknown exact identifiers remain fail-closed. Indexed setup
+reads avoid whole-corpus BM25. Red/green unsupported-identifier and integration
+fixtures pass;471URLtests+workspacechecks pass. Final post-analysis regression
+31/140selected,47.8571%top5,discovery149.240ms,complete144.068ms. Qualification
+remains failed;the frozen suite is unchanged and ineligible.
+
+IDF/path/leaf ranking experiment reaches11/14development first,13/14top5 with
+indexed200candidate queries at33.658ms ranking p95. Full post-analysis regression
+15/140first,56/140top5;requested-target parsing yields59/140top5. Only76/140
+expected destinations enter the200candidate pool. Timing excludes response and
+initial token preparation. Experiment remains unshipped;candidate recall needs
+redesign. Pinned https_auto_cert description incorrectly repeats bring-your-own
+certificate wording;source text remains unchanged and this inconsistency is
+recorded rather than silently rewritten by the consumer.
+
+A fresh independent source-only reviewer is auditing all200existing labels in
+an isolated task workspace. No retrieval code/results or prior review findings
+were supplied. This audit does not replace or modify the frozen benchmark and
+cannot confer runtime qualification.

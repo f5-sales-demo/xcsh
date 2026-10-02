@@ -680,6 +680,18 @@ export function scoreTerraformAliasContext(
 	return score;
 }
 
+export function terraformProviderSetupDestination(query: string): string | undefined {
+	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
+	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
+		return undefined;
+	const methods = [
+		{ present: /\bapi[ -]token\b/i.test(query), anchor: "option-1-api-token-authentication" },
+		{ present: /\bp12\b|\bpkcs[ -]?12\b/i.test(query), anchor: "option-2-p12-certificate-authentication" },
+		{ present: /\bpem\b/i.test(query), anchor: "option-3-pem-certificate-authentication" },
+	].filter(method => method.present);
+	return methods.length === 1 ? methods[0]!.anchor : "authentication-options";
+}
+
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
 	if (/\bimport\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	if (
@@ -896,6 +908,15 @@ export function selectTerraformCandidate(
 		broadened ||
 		(!/^(schema-|section$)/.test(first.anchor) &&
 			!["import", "timeouts", "lifecycle"].includes(first.metadata.role) &&
+			!(
+				first.metadata.provider_type === "provider" &&
+				[
+					"authentication-options",
+					"option-1-api-token-authentication",
+					"option-2-p12-certificate-authentication",
+					"option-3-pem-certificate-authentication",
+				].includes(first.anchor)
+			) &&
 			!(
 				first.metadata.role === "fundamentals" &&
 				["minimal-configuration", "root-configuration"].includes(first.anchor)
@@ -1228,9 +1249,10 @@ export class TerraformDocumentationRepository {
 				/(?:which|what).*documentation|where.*(?:begin|start)|need.*(?:help|guidance)|(?:resource.*data[ -]source|data[ -]source.*resource)|explain.*fields/i.test(
 					search,
 				);
+			const setupAnchor = terraformProviderSetupDestination(search);
 			const query = terraformSearchQuery(search);
 			const identity = terraformQueryIdentity(search);
-			if (!filters.some(f => f.key === "provider_type") && identity.providerType)
+			if (!setupAnchor && !filters.some(f => f.key === "provider_type") && identity.providerType)
 				filters.push({ key: "provider_type", value: identity.providerType });
 			const propertyMention = /where is (.*?) documented/i.exec(search)?.[1];
 			const propertySearch = propertyMention
@@ -1243,7 +1265,7 @@ export class TerraformDocumentationRepository {
 				.toLowerCase()
 				.replace(/[^a-z0-9]+/g, " ")
 				.trim()} `;
-			if (!filters.some(f => f.key === "provider_name")) {
+			if (!setupAnchor && !filters.some(f => f.key === "provider_name")) {
 				const identityRole = filters.find(filter => filter.key === "provider_type")?.value;
 				const names = db
 					.query(
@@ -1554,7 +1576,7 @@ export class TerraformDocumentationRepository {
 						term => !db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(`"${term}"`),
 					) ?? false;
 			if (unknownIdentifiers) rows = [];
-			if (!rows.length && !unknownIdentifiers) {
+			if (!rows.length && !unknownIdentifiers && !setupAnchor) {
 				rows = query ? (statement.all(...args) as SearchRow[]) : [];
 				if (!rows.length && query.includes(" AND ")) {
 					const known = terraformKnownQueryTerms(query, term =>
@@ -1643,6 +1665,30 @@ export class TerraformDocumentationRepository {
 						}
 					}
 				}
+			}
+			if (setupAnchor && !unknownIdentifiers) {
+				const setupClauses = ["td.provider_type='provider'", "td.provider_name='setup'", "s.anchor=?"];
+				const setupArgs: Array<string | number> = [setupAnchor];
+				for (const filter of filters) {
+					setupClauses.push(
+						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=td.path AND f.facet=? AND f.value=?)",
+					);
+					setupArgs.push(filter.key, filter.value);
+				}
+				if (node) {
+					setupClauses.push(
+						"td.id IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT id FROM descendants)",
+					);
+					setupArgs.push(node);
+				}
+				rows = (
+					db
+						.query(
+							`SELECT td.path,td.metadata,s.anchor,s.heading,s.context_markdown markdown FROM terraform_documents td JOIN terraform_sections s ON s.path=td.path WHERE ${setupClauses.join(" AND ")} ORDER BY td.path COLLATE BINARY LIMIT ?`,
+						)
+						.all(...setupArgs, limit) as SearchRow[]
+				).map(row => ({ ...row, raw_score: 200, score: 200 / 201 }));
+				broadened = false;
 			}
 			const uniqueRows = new Map<string, SearchRow>();
 			for (const row of rows) {
