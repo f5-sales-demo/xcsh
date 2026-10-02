@@ -943,6 +943,10 @@ export class TerraformDocumentationRepository {
 				rows.length > limit ? `Continue: ${next.href}` : "",
 			);
 		} else if (search) {
+			const navigationRequest =
+				/(?:which|what).*documentation|where.*(?:begin|start)|need.*(?:help|guidance)|explain.*fields/i.test(
+					search,
+				);
 			const query = terraformSearchQuery(search);
 			if (!filters.some(f => f.key === "provider_type")) {
 				const inferred = /\bephemeral(?: resource)?\b/i.test(search)
@@ -1019,7 +1023,7 @@ export class TerraformDocumentationRepository {
 			// Exact schema terminology routes through indexed destinations, before passage ranking.
 			const providerFilter = filters.find(f => f.key === "provider_name");
 
-			if (providerFilter) {
+			if (providerFilter && !navigationRequest) {
 				const destinationClauses = ["dest.provider_name=?", "instr(?, ' ' || dest.phrase || ' ')>0"];
 				const destinationArgs: Array<string | number> = [providerFilter.value, propertySearch ?? normalizedSearch];
 				for (const f of filters) {
@@ -1064,7 +1068,7 @@ export class TerraformDocumentationRepository {
 					broadened = false;
 				}
 			}
-			if (providerFilter && !node && !propertyMention) {
+			if (providerFilter && !navigationRequest && !node && !propertyMention) {
 				const aliasClauses = ["a.provider_name=?", "instr(?, ' ' || a.alias || ' ')>0"];
 				const aliasArgs: Array<string | number> = [providerFilter.value, normalizedSearch];
 				for (const f of filters) {
@@ -1187,11 +1191,12 @@ export class TerraformDocumentationRepository {
 				!filters.some(f => f.key !== "provider_name") &&
 				!propertyMention &&
 				!taskRole &&
-				query
-					.split(" AND ")
-					.every(term =>
-						Boolean(db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(term)),
-					)
+				(navigationRequest ||
+					query
+						.split(" AND ")
+						.every(term =>
+							Boolean(db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(term)),
+						))
 			) {
 				const choices = db
 					.query(

@@ -23,3 +23,7 @@ No overall/model accuracy, supported-HCL result, false-live-apply pass or instal
 Index f284ffe3b44f49e8f1718288223d5e923e62e8b0affac82989f2500f5b6504ab; SQLite 892,760,064 bytes, gzip 77,824,448 bytes. Two generation runs match both digests. Answerable leaf accuracy/top5 98.5714%; scored retrieval 98.9474%. Ubuntu warm p95 105.174 ms; Mac 98.132 ms. Five repetitions, 970 complete search responses per host. Context sections/fences remain complete; maximum discovery 2,878 bytes. Two prompts remain failures (existing-certificate and advanced Bot Defense paraphrases). This is regression evidence after examining the first frozen run; no renewed held-out qualification is claimed.
 
 Broader internal URL suite: 454 tests pass after required source-matched native preparation. Typecheck, bundle check and prompt formatting checks pass. Installed model route confirmed openai-codex/gpt-6.1-sol on xcsh 22.7.2; candidate installed 40-prompt UAT is pending provider publication.
+
+## Disjoint v2 first run
+
+A second frozen set has no prior prompt or answerable-destination overlap. It passes 140/140 answerable destinations but fails all 40 role ambiguities because navigation wording collides with read timeout fields. Scored accuracy 78.9474%; first-run p95 Ubuntu12.897ms/Mac8.271ms. This FAILED qualification and is preserved. Navigation detection repair regression: 139/140 answerable and 40/40 ambiguous; scored99.4737%, Ubuntu97.180ms. This remains post-analysis regression.

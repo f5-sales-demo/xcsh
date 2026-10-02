@@ -197,6 +197,13 @@ describe("Terraform snapshot ingestion", () => {
 			expect((await resolve("xcsh://terraform-documentation/?search=fixture&limit=10")).size).toBeLessThanOrEqual(
 				4096,
 			);
+			expect(
+				(
+					await resolve(
+						"xcsh://terraform-documentation/?search=I%20need%20Terraform%20guidance%20for%20fixture.%20Which%20documentation%20should%20I%20read%3F",
+					)
+				).content,
+			).toContain("Narrowing choices");
 			const broadened = (await resolve("xcsh://terraform-documentation/?search=fixture%20nonexistent")).content;
 			expect(broadened).toContain("No results.");
 			expect((await resolve("xcsh://terraform-documentation/?search=how%20do%20I")).content).toContain(

@@ -12,7 +12,7 @@ const assetFile=arg('--assets');if(!assetFile)throw new Error('--assets <JSON> r
 const assets=JSON.parse(await readFile(assetFile,'utf8')) as TerraformEmbeddedAssets;
 const suiteFile=arg('--suite')??path.join(root,'heldout.json');
 const output=arg('--output')??path.join(root,`qualification-${os.platform()}-${os.arch()}.json`);
-const freeze=JSON.parse(await readFile(path.join(root,'freeze.json'),'utf8'));
+const freeze=JSON.parse(await readFile(path.join(path.dirname(suiteFile),'freeze.json'),'utf8'));
 const suiteBytes=await readFile(suiteFile);const suiteName=path.basename(suiteFile);
 if(terraformHash(suiteBytes)!==freeze.files[suiteName])throw new Error('Frozen qualification suite hash mismatch');
 const suite=JSON.parse(suiteBytes.toString()) as Case[];

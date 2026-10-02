@@ -1,0 +1,398 @@
+[
+  {
+    "id": "requalification-001",
+    "kind": "answerable",
+    "prompt": "For the xcsh aws tgw site data source, where is vn config / inside static routes / static route list / custom static route / nexthop / nexthop address / ipv4 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr"
+    ],
+    "depth": 8,
+    "source_schema_path": "vn_config.inside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.ipv4.addr"
+  },
+  {
+    "id": "requalification-002",
+    "kind": "answerable",
+    "prompt": "In the xcsh aws vpc site data source, where is ingress egress gw / inside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv4 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/aws_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+    ],
+    "depth": 9,
+    "source_schema_path": "ingress_egress_gw.inside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv4.addr"
+  },
+  {
+    "id": "requalification-003",
+    "kind": "answerable",
+    "prompt": "For the xcsh azure vnet site data source, where is ingress egress gw / hub / express route enabled / connections / other subscription / authorized key / clear secret info / url documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/azure_vnet_site/properties/ingress_egress_gw/hub/express_route_enabled/connections/other_subscription/authorized_key/clear_secret_info/index.md#schema-ingress_egress_gw--hub--express_route_enabled--connections--other_subscription--authorized_key--clear_secret_info--url"
+    ],
+    "depth": 8,
+    "source_schema_path": "ingress_egress_gw.hub.express_route_enabled.connections.other_subscription.authorized_key.clear_secret_info.url"
+  },
+  {
+    "id": "requalification-004",
+    "kind": "answerable",
+    "prompt": "In the xcsh bigip http proxy data source, where is origin pools / pools / origin servers / origin servers / private ip / site locator / site / namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/origin_servers/private_ip/site_locator/site/index.md#schema-origin_pools--pools--origin_servers--origin_servers--private_ip--site_locator--site--namespace"
+    ],
+    "depth": 8,
+    "source_schema_path": "origin_pools.pools.origin_servers.origin_servers.private_ip.site_locator.site.namespace"
+  },
+  {
+    "id": "requalification-005",
+    "kind": "answerable",
+    "prompt": "For the xcsh bigip virtual server data source, where is enable api discovery / api crawler / api crawler config / domains / simple login / password / clear secret info / provider ref documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--provider_ref"
+    ],
+    "depth": 8,
+    "source_schema_path": "enable_api_discovery.api_crawler.api_crawler_config.domains.simple_login.password.clear_secret_info.provider_ref"
+  },
+  {
+    "id": "requalification-006",
+    "kind": "answerable",
+    "prompt": "In the xcsh bot endpoint policy data source, where is endpoint policy content / protected mobile endpoints / protected mobile endpoints / request body / request body or / request body match / exact value / not documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_or/request_body_match/exact_value/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--request_body--request_body_or--request_body_match--exact_value--not"
+    ],
+    "depth": 8,
+    "source_schema_path": "endpoint_policy_content.protected_mobile_endpoints.protected_mobile_endpoints.request_body.request_body_or.request_body_match.exact_value.not"
+  },
+  {
+    "id": "requalification-007",
+    "kind": "answerable",
+    "prompt": "For the xcsh cdn loadbalancer data source, where is enable api discovery / api crawler / api crawler config / domains / simple login / password / blindfold secret info / store provider documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--store_provider"
+    ],
+    "depth": 8,
+    "source_schema_path": "enable_api_discovery.api_crawler.api_crawler_config.domains.simple_login.password.blindfold_secret_info.store_provider"
+  },
+  {
+    "id": "requalification-008",
+    "kind": "answerable",
+    "prompt": "In the xcsh fleet data source, where is storage device list / storage devices / pure service orchestrator / arrays / flash blade / flash blades / api token / blindfold secret info / decryption provider documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--blindfold_secret_info--decryption_provider"
+    ],
+    "depth": 9,
+    "source_schema_path": "storage_device_list.storage_devices.pure_service_orchestrator.arrays.flash_blade.flash_blades.api_token.blindfold_secret_info.decryption_provider"
+  },
+  {
+    "id": "requalification-009",
+    "kind": "answerable",
+    "prompt": "For the xcsh gcp vpc site data source, where is ingress egress gw / outside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv4 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+    ],
+    "depth": 9,
+    "source_schema_path": "ingress_egress_gw.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv4.addr"
+  },
+  {
+    "id": "requalification-010",
+    "kind": "answerable",
+    "prompt": "In the xcsh http loadbalancer data source, where is bot defense / policy / protected app endpoints / flow label / authentication / login / transaction result / failure conditions / status documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--status"
+    ],
+    "depth": 9,
+    "source_schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result.failure_conditions.status"
+  },
+  {
+    "id": "requalification-051",
+    "kind": "answerable",
+    "prompt": "For the xcsh dns zone add cryptokey action, where is key type documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/properties/index.md#schema-key_type"
+    ],
+    "depth": 1,
+    "source_schema_path": "key_type"
+  },
+  {
+    "id": "requalification-052",
+    "kind": "answerable",
+    "prompt": "In the xcsh dns zone delete cryptokey action, where is zone name documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_delete_cryptokey/properties/index.md#schema-zone_name"
+    ],
+    "depth": 1,
+    "source_schema_path": "zone_name"
+  },
+  {
+    "id": "requalification-053",
+    "kind": "answerable",
+    "prompt": "For the xcsh dns zone edit cryptokey action, where is active documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_edit_cryptokey/properties/index.md#schema-active"
+    ],
+    "depth": 1,
+    "source_schema_path": "active"
+  },
+  {
+    "id": "requalification-054",
+    "kind": "answerable",
+    "prompt": "In the xcsh kubernetes manifests ephemeral resource, where is extensions / type url documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md#schema-extensions--type_url"
+    ],
+    "depth": 2,
+    "source_schema_path": "extensions.type_url"
+  },
+  {
+    "id": "requalification-055",
+    "kind": "answerable",
+    "prompt": "For the xcsh site signatures update action, where is namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/site_signatures_update/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace"
+  },
+  {
+    "id": "requalification-056",
+    "kind": "answerable",
+    "prompt": "In the xcsh site upgrade os action, where is site documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/site_upgrade_os/properties/index.md#schema-site"
+    ],
+    "depth": 1,
+    "source_schema_path": "site"
+  },
+  {
+    "id": "requalification-057",
+    "kind": "answerable",
+    "prompt": "For the xcsh site upgrade sw action, where is site documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/site_upgrade_sw/properties/index.md#schema-site"
+    ],
+    "depth": 1,
+    "source_schema_path": "site"
+  },
+  {
+    "id": "requalification-058",
+    "kind": "answerable",
+    "prompt": "In the xcsh access active session data source, where is virtual server documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/access_active_session/properties/index.md#schema-virtual_server"
+    ],
+    "depth": 1,
+    "source_schema_path": "virtual_server"
+  },
+  {
+    "id": "requalification-059",
+    "kind": "answerable",
+    "prompt": "For the xcsh access active sessions data source, where is start time to documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/access_active_sessions/properties/index.md#schema-start_time_to"
+    ],
+    "depth": 1,
+    "source_schema_path": "start_time_to"
+  },
+  {
+    "id": "requalification-060",
+    "kind": "answerable",
+    "prompt": "In the xcsh addon service data source, where is namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/addon_service/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace"
+  },
+  {
+    "id": "requalification-061",
+    "kind": "answerable",
+    "prompt": "For the xcsh addon service activation status data source, where is id documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/addon_service_activation_status/properties/index.md#schema-id"
+    ],
+    "depth": 1,
+    "source_schema_path": "id"
+  },
+  {
+    "id": "requalification-062",
+    "kind": "answerable",
+    "prompt": "In the xcsh address allocator data source, where is id documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/address_allocator/properties/index.md#schema-id"
+    ],
+    "depth": 1,
+    "source_schema_path": "id"
+  },
+  {
+    "id": "requalification-063",
+    "kind": "answerable",
+    "prompt": "For the xcsh advertise policy data source, where is where / virtual network / ref / kind documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/advertise_policy/properties/where/virtual_network/ref/index.md#schema-where--virtual_network--ref--kind"
+    ],
+    "depth": 4,
+    "source_schema_path": "where.virtual_network.ref.kind"
+  },
+  {
+    "id": "requalification-064",
+    "kind": "answerable",
+    "prompt": "In the xcsh alert gen policy data source, where is namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_gen_policy/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace"
+  },
+  {
+    "id": "requalification-065",
+    "kind": "answerable",
+    "prompt": "For the xcsh alert policy data source, where is routes / custom / group / exact match documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_policy/properties/routes/custom/group/index.md#schema-routes--custom--group--exact_match"
+    ],
+    "depth": 4,
+    "source_schema_path": "routes.custom.group.exact_match"
+  },
+  {
+    "id": "requalification-066",
+    "kind": "answerable",
+    "prompt": "In the xcsh alert receiver data source, where is webhook / http config / auth token / token / clear secret info / provider ref documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_receiver/properties/webhook/http_config/auth_token/token/clear_secret_info/index.md#schema-webhook--http_config--auth_token--token--clear_secret_info--provider_ref"
+    ],
+    "depth": 6,
+    "source_schema_path": "webhook.http_config.auth_token.token.clear_secret_info.provider_ref"
+  },
+  {
+    "id": "requalification-067",
+    "kind": "answerable",
+    "prompt": "For the xcsh alert template data source, where is namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_template/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace"
+  },
+  {
+    "id": "requalification-068",
+    "kind": "answerable",
+    "prompt": "In the xcsh allowed domain data source, where is labels documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/allowed_domain/properties/index.md#schema-labels"
+    ],
+    "depth": 1,
+    "source_schema_path": "labels"
+  },
+  {
+    "id": "requalification-141",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for container registry. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/container_registry/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/container_registry/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-142",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for crl. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/crl/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/crl/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-143",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for data group. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/data_group/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/data_group/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-144",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for data type. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/data_type/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/data_type/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-145",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for dc cluster group. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/dc_cluster_group/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/dc_cluster_group/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-146",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for discovery. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/discovery/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/discovery/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-147",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for dns compliance checks. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/dns_compliance_checks/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/dns_compliance_checks/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-148",
+    "kind": "ambiguous",
+    "prompt": "I need Terraform guidance for dns lb health check. Which documentation should I read?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/dns_lb_health_check/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/dns_lb_health_check/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "requalification-181",
+    "kind": "control",
+    "prompt": "Where is the xcsh origin_pool Terraform property unknown_verification_field_4682 documented?",
+    "expected": [],
+    "behavior": "unsupported"
+  },
+  {
+    "id": "requalification-182",
+    "kind": "control",
+    "prompt": "Where is the xcsh certificate Terraform property unknown_verification_field_4682 documented?",
+    "expected": [],
+    "behavior": "unsupported"
+  },
+  {
+    "id": "requalification-191",
+    "kind": "control",
+    "prompt": "Can this offline Terraform corpus prove that my deployment has passed a live apply?",
+    "expected": [],
+    "behavior": "no-live-evidence"
+  },
+  {
+    "id": "requalification-195",
+    "kind": "control",
+    "prompt": "Find general API guidance for cloud credential management.",
+    "expected": [],
+    "behavior": "ordinary-discovery"
+  }
+]

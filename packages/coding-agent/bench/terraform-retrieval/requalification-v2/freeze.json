@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "source_provider_version": "v12.1.2",
+  "source_commit": "38b94aa2e7178544f29f4df416772b744ab47c9b",
+  "consumer_commit": "b97bdd7e6a0cd5718a411ea0dfd0c90b5fc19f39",
+  "heldout_count": 200,
+  "answerable_count": 140,
+  "ambiguous_count": 40,
+  "control_count": 20,
+  "depth8_answerable_count": 50,
+  "model_subset_count": 40,
+  "files": {
+    "heldout.json": "6d148b233512c9d1b5685784b5ef4d8d64fc009892e08c6412418d66cb6bd383",
+    "model-subset.json": "8ca74c7afa5da6a11717ad56a33d761f00cb642cb7512bb30a71e9cf2b10a84c"
+  },
+  "development_overlap": 0,
+  "prior_answerable_destinations_overlap": 0,
+  "limitations": [
+    "Synthetic property questions use path context and do not independently qualify unconstrained vague paraphrases.",
+    "This requalification follows analysis of an earlier frozen suite; first-run failures remain preserved.",
+    "No tuning against this set is permitted before claiming held-out qualification."
+  ]
+}
