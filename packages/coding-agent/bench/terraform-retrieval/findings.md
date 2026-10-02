@@ -390,3 +390,9 @@ destinations in the same provider role,with all facets and descendant scope appl
 Discovery password without mode returns both top-level API discovery and per-app
 ML discovery choices;exact branch queries still select correct leaves.
 467URLtests+workspacechecks pass;qualification gate remains unresolved.
+
+End-to-end sibling fixture verifies hidden repeated branches become choices and
+category scoping excludes unrelated branch destinations. Two-segment repeated
+suffix lookup covers shallower branch collisions;metadata/Markdown load only for
+returned alternatives. Exact discovery-mode corpus queries remain selected leaves.
+468URLtests+workspacechecks pass. This guards missing context,not validation rules.

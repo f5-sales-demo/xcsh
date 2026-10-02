@@ -286,6 +286,90 @@ describe("Terraform snapshot ingestion", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+	test("sibling discovery preserves absent branch choices and applies category scope", async () => {
+		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-sibling-"));
+		try {
+			const pin = await fixture(root);
+			const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+			const docs = ["single_lb_app.enable_discovery.login.password", "enable_api_discovery.login.password"].map(
+				(schema, index) => {
+					const path = `documentation/resources/fixture/properties/${schema.split(".").join("/")}/index.md`;
+					const body = '<a id="section"></a>\n# Password\nDiscovery password secret.\n';
+					const id = `branch-${index}`;
+					return {
+						...original,
+						path,
+						body,
+						markdown: body,
+						sha256: terraformHash(body),
+						body_sha256: terraformHash(body),
+						size_bytes: body.length,
+						metadata: {
+							...original.metadata,
+							id,
+							canonical_id: id,
+							path,
+							provider_type: "resources",
+							role: "properties",
+							category: index === 0 ? "security" : "dns",
+							schema_path: schema.split("."),
+							aliases: index === 0 ? ["discovery password"] : ["password"],
+							sections: [
+								{
+									schema_path: schema.split("."),
+									document_id: id,
+									anchor: "section",
+									description: "Discovery password secret",
+									aliases: [],
+									relationships: [],
+									flags: [],
+								},
+							],
+						},
+					};
+				},
+			);
+			await buildTerraformIndex(docs, pin, path.join(root, "index.sqlite"));
+			const bytes = await readFile(path.join(root, "index.sqlite")),
+				compressed = gzipSync(bytes);
+			await writeFile(path.join(root, "index.gz"), compressed);
+			const repo = new TerraformDocumentationRepository(
+				{
+					indexGzipPath: path.join(root, "index.gz"),
+					pin: {
+						...pin,
+						index: {
+							sha256: terraformHash(bytes),
+							size_bytes: bytes.length,
+							gzip_sha256: terraformHash(compressed),
+							gzip_size_bytes: compressed.length,
+						},
+					},
+				},
+				path.join(root, "cache"),
+			);
+			const read = (suffix: string) =>
+				repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?search=configure%20discovery%20password&provider_name=fixture&provider_type=resources" +
+								suffix,
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				);
+			const all = (await read("")).content;
+			expect(all).toContain("Narrowing choices");
+			expect(all).toContain("single_lb_app/enable_discovery/login/password");
+			expect(all).toContain("properties/enable_api_discovery/login/password");
+			const scoped = (await read("&category=security")).content;
+			expect(scoped).toContain("Selected leaf;");
+			expect(scoped).not.toContain("properties/enable_api_discovery/login/password");
+			(await repo.database()).close();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
 	test("context returns whole fences, continuation sections and oversized notices", async () => {
 		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-context-"));
 		try {

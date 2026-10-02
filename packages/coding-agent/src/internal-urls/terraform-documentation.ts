@@ -1571,7 +1571,7 @@ export class TerraformDocumentationRepository {
 					? current.anchor.slice(7).split("--")
 					: metadata.schema_path;
 				if (schema.length >= 3) {
-					const suffix = schema.slice(-3).join(".");
+					const suffix = schema.slice(-2).join(".");
 					const siblingClauses = ["dest.provider_name=?", "dest.provider_type=?", "dest.schema_path LIKE ?"];
 					const siblingArgs: Array<string | number> = [
 						metadata.provider_name,
@@ -1592,11 +1592,11 @@ export class TerraformDocumentationRepository {
 					}
 					const siblings = db
 						.query(
-							`SELECT dest.path,dest.anchor,dest.schema_path,td.metadata,s.heading,s.context_markdown markdown FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path JOIN terraform_sections s ON s.path=dest.path AND s.anchor=dest.anchor WHERE ${siblingClauses.join(" AND ")} ORDER BY dest.schema_path LIMIT 100`,
+							`SELECT dest.path,dest.anchor,dest.schema_path FROM terraform_destinations dest WHERE ${siblingClauses.join(" AND ")} ORDER BY dest.schema_path LIMIT 100`,
 						)
-						.all(...siblingArgs) as Array<SearchRow & { schema_path: string }>;
+						.all(...siblingArgs) as Array<{ path: string; anchor: string; schema_path: string }>;
 					for (const sibling of siblings) {
-						const m = JSON.parse(sibling.metadata) as TerraformMetadata;
+						const m = { ...metadata, schema_path: sibling.schema_path.split(".") };
 						if (
 							selectTerraformCandidate(
 								[
@@ -1617,9 +1617,18 @@ export class TerraformDocumentationRepository {
 								search,
 							) === "choices"
 						) {
+							const details = db
+								.query(
+									"SELECT td.metadata,s.heading,s.context_markdown markdown FROM terraform_documents td JOIN terraform_sections s ON s.path=td.path WHERE td.path=? AND s.anchor=?",
+								)
+								.get(sibling.path, sibling.anchor) as { metadata: string; heading: string; markdown: string };
 							rows.push({
 								...sibling,
-								metadata: JSON.stringify({ ...m, schema_path: sibling.schema_path.split(".") }),
+								...details,
+								metadata: JSON.stringify({
+									...JSON.parse(details.metadata),
+									schema_path: sibling.schema_path.split("."),
+								}),
 								raw_score: current.raw_score * 0.5,
 								score: (current.raw_score * 0.5) / (1 + current.raw_score * 0.5),
 							});
