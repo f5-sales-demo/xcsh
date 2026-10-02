@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "candidate_sha256": "0051440d4a86ebeeb84e4aa131bae9ef24062d73f24f128003a12c957d2e4fe5",
+  "verifier_model": "Gemini 3.8 Flash (High)",
+  "fresh_conversation": true,
+  "reviewed_cases": 200,
+  "verdict": "needs-attention",
+  "findings": [
+    {
+      "case_ids": [
+        "amb-008"
+      ],
+      "explanation": "In amb-008, the user prompt states: 'When writing our monitoring configuration in Terraform, how do I query an existing alert policy via data source rather than define a new alert policy resource?'. The prompt explicitly specifies querying via data source and explicitly rejects resource creation ('rather than define a new alert policy resource'). Task wording directly determines the single correct destination (documentation/data-sources/alert_policy/index.md#root-configuration). Categorizing this query as ambiguous and demanding clarification between resource provisioning and data source lookup directly violates the requirement to reject unnecessary clarification when task wording already determines it.",
+      "recommendation": "Remove amb-008 from the ambiguous suite and replace it with a genuinely ambiguous architectural choice, or reclassify it as an answerable query targeting data-sources/alert_policy/index.md#root-configuration.",
+      "severity": "blocking",
+      "source_evidence": [
+        "revised-candidate.json: case amb-008 prompt: 'When writing our monitoring configuration in Terraform, how do I query an existing alert policy via data source rather than define a new alert policy resource?'",
+        "revised-candidate.json: case amb-008 expected: ['xcsh://terraform-documentation/documentation/resources/alert_policy/index.md#minimal-configuration', 'xcsh://terraform-documentation/documentation/data-sources/alert_policy/index.md#root-configuration']",
+        "brief.md line 7: 'reject unnecessary clarification when task wording already determines it.'",
+        "documentation/data-sources/alert_policy/index.md#root-configuration: Data source root configuration for xcsh_alert_policy."
+      ]
+    },
+    {
+      "case_ids": [
+        "ans-std-020",
+        "amb-038",
+        "amb-039",
+        "ans-std-016"
+      ],
+      "explanation": "The candidate suite maintains an unresolved conflict between answerable timeout cases and ambiguous timeout cases: (1) In ans-std-020, the prompt explicitly asks: 'Where do I set lifecycle timeouts for the xcsh_healthcheck resource in Terraform?'. Despite explicitly asking for lifecycle timeouts, its expected destination is recorded as documentation/resources/healthcheck/properties/timeouts/index.md#section (the schema property block), completely bypassing documentation/resources/healthcheck/lifecycle/timeouts/index.md#timeouts (role 'timeouts', tasks ['lifecycle']). (2) In amb-038, the suite defines the two destinations as the distinction between 'provider schema operation timeouts and resource lifecycle timeouts'. By this standard, ans-std-020 should have routed to the lifecycle document rather than the properties schema block. (3) In ans-std-016, 'How do I define custom operation timeouts for an origin pool resource?' is marked answerable to origin_pool/properties/timeouts, while in amb-039, 'Where can I find origin pool timeout documentation?' is marked ambiguous between origin_pool/properties/timeouts and origin_pool/lifecycle/timeouts. All eight resources with timeout properties also have lifecycle timeout documents, but prompt wording fails to establish a non-contradictory boundary across the suite.",
+      "recommendation": "Harmonize timeout prompt terminology and expected destinations across both answerable and ambiguous suites. If a prompt explicitly queries 'lifecycle timeouts' (as in ans-std-020), it must point to lifecycle/timeouts/index.md#timeouts. Ensure answerable timeout prompts (ans-std-015 to ans-std-022) explicitly specify property block schema attributes versus lifecycle guidance without contradicting the ambiguity criteria used in amb-038 and amb-039.",
+      "severity": "blocking",
+      "source_evidence": [
+        "documentation/resources/healthcheck/lifecycle/timeouts/index.md#timeouts: role 'timeouts', tasks ['lifecycle'], page_title 'Timeouts'",
+        "documentation/resources/healthcheck/properties/timeouts/index.md#section: role 'properties', tasks ['configuration'], page_title 'timeouts'",
+        "revised-candidate.json: ans-std-020 prompt asks for 'lifecycle timeouts' but expects documentation/resources/healthcheck/properties/timeouts/index.md#section",
+        "revised-candidate.json: amb-038 permitted_choices contrasts 'Property block schema reference for timeouts' with 'Lifecycle timeouts guide and usage examples'"
+      ]
+    },
+    {
+      "case_ids": [
+        "ans-deep-009"
+      ],
+      "explanation": "In ans-deep-009, the prompt specifies: 'Looking up the xcsh_bot_defense_policy data source in Terraform, which schema section handles cookie operator rules for protected mobile endpoints when checking transaction success?'. The entity xcsh_bot_defense_policy does not exist anywhere in the provider documentation or schema. The canonical data source is xcsh_bot_endpoint_policy (as correctly referenced in ans-deep-011 and ans-deep-013). Specifying a non-existent provider entity in an answerable prompt creates an invalid test case that cannot be resolved through legitimate documentation retrieval.",
+      "recommendation": "Correct the prompt in ans-deep-009 to reference xcsh_bot_endpoint_policy or use natural language phrasing such as 'bot endpoint policy data source' matching canonical documentation.",
+      "severity": "blocking",
+      "source_evidence": [
+        "revised-candidate.json: ans-deep-009 prompt specifies 'xcsh_bot_defense_policy'",
+        "documentation/data-sources/bot_endpoint_policy/index.md: canonical registration for xcsh_bot_endpoint_policy",
+        "Corpus check: documentation/data-sources/ contains bot_endpoint_policy, bot_allowlist_policy, bot_detection_rule, and bot_infrastructure, but no bot_defense_policy directory exists."
+      ]
+    },
+    {
+      "case_ids": [
+        "amb-002",
+        "amb-004",
+        "amb-005",
+        "amb-006",
+        "amb-007",
+        "amb-009",
+        "amb-010",
+        "amb-011",
+        "amb-012",
+        "amb-013",
+        "amb-016",
+        "amb-017",
+        "amb-020",
+        "amb-027",
+        "amb-028",
+        "amb-031",
+        "amb-038"
+      ],
+      "explanation": "17 ambiguous cases (over 42% of the ambiguous suite) use a mechanical, synthetic phrasing pattern appending 'when choosing between X and Y', 'versus', or 'between enabled and disabled': (1) In amb-027 and amb-028, the prompts ask where to toggle a capability 'between enabled and disabled'. Asking where a toggle resides requests information covering both branches and is answerable by showing both configuration blocks (enable_* and disable_*); there is no missing decision information that prevents answering or requires asking the user to clarify whether they want to enable or disable the feature. (2) In amb-002, amb-006, and amb-011, the prompts ask how to do option A 'versus' option B. Comparative queries requesting documentation for both branches are not ambiguous\u2014the user explicitly asked for both. (3) In amb-004, amb-005, amb-007, amb-009, amb-010, amb-012, amb-013, amb-016, amb-017, amb-020, amb-031, and amb-038, the prompts mechanically enumerate the exact schema blocks in the prompt. This repeated template violates the brief rule to avoid repeating one template and reject unnecessary clarification when task wording already determines it. Genuine ambiguity requires unstated requirements or missing context, not multiple-choice questions asking about enumerated schema options.",
+      "recommendation": "Reframe ambiguous cases to represent authentic developer underspecification where essential context is omitted (e.g. unstated network scopes, conflicting listener protocols, or missing identity mechanisms) without enumerating the schema blocks in the prompt. Replace neutral toggle queries (amb-027, amb-028) and comparative queries (amb-002, amb-006, amb-011) with genuine multi-path architectural choices.",
+      "severity": "major",
+      "source_evidence": [
+        "brief.md line 5: 'Avoid filling the suite with explicit schema-path requests or repeating one template.'",
+        "brief.md line 7: 'reject unnecessary clarification when task wording already determines it. Distinguish destination ambiguity from missing HCL values.'",
+        "revised-candidate.json: prompts for amb-002, amb-004, amb-005, amb-006, amb-007, amb-009, amb-010, amb-011, amb-012, amb-013, amb-016, amb-017, amb-020, amb-027, amb-028, amb-031, amb-038"
+      ]
+    },
+    {
+      "case_ids": [
+        "amb-002",
+        "amb-038"
+      ],
+      "explanation": "The 40-case model subset (model_subset_ids) retains defective and synthetically templated ambiguous cases: amb-002 (synthetic 'data source versus declare resource' comparative prompt) and amb-038 (synthetic 'choosing between provider schema operation timeouts and resource lifecycle timeouts'). Including artificial ambiguity cases in the primary model evaluation subset weakens evaluation rigor.",
+      "recommendation": "Replace amb-002 and amb-038 in model_subset_ids with genuine ambiguous cases that lack required architectural parameters.",
+      "severity": "major",
+      "source_evidence": [
+        "revised-candidate.json: model_subset_ids contains amb-002 and amb-038",
+        "brief.md line 9: 'Supply 40 model_subset_ids: 28 answerable, eight ambiguous, four controls, covering HCL drafting and provenance.'"
+      ]
+    },
+    {
+      "case_ids": [
+        "amb-014"
+      ],
+      "explanation": "Case amb-014 prompts: 'Where do I inspect or set up an AWS VPC site in Distributed Cloud?'. This prompt retains the generic 'inspect or set up' phrasing from the initial candidate suite without realistic scenario context.",
+      "recommendation": "Reframe amb-014 with authentic user intent (e.g. referencing an existing AWS VPC deployment via data source vs declaring a newly managed AWS VPC site resource).",
+      "severity": "warning",
+      "source_evidence": [
+        "revised-candidate.json: case amb-014 prompt: 'Where do I inspect or set up an AWS VPC site in Distributed Cloud?'",
+        "candidate.json: case amb-014 prompt identical."
+      ]
+    },
+    {
+      "case_ids": [
+        "amb-001"
+      ],
+      "explanation": "In amb-001, the prompt asks: 'I need to draft the private key block for an xcsh_certificate resource in Terraform with name 'app-cert', but my input is missing whether the private key is stored as an unencrypted clear secret or encrypted via Blindfold Secret Management. Where do I find the documented configuration choices?'. While this successfully addresses the missing certificate values requirement, the query asks where to find documented configuration choices (which is answered by documentation/resources/certificate/properties/private_key/index.md#section), but the expected destinations are set to the leaf blocks blindfold_secret_info and clear_secret_info. If the user asks where the choices are documented, pointing to the two mutually exclusive sub-blocks rather than the parent choice block creates a minor semantic tension.",
+      "recommendation": "Refine amb-001 prompt to ask how to configure the private key block directly rather than asking where the choices are documented, ensuring clear alignment with the leaf sub-block destinations.",
+      "severity": "warning",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/private_key/index.md#section: Direct properties lists blindfold_secret_info and clear_secret_info, with ast-validator:ConflictingObjectAttributes.",
+        "revised-candidate.json: amb-001 prompt and expected destinations."
+      ]
+    }
+  ],
+  "frozen": false,
+  "retrieval_run": false,
+  "qualification_passed": false
+}

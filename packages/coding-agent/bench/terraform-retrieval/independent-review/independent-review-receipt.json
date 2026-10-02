@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "candidate_sha256": "a38628c016a58043424b2e779dedbbe03017a9c090824b643750c41a0ae51b23",
+  "author_model": "Gemini 3.8 Flash (High)",
+  "verifier_model": "Gemini 3.8 Flash (High)",
+  "separate_conversations": true,
+  "implementation_and_previous_results_withheld": true,
+  "reviewed_cases": 200,
+  "verdict": "needs-attention",
+  "findings": [
+    {
+      "case_ids": [
+        "ans-deep-001",
+        "ans-deep-002",
+        "ans-deep-003"
+      ],
+      "explanation": "Cases ans-deep-001, ans-deep-002, and ans-deep-003 specify expected destination anchors pointing to leaf attributes (status, regex_values, and name) in documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md. However, candidate.json records their schema_path truncated to the parent block ['bot_defense', 'policy', 'protected_app_endpoints', 'flow_label', 'authentication', 'login', 'transaction_result', 'success_conditions'] (depth 8) instead of appending the leaf attribute (depth 9). This breaks exact leaf read verification, causes structural validation to fail with exit code 1 ('schema path not verified at anchor'), and impacts two cases (ans-deep-001 and ans-deep-003) selected for model_subset_ids.",
+      "recommendation": "Update schema_path to append the leaf attribute name (status, regex_values, name) and adjust depth to 9 for ans-deep-001, ans-deep-002, and ans-deep-003 so that schema_path strictly matches the anchor definition in authoritative Markdown and xcsh_docs metadata.",
+      "severity": "blocking",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status",
+        "xcsh_docs metadata in documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md sections: anchor 'schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status' has schema_path ['bot_defense', 'policy', 'protected_app_endpoints', 'flow_label', 'authentication', 'login', 'transaction_result', 'success_conditions', 'status'] (depth 9).",
+        "candidate-structure.json: structural_validation_passed is false with 3 schema path mismatch errors."
+      ]
+    },
+    {
+      "case_ids": [
+        "ans-deep-001",
+        "ans-deep-003",
+        "amb-001"
+      ],
+      "explanation": "The model subset (model_subset_ids) contains 40 cases (28 answerable, 8 ambiguous, 4 controls) but fails specific substantive composition requirements: (1) Exact leaf reads: ans-deep-001 and ans-deep-003 are included in model_subset_ids but have corrupted schema paths missing the leaf attribute; (2) Provenance: No case in the model subset (nor across the candidate suite) exercises upstream receipt provenance, registry anchor traceability, or source commit provenance; (3) Missing certificate values: No case in the model subset tests handling of missing certificate values (amb-001 merely tests resource vs data source destination choice rather than missing certificate attributes).",
+      "recommendation": "Repair leaf schema paths for ans-deep-001 and ans-deep-003. Replace or refine model subset cases to explicitly exercise upstream provenance (e.g., verifying upstream receipt pins or registry path anchors) and missing certificate values (e.g., evaluating handling of incomplete TLS certificate bundles).",
+      "severity": "blocking",
+      "source_evidence": [
+        "brief.md line 9: 'Supply 40 model_subset_ids: 28 answerable, eight ambiguous, four controls, covering HCL drafting and provenance.'",
+        "verifier-brief.md line 5: 'Verify the model subset is 28/8/4 and exercises HCL, missing certificate values, provenance, supported fields, and exact leaf reads.'",
+        "candidate.json model_subset_ids contains ans-deep-001 and ans-deep-003 with defective leaf schema paths and lacks any provenance or missing certificate value test cases."
+      ]
+    },
+    {
+      "case_ids": [
+        "amb-001",
+        "amb-002",
+        "amb-003",
+        "amb-004",
+        "amb-005",
+        "amb-006",
+        "amb-007",
+        "amb-008",
+        "amb-009",
+        "amb-010",
+        "amb-011",
+        "amb-012",
+        "amb-013",
+        "amb-015"
+      ],
+      "explanation": "14 ambiguous cases (35% of the ambiguous suite) repeat an identical template asking 'How do I configure/manage/set up <resource> in Terraform?' and claiming operational ambiguity between resource creation and data source query. In Terraform conventions and standard developer intent, 'configuring' or 'setting up' a resource unambiguously denotes resource provisioning (data sources only query existing infrastructure). This violates the brief instruction to 'Reject excessive explicit schema-path prompts and repeated templates even when paths are correct' and 'reject unnecessary clarification when task wording already determines it'.",
+      "recommendation": "Diversify ambiguous cases and eliminate repetitive templates. For cases intended to test resource vs data source ambiguity, use neutral phrasing (such as 'How do I reference or attach an existing DNS zone vs declare a new one?'). Replace multiple redundant resource-vs-data-source cases with authentic architectural ambiguities (e.g. mutually exclusive listener protocols, conflicting routing options, or distinct authentication models).",
+      "severity": "major",
+      "source_evidence": [
+        "brief.md line 5: 'Avoid filling the suite with explicit schema-path requests or repeating one template.'",
+        "brief.md line 7: 'reject unnecessary clarification when task wording already determines it.'",
+        "candidate.json cases amb-001 through amb-013 and amb-015: identical pattern where 'How do I configure/manage/set up X' is forced into clarification between resource creation and data source reading."
+      ]
+    },
+    {
+      "case_ids": [
+        "amb-027",
+        "amb-028"
+      ],
+      "explanation": "Cases amb-027 ('How do I set IP reputation filtering on an HTTP load balancer?') and amb-028 ('Where do I configure Threat Mesh settings on an HTTP load balancer?') force clarification between enabling the feature (enable_ip_reputation, enable_threat_mesh) and disabling it (disable_ip_reputation, disable_threat_mesh). Requesting how to 'set' or 'configure' a capability carries affirmative intent to use the capability; routing to a disable block represents an artificial ambiguity that violates the instruction to reject unnecessary clarification when task wording already determines intent.",
+      "recommendation": "Reframe prompts in amb-027 and amb-028 to query the status toggle neutrally (e.g. 'Where do I toggle IP reputation filtering between enabled and disabled on an HTTP load balancer?') so both branches are genuinely plausible, or replace with genuine multi-option schema choices.",
+      "severity": "warning",
+      "source_evidence": [
+        "candidate.json amb-027: prompt 'How do I set IP reputation filtering on an HTTP load balancer?' clarified between enable_ip_reputation and disable_ip_reputation.",
+        "candidate.json amb-028: prompt 'Where do I configure Threat Mesh settings on an HTTP load balancer?' clarified between enable_threat_mesh and disable_threat_mesh.",
+        "verifier-brief.md line 5: 'reject unnecessary clarification when task wording already determines it.'"
+      ]
+    },
+    {
+      "case_ids": [
+        "ans-deep-001",
+        "ans-deep-002",
+        "ans-deep-003"
+      ],
+      "explanation": "Candidate validation pipeline failed with exit code 1, recording structural_validation_passed: false in candidate-structure.json due to schema path mismatch errors. Under the independent verification policy, approval requires all 200 cases to be verified with zero material unverified requirements and full structural compliance. Candidate benchmark cannot proceed to freeze preparation while automated structural validation fails.",
+      "recommendation": "Correct the schema paths and depth annotations in candidate.json, rerun validate_candidate.py to confirm clean zero-error structural validation, and submit the corrected candidate for fresh independent verification.",
+      "severity": "blocking",
+      "source_evidence": [
+        "candidate-structure.json line 15: '\"structural_validation_passed\": false'",
+        "candidate-validator.log: exit status 1 from validate_candidate.py with 3 fatal errors for ans-deep-001, ans-deep-002, and ans-deep-003."
+      ]
+    },
+    {
+      "case_ids": [
+        "ans-deep-001",
+        "ans-deep-002",
+        "ans-deep-003"
+      ],
+      "explanation": "Anchor and schema depth mismatch: ans-deep-001, ans-deep-002, and ans-deep-003 target leaf properties with depth 9 in xcsh_docs metadata but are annotated as depth 8 in candidate.json, understating the actual leaf schema depth.",
+      "recommendation": "Ensure depth field reflects the true schema path length of 9 matching the verified anchor in authoritative Markdown.",
+      "severity": "major",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md lines 81, 151, 209"
+      ]
+    }
+  ],
+  "coverage_assessment": [
+    "Evaluated complete 200-case suite against canonical documentation: 140 answerable, 40 ambiguous, and 20 control cases.",
+    "Product family coverage verified across 11 families: security (48), load-balancing (44), infrastructure (40), container (23), networking (12), administration (11), dns (8), cdn (6), identity (3), monitoring (3), and api-management (2).",
+    "Provider role coverage verified across 5 roles: properties (126), fundamentals (44), overview (19), import (10), and reference (1).",
+    "Schema depth analysis confirms 56 answerable cases targeting depth >= 8 (53 strictly verified at metadata anchor, 3 intended depth 9 leaf properties currently mislabeled as depth 8), meeting the threshold of >= 50 deep cases.",
+    "Domain coverage verified: provider authentication (ans-std-001 to ans-std-004), resource imports (ans-std-005 to ans-std-014, amb-040), timeouts (ans-std-015 to ans-std-022, amb-038, amb-039), actions (ans-std-023 to ans-std-032, amb-031 to amb-035), ephemeral resources (ans-std-033 to ans-std-036, amb-036, amb-037), nested TLS (ans-std-037, ans-std-038, ans-std-043, ans-std-044, amb-017, amb-020, amb-021), Bot Defense successful logins (ans-deep-001 to ans-deep-006), existing certificates (ans-std-045 to ans-std-048, amb-001), backend servers (ans-std-040, ans-std-049 to ans-std-053, amb-019, amb-020, amb-025), and credential setup (ans-deep-007, ans-deep-008, ans-std-054 to ans-std-056, amb-030).",
+    "Control verification confirmed: 10 ordinary-discovery controls (ctrl-disc-001 to ctrl-disc-010) correctly test non-Terraform activation boundaries with empty expected destinations; 6 unsupported-field controls (ctrl-unsupp-001 to ctrl-unsupp-006) were independently verified via full-corpus grep across 18,954 markdown files to be completely absent from the provider schema; 4 no-live-claim controls (ctrl-claim-001 to ctrl-claim-004) accurately reflect provider architectural limits (including ctrl-claim-004 verified verbatim in documentation/provider/setup/index.md)."
+  ],
+  "limitations": [
+    "Read-only independent inspection performed strictly on candidate.json, brief.md, source.json, and canonical documentation/ without executing retrieval code, running Terraform, or querying external networks.",
+    "Verification evaluated static semantic uniqueness and schema destinations against local authoritative Markdown files and xcsh_docs frontmatter metadata; dynamic runtime retrieval performance and scoring were out of scope.",
+    "Source repository status in source.json is recorded as 'review preparation only; freeze waits for published snapshot' (commit 183149e97a049ed8b5803251fb10ddc9c34f1480, provider_version 'pending normal release'). Benchmark freeze remains gated until the immutable metadata-v1 snapshot is published.",
+    "Blocking structural errors (ans-deep-001, ans-deep-002, ans-deep-003), model subset gaps, and template repetition require author correction and clean independent re-review before candidate qualification."
+  ],
+  "frozen": false,
+  "retrieval_run": false,
+  "qualification_passed": false
+}
