@@ -241,6 +241,51 @@ describe("Terraform snapshot ingestion", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+	test("discovery preserves distinct relevant property anchors sharing one file", async () => {
+		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-fields-"));
+		try {
+			const pin = await fixture(root);
+			const docs = await verifyTerraformSnapshot(root, pin);
+			const body =
+				'# Retry configuration\n\n<a id="schema-retry_count"></a>\n### retry_count\nRetry count for failed requests.\n\n<a id="schema-retry_interval"></a>\n### retry_interval\nRetry interval between failed requests.\n';
+			docs[0]!.body = body;
+			docs[0]!.markdown = body;
+			docs[0]!.sha256 = terraformHash(body);
+			docs[0]!.body_sha256 = terraformHash(body);
+			docs[0]!.metadata.role = "reference";
+			await buildTerraformIndex(docs, pin, path.join(root, "index.sqlite"));
+			const bytes = await readFile(path.join(root, "index.sqlite"));
+			const compressed = gzipSync(bytes);
+			await writeFile(path.join(root, "index.gz"), compressed);
+			const repo = new TerraformDocumentationRepository(
+				{
+					indexGzipPath: path.join(root, "index.gz"),
+					pin: {
+						...pin,
+						index: {
+							sha256: terraformHash(bytes),
+							size_bytes: bytes.length,
+							gzip_sha256: terraformHash(compressed),
+							gzip_size_bytes: compressed.length,
+						},
+					},
+				},
+				path.join(root, "cache"),
+			);
+			const url = Object.assign(
+				new URL("xcsh://terraform-documentation/?search=fixture%20retry&provider_type=resources&role=reference"),
+				{ rawHost: "terraform-documentation" },
+			) as InternalUrl;
+			const response = (await repo.resolve(url)).content;
+			expect(response).toContain("#schema-retry_count");
+			expect(response).toContain("#schema-retry_interval");
+			expect(response.match(/^Read: /gm)?.length).toBeGreaterThanOrEqual(2);
+			expect(response).toContain("Narrowing choices");
+			(await repo.database()).close();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
 	test("context returns whole fences, continuation sections and oversized notices", async () => {
 		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-context-"));
 		try {

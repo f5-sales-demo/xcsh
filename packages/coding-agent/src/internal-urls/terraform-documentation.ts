@@ -1228,7 +1228,7 @@ export class TerraformDocumentationRepository {
                   ABS(bm25(documents_fts,1.5,4.0,1.0)) raw_score
                 FROM documents_fts JOIN documents d ON d.id=documents_fts.rowid
                 JOIN terraform_passages p ON p.qmd_path=d.path JOIN terraform_documents td ON td.path=p.path WHERE ${clauses.join(" AND ")}),
-                ranked AS (SELECT *,ROW_NUMBER() OVER(PARTITION BY path ORDER BY raw_score DESC,ordinal ASC) rank FROM scored),
+                ranked AS (SELECT *,ROW_NUMBER() OVER(PARTITION BY path,anchor ORDER BY raw_score DESC,ordinal ASC) rank FROM scored),
                 selected AS (SELECT * FROM ranked WHERE rank=1 ORDER BY raw_score DESC,path COLLATE BINARY,ordinal LIMIT ?)
                 SELECT selected.*,td.metadata,c.doc AS markdown,raw_score/(1+raw_score) score
                 FROM selected JOIN terraform_documents td ON td.path=selected.path JOIN content c ON c.hash=selected.hash

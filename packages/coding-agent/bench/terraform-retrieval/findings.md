@@ -358,3 +358,11 @@ baseline8/14correct selected leaves,p95148.141ms;candidate9/14,p95148.299ms.
 The fallback index adds35.7MB and showed no latency gain. It was not promoted;
 production source and reviewed pin restored. Prototype and full results
 remain bench-only. No qualification expected destination was changed.
+
+## Distinct fields within one document
+
+BM25 candidates retain distinct anchors per file instead of collapsing all fields
+to a single page result. A fixture reproduces hidden retry count/interval fields;
+both exact anchors are now discoverable and same-destination aliases remain
+deduplicated.466URLtests+workspacechecks pass. Post-analysis regression top5
+42.8571%,selected32/140,p95202.774ms;qualification still failed,labels unchanged.
