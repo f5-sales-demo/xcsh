@@ -1119,7 +1119,14 @@ export class TerraformDocumentationRepository {
 					broadened = false;
 				}
 			}
-			if (providerFilter && !propertyMention && /\b(status|port|name|tenant|namespace|url|value)\b/i.test(search)) {
+			if (
+				providerFilter &&
+				!navigationRequest &&
+				!node &&
+				!propertyMention &&
+				!filters.some(f => !["provider_name", "provider_type"].includes(f.key)) &&
+				/\b(status|port|name|tenant|namespace|url|value)\b/i.test(search)
+			) {
 				const terminals: string[] =
 					search.toLowerCase().match(/\b(status|port|name|tenant|namespace|url|value)\b/g) ?? [];
 				const current = rows[0];
