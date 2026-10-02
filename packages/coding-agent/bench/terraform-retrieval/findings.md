@@ -334,3 +334,12 @@ field/attribute requests retain schema routing. Corpus checks select cryptokey
 delete,single-session terminate,site OS upgrade.464URLtests+workspacechecks pass.
 Post-analysis regression33/140leaf(23.5714%),top5 40%,discovery203.052ms still
 fails qualification. Frozen suite remains ineligible and unchanged.
+
+Ancestor-description section experiment:14/14 development top5,11/14 first,
+ranking p9572.446ms;not connected to production. Ambiguous certificate mode and
+generic parent/field descriptions remain limitations.
+
+Operation timeout requests now use indexed timeouts.create/read/update/delete
+destinations;connection/request/TLS idle timeouts stay in property retrieval.
+Initial creation and refresh phrasing tested;multiple operations return multiple
+exact anchors. Explicit facets and descendant scope preserved. Qualification open.

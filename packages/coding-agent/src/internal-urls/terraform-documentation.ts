@@ -763,6 +763,22 @@ export function rankTerraformProviderNames(
 		.sort((a, b) => b.score - a.score || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
+export function terraformTimeoutOperations(query: string): string[] {
+	if (
+		!/\btimeouts?\b|\bduration\b/i.test(query) ||
+		/\b(?:connection|idle|request|response|tls|handshake)\b/i.test(query)
+	)
+		return [];
+	const terms = query.toLowerCase();
+	const operations: Array<[string, RegExp]> = [
+		["create", /\b(?:create|creation|creating|initial)\b/],
+		["read", /\b(?:read|refresh|inspect)\b/],
+		["update", /\b(?:update|modification|modify)\b/],
+		["delete", /\b(?:delete|deletion|destroy|destruction)\b/],
+	];
+	return operations.filter(([, pattern]) => pattern.test(terms)).map(([name]) => name);
+}
+
 export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
 	const exact = [
 		...new Set([...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)].map(match => match[1]!.toLowerCase())),
@@ -1401,6 +1417,38 @@ export class TerraformDocumentationRepository {
 				}
 			}
 
+			const timeoutOperations = terraformTimeoutOperations(search);
+			if (providerFilter && timeoutOperations.length && !taskDestination) {
+				const conditions = [
+					"dest.provider_name=?",
+					`dest.schema_path IN (${timeoutOperations.map(() => "?").join(",")})`,
+				];
+				const values: Array<string | number> = [
+					providerFilter.value,
+					...timeoutOperations.map(operation => `timeouts.${operation}`),
+				];
+				for (const filter of filters) {
+					conditions.push(
+						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
+					);
+					values.push(filter.key, filter.value);
+				}
+				if (node) {
+					conditions.push(
+						"dest.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT path FROM descendants)",
+					);
+					values.push(node);
+				}
+				const destinations = db
+					.query(
+						`SELECT dest.path,td.metadata,dest.anchor,s.heading,s.context_markdown markdown FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path JOIN terraform_sections s ON s.path=dest.path AND s.anchor=dest.anchor WHERE ${conditions.join(" AND ")} ORDER BY dest.provider_type,dest.schema_path LIMIT ?`,
+					)
+					.all(...values, limit) as SearchRow[];
+				if (destinations.length) {
+					rows = destinations.map(row => ({ ...row, raw_score: 200, score: 200 / 201 }));
+					broadened = false;
+				}
+			}
 			// Unsupported identifier terms must not be discarded by exact-match routing.
 			if (
 				/[a-z][a-z0-9]*_[a-z0-9_]+/i.test(search) &&

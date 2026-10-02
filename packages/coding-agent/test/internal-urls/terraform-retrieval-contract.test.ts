@@ -9,6 +9,7 @@ import {
 	terraformProviderMention,
 	terraformQueryIdentity,
 	terraformTaskDestination,
+	terraformTimeoutOperations,
 	validateTerraformRetrievalMetadata,
 } from "../../src/internal-urls/terraform-documentation";
 
@@ -193,4 +194,16 @@ test("operation identity resolves descriptive action names and keeps execution s
 	expect(rankTerraformProviderNames("Upgrade a site's operating system", names)[0]?.name).toBe("site_upgrade_os");
 	const ambiguous = rankTerraformProviderNames("Maintain cryptokeys in a DNS zone", names);
 	expect(ambiguous.filter(row => row.score === ambiguous[0]?.score)).toHaveLength(3);
+});
+
+test("operation timeouts are distinct from transport timeouts and general usage", () => {
+	expect(terraformTimeoutOperations("increase initial creation timeout")).toEqual(["create"]);
+	expect(terraformTimeoutOperations("schema create and delete timeout duration strings")).toEqual([
+		"create",
+		"delete",
+	]);
+	expect(terraformTimeoutOperations("adjust refresh operation timeout")).toEqual(["read"]);
+	expect(terraformTimeoutOperations("increase HTTP connection idle timeout")).toEqual([]);
+	expect(terraformTimeoutOperations("show lifecycle timeout usage guidance")).toEqual([]);
+	expect(terraformTimeoutOperations("configure backend request timeout")).toEqual([]);
 });
