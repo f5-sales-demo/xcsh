@@ -90,11 +90,6 @@ for case in cases:
             any(
                 normalized(read) == normalized(want)
                 or (
-                    normalized(read).split("#")[0] == normalized(want).split("#")[0]
-                    and "#" not in read
-                    and "view=hint" not in read
-                )
-                or (
                     case.get("match_document")
                     and normalized(read).split("#")[0] == normalized(want).split("#")[0]
                 )
@@ -190,6 +185,7 @@ for case in cases:
                 "read_uris": reads,
                 "citation_uris": citations,
                 "exact_leaf_read": exact_read,
+                "clarification_review_required": case["kind"] == "ambiguous",
                 "expected_citation": cited,
                 "provider_version_cited": args.provider_version in text,
                 "clarification": clarification,
@@ -218,7 +214,10 @@ for case in cases:
                 "binary": args.binary,
                 "provider_version": args.provider_version,
                 "suite_sha256": hashlib.sha256(suite_bytes).hexdigest(),
-                "accuracy": sum(r["passed"] for r in results) / len(results),
+                "automated_trace_accuracy": sum(r["passed"] for r in results)
+                / len(results),
+                "manual_review_required": True,
+                "qualification_passed": False,
                 "complete": len(results) == len(cases),
                 "partition_index": args.partition_index,
                 "partition_count": args.partition_count,

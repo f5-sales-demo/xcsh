@@ -144,3 +144,9 @@ Before the independent freeze, latency measurement also repeats every selected
 context read five times and reports discovery, context, complete response and
 combined route p95 separately. Complete context bytes are included in totals.
 Workspace type/lint checks and scorer tests pass; no held-out run has occurred.
+
+Before the independent freeze, model trace scoring also requires exact anchored
+reads rather than accepting a parent-file read. Automated trace accuracy is
+explicitly provisional; manual clarification and HCL review remain required,
+and qualification_passed remains false until combined acceptance evidence exists.
+Python syntax, Ruff and formatting checks pass.
