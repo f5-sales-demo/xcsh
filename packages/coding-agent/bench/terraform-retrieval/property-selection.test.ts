@@ -84,3 +84,9 @@ test("explicit single-stack excludes dual-stack while omitted stack remains ambi
 	expect(selectPropertyDestination("single-stack outside IPv4 address", rows).kind).toBe("leaf");
 	expect(selectPropertyDestination("outside IPv4 address", rows).kind).toBe("choices");
 });
+
+test("provider-only evidence cannot justify an unrelated requested operation", () => {
+	const candidate = { ...row("token", 23, "ephemeral-resources"), provider_name: "artifact_registry_token", description: "Access token for the F5 Artifact Registry used to authenticate when pulling images.", coverage: 1 };
+	expect(selectPropertyDestination("Which attribute in an ephemeral artifact registry token sets a maximum download bandwidth rate limit?", [candidate]).kind).toBe("choices");
+	expect(selectPropertyDestination("Which attribute in an ephemeral artifact registry token provides the authentication token?", [candidate]).kind).toBe("leaf");
+});

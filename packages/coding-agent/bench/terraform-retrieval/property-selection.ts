@@ -52,6 +52,15 @@ export function selectPropertyDestination(
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
 	if (first.coverage < 0.35 || first.score <= 0)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient query coverage" };
+	const intent = queryText.match(/\b(?:sets?|provides?|enables?|accepts?|specifies|specify|specifying|holds?|retrieves?)\b\s+(.+)/i)?.[1];
+	if (intent && /\b(?:attribute|field|property|parameter|option)\b/i.test(queryText)) {
+		const generic = new Set(["option", "native", "directly", "allow", "added"]);
+		const requestedTerms = propertyTerms(intent).filter(term => !generic.has(term));
+		const local = new Set(propertyTerms(`${first.schema_path.split(".").at(-1)} ${first.description}`));
+		const matches = requestedTerms.filter(term => local.has(term)).length;
+		if (requestedTerms.length && matches / requestedTerms.length < 0.35)
+			return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient requested operation evidence" };
+	}
 	const parts = first.schema_path.split(".");
 	const collisions = [
 		first,

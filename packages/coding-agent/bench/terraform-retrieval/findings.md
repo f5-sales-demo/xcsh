@@ -905,3 +905,22 @@ A fresh existing Antigravity reviewer is auditing all development labels in a
 source-only v12.3.1 workspace. No replacement held-out suite is frozen or run.
 Consumer PR remains draft with auto-merge disabled until valid qualification
 and human acceptance.
+
+Control audit of the same report finds three unsupported natural-language controls
+selecting unrelated leaves (078-080), and one ambiguous-labeled case selecting an
+action overview (071; label uniqueness remains under source review). Zero observed
+false leaves above is restricted to answerable cases, not a safety qualification.
+Report counters now expose control and ambiguous leaf selections explicitly.
+These failures independently prevent production promotion.
+
+A red/green requested-operation fixture now requires local field/description
+evidence after an explicit operation verb. Provider vocabulary alone cannot
+justify an unrelated requested operation. Latest revised development selects
+35/60 expected leaves, with zero answerable false leaves and zero leaf selections
+on eight controls; one ambiguous-labeled action overview remains under review.
+Original development remains 9/14 answerable selections, with three ambiguous
+leaf selections and zero leaf selections on two controls. Neither suite is valid
+held-out qualification. Revised/original p95 is 28.881/31.569 ms. Thirty-three
+focused tests pass. Digest-bound raw reports: indexed-task-intent-receipt.json.
+The policy sacrifices two answerable selections with paraphrased field wording;
+that limitation remains unresolved and prevents promotion.
