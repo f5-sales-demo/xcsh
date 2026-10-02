@@ -297,3 +297,14 @@ Role inference now follows explicit provisioning/configuration versus lookup int
 and does not mistake existing resources for data sources. Generic informational
 queries and competing roles stay undecided.462 internal-URL tests and workspace
 checks pass; explicit Terraform activation remains unchanged. Regression only.
+
+Task/role post-analysis regression:24/140 leaf selection (17.1429%),top5 31.4286%.
+The scalar alias join query plan exposed a full terraform_destinations scan per
+alias. Added provider_name/provider_type join predicates to use existing indexed
+scope. Paired24development queries,5repetitions:complete responses identical;
+p95 before359.770ms,after126.140ms. Accuracy qualification remains unresolved.
+
+Scoped join full post-analysis regression:unchanged24/140 selected leaves,top5
+31.4286%,discovery p95180.277ms,down from650.691ms in prior role regression.
+Response bytes/destinations remain unchanged. Still fails latency/accuracy gate;
+frozen suite remains ineligible.462URLtests+workspacechecks pass.
