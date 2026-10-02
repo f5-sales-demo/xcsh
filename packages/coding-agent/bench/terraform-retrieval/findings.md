@@ -101,3 +101,12 @@ After preserving competing provider roles, v3 regression passes all 190 scored
 retrieval cases, including 140/140 answerable and 40/40 ambiguous cases. Ubuntu
 warm p95101.998ms. This is post-analysis regression, not untouched qualification;
 the v3 first-run failure remains authoritative for the held-out gate.
+
+## Separate semantic experiment
+
+embeddinggemma:300m document-summary embeddings (768 dimensions, model manifest
+85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1) indexed 18,267 pages.
+Development-only top1 0/6, top5 1/6; warm p95240.378ms; vector storage56,116,352bytes;
+embedding generation157.333seconds. This experiment excludes direct-property passages
+and is too narrow to disqualify hybrid retrieval generally. It provides no basis to
+ship semantic retrieval; passage/hybrid evaluation remains separate from frozen suites.
