@@ -1,0 +1,825 @@
+{
+  "cases": [
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-001",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider' uniquely identifies attribute 'decryption_provider' in 'documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:61-91"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-002",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location' uniquely identifies attribute 'location' in 'documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:93-150"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-003",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider' uniquely identifies attribute 'decryption_provider' in 'documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:61-91"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-004",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name' uniquely identifies attribute 'name' in 'documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:80-148"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-005",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--regex_values' uniquely identifies attribute 'regex_values' in 'documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:150-206"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-006",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name' uniquely identifies attribute 'name' in 'documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:80-148"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-007",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status' uniquely identifies attribute 'status' in 'documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:208-264"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-008",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-items--object--spec--gc_spec--infra--hw_info--chassis--asset_tag' uniquely identifies attribute 'asset_tag' in 'documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:35-49"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-009",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-items--object--spec--gc_spec--infra--hw_info--chassis--serial' uniquely identifies attribute 'serial' in 'documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:51-65"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-010",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-items--object--spec--gc_spec--infra--hw_info--chassis--asset_tag' uniquely identifies attribute 'asset_tag' in 'documentation/data-sources/site_registrations_by_state/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations_by_state/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:35-49"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-011",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-spec--gc_spec--infra--hw_info--chassis--serial' uniquely identifies attribute 'serial' in 'documentation/data-sources/site_registration/properties/spec/gc_spec/infra/hw_info/chassis/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/data-sources/site_registration/properties/spec/gc_spec/infra/hw_info/chassis/index.md:51-65"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-012",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/aws_tgw_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-013",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/aws_tgw_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-014",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr' uniquely identifies attribute 'addr' in 'documentation/resources/aws_tgw_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-015",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-016",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-017",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr' uniquely identifies attribute 'addr' in 'documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-018",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-019",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-020",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--redirect_route--path--path' uniquely identifies attribute 'path' in 'documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 10, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md:69-122"
+      ],
+      "valid": true,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-021",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix' uniquely identifies attribute 'prefix' in 'documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 10, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124-177"
+      ],
+      "valid": true,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix"
+      ],
+      "id": "dev-revised-022",
+      "reason": "Label defect: The prompt asks for the string attribute specifying the prefix path to match for a simple route. The expected destination was incorrectly labeled as '#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--path' (exact path match), whereas the schema provides '#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix' for prefix path matching. Verified schema depth is 10.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124-177"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-023",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect' uniquely identifies attribute 'host_redirect' in 'documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 10, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:72-125"
+      ],
+      "valid": true,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-024",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--network_prefix' uniquely identifies attribute 'network_prefix' in 'documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md:83-138"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-025",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip' uniquely identifies attribute 'end_ip' in 'documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 10, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:79-131"
+      ],
+      "valid": true,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-026",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--request_body--request_body_none--request_body_match--exact_value--case_insensitive' uniquely identifies attribute 'case_insensitive' in 'documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_none/request_body_match/exact_value/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_none/request_body_match/exact_value/index.md:34-48"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-027",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_none--cookie_operator--cookie--cookie_or--cookie_match_v2--case_sensitive' uniquely identifies attribute 'case_sensitive' in 'documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 12, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md:38-52"
+      ],
+      "valid": true,
+      "verified_depth": 12
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-028",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-custom_network_config--slo_config--static_v6_routes--static_routes--node_interface--list--interface--name' uniquely identifies attribute 'name' in 'documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md:114-177"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-029",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--blindfold_secret_info--location' uniquely identifies attribute 'location' in 'documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 9, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:94-151"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-030",
+      "reason": "Valid answerable case: Provider root documentation section 'argument-reference' in 'documentation/provider/setup/index.md' uniquely resolves the prompt. Verified schema depth is 0.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-031",
+      "reason": "Valid answerable case: Provider root documentation section 'option-1-api-token-authentication' in 'documentation/provider/setup/index.md' uniquely resolves the prompt. Verified schema depth is 0.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:103-121"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-032",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-token' uniquely identifies attribute 'token' in 'documentation/ephemeral-resources/artifact_registry_token/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-44"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-033",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-expiration_time' uniquely identifies attribute 'expiration_time' in 'documentation/ephemeral-resources/artifact_registry_token/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:21-27"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-034",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-content_type' uniquely identifies attribute 'content_type' in 'documentation/ephemeral-resources/kubernetes_manifests/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-27"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-035",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-extensions--type_url' uniquely identifies attribute 'type_url' in 'documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md:28-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-036",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-key_type' uniquely identifies attribute 'key_type' in 'documentation/actions/dns_zone_add_cryptokey/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path. Note: cases.json supplied lines 33-48 (which document namespace); independent source audit establishes the exact line range for schema-key_type as lines 20-28.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/properties/index.md:21-27"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-037",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-active' uniquely identifies attribute 'active' in 'documentation/actions/dns_zone_edit_cryptokey/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_edit_cryptokey/properties/index.md:21-27"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-038",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-software_version' uniquely identifies attribute 'software_version' in 'documentation/actions/site_upgrade_sw/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_sw/properties/index.md:27-31"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-039",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ids' uniquely identifies attribute 'ids' in 'documentation/actions/access_active_sessions_terminate/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-27"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-040",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-site_names' uniquely identifies attribute 'site_names' in 'documentation/actions/site_signatures_update/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/actions/site_signatures_update/properties/index.md:29-35"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-041",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-os_version' uniquely identifies attribute 'os_version' in 'documentation/actions/site_upgrade_os/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/properties/index.md:21-25"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-042",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr' uniquely identifies attribute 'addr' in 'documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-105"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-043",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-openstack--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--start_ip' uniquely identifies attribute 'start_ip' in 'documentation/resources/securemesh_site_v2/properties/openstack/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/openstack/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md:139-191"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-044",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-origin_pools--pools--origin_servers--origin_servers--private_ip--snat_pool--snat_pool--prefixes' uniquely identifies attribute 'prefixes' in 'documentation/resources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/origin_servers/private_ip/snat_pool/snat_pool/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 8, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/origin_servers/private_ip/snat_pool/snat_pool/index.md:55-105"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-045",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-secondary--primary_servers' uniquely identifies attribute 'primary_servers' in 'documentation/resources/dns_zone/properties/secondary/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:55-115"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-046",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-certificate_url' uniquely identifies attribute 'certificate_url' in 'documentation/resources/certificate/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/index.md:63-126"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-047",
+      "reason": "Valid answerable case: Explicit block request correctly targets '#section' at 'documentation/resources/k8s_cluster/properties/cluster_scoped_access_permit/index.md'. Destination is uniquely distinguished from sibling blocks and role variants. Verified schema depth is 1, matching xcsh_docs metadata.",
+      "source_evidence": [
+        "documentation/resources/k8s_cluster/properties/cluster_scoped_access_permit/index.md:20-47"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-048",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-tunnel_interface--static_ip--node_static_ip--default_gw' uniquely identifies attribute 'default_gw' in 'documentation/resources/network_interface/properties/tunnel_interface/static_ip/node_static_ip/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 4, matching xcsh_docs canonical schema_path. Note: cases.json supplied lines 23-38 (object container header); independent source audit establishes the exact line range for schema-tunnel_interface--static_ip--node_static_ip--default_gw as lines 56-107.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/tunnel_interface/static_ip/node_static_ip/index.md:57-107"
+      ],
+      "valid": true,
+      "verified_depth": 4
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-049",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-peers--external--asn' uniquely identifies attribute 'asn' in 'documentation/resources/bgp/properties/peers/external/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 3, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:249-319"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-050",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-description' uniquely identifies attribute 'description' in 'documentation/resources/namespace/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/namespace/properties/index.md:61-105"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-051",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-receivers--name' uniquely identifies attribute 'name' in 'documentation/resources/alert_policy/properties/receivers/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:106-141"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-052",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-limits--total_number' uniquely identifies attribute 'total_number' in 'documentation/resources/rate_limiter/properties/limits/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/properties/limits/index.md:192-241"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-053",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-swagger_specs' uniquely identifies attribute 'swagger_specs' in 'documentation/resources/api_definition/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/api_definition/properties/index.md:302-359"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-054",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-tenant_details--display_name' uniquely identifies attribute 'display_name' in 'documentation/resources/tenant_configuration/properties/tenant_details/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/tenant_configuration/properties/tenant_details/index.md:55-109"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-055",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-aws_provider--aws_account_number' uniquely identifies attribute 'aws_account_number' in 'documentation/resources/cloud_user_account/properties/aws_provider/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/cloud_user_account/properties/aws_provider/index.md:62-108"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-056",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-registry' uniquely identifies attribute 'registry' in 'documentation/resources/container_registry/properties/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 1, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/container_registry/properties/index.md:351-400"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-057",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-cache_rules--eligible_for_cache--scheme_proxy_host_request_uri--cache_ttl' uniquely identifies attribute 'cache_ttl' in 'documentation/resources/cdn_cache_rule/properties/cache_rules/eligible_for_cache/scheme_proxy_host_request_uri/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 4, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/cdn_cache_rule/properties/cache_rules/eligible_for_cache/scheme_proxy_host_request_uri/index.md:86-129"
+      ],
+      "valid": true,
+      "verified_depth": 4
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-058",
+      "reason": "Valid answerable case: Explicit block request correctly targets '#section' at 'documentation/resources/service_policy/properties/allow_list/index.md'. Destination is uniquely distinguished from sibling blocks and role variants. Verified schema depth is 1, matching xcsh_docs metadata.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/allow_list/index.md:20-57"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-059",
+      "reason": "Valid answerable case: Exact scalar anchor '#schema-routes--request_headers_to_remove' uniquely identifies attribute 'request_headers_to_remove' in 'documentation/resources/route/properties/routes/index.md'. Disambiguated from sibling branches, role variants, and competing products by explicit prompt qualifiers. Verified schema depth is 2, matching xcsh_docs canonical schema_path.",
+      "source_evidence": [
+        "documentation/resources/route/properties/routes/index.md:177-228"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-060",
+      "reason": "Valid answerable case: Explicit block request correctly targets '#section' at 'documentation/resources/cloud_credentials/properties/aws_secret_key/index.md'. Destination is uniquely distinguished from sibling blocks and role variants. Verified schema depth is 1, matching xcsh_docs metadata.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-51"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-061",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the query seeks to declare the port on a managed origin pool resource or inspect the port from an existing origin pool data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:492-553",
+        "documentation/data-sources/origin_pool/properties/index.md:423-474"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-062",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the primary server addresses are being configured on a managed secondary DNS zone resource or read from an existing secondary DNS zone data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 2.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:55-115",
+        "documentation/data-sources/dns_zone/properties/secondary/index.md:41-93"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-063",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the caller is configuring the blocking mode block on an application firewall resource or reading it from a data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20-54",
+        "documentation/data-sources/app_firewall/properties/blocking/index.md:20-48"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-064",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the caller is configuring the MTU on a managed network interface resource or reading it from a network interface data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 2.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/dedicated_interface/index.md:140-193",
+        "documentation/data-sources/network_interface/properties/dedicated_interface/index.md:112-154"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-065",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the alert receiver name is being declared on an alert policy resource or read from an alert policy data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 2.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:106-141",
+        "documentation/data-sources/alert_policy/properties/receivers/index.md:98-133"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-066",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the external peer ASN is being configured on a managed BGP resource or queried from an existing BGP data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 3.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:249-319",
+        "documentation/data-sources/bgp/properties/peers/external/index.md:140-202"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-067",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the health check timeout is being set on a managed health check resource or queried from a health check data source.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/healthcheck/properties/index.md:483-547",
+        "documentation/data-sources/healthcheck/properties/index.md:417-471"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-068",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether mutual TLS authentication to F5 Distributed Cloud is configured using a PKCS#12 bundle or separate PEM certificate and private key files.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 0.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:123-144",
+        "documentation/provider/setup/index.md:145-168"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-069",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the header secret value is supplied using encrypted blindfold secret metadata or plaintext secret information.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 6.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/blindfold_secret_info/index.md:25-56",
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md:25-56"
+      ],
+      "valid": true,
+      "verified_depth": 6
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-070",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether automatic DHCP IP address assignment on the interface begins from the start of the address pool or from the end.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 3.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md:22-49",
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md:22-49"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-071",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the administrative action targets a single active session ID via access_active_session_terminate or a batch list of session IDs via access_active_sessions_terminate.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 1.",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/properties/index.md:21-27",
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-27"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-072",
+      "reason": "Valid ambiguous case: The prompt genuinely omits critical differentiating context (Whether the cloud credential resource is being configured for AWS secret access credentials or Azure client application secret credentials.). The 2 expected destinations form a complete and meaningful set of choices across sibling branches or resource vs data-source role variants. Verified schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-51",
+        "documentation/resources/cloud_credentials/properties/azure_client_secret/index.md:20-57"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-073",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/provider/setup/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (The F5 Distributed Cloud (xcsh) provider block does not support direct AWS IAM role ARN or STS assume-role parameters; authentication is strictly restricted to API tokens, PKCS#12 bundles, or PEM certificates.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-91"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-074",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/resources/http_loadbalancer/properties/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (The HTTP load balancer schema does not provide a property for configuring HTTP/3 transport congestion control algorithms.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/index.md:28-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-075",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/resources/dns_zone/properties/primary/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (The DNS zone schema does not expose configurable NSEC3 salt iteration count attributes in its DNSSEC configuration.). Verified conceptual schema depth is 2.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md:43-51"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-076",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/resources/app_firewall/properties/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (The application firewall resource schema does not support configuring custom machine learning training datasets or retraining intervals.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/index.md:23-31"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-077",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/resources/network_interface/properties/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (Network interface configurations support ethernet, dedicated, layer 2, and tunnel interfaces, but do not provide a native WireGuard private key property.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/index.md:285-293"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-078",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/resources/origin_pool/properties/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (Origin pools do not support a native gRPC-Web transcoding schema property.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:33-41"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-079",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/ephemeral-resources/artifact_registry_token/properties/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (The ephemeral artifact registry token resource only exposes expiration_time, namespace, and token attributes; bandwidth throttling is not supported.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-45"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-080",
+      "reason": "Valid control case: Prompt queries an unsupported feature/property. Canonical source documentation in documentation/ephemeral-resources/kubernetes_manifests/properties/index.md confirms that this capability is not exposed in the provider schema, satisfying ordinary discovery expectations (The ephemeral kubernetes manifests resource accepts raw manifest content and extensions, but does not provide a Helm repository URL parameter.). Verified conceptual schema depth is 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-29"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    }
+  ],
+  "limitations": [
+    "Audit conducted strictly using canonical documentation/ and source.json from provider version v12.2.0 (commit b53aad4062cce8c72c387720a614043232d129b9).",
+    "This evaluation constitutes development evidence only; it is never held-out qualification, and no runtime qualification is claimed.",
+    "No retrieval code, retrieval results, previous review logs, external workspaces, or GitHub resources were inspected.",
+    "No Terraform CLI execution or runtime schema introspection was performed."
+  ],
+  "verdict": "label-defects"
+}
