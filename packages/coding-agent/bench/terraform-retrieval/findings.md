@@ -240,3 +240,8 @@ about196KB before newline. A300KB print-mode regression reproduced returning
 before the actual record write callback. Print mode now waits for each write.
 14 print-mode regressions and workspace checks pass; exact control reruns pending.
 Original failed traces are preserved; no trace cleanup or inferred pass is used.
+
+JSON write repair exact retries:3/4 formerly failed controls now produce complete
+valid traces and pass activation/claim checks. ctrl-disc-008 still times out.
+Original invalid/truncated traces and first attempts remain retained. This repair
+does not change failed accuracy qualification or establish installed release UAT.
