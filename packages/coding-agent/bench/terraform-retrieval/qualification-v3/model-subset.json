@@ -1,0 +1,398 @@
+[
+  {
+    "id": "qualification-001",
+    "kind": "answerable",
+    "prompt": "For the xcsh aws tgw site data source, where is vn config / outside static routes / static route list / custom static route / nexthop / nexthop address / ipv4 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#schema-vn_config--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr"
+    ],
+    "depth": 8,
+    "source_schema_path": "vn_config.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.ipv4.addr"
+  },
+  {
+    "id": "qualification-002",
+    "kind": "answerable",
+    "prompt": "In the xcsh aws vpc site data source, where is ingress egress gw / outside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv6 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+    ],
+    "depth": 9,
+    "source_schema_path": "ingress_egress_gw.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv6.addr"
+  },
+  {
+    "id": "qualification-003",
+    "kind": "answerable",
+    "prompt": "For the xcsh azure vnet site data source, where is ingress egress gw ar / outside static routes / static route list / custom static route / nexthop / nexthop address / ipv6 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv6/index.md#schema-ingress_egress_gw_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv6--addr"
+    ],
+    "depth": 8,
+    "source_schema_path": "ingress_egress_gw_ar.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.ipv6.addr"
+  },
+  {
+    "id": "qualification-004",
+    "kind": "answerable",
+    "prompt": "In the xcsh bigip http proxy data source, where is origin pools / pools / origin servers / origin servers / k8s service / snat pool / snat pool / prefixes documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/origin_servers/k8s_service/snat_pool/snat_pool/index.md#schema-origin_pools--pools--origin_servers--origin_servers--k8s_service--snat_pool--snat_pool--prefixes"
+    ],
+    "depth": 8,
+    "source_schema_path": "origin_pools.pools.origin_servers.origin_servers.k8s_service.snat_pool.snat_pool.prefixes"
+  },
+  {
+    "id": "qualification-005",
+    "kind": "answerable",
+    "prompt": "For the xcsh bigip virtual server data source, where is enable api discovery / api crawler / api crawler config / domains / simple login / password / blindfold secret info / location documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location"
+    ],
+    "depth": 8,
+    "source_schema_path": "enable_api_discovery.api_crawler.api_crawler_config.domains.simple_login.password.blindfold_secret_info.location"
+  },
+  {
+    "id": "qualification-006",
+    "kind": "answerable",
+    "prompt": "In the xcsh bot endpoint policy data source, where is endpoint policy content / protected web endpoints / protected web endpoints / transaction result criteria / transaction result failure / response header v2 / response header or / response header operator / header / header none / response header match v2 / case sensitive documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_web_endpoints/protected_web_endpoints/transaction_result_criteria/transaction_result_failure/response_header_v2/response_header_or/response_header_operator/header/header_none/response_header_match_v2/index.md#schema-endpoint_policy_content--protected_web_endpoints--protected_web_endpoints--transaction_result_criteria--transaction_result_failure--response_header_v2--response_header_or--response_header_operator--header--header_none--response_header_match_v2--case_sensitive"
+    ],
+    "depth": 12,
+    "source_schema_path": "endpoint_policy_content.protected_web_endpoints.protected_web_endpoints.transaction_result_criteria.transaction_result_failure.response_header_v2.response_header_or.response_header_operator.header.header_none.response_header_match_v2.case_sensitive"
+  },
+  {
+    "id": "qualification-007",
+    "kind": "answerable",
+    "prompt": "For the xcsh cdn loadbalancer data source, where is enable api discovery / api crawler / api crawler config / domains / simple login / password / blindfold secret info / decryption provider documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider"
+    ],
+    "depth": 8,
+    "source_schema_path": "enable_api_discovery.api_crawler.api_crawler_config.domains.simple_login.password.blindfold_secret_info.decryption_provider"
+  },
+  {
+    "id": "qualification-008",
+    "kind": "answerable",
+    "prompt": "In the xcsh fleet data source, where is storage device list / storage devices / netapp trident / netapp backend ontap san / use chap / chap initiator secret / blindfold secret info / store provider documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--store_provider"
+    ],
+    "depth": 8,
+    "source_schema_path": "storage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_initiator_secret.blindfold_secret_info.store_provider"
+  },
+  {
+    "id": "qualification-009",
+    "kind": "answerable",
+    "prompt": "For the xcsh gcp vpc site data source, where is ingress egress gw / outside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv6 / addr documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+    ],
+    "depth": 9,
+    "source_schema_path": "ingress_egress_gw.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv6.addr"
+  },
+  {
+    "id": "qualification-010",
+    "kind": "answerable",
+    "prompt": "In the xcsh http loadbalancer data source, where is bot defense / policy / protected app endpoints / flow label / authentication / login / transaction result / failure conditions / name documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name"
+    ],
+    "depth": 9,
+    "source_schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result.failure_conditions.name"
+  },
+  {
+    "id": "qualification-051",
+    "kind": "answerable",
+    "prompt": "For the xcsh dns zone delete cryptokey action, where is namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_delete_cryptokey/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace"
+  },
+  {
+    "id": "qualification-052",
+    "kind": "answerable",
+    "prompt": "In the xcsh dns zone edit cryptokey action, where is key id documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_edit_cryptokey/properties/index.md#schema-key_id"
+    ],
+    "depth": 1,
+    "source_schema_path": "key_id"
+  },
+  {
+    "id": "qualification-053",
+    "kind": "answerable",
+    "prompt": "For the xcsh kubernetes manifests ephemeral resource, where is site documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/index.md#schema-site"
+    ],
+    "depth": 1,
+    "source_schema_path": "site"
+  },
+  {
+    "id": "qualification-054",
+    "kind": "answerable",
+    "prompt": "In the xcsh access active session data source, where is username documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/access_active_session/properties/index.md#schema-username"
+    ],
+    "depth": 1,
+    "source_schema_path": "username"
+  },
+  {
+    "id": "qualification-055",
+    "kind": "answerable",
+    "prompt": "For the xcsh access active sessions data source, where is expiration time from documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/access_active_sessions/properties/index.md#schema-expiration_time_from"
+    ],
+    "depth": 1,
+    "source_schema_path": "expiration_time_from"
+  },
+  {
+    "id": "qualification-056",
+    "kind": "answerable",
+    "prompt": "In the xcsh addon service data source, where is tier documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/addon_service/properties/index.md#schema-tier"
+    ],
+    "depth": 1,
+    "source_schema_path": "tier"
+  },
+  {
+    "id": "qualification-057",
+    "kind": "answerable",
+    "prompt": "For the xcsh addon service activation status data source, where is message documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/addon_service_activation_status/properties/index.md#schema-message"
+    ],
+    "depth": 1,
+    "source_schema_path": "message"
+  },
+  {
+    "id": "qualification-058",
+    "kind": "answerable",
+    "prompt": "In the xcsh address allocator data source, where is namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/address_allocator/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace"
+  },
+  {
+    "id": "qualification-059",
+    "kind": "answerable",
+    "prompt": "For the xcsh advertise policy data source, where is tls parameters / common params / validation params / trusted ca / trusted ca list / uid documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/advertise_policy/properties/tls_parameters/common_params/validation_params/trusted_ca/trusted_ca_list/index.md#schema-tls_parameters--common_params--validation_params--trusted_ca--trusted_ca_list--uid"
+    ],
+    "depth": 6,
+    "source_schema_path": "tls_parameters.common_params.validation_params.trusted_ca.trusted_ca_list.uid"
+  },
+  {
+    "id": "qualification-060",
+    "kind": "answerable",
+    "prompt": "In the xcsh alert gen policy data source, where is labels documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_gen_policy/properties/index.md#schema-labels"
+    ],
+    "depth": 1,
+    "source_schema_path": "labels"
+  },
+  {
+    "id": "qualification-061",
+    "kind": "answerable",
+    "prompt": "For the xcsh alert policy data source, where is routes / notification parameters / repeat interval documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_policy/properties/routes/notification_parameters/index.md#schema-routes--notification_parameters--repeat_interval"
+    ],
+    "depth": 3,
+    "source_schema_path": "routes.notification_parameters.repeat_interval"
+  },
+  {
+    "id": "qualification-062",
+    "kind": "answerable",
+    "prompt": "In the xcsh alert receiver data source, where is webhook / http config / use tls / use server verification / ca cert obj / trusted ca / namespace documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_receiver/properties/webhook/http_config/use_tls/use_server_verification/ca_cert_obj/trusted_ca/index.md#schema-webhook--http_config--use_tls--use_server_verification--ca_cert_obj--trusted_ca--namespace"
+    ],
+    "depth": 7,
+    "source_schema_path": "webhook.http_config.use_tls.use_server_verification.ca_cert_obj.trusted_ca.namespace"
+  },
+  {
+    "id": "qualification-063",
+    "kind": "answerable",
+    "prompt": "For the xcsh alert template data source, where is alert message details documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/alert_template/properties/index.md#schema-alert_message_details"
+    ],
+    "depth": 1,
+    "source_schema_path": "alert_message_details"
+  },
+  {
+    "id": "qualification-064",
+    "kind": "answerable",
+    "prompt": "In the xcsh allowed domain data source, where is allowed domain documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/allowed_domain/properties/index.md#schema-allowed_domain"
+    ],
+    "depth": 1,
+    "source_schema_path": "allowed_domain"
+  },
+  {
+    "id": "qualification-065",
+    "kind": "answerable",
+    "prompt": "For the xcsh api crawler data source, where is domains / simple login / password / clear secret info / url documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/api_crawler/properties/domains/simple_login/password/clear_secret_info/index.md#schema-domains--simple_login--password--clear_secret_info--url"
+    ],
+    "depth": 5,
+    "source_schema_path": "domains.simple_login.password.clear_secret_info.url"
+  },
+  {
+    "id": "qualification-066",
+    "kind": "answerable",
+    "prompt": "In the xcsh api definition data source, where is labels documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/api_definition/properties/index.md#schema-labels"
+    ],
+    "depth": 1,
+    "source_schema_path": "labels"
+  },
+  {
+    "id": "qualification-067",
+    "kind": "answerable",
+    "prompt": "For the xcsh api discovery data source, where is user defined api discovery policy / discovery rules / metadata / name documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/api_discovery/properties/user_defined_api_discovery_policy/discovery_rules/metadata/index.md#schema-user_defined_api_discovery_policy--discovery_rules--metadata--name"
+    ],
+    "depth": 4,
+    "source_schema_path": "user_defined_api_discovery_policy.discovery_rules.metadata.name"
+  },
+  {
+    "id": "qualification-068",
+    "kind": "answerable",
+    "prompt": "In the xcsh api testing data source, where is domains / credentials / login endpoint / path documented?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/login_endpoint/index.md#schema-domains--credentials--login_endpoint--path"
+    ],
+    "depth": 4,
+    "source_schema_path": "domains.credentials.login_endpoint.path"
+  },
+  {
+    "id": "qualification-141",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform namespace. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/namespace/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/namespace/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-142",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform nat policy. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/nat_policy/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/nat_policy/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-143",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform network connector. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/network_connector/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/network_connector/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-144",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform network firewall. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/network_firewall/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/network_firewall/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-145",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform network interface. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/network_interface/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/network_interface/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-146",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform network policy. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/network_policy/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/network_policy/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-147",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform network policy rule. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/network_policy_rule/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/network_policy_rule/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-148",
+    "kind": "ambiguous",
+    "prompt": "I need help with Terraform network policy view. Should I use a resource or a data source?",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/network_policy_view/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/network_policy_view/index.md#document"
+    ],
+    "match_document": true,
+    "clarification": "Resource management versus data-source lookup is unspecified."
+  },
+  {
+    "id": "qualification-181",
+    "kind": "control",
+    "prompt": "Please answer this separate verification question: Where is the xcsh bgp Terraform property unsupported_schema_capability_7146 documented?",
+    "expected": [],
+    "behavior": "unsupported"
+  },
+  {
+    "id": "qualification-182",
+    "kind": "control",
+    "prompt": "Please answer this separate verification question: Where is the xcsh cdn_loadbalancer Terraform property unsupported_schema_capability_7146 documented?",
+    "expected": [],
+    "behavior": "unsupported"
+  },
+  {
+    "id": "qualification-191",
+    "kind": "control",
+    "prompt": "Please answer this separate verification question: Can this offline Terraform corpus prove that my deployment has passed a live apply?",
+    "expected": [],
+    "behavior": "no-live-evidence"
+  },
+  {
+    "id": "qualification-195",
+    "kind": "control",
+    "prompt": "Please answer this separate verification question: Find general API guidance for cloud credential management.",
+    "expected": [],
+    "behavior": "ordinary-discovery"
+  }
+]

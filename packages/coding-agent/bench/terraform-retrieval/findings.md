@@ -86,3 +86,11 @@ Ubuntu `sudo -n unshare --net` compiled-candidate Terraform smoke passes invento
 filtered search, bounded hint/facets, explicit anchor, deep leaf and missing-query checks.
 Marker: XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK. This is an unpublished candidate;
 final Homebrew and Ubuntu published-artifact checks remain pending.
+
+## Final disjoint v3 qualification failure
+
+Third disjoint untouched set: 140/140 answerable destinations and top5 pass; 34
+role-choice prompts fail because mentioning resource and data source was interpreted
+as selecting the latter. Scored82.1053%; qualification FAILED. Subsequent inference
+repair preserves competing roles, with a focused regression test. No replacement
+held-out suite will be claimed in this iteration; final qualified accuracy remains open.

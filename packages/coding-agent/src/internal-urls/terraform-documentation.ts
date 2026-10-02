@@ -946,18 +946,19 @@ export class TerraformDocumentationRepository {
 			);
 		} else if (search) {
 			const navigationRequest =
-				/(?:which|what).*documentation|where.*(?:begin|start)|need.*(?:help|guidance)|explain.*fields/i.test(
+				/(?:which|what).*documentation|where.*(?:begin|start)|need.*(?:help|guidance)|(?:resource.*data[ -]source|data[ -]source.*resource)|explain.*fields/i.test(
 					search,
 				);
 			const query = terraformSearchQuery(search);
 			if (!filters.some(f => f.key === "provider_type")) {
 				const inferred = /\bephemeral(?: resource)?\b/i.test(search)
 					? "ephemeral-resources"
-					: /\bdata[ -]source\b/i.test(search)
+					: /\bdata[ -]source\b/i.test(search) &&
+							!/\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(search)
 						? "data-sources"
 						: /\baction\b/i.test(search)
 							? "actions"
-							: /\bresource\b/i.test(search)
+							: /\bresource\b/i.test(search) && !/\bdata[ -]source\b/i.test(search)
 								? "resources"
 								: undefined;
 				if (inferred) filters.push({ key: "provider_type", value: inferred });

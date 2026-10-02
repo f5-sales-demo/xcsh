@@ -204,6 +204,13 @@ describe("Terraform snapshot ingestion", () => {
 					)
 				).content,
 			).toContain("Narrowing choices");
+			expect(
+				(
+					await resolve(
+						"xcsh://terraform-documentation/?search=I%20need%20help%20with%20Terraform%20fixture.%20Should%20I%20use%20a%20resource%20or%20a%20data%20source%3F",
+					)
+				).content,
+			).toContain("Narrowing choices");
 			const broadened = (await resolve("xcsh://terraform-documentation/?search=fixture%20nonexistent")).content;
 			expect(broadened).toContain("No results.");
 			expect((await resolve("xcsh://terraform-documentation/?search=how%20do%20I")).content).toContain(
