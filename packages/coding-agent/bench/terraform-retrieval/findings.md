@@ -1091,3 +1091,11 @@ and Ubuntu x64 with networking disabled, over five repetitions. Warm p95 is
 reused verified cache while Mac created a new cache. Raw synthetic reports and
 digests: production-offline-parity.json. 49 focused rank/index/selection/task
 tests pass. This is development parity, not held-out or installed acceptance.
+
+Qualification measurement now interleaves discovery and selected complete context
+reads inside each of five repetitions, records complete route latency directly,
+and verifies complete-response hashes across repetitions. Red/green tests cover
+interleaving, response drift and discovery budgets. Historical qualification
+reports remain unchanged; this corrects future measurement only, not scoring.
+Fresh candidate author and separate verifier handoff remain active source-only
+processes; no candidate is inspected by implementation, frozen or retrieved.
