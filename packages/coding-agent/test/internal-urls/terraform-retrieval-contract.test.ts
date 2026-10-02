@@ -3,6 +3,7 @@ import {
 	boundedTerraformResponse,
 	selectTerraformCandidate,
 	type TerraformMetadata,
+	terraformQueryIdentity,
 	validateTerraformRetrievalMetadata,
 } from "../../src/internal-urls/terraform-documentation";
 
@@ -68,4 +69,20 @@ test("selection distinguishes provider role and competing choices from ranking v
 		),
 	).toBe("choices");
 	expect(selectTerraformCandidate([leaf], true)).toBe("choices");
+});
+
+test("query identity keeps exact provider mentions anywhere and concrete HCL resource intent", () => {
+	expect(
+		terraformQueryIdentity("Draft HCL for backend servers and attach xcsh_origin_pool at the end").providerPhrase,
+	).toBe("origin pool");
+	expect(terraformQueryIdentity("Where do I configure routing on xcsh_http_loadbalancer?").providerPhrase).toBe(
+		"http loadbalancer",
+	);
+	expect(
+		terraformQueryIdentity("Draft the Terraform status block under Bot Defense in xcsh_cdn_loadbalancer")
+			.providerType,
+	).toBe("resources");
+	expect(terraformQueryIdentity("Read xcsh_origin_pool data source properties").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Should this be a resource or a data source?")).not.toHaveProperty("providerType");
+	expect(terraformQueryIdentity("HTTP body payload name")).not.toHaveProperty("providerPhrase");
 });

@@ -175,3 +175,16 @@ Compiled candidate Terraform smoke passes with network disabled on Ubuntu and Ma
 These are candidate artifact checks, not released Homebrew/Ubuntu acceptance.
 Metadata-v1 snapshot asset digests match exact-tag candidate; Linux repeated index
 builds match; Mac logical tables and FTS hashes match but SQLite storage bytes differ.
+
+Published-provider model candidate:40 frozen prompts completed; automated trace
+pass27/40 (16/28 answerable,8/8 ambiguous,3/4 controls). Exact leaf-read failures
+remain; two negated live-apply regex false positives explicitly reviewed.
+11 HCL fences parse;54 provider paths verified supported; completeness of partial
+snippets not claimed. No false live-apply claim found in manual trace review.
+The custom-provider-function control used external generic syntax instead of
+the documented absence. Consumer remains unqualified.
+
+General first-run failure repairs preserve full exact provider mentions and
+concrete HCL resource intent, and stop role-choice fallback overwriting existing
+precise candidates.458 internal-URL tests pass. Any frozen-suite rerun after
+these repairs is regression only; untouched first-run failure stays authoritative.

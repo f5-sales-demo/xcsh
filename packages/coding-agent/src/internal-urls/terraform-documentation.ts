@@ -621,6 +621,27 @@ const TERRAFORM_QUERY_VARIANTS: Record<string, string> = {
 	certs: "certificate",
 };
 
+export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
+	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
+	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
+	const competingRoles = /\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(search);
+	const providerType = competingRoles
+		? undefined
+		: /\bephemeral(?: resource)?\b/i.test(search)
+			? "ephemeral-resources"
+			: /\bdata[ -]source\b/i.test(search)
+				? "data-sources"
+				: /\baction\b/i.test(search)
+					? "actions"
+					: /\bresource\b/i.test(search) || /\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search)
+						? "resources"
+						: undefined;
+	return {
+		...(names.length === 1 ? { providerPhrase: names[0]!.replaceAll("_", " ") } : {}),
+		...(providerType ? { providerType } : {}),
+	};
+}
+
 export function terraformSearchQuery(query: string): string {
 	const terms =
 		query
@@ -950,20 +971,10 @@ export class TerraformDocumentationRepository {
 					search,
 				);
 			const query = terraformSearchQuery(search);
-			if (!filters.some(f => f.key === "provider_type")) {
-				const inferred = /\bephemeral(?: resource)?\b/i.test(search)
-					? "ephemeral-resources"
-					: /\bdata[ -]source\b/i.test(search) &&
-							!/\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(search)
-						? "data-sources"
-						: /\baction\b/i.test(search)
-							? "actions"
-							: /\bresource\b/i.test(search) && !/\bdata[ -]source\b/i.test(search)
-								? "resources"
-								: undefined;
-				if (inferred) filters.push({ key: "provider_type", value: inferred });
-			}
-			const providerMention = search.split(/,|where is|how do|fields/i)[0]!;
+			const identity = terraformQueryIdentity(search);
+			if (!filters.some(f => f.key === "provider_type") && identity.providerType)
+				filters.push({ key: "provider_type", value: identity.providerType });
+			const providerMention = identity.providerPhrase ?? search;
 			const providerSearch = ` ${providerMention
 				.toLowerCase()
 				.replace(/[^a-z0-9]+/g, " ")
@@ -1219,7 +1230,7 @@ export class TerraformDocumentationRepository {
 					heading: string;
 					markdown: string;
 				}>;
-				if (choices.length > 1) {
+				if (choices.length > 1 && (navigationRequest || !rows.length)) {
 					rows = choices.map(r => ({ ...r, raw_score: 100, score: 100 / 101 }));
 					broadened = false;
 				}
