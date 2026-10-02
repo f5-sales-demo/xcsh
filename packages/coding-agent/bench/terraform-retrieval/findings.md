@@ -94,3 +94,10 @@ role-choice prompts fail because mentioning resource and data source was interpr
 as selecting the latter. Scored82.1053%; qualification FAILED. Subsequent inference
 repair preserves competing roles, with a focused regression test. No replacement
 held-out suite will be claimed in this iteration; final qualified accuracy remains open.
+
+## V3 repair regression
+
+After preserving competing provider roles, v3 regression passes all 190 scored
+retrieval cases, including 140/140 answerable and 40/40 ambiguous cases. Ubuntu
+warm p95101.998ms. This is post-analysis regression, not untouched qualification;
+the v3 first-run failure remains authoritative for the held-out gate.
