@@ -90,3 +90,11 @@ test("provider-only evidence cannot justify an unrelated requested operation", (
 	expect(selectPropertyDestination("Which attribute in an ephemeral artifact registry token sets a maximum download bandwidth rate limit?", [candidate]).kind).toBe("choices");
 	expect(selectPropertyDestination("Which attribute in an ephemeral artifact registry token provides the authentication token?", [candidate]).kind).toBe("leaf");
 });
+
+test("requested field evidence excludes trailing branch context while retaining unsupported operations", () => {
+	const address = { ...row("outside.ipv4.addr", 50), description: "IPv4 Address in string form with dot-decimal notation." };
+	expect(selectPropertyDestination("Which attribute sets the IPv4 next-hop address for custom outside static routes?", [address]).kind).toBe("leaf");
+	const uri = { ...row("flash_array.location", 50), description: "Location is the uri_ref. It could be in URL format." };
+	expect(selectPropertyDestination("Which attribute specifies the secret location URI for a FlashArray API token?", [uri]).kind).toBe("leaf");
+	expect(selectPropertyDestination("Which attribute specifies a Helm chart repository URL for deployment?", [uri]).kind).toBe("choices");
+});

@@ -55,7 +55,7 @@ export function selectPropertyDestination(
 	const intent = queryText.match(/\b(?:sets?|provides?|enables?|accepts?|specifies|specify|specifying|holds?|retrieves?)\b\s+(.+)/i)?.[1];
 	if (intent && /\b(?:attribute|field|property|parameter|option)\b/i.test(queryText)) {
 		const generic = new Set(["option", "native", "directly", "allow", "added"]);
-		const requestedTerms = propertyTerms(intent).filter(term => !generic.has(term));
+		const requestedTerms = propertyTerms(intent.split(/\bfor\b/i)[0]!).filter(term => !generic.has(term));
 		const local = new Set(propertyTerms(`${first.schema_path.split(".").at(-1)} ${first.description}`));
 		const matches = requestedTerms.filter(term => local.has(term)).length;
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)

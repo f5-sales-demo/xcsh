@@ -934,3 +934,14 @@ source SQLite and property side-index digests match the pinned source exactly.
 This is development parity, not released/offline/installed acceptance. Synthetic
 Mac raw output and cross-host receipt are retained in indexed-task-intent-mac.json.gz
 and indexed-task-intent-parity-receipt.json.
+
+A red/green fixture distinguishes requested field wording from trailing for-branch
+context without accepting unsupported operations. Latest revised development is
+36/60 selected (34/58 properties), zero answerable wrong leaves, zero leaf
+selections on eight controls and one ambiguous-labeled action overview. Original
+remains 9/14 selected. All 80 revised case rankings/scores/anchors/decisions and
+response hashes match Mac/Ubuntu over five repetitions. Latest p95 is
+32.434 ms Mac and 29.230 ms Ubuntu; original Ubuntu p95 is 31.550 ms.
+Latest raw reports and provenance: indexed-task-local-intent-receipt.json and
+indexed-task-local-intent-parity.json. This supersedes earlier development metrics,
+remains outside production, and does not qualify the retained 95% gate.

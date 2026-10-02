@@ -1,0 +1,14 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "cases": 80,
+  "repetitions": 5,
+  "identical_rankings_anchors_scores_decisions_and_response_hashes": true,
+  "linux_p95_ms": 29.23038600000018,
+  "mac_p95_ms": 32.43445800000018,
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "mac_raw_sha256": "d49a19cdfaa0641992b3068afe6c9e730802be69064d80226bc38dff74699b86",
+  "linux_raw_sha256": "8e4f41033baea27aae6bf1badda011d10f1323b129f377c85f293b30056ecc77"
+}
