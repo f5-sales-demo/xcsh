@@ -622,7 +622,7 @@ ProviderCIaggregate job names match protection;build,vet,lint pass,race/docs liv
 
 ## Explicit unpublished preview binding
 
-Changed regression indexes require a digest-bound preview receipt and cannot run
+Changed regression indices require a digest-bound preview receipt and cannot run
 qualification. Reports identify unpublished source commit separately from baseline
 release-pin fields. Red/green scorer tests and end-to-end missing-receipt rejection
 pass;workspacechecks pass. Bound enriched-preview regression41/140selected,
@@ -652,3 +652,14 @@ to usage. Red fixtures reproduce declarations and scoped lookups.479URLtests
 and workspacechecks pass. Final regression42/140selected,51.4286%top5,
 discovery169.120ms,complete158.809ms remains failed. Provider source all CI
 passes except exact-head linked-issue workflow still queued. No gate bypass.
+
+
+## Scoped exact-identifier support
+
+Exact identifiers must appear inside the caller-selected provider/role/facet/node
+scope. A field documented only for another provider no longer broadens into
+unrelated guidance. Red fixture reproduces cross-provider leakage;480URLtests,
+workspacechecks and scoped integration pass. Published regression unchanged
+42/140selected,51.4286%top5,discovery192.545ms,complete176.715ms;qualification
+remains failed. CIregex spelling fragments and report terminology repaired.
+Provider all implementation checks pass;exact-head issue check remains queued.

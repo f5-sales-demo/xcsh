@@ -699,3 +699,44 @@ test("verified sibling type choices remain undecided without an exact type ident
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("unsupported exact fields fail closed within the selected provider scope", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-field-scope-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const original = docs[0]!;
+		const body =
+			'# Other provider\n\n<a id="schema-foreign_flag"></a>\n### foreign_flag\nA setting for the other provider.\n';
+		const docPath = "documentation/resources/other/properties/index.md";
+		docs.push({
+			...original,
+			path: docPath,
+			body,
+			markdown: body,
+			sha256: terraformHash(body),
+			metadata: {
+				...original.metadata,
+				id: "other",
+				canonical_id: "other",
+				path: docPath,
+				provider_name: "other",
+				role: "properties",
+				aliases: [],
+			},
+		});
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const uri =
+			"xcsh://terraform-documentation/?search=configure%20foreign_flag%20on%20xcsh_fixture&provider_type=resources";
+		const content = (
+			await repo.resolve(Object.assign(new URL(uri), { rawHost: "terraform-documentation" }) as InternalUrl)
+		).content;
+		expect(content).toContain("No results.");
+		expect(content).not.toContain("Selected leaf;");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

@@ -963,7 +963,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 					? "actions"
 					: /\bresource\b/i.test(search) ||
 							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-							/\b(?:declar(?:e|ing)|defin(?:e|ing)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+							/\b(?:(?:declare|declaring)|(?:define|defining)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
 								search,
 							)
 						? "resources"
@@ -1663,16 +1663,6 @@ export class TerraformDocumentationRepository {
 					broadened = false;
 				}
 			}
-			// Unsupported identifier terms must not be discarded by exact-match routing.
-			if (
-				/[a-z][a-z0-9]*_[a-z0-9_]+/i.test(search) &&
-				search
-					.match(/[a-z][a-z0-9]*_[a-z0-9_]+/gi)
-					?.some(
-						term => !db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(`"${term}"`),
-					)
-			)
-				rows = [];
 			if (
 				providerFilter &&
 				!node &&
@@ -1702,12 +1692,31 @@ export class TerraformDocumentationRepository {
 					broadened = false;
 				}
 			}
+			const identifierExists = (term: string): boolean => {
+				const scopeClauses = ["documents_fts MATCH ?"];
+				const scopeArgs: Array<string | number> = [`"${term}"`];
+				for (const filter of filters) {
+					scopeClauses.push(
+						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=td.path AND f.facet=? AND f.value=?)",
+					);
+					scopeArgs.push(filter.key, filter.value);
+				}
+				if (node) {
+					scopeClauses.push(
+						"td.id IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT id FROM descendants)",
+					);
+					scopeArgs.push(node);
+				}
+				return Boolean(
+					db
+						.query(
+							`SELECT 1 FROM documents_fts JOIN documents d ON d.id=documents_fts.rowid JOIN terraform_passages p ON p.qmd_path=d.path JOIN terraform_documents td ON td.path=p.path WHERE ${scopeClauses.join(" AND ")} LIMIT 1`,
+						)
+						.get(...scopeArgs),
+				);
+			};
 			const unknownIdentifiers =
-				search
-					.match(/[a-z][a-z0-9]*_[a-z0-9_]+/gi)
-					?.some(
-						term => !db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(`"${term}"`),
-					) ?? false;
+				search.match(/[a-z][a-z0-9]*_[a-z0-9_]+/gi)?.some(term => !identifierExists(term)) ?? false;
 			if (unknownIdentifiers) rows = [];
 			if (!rows.length && !unknownIdentifiers && !setupAnchor) {
 				rows = query ? (statement.all(...args) as SearchRow[]) : [];
