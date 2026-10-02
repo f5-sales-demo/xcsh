@@ -62,3 +62,12 @@ index389bdb4dfe12947d7f079e3d7c71f2ec5aa94dffdbd845ffb862a82997d85490; 903,282,6
 Original-suite regression: 98.5714% answerable leaf, 99.2857% top5, scored98.9474%; Ubuntu p95144.740ms, Mac106.572ms;
 identical rankings/anchors, maximum discovery2,904bytes. Complete 18,953-document hint/context audit passes,
 max4,084/11,321bytes. Both untouched frozen first runs remain failures; no overall or installed qualification claimed.
+
+## Candidate model traces
+
+A compiled unpublished candidate ran the frozen 40-model subset with openai-codex/gpt-6.1-sol.
+Manual trace review and exact retries: 39/40 pass; 27/28 answerable pass; no unsupported-field
+or false-live-apply claims found. The certificate expected destination remains failed. Two
+trace-format retries and two negation/wording grader false positives are recorded. Most
+answerable cases used two or three reads after static query-preservation guidance. No HCL
+was emitted; supported-field drafting acceptance and released-artifact rerun remain required.
