@@ -945,3 +945,9 @@ response hashes match Mac/Ubuntu over five repetitions. Latest p95 is
 Latest raw reports and provenance: indexed-task-local-intent-receipt.json and
 indexed-task-local-intent-parity.json. This supersedes earlier development metrics,
 remains outside production, and does not qualify the retained 95% gate.
+
+Network-disabled prototype runs (Mac Seatbelt deny network, Ubuntu unshare net)
+complete all 80 revised development cases with identical online/offline rankings,
+scores, anchors, decisions and response hashes. Offline p95 is 33.978 ms Mac and
+28.604 ms Ubuntu. Digest-bound synthetic output is retained with
+indexed-task-local-intent-offline.json. This does not qualify an installed artifact.

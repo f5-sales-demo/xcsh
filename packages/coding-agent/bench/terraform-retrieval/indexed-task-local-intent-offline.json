@@ -1,0 +1,28 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "cases": 80,
+  "network_denied_routes": [
+    "Mac sandbox-exec deny network",
+    "Ubuntu sudo unshare --net"
+  ],
+  "identical_online_offline_rankings_and_response_hashes": true,
+  "mac_p95_ms": 33.97750000000042,
+  "linux_p95_ms": 28.603538999999728,
+  "limitations": [
+    "Prototype only; no compiled installed artifact or installed model acceptance."
+  ],
+  "raw_reports": {
+    "linux": {
+      "file": "indexed-task-local-intent-offline-linux.json.gz",
+      "gzip_sha256": "e50a06479029a838b8656e0daa3fec4b3f6cac19facbe7b9501294fee0fde660",
+      "raw_sha256": "1ba4427cc70b68fbf904fa135cf239fa91c15a5734dee53e4ede86d76fa00729"
+    },
+    "mac": {
+      "file": "indexed-task-local-intent-offline-mac.json.gz",
+      "gzip_sha256": "ddebcddd4ee390b36d16b9d39581243eb0092522647050baa01f7380ccc91a41",
+      "raw_sha256": "67df6e85953d9797cc30c0a931e0529c245c6e3f99bb51adaa79ebb53bee09a6"
+    }
+  }
+}
