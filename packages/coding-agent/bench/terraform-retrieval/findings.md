@@ -396,3 +396,18 @@ category scoping excludes unrelated branch destinations. Two-segment repeated
 suffix lookup covers shallower branch collisions;metadata/Markdown load only for
 returned alternatives. Exact discovery-mode corpus queries remain selected leaves.
 468URLtests+workspacechecks pass. This guards missing context,not validation rules.
+
+## Published-corpus hybrid evaluation
+
+Exact v12.2.0 property embeddings,embeddinggemma:300m model manifest
+85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1.
+Reciprocal rank fusion of lexical ancestor ranking and semantic property ranking
+finds12/14development first,14/14top5. Local total p95205.993ms,
+embedding193.829ms,ranking27.125ms. Two lexical misses improved,one lexical hit
+regressed. Existing semantically ambiguous HTTPS-mode prompt still needs context.
+Development only;no semantic path or model is bundled or promoted.
+
+Hybrid script accepts explicit inputs and output,passes syntax/Ruff/format checks.
+A second run reproduces identical rankings (12/14first,14/14top5);total p95186.257ms,
+embedding178.272ms,ranking26.868ms. Semantic service stopped after task-only use.
+No model/vector artifact is bundled and no held-out qualification is claimed.
