@@ -54,3 +54,14 @@ it("full native qualification builds licensed candidate binaries without publish
 		expect(job).not.toContain("inputs.full_native_matrix");
 	}
 });
+
+it("native sandbox tests reset optional Terraform loader before importing the source CLI", async () => {
+	const workflow = parse(await Bun.file(workflowPath).text()) as WorkflowDocument;
+	for (const name of ["native-linux-x64-baseline", "native"]) {
+		const steps = workflow.jobs?.[name]?.steps ?? [];
+		const reset = steps.findIndex(s => s.run?.includes("generate-terraform-documentation-index --reset"));
+		const sandbox = steps.findIndex(s => s.run?.includes("sandbox-check.test.ts"));
+		expect(reset).toBeGreaterThanOrEqual(0);
+		expect(reset).toBeLessThan(sandbox);
+	}
+});

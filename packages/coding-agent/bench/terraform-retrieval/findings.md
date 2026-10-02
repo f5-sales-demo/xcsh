@@ -1124,3 +1124,10 @@ review, approval without findings and exact coverage of every heldout case befor
 retrieval. Red/green guard tests cover changed receipts, incomplete review and
 non-approval. Eight guard/measurement tests and workspace checks pass. No new
 candidate prompts or retrieval outputs have been inspected during authoring.
+
+Candidate dispatch run 37073360550 failed Linux baseline sandbox tests after
+successfully building the addon: source CLI imported committed Terraform loader
+without ignored gzip bytes. Native-only sandbox jobs now reset the optional
+loader before source tests; later candidate binary jobs regenerate and verify
+pinned indexes. Red/green workflow test and actionlint pass. This corrects a
+fresh-checkout test prerequisite without masking retrieval acceptance.
