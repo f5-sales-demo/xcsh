@@ -254,3 +254,9 @@ Paired24-prompt development evaluation,5 repetitions: all complete responses
 identical; warm p95 before566.785ms,after138.183ms. This is development performance
 evidence, not held-out qualification. Indexed facets and exact-read behavior stay
 covered by focused snapshot and routing tests. Section ranker remains bench-only.
+
+Deferred content loading full-suite post-analysis regression: discovery p95176.236ms,
+complete response p95134.098ms; answerable18/140 (12.8571%),top5 26.4286%.
+Not qualification. An alternative materialized grouped-ranking SQL preserved all24
+development responses but increased paired p95139.290ms to177.158ms; rejected.
+Window-ranking implementation retained. Accuracy and discovery latency remain open.
