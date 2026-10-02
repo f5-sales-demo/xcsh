@@ -569,3 +569,20 @@ rank fusion reaches42first,88top5;no complete response latency measured. Fusion
 remains unshipped. Producer generic aliases apply to description words,spreading
 certificate/backend/authentication phrases broadly. Published automatic-cert
 description and missing top-level choice relationships require producer review.
+
+
+## Verified sibling type navigation and producer preview
+
+Provider-choice relationships between sibling schema types now preserve alternatives
+for vague queries and select explicitly named type identifiers. Existing direct
+child conflicts remain supported;caller facets/node scope remains applied. Red
+fixture reproduces false manual-mode selection;477URLtests+workspacechecks pass.
+Published-source regression remains40/140selected,50.7143%top5,discovery168.813ms,
+complete156.921ms. Accuracy/latency qualification remain failed.
+
+Provider2366preview index contains all9provider-choice links and reviewed automatic
+certificate summary. Development10/14selected,12top5,p95224.812ms with concurrent
+tests/CI;not matched qualification. Preview index SHA
+bdf34d8c66197097177d05e9fe40e0b4b73f86aee861f62651237c521df8da34,
+897630208bytes,gzip77935872bytes. Unpublished source and baseline provenance
+explicitly disclosed;reviewed bundled pin unchanged.

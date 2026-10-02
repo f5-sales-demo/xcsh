@@ -632,3 +632,64 @@ test("verified parent choice groups return storage alternatives instead of a fal
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("verified sibling type choices remain undecided without an exact type identifier", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-type-choice-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const modes = ["manual_tls", "automatic_tls"];
+		const docs = modes.map((mode, index) => {
+			const docPath = `documentation/resources/fixture/properties/${mode}/index.md`;
+			const body = `<a id="section"></a>\n# TLS mode\nTLS encryption.\n`;
+			return {
+				...original,
+				path: docPath,
+				body,
+				markdown: body,
+				sha256: terraformHash(body),
+				metadata: {
+					...original.metadata,
+					id: mode,
+					canonical_id: mode,
+					path: docPath,
+					role: "properties",
+					schema_path: [mode],
+					aliases: index === 0 ? ["tls encryption"] : [],
+					relationships: [
+						{
+							type: "choice" as const,
+							target_id: modes[1 - index]!,
+							anchor: "section",
+							enforcement: "provider-choice" as const,
+							source: "receipt-pinned-immutable-oneof",
+							group: "type",
+						},
+					],
+				},
+			};
+		});
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}&provider_name=fixture&provider_type=resources`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		const vague = (await read("configure TLS encryption")).content;
+		expect(vague).toContain("Narrowing choices");
+		expect(vague).toContain("manual_tls/index.md");
+		expect(vague).toContain("automatic_tls/index.md");
+		const explicit = (await read("configure automatic_tls")).content;
+		expect(explicit).toContain("Selected leaf;");
+		expect(explicit).toContain("automatic_tls/index.md");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

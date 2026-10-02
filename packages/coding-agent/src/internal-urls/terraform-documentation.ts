@@ -1798,18 +1798,21 @@ export class TerraformDocumentationRepository {
 				}
 				const alternatives = db
 					.query(
-						`SELECT td.path,td.metadata,s.anchor,s.heading,s.context_markdown markdown,r.choice_group FROM terraform_relationships r JOIN terraform_documents td ON td.path=r.target_path JOIN terraform_sections s ON s.path=td.path AND s.anchor=r.target_anchor WHERE ${choiceClauses.join(" AND ")} ORDER BY r.choice_group,td.path COLLATE BINARY LIMIT 30`,
+						`SELECT td.path,td.metadata,s.anchor,s.heading,s.context_markdown markdown,r.choice_group,r.enforcement FROM terraform_relationships r JOIN terraform_documents td ON td.path=r.target_path JOIN terraform_sections s ON s.path=td.path AND s.anchor=r.target_anchor WHERE ${choiceClauses.join(" AND ")} ORDER BY r.choice_group,td.path COLLATE BINARY LIMIT 30`,
 					)
-					.all(...choiceArgs) as Array<SearchRow & { choice_group: string }>;
+					.all(...choiceArgs) as Array<SearchRow & { choice_group: string; enforcement: string }>;
 				const groups = new Map<string, SearchRow[]>();
 				for (const alternative of alternatives) {
 					const target = JSON.parse(alternative.metadata) as TerraformMetadata;
-					if (
-						target.schema_path.length !== metadata.schema_path.length + 1 ||
-						!metadata.schema_path.every((part, index) => target.schema_path[index] === part)
-					)
-						continue;
-					const group = groups.get(alternative.choice_group) ?? [];
+					const directChild =
+						target.schema_path.length === metadata.schema_path.length + 1 &&
+						metadata.schema_path.every((part, index) => target.schema_path[index] === part);
+					const siblingType =
+						alternative.enforcement === "provider-choice" &&
+						target.schema_path.length === metadata.schema_path.length &&
+						target.schema_path.slice(0, -1).every((part, index) => metadata.schema_path[index] === part);
+					if (!directChild && !siblingType) continue;
+					const group = groups.get(alternative.choice_group) ?? (siblingType ? [parent] : []);
 					if (!group.some(row => row.path === alternative.path && row.anchor === alternative.anchor))
 						group.push(alternative);
 					groups.set(alternative.choice_group, group);
@@ -1819,7 +1822,12 @@ export class TerraformDocumentationRepository {
 					const named = choices[0]!.filter(row => {
 						const target = JSON.parse(row.metadata) as TerraformMetadata;
 						const phrase = target.schema_path.at(-1)!.replaceAll("_", " ");
-						return normalizedSearch.includes(` ${phrase} `);
+						const sibling = target.schema_path.length === metadata.schema_path.length;
+						return sibling
+							? (search.match(/[a-z][a-z0-9]*_[a-z0-9_]+/gi) ?? []).some(
+									term => term.toLowerCase() === target.schema_path.at(-1),
+								)
+							: normalizedSearch.includes(` ${phrase} `);
 					});
 					rows = (named.length === 1 ? named : choices[0]!).map(row => ({
 						...row,
