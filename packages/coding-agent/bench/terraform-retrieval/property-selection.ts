@@ -1,5 +1,5 @@
 // Development-only selection policy. Scores express rank, never probability.
-import { propertyTerms, type PropertyCandidate } from "./contrastive-ranking";
+import { type PropertyCandidate, propertyTerms } from "./contrastive-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
 	coverage: number;
@@ -12,6 +12,7 @@ const contradictoryPairs = [
 ] as const;
 function contradicts(query: Set<string>, candidate: PropertyCandidate) {
 	const path = new Set(propertyTerms(candidate.schema_path));
+	if (query.has("single") && !query.has("dual") && path.has("dual")) return true;
 	return contradictoryPairs.some(
 		([a, b]) =>
 			(query.has(a) && !query.has(b) && path.has(b) && !path.has(a)) ||
@@ -75,9 +76,10 @@ export function selectPropertyDestination(
 		}
 		if (a < 0 && b < 0) continue;
 		const differing = parts.slice(0, a + 1).filter(part => !otherParts.includes(part));
+		const otherTerms = new Set(propertyTerms(other.schema_path));
 		if (
 			!differing.some(part => {
-				const terms = propertyTerms(part);
+				const terms = propertyTerms(part).filter(term => !otherTerms.has(term));
 				return terms.length > 0 && terms.every(term => query.has(term));
 			})
 		)
@@ -107,13 +109,15 @@ export function selectPropertyDestination(
 		)
 			return true;
 		const otherParts = other.schema_path.split(".");
-		const named = (segments: string[], compared: string[]) =>
-			segments
+		const named = (segments: string[], compared: string[]) => {
+			const comparedTerms = new Set(propertyTerms(compared.join(" ")));
+			return segments
 				.filter(segment => !compared.includes(segment))
 				.some(segment => {
-					const terms = propertyTerms(segment);
+					const terms = propertyTerms(segment).filter(term => !comparedTerms.has(term));
 					return terms.length > 0 && terms.every(term => query.has(term));
 				});
+		};
 		return !named(parts, otherParts) || named(otherParts, parts);
 	});
 	if (second && first.score < second.score * 1.3)

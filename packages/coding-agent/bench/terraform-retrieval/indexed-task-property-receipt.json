@@ -1,0 +1,68 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "reports": {
+    "revised": {
+      "raw_sha256": "2ea51f1b2c181b4ba2f0f8d583c7adf20ef9d3ed91fa23c259c3008fd2f286f2",
+      "gzip_sha256": "4fadfce9ee5cd898bb6da75ec494d5056e151a455ec76cc46b6940fdf261ea45",
+      "report_file": "indexed-task-property-revised.json.gz",
+      "development_only": true,
+      "qualification_passed": false,
+      "production_promoted": false,
+      "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "provider_version": "v12.3.1",
+      "answerable_cases": 60,
+      "answerable_correct_leaf": 37,
+      "answerable_false_leaf": 0,
+      "property_cases": 58,
+      "correct_leaf": 35,
+      "false_leaf": 0,
+      "clarifications": 23,
+      "property_first": 51,
+      "property_top5": 56,
+      "preparation_ms": 0.05354699999999468,
+      "experimental_complete_route_p95_ms": 28.403107999999975,
+      "limitations": [
+        "Measured route includes candidate query, provider/task identity, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+        "Development labels have known defects and unresolved same-role ambiguities.",
+        "Experimental route uses prepared terms and scope weights via targeted indexed SQL, with exact source reads. Bundled index integration, cold materialization and installed acceptance remain unverified."
+      ]
+    },
+    "original": {
+      "raw_sha256": "684f2e493f5af47a818f2bf0514be8543daabd01e6e019fd5cf8e3e18bc412d1",
+      "gzip_sha256": "e1b17f5f31e2b02e3634238b66d456a5dafd2803bae2af2d0eafc7f01c9c9016",
+      "report_file": "indexed-task-property-original.json.gz",
+      "development_only": true,
+      "qualification_passed": false,
+      "production_promoted": false,
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "provider_version": "v12.3.1",
+      "answerable_cases": 14,
+      "answerable_correct_leaf": 9,
+      "answerable_false_leaf": 0,
+      "property_cases": 14,
+      "correct_leaf": 9,
+      "false_leaf": 0,
+      "clarifications": 5,
+      "property_first": 12,
+      "property_top5": 13,
+      "preparation_ms": 0.08048300000000097,
+      "experimental_complete_route_p95_ms": 33.38251900000023,
+      "limitations": [
+        "Measured route includes candidate query, provider/task identity, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+        "Development labels have known defects and unresolved same-role ambiguities.",
+        "Experimental route uses prepared terms and scope weights via targeted indexed SQL, with exact source reads. Bundled index integration, cold materialization and installed acceptance remain unverified."
+      ]
+    }
+  },
+  "source_files": {
+    "contrastive-ranking.ts": "3f281bc98196b2889ea9f95626ec76e803900c91577b7be3ccdf3b4a9ea30f98",
+    "property-selection.ts": "e71d929543482d884a7cb0ec29e6deca0153b2a717cc436e3810bbb40553b941",
+    "property-index.ts": "82f9c2d6e52a8f32b382a0e5f3e6b8509bdb197f84439c10d5b57fd1666b69f5",
+    "indexed-task-route.ts": "04168aae06b0e9805521fc33d134097786b7e21f010cbc0ce3ac6d7c35dbbe16",
+    "targeted-complete-property-route.ts": "d44f85c8fcfb661e1020c6348a0b40a11e67cbba74d13b32b97252105b1d95c1"
+  }
+}

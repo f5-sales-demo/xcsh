@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { preparePropertyScope, rankPropertyScope, propertyTerms } from "./contrastive-ranking";
+import { preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
+
 const row = (schema_path: string, description: string, anchor = "schema-" + schema_path.replaceAll(".", "--")) => ({
 	provider_type: "resources",
 	provider_name: "fixture",
@@ -70,4 +71,23 @@ test("an explicitly named configuration block outranks incidental mention in ano
 	expect(
 		rankPropertyScope("which configuration block configures the allow list rule set", scope)[0]?.schema_path,
 	).toBe("allow_list");
+});
+
+test("provider names cannot erase a requested field sharing their vocabulary", () => {
+	const scope = preparePropertyScope([
+		{
+			...row(
+				"token",
+				"Access token for the F5 Artifact Registry (FAR) This token can be used to authenticate with FAR when pulling related images for Kubernetes bot infrastructure.",
+			),
+			provider_name: "artifact_registry_token",
+		},
+		{ ...row("expiration_time", "Token expiration time."), provider_name: "artifact_registry_token" },
+	]);
+	const ranked = rankPropertyScope(
+		"When requesting an ephemeral artifact registry token, which attribute provides the generated authentication token string?",
+		scope,
+	);
+	expect(ranked[0]?.schema_path).toBe("token");
+	expect(ranked[0]?.score).toBeGreaterThan(0);
 });

@@ -76,10 +76,11 @@ export function rankPropertyScope(
 	candidates?: ReadonlySet<string>,
 ) {
 	const providerTerms = new Set(propertyTerms(scope.rows[0]?.provider_name ?? ""));
-	const query = propertyTerms(queryText).filter(t => !providerTerms.has(t));
 	const ask = queryText.split(/\b(?:which|what)\s+(?:\w+\s+)?(?:field|attribute|property|parameter)\b/i).at(-1)!;
-	const target = propertyTerms(ask).filter(t => !providerTerms.has(t));
 	const asksField = /\b(field|attribute|property|parameter)\b/i.test(queryText);
+	const requested = asksField ? new Set(propertyTerms(ask)) : new Set<string>();
+	const query = propertyTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
+	const target = propertyTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	return scope.rows
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
@@ -103,7 +104,7 @@ export function rankPropertyScope(
 			const requestedLeaf = row.leaf.filter(term => target.includes(term)).length;
 			const leafComplete = row.leaf.length > 0 && row.leaf.every(term => target.includes(term));
 			let score =
-				(local + context * 0.6) * (total ? Math.pow(coverage / total, 2) : 0) +
+				(local + context * 0.6) * (total ? (coverage / total) ** 2 : 0) +
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
 			if (asksField && row.anchor === "section") score -= 12;

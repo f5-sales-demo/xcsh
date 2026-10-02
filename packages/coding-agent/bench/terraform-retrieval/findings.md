@@ -874,3 +874,34 @@ SHA2567aae0c725d33ce1d012e571c74ec68f464b913a742366c188a7d8d39e1a42785.
 This is a prototype artifact outside the reviewed bundled pin. Bundled generation
 integration, cross-platform complete responses and installed qualification remain
 unfinished. Twenty-two ranking/selection/index tests and workspace checks pass.
+
+
+## Indexed task route and requested field vocabulary
+
+The development route resolves canonical setup, authentication and lifecycle
+sections with indexed provider, role, AND facets and descendant constraints.
+Query-inferred identity is distinct from binding caller scope. Literal unsupported
+identifiers fail closed. Certificate authentication without a representation
+returns exact P12/PEM choices. Provider/task inference is inside each timed
+repetition; context uses complete pinned sections and oversized full-read notices.
+
+A red fixture exposed provider-name words erasing a requested token field.
+Requested field words now survive identity removal. Another pair of red fixtures
+checks explicit single-stack and exclusive terms in shared multiword branch names;
+omitted stack/branch evidence continues to return choices. Thirty-two focused
+experiment tests pass. No production module imports these prototypes.
+
+Final development results are 37/60 expected leaf selections (35/58 properties),
+51/58 first-ranked property destinations and 56/58 top-five, with zero observed
+false leaves. Original development remains 9/14 selected and 13/14 top-five.
+Complete experimental warm p95 is 28.403 ms revised and 33.383 ms original over
+five repetitions with identical discovery/context hashes. Measurements exclude
+cold materialization, installed/model/network time and final artifact integration.
+Raw synthetic reports are gzip compressed deterministically and digest-bound in
+indexed-task-property-receipt.json. Development labels remain defective and
+these measurements do not satisfy the retained 95% qualification gate.
+
+A fresh existing Antigravity reviewer is auditing all development labels in a
+source-only v12.3.1 workspace. No replacement held-out suite is frozen or run.
+Consumer PR remains draft with auto-merge disabled until valid qualification
+and human acceptance.

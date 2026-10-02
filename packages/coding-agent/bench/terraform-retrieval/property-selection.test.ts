@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { selectPropertyDestination } from "./property-selection";
+
 const row = (schema_path: string, score: number, provider_type = "resources") => ({
 	provider_type,
 	provider_name: "fixture",
@@ -70,4 +71,16 @@ test("a complete multiword field name separates nearby sibling fields", () => {
 	const burst = row("limits.burst_multiplier", 39);
 	expect(selectPropertyDestination("total maximum number of requests", [total, burst]).kind).toBe("leaf");
 	expect(selectPropertyDestination("adjust request limits", [total, burst]).kind).toBe("choices");
+});
+
+test("exclusive branch terms distinguish shared multiword segments without requiring boilerplate", () => {
+	const rows = [row("scheme_proxy_host_request_uri.cache_ttl", 50), row("scheme_proxy_host_uri.cache_ttl", 10)];
+	expect(selectPropertyDestination("proxy host request URI cache TTL", rows).kind).toBe("leaf");
+	expect(selectPropertyDestination("proxy host URI cache TTL", rows).kind).toBe("choices");
+});
+
+test("explicit single-stack excludes dual-stack while omitted stack remains ambiguous", () => {
+	const rows = [row("outside.ipv4.addr", 50), row("outside.dual_stack.ipv4.addr", 10)];
+	expect(selectPropertyDestination("single-stack outside IPv4 address", rows).kind).toBe("leaf");
+	expect(selectPropertyDestination("outside IPv4 address", rows).kind).toBe("choices");
 });

@@ -1,18 +1,20 @@
-import { selectPropertyDestination, type RankedProperty } from "./property-selection";
 import { Database } from "bun:sqlite";
 import { readFile, writeFile } from "node:fs/promises";
-import { searchPropertyIndex, validatePropertyIndex } from "./property-index";
-import type { PropertyCandidate } from "./contrastive-ranking";
 import {
+	boundedTerraformResponse,
+	rankTerraformDirectProperties,
+	rankTerraformProviderNames,
+	rewriteTerraformLinks,
+	terraformHash,
 	terraformProviderMention,
 	terraformQueryIdentity,
-	rankTerraformProviderNames,
-	terraformHash,
-	rankTerraformDirectProperties,
 	terraformTimeoutOperations,
-	boundedTerraformResponse,
-	rewriteTerraformLinks,
 } from "../../src/internal-urls/terraform-documentation";
+import type { PropertyCandidate } from "./contrastive-ranking";
+import { resolveIndexedTask } from "./indexed-task-route";
+import { searchPropertyIndex, validatePropertyIndex } from "./property-index";
+import { type RankedProperty, selectPropertyDestination } from "./property-selection";
+
 const args = process.argv.slice(2);
 const arg = (key: string) => {
 	const index = args.indexOf(key);
@@ -42,19 +44,7 @@ const cases = (suite.cases ?? suite).map((item: any, index: number) => ({
 const results = [];
 const timings: number[] = [];
 for (const item of cases) {
-	const role = terraformQueryIdentity(item.prompt).providerType;
-	const names = (
-		db
-			.query(
-				"SELECT DISTINCT provider_name FROM terraform_documents WHERE (? IS NULL OR provider_type=?) ORDER BY provider_name",
-			)
-			.all(role ?? null, role ?? null) as { provider_name: string }[]
-	).map(row => row.provider_name);
-	let provider = terraformProviderMention(item.prompt, names);
-	if (!provider && role === "actions") {
-		const matches = rankTerraformProviderNames(item.prompt, names);
-		if (matches[0] && (!matches[1] || matches[0].score >= matches[1].score + 10)) provider = matches[0].name;
-	}
+	let role: string | undefined, provider: string | undefined;
 	let ranked: ReturnType<typeof searchPropertyIndex> = [];
 	const times = [];
 	let decision: ReturnType<typeof selectPropertyDestination> = { kind: "none", destinations: [], reason: "No query" };
@@ -63,44 +53,68 @@ for (const item of cases) {
 		responseHash = "";
 	for (let n = 0; n < 5; n++) {
 		const before = performance.now();
-		ranked = searchPropertyIndex(search, item.prompt, { providerType: role, providerName: provider });
-		const top = ranked[0];
-		if (top?.anchor === "section") {
-			const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(top.path) as {
-				metadata: string;
-			};
-			const m = JSON.parse(record.metadata);
-			const refined = rankTerraformDirectProperties(item.prompt, m.schema_path, m.sections ?? []);
-			if (refined[0]?.document_id === m.id) {
-				const field = db
-					.query(
-						"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE path=? AND anchor=?",
-					)
-					.get(top.path, refined[0].anchor) as PropertyCandidate | null;
-				if (field) ranked = [{ ...field, score: top.score, coverage: top.coverage }, ...ranked.slice(1)];
-			}
-		}
-		const operations = terraformTimeoutOperations(item.prompt);
-		if (provider && operations.length) {
-			const paths = operations.map(operation => `timeouts.${operation}`);
-			const fields = db
+		role = terraformQueryIdentity(item.prompt).providerType;
+		const names = (
+			db
 				.query(
-					`SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND schema_path IN (${paths.map(() => "?").join(",")}) ORDER BY provider_type,schema_path`,
+					"SELECT DISTINCT provider_name FROM terraform_documents WHERE (? IS NULL OR provider_type=?) ORDER BY provider_name",
 				)
-				.all(provider, role ?? null, role ?? null, ...paths) as PropertyCandidate[];
-			if (fields.length) ranked = fields.map(row => ({ ...row, score: 100, coverage: 1 }));
+				.all(role ?? null, role ?? null) as { provider_name: string }[]
+		).map(row => row.provider_name);
+		provider = terraformProviderMention(item.prompt, names);
+		if (!provider && role === "actions") {
+			const matches = rankTerraformProviderNames(item.prompt, names);
+			if (matches[0] && (!matches[1] || matches[0].score >= matches[1].score + 10)) provider = matches[0].name;
 		}
-		const first = ranked[0];
-		const leaf = first?.schema_path.split(".").at(-1);
-		const alternatives = first
-			? (db
+
+		const task = resolveIndexedTask(db, item.prompt, {
+			providerType: role,
+			providerName: provider,
+			inferredIdentity: true,
+		});
+		if (task) {
+			decision = task;
+			ranked = task.destinations;
+		} else {
+			ranked = searchPropertyIndex(search, item.prompt, { providerType: role, providerName: provider });
+			const top = ranked[0];
+			if (top?.anchor === "section") {
+				const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(top.path) as {
+					metadata: string;
+				};
+				const m = JSON.parse(record.metadata);
+				const refined = rankTerraformDirectProperties(item.prompt, m.schema_path, m.sections ?? []);
+				if (refined[0]?.document_id === m.id) {
+					const field = db
+						.query(
+							"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE path=? AND anchor=?",
+						)
+						.get(top.path, refined[0].anchor) as PropertyCandidate | null;
+					if (field) ranked = [{ ...field, score: top.score, coverage: top.coverage }, ...ranked.slice(1)];
+				}
+			}
+			const operations = terraformTimeoutOperations(item.prompt);
+			if (provider && operations.length) {
+				const paths = operations.map(operation => `timeouts.${operation}`);
+				const fields = db
 					.query(
-						"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND (schema_path=? OR substr(schema_path,-length(?))=?) ORDER BY provider_type,schema_path",
+						`SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND schema_path IN (${paths.map(() => "?").join(",")}) ORDER BY provider_type,schema_path`,
 					)
-					.all(first.provider_name, role ?? null, role ?? null, leaf ?? null, `.${leaf}`, `.${leaf}`)
-					.map((row: any) => ({ ...row, score: 0, coverage: 0 })) as RankedProperty[])
-			: [];
-		decision = selectPropertyDestination(item.prompt, ranked.slice(0, 5), alternatives);
+					.all(provider, role ?? null, role ?? null, ...paths) as PropertyCandidate[];
+				if (fields.length) ranked = fields.map(row => ({ ...row, score: 100, coverage: 1 }));
+			}
+			const first = ranked[0];
+			const leaf = first?.schema_path.split(".").at(-1);
+			const alternatives = first
+				? (db
+						.query(
+							"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND (schema_path=? OR substr(schema_path,-length(?))=?) ORDER BY provider_type,schema_path",
+						)
+						.all(first.provider_name, role ?? null, role ?? null, leaf ?? null, `.${leaf}`, `.${leaf}`)
+						.map((row: any) => ({ ...row, score: 0, coverage: 0 })) as RankedProperty[])
+				: [];
+			decision = selectPropertyDestination(item.prompt, ranked.slice(0, 5), alternatives);
+		}
 		const provenance = `Provider: ${pin.provider_version}\nSnapshot: ${pin.release_tag}\nCommit: ${pin.source_commit}\nReceipt SHA-256: ${pin.receipt_sha256}`;
 		discovery = boundedTerraformResponse(
 			`${provenance}\nSelection: ${decision.kind}\nReason: ${decision.reason}`,
@@ -177,6 +191,9 @@ const report = {
 	suite_sha256: terraformHash(suiteBytes),
 	source_commit: pin.source_commit,
 	provider_version: pin.provider_version,
+	answerable_cases: results.filter(row => row.kind === "answerable").length,
+	answerable_correct_leaf: results.filter(row => row.kind === "answerable" && row.correct_leaf).length,
+	answerable_false_leaf: results.filter(row => row.kind === "answerable" && row.false_leaf).length,
 	property_cases: properties.length,
 	correct_leaf: properties.filter(row => row.correct_leaf).length,
 	false_leaf: properties.filter(row => row.false_leaf).length,
@@ -187,7 +204,7 @@ const report = {
 
 	experimental_complete_route_p95_ms: timings.sort((a, b) => a - b)[Math.ceil(timings.length * 0.95) - 1],
 	limitations: [
-		"Measured route includes candidate query, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+		"Measured route includes candidate query, provider/task identity, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
 		"Development labels have known defects and unresolved same-role ambiguities.",
 		"Experimental route uses prepared terms and scope weights via targeted indexed SQL, with exact source reads. Bundled index integration, cold materialization and installed acceptance remain unverified.",
 	],
