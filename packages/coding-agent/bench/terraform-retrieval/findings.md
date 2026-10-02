@@ -698,3 +698,14 @@ builds match SQLitec77d9f2c3cb49ad9bf06f06cd268de5f4ad5f9fc66ee4b8ccfe469a2515a5
 65234569bytes. Published regression43/140selected,52.8571%top5,discovery129.868ms,
 complete119.610ms. Enriched preview44/140selected54.2857%top5. No accuracy
 qualification. Derived pin updated with source;tracked loader remains placeholder.
+
+
+## Scoped exact scalar destinations
+
+Explicit scalar identifiers query verified destination anchors within caller scope
+before generic broadening. Branch context ranks all bounded matching destinations
+prior to output selection;unqualified branches remain choices. Tasks/setup routes
+stay distinct. Red fixture reproduces precise named-branch query falsely marked
+broadened;484URLtests+workspacechecks pass. Published regression unchanged
+43/140selected,52.8571%top5,discovery122.274ms,complete113.286ms;no qualification.
+Provider exact-source documentation regeneration remains active.

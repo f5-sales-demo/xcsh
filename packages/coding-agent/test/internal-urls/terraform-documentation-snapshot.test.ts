@@ -807,3 +807,65 @@ test("property search excludes validator code while exact context preserves it",
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("exact scalar field identifiers retain all branches before context selection", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-scalar-destinations-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const branches = ["branch_a", "branch_b", "branch_c", "branch_d", "branch_e", "branch_f", "branch_z"];
+		const docs = branches.map(branch => {
+			const docPath = `documentation/resources/fixture/properties/${branch}/index.md`;
+			const anchor = `schema-${branch}--shared_flag`;
+			const body = `# ${branch}\n\n<a id="${anchor}"></a>\n### shared_flag\nA flag setting.\n`;
+			return {
+				...original,
+				path: docPath,
+				body,
+				markdown: body,
+				sha256: terraformHash(body),
+				metadata: {
+					...original.metadata,
+					id: branch,
+					canonical_id: branch,
+					path: docPath,
+					role: "properties",
+					schema_path: [branch],
+					aliases: [],
+					sections: [
+						{
+							schema_path: [branch, "shared_flag"],
+							document_id: branch,
+							anchor,
+							description: "A flag setting.",
+							aliases: [],
+							flags: [],
+							relationships: [],
+						},
+					],
+				},
+			};
+		});
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}&provider_name=fixture&provider_type=resources`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		const precise = (await read("configure shared_flag under branch_z")).content;
+		expect(precise).toContain("Selected leaf;");
+		expect(precise).toContain("#schema-branch_z--shared_flag");
+		const vague = (await read("configure shared_flag")).content;
+		expect(vague).toContain("Narrowing choices");
+		expect(vague).not.toContain("Selected leaf;");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

@@ -1716,6 +1716,63 @@ export class TerraformDocumentationRepository {
 					broadened = false;
 				}
 			}
+			if (providerFilter && !taskDestination && !setupAnchor && !navigationRequest) {
+				const identifiers = [
+					...new Set(
+						(search.toLowerCase().match(/[a-z][a-z0-9]*_[a-z0-9_]+/g) ?? []).filter(
+							term => !term.startsWith("xcsh_") && term !== providerFilter.value,
+						),
+					),
+				];
+				if (identifiers.length) {
+					const exactClauses = [
+						"dest.provider_name=?",
+						"dest.anchor LIKE 'schema-%'",
+						`(${identifiers.map(() => "dest.schema_path=? OR dest.schema_path LIKE ?").join(" OR ")})`,
+					];
+					const exactArgs: Array<string | number> = [
+						providerFilter.value,
+						...identifiers.flatMap(term => [term, `%.${term}`]),
+					];
+					for (const filter of filters) {
+						exactClauses.push(
+							"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=td.path AND f.facet=? AND f.value=?)",
+						);
+						exactArgs.push(filter.key, filter.value);
+					}
+					if (node) {
+						exactClauses.push(
+							"td.id IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT id FROM descendants)",
+						);
+						exactArgs.push(node);
+					}
+					const exact = db
+						.query(
+							`SELECT dest.path,dest.anchor,dest.schema_path,td.metadata,s.heading,s.context_markdown markdown FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path JOIN terraform_sections s ON s.path=dest.path AND s.anchor=dest.anchor WHERE ${exactClauses.join(" AND ")} ORDER BY dest.schema_path COLLATE BINARY LIMIT 300`,
+						)
+						.all(...exactArgs) as Array<SearchRow & { schema_path: string }>;
+					if (exact.length && exact.length < 300) {
+						rows = exact
+							.map(row => {
+								const rank =
+									300 + scoreTerraformAliasContext(search, row.schema_path, providerFilter.value.split("_"));
+								return {
+									...row,
+									metadata: JSON.stringify({
+										...JSON.parse(row.metadata),
+										schema_path: row.schema_path.split("."),
+									}),
+									raw_score: rank,
+									score: rank / (1 + rank),
+								};
+							})
+							.sort((a, b) => b.raw_score - a.raw_score || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+						const best = rows[0]!.raw_score;
+						rows = rows.filter(row => row.raw_score === best);
+						broadened = false;
+					}
+				}
+			}
 			const identifierExists = (term: string): boolean => {
 				const scopeClauses = ["documents_fts MATCH ?"];
 				const scopeArgs: Array<string | number> = [`"${term}"`];
