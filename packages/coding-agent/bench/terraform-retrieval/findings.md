@@ -343,3 +343,18 @@ Operation timeout requests now use indexed timeouts.create/read/update/delete
 destinations;connection/request/TLS idle timeouts stay in property retrieval.
 Initial creation and refresh phrasing tested;multiple operations return multiple
 exact anchors. Explicit facets and descendant scope preserved. Qualification open.
+
+## Dedicated ancestor section index experiment
+
+Separate FTS5 index stores direct property schema paths,leaf/description terms and
+ancestor descriptions without page Markdown.39,557 destinations,35,741,696bytes;
+development14/14top5,11/14first,warm query p9540.210ms over5repetitions.
+Two fixture builds are byte-identical and role/anchor regression passes.
+Still experimental:ambiguous HTTPS mode,parent-vs-field and operation task intent
+need selection handling. Not wired into production and no qualification claimed.
+
+Dedicated ancestor index integration was evaluated on24development prompts:
+baseline8/14correct selected leaves,p95148.141ms;candidate9/14,p95148.299ms.
+The fallback index adds35.7MB and showed no latency gain. It was not promoted;
+production source and reviewed pin restored. Prototype and full results
+remain bench-only. No qualification expected destination was changed.
