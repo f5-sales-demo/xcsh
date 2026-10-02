@@ -64,7 +64,10 @@ test("bounded discovery preserves UTF-8 entries and continuation destinations", 
 test("selection distinguishes provider role and competing choices from ranking values", () => {
 	const leaf = { path: metadata().path, anchor: "schema-tls--certificate", metadata: metadata(), ranking: 20 };
 	expect(selectTerraformCandidate([leaf], false)).toBe("leaf");
-	expect(selectTerraformCandidate([leaf, { ...leaf, ranking: 19 }], false)).toBe("choices");
+	expect(selectTerraformCandidate([leaf, { ...leaf, ranking: 19 }], false)).toBe("leaf");
+	expect(selectTerraformCandidate([leaf, { ...leaf, anchor: "schema-tls--other", ranking: 19 }], false)).toBe(
+		"choices",
+	);
 	expect(
 		selectTerraformCandidate(
 			[leaf, { ...leaf, ranking: 1, metadata: { ...metadata(), provider_type: "data-sources" } }],

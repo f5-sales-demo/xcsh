@@ -769,6 +769,18 @@ export function selectTerraformCandidate(
 	candidates: Array<{ path: string; anchor: string; metadata: TerraformMetadata; ranking: number }>,
 	broadened: boolean,
 ): "leaf" | "choices" {
+	const destinations = new Map<string, (typeof candidates)[number]>();
+	for (const candidate of candidates) {
+		const key = `${candidate.metadata.provider_type}:${candidate.path}#${candidate.anchor}`;
+		const previous = destinations.get(key);
+		if (!previous || candidate.ranking > previous.ranking) destinations.set(key, candidate);
+	}
+	candidates = [...destinations.values()].sort(
+		(a, b) =>
+			b.ranking - a.ranking ||
+			(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
+			(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
+	);
 	const first = candidates[0];
 	if (
 		!first ||
@@ -1369,6 +1381,18 @@ export class TerraformDocumentationRepository {
 					broadened = rows.length > 0;
 				}
 			}
+			const uniqueRows = new Map<string, SearchRow>();
+			for (const row of rows) {
+				const key = `${row.path}#${row.anchor}`;
+				const previous = uniqueRows.get(key);
+				if (!previous || row.raw_score > previous.raw_score) uniqueRows.set(key, row);
+			}
+			rows = [...uniqueRows.values()].sort(
+				(a, b) =>
+					b.raw_score - a.raw_score ||
+					(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
+					(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
+			);
 			const selection = selectTerraformCandidate(
 				rows.map(r => ({
 					path: r.path,

@@ -313,3 +313,8 @@ Scalar alias joins now bind schema_path encoded in verified schema anchors,
 using destination primary-key lookup. Paired24development response parity passes,
 p95140.241ms to127.061ms. Full regression remains24/140selected,31.4286%top5,
 discovery181.660ms; no qualification.462URLtests+workspacechecks pass.
+
+Duplicate aliases to one exact destination no longer cause false ambiguity or
+repeated search entries. Provider roles and different anchors remain distinct.
+462URLtests+workspacechecks pass. Full regression remains24/140 selected,
+31.4286%top5,discovery183.127ms;no qualification claim.
