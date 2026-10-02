@@ -456,3 +456,14 @@ test("provider ownership phrases outrank incidental nested provider names", () =
 		terraformProviderMention("Compare a workload resource versus an HTTP load balancer resource", names),
 	).toBeUndefined();
 });
+
+test("cloud resource credentials retain their provider scope instead of setup guidance", () => {
+	expect(
+		terraformProviderSetupDestination(
+			"Which block in a cloud credentials resource configures AWS secret key credentials for cloud provider access?",
+		),
+	).toBeUndefined();
+	expect(terraformProviderSetupDestination("Configure API token authentication for the xcsh provider")).toBe(
+		"option-1-api-token-authentication",
+	);
+});

@@ -779,6 +779,7 @@ export function scoreTerraformAliasContext(
 }
 
 export function terraformProviderSetupDestination(query: string): string | undefined {
+	if (/\b(?:resource|data[ -]source|action|ephemeral)\b/i.test(query)) return undefined;
 	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
 	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
 		return undefined;
