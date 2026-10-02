@@ -739,3 +739,20 @@ discovery/context hashes match,including481scores and481contextreads. Five-repea
 discoveryp95Mac94.062ms,Ubuntu104.610ms;complete91.413/101.019ms. Accuracy
 43/140and52.8571%top5still fails;ineligible suite regression only. Earlier dirty
 Mac worktree preserved. Final released installed acceptance remains unfinished.
+
+
+## Literal branch prefix refinement
+
+A focused regression reproduced a false port destination in branchxa when the
+selected branch was branch_a. Direct-field prefix comparisons now treat schema
+underscores literally. The test fails before the repair; 486 URL tests and
+workspace checks pass after it. Published-corpus regression remains 43/140 correct
+selections and 52.86% top-five recall. Ubuntu discovery p95 is 99.893 ms; complete
+response p95 is 96.421 ms across five repetitions. This is ineligible-suite
+regression evidence and does not qualify the release.
+
+Failure triage groups the existing regression into 88 property requests (9 correct
+selections, 34 expected destinations in top five) and 52 task requests (34 correct,
+40 in top five). These counts guide redesign and are not independent acceptance.
+Broader source-only development authoring is underway with the existing reviewer;
+its material will remain separate from any new held-out qualification suite.
