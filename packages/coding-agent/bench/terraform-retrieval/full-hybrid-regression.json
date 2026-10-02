@@ -1,0 +1,39 @@
+{
+  "timing_scope": "query embedding plus vector ranking and fusion; lexical candidate generation precomputed",
+  "estimated_route_p95_ms": 630.7805409760076,
+  "lexical_timing_complete": true,
+  "matrix_ranking": true,
+  "embedding_p95_ms": 216.47798595950007,
+  "ranking_p95_ms": 12.767302105203271,
+  "development_only": true,
+  "qualification_passed": false,
+  "model": "embeddinggemma:300m",
+  "corpus_sha256": "e91a65961dbc53bfea4d2578909a94d6fcfe1067dfb9b52c552687f1648ecf91",
+  "answerable": 140,
+  "top1": 19,
+  "top5": 65,
+  "p95_ms": 221.37975099030882,
+  "limitations": [
+    "Vectors built from exact tagged v12.2.0 metadata; experiment only.",
+    "200 previously analyzed frozen prompts;regression only;no held-out qualification.",
+    "Local embedding time included; lexical generation measured separately and route estimate is not complete-response latency.",
+    "No production route shipped; response rendering and source materialization excluded."
+  ],
+  "original_raw_report_sha256": "1ee0b2ea413debb5c46e3ecbd50d45cbd95d53d5ac5f35dfde8ac20664509af6",
+  "original_report_count_defect": {
+    "answerable": 14,
+    "claimed_development_prompts": 24
+  },
+  "post_analysis_regression": true,
+  "production_promoted": false,
+  "suite_cases": 200,
+  "model_manifest_sha256": "85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+  "complete_results": {
+    "artifact": "full-hybrid-regression.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "cc631e4338730cee3319d54489079c602a85170d89fd88c2d5971be9f7dbfcba",
+    "uncompressed_bytes": 456177,
+    "compressed_sha256": "b6e3bfde72134f411720786e340d8c66695d5dbe33ed5e36b4cf3696fdc4747e",
+    "compressed_bytes": 66570
+  }
+}

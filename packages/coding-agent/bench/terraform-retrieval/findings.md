@@ -628,3 +628,16 @@ release-pin fields. Red/green scorer tests and end-to-end missing-receipt reject
 pass;workspacechecks pass. Bound enriched-preview regression41/140selected,
 52.1429%top5,discovery154.920ms,complete148.480ms remains failed. No immutable
 provider publication or consumer pin update follows preview evidence.
+
+
+## Full semantic hybrid regression rejection
+
+Fixed published v12.2.0 property embeddings and lexical ancestor candidates
+evaluated all200previously analyzed prompts with5repetitions.19/140first,65/140
+top5;embedding216.478msp95,ranking12.767ms,semantic/fusion221.380ms,estimated
+route630.781ms. Complete response rendering excluded;no latency qualification.
+Initial run failed with404because task server used empty default model directory;
+exact retry used retained model cache and succeeded. Original raw count defect
+(14answerable/24development) preserved by digest;corrected report records140/200.
+Evaluator now derives counts from supplied suite. Task server stopped. Hybrid
+remains unshipped and does not meet accuracy or latency gates.
