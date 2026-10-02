@@ -15,3 +15,16 @@ export function scoreDestinations(
   kind === "ambiguous" ? !selected && wanted.length >= 2 && matchedExpected === wanted.length : null;
  return { rank: rank || null, top5: rank > 0 && rank <= 5, matchedExpected, selectionCorrect };
 }
+
+export function validateQualificationSource(
+ freeze:{source_provider_version:string;source_commit?:string;receipt_sha256?:string;source_index_sha256?:string},
+ pin:{provider_version:string;source_commit:string;receipt_sha256:string;index?:{sha256:string}},
+ regression:boolean,
+):void {
+ if(freeze.source_provider_version!==pin.provider_version ||
+  (freeze.source_commit && freeze.source_commit!==pin.source_commit) ||
+  (freeze.receipt_sha256 && freeze.receipt_sha256!==pin.receipt_sha256))
+  throw new Error("Frozen qualification provider source mismatch");
+ if(!regression && freeze.source_index_sha256 && freeze.source_index_sha256!==pin.index?.sha256)
+  throw new Error("Frozen qualification index mismatch; use --regression for post-analysis evidence");
+}

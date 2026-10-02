@@ -229,3 +229,8 @@ Unified path/description scorer experiment reaches8/14 first destinations and
 not imported by production retrieval. Further accuracy work remains required.
 Provider-name normalization for ordinary 'HTTP load balancer' wording is a
 separate tested production repair. Local duplication check5.38% passes.
+
+Qualification runner now rejects provider version/source/receipt drift and requires
+explicit --regression for a changed index. Focused source-binding tests pass.
+Static guidance keeps provider-specific support in the offline bundled corpus and
+separates generic Terraform syntax from actual xcsh support. Workspace checks pass.
