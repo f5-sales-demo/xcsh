@@ -83,7 +83,23 @@ export function selectPropertyDestination(
 		)
 			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing schema branch context" };
 	}
+	const completeFieldTerms = (candidate: PropertyCandidate) => {
+		const terms = propertyTerms(candidate.schema_path.split(".").at(-1) ?? "");
+		return terms.length > 0 && terms.every(term => query.has(term));
+	};
+	const fieldNamed = first.anchor.startsWith("schema-") && completeFieldTerms(first);
 	const second = ranked.slice(1).find(other => {
+		if (other.provider_type === first.provider_type && other.provider_name === first.provider_name && fieldNamed) {
+			if (other.anchor === "section" && parts.slice(0, -1).join(".") === other.schema_path) return false;
+			const fieldTerms = propertyTerms(parts.at(-1) ?? "");
+			if (
+				fieldTerms.length >= 2 &&
+				parts.slice(0, -1).join(".") === other.schema_path.split(".").slice(0, -1).join(".") &&
+				!completeFieldTerms(other)
+			)
+				return false;
+		}
+
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
 		if (
 			other.schema_path.split(".").at(-1) !== parts.at(-1) ||

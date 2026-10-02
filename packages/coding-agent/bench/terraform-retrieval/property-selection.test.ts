@@ -59,3 +59,15 @@ test("unsupported explicit field identifiers cannot disappear from coverage", ()
 	expect(selectPropertyDestination("set invented_flag on TLS port", [row("tls.port", 50)]).kind).toBe("none");
 	expect(selectPropertyDestination("set tls_port", [row("tls_port", 50)]).kind).toBe("leaf");
 });
+
+test("the enclosing block does not compete with a specifically requested direct field", () => {
+	const field = row("tls.version", 40);
+	const parent = { ...row("tls", 39), anchor: "section" };
+	expect(selectPropertyDestination("TLS version field", [field, parent]).kind).toBe("leaf");
+});
+test("a complete multiword field name separates nearby sibling fields", () => {
+	const total = row("limits.total_number", 40);
+	const burst = row("limits.burst_multiplier", 39);
+	expect(selectPropertyDestination("total maximum number of requests", [total, burst]).kind).toBe("leaf");
+	expect(selectPropertyDestination("adjust request limits", [total, burst]).kind).toBe("choices");
+});

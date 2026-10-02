@@ -832,3 +832,26 @@ development sets; rankings reach48/58and12/14first. This remains insufficient
 for promotion. In-memory FTS and preloaded scope statistics remain experimental;
 final indexed artifact, installed routes and valid held-out qualification are
 unverified. No production module imports this experiment.
+
+
+## Prepared property index and explicit field/block intent
+
+A tested field-selection rule excludes the enclosing block when the caller
+names a direct scalar field, and distinguishes a complete multiword field from
+nearby siblings. Explicit block phrases outrank incidental description mentions.
+Final complete experimental route reaches27/58correct selections and49/58first
+destinations on revised development,with zero observed false leaf;original
+remains9/14selected. Twenty ranking/selection/index tests and workspace checks
+pass. Complete-route timing here ran alongside source checks and is not final
+cross-platform performance qualification.
+
+Dedicated property_scopes,property_scope_terms,property_terms and property_search
+tables store prepared vocabulary and provider-scope statistics. Targeted SQL
+fetches bounded candidates and their terms rather than loading whole-corpus
+metadata at runtime. Two independent56,627,200-byteprototype indexes match
+SHA2561796d6d165e9bd57e5c1f18b683a0f906248a9e651be1542daec3cb8ac5f93c2.
+Ranking reaches49/58first and56/58topfive on revised development at30.809ms
+p95;original8/14first and12/14topfive before refinement/lifecycle routing.
+Ambiguous-query candidate differences are retained and prevent broad parity
+claims. Prototype remains outside production;complete targeted route,filters,
+continuations,installed artifact and valid held-out qualification remain required.

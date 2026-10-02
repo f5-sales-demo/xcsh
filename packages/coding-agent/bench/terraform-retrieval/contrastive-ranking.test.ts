@@ -61,3 +61,13 @@ test("out-of-vocabulary filler does not overwhelm documented field coverage", ()
 	expect(verbose.coverage).toBe(direct.coverage);
 	expect(rankPropertyScope("unseen invented widget", scope)[0]?.coverage).toBe(0);
 });
+
+test("an explicitly named configuration block outranks incidental mention in another description", () => {
+	const scope = preparePropertyScope([
+		row("rule_list", "Ordered rules; use allow_list or deny_list for geographic matches.", "section"),
+		row("allow_list", "List of sources matching criteria.", "section"),
+	]);
+	expect(
+		rankPropertyScope("which configuration block configures the allow list rule set", scope)[0]?.schema_path,
+	).toBe("allow_list");
+});

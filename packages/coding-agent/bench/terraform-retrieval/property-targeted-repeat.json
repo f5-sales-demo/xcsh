@@ -1,0 +1,26 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "property_cases": 58,
+  "property_first": 49,
+  "property_top5": 56,
+  "index_build_ms": 1263.198478,
+  "index_bytes": 56627200,
+  "index_sha256": "1796d6d165e9bd57e5c1f18b683a0f906248a9e651be1542daec3cb8ac5f93c2",
+  "ranking_p95_ms": 34.75054300000011,
+  "limitations": [
+    "Targeted prepared-term SQL prototype; excludes complete response rendering, selection and installed acceptance.",
+    "Source labels contain known defects."
+  ],
+  "complete_results": {
+    "artifact": "property-targeted-repeat.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "8e5440315970a8f204818bcb5e44b09714099282b00f0b4a9216caaa01f74dd4",
+    "uncompressed_bytes": 338276,
+    "compressed_sha256": "e4100b662858ef66963062f1c176f1d31e6434f45f8decaad96bc90a25a94709",
+    "compressed_bytes": 32112
+  }
+}
