@@ -1,0 +1,28 @@
+{
+  "qualification_passed": false,
+  "candidate_only": true,
+  "binary_version": "22.8.1",
+  "binary_source_commit": "8388c8de10f442934bc422203723b22d9aa1c9e2",
+  "build_run": "37075887687",
+  "binary_sha256": "a7f270f8c657b8bd92867430af53b04b2af503182d62f1c0c9234f1895e281fd",
+  "binary_bytes": 698856928,
+  "binary_and_native_checksums_verified": true,
+  "provider_version": "v12.3.1",
+  "provider_source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "isolated_home": true,
+  "network_disabled": "sudo unshare --net",
+  "smoke_marker": "XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK",
+  "smoke_checks": [
+    "inventory provenance",
+    "filtered search",
+    "bounded hint and facet",
+    "exact explicit anchor with validators",
+    "deep Bot Defense leaf and links",
+    "missing query without fetch"
+  ],
+  "limitations": [
+    "Candidate binary, not published release.",
+    "Frozen v4 retrieval accuracy failed; no release qualification claim.",
+    "Installed model 40 and signed Mac candidate acceptance remain incomplete."
+  ]
+}

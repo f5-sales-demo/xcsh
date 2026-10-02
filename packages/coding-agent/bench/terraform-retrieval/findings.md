@@ -1190,3 +1190,11 @@ branch dispatch used feature branch name as semantic release version. Both Mac
 provenance/package steps now choose package version for branch dispatches and
 retain tag version for releases; red/green workflow test and actionlint pass.
 This changes candidate build provenance only, not frozen retrieval behavior.
+
+CI-produced Linux candidate binary from source 8388c8de passes binary/native
+checksum verification and installed Terraform smoke in isolated HOME with
+network namespace disabled. Inventory provenance, filtered discovery, hint/facet
+budgets, exact anchor validators and deep Bot Defense leaf links pass. Candidate
+receipt: installed-candidate-linux-receipt.json. Frozen accuracy remains failed;
+this installed smoke is not model or release qualification. Mac candidate fix
+run 37079682221 is queued and does not publish release.
