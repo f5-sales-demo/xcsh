@@ -83,7 +83,7 @@ export function rankPropertyScope(
 	return scope.rows
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
-			const weight = (term: string) => scope.weights.get(term) ?? Math.log(2 + scope.rows.length);
+			const weight = (term: string) => scope.weights.get(term) ?? 0;
 			const union = new Set([...row.leaf, ...row.context, ...row.descriptionTerms]);
 			let coverage = 0,
 				total = 0,

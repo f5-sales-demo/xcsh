@@ -48,3 +48,14 @@ test("unrelated repeated field names do not require missing branch context", () 
 	const other = { ...row("routing.port", 10), description: "BGP transport port." };
 	expect(selectPropertyDestination("HTTPS listening port", [first], [other]).kind).toBe("leaf");
 });
+
+test("explicit dual-stack context excludes its otherwise identical single-stack destination", () => {
+	const rows = [row("outside.dual_stack.ipv4.addr", 50), row("outside.ipv4.addr", 49)];
+	expect(selectPropertyDestination("outside dual stack IPv4 address", rows).kind).toBe("leaf");
+	expect(selectPropertyDestination("outside IPv4 address", rows).kind).toBe("choices");
+});
+
+test("unsupported explicit field identifiers cannot disappear from coverage", () => {
+	expect(selectPropertyDestination("set invented_flag on TLS port", [row("tls.port", 50)]).kind).toBe("none");
+	expect(selectPropertyDestination("set tls_port", [row("tls_port", 50)]).kind).toBe("leaf");
+});

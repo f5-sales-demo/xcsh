@@ -811,3 +811,24 @@ collision lookup. It is explicitly estimated rendering-route timing, not measure
 integrated complete-response latency. Original mislabeled timing report digests
 are preserved. Twelve ranker/selection tests and workspace checks pass. No
 production imports or held-out qualification; source-label defects remain.
+
+ 
+## Explicit branch exclusion and documented-vocabulary coverage
+
+A red selection fixture reproduced unnecessary clarification between dual-stack
+and ordinary IP address branches when the prompt explicitly requested dual
+stack. An excluded identical-field branch no longer triggers score-gap
+clarification. Unknown vocabulary no longer receives provider-scope rarity
+weight; explicit unsupported identifiers remain a separate fail-closed check.
+Fifteen ranking and selection tests pass, together with workspace checks.
+
+The complete development route times candidate queries, ranking, direct-field
+refinement, lifecycle routing, indexed collisions, selection and bounded
+discovery/context rendering inside each repetition. Five repetitions produce
+identical response hashes. With workspace checks stopped, measured experimental
+p95 is25.169msrevised and17.124msoriginal. Preparation is744.512/729.992ms.
+Selected leaves improve to24/58and9/14with zero observed false leaf on these
+development sets; rankings reach48/58and12/14first. This remains insufficient
+for promotion. In-memory FTS and preloaded scope statistics remain experimental;
+final indexed artifact, installed routes and valid held-out qualification are
+unverified. No production module imports this experiment.

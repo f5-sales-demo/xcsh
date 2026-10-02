@@ -24,6 +24,16 @@ export function selectPropertyDestination(
 	alternatives: readonly RankedProperty[] = [],
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
 	const query = new Set(propertyTerms(queryText));
+	const identifiers = (queryText.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
+		term => !term.startsWith("xcsh_") && ![...input, ...alternatives].some(row => row.provider_name === term),
+	);
+	if (
+		identifiers.some(
+			identifier => ![...input, ...alternatives].some(row => row.schema_path.split(".").includes(identifier)),
+		)
+	)
+		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
+
 	const unique = new Map<string, RankedProperty>();
 	for (const row of input) {
 		const key = `${row.path}#${row.anchor}`;
@@ -65,10 +75,31 @@ export function selectPropertyDestination(
 		}
 		if (a < 0 && b < 0) continue;
 		const differing = parts.slice(0, a + 1).filter(part => !otherParts.includes(part));
-		if (!differing.some(part => propertyTerms(part).every(term => query.has(term))))
+		if (
+			!differing.some(part => {
+				const terms = propertyTerms(part);
+				return terms.length > 0 && terms.every(term => query.has(term));
+			})
+		)
 			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing schema branch context" };
 	}
-	const second = ranked[1];
+	const second = ranked.slice(1).find(other => {
+		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
+		if (
+			other.schema_path.split(".").at(-1) !== parts.at(-1) ||
+			propertyTerms(other.description).join(" ") !== propertyTerms(first.description).join(" ")
+		)
+			return true;
+		const otherParts = other.schema_path.split(".");
+		const named = (segments: string[], compared: string[]) =>
+			segments
+				.filter(segment => !compared.includes(segment))
+				.some(segment => {
+					const terms = propertyTerms(segment);
+					return terms.length > 0 && terms.every(term => query.has(term));
+				});
+		return !named(parts, otherParts) || named(otherParts, parts);
+	});
 	if (second && first.score < second.score * 1.3)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Close competing destinations" };
 	return { kind: "leaf", destinations: [first], reason: "Separated candidate with supported branch context" };

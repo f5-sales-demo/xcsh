@@ -50,3 +50,14 @@ test("query synonyms and schema abbreviations share canonical terms", () => {
 	expect(propertyTerms("static IPv6 routes")).toEqual(propertyTerms("static_v6_routes"));
 	expect(propertyTerms("ending IP address")).toEqual(propertyTerms("end_ip_address"));
 });
+
+test("out-of-vocabulary filler does not overwhelm documented field coverage", () => {
+	const scope = preparePropertyScope([
+		row("tls.port", "HTTPS listening port."),
+		row("tls.timeout", "Connection timeout."),
+	]);
+	const direct = rankPropertyScope("HTTPS listening port", scope)[0]!;
+	const verbose = rankPropertyScope("Kindly elucidate the HTTPS listening port", scope)[0]!;
+	expect(verbose.coverage).toBe(direct.coverage);
+	expect(rankPropertyScope("unseen invented widget", scope)[0]?.coverage).toBe(0);
+});
