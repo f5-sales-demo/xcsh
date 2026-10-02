@@ -1153,3 +1153,9 @@ depths. The candidate remains unrun and unfrozen; source-only revision is active
 The review digest and outcome are recorded in independent-authoring-status.json.
 Corrected candidate build passes Linux baseline/modern, Mac arm64, Rust and
 native-independent TypeScript checks; remaining matrix/build jobs remain active.
+
+Candidate run 37074075798 completed all native builds, but native-dependent
+TypeScript source imports failed on the missing ignored Terraform gzip asset.
+That source shard now resets the optional loader before tests; compiled candidate
+preparation still regenerates/verifies the pinned index. Red/green workflow
+regression and actionlint pass. No candidate binaries were produced by that run.

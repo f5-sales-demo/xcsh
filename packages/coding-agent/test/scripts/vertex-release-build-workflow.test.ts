@@ -65,3 +65,12 @@ it("native sandbox tests reset optional Terraform loader before importing the so
 		expect(reset).toBeLessThan(sandbox);
 	}
 });
+
+it("native-dependent source shard resets optional loader before CLI imports", async () => {
+	const workflow = parse(await Bun.file(workflowPath).text()) as WorkflowDocument;
+	const steps = workflow.jobs?.["test-typescript-native"]?.steps ?? [];
+	const reset = steps.findIndex(s => s.run?.includes("generate-terraform-documentation-index --reset"));
+	const test = steps.findIndex(s => s.run?.includes("--shard=native-dependent"));
+	expect(reset).toBeGreaterThanOrEqual(0);
+	expect(reset).toBeLessThan(test);
+});
