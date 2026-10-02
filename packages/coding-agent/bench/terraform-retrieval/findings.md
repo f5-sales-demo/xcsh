@@ -663,3 +663,15 @@ workspacechecks and scoped integration pass. Published regression unchanged
 42/140selected,51.4286%top5,discovery192.545ms,complete176.715ms;qualification
 remains failed. CIregex spelling fragments and report terminology repaired.
 Provider all implementation checks pass;exact-head issue check remains queued.
+
+
+## Property title navigation deduplication
+
+Property page title passages preceding canonical section anchors no longer enter
+search;authoritative Markdown and exact reads remain complete. Red/green fixture
+proves navigation text survives exact reads.481URLtests+workspacechecks pass.
+Two reviewed v12.2.0 index builds match SQLite/gzip digests;SQLite799932416bytes,
+gzip68812457bytes. Source pin preserved;derived index pin updated atomically.
+Published regression43/140selected,51.4286%top5,discovery149.741ms,complete
+142.963ms. Unpublished enriched preview44/140selected,52.1429%top5;still no
+accuracy qualification. Tracked asset loader restored to null placeholder.

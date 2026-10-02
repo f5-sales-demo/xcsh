@@ -589,6 +589,13 @@ export async function buildTerraformIndex(
 				].join(" ");
 				const passages = m.role === "navigation" ? [] : terraformPassages(d.body, false);
 				for (const p of passages) {
+					if (
+						m.role === "properties" &&
+						p.ordinal === 0 &&
+						p.anchor !== "section" &&
+						passages.some(section => section.anchor === "section")
+					)
+						continue;
 					// Adjacent explicit anchors and headings share one searchable passage.
 					const previous = passages[p.ordinal - 1];
 					if (previous && previous.heading === p.heading && /^(schema-|section$)/.test(previous.anchor)) continue;

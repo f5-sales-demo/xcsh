@@ -740,3 +740,37 @@ test("unsupported exact fields fail closed within the selected provider scope", 
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("property page title navigation is not indexed beside its canonical section", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-title-index-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		const body =
+			'# TLS\n\nBreadcrumbs:\n\n- navigation phrase\n\n<a id="section"></a>\n\nType: object.\nTLS configuration.\n\n<a id="schema-port"></a>\n### port\nListening port.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.role = "properties";
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const db = await repo.database();
+		const passages = db
+			.query("SELECT anchor FROM terraform_passages WHERE path=? ORDER BY ordinal")
+			.all(doc.path) as { anchor: string }[];
+		expect(passages.map(p => p.anchor)).toEqual(["section", "schema-port"]);
+		const exact = (
+			await repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/${doc.path}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			)
+		).content;
+		expect(exact).toContain("navigation phrase");
+		db.close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
