@@ -400,3 +400,27 @@ test("reviewed exclusive aliases choose a branch while shared TLS aliases do not
 	expect(terraformNamedChoice("https_auto_cert", choices)).toBe(1);
 	expect(terraformNamedChoice("https and https_auto_cert", choices)).toBeUndefined();
 });
+
+test("workflow grammar infers declaration role and lookup usage without literal resource names", () => {
+	expect(terraformQueryIdentity("declare xcsh_malicious_user_mitigation policy").providerType).toBe("resources");
+	expect(terraformQueryIdentity("provisioning an isolated network").providerType).toBe("resources");
+	expect(terraformTaskDestination("data source documented for querying an existing service policy")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+	expect(terraformTaskDestination("Which resource manages WAF exclusion policies?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("resource documented for creating a rate limiter")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("querying the status attribute of a data source")).toBeUndefined();
+	expect(
+		terraformTaskDestination("Querying the site data source, where is the IPv4 nexthop address?"),
+	).toBeUndefined();
+	expect(
+		terraformTaskDestination("Looking up the policy data source, which schema section handles cookies?"),
+	).toBeUndefined();
+});

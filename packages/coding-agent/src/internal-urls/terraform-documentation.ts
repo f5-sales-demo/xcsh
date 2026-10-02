@@ -782,11 +782,23 @@ export function terraformProviderSetupDestination(query: string): string | undef
 
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	if (
+		/\bresource\b.*\b(?:documented|specification)\b/i.test(query) &&
+		!/\b(?:attributes?|fields?|schema path)\b/i.test(query)
+	)
+		return { role: "fundamentals", anchor: "minimal-configuration" };
 	const fieldRequest = /\b(?:fields?|attributes?|properties|parameters?|schema path|match rules|inside|under)\b/i.test(
 		query,
 	);
-	if (!fieldRequest) {
-		if (/\bdata[ -]source\b/i.test(query) && /\b(?:query|look up|lookup|read|inspect)\b/i.test(query))
+	const scopedLookup =
+		/\b(?:query(?:ing)?|look(?:ing)? up|read(?:ing)?|inspect(?:ing)?)\b[^,]*\bdata[ -]source\b[^,]*,\s*(?:where|which|what)\b/i.test(
+			query,
+		);
+	if (!fieldRequest && !scopedLookup) {
+		if (
+			/\bdata[ -]source\b/i.test(query) &&
+			/\b(?:query(?:ing)?|look(?:ing)? up|lookup|read(?:ing)?|inspect(?:ing)?)\b/i.test(query)
+		)
 			return { role: "fundamentals", anchor: "root-configuration" };
 		if (
 			/\b(?:declare|defined|definition)\b.*\b(?:xcsh_[a-z0-9_]+|resource|policy)\b|\b(?:xcsh_[a-z0-9_]+|resource)\b.*\b(?:defined|definition)\b/i.test(
@@ -810,7 +822,7 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	if (/\broot\s+configuration\b/i.test(query)) return { role: "fundamentals", anchor: "root-configuration" };
 	if (!/\b(?:field|attribute|property|properties|parameter|schema path)\b/i.test(query)) {
 		if (
-			/\b(?:which|what)\s+resource\b.*\b(?:manage|manages|create|creates|represent|represents|provide|provides)\b|\bresource\b.*\b(?:documented|specification)\b/i.test(
+			/\b(?:which|what)\s+(?:the\s+)?resource\b.*\b(?:manage|manages|create|creates|represent|represents|provide|provides)\b|\bresource\b.*\b(?:documented|specification)\b/i.test(
 				query,
 			)
 		)
@@ -951,7 +963,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 					? "actions"
 					: /\bresource\b/i.test(search) ||
 							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-							/\b(?:configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+							/\b(?:declar(?:e|ing)|defin(?:e|ing)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
 								search,
 							)
 						? "resources"

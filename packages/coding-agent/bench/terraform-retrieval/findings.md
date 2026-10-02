@@ -641,3 +641,14 @@ exact retry used retained model cache and succeeded. Original raw count defect
 (14answerable/24development) preserved by digest;corrected report records140/200.
 Evaluator now derives counts from supplied suite. Task server stopped. Hybrid
 remains unshipped and does not meet accuracy or latency gates.
+
+
+## Scoped lookup grammar
+
+Declaration/definition verbs infer resource role;querying/reading/inspecting
+usage can target data-source root configuration. A leading lookup scope followed
+by comma+where/which/what retains exact property retrieval rather than rewriting
+to usage. Red fixtures reproduce declarations and scoped lookups.479URLtests
+and workspacechecks pass. Final regression42/140selected,51.4286%top5,
+discovery169.120ms,complete158.809ms remains failed. Provider source all CI
+passes except exact-head linked-issue workflow still queued. No gate bypass.
