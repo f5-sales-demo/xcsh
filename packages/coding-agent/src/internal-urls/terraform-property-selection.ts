@@ -1,5 +1,5 @@
 // Conservative indexed property selection policy. Scores express rank, never probability.
-import { type PropertyCandidate, propertyTerms } from "./terraform-property-ranking";
+import { type PropertyCandidate, propertyQueryTerms, propertyTerms } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
 	coverage: number;
@@ -31,7 +31,7 @@ export function selectPropertyDestination(
 	input: readonly RankedProperty[],
 	alternatives: readonly RankedProperty[] = [],
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
-	const query = new Set(propertyTerms(queryText));
+	const query = new Set(propertyQueryTerms(queryText));
 	const identifiers = (queryText.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
 		term => !term.startsWith("xcsh_") && ![...input, ...alternatives].some(row => row.provider_name === term),
 	);
@@ -85,7 +85,9 @@ export function selectPropertyDestination(
 	)?.[1];
 	if (intent && /\b(?:attribute|field|property|parameter|option)\b/i.test(queryText)) {
 		const generic = new Set(["option", "native", "directly", "allow", "added"]);
-		requestedTerms = propertyTerms(intent.split(/\bfor\b|\breferenced in\b/i)[0]!).filter(term => !generic.has(term));
+		requestedTerms = propertyQueryTerms(intent.split(/\bfor\b|\breferenced in\b/i)[0]!).filter(
+			term => !generic.has(term),
+		);
 		const local = new Set(propertyTerms(`${first.schema_path} ${first.description}`));
 		const matches = requestedTerms.filter(term => local.has(term)).length;
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)

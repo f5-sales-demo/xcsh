@@ -3,7 +3,7 @@ import type { Database } from "bun:sqlite";
 import {
 	type PropertyCandidate,
 	preparePropertyScope,
-	propertyTerms,
+	propertyQueryTerms,
 	rankPropertyScope,
 } from "./terraform-property-ranking";
 export interface PropertyIndexSource {
@@ -93,7 +93,7 @@ export function searchPropertyIndex(
 	},
 	limit = 500,
 ) {
-	const terms = propertyTerms(query);
+	const terms = propertyQueryTerms(query);
 	if (!terms.length) return [];
 	const clauses = ["property_search MATCH ?"];
 	const args: string[] = [terms.map(term => `"${term}"`).join(" OR ")];

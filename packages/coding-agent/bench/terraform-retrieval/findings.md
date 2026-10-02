@@ -1071,3 +1071,15 @@ three ambiguous selections on labels not yet audited and 13/14 top-five.
 494 internal URL tests pass. Source and raw-output hashes are retained in
 production-branch-evidence-receipt.json. Development is not qualification;
 fresh held-out/installed gates and four audited answerable misses remain open.
+
+Query-only terminology normalizes header strip/remove, before-forwarding/upstream,
+source network address translation/SNAT, IP address prefixes/prefixes and permits/permit.
+Indexed corpus vocabulary and index digest stay unchanged. Schema block intent
+uses conservative indexed selection. Actual audited development reaches 47/48
+(97.92%) with zero wrong answerable leaves and zero ambiguous/control leaf
+selections; all expected destinations remain top-five. The remaining case omits
+IPv4 versus IPv6 and stays choices. Original remains 9/14, zero wrong leaves,
+three ambiguous selections on unaudited labels. 494 internal-URL tests pass.
+These are development measurements, never held-out qualification. Fresh
+source-only Antigravity authoring for an entirely new 200-case candidate is
+started; no candidate is inspected, frozen or run yet.

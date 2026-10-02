@@ -63,6 +63,17 @@ export function propertyTerms(text: string): string[] {
 		),
 	];
 }
+export function propertyQueryTerms(text: string): string[] {
+	return propertyTerms(
+		text
+			.toLowerCase()
+			.replace(/\bsource network address translation\b/g, "snat")
+			.replace(/\bip address prefixes\b/g, "prefixes")
+			.replace(/\bstrip(?:ping|ped)?\b/g, "remove")
+			.replace(/\bbefore forwarding\b/g, "upstream")
+			.replace(/\bpermits\b/g, "permit"),
+	);
+}
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 	const prepared = rows.map(row => ({
 		...row,
@@ -87,9 +98,9 @@ export function rankPropertyScope(
 	const asksField =
 		/\b(field|attribute|property|parameter)\b/i.test(queryText) ||
 		(!/\bblock\b/i.test(queryText) && /\bwhere\b.*\b(?:specify|set)\b/i.test(queryText));
-	const requested = asksField ? new Set(propertyTerms(ask)) : new Set<string>();
-	const query = propertyTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
-	const target = propertyTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
+	const requested = asksField ? new Set(propertyQueryTerms(ask)) : new Set<string>();
+	const query = propertyQueryTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
+	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	return scope.rows
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {

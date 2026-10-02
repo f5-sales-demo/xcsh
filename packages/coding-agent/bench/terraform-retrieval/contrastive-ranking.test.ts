@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
+import { propertyQueryTerms, preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
 
 const row = (schema_path: string, description: string, anchor = "schema-" + schema_path.replaceAll(".", "--")) => ({
 	provider_type: "resources",
@@ -106,4 +106,14 @@ test("where-to-specify field requests prefer scalar destinations over enclosing 
 	]);
 	expect(rankPropertyScope("Where do I specify the IPv4 address for dual-stack routing?", scope)[0]?.schema_path).toBe("dual_stack.ipv4.addr");
 	expect(rankPropertyScope("Which configuration block selects dual stack?", scope)[0]?.schema_path).toBe("dual_stack");
+});
+
+test("query phrasing maps header removal and source NAT to indexed terminology", () => {
+	expect(propertyQueryTerms("request headers to strip before forwarding")).toContain("remove");
+	expect(propertyQueryTerms("prefixes for source network address translation")).toContain("snat");
+	expect(propertyQueryTerms("permits cluster-scoped access")).toContain("permit");
+});
+
+test("address prefixes name a prefix field rather than an individual address", () => {
+	expect(propertyQueryTerms("IP address prefixes")).toEqual(propertyQueryTerms("prefixes"));
 });
