@@ -308,3 +308,8 @@ Scoped join full post-analysis regression:unchanged24/140 selected leaves,top5
 31.4286%,discovery p95180.277ms,down from650.691ms in prior role regression.
 Response bytes/destinations remain unchanged. Still fails latency/accuracy gate;
 frozen suite remains ineligible.462URLtests+workspacechecks pass.
+
+Scalar alias joins now bind schema_path encoded in verified schema anchors,
+using destination primary-key lookup. Paired24development response parity passes,
+p95140.241ms to127.061ms. Full regression remains24/140selected,31.4286%top5,
+discovery181.660ms; no qualification.462URLtests+workspacechecks pass.

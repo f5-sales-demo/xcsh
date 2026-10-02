@@ -1195,7 +1195,7 @@ export class TerraformDocumentationRepository {
 				}
 				let aliasRows = db
 					.query(
-						`SELECT a.path,td.metadata,a.anchor,s.heading,s.context_markdown markdown,length(a.alias) specificity,dest.schema_path destination_schema_path FROM terraform_aliases a JOIN terraform_documents td ON td.path=a.path JOIN terraform_sections s ON s.path=a.path AND s.anchor=a.anchor LEFT JOIN terraform_destinations dest ON dest.provider_name=a.provider_name AND dest.provider_type=a.provider_type AND dest.path=a.path AND dest.anchor=a.anchor WHERE ${aliasClauses.join(" AND ")} ORDER BY specificity DESC,a.path COLLATE BINARY LIMIT ?`,
+						`SELECT a.path,td.metadata,a.anchor,s.heading,s.context_markdown markdown,length(a.alias) specificity,dest.schema_path destination_schema_path FROM terraform_aliases a JOIN terraform_documents td ON td.path=a.path JOIN terraform_sections s ON s.path=a.path AND s.anchor=a.anchor LEFT JOIN terraform_destinations dest ON dest.provider_name=a.provider_name AND dest.provider_type=a.provider_type AND dest.schema_path=replace(substr(a.anchor,8),'--','.') AND dest.path=a.path AND dest.anchor=a.anchor WHERE ${aliasClauses.join(" AND ")} ORDER BY specificity DESC,a.path COLLATE BINARY LIMIT ?`,
 					)
 					.all(...aliasArgs, 300) as Array<{
 					path: string;
