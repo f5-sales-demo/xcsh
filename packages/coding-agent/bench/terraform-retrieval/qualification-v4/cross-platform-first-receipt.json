@@ -1,0 +1,18 @@
+{
+  "suite_sha256": "fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d",
+  "qualification_passed": false,
+  "first_untouched_runs": true,
+  "linux_route_p95_ms": 111.77420000000166,
+  "mac_route_p95_ms": 87.72941700000047,
+  "raw_reports": {
+    "linux": {
+      "gzip_sha256": "967f5f5c1bd71aa7b11d8551263969c3318412d82f85ca0ad42e335bcdc5be0e",
+      "raw_sha256": "777aca2bb80388e6c45a971da2df7c0616d903d925c35dddc33ab3b0a217b7bc"
+    },
+    "mac": {
+      "gzip_sha256": "372e0f9c7e12c662224a2b616d68d87043a446db9e9931b22905a6791920e031",
+      "raw_sha256": "4a63e44a401da7fa5c8fb7ff1abc71190d51433af0c4b1bd18c227fee138fc0f"
+    }
+  },
+  "same_destinations_decisions_and_response_hashes": true
+}

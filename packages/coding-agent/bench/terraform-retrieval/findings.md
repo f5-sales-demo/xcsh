@@ -1165,3 +1165,22 @@ workload TLS paths; fresh verifier returns needs-attention with four findings on
 those paths/depth/subset entries. It remains unfrozen and unrun. Final source-only
 author correction and another fresh verifier handoff are active. Candidate build
 run 37075887687 includes source-loader preparation fix; no release publication.
+
+
+## New independently frozen v4 qualification failure
+
+Exact restored author file passes structural validation (140/40/20, 55 verified
+deep cases) and fresh independent source review approves all 200 without
+findings. Candidate hash 332114e17f3dbf2e5943391d8df5baaf7445c50034ea9ddb99cb7dda15f33d08;
+frozen suite fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d.
+First untouched Linux retrieval qualification FAILS: 23/140 answerable correct
+leaves (16.43%), 56/140 expected top-five (40%); 23 wrong answerable leaf
+selections and five ambiguous leaf selections. No control leaf selections.
+Complete route p95 111.774 ms, within 150 ms; accuracy gates unmet. Results
+preserved under qualification-v4. No tuning against frozen suite, no merge or
+release. Model/installed acceptance remain required and cannot repair this gate.
+
+Mac first untouched qualification exactly matches Linux destinations, selection
+decisions and complete-response hashes. Complete route p95 is 87.729 ms Mac,
+111.774 ms Ubuntu. Cross-platform-first-receipt.json binds raw output digests.
+The accuracy failure remains release-gating. No frozen-suite tuning performed.
