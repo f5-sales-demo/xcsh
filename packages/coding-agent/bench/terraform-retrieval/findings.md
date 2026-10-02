@@ -1137,3 +1137,12 @@ read toolResult, rather than counting an attempted read tool call. Failed or
 missing results are rejected by two red/green synthetic trace tests; Ruff and
 Python compilation pass. Final model qualification remains pending independent
 freeze and licensed candidate binaries.
+
+Fresh independent authoring candidate failed source-only structural validation:
+129 errors and zero verified depth-eight cases, despite the required case mix.
+It is not frozen or run. The same independent author is revising against a
+Markdown-derived exact direct-property destination catalog; a fresh separate
+verifier will audit the revision. Synthetic status receipt:
+independent-authoring-status.json. Retrieval implementation/results are withheld.
+Candidate CI run 37074075798 passes the formerly failing Linux baseline job;
+full licensed compiled artifact acceptance remains in progress.

@@ -1,0 +1,19 @@
+{
+  "qualification_passed": false,
+  "frozen": false,
+  "retrieval_run": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "candidate_sha256": "e4b7a9a7d27fe432cf6c8ef59d1a4aecdcd68d26140eb57a9202eb609b710e4b",
+  "structural_validation_passed": false,
+  "structural_errors": 129,
+  "verified_depth8": 0,
+  "authoring_conversation": "e21cc60e-c93b-4a72-aa2d-57910d69b76d",
+  "authoring_model": "Gemini 3.8 Flash (High)",
+  "source_only_revision_started": true,
+  "retrieval_results_withheld": true,
+  "limitations": [
+    "Initial print window ended with partial output; same conversation resumed.",
+    "Completed candidate failed structure and remains unrun; source-only revision pending.",
+    "Independent review and final freeze are not complete."
+  ]
+}
