@@ -1585,9 +1585,9 @@ export class TerraformDocumentationRepository {
 					const prefix = `${m.schema_path.join(".")}.`;
 					const candidates = db
 						.query(
-							"SELECT dest.path,td.metadata,dest.anchor,dest.description heading,s.context_markdown markdown,dest.schema_path FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path JOIN terraform_sections s ON s.path=dest.path AND s.anchor=dest.anchor WHERE dest.provider_name=? AND dest.provider_type=? AND dest.schema_path LIKE ? ORDER BY dest.schema_path COLLATE BINARY",
+							"SELECT dest.path,td.metadata,dest.anchor,dest.description heading,s.context_markdown markdown,dest.schema_path FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path JOIN terraform_sections s ON s.path=dest.path AND s.anchor=dest.anchor WHERE dest.provider_name=? AND dest.provider_type=? AND substr(dest.schema_path,1,length(?))=? ORDER BY dest.schema_path COLLATE BINARY",
 						)
-						.all(providerFilter.value, m.provider_type, `${prefix}%`) as Array<{
+						.all(providerFilter.value, m.provider_type, prefix, prefix) as Array<{
 						path: string;
 						metadata: string;
 						anchor: string;

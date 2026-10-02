@@ -933,3 +933,63 @@ test("schema identifier underscores are literal rather than SQL wildcards", asyn
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("direct field refinement preserves literal schema branch prefixes", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-literal-prefix-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const docs = ["branch_a", "branchxa"].map((branch, index) => {
+			const docPath = `documentation/resources/fixture/properties/${branch}/index.md`;
+			const anchor = `schema-${branch}--port`;
+			const body = `<a id="section"></a>\n# Backend servers\nServer configuration.\n${index ? `<a id="${anchor}"></a>\n### port\nListening port.\n` : ""}`;
+			return {
+				...original,
+				path: docPath,
+				body,
+				markdown: body,
+				sha256: terraformHash(body),
+				metadata: {
+					...original.metadata,
+					id: branch,
+					canonical_id: branch,
+					path: docPath,
+					role: "properties",
+					schema_path: [branch],
+					aliases: index ? [] : ["backend servers"],
+					sections: index
+						? [
+								{
+									schema_path: [branch, "port"],
+									document_id: branch,
+									anchor,
+									description: "Listening port.",
+									aliases: [],
+									flags: [],
+									relationships: [],
+								},
+							]
+						: [],
+				},
+			};
+		});
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const content = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=configure%20backend%20servers%20port&provider_name=fixture&provider_type=resources",
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(content).not.toContain("#schema-branchxa--port");
+		expect(content).toContain("branch_a/index.md?view=context#section");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
