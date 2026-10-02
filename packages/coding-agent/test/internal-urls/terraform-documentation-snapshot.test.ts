@@ -501,3 +501,50 @@ test("provider setup resolves exact maintained authentication sections and honor
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("selected property blocks refine to direct fields without changing explicit block reads", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-direct-property-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		const body =
+			'<a id="section"></a>\n# Public IP\nPublic IP origin server.\n\n<a id="schema-origin_servers--public_ip--ip"></a>\n### ip\nPublic IPv4 address.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.role = "properties";
+		doc.metadata.schema_path = ["origin_servers", "public_ip"];
+		doc.metadata.aliases = ["public ip"];
+		doc.metadata.sections = [
+			{
+				schema_path: ["origin_servers", "public_ip", "ip"],
+				document_id: doc.metadata.id,
+				anchor: "schema-origin_servers--public_ip--ip",
+				description: "Public IPv4 address.",
+				aliases: [],
+				relationships: [],
+				flags: [],
+			},
+		];
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}&provider_name=fixture&provider_type=resources`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		expect((await read("specify public IP address for origin server")).content).toContain(
+			"#schema-origin_servers--public_ip--ip",
+		);
+		expect((await read("configure public IP origin server block")).content).toContain("#section");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

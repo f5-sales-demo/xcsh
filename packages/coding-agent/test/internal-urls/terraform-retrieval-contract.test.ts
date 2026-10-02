@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	boundedTerraformResponse,
+	rankTerraformDirectProperties,
 	rankTerraformProviderNames,
 	scoreTerraformAliasContext,
 	selectTerraformCandidate,
@@ -307,4 +308,56 @@ test("task and role identity accepts ordinary grammatical variants", () => {
 		"argument-reference",
 	);
 	expect(terraformTaskDestination("Which attributes are exported by this action?")).toBeUndefined();
+});
+
+test("direct property refinement uses field descriptions and keeps absent field intent undecided", () => {
+	const sections = [
+		{
+			schema_path: ["origin_servers", "public_ip", "ip"],
+			document_id: "public",
+			anchor: "schema-ip",
+			description: "Public IPv4 address.",
+			aliases: [],
+			relationships: [],
+			flags: [],
+		},
+		{
+			schema_path: ["origin_servers", "public_ip", "site_locator"],
+			document_id: "public",
+			anchor: "schema-site",
+			description: "Site to discover server.",
+			aliases: [],
+			relationships: [],
+			flags: [],
+		},
+	];
+	expect(
+		rankTerraformDirectProperties("specify the public IP address", ["origin_servers", "public_ip"], sections)[0]
+			?.anchor,
+	).toBe("schema-ip");
+	expect(
+		rankTerraformDirectProperties(
+			"configure the public IP origin server block",
+			["origin_servers", "public_ip"],
+			sections,
+		),
+	).toEqual([]);
+	const tls = [
+		{
+			...sections[0]!,
+			schema_path: ["https", "http_redirect"],
+			anchor: "schema-redirect",
+			description: "Redirect HTTP traffic to HTTPS.",
+		},
+		{
+			...sections[1]!,
+			schema_path: ["https", "port"],
+			anchor: "schema-port",
+			description: "Listening port for HTTPS.",
+		},
+	];
+	expect(rankTerraformDirectProperties("automatic redirection HTTP to HTTPS", ["https"], tls)[0]?.anchor).toBe(
+		"schema-redirect",
+	);
+	expect(rankTerraformDirectProperties("HTTPS listener port", ["https"], tls)[0]?.anchor).toBe("schema-port");
 });

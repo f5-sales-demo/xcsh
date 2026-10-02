@@ -514,3 +514,15 @@ JSON summaries.16artifacts verify exactly:3,335,699original bytes,368,377compres
 Frozen suites/first-run evidence remain unchanged. Exact CI jscpd5.0.10passes9.53%
 against unchanged10%threshold. Current unversioned jscpd differs;CIversion is the
 relevant verification authority. Workspace checks and focused snapshot tests pass.
+
+
+## Direct property refinement
+
+A single selected property block may refine to a clearly requested direct field
+using exact schema leaf and description terms. Explicit block/object requests stay
+at the block;multiple candidates remain choices. No inferred validation or new
+metadata is added. End-to-end public-IP fixture fails baseline and passes repair.
+HTTP redirection and public IP development cases now cite exact anchors;24prompt
+development14answerable reaches10selected,12top5,p95123.328ms.474URLtests and
+workspacechecks pass. Full ineligible-suite regression remains35/140selected,
+49.2857%top5,discovery149.465ms,complete147.005ms. No qualification claim.

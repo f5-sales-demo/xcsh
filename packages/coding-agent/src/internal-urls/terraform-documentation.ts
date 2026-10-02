@@ -635,6 +635,55 @@ const TERRAFORM_QUERY_VARIANTS: Record<string, string> = {
 	certs: "certificate",
 };
 
+export function rankTerraformDirectProperties(
+	query: string,
+	parentPath: readonly string[],
+	sections: readonly TerraformSection[],
+): TerraformSection[] {
+	if (/\b(?:block|object|schema path)\b/i.test(query) && !/\b(?:field|attribute|property)\b/i.test(query)) return [];
+	const terms = (value: string) => [
+		...new Set(
+			(value.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+				.filter(term => !TERRAFORM_QUERY_STOPWORDS.has(term))
+				.map(
+					term =>
+						({
+							redirection: "redirect",
+							redirecting: "redirect",
+							listening: "listen",
+							listener: "listen",
+							addresses: "address",
+						})[term] ?? term,
+				),
+		),
+	];
+	const requested = terms(query);
+	const parentTerms = new Set(terms(parentPath.join(" ")));
+	const ranked = sections
+		.filter(
+			section =>
+				section.schema_path.length === parentPath.length + 1 &&
+				parentPath.every((part, index) => section.schema_path[index] === part),
+		)
+		.map(section => {
+			const leaf = new Set(terms(section.schema_path.at(-1)!));
+			const description = new Set(terms(section.description));
+			const score = requested.reduce(
+				(total, term) => total + (leaf.has(term) ? 4 : description.has(term) && !parentTerms.has(term) ? 1 : 0),
+				0,
+			);
+			return { section, score };
+		})
+		.filter(row => row.score >= 4)
+		.sort(
+			(a, b) =>
+				b.score - a.score ||
+				(a.section.anchor < b.section.anchor ? -1 : a.section.anchor > b.section.anchor ? 1 : 0),
+		);
+	if (!ranked[0] || (ranked[1] && ranked[0].score < ranked[1].score + 2)) return [];
+	return [ranked[0].section];
+}
+
 export function scoreTerraformAliasContext(
 	query: string,
 	schemaPath: string,
@@ -1464,6 +1513,19 @@ export class TerraformDocumentationRepository {
 						rows = direct.map(r => ({ ...r, raw_score: 200, score: 200 / 201 }));
 						broadened = false;
 					}
+				}
+			}
+			if (rows.length === 1 && rows[0]?.anchor === "section" && !navigationRequest) {
+				const parent = rows[0];
+				const metadata = JSON.parse(parent.metadata) as TerraformMetadata;
+				const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);
+				if (refined[0]?.document_id === metadata.id) {
+					const section = db
+						.query(
+							"SELECT anchor,heading,context_markdown markdown FROM terraform_sections WHERE path=? AND anchor=?",
+						)
+						.get(parent.path, refined[0].anchor) as { anchor: string; heading: string; markdown: string } | null;
+					if (section) rows = [{ ...parent, ...section }];
 				}
 			}
 			const taskDestination = terraformTaskDestination(search);
