@@ -586,3 +586,15 @@ tests/CI;not matched qualification. Preview index SHA
 bdf34d8c66197097177d05e9fe40e0b4b73f86aee861f62651237c521df8da34,
 897630208bytes,gzip77935872bytes. Unpublished source and baseline provenance
 explicitly disclosed;reviewed bundled pin unchanged.
+
+
+## Reviewed choice terminology
+
+Verified choice groups accept branch-exclusive reviewed aliases as deciding context.
+Shared/generic TLS aliases remain undecided;explicit type identifiers retain
+precedence and multiple exact names preserve comparison choices. End-to-end fixture
+checks ordinary automatic-certificate wording and shared TLS wording. Published
+corpus regression remains40/140selected,50.7143%top5,discovery155.102ms,complete
+146.691ms;pre-enrichment source lacks new aliases. This is not qualification.
+Provider153108c50c lint/security pass,but requiredCI37009759185remains pending
+without jobs and no deployment approvals;no retry or restart inferred from delay.

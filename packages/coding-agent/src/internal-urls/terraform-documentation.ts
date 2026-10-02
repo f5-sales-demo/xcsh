@@ -635,6 +635,44 @@ const TERRAFORM_QUERY_VARIANTS: Record<string, string> = {
 	certs: "certificate",
 };
 
+export function terraformNamedChoice(
+	query: string,
+	choices: readonly { schema_path: string[]; aliases: string[] }[],
+): number | undefined {
+	const normalize = (text: string) =>
+		text
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, " ")
+			.trim();
+	const question = ` ${normalize(query)} `;
+	const identifiers: string[] = query.toLowerCase().match(/[a-z][a-z0-9_]*/g) ?? [];
+	const exact = choices.flatMap((choice, index) =>
+		identifiers.includes(choice.schema_path.at(-1) ?? "") ? [index] : [],
+	);
+	if (exact.length === 1) return exact[0];
+	if (exact.length > 1) return undefined;
+
+	const phrases = choices.map(
+		choice =>
+			new Set(
+				[choice.schema_path.at(-1) ?? "", ...choice.aliases]
+					.map(normalize)
+					.filter(
+						term => Boolean(term) && !["tls encryption", "tls certificates", "https", "http"].includes(term),
+					),
+			),
+	);
+	const matches = phrases.map((terms, index) =>
+		[...terms].some(
+			term =>
+				question.includes(` ${term} `) &&
+				!phrases.some((other, otherIndex) => otherIndex !== index && other.has(term)),
+		),
+	);
+	const indices = matches.flatMap((matched, index) => (matched ? [index] : []));
+	return indices.length === 1 ? indices[0] : undefined;
+}
+
 export function rankTerraformDirectProperties(
 	query: string,
 	parentPath: readonly string[],
@@ -1819,22 +1857,16 @@ export class TerraformDocumentationRepository {
 				}
 				const choices = [...groups.values()].filter(group => group.length >= 2 && group.length <= limit);
 				if (choices.length === 1) {
-					const named = choices[0]!.filter(row => {
-						const target = JSON.parse(row.metadata) as TerraformMetadata;
-						const phrase = target.schema_path.at(-1)!.replaceAll("_", " ");
-						const sibling = target.schema_path.length === metadata.schema_path.length;
-						return sibling
-							? (search.match(/[a-z][a-z0-9]*_[a-z0-9_]+/gi) ?? []).some(
-									term => term.toLowerCase() === target.schema_path.at(-1),
-								)
-							: normalizedSearch.includes(` ${phrase} `);
-					});
-					rows = (named.length === 1 ? named : choices[0]!).map(row => ({
+					const choice = terraformNamedChoice(
+						search,
+						choices[0]!.map(row => JSON.parse(row.metadata) as TerraformMetadata),
+					);
+					rows = (choice === undefined ? choices[0]! : [choices[0]![choice]!]).map(row => ({
 						...row,
 						raw_score: parent.raw_score,
 						score: parent.score,
 					}));
-					unresolvedChoice = named.length !== 1;
+					unresolvedChoice = choice === undefined;
 				}
 			}
 			const uniqueRows = new Map<string, SearchRow>();

@@ -7,6 +7,7 @@ import {
 	selectTerraformCandidate,
 	type TerraformMetadata,
 	terraformKnownQueryTerms,
+	terraformNamedChoice,
 	terraformProviderMention,
 	terraformProviderSetupDestination,
 	terraformQueryIdentity,
@@ -383,4 +384,19 @@ test("declaration and lookup workflows target complete usage while field request
 	expect(
 		terraformTaskDestination("Where do I declare match rules inside the service policy resource?"),
 	).toBeUndefined();
+});
+
+test("reviewed exclusive aliases choose a branch while shared TLS aliases do not", () => {
+	const choices = [
+		{ schema_path: ["https"], aliases: ["TLS certificates", "existing certificates"] },
+		{ schema_path: ["https_auto_cert"], aliases: ["TLS certificates", "automatic certificate management"] },
+	];
+	expect(terraformNamedChoice("automatic certificate management for domains", choices)).toBe(1);
+	expect(terraformNamedChoice("TLS certificates for domains", choices)).toBeUndefined();
+	expect(terraformNamedChoice("existing certificates for domains", choices)).toBe(0);
+	expect(
+		terraformNamedChoice("compare existing certificates and automatic certificate management", choices),
+	).toBeUndefined();
+	expect(terraformNamedChoice("https_auto_cert", choices)).toBe(1);
+	expect(terraformNamedChoice("https and https_auto_cert", choices)).toBeUndefined();
 });

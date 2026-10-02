@@ -655,7 +655,10 @@ test("verified sibling type choices remain undecided without an exact type ident
 					path: docPath,
 					role: "properties",
 					schema_path: [mode],
-					aliases: index === 0 ? ["tls encryption"] : [],
+					aliases:
+						index === 0
+							? ["tls encryption", "existing certificates"]
+							: ["tls encryption", "automatic certificate management"],
 					relationships: [
 						{
 							type: "choice" as const,
@@ -688,6 +691,9 @@ test("verified sibling type choices remain undecided without an exact type ident
 		const explicit = (await read("configure automatic_tls")).content;
 		expect(explicit).toContain("Selected leaf;");
 		expect(explicit).toContain("automatic_tls/index.md");
+		const prose = (await read("configure automatic certificate management")).content;
+		expect(prose).toContain("Selected leaf;");
+		expect(prose).toContain("automatic_tls/index.md");
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });
