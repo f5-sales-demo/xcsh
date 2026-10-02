@@ -3362,16 +3362,24 @@ export class AgentSession {
 
 	/**
 	 * Build a plan mode message.
-	 * Returns null if plan mode is not enabled.
-	 * @returns The plan mode message, or null if plan mode is not enabled.
+	 * After planning, Default turns explicitly supersede retained Plan instructions, including on resume.
+	 * @returns Active mode instructions, or null for a Default session with no prior planning.
 	 */
 
 	async #buildPlanModeMessage(): Promise<CustomMessage | null> {
-		if (!this.#planModeState?.enabled) return null;
+		const enabled = this.#planModeState?.enabled;
+		const hadPlanningContext = this.sessionManager
+			.getBranch()
+			.some(
+				entry =>
+					(entry.type === "mode_change" && entry.mode === "plan") ||
+					(entry.type === "custom_message" && entry.customType === "plan-mode-context"),
+			);
+		if (!enabled && !hadPlanningContext) return null;
 		return {
 			role: "custom",
-			customType: "plan-mode-context",
-			content: planModeActivePrompt,
+			customType: enabled ? "plan-mode-context" : "collaboration-mode",
+			content: enabled ? planModeActivePrompt : defaultModePrompt,
 			display: false,
 			attribution: "agent",
 			timestamp: Date.now(),
