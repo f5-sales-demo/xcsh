@@ -6,6 +6,7 @@ import {
 	type TerraformMetadata,
 	terraformProviderMention,
 	terraformQueryIdentity,
+	terraformTaskDestination,
 	validateTerraformRetrievalMetadata,
 } from "../../src/internal-urls/terraform-documentation";
 
@@ -119,4 +120,20 @@ test("alias context preserves exact snake-case leaf identity and branch evidence
 	expect(
 		scoreTerraformAliasContext("stateful auto_host_rewrite", "stateful_service.routes.auto_host_rewrite", []),
 	).toBeGreaterThan(scoreTerraformAliasContext("stateful auto_host_rewrite", "service.routes.auto_host_rewrite", []));
+});
+
+test("task destination distinguishes usage pages from schema fields", () => {
+	expect(terraformTaskDestination("Where is the minimal configuration example for xcsh_app_firewall?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("Look up the root configuration of a data source")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+	expect(terraformTaskDestination("How do I import an existing origin pool into state?")).toEqual({ role: "import" });
+	expect(terraformTaskDestination("Show lifecycle timeout usage examples")).toEqual({ role: "timeouts" });
+	expect(terraformTaskDestination("Which create and delete timeout attributes are in the schema?")).toBeUndefined();
+	expect(terraformTaskDestination("Set HTTP connection idle timeout")).toBeUndefined();
+	expect(terraformTaskDestination("Set TLS certificate name")).toBeUndefined();
 });

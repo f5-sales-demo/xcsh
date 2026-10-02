@@ -680,6 +680,20 @@ export function scoreTerraformAliasContext(
 	return score;
 }
 
+export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
+	if (/\bimport\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	if (/\bminimal\s+configuration\b|\bminimal\s+(?:hcl\s+)?example\b/i.test(query))
+		return { role: "fundamentals", anchor: "minimal-configuration" };
+	if (/\broot\s+configuration\b/i.test(query)) return { role: "fundamentals", anchor: "root-configuration" };
+	if (
+		/\btimeouts?\b/i.test(query) &&
+		/\blifecycle\b|\busage\b|\bduration string format\b|\bguidance\b/i.test(query) &&
+		!/\battributes?\b|\bschema\b|\bpropert(?:y|ies)\b/i.test(query)
+	)
+		return { role: "timeouts" };
+	return undefined;
+}
+
 export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
 	const exact = [
 		...new Set([...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)].map(match => match[1]!.toLowerCase())),
@@ -755,7 +769,12 @@ export function selectTerraformCandidate(
 	if (
 		!first ||
 		broadened ||
-		(!/^(schema-|section$)/.test(first.anchor) && !["import", "timeouts", "lifecycle"].includes(first.metadata.role))
+		(!/^(schema-|section$)/.test(first.anchor) &&
+			!["import", "timeouts", "lifecycle"].includes(first.metadata.role) &&
+			!(
+				first.metadata.role === "fundamentals" &&
+				["minimal-configuration", "root-configuration"].includes(first.anchor)
+			))
 	)
 		return "choices";
 	const second = candidates[1];
@@ -1248,34 +1267,42 @@ export class TerraformDocumentationRepository {
 					}
 				}
 			}
-			const taskRole = /adopt|\bimport\b/i.test(search)
-				? "import"
-				: /operation duration|\btimeouts?\b/i.test(search)
-					? "timeouts"
-					: undefined;
-			if (
-				providerFilter &&
-				taskRole &&
-				!propertyMention &&
-				!node &&
-				!filters.some(f => !["provider_name", "provider_type"].includes(f.key))
-			) {
+			const taskDestination = terraformTaskDestination(search);
+			const taskRole = taskDestination?.role;
+			if (providerFilter && taskRole && !propertyMention) {
+				const roleClauses = ["td.provider_name=?", "td.role=?"];
+				const roleArgs: Array<string | number> = [providerFilter.value, taskRole];
+				for (const filter of filters) {
+					roleClauses.push(
+						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=td.path AND f.facet=? AND f.value=?)",
+					);
+					roleArgs.push(filter.key, filter.value);
+				}
+				if (node) {
+					roleClauses.push(
+						"td.id IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT id FROM descendants)",
+					);
+					roleArgs.push(node);
+				}
+				roleClauses.push(taskDestination?.anchor ? "s.anchor=?" : "s.ordinal=0");
+				if (taskDestination?.anchor) roleArgs.push(taskDestination.anchor);
 				const roleRows = db
 					.query(
-						"SELECT td.path,td.metadata,s.anchor,s.heading,s.context_markdown markdown FROM terraform_documents td JOIN terraform_sections s ON s.path=td.path AND s.ordinal=0 WHERE td.provider_name=? AND td.role=? AND (? IS NULL OR td.provider_type=?) ORDER BY td.path COLLATE BINARY LIMIT ?",
+						`SELECT td.path,td.metadata,s.anchor,s.heading,s.context_markdown markdown FROM terraform_documents td JOIN terraform_sections s ON s.path=td.path WHERE ${roleClauses.join(" AND ")} ORDER BY td.path COLLATE BINARY LIMIT ?`,
 					)
-					.all(
-						providerFilter.value,
-						taskRole,
-						filters.find(f => f.key === "provider_type")?.value ?? null,
-						filters.find(f => f.key === "provider_type")?.value ?? null,
-						limit,
-					) as Array<{ path: string; metadata: string; anchor: string; heading: string; markdown: string }>;
+					.all(...roleArgs, limit) as Array<{
+					path: string;
+					metadata: string;
+					anchor: string;
+					heading: string;
+					markdown: string;
+				}>;
 				if (roleRows.length) {
-					rows = roleRows.map(r => ({ ...r, raw_score: 100, score: 100 / 101 }));
+					rows = roleRows.map(row => ({ ...row, raw_score: 100, score: 100 / 101 }));
 					broadened = false;
 				}
 			}
+
 			// Unsupported identifier terms must not be discarded by exact-match routing.
 			if (
 				/[a-z][a-z0-9]*_[a-z0-9_]+/i.test(search) &&

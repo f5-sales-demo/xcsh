@@ -282,3 +282,13 @@ Focused exact queries select Bot Defense success status and stateful custom-rout
 host rewrite; unspecified cookie nesting yields three meaningful sibling choices.
 Full preceding alias-context regression top5 improves to30%, leaf accuracy remains
 18/140; it is explicitly regression only. No qualification claim follows.
+
+## Task-directed section routing
+
+Root/minimal configuration requests now use exact fundamentals sections; import
+and lifecycle timeout guidance remain dedicated task routes. Timeout schema field
+requests no longer get replaced by usage guidance. Explicit facets and descendant
+node constraints apply to task routes. Corpus checks select exact minimal app
+firewall,certificate data-source root,and healthcheck timeout anchors; requesting
+create/delete timeout fields returns both exact schema destinations.
+461 internal-URL tests and workspace checks pass. Qualification remains unresolved.
