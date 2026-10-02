@@ -57,8 +57,9 @@ for case in cases:
         events = [
             json.loads(line) for line in result.stdout.splitlines() if line.strip()
         ]
-        (args.output / (case["id"] + ".ndjson")).write_text(result.stdout)
-        events = [event for event in events if isinstance(event, dict)]
+        if not all(isinstance(event, dict) for event in events):
+            message = "Unexpected non-object event in CLI JSON stream"
+            raise ValueError(message)  # noqa: TRY301 - invalid event boundary is recorded as an explicit failed case
         messages = [
             message
             for event in events
@@ -201,7 +202,7 @@ for case in cases:
                 "raw_trace_sha256": hashlib.sha256(result.stdout.encode()).hexdigest(),
             }
         )
-    except (subprocess.TimeoutExpired, json.JSONDecodeError) as error:
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError) as error:
         results.append(
             {
                 "id": case["id"],
