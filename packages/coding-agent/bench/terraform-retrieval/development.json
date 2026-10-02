@@ -1,0 +1,62 @@
+[
+  {
+    "prompt": "In the xcsh http loadbalancer resource, where is https / port documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port"
+    ],
+    "depth": 2,
+    "source_schema_path": "https.port",
+    "id": "development-001"
+  },
+  {
+    "prompt": "In the xcsh origin pool resource, where is port documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-port"
+    ],
+    "depth": 1,
+    "source_schema_path": "port",
+    "id": "development-002"
+  },
+  {
+    "prompt": "In the xcsh namespace resource, where is name documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md#schema-name"
+    ],
+    "depth": 1,
+    "source_schema_path": "name",
+    "id": "development-003"
+  },
+  {
+    "prompt": "In the xcsh certificate resource, where is name documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md#schema-name"
+    ],
+    "depth": 1,
+    "source_schema_path": "name",
+    "id": "development-004"
+  },
+  {
+    "prompt": "In the xcsh dns zone data source, where is name documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/dns_zone/properties/index.md#schema-name"
+    ],
+    "depth": 1,
+    "source_schema_path": "name",
+    "id": "development-005"
+  },
+  {
+    "prompt": "In the xcsh http loadbalancer resource, where is bot defense advanced protection documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/index.md#section"
+    ],
+    "depth": 1,
+    "source_schema_path": "bot_defense_advanced_protection",
+    "id": "development-006"
+  }
+]

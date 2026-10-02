@@ -1,0 +1,398 @@
+[
+  {
+    "prompt": "In the xcsh aws tgw site resource, where is vn config / outside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv6 documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section"
+    ],
+    "depth": 8,
+    "source_schema_path": "vn_config.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv6",
+    "id": "heldout-001"
+  },
+  {
+    "prompt": "In the xcsh aws vpc site resource, where is ingress egress gw / inside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv4 documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section"
+    ],
+    "depth": 8,
+    "source_schema_path": "ingress_egress_gw.inside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv4",
+    "id": "heldout-002"
+  },
+  {
+    "prompt": "In the xcsh azure vnet site resource, where is ingress egress gw ar / outside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv4 documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section"
+    ],
+    "depth": 8,
+    "source_schema_path": "ingress_egress_gw_ar.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv4",
+    "id": "heldout-003"
+  },
+  {
+    "prompt": "In the xcsh bigip http proxy resource, where is origin pools / pools / origin servers / origin servers / private ip / snat pool / snat pool / prefixes documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/origin_servers/private_ip/snat_pool/snat_pool/index.md#schema-origin_pools--pools--origin_servers--origin_servers--private_ip--snat_pool--snat_pool--prefixes"
+    ],
+    "depth": 8,
+    "source_schema_path": "origin_pools.pools.origin_servers.origin_servers.private_ip.snat_pool.snat_pool.prefixes",
+    "id": "heldout-004"
+  },
+  {
+    "prompt": "In the xcsh cdn loadbalancer resource, where is bot defense / policy / protected app endpoints / flow label / authentication / login / transaction result / success conditions / status documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+    ],
+    "depth": 9,
+    "source_schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result.success_conditions.status",
+    "id": "heldout-005"
+  },
+  {
+    "prompt": "In the xcsh fleet resource, where is storage device list / storage devices / netapp trident / netapp backend ontap san / use chap / chap initiator secret / blindfold secret info / decryption provider documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider"
+    ],
+    "depth": 8,
+    "source_schema_path": "storage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_initiator_secret.blindfold_secret_info.decryption_provider",
+    "id": "heldout-006"
+  },
+  {
+    "prompt": "In the xcsh gcp vpc site resource, where is voltstack cluster / outside static routes / static route list / custom static route / nexthop / nexthop address / dual stack / ipv6 documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section"
+    ],
+    "depth": 8,
+    "source_schema_path": "voltstack_cluster.outside_static_routes.static_route_list.custom_static_route.nexthop.nexthop_address.dual_stack.ipv6",
+    "id": "heldout-007"
+  },
+  {
+    "prompt": "In the xcsh http loadbalancer resource, where is bot defense / policy / protected app endpoints / flow label / authentication / login / transaction result / success conditions / regex values documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--regex_values"
+    ],
+    "depth": 9,
+    "source_schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result.success_conditions.regex_values",
+    "id": "heldout-008"
+  },
+  {
+    "prompt": "In the xcsh protected application resource, where is cloudfront / protected endpoints / flow label / authentication / login / transaction result / success conditions / name documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name"
+    ],
+    "depth": 8,
+    "source_schema_path": "cloudfront.protected_endpoints.flow_label.authentication.login.transaction_result.success_conditions.name",
+    "id": "heldout-009"
+  },
+  {
+    "prompt": "In the xcsh securemesh site resource, where is custom network config / slo config / static routes / static routes / node interface / list / interface / uid documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_routes/static_routes/node_interface/list/interface/index.md#schema-custom_network_config--slo_config--static_routes--static_routes--node_interface--list--interface--uid"
+    ],
+    "depth": 8,
+    "source_schema_path": "custom_network_config.slo_config.static_routes.static_routes.node_interface.list.interface.uid",
+    "id": "heldout-010"
+  },
+  {
+    "prompt": "In the xcsh access active session terminate action, where is namespace documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace",
+    "id": "heldout-051"
+  },
+  {
+    "prompt": "In the xcsh access active sessions terminate action, where is ids documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md#schema-ids"
+    ],
+    "depth": 1,
+    "source_schema_path": "ids",
+    "id": "heldout-052"
+  },
+  {
+    "prompt": "In the xcsh artifact registry token ephemeral resource, where is expiration time documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md#schema-expiration_time"
+    ],
+    "depth": 1,
+    "source_schema_path": "expiration_time",
+    "id": "heldout-053"
+  },
+  {
+    "prompt": "In the xcsh dns zone add cryptokey action, where is namespace documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace",
+    "id": "heldout-054"
+  },
+  {
+    "prompt": "In the xcsh dns zone delete cryptokey action, where is key id documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_delete_cryptokey/properties/index.md#schema-key_id"
+    ],
+    "depth": 1,
+    "source_schema_path": "key_id",
+    "id": "heldout-055"
+  },
+  {
+    "prompt": "In the xcsh dns zone edit cryptokey action, where is namespace documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/dns_zone_edit_cryptokey/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace",
+    "id": "heldout-056"
+  },
+  {
+    "prompt": "In the xcsh infraprotect synchronize configuration action, where is namespace documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/properties/index.md#schema-namespace"
+    ],
+    "depth": 1,
+    "source_schema_path": "namespace",
+    "id": "heldout-057"
+  },
+  {
+    "prompt": "In the xcsh kubernetes manifests ephemeral resource, where is data documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/index.md#schema-data"
+    ],
+    "depth": 1,
+    "source_schema_path": "data",
+    "id": "heldout-058"
+  },
+  {
+    "prompt": "In the xcsh site signatures update action, where is site names documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/site_signatures_update/properties/index.md#schema-site_names"
+    ],
+    "depth": 1,
+    "source_schema_path": "site_names",
+    "id": "heldout-059"
+  },
+  {
+    "prompt": "In the xcsh site upgrade os action, where is os version documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/site_upgrade_os/properties/index.md#schema-os_version"
+    ],
+    "depth": 1,
+    "source_schema_path": "os_version",
+    "id": "heldout-060"
+  },
+  {
+    "prompt": "In the xcsh site upgrade sw action, where is software version documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/site_upgrade_sw/properties/index.md#schema-software_version"
+    ],
+    "depth": 1,
+    "source_schema_path": "software_version",
+    "id": "heldout-061"
+  },
+  {
+    "prompt": "In the xcsh access active session data source, where is variables / value documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/access_active_session/properties/variables/index.md#schema-variables--value"
+    ],
+    "depth": 2,
+    "source_schema_path": "variables.value",
+    "id": "heldout-062"
+  },
+  {
+    "prompt": "In the xcsh access active sessions data source, where is cursor documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/access_active_sessions/properties/index.md#schema-cursor"
+    ],
+    "depth": 1,
+    "source_schema_path": "cursor",
+    "id": "heldout-063"
+  },
+  {
+    "prompt": "In the xcsh addon service data source, where is id documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/addon_service/properties/index.md#schema-id"
+    ],
+    "depth": 1,
+    "source_schema_path": "id",
+    "id": "heldout-064"
+  },
+  {
+    "prompt": "In the xcsh addon service activation status data source, where is addon service documented?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/addon_service_activation_status/properties/index.md#schema-addon_service"
+    ],
+    "depth": 1,
+    "source_schema_path": "addon_service",
+    "id": "heldout-065"
+  },
+  {
+    "prompt": "Which subsection lists backend servers for the xcsh origin pool resource?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/index.md#section"
+    ],
+    "depth": 1,
+    "source_schema_path": "origin_servers",
+    "id": "heldout-131"
+  },
+  {
+    "prompt": "Where can the xcsh HTTP loadbalancer resource refer to existing certificates for HTTPS?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_cert_params/index.md#section"
+    ],
+    "depth": 2,
+    "source_schema_path": "https.tls_cert_params",
+    "id": "heldout-132"
+  },
+  {
+    "prompt": "Where do I configure advanced Bot Defense on the xcsh HTTP loadbalancer resource?",
+    "kind": "answerable",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/index.md#section"
+    ],
+    "depth": 1,
+    "source_schema_path": "bot_defense_advanced_protection",
+    "id": "heldout-133"
+  },
+  {
+    "prompt": "I need Terraform help with address allocator. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/address_allocator/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/address_allocator/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-141"
+  },
+  {
+    "prompt": "I need Terraform help with advertise policy. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/advertise_policy/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/advertise_policy/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-142"
+  },
+  {
+    "prompt": "I need Terraform help with alert gen policy. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/alert_gen_policy/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/alert_gen_policy/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-143"
+  },
+  {
+    "prompt": "I need Terraform help with alert policy. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/alert_policy/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/alert_policy/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-144"
+  },
+  {
+    "prompt": "I need Terraform help with alert receiver. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/alert_receiver/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/alert_receiver/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-145"
+  },
+  {
+    "prompt": "I need Terraform help with alert template. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/alert_template/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/alert_template/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-146"
+  },
+  {
+    "prompt": "I need Terraform help with allowed domain. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/allowed_domain/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/allowed_domain/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-147"
+  },
+  {
+    "prompt": "I need Terraform help with api crawler. Where should I begin?",
+    "kind": "ambiguous",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/api_crawler/index.md#document",
+      "xcsh://terraform-documentation/documentation/data-sources/api_crawler/index.md#document"
+    ],
+    "clarification": "Whether the user wants to manage a resource or inspect an existing object with a data source.",
+    "match_document": true,
+    "id": "heldout-148"
+  },
+  {
+    "prompt": "Can xcsh Terraform configure imaginary_quantum_shield_2348 for an HTTP loadbalancer?",
+    "kind": "control",
+    "expected": [],
+    "behavior": "unsupported",
+    "id": "heldout-181"
+  },
+  {
+    "prompt": "What is the Terraform property teleportation_port_2348 on xcsh origin_pool?",
+    "kind": "control",
+    "expected": [],
+    "behavior": "unsupported",
+    "id": "heldout-182"
+  },
+  {
+    "prompt": "Does the bundled Terraform documentation prove this will apply successfully in my tenant?",
+    "kind": "control",
+    "expected": [],
+    "behavior": "no-live-evidence",
+    "id": "heldout-191"
+  },
+  {
+    "prompt": "Find the F5 XC API endpoint for HTTP loadbalancers.",
+    "kind": "control",
+    "expected": [],
+    "behavior": "ordinary-discovery",
+    "id": "heldout-195"
+  }
+]

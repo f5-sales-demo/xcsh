@@ -27,7 +27,13 @@ async function fixture(
 		role: "fundamentals",
 		schema_path: [],
 		summary: "Fixture",
-		aliases: [],
+		aliases: ["everyday fixture"],
+		retrieval_version: 1,
+		category: "security",
+		capabilities: ["security.bot-defense"],
+		tasks: ["configuration"],
+		sections: [],
+		relationships: [],
 		parent_id: null,
 		child_ids: [],
 	};
@@ -159,8 +165,38 @@ describe("Terraform snapshot ingestion", () => {
 					.content,
 			).toContain("Complete value.");
 			const result = (await resolve("xcsh://terraform-documentation/?search=fixture")).content;
-			expect(result).toContain("Documentation trail:");
+			expect(result).toContain("Refine:");
 			expect(result).toContain("xcsh://terraform-documentation/documentation/guides/parent/index.md");
+			expect(
+				(
+					await resolve(
+						"xcsh://terraform-documentation/?search=fixture&category=security&capability=security.bot-defense&task=configuration",
+					)
+				).content,
+			).toContain("documentation/resources/fixture/index.md");
+			expect((await resolve("xcsh://terraform-documentation/?search=fixture&category=dns")).content).toContain(
+				"No results.",
+			);
+			expect((await resolve("xcsh://terraform-documentation/?facet=capability&limit=1")).content).toContain(
+				"security.bot-defense",
+			);
+			expect((await resolve("xcsh://terraform-documentation/?node=parent&search=fixture")).content).toContain(
+				"documentation/resources/fixture/index.md",
+			);
+			expect((await resolve("xcsh://terraform-documentation/?node=parent")).size).toBeLessThanOrEqual(4096);
+			expect(
+				(await resolve("xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=hint")).size,
+			).toBeLessThanOrEqual(4096);
+			expect(
+				(
+					await resolve(
+						"xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=context#schema-value",
+					)
+				).content,
+			).toContain("Complete value.");
+			expect((await resolve("xcsh://terraform-documentation/?search=fixture&limit=10")).size).toBeLessThanOrEqual(
+				4096,
+			);
 			const broadened = (await resolve("xcsh://terraform-documentation/?search=fixture%20nonexistent")).content;
 			expect(broadened).toContain("No results.");
 			expect((await resolve("xcsh://terraform-documentation/?search=how%20do%20I")).content).toContain(
@@ -185,6 +221,58 @@ describe("Terraform snapshot ingestion", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+	test("context returns whole fences, continuation sections and oversized notices", async () => {
+		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-context-"));
+		try {
+			const pin = await fixture(root);
+			const docs = await verifyTerraformSnapshot(root, pin);
+			const body = `# Fixture\n\n<a id="schema-first"></a>\n### first\n\n\`\`\`terraform\n${"# preserved fixture line\n".repeat(350)}\`\`\`\n\n<a id="schema-second"></a>\n### second\n\n${"complete paragraph ".repeat(500)}\n\n<a id="schema-large"></a>\n### large\n\n${"oversized complete section ".repeat(1000)}\n`;
+			docs[0]!.body = body;
+			docs[0]!.markdown = body;
+			docs[0]!.sha256 = terraformHash(body);
+			docs[0]!.body_sha256 = terraformHash(body);
+			await buildTerraformIndex(docs, pin, path.join(root, "index.sqlite"));
+			const bytes = await readFile(path.join(root, "index.sqlite"));
+			const compressed = gzipSync(bytes);
+			await writeFile(path.join(root, "index.gz"), compressed);
+			const repository = new TerraformDocumentationRepository(
+				{
+					indexGzipPath: path.join(root, "index.gz"),
+					pin: {
+						...pin,
+						index: {
+							sha256: terraformHash(bytes),
+							size_bytes: bytes.length,
+							gzip_sha256: terraformHash(compressed),
+							gzip_size_bytes: compressed.length,
+						},
+					},
+				},
+				path.join(root, "cache"),
+			);
+			const read = (uri: string) =>
+				repository.resolve(Object.assign(new URL(uri), { rawHost: "terraform-documentation" }) as InternalUrl);
+			const base = "xcsh://terraform-documentation/documentation/resources/fixture/index.md";
+			const first = await read(`${base}?view=context#schema-first`);
+			expect(first.content).toContain("# preserved fixture line\n".repeat(350));
+			expect(first.content.match(/```/g)).toHaveLength(2);
+			const all = await read(`${base}?view=context`);
+			expect(all.size).toBeLessThanOrEqual(16384);
+			expect(all.content).toContain("Continue:");
+			const continuation = /Continue: (\S+)/.exec(all.content)![1]!;
+			const next = await read(continuation);
+			expect(next.size).toBeLessThanOrEqual(16384);
+			expect(next.content).toContain("complete paragraph ".repeat(500));
+			const large = await read(`${base}?view=context#schema-large`);
+			expect(large.content).toContain("Oversized section:");
+			expect(large.content).toContain("view=full#schema-large");
+			expect((await read(`${base}#schema-large`)).content).toContain("oversized complete section ".repeat(1000));
+			(await repository.database()).close();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	test("rejects corrupt bytes, missing relationships and unexpected unsafe archive members", async () => {
 		const root = await mkdtemp(path.join(os.tmpdir(), "terraform-fixture-"));
 		try {

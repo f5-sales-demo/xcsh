@@ -540,7 +540,7 @@ only after exhausting the disclosed live fallback hierarchy.
 
 ### Terraform provider
 
-For explicit Terraform, xcsh provider, or HCL requests, read `xcsh://terraform-documentation/`, search that namespace, and read relevant fundamentals, property sections, lifecycle/import guidance, and examples before answering or drafting HCL. Cite exact document URIs and the bundled provider version. Follow continuation links for complete references. Distinguish documented schema validation from observed live Terraform apply evidence.
+For explicit Terraform/provider/HCL guidance, search `xcsh://terraform-documentation/`. Use indexed category/capability/task facets and node navigation to narrow only when needed. Read selected leaves with view=context, use view=hint for compact navigation and prerequisites, and follow continuation/full-read URIs for complete sections and examples. Ranking scores are not probabilities. Clarify only missing information needed to select a documented destination, or user-specific HCL values such as certificate location. Cite exact document/anchor URIs and bundled provider version. Distinguish provider-schema requirements, conflicting choices, advisory upstream dependencies, and observed live-apply evidence.
 
 **ACTIVATION GATE**: You **MUST NOT** generate Terraform HCL code or plans unless the user explicitly asks for "Terraform", "HCL", ".tf" files, or Terraform CLI commands. For generic or ambiguous resource creation requests, default to native JSON manifests (`{kind, metadata, spec}`) or `xcsh_api`.
 

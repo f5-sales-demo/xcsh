@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "source_provider_version": "v12.1.2",
+  "source_commit": "38b94aa2e7178544f29f4df416772b744ab47c9b",
+  "source_index_sha256": "9e7b908c317497b193087429700f7ef0a37a87a3c86b95bd0d21e204ba75a88b",
+  "heldout_count": 200,
+  "answerable_count": 140,
+  "ambiguous_count": 40,
+  "controls_count": 20,
+  "depth8_answerable_count": 52,
+  "model_subset_count": 40,
+  "development_count": 6,
+  "files": {
+    "development.json": "d64dd2c131492206fddf48c6093dff374810076706338572c12cf984b1824ecf",
+    "heldout.json": "7d768dd1eaede2033d2df9a0e43b215e2ac0990a5d099c4a6be91bc23caf4430",
+    "model-subset.json": "b4d698113d3de61ac420e697e62ffb154399938e4d90f6d5d9c35fa86a3cd70e"
+  },
+  "limitations": [
+    "Schema-path scaffolding disambiguates deep cases; these are synthetic, not naturally collected user questions.",
+    "Ambiguity cases qualify resource/data-source distinctions; certificate-location clarifications must also be checked in model UAT.",
+    "Never modify frozen expected results in response to retrieval failures."
+  ]
+}
