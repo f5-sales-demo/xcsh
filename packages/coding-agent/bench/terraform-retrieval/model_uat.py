@@ -9,6 +9,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from model_trace import successful_read_paths
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
 parser.add_argument("--suite", type=Path, required=True)
@@ -85,6 +87,7 @@ for case in cases:
             """Remove view parameters while retaining exact property anchors."""
             return re.sub(r"\?[^#]*", "", uri).rstrip(".,;")
 
+        successful_reads = successful_read_paths(messages)
         expected = case["expected"]
         exact_read = any(
             any(
@@ -95,7 +98,7 @@ for case in cases:
                 )
                 for want in expected
             )
-            for read in reads
+            for read in successful_reads
         )
         cited = any(
             any(
@@ -178,6 +181,7 @@ for case in cases:
                 "model_ms": (time.perf_counter() - start) * 1000,
                 "exit_code": result.returncode,
                 "read_uris": reads,
+                "successful_read_uris": successful_reads,
                 "citation_uris": citations,
                 "exact_leaf_read": exact_read,
                 "clarification_review_required": case["kind"] == "ambiguous",

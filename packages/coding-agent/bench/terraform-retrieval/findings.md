@@ -1131,3 +1131,9 @@ without ignored gzip bytes. Native-only sandbox jobs now reset the optional
 loader before source tests; later candidate binary jobs regenerate and verify
 pinned indexes. Red/green workflow test and actionlint pass. This corrects a
 fresh-checkout test prerequisite without masking retrieval acceptance.
+
+Installed model exact_leaf_read now requires a matching completed successful
+read toolResult, rather than counting an attempted read tool call. Failed or
+missing results are rejected by two red/green synthetic trace tests; Ruff and
+Python compilation pass. Final model qualification remains pending independent
+freeze and licensed candidate binaries.
