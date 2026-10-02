@@ -945,6 +945,10 @@ export function terraformProviderMention(search: string, names: readonly string[
 		value
 			.toLowerCase()
 			.replace(/load\s+balancer/g, "loadbalancer")
+			.replace(/transit[ _-]+gateway/g, "tgw")
+			.replace(/kubernetes/g, "k8s")
+			.replace(/big[ _-]+ip/g, "bigip")
+			.replace(/secure[ _-]+mesh/g, "securemesh")
 			.replace(/[^a-z0-9]+/g, " ")
 			.trim();
 	const query = ` ${normalize(search)} `;

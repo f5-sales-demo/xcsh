@@ -487,3 +487,22 @@ test("direct field descriptions recognize ordinary address wording", () => {
 	).toBe("schema-addr");
 	expect(rankTerraformDirectProperties("configure IPv6 block", ["dual_stack", "ipv6"], [section])).toEqual([]);
 });
+
+test("provider names normalize documented product abbreviations", () => {
+	const names = [
+		"aws_tgw_site",
+		"k8s_cluster",
+		"bigip_http_proxy",
+		"proxy",
+		"cluster",
+		"route",
+		"securemesh_site",
+		"network_interface",
+	];
+	expect(terraformProviderMention("AWS Transit Gateway site resource next-hop route", names)).toBe("aws_tgw_site");
+	expect(terraformProviderMention("Kubernetes cluster resource administrative access", names)).toBe("k8s_cluster");
+	expect(terraformProviderMention("BIG-IP HTTP proxy resource settings", names)).toBe("bigip_http_proxy");
+	expect(terraformProviderMention("secure mesh site resource network interface reference", names)).toBe(
+		"securemesh_site",
+	);
+});
