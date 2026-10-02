@@ -924,3 +924,13 @@ held-out qualification. Revised/original p95 is 28.881/31.569 ms. Thirty-three
 focused tests pass. Digest-bound raw reports: indexed-task-intent-receipt.json.
 The policy sacrifices two answerable selections with paraphrased field wording;
 that limitation remains unresolved and prevents promotion.
+
+The source-bound prototype produces identical rankings, exact anchors, scores,
+selection decisions and discovery/context hashes on all 80 revised development
+cases on Mac arm64 and Ubuntu x64, each with five complete-response repetitions.
+Mac/Ubuntu experimental warm p95 is 32.395/28.881 ms. Both hosts pass 33 focused
+experiment tests. The copied Mac harness uses existing bootstrapped dependencies;
+source SQLite and property side-index digests match the pinned source exactly.
+This is development parity, not released/offline/installed acceptance. Synthetic
+Mac raw output and cross-host receipt are retained in indexed-task-intent-mac.json.gz
+and indexed-task-intent-parity-receipt.json.

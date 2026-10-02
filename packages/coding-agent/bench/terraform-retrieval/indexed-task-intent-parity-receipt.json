@@ -1,0 +1,18 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "cases": 80,
+  "identical_rankings_anchors_scores_and_response_hashes": true,
+  "response_repetitions": 5,
+  "linux_p95_ms": 28.88124599999992,
+  "mac_p95_ms": 32.39474999999993,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "linux_raw_sha256": "afffdcb3249dd4e9a7d430349f5dee14234bd6b074e6b203e3cae645a439abcb",
+  "mac_raw_sha256": "aa6cd8edf3cecf4519823c39804bbcba4504ae64f0b324814f30aa2438ea72c0",
+  "limitations": [
+    "Development prototype only; source-only copied Mac harness uses preinstalled dependencies.",
+    "No installed-model, offline artifact, cold materialization or held-out qualification claim."
+  ]
+}
