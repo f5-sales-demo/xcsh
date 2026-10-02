@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "structural_validation_passed": false,
+  "verified_depth8_count": 24,
+  "errors": [
+    "Only 24 deep answerable cases"
+  ],
+  "semantic_review_required": true
+}

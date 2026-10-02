@@ -1,0 +1,22 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "answerable": 60,
+  "first": 25,
+  "top5": 37,
+  "ranking_p95_ms": 33.54105300000083,
+  "limitations": [
+    "Candidate labels are under source-only audit.",
+    "Ranking only; excludes complete response rendering and selection.",
+    "Retained earlier ancestor index; no new production index."
+  ],
+  "complete_results": {
+    "artifact": "ancestor-baseline.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "c349d324ec9b21846843c62f0456cdf90fc70a87860ffba12a5af82293a2a316",
+    "uncompressed_bytes": 409020,
+    "compressed_sha256": "cfff1e3b524161c2ee6a9736234184f22615c03a28b88555f8f403b50f93f333",
+    "compressed_bytes": 35269
+  }
+}

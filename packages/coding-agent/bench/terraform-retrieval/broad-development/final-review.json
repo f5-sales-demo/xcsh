@@ -1,0 +1,829 @@
+{
+  "cases": [
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-001",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:61-92"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-002",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:93-108"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-003",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:61-92"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-004",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:80-95"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-005",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:150-165"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-006",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:80-95"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+      ],
+      "id": "dev-broad-007",
+      "reason": "Label defect: prompt omits role qualification ('resource' vs 'data source') while identical property path exists in both resources/ and data-sources/. Labeled destination fails role-variant uniqueness against xcsh://terraform-documentation/documentation/data-sources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:208-223"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-008",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:34-49"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-009",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:42-57"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-010",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations_by_state/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:34-49"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-011",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations_by_site/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:42-57"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-012",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 8 in cases.json differs from canonical verified depth 7 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md:26-52"
+      ],
+      "valid": true,
+      "verified_depth": 7
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-013",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:41-56"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-014",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:41-56"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-015",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 8 in cases.json differs from canonical verified depth 7 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md:26-52"
+      ],
+      "valid": true,
+      "verified_depth": 7
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-016",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:41-56"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-017",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:41-56"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-018",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 8 in cases.json differs from canonical verified depth 7 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md:26-52"
+      ],
+      "valid": true,
+      "verified_depth": 7
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-019",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:41-56"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-020",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 8 in cases.json differs from canonical verified depth 7 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/index.md:26-47"
+      ],
+      "valid": true,
+      "verified_depth": 7
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-021",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 9 in cases.json differs from canonical verified depth 8 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/index.md:26-46"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--path"
+      ],
+      "id": "dev-broad-022",
+      "reason": "Label defect: prompt omits role qualification ('resource' vs 'data source') while identical property path exists in both resources/ and data-sources/. Labeled destination fails role-variant uniqueness against xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--path.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:69-84"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-023",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 10.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:72-87"
+      ],
+      "valid": true,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-024",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md:83-98"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip"
+      ],
+      "id": "dev-broad-025",
+      "reason": "Label defect: prompt omits role qualification ('resource' vs 'data source') while identical property path exists in both resources/ and data-sources/. Labeled destination fails role-variant uniqueness against xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:79-94"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-026",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_none/request_body_match/exact_value/index.md:34-49"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-027",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 12.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md:38-53"
+      ],
+      "valid": true,
+      "verified_depth": 12
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-028",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 8.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md:114-129"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-029",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 9.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:94-109"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-030",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 0.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-031",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 0.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:103-121"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-032",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-52"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-033",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-034",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-035",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md:20-35"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-036",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/properties/index.md:33-48"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-037",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_edit_cryptokey/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-038",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_sw/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-039",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-040",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/site_signatures_update/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-041",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-042",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/index.md:240-255"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-043",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/advanced_options/index.md:94-109"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-044",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-045",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:55-70"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-046",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/index.md:63-78"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-047",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/k8s_cluster/properties/cluster_scoped_access_permit/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-048",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 4.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/tunnel_interface/static_ip/node_static_ip/index.md:23-38"
+      ],
+      "valid": true,
+      "verified_depth": 4
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-049",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 3.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:249-264"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-050",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/namespace/properties/index.md:61-76"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-051",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:106-121"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-052",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/properties/limits/index.md:192-207"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-053",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/api_definition/properties/index.md:302-317"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-054",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/tenant_configuration/properties/tenant_details/index.md:55-70"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-055",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/cloud_user_account/properties/aws_provider/index.md:62-77"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-056",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/container_registry/properties/index.md:351-366"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-057",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 4.",
+      "source_evidence": [
+        "documentation/resources/cdn_cache_rule/properties/cache_rules/eligible_for_cache/scheme_proxy_host_request_uri/index.md:86-101"
+      ],
+      "valid": true,
+      "verified_depth": 4
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-058",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 2 in cases.json differs from canonical verified depth 1 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/allow_list/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-059",
+      "reason": "Valid destination and anchor uniquely identifying canonical documentation path at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/route/properties/routes/index.md:177-192"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-060",
+      "reason": "Expected destination is unique and accurate against sibling branches and role variants. Declared depth 2 in cases.json differs from canonical verified depth 1 (len(schema_path)) in xcsh_docs metadata due to section anchor path naming.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-061",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the query seeks to declare the port on a managed origin pool resource or inspect the port from an existing origin pool data source.) at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:492-507",
+        "documentation/data-sources/origin_pool/properties/index.md:423-438"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-062",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the primary server addresses are being configured on a managed secondary DNS zone resource or read from an existing secondary DNS zone data source.) at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:55-70",
+        "documentation/data-sources/dns_zone/properties/secondary/index.md:41-56"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-063",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the caller is configuring the blocking mode block on an application firewall resource or reading it from a data source.) at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20-32",
+        "documentation/data-sources/app_firewall/properties/blocking/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-064",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the caller is configuring the MTU on a managed network interface resource or reading it from a network interface data source.) at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/dedicated_interface/index.md:140-155",
+        "documentation/data-sources/network_interface/properties/dedicated_interface/index.md:112-127"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-065",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the alert receiver name is being declared on an alert policy resource or read from an alert policy data source.) at verified depth 2.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:106-121",
+        "documentation/data-sources/alert_policy/properties/receivers/index.md:98-113"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-066",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the external peer ASN is being configured on a managed BGP resource or queried from an existing BGP data source.) at verified depth 3.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:249-264",
+        "documentation/data-sources/bgp/properties/peers/external/index.md:140-155"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-067",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the health check timeout is being set on a managed health check resource or queried from a health check data source.) at verified depth 1.",
+      "source_evidence": [
+        "documentation/resources/healthcheck/properties/index.md:483-498",
+        "documentation/data-sources/healthcheck/properties/index.md:417-432"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-068",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether mutual TLS authentication to F5 Distributed Cloud is configured using a PKCS#12 bundle or separate PEM certificate and private key files.) at verified depth 0.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:123-144",
+        "documentation/provider/setup/index.md:145-166"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-069",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the header secret value is supplied using encrypted blindfold secret metadata or plaintext secret information.) at verified depth 6.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/blindfold_secret_info/index.md:26-52",
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md:26-52"
+      ],
+      "valid": true,
+      "verified_depth": 6
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-070",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether automatic DHCP IP address assignment on the interface begins from the start of the address pool or from the end.) at verified depth 3.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md:20-32",
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-071",
+      "reason": "Valid ambiguous query with complete, mutually exclusive destinations addressing genuine missing context (Whether the administrative action targets a single active session ID via access_active_session_terminate or a batch list of session IDs via access_active_sessions_terminate.) at verified depth 1.",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/properties/index.md:21-36",
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-072",
+      "reason": "Valid ambiguous case presenting complete, mutually exclusive choices for genuine missing context (Whether the cloud credential resource is being configured for AWS secret access credentials or Azure client application secret credentials.). Declared depth 2 corrected to verified depth 1 per xcsh_docs metadata.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-32",
+        "documentation/resources/cloud_credentials/properties/azure_client_secret/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-073",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-91"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-074",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/index.md:28-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-075",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 2.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md:43-51"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-076",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/index.md:23-31"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-077",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/index.md:285-293"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-078",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:33-41"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-079",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-45"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-broad-080",
+      "reason": "Valid negative control query verifying unsupported feature in xcsh provider schema with ordinary discovery expectations; accurately bounded by provider schema reference at depth 1.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-29"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    }
+  ],
+  "limitations": [
+    "The corpus is strictly constrained to the static offline documentation set and schema specifications published in documentation/ and source.json; runtime F5 Distributed Cloud API behaviors and live tenant validations are not represented.",
+    "Prompts intentionally paraphrase terminology and omit exact Terraform resource identifiers while retaining sufficient product and role semantics to achieve unambiguous destination resolution for answerable queries.",
+    "Provider setup queries target human-oriented markdown argument reference sections rather than schema attribute anchors due to absence of machine-readable schema metadata in provider/setup/index.md.",
+    "Controls represent realistic discovery queries for features supported in broader cloud ecosystem tooling (e.g. AWS IAM assume-role, WireGuard keys, Helm repository URLs) that are unsupported in the xcsh provider schema."
+  ],
+  "verdict": "label-defects"
+}

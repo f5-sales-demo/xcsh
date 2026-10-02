@@ -1,0 +1,29 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "frozen": false,
+  "counts": {
+    "answerable": 60,
+    "ambiguous": 12,
+    "control": 8
+  },
+  "families": 50,
+  "roles": [
+    "actions",
+    "data-sources",
+    "ephemeral-resources",
+    "provider",
+    "resources"
+  ],
+  "verified_depth8_count": 24,
+  "candidate_sha256": "430306652dbe4c1a1694dfbd6b26ce56655d592bf7b1a045335f20ff632dc57f",
+  "errors": [
+    "dev-broad-030: explicit anchor unverified xcsh://terraform-documentation/documentation/provider/setup/index.md#argument-reference",
+    "dev-broad-031: explicit anchor unverified xcsh://terraform-documentation/documentation/provider/setup/index.md#option-1-api-token-authentication",
+    "dev-broad-068: explicit anchor unverified xcsh://terraform-documentation/documentation/provider/setup/index.md#option-2-p12-certificate-authentication",
+    "dev-broad-068: explicit anchor unverified xcsh://terraform-documentation/documentation/provider/setup/index.md#option-3-pem-certificate-authentication",
+    "Only 24 verified deep cases"
+  ],
+  "structural_validation_passed": false,
+  "semantic_review_required": true
+}
