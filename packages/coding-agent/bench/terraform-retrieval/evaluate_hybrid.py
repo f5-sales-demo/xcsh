@@ -7,6 +7,7 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
+from hybrid_ranking import fuse_rankings
 
 parser = argparse.ArgumentParser(
     description="Development-only local lexical/semantic fusion experiment"
@@ -16,6 +17,7 @@ parser.add_argument("--corpus", type=Path, required=True)
 parser.add_argument("--suite", type=Path, required=True)
 parser.add_argument("--lexical", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--matrix-ranking", action="store_true")
 args = parser.parse_args()
 root = args.cache
 corpus = args.corpus
@@ -95,6 +97,14 @@ def embed(query: str) -> np.ndarray:
 
 
 lexical = json.loads(args.lexical.read_text())
+if len(lexical) != len(suite) or any(
+    row["prompt"] != case["prompt"] for row, case in zip(lexical, suite, strict=True)
+):
+    message = "Lexical candidates do not match the development prompts"
+    raise ValueError(message)
+if vectors.shape[0] != len(pages):
+    message = "Embedding rows do not match the pinned property corpus"
+    raise ValueError(message)
 uri_to_index = {
     "xcsh://terraform-documentation/" + p["path"] + "#" + p["anchor"]: i
     for i, p in enumerate(pages)
@@ -114,6 +124,9 @@ for case_no, case in enumerate(suite):
         for r in lexical[case_no]["ranked"]
         if r["uri"] in uri_to_index
     ]
+    candidate_vectors = (
+        np.ascontiguousarray(vectors[subset]) if args.matrix_ranking else None
+    )
     times = []
     embedding_times = []
     ranking_times = []
@@ -123,24 +136,36 @@ for case_no, case in enumerate(suite):
         q = embed(query)
         embedded = time.perf_counter()
         embedding_times.append((embedded - start) * 1000)
-        semantic = sorted(((float(vectors[i] @ q), i) for i in subset), reverse=True)
-        score = {}
-        for rank, (_, i) in enumerate(lex[:100]):
-            score[i] = score.get(i, 0) + 1 / (20 + rank)
-        for rank, (_, i) in enumerate(semantic[:100]):
-            score[i] = score.get(i, 0) + 1 / (20 + rank)
-        ordered = sorted(
-            score, key=lambda i: (-score[i], pages[i]["path"], pages[i]["anchor"])
-        )[:5]
+        if candidate_vectors is not None:
+            similarities = candidate_vectors @ q
+            order = np.argsort(-similarities, kind="stable")
+            semantic = [
+                (float(similarities[position]), subset[position]) for position in order
+            ]
+        else:
+            semantic = sorted(
+                ((float(vectors[i] @ q), i) for i in subset),
+                key=lambda row: (-row[0], row[1]),
+            )
+        lexical_destinations = [
+            "xcsh://terraform-documentation/"
+            + pages[i]["path"]
+            + "#"
+            + pages[i]["anchor"]
+            for _, i in lex[:100]
+        ]
+        semantic_destinations = [
+            "xcsh://terraform-documentation/"
+            + pages[i]["path"]
+            + "#"
+            + pages[i]["anchor"]
+            for _, i in semantic[:100]
+        ]
         ranked = [
-            {
-                "uri": "xcsh://terraform-documentation/"
-                + pages[i]["path"]
-                + "#"
-                + pages[i]["anchor"],
-                "score": score[i],
-            }
-            for i in ordered
+            {"uri": destination, "score": score}
+            for destination, score in fuse_rankings(
+                lexical_destinations, semantic_destinations
+            )
         ]
         ranking_times.append((time.perf_counter() - embedded) * 1000)
         times.append((time.perf_counter() - start) * 1000)
@@ -154,6 +179,7 @@ for case_no, case in enumerate(suite):
             "top1": bool(ranked and ranked[0]["uri"] in case["expected"]),
             "top5": any(r["uri"] in case["expected"] for r in ranked),
             "times_ms": times,
+            "lexical_precomputed_ms": lexical[case_no].get("latency_ms"),
             "embedding_times_ms": embedding_times,
             "ranking_times_ms": ranking_times,
             "ranked": ranked,
@@ -162,7 +188,25 @@ for case_no, case in enumerate(suite):
 times = sorted(t for r in results for t in r["times_ms"])
 embedding = sorted(t for r in results for t in r["embedding_times_ms"])
 ranking = sorted(t for r in results for t in r["ranking_times_ms"])
+lexical_timing_complete = all(
+    isinstance(row.get("lexical_precomputed_ms"), (int, float)) for row in results
+)
+estimated_route = (
+    sorted(
+        t + row["lexical_precomputed_ms"] for row in results for t in row["times_ms"]
+    )
+    if lexical_timing_complete
+    else []
+)
 report = {
+    "timing_scope": "query embedding plus vector ranking and fusion; lexical candidate generation precomputed",
+    "estimated_route_p95_ms": estimated_route[
+        int(np.ceil(len(estimated_route) * 0.95)) - 1
+    ]
+    if estimated_route
+    else None,
+    "lexical_timing_complete": lexical_timing_complete,
+    "matrix_ranking": args.matrix_ranking,
     "embedding_p95_ms": embedding[int(np.ceil(len(embedding) * 0.95)) - 1],
     "ranking_p95_ms": ranking[int(np.ceil(len(ranking) * 0.95)) - 1],
     "development_only": True,
@@ -176,7 +220,8 @@ report = {
     "limitations": [
         "Vectors built from exact tagged v12.2.0 metadata; experiment only.",
         "24known development prompts; no held-out claim.",
-        "Local embedding time included; no production route shipped.",
+        "Local embedding time included; lexical generation measured separately and route estimate is not complete-response latency.",
+        "No production route shipped; response rendering and source materialization excluded.",
     ],
     "results": results,
 }

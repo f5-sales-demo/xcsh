@@ -411,3 +411,12 @@ Hybrid script accepts explicit inputs and output,passes syntax/Ruff/format check
 A second run reproduces identical rankings (12/14first,14/14top5);total p95186.257ms,
 embedding178.272ms,ranking26.868ms. Semantic service stopped after task-only use.
 No model/vector artifact is bundled and no held-out qualification is claimed.
+
+## Hybrid timing scope correction
+
+Prior hybrid p95 measured embedding plus semantic ranking/fusion only;lexical
+candidate work was precomputed and excluded. Script now reports timing scope and
+an explicitly estimated route with separate lexical time. Matrix single-thread
+ranking reduces ranking p95 to9.840ms,but embedding181.677ms still exceeds target.
+Measured semantic/fusion p95182.719ms;estimated combined route599.558ms.
+12/14development first,14/14top5;no production route or qualification claim.
