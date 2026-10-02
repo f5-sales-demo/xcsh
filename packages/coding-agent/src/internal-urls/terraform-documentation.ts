@@ -1564,6 +1564,70 @@ export class TerraformDocumentationRepository {
 					}
 				}
 			}
+			if (rows[0] && !broadened && !taskDestination) {
+				const current = rows[0];
+				const metadata = JSON.parse(current.metadata) as TerraformMetadata;
+				const schema = current.anchor.startsWith("schema-")
+					? current.anchor.slice(7).split("--")
+					: metadata.schema_path;
+				if (schema.length >= 3) {
+					const suffix = schema.slice(-3).join(".");
+					const siblingClauses = ["dest.provider_name=?", "dest.provider_type=?", "dest.schema_path LIKE ?"];
+					const siblingArgs: Array<string | number> = [
+						metadata.provider_name,
+						metadata.provider_type,
+						`%.${suffix}`,
+					];
+					for (const filter of filters) {
+						siblingClauses.push(
+							"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
+						);
+						siblingArgs.push(filter.key, filter.value);
+					}
+					if (node) {
+						siblingClauses.push(
+							"dest.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT path FROM descendants)",
+						);
+						siblingArgs.push(node);
+					}
+					const siblings = db
+						.query(
+							`SELECT dest.path,dest.anchor,dest.schema_path,td.metadata,s.heading,s.context_markdown markdown FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path JOIN terraform_sections s ON s.path=dest.path AND s.anchor=dest.anchor WHERE ${siblingClauses.join(" AND ")} ORDER BY dest.schema_path LIMIT 100`,
+						)
+						.all(...siblingArgs) as Array<SearchRow & { schema_path: string }>;
+					for (const sibling of siblings) {
+						const m = JSON.parse(sibling.metadata) as TerraformMetadata;
+						if (
+							selectTerraformCandidate(
+								[
+									{
+										path: current.path,
+										anchor: current.anchor,
+										metadata: { ...metadata, schema_path: schema },
+										ranking: current.raw_score,
+									},
+									{
+										path: sibling.path,
+										anchor: sibling.anchor,
+										metadata: { ...m, schema_path: sibling.schema_path.split(".") },
+										ranking: current.raw_score * 0.5,
+									},
+								],
+								false,
+								search,
+							) === "choices"
+						) {
+							rows.push({
+								...sibling,
+								metadata: JSON.stringify({ ...m, schema_path: sibling.schema_path.split(".") }),
+								raw_score: current.raw_score * 0.5,
+								score: (current.raw_score * 0.5) / (1 + current.raw_score * 0.5),
+							});
+							broadened = true;
+						}
+					}
+				}
+			}
 			const uniqueRows = new Map<string, SearchRow>();
 			for (const row of rows) {
 				const key = `${row.path}#${row.anchor}`;

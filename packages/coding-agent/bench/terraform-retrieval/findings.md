@@ -383,3 +383,10 @@ context identifying the top branch even when scores differ. Missing discovery
 mode or cookie nesting yields choices; naming a lower-ranked alternative cannot
 justify selecting the wrong top branch. Same-destination aliases remain merged.
 467URLtests+workspacechecks pass;no qualification or benchmark expectation changes.
+
+Corpus verification exposed that a ranked list may omit a real repeated branch.
+Before confident selection,deep candidates now check verified sibling schema suffix
+destinations in the same provider role,with all facets and descendant scope applied.
+Discovery password without mode returns both top-level API discovery and per-app
+ML discovery choices;exact branch queries still select correct leaves.
+467URLtests+workspacechecks pass;qualification gate remains unresolved.
