@@ -792,3 +792,22 @@ these use labels and are not executable selection policy. Timing covers only
 candidate queries/ranking, excluding post-ranking refinement, lifecycle routing,
 responses and confidence. Preparation now reports index construction as well as
 term preparation. No production import, confidence or held-out qualification.
+
+
+## Property selection and complete-scope collision experiment
+
+Seven selection tests cover omitted branches, role collisions, low coverage,
+close fields, contradictory IP/route evidence and alternatives outside top five.
+The initial policy selected one false HTTP-redirect mode on original development
+prompts. Indexed same-leaf checks eliminate that false leaf. Caller-inferred
+provider role is honored; matching names with different descriptions are not
+automatically treated as equivalent. Final development selection remains only
+10/58correct leaves on the revised set and5/14on the original,with no observed
+false leaf in these runs. Unnecessary clarification prevents promotion.
+
+The rendering evaluator reads complete local sections and reports oversized
+notices, but its latency adds precomputed ranking samples and excludes indexed
+collision lookup. It is explicitly estimated rendering-route timing, not measured
+integrated complete-response latency. Original mislabeled timing report digests
+are preserved. Twelve ranker/selection tests and workspace checks pass. No
+production imports or held-out qualification; source-label defects remain.
