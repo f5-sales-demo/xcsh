@@ -11,6 +11,7 @@ import {
 	terraformProviderMention,
 	terraformProviderSetupDestination,
 	terraformQueryIdentity,
+	terraformScopedSearchQuery,
 	terraformTaskDestination,
 	terraformTimeoutOperations,
 	validateTerraformRetrievalMetadata,
@@ -423,4 +424,16 @@ test("workflow grammar infers declaration role and lookup usage without literal 
 	expect(
 		terraformTaskDestination("Looking up the policy data source, which schema section handles cookies?"),
 	).toBeUndefined();
+});
+
+test("indexed provider filters remove redundant identity words from passage queries", () => {
+	expect(
+		terraformScopedSearchQuery("HTTPS listener port on xcsh_http_loadbalancer resource", "http_loadbalancer"),
+	).toBe('"https"* AND "listener"* AND "port"*');
+	expect(terraformScopedSearchQuery("HTTP load balancer Bot Defense login status", "http_loadbalancer")).toBe(
+		'"bot"* AND "defense"* AND "login"* AND "status"*',
+	);
+	expect(terraformScopedSearchQuery("public IP origin servers in origin pool", "origin_pool")).toContain('"origin"*');
+	expect(terraformScopedSearchQuery("xcsh_origin_pool", "origin_pool")).toBe("");
+	expect(terraformScopedSearchQuery("HTTP load balancer TLS", undefined)).toContain('"http_loadbalancer"*');
 });

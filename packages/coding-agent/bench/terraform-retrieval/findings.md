@@ -675,3 +675,13 @@ gzip68812457bytes. Source pin preserved;derived index pin updated atomically.
 Published regression43/140selected,51.4286%top5,discovery149.741ms,complete
 142.963ms. Unpublished enriched preview44/140selected,52.1429%top5;still no
 accuracy qualification. Tracked asset loader restored to null placeholder.
+
+
+## Provider-scoped passage query
+
+Indexed provider identity is removed from passage terms after filter inference;
+provider-only search retains its existing query. Root/field exact routes and scoped
+unsupported identifiers remain intact.482URLtests+workspacechecks pass. Full
+regression43/140selected,52.8571%top5,discovery178.939ms,complete163.831ms
+remains failed. This improves candidate recall without a qualification claim.
+Provider post-merge aggregate passed;exact-source regeneration now active.

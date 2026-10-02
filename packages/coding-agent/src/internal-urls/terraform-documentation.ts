@@ -999,6 +999,17 @@ export function terraformSearchQuery(query: string): string {
 		.join(" AND ");
 }
 
+export function terraformScopedSearchQuery(query: string, providerName: string | undefined): string {
+	if (!providerName) return terraformSearchQuery(query);
+	const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const identity = providerName.replaceAll("_", " ").replace(/loadbalancer/g, "load balancer");
+	const namePattern = new RegExp(
+		`\\b(?:xcsh_${escapePattern(providerName)}|${escapePattern(providerName)}|${escapePattern(identity)})\\b`,
+		"gi",
+	);
+	return terraformSearchQuery(query.replace(namePattern, " ").replace(/\bresources?\b/gi, " "));
+}
+
 export function boundedTerraformResponse(prefix: string, entries: string[], budget: number, continuation = ""): string {
 	const suffix = continuation ? `\n\n${continuation}` : "";
 	if (Buffer.byteLength(prefix + suffix) > budget) throw new Error("Terraform response envelope exceeds budget");
@@ -1376,7 +1387,7 @@ export class TerraformDocumentationRepository {
 					search,
 				);
 			const setupAnchor = terraformProviderSetupDestination(search);
-			const query = terraformSearchQuery(search);
+			let query = terraformSearchQuery(search);
 			const identity = terraformQueryIdentity(search);
 			if (!setupAnchor && !filters.some(f => f.key === "provider_type") && identity.providerType)
 				filters.push({ key: "provider_type", value: identity.providerType });
@@ -1416,6 +1427,8 @@ export class TerraformDocumentationRepository {
 				}
 				if (named) filters.push({ key: "provider_name", value: named });
 			}
+			query =
+				terraformScopedSearchQuery(search, filters.find(filter => filter.key === "provider_name")?.value) || query;
 			const clauses = ["documents_fts MATCH ?", "d.active=1"];
 			const args: Array<string | number> = [query];
 			for (const f of filters) {
