@@ -1,0 +1,28 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "provider_version": "v12.3.1",
+  "property_cases": 58,
+  "property_first": 47,
+  "property_top5": 56,
+  "preparation_ms": 519.019462,
+  "scope_preparation_ms": 378.06596199999996,
+  "ranking_p95_ms": 25.70976500000006,
+  "limitations": [
+    "Ranking only; excludes response rendering and confidence selection.",
+    "Development labels have known defects and unresolved same-role ambiguities.",
+    "Experimental in-memory FTS limits ranking to 500 candidates; production integration and complete response timing remain unverified."
+  ],
+  "complete_results": {
+    "artifact": "contrastive-refined-revised.json.gz",
+    "uncompressed_sha256": "db7e3656d2cdaa4b53b38871c30b6cff09f9d243a940fb4f8be9b09c00d1133f",
+    "uncompressed_bytes": 342747,
+    "compressed_sha256": "3331b87e9135a41130a24d6973a470d6642537b26b52bfef987f75ab791e8640",
+    "compressed_bytes": 33801,
+    "encoding": "gzip"
+  },
+  "timing_limitations": "Candidate query and ranking only; post-ranking refinement, lifecycle routing and full responses excluded."
+}

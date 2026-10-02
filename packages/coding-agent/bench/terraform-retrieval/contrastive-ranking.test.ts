@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { preparePropertyScope, rankPropertyScope } from "./contrastive-ranking";
+import { preparePropertyScope, rankPropertyScope, propertyTerms } from "./contrastive-ranking";
 const row = (schema_path: string, description: string, anchor = "schema-" + schema_path.replaceAll(".", "--")) => ({
 	provider_type: "resources",
 	provider_name: "fixture",
@@ -38,4 +38,15 @@ test("indistinguishable repeated branches retain equal evidence and deterministi
 	expect(ranked[0]?.score).toBe(ranked[1]?.score);
 	expect(ranked.map(r => r.schema_path)).toEqual(["mode_a.password.location", "mode_b.password.location"]);
 	expect(rankPropertyScope("password secret location URI", scope)).toEqual(ranked);
+});
+
+test("HTTP encryption words do not imply a private-key storage mode", () => {
+	expect(propertyTerms("unencrypted HTTP requests")).not.toContain("clear");
+	expect(propertyTerms("encrypted backend traffic")).not.toContain("blindfold");
+});
+
+test("query synonyms and schema abbreviations share canonical terms", () => {
+	expect(propertyTerms("regular expression patterns")).toEqual(propertyTerms("regex_values"));
+	expect(propertyTerms("static IPv6 routes")).toEqual(propertyTerms("static_v6_routes"));
+	expect(propertyTerms("ending IP address")).toEqual(propertyTerms("end_ip_address"));
 });

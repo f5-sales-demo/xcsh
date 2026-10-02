@@ -6,9 +6,14 @@ import {
 	terraformQueryIdentity,
 	rankTerraformProviderNames,
 	terraformHash,
+	rankTerraformDirectProperties,
+	terraformTimeoutOperations,
 } from "../../src/internal-urls/terraform-documentation";
 const args = process.argv.slice(2);
-const arg = (key: string) => { const index=args.indexOf(key); return index<0?undefined:args[index+1]; };
+const arg = (key: string) => {
+	const index = args.indexOf(key);
+	return index < 0 ? undefined : args[index + 1];
+};
 const index = arg("--index"),
 	suitePath = arg("--suite"),
 	output = arg("--output");
@@ -38,9 +43,17 @@ search.transaction(() => {
 			insert.run([...row.leaf, ...row.context, ...row.descriptionTerms].join(" "), key, `${row.path}#${row.anchor}`);
 })();
 const preparationMs = performance.now() - start;
+const metadata = new Map(
+	(db.query("SELECT path,metadata FROM terraform_documents").all() as { path: string; metadata: string }[]).map(
+		row => [row.path, JSON.parse(row.metadata)],
+	),
+);
 const suiteBytes = await readFile(suitePath);
 const suite = JSON.parse(suiteBytes.toString());
-const cases = (suite.cases ?? suite).map((item: any, index: number) => ({ ...item, id: item.id ?? `development-${index + 1}` }));
+const cases = (suite.cases ?? suite).map((item: any, index: number) => ({
+	...item,
+	id: item.id ?? `development-${index + 1}`,
+}));
 const results = [];
 const timings: number[] = [];
 for (const item of cases) {
@@ -83,6 +96,25 @@ for (const item of cases) {
 		times.push(performance.now() - before);
 	}
 	timings.push(...times);
+	const top = ranked[0];
+	if (top?.anchor === "section") {
+		const m = metadata.get(top.path);
+		const refined = rankTerraformDirectProperties(item.prompt, m.schema_path, m.sections ?? []);
+		if (refined[0]?.document_id === m.id) {
+			const field = rows.find(row => row.path === top.path && row.anchor === refined[0].anchor);
+			if (field) ranked = [{ ...field, score: top.score, coverage: top.coverage }, ...ranked.slice(1)];
+		}
+	}
+	const operations = terraformTimeoutOperations(item.prompt);
+	if (provider && operations.length) {
+		const fields = rows.filter(
+			row =>
+				row.provider_name === provider &&
+				(!role || row.provider_type === role) &&
+				operations.some(operation => row.schema_path === `timeouts.${operation}`),
+		);
+		if (fields.length) ranked = fields.map(row => ({ ...row, score: 100, coverage: 1 }));
+	}
 	const destinations = ranked.slice(0, 5).map(row => `xcsh://terraform-documentation/${row.path}#${row.anchor}`);
 	results.push({
 		id: item.id,
@@ -114,10 +146,10 @@ const report = {
 	property_first: properties.filter(row => row.first).length,
 	property_top5: properties.filter(row => row.top5).length,
 	preparation_ms: preparationMs,
- scope_preparation_ms: scopePreparationMs,
+	scope_preparation_ms: scopePreparationMs,
 	ranking_p95_ms: timings.sort((a, b) => a - b)[Math.ceil(timings.length * 0.95) - 1],
 	limitations: [
-		"Ranking only; excludes response rendering and confidence selection.",
+		"Indexed candidate query and ranking only; excludes post-ranking direct-field refinement, lifecycle routing, response rendering and confidence selection.",
 		"Development labels have known defects and unresolved same-role ambiguities.",
 		"Experimental in-memory FTS limits ranking to 500 candidates; production integration and complete response timing remain unverified.",
 	],

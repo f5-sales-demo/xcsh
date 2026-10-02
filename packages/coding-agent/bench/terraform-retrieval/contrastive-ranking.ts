@@ -18,15 +18,18 @@ const variants: Record<string, string> = {
 	hostname: "dns",
 	expression: "regex",
 	expressions: "regex",
-	patterns: "values",
+	patterns: "value",
+	values: "value",
+	v6: "ipv6",
+	v4: "ipv4",
+	ending: "end",
+	starting: "start",
 	succeeded: "success",
 	successful: "success",
 	failed: "failure",
 	redirection: "redirect",
 	redirecting: "redirect",
 	kubernetes: "k8s",
-	encrypted: "blindfold",
-	unencrypted: "clear",
 };
 export function propertyTerms(text: string): string[] {
 	const words =

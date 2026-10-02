@@ -1,0 +1,25 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "provider_version": "v12.3.1",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "property_cases": 58,
+  "production_first": 35,
+  "ranking_first": 47,
+  "first_union_ceiling": 52,
+  "top5_union_ceiling": 56,
+  "limitations": [
+    "Union ceilings use expected labels for diagnostics and are not an executable selection policy.",
+    "No confidence or installed qualification."
+  ],
+  "complete_results": {
+    "artifact": "combined-revised-development.json.gz",
+    "uncompressed_sha256": "245ab4a1ebddca7648a988ce52918c9972a9adc94cda939f1c5196a91af130f0",
+    "uncompressed_bytes": 146415,
+    "compressed_sha256": "046691f8cee62ad74100a72eda89fb197198556e5cc8c16c4c44432cedfd377e",
+    "compressed_bytes": 8318,
+    "encoding": "gzip"
+  },
+  "timing_limitations": "Candidate query and ranking only; post-ranking refinement, lifecycle routing and full responses excluded."
+}

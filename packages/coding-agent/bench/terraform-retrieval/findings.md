@@ -773,3 +773,22 @@ An evaluator count defect caused absent IDs to group ambiguous cases as property
 cases. The corrected evaluator assigns synthetic development IDs; both raw
 results and the original defect digest are retained. No held-out qualification
 was run or claimed. The experiment remains outside production imports.
+
+
+## Canonical property terms and combined development route
+
+Removed the experimental encrypted-to-Blindfold and unencrypted-to-clear
+translations: transport encryption does not establish secret storage choice.
+Red fixtures verify consistent regex-value, IPv4/IPv6, and start/end terms.
+Canonicalization raises revised development first destinations to47/58 and
+top-five to56/58. The separate original set remains8/14 until the existing
+direct-field refinement and lifecycle timeout route are applied, then reaches
+11/14first and13/14top-five. Five ranker tests and workspace checks pass.
+
+Broad alias-token weighting and full-phrase bonuses both regress the revised
+set, so they were removed. Complete failed experiment results remain retained.
+Diagnostic first-destination union ceilings are52/58revised and13/14original;
+these use labels and are not executable selection policy. Timing covers only
+candidate queries/ranking, excluding post-ranking refinement, lifecycle routing,
+responses and confidence. Preparation now reports index construction as well as
+term preparation. No production import, confidence or held-out qualification.

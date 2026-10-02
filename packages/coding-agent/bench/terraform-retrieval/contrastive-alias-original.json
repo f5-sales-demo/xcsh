@@ -1,0 +1,28 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "provider_version": "v12.3.1",
+  "property_cases": 14,
+  "property_first": 6,
+  "property_top5": 12,
+  "preparation_ms": 656.017887,
+  "scope_preparation_ms": 503.254714,
+  "ranking_p95_ms": 16.647772999999916,
+  "limitations": [
+    "Ranking only; excludes response rendering and confidence selection.",
+    "Development labels have known defects and unresolved same-role ambiguities.",
+    "Experimental in-memory FTS limits ranking to 500 candidates; production integration and complete response timing remain unverified."
+  ],
+  "rejected": true,
+  "complete_results": {
+    "artifact": "contrastive-alias-original.json.gz",
+    "uncompressed_sha256": "56a888d5e51ce5b7ef9e517100ab6f0c9d6cea9008581f26475c65e4e34f9109",
+    "uncompressed_bytes": 98359,
+    "compressed_sha256": "a28f988c456064e81ef50b866f8304a11762fd703460188c4a86a3bd6a88d4dd",
+    "compressed_bytes": 11264,
+    "encoding": "gzip"
+  }
+}
