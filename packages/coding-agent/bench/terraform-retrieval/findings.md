@@ -756,3 +756,20 @@ selections, 34 expected destinations in top five) and 52 task requests (34 corre
 40 in top five). These counts guide redesign and are not independent acceptance.
 Broader source-only development authoring is underway with the existing reviewer;
 its material will remain separate from any new held-out qualification suite.
+
+
+## Provider-scoped field and context ranking experiment
+
+A separate development ranker weights direct field wording, descriptions and
+ancestor schema context using provider-scope term frequencies. Indexed 500-case
+candidate selection reaches 43/58 first and 54/58 top-five property destinations
+on revised development prompts, with ranking p95 24.198 ms. The separate original
+development set reaches only 8/14 first and 12/14 top five. This cross-set gap
+prevents production promotion. Complete response rendering, startup impact and
+confidence selection remain unverified. Three tests cover direct-field intent,
+contradictory branches and deterministic ties; workspace checks pass.
+
+An evaluator count defect caused absent IDs to group ambiguous cases as property
+cases. The corrected evaluator assigns synthetic development IDs; both raw
+results and the original defect digest are retained. No held-out qualification
+was run or claimed. The experiment remains outside production imports.

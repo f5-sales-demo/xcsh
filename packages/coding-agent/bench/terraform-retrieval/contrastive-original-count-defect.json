@@ -1,0 +1,8 @@
+{
+  "invalid_original_report_sha256": "9b92567b1e5f1b50dcee12fc9411c2de955394fc1749687c15fe3497c0f09e10",
+  "defect": "Missing case IDs collapsed answerable and ambiguous cases into one property-case group.",
+  "reported_property_cases": 24,
+  "correct_property_cases": 14,
+  "corrected_report": "contrastive-original-development.json",
+  "qualified": false
+}
