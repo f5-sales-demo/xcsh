@@ -215,3 +215,9 @@ Index provenance is now recursively key-sorted; a regression first failed then
 passed when building with reversed equivalent pin keys. Two complete published
 index builds now match after formatting, sha067e04c33404d29a13318624bcc768947673a4732c504d4e43754f69baa11ade.
 Receipt payloads compacted without dropping records or changing frozen prompts.
+
+Native baseline CI exposed a materialized generated loader committed without
+its ignored SQLite file. Restored tracked null placeholder; normal builds generate
+and verify the immutable assets. Workspace checks pass after this repair.
+Four exact full-suite control retries still fail (2 invalid JSON,2 timeouts);
+original failures and retries remain explicit, and no overall pass is claimed.
