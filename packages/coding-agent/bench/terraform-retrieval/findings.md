@@ -719,3 +719,13 @@ for shared_flag with deeper matching context. Literal suffix comparisons repair
 that false destination;485URLtests+workspacechecks pass. Published regression
 43/140selected52.8571%top5unchanged,discovery112.092ms,complete107.889ms.
 No accuracy qualification. Provider documentation regeneration remains active.
+
+
+## All-branch-context rule rejected
+
+Requiring every differing schema segment reduced regression selection43/140to
+41/140and hid valid Equinix IPv6 and inside-static-route leaves. Existing query
+qualifiers already excluded the alternatives. The diagonal fixture did not prove
+independent missing choices. Rule and fixture removed;production restored.
+Regression evidence retained without qualification or promotion. Provider2370
+CIbuild/vet/lint/security pass,race and Super-Linter remain live.
