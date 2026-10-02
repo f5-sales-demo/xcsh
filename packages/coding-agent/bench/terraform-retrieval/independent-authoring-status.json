@@ -15,5 +15,13 @@
     "Initial print window ended with partial output; same conversation resumed.",
     "Completed candidate failed structure and remains unrun; source-only revision pending.",
     "Independent review and final freeze are not complete."
-  ]
+  ],
+  "independent_review": {
+    "verdict": "needs-attention",
+    "reviewed_cases": 200,
+    "findings": 8,
+    "review_sha256": "3ff2a83a0170a7c890987577b04cdea72171861da8b251ef1e30ceae83656ee3",
+    "source_only": true
+  },
+  "source_only_revision_pending": true
 }

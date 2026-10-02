@@ -1146,3 +1146,10 @@ verifier will audit the revision. Synthetic status receipt:
 independent-authoring-status.json. Retrieval implementation/results are withheld.
 Candidate CI run 37074075798 passes the formerly failing Linux baseline job;
 full licensed compiled artifact acceptance remains in progress.
+
+Original independent candidate verifier completed all 200 cases with
+needs-attention (eight findings), confirming fabricated destinations and invalid
+depths. The candidate remains unrun and unfrozen; source-only revision is active.
+The review digest and outcome are recorded in independent-authoring-status.json.
+Corrected candidate build passes Linux baseline/modern, Mac arm64, Rust and
+native-independent TypeScript checks; remaining matrix/build jobs remain active.
