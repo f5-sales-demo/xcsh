@@ -71,3 +71,11 @@ or false-live-apply claims found. The certificate expected destination remains f
 trace-format retries and two negation/wording grader false positives are recorded. Most
 answerable cases used two or three reads after static query-preservation guidance. No HCL
 was emitted; supported-field drafting acceptance and released-artifact rerun remain required.
+
+## Candidate HCL drafting
+
+Synthetic namespace and origin-pool drafts use only exact documented schema paths.
+The certificate case identifies named-object and PEM/secret-reference choices and asks
+for storage location before drafting. Exact citations and trace/HCL hashes are recorded.
+No Terraform execution occurred, and all cases disclose the unpublished preview.
+These candidate checks require a final immutable-release rerun.
