@@ -1184,3 +1184,9 @@ Mac first untouched qualification exactly matches Linux destinations, selection
 decisions and complete-response hashes. Complete route p95 is 87.729 ms Mac,
 111.774 ms Ubuntu. Cross-platform-first-receipt.json binds raw output digests.
 The accuracy failure remains release-gating. No frozen-suite tuning performed.
+
+Candidate Mac builds/signing succeeded but provenance capture failed because
+branch dispatch used feature branch name as semantic release version. Both Mac
+provenance/package steps now choose package version for branch dispatches and
+retain tag version for releases; red/green workflow test and actionlint pass.
+This changes candidate build provenance only, not frozen retrieval behavior.

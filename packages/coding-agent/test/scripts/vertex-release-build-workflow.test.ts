@@ -74,3 +74,10 @@ it("native-dependent source shard resets optional loader before CLI imports", as
 	expect(reset).toBeGreaterThanOrEqual(0);
 	expect(reset).toBeLessThan(test);
 });
+
+it("candidate Mac provenance uses the package version for branch dispatches", async () => {
+	const workflow = await Bun.file(workflowPath).text();
+	const job = workflow.split("  build-sign-macos:")[1]!.split(/\n {2}[a-z][a-z0-9-]*:/)[0]!;
+	expect(job).toContain("GITHUB_REF_TYPE");
+	expect(job).toContain("packages/coding-agent/package.json");
+});

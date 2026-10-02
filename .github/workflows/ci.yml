@@ -1027,7 +1027,11 @@ jobs:
       - name: Capture immutable macOS payload provenance
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version=$(bun -p "require('./packages/coding-agent/package.json').version")
+          fi
           bun scripts/macos-release-provenance.ts create \
             --arch "$RELEASE_ARCH" \
             --version "$version" \
@@ -1046,7 +1050,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version=$(bun -p "require('./packages/coding-agent/package.json').version")
+          fi
           binary="packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}"
           pkg="packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.pkg"
           bun scripts/ci-release-macos-pkg.ts \
