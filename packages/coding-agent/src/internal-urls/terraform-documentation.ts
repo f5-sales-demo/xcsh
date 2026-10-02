@@ -797,12 +797,11 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	if (
 		/\bresource\b.*\b(?:documented|specification)\b/i.test(query) &&
-		!/\b(?:attributes?|fields?|schema path)\b/i.test(query)
+		!/\b(?:attributes?|fields?|property|properties|parameters?|schema path)\b/i.test(query)
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
-	const fieldRequest = /\b(?:fields?|attributes?|properties|parameters?|schema path|match rules|inside|under)\b/i.test(
-		query,
-	);
+	const fieldRequest =
+		/\b(?:fields?|attributes?|property|properties|parameters?|schema path|match rules|inside|under)\b/i.test(query);
 	const scopedLookup =
 		/\b(?:query(?:ing)?|look(?:ing)? up|read(?:ing)?|inspect(?:ing)?)\b[^,]*\bdata[ -]source\b[^,]*,\s*(?:where|which|what)\b/i.test(
 			query,

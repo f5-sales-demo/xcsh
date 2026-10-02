@@ -506,3 +506,16 @@ test("provider names normalize documented product abbreviations", () => {
 		"securemesh_site",
 	);
 });
+
+test("singular property requests retain exact data-source field routing", () => {
+	expect(
+		terraformTaskDestination(
+			"In a site registrations data source query, which property exposes the chassis serial number?",
+		),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Where is this resource property documented?")).toBeUndefined();
+	expect(terraformTaskDestination("How do I query the site registrations data source?")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
