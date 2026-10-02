@@ -1,0 +1,72 @@
+{
+  "cases": [
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+      ],
+      "id": "dev-broad-014",
+      "reason": "The prompt asks for the IPv6 next-hop address string for dual-stack static routes on an aws_tgw_site resource, but fails to specify whether inside static routes (vn_config.inside_static_routes) or outside static routes (vn_config.outside_static_routes) are configured. Both branches share an identical sub-hierarchy (.../static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6) terminating in the addr attribute, making vn_config.inside_static_routes an equally valid documented destination.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:60-68",
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:60-68"
+      ],
+      "valid": false,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw_ar--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+      ],
+      "id": "dev-broad-016",
+      "reason": "The prompt omits both the Azure site architecture variant (voltstack_cluster_ar vs voltstack_cluster vs ingress_egress_gw vs ingress_egress_gw_ar) and the route scope (outside_static_routes vs inside_static_routes). All of these variants define identical schema structures for custom dual-stack static route IPv4 next-hop addresses (.../static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/addr), yielding at least five documented alternative destinations equally valid under the prompt.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-67",
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:60-68",
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:60-68",
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:60-68",
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:60-68",
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:60-68"
+      ],
+      "valid": false,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_and/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_and--cookie_operator--cookie--cookie_and--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_or--cookie_operator--cookie--cookie_or--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_and/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_none--cookie_operator--cookie--cookie_and--cookie_match_v2--case_sensitive"
+      ],
+      "id": "dev-broad-027",
+      "reason": "The prompt asks for the boolean field controlling case sensitivity for cookie match rules under mobile success cookie criteria, but omits the outer boolean combinator (cookies_none vs cookies_and vs cookies_or) as well as the nested inner combinator (cookie_or vs cookie_and vs cookie_none). There are at least nine symmetric schema branches under transaction_result_success.cookie_v2 that provide the exact same case_sensitive boolean field on cookie_match_v2, making the expected path non-unique.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md:38-45",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_and/cookie_match_v2/index.md:38-45",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md:38-45"
+      ],
+      "valid": false,
+      "verified_depth": 12
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site/properties/custom_network_config/sli_config/static_v6_routes/static_routes/node_interface/list/interface/index.md#schema-custom_network_config--sli_config--static_v6_routes--static_routes--node_interface--list--interface--name"
+      ],
+      "id": "dev-broad-028",
+      "reason": "The prompt fails to specify whether custom network static IPv6 routes are being configured for Site-Local Outside (slo_config) or Site-Local Inside (sli_config). Both slo_config.static_v6_routes and sli_config.static_v6_routes contain the identical path static_routes/node_interface/list/interface, where the name attribute defines the target network interface reference name.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md:114-122",
+        "documentation/resources/securemesh_site/properties/custom_network_config/sli_config/static_v6_routes/static_routes/node_interface/list/interface/index.md:114-122"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    }
+  ],
+  "limitations": [
+    "Adjudication is based strictly on canonical documentation/ and source.json in the repository; no runtime Terraform or search engine retrieval execution was used.",
+    "Prompts and expected labels were adjudicated as-is without modification."
+  ],
+  "verdict": "label-defects"
+}

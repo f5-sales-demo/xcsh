@@ -20,5 +20,5 @@ results are bound by SHA-256 and byte counts in their JSON summaries.
 
 A follow-up source collision check found repeated same-role suffix destinations
 for four audit-accepted cases (014, 016, 027, 028). Concrete alternatives are
-retained in same-role-collision-review.json; fresh source-only adjudication is
-active. The candidate must not be treated as semantically validated.
+retained in same-role-collision-review.json; fresh source-only adjudication rejects all four labels. The complete verdict is
+retained in same-role-adjudication.json. The candidate must not be treated as semantically validated.
