@@ -28,3 +28,12 @@ export function validateQualificationSource(
  if(!regression && freeze.source_index_sha256 && freeze.source_index_sha256!==pin.index?.sha256)
   throw new Error("Frozen qualification index mismatch; use --regression for post-analysis evidence");
 }
+
+export function validateQualificationEligibility(
+ audit:{suite_sha256:string;qualification_eligible:boolean;reason:string}|undefined,
+ suiteHash:string,regression:boolean,
+):void {
+ if(!audit)return;
+ if(audit.suite_sha256!==suiteHash)throw new Error("Benchmark eligibility audit digest mismatch");
+ if(!audit.qualification_eligible&&!regression)throw new Error("Benchmark cannot qualify: "+audit.reason);
+}

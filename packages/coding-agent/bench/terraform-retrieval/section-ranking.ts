@@ -1,4 +1,5 @@
 // Development experiment only; not imported by production retrieval.
+// Section ranking uses documented schema paths and descriptions; values are ranking evidence, not probabilities.
 const SECTION_VARIANTS: Record<string, string> = {
 	automatic: "auto",
 	automatically: "auto",
@@ -40,7 +41,10 @@ export function terraformSectionTerms(value: string): string[] {
 				.filter(term => !SECTION_STOPWORDS.has(term))
 				.map(term => {
 					const mapped = SECTION_VARIANTS[term] ?? term;
-					return mapped.endsWith("s") && !mapped.endsWith("ss") && mapped.length > 4 && !["https", "status", "success"].includes(mapped)
+					return mapped.endsWith("s") &&
+						!mapped.endsWith("ss") &&
+						mapped.length > 4 &&
+						!["https", "status", "success"].includes(mapped)
 						? mapped.slice(0, -1)
 						: mapped;
 				}),
@@ -51,9 +55,10 @@ export function rankTerraformSections<
 	T extends { schema_path: string; description: string; path: string; anchor: string },
 >(query: string, sections: readonly T[]): Array<T & { ranking: number; coverage: number }> {
 	const terms = terraformSectionTerms(query);
- const original=query.toLowerCase();
- if(/\btimeout\b|\bduration\b/.test(original)) terms.push("timeout");
- if(/\b(?:auto|automatic|automatically)\b/.test(original)&&/\bcertificates?\b/.test(original)) terms.push("auto","certificate");
+	const original = query.toLowerCase();
+	if (/\btimeout\b|\bduration\b/.test(original)) terms.push("timeout");
+	if (/\b(?:auto|automatic|automatically)\b/.test(original) && /\bcertificates?\b/.test(original))
+		terms.push("auto", "certificate");
 
 	const terminalWords = new Set([
 		"name",
@@ -69,11 +74,12 @@ export function rankTerraformSections<
 		"token",
 		"ip",
 	]);
- const directFields=new Set<string>();
- for(const candidate of sections){
-  const path=candidate.schema_path.split(".");
-  if(terraformSectionTerms(path.at(-1)??"").some(term=>terminalWords.has(term)&&terms.includes(term))) directFields.add(path.slice(0,-1).join("."));
- }
+	const directFields = new Set<string>();
+	for (const candidate of sections) {
+		const path = candidate.schema_path.split(".");
+		if (terraformSectionTerms(path.at(-1) ?? "").some(term => terminalWords.has(term) && terms.includes(term)))
+			directFields.add(path.slice(0, -1).join("."));
+	}
 	return sections
 		.map(section => {
 			const schemaTerms = new Set(terraformSectionTerms(section.schema_path));
@@ -100,21 +106,19 @@ export function rankTerraformSections<
 				if (terms.includes(positive!) && schemaTerms.has(opposite!) && !schemaTerms.has(positive!)) ranking -= 12;
 			}
 			for (const term of terms) if (terminalWords.has(term) && terminal.has(term)) ranking += 24;
-            const terminalPhrase=terraformSectionTerms(section.schema_path.split(".").at(-1)??"").join(" ");
-            if(terminalPhrase.split(" ").length>1 && original.replace(/[_-]/g," ").includes(terminalPhrase)) ranking+=12;
-            if(section.schema_path.endsWith(".dns_name") && /dns|hostname/.test(original)) ranking+=16;
-            if(section.schema_path==="https_auto_cert" && /(?:auto|automatically).*(?:provision|manage).*(?:certificate)|(?:certificate).*(?:auto|automatically)/.test(original)) ranking+=40;
-            if(/\b(?:platform|volterra)\b/.test(original)&&section.schema_path.endsWith(".volterra_trusted_ca")) ranking+=30;
-            if(terms.includes("timeout") && section.schema_path.startsWith("timeouts.")) ranking+=24;
+			const terminalPhrase = terraformSectionTerms(section.schema_path.split(".").at(-1) ?? "").join(" ");
+			if (terminalPhrase.split(" ").length > 1 && original.replace(/[_-]/g, " ").includes(terminalPhrase))
+				ranking += 12;
+			if (section.schema_path.endsWith(".dns_name") && /dns|hostname/.test(original)) ranking += 16;
 			const coverage = terms.length ? covered.length / terms.length : 0;
 			return { ...section, ranking: Number(ranking.toFixed(12)), coverage };
 		})
-.map(section=>{
-   if(section.anchor==="section"){
-    if(directFields.has(section.schema_path)) return {...section,ranking:section.ranking-20};
-   }
-   return section;
-  })
+		.map(section => {
+			if (section.anchor === "section") {
+				if (directFields.has(section.schema_path)) return { ...section, ranking: section.ranking - 20 };
+			}
+			return section;
+		})
 		.filter(section => section.ranking > 0)
 		.sort(
 			(a, b) =>
@@ -124,3 +128,39 @@ export function rankTerraformSections<
 		);
 }
 
+export type RankedTerraformSection = {
+	schema_path: string;
+	description: string;
+	path: string;
+	anchor: string;
+	ranking: number;
+	coverage: number;
+};
+export function selectTerraformSections<T extends RankedTerraformSection>(
+	query: string,
+	ranked: readonly T[],
+	conflictingAlternatives: readonly T[] = [],
+): { kind: "leaf" | "choices" | "none"; destinations: T[]; missingTerms: string[] } {
+	if (!ranked.length) return { kind: "none", destinations: [], missingTerms: [] };
+	const queryTerms = new Set(terraformSectionTerms(query));
+	const pool = conflictingAlternatives.length
+		? conflictingAlternatives
+		: [...ranked.slice(0, 5)].filter(row => row.ranking >= ranked[0]!.ranking * 0.8);
+	const base = pool[0]!;
+	const shared = new Set(terraformSectionTerms(base.schema_path));
+	for (const row of pool)
+		for (const term of [...shared]) if (!terraformSectionTerms(row.schema_path).includes(term)) shared.delete(term);
+	const discriminators = pool.map(row => terraformSectionTerms(row.schema_path).filter(term => !shared.has(term)));
+	const scores = discriminators.map(terms => terms.filter(term => queryTerms.has(term)).length);
+	const best = Math.max(...scores);
+	const supported = pool.filter((_, i) => scores[i] === best && best > 0);
+	if (supported.length === 1) return { kind: "leaf", destinations: supported, missingTerms: [] };
+	const competing = conflictingAlternatives.length ? pool : pool.filter(row => row.ranking >= base.ranking * 0.8);
+	if (competing.length > 1 && (best === 0 || supported.length > 1))
+		return {
+			kind: "choices",
+			destinations: [...competing],
+			missingTerms: [...new Set(discriminators.flat())].filter(term => !queryTerms.has(term)),
+		};
+	return { kind: "leaf", destinations: [ranked[0]!], missingTerms: [] };
+}

@@ -260,3 +260,15 @@ complete response p95134.098ms; answerable18/140 (12.8571%),top5 26.4286%.
 Not qualification. An alternative materialized grouped-ranking SQL preserved all24
 development responses but increased paired p95139.290ms to177.158ms; rejected.
 Window-ranking implementation retained. Accuracy and discovery latency remain open.
+
+## Section selection development and qualification eligibility
+
+Adaptive section selection now preserves indistinguishable sibling branches and
+limits conflict hints to verified choice groups. Development integration reached
+8/14 selected leaves,12/14top5,p95186.878ms. It was rejected and remains bench-only;
+production retrieval keeps deferred-content ranking. No failed prototype shipped.
+
+The independently audited frozen suite is explicitly ineligible for qualification.
+An eligibility sidecar binds its unchanged suite digest and lists11 invalid unique
+labels. Runner rejects qualification use, permits explicit --regression, and rejects
+sidecar hash mismatch. New independently reviewed valid benchmark still required.

@@ -1,5 +1,10 @@
-import {expect,test} from "bun:test";
-import {rankTerraformSections,terraformSectionTerms} from "./section-ranking";
+import { expect, test } from "bun:test";
+import {
+	rankTerraformSections,
+	selectTerraformSections,
+	terraformSectionTerms,
+} from "./section-ranking";
+
 test("section ranking keeps semantic path context and favors the requested direct property", () => {
 	const rows = [
 		{
@@ -36,29 +41,148 @@ test("section ranking keeps semantic path context and favors the requested direc
 });
 
 test("schema and ordinary prose share semantic terms without dropping success", () => {
- expect(terraformSectionTerms("https_auto_cert")).toEqual(expect.arrayContaining(["https","auto","certificate"]));
- expect(terraformSectionTerms("automatically manage TLS certificates")).toEqual(expect.arrayContaining(["auto","certificate"]));
- expect(terraformSectionTerms("login succeeded")).toContain("success");
- expect(terraformSectionTerms("timeouts.create")).toEqual(expect.arrayContaining(["timeout","create"]));
- expect(terraformSectionTerms("initial creation")).toEqual(expect.arrayContaining(["create"]));
+	expect(terraformSectionTerms("https_auto_cert")).toEqual(expect.arrayContaining(["https", "auto", "certificate"]));
+	expect(terraformSectionTerms("automatically manage TLS certificates")).toEqual(
+		expect.arrayContaining(["auto", "certificate"]),
+	);
+	expect(terraformSectionTerms("login succeeded")).toContain("success");
+	expect(terraformSectionTerms("timeouts.create")).toEqual(expect.arrayContaining(["timeout", "create"]));
+	expect(terraformSectionTerms("initial creation")).toEqual(expect.arrayContaining(["create"]));
 });
 test("automatic certificate ownership and response success keep opposite branches separate", () => {
- const certs=[
- {schema_path:"https",description:"Choice for HTTP proxy with bring your own certificates.",path:"manual",anchor:"section"},
- {schema_path:"https_auto_cert",description:"Choice for HTTP proxy with bring your own certificates.",path:"auto",anchor:"section"},
- ];
- expect(rankTerraformSections("automatically provision TLS certificates",certs)[0]?.path).toBe("auto");
- const status=[
- {schema_path:"login.transaction_result.failure_conditions.status",description:"HTTP status.",path:"failure",anchor:"schema-status"},
- {schema_path:"login.transaction_result.success_conditions.status",description:"HTTP status.",path:"success",anchor:"schema-status"},
- ];
- expect(rankTerraformSections("login transaction succeeded HTTP status",status)[0]?.path).toBe("success");
+	const certs = [
+		{
+			schema_path: "https",
+			description: "Choice for HTTP proxy with bring your own certificates.",
+			path: "manual",
+			anchor: "section",
+		},
+		{
+			schema_path: "https_auto_cert",
+			description: "Choice for HTTP proxy with bring your own certificates.",
+			path: "auto",
+			anchor: "section",
+		},
+	];
+	expect(rankTerraformSections("automatically provision TLS certificates", certs)[0]?.path).toBe("auto");
+	const status = [
+		{
+			schema_path: "login.transaction_result.failure_conditions.status",
+			description: "HTTP status.",
+			path: "failure",
+			anchor: "schema-status",
+		},
+		{
+			schema_path: "login.transaction_result.success_conditions.status",
+			description: "HTTP status.",
+			path: "success",
+			anchor: "schema-status",
+		},
+	];
+	expect(rankTerraformSections("login transaction succeeded HTTP status", status)[0]?.path).toBe("success");
 });
 
 test("explicit field request ranks a direct field above its enclosing object", () => {
- const rows=[
- {schema_path:"origin_servers.public_ip",description:"Public IP address.",path:"parent",anchor:"section"},
- {schema_path:"origin_servers.public_ip.ip",description:"IP address.",path:"parent",anchor:"schema-ip"},
- ];
- expect(rankTerraformSections("public IP address",rows)[0]?.anchor).toBe("schema-ip");
+	const rows = [
+		{ schema_path: "origin_servers.public_ip", description: "Public IP address.", path: "parent", anchor: "section" },
+		{ schema_path: "origin_servers.public_ip.ip", description: "IP address.", path: "parent", anchor: "schema-ip" },
+	];
+	expect(rankTerraformSections("public IP address", rows)[0]?.anchor).toBe("schema-ip");
+});
+
+test("adaptive section selection asks only for an undecided branch", () => {
+	const rows = [
+		{
+			schema_path: "https.port",
+			description: "Listen port.",
+			path: "manual",
+			anchor: "schema-port",
+			ranking: 50,
+			coverage: 1,
+		},
+		{
+			schema_path: "https_auto_cert.port",
+			description: "Listen port.",
+			path: "auto",
+			anchor: "schema-port",
+			ranking: 50,
+			coverage: 1,
+		},
+	];
+	expect(selectTerraformSections("HTTPS listen port", rows).kind).toBe("choices");
+	expect(selectTerraformSections("automatic certificate HTTPS listen port", rows).kind).toBe("leaf");
+	const cookies = [
+		{
+			schema_path: "cookies_none.cookie_operator",
+			description: "Cookie operator.",
+			path: "none",
+			anchor: "section",
+			ranking: 40,
+			coverage: 1,
+		},
+		{
+			schema_path: "cookies_and.cookie_operator",
+			description: "Cookie operator.",
+			path: "and",
+			anchor: "section",
+			ranking: 40,
+			coverage: 1,
+		},
+	];
+	expect(selectTerraformSections("cookie operator", cookies).kind).toBe("choices");
+	expect(selectTerraformSections("cookies none cookie operator", cookies).kind).toBe("leaf");
+});
+test("validation conflicts provide exact narrowing destinations", () => {
+	const rows = [
+		{
+			schema_path: "private_key",
+			description: "Private key.",
+			path: "parent",
+			anchor: "section",
+			ranking: 30,
+			coverage: 1,
+		},
+	];
+	const alternatives = [
+		{
+			schema_path: "private_key.clear_secret_info",
+			description: "Clear private key.",
+			path: "clear",
+			anchor: "section",
+			ranking: 20,
+			coverage: 1,
+		},
+		{
+			schema_path: "private_key.blindfold_secret_info",
+			description: "Blindfold private key.",
+			path: "blindfold",
+			anchor: "section",
+			ranking: 20,
+			coverage: 1,
+		},
+	];
+	expect(selectTerraformSections("private key storage", rows, alternatives).kind).toBe("choices");
+	expect(selectTerraformSections("Blindfold private key", rows, alternatives).destinations[0]?.path).toBe("blindfold");
+});
+
+test("weak unrelated candidate cannot replace the strongest supported leaf", () => {
+	const rows = [
+		{
+			schema_path: "https.port",
+			description: "Listen port.",
+			path: "port",
+			anchor: "schema-port",
+			ranking: 80,
+			coverage: 1,
+		},
+		{
+			schema_path: "https.non_default_loadbalancer",
+			description: "Nondefault listener.",
+			path: "other",
+			anchor: "section",
+			ranking: 10,
+			coverage: 0.1,
+		},
+	];
+	expect(selectTerraformSections("HTTPS nonstandard port", rows).destinations[0]?.path).toBe("port");
 });

@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { TerraformDocumentationRepository, terraformHash, type TerraformEmbeddedAssets } from "../../src/internal-urls/terraform-documentation";
 import type { InternalUrl } from "../../src/internal-urls/types";
-import { scoreDestinations,validateQualificationSource } from "./score";
+import { scoreDestinations,validateQualificationSource, validateQualificationEligibility } from "./score";
 
 interface Case {id:string;prompt:string;kind:'answerable'|'ambiguous'|'control';expected:string[];match_document?:boolean;behavior?:string;clarification?:string;depth?:number;}
 const root=import.meta.dir;
@@ -18,6 +18,10 @@ const suiteBytes=await readFile(suiteFile);const suiteName=path.basename(suiteFi
 if(terraformHash(suiteBytes)!==freeze.files[suiteName])throw new Error('Frozen qualification suite hash mismatch');
 const regression=process.argv.includes("--regression");
 validateQualificationSource(freeze,assets.pin,regression);
+const eligibilityPath=path.join(path.dirname(suiteFile),"eligibility.json");
+const eligibility=await Bun.file(eligibilityPath).exists()?JSON.parse(await readFile(eligibilityPath,"utf8")):undefined;
+validateQualificationEligibility(eligibility,terraformHash(suiteBytes),regression);
+
 const suite=JSON.parse(suiteBytes.toString()) as Case[];
 const cache=arg('--cache')??path.join(os.tmpdir(),`xcsh-terraform-qualification-${terraformHash(suiteBytes).slice(0,12)}`);
 const repo=new TerraformDocumentationRepository(assets,cache);

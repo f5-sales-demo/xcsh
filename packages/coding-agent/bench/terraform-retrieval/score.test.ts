@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { scoreDestinations, validateQualificationSource } from "./score";
+import { scoreDestinations, validateQualificationEligibility, validateQualificationSource } from "./score";
 
 const a = "xcsh://terraform-documentation/documentation/resources/a/index.md#section";
 const b = "xcsh://terraform-documentation/documentation/resources/b/index.md#section";
@@ -26,4 +26,12 @@ test("heldout qualification binds provider receipt and exact reviewed index", ()
  expect(()=>validateQualificationSource(freeze,{...pin,index:{sha256:"changed"}},false)).toThrow();
  expect(()=>validateQualificationSource(freeze,{...pin,index:{sha256:"changed"}},true)).not.toThrow();
  expect(()=>validateQualificationSource(freeze,{...pin,source_commit:"changed"},true)).toThrow();
+});
+
+test("a disqualified frozen benchmark may run only as explicit regression", () => {
+ const audit={suite_sha256:"suite",qualification_eligible:false,reason:"Nonunique answerable labels"};
+ expect(()=>validateQualificationEligibility(audit,"suite",false)).toThrow("Nonunique");
+ expect(()=>validateQualificationEligibility(audit,"suite",true)).not.toThrow();
+ expect(()=>validateQualificationEligibility(audit,"different",true)).toThrow("digest");
+ expect(()=>validateQualificationEligibility(undefined,"suite",false)).not.toThrow();
 });
