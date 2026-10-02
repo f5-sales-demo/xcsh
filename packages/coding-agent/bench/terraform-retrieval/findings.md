@@ -526,3 +526,13 @@ HTTP redirection and public IP development cases now cite exact anchors;24prompt
 development14answerable reaches10selected,12top5,p95123.328ms.474URLtests and
 workspacechecks pass. Full ineligible-suite regression remains35/140selected,
 49.2857%top5,discovery149.465ms,complete147.005ms. No qualification claim.
+
+
+## Completed source-only adjudication
+
+Fresh20case adjudication returned SUCCESS:ten ambiguous answerable labels and
+six document-role labels rejected. One single-public-port case accepted,unlike
+the first collision audit. Two parent-block labels accepted using benchmark
+patterns rather than exact-leaf evidence;their precision remains unresolved.
+All three source reviews are retained. Frozen suite remains unchanged/ineligible;
+no reviewed replacement or runtime qualification follows this audit.
