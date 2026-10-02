@@ -27,9 +27,17 @@ export async function runTerraformDocumentationSmoke(): Promise<string> {
 	const search = await read(
 		"xcsh://terraform-documentation/?search=http_loadbalancer&provider_type=resources&provider_name=http_loadbalancer&role=fundamentals&limit=5",
 	);
-	if (!search.includes("Document: documentation/resources/http_loadbalancer/index.md"))
+	if (!search.includes("xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md"))
 		throw new Error("Terraform filtered search smoke failed");
 	trace.push({ event: "terraform-filtered-search", outcome: "top-five" });
+	const facets = await read("xcsh://terraform-documentation/?facet=capability&limit=5");
+	if (Buffer.byteLength(facets) > 4096 || !facets.includes("Facet: capability"))
+		throw new Error("Terraform facet smoke failed");
+	const hint = await read(
+		"xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md?view=hint",
+	);
+	if (Buffer.byteLength(hint) > 4096 || !hint.includes("view=context")) throw new Error("Terraform hint smoke failed");
+	trace.push({ event: "terraform-bounded-hint-facets", outcome: "within-4096-bytes" });
 	const section = await read(
 		"xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port",
 	);

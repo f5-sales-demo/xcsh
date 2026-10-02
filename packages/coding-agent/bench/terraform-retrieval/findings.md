@@ -79,3 +79,10 @@ The certificate case identifies named-object and PEM/secret-reference choices an
 for storage location before drafting. Exact citations and trace/HCL hashes are recorded.
 No Terraform execution occurred, and all cases disclose the unpublished preview.
 These candidate checks require a final immutable-release rerun.
+
+## Offline compiled candidate smoke
+
+Ubuntu `sudo -n unshare --net` compiled-candidate Terraform smoke passes inventory,
+filtered search, bounded hint/facets, explicit anchor, deep leaf and missing-query checks.
+Marker: XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK. This is an unpublished candidate;
+final Homebrew and Ubuntu published-artifact checks remain pending.
