@@ -1118,3 +1118,9 @@ publication jobs retain tag-only gates. This supplies the compiled candidate
 route when local licensed Vertex inputs are absent. Red/green workflow tests
 verify build qualification activation and publication exclusion; four focused
 workflow tests, eleven CI capacity/outcome tests and actionlint pass.
+
+New schema-version-2 frozen qualification requires a digest-matching independent
+review, approval without findings and exact coverage of every heldout case before
+retrieval. Red/green guard tests cover changed receipts, incomplete review and
+non-approval. Eight guard/measurement tests and workspace checks pass. No new
+candidate prompts or retrieval outputs have been inspected during authoring.

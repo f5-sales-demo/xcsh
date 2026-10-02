@@ -12,6 +12,7 @@ import { measureCompleteRetrieval } from "./complete-measurement";
 import {
 	scoreDestinations,
 	type TerraformPreviewEvidence,
+	validateIndependentFreeze,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -59,6 +60,17 @@ const eligibility = (await Bun.file(eligibilityPath).exists())
 validateQualificationEligibility(eligibility, terraformHash(suiteBytes), regression);
 
 const suite = JSON.parse(suiteBytes.toString()) as Case[];
+if (freeze.schema_version === 2) {
+	const reviewBytes = await readFile(path.join(path.dirname(suiteFile), "independent-review.json"));
+	const allCases = JSON.parse(await readFile(path.join(path.dirname(suiteFile), "heldout.json"), "utf8")) as Case[];
+	validateIndependentFreeze(
+		freeze,
+		JSON.parse(reviewBytes.toString()),
+		terraformHash(reviewBytes),
+		allCases.map(c => c.id),
+	);
+}
+
 const cache =
 	arg("--cache") ?? path.join(os.tmpdir(), `xcsh-terraform-qualification-${terraformHash(suiteBytes).slice(0, 12)}`);
 const repo = new TerraformDocumentationRepository(assets, cache);
