@@ -150,3 +150,28 @@ reads rather than accepting a parent-file read. Automated trace accuracy is
 explicitly provisional; manual clarification and HCL review remain required,
 and qualification_passed remains false until combined acceptance evidence exists.
 Python syntax, Ruff and formatting checks pass.
+
+## Independently reviewed published-source first run
+
+Provider v12.2.0, immutable documentation-v12.2.0, source b53aad4062cc,
+receipt f735dbfcb84536210bd396ec0d54477e662e005ad0b37b9e35f962fce5e79693.
+Suite6deb592af8737b3d91085b5e28c939d8d928f5eb5243ae833d5ee754bb348d6a;
+140/40/20,56 depth8+, fresh source-only author and verifier approval.
+
+Untouched first run FAILED:12/140 answerable (8.5714%), top5 21.4286%;
+0/40 complete ambiguity choices,6/6 unsupported fields,14 model controls
+unscored. Ubuntu discovery p95774.967ms, Mac1132.098ms; complete-response
+p95677.771/999.056ms. Rank/anchor/results and response bytes match exactly.
+Discovery<=4065bytes, context<=6472bytes. Budgets pass; accuracy and latency fail.
+
+Early failures show role confusion, exact resource context lost to generic schema
+words, BM25 selecting incomplete branch choices, and broad-query scan latency.
+The approved suite remains unchanged. No repaired run will be called held-out
+qualification. Consumer PR #4687 remains draft under the retained >=95% gate.
+
+Published snapshot regressions:457 internal-URL tests pass. All18,954 document
+hint/context views pass (37,908 responses), max4084/15155bytes.
+Compiled candidate Terraform smoke passes with network disabled on Ubuntu and Mac.
+These are candidate artifact checks, not released Homebrew/Ubuntu acceptance.
+Metadata-v1 snapshot asset digests match exact-tag candidate; Linux repeated index
+builds match; Mac logical tables and FTS hashes match but SQLite storage bytes differ.

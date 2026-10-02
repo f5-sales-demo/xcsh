@@ -1,0 +1,4881 @@
+{
+  "schema_version": 1,
+  "source_provider_version": "v12.2.0",
+  "source_commit": "b53aad4062cce8c72c387720a614043232d129b9",
+  "index": {
+    "sha256": "36bc4c943f824131b4967ef8ddc194e6eef7a59b2bc6b8278231f1d4e89e7bdd",
+    "size_bytes": 902631424,
+    "gzip_sha256": "7e667dffdd457cde10fdcdf72f90aedf99c37bc298378cd7c55a11f6f5e4f072",
+    "gzip_size_bytes": 78715948
+  },
+  "suite_sha256": "6deb592af8737b3d91085b5e28c939d8d928f5eb5243ae833d5ee754bb348d6a",
+  "frozen_source_provider_version": "v12.2.0",
+  "platform": "linux",
+  "arch": "x64",
+  "materialization_ms": 3186.439047,
+  "warm_p95_ms": 677.7706140000082,
+  "discovery_p95_ms": 774.96695799999,
+  "context_p95_ms": 0.11809099998208694,
+  "route_p95_ms": 774.96695799999,
+  "warm_measurement_count": 1215,
+  "discovery_measurement_count": 950,
+  "context_measurement_count": 265,
+  "repetitions": 5,
+  "model_network_ms": null,
+  "model_uat_required": true,
+  "max_discovery_bytes": 4065,
+  "max_context_bytes": 6472,
+  "total_response_bytes": 2030625,
+  "tool_calls": 1215,
+  "index_file_bytes": 78715948,
+  "answerable_accuracy": 0.08571428571428572,
+  "answerable_top5": 0.21428571428571427,
+  "scored_accuracy": 0.0967741935483871,
+  "overall_accuracy": null,
+  "qualification_passed": false,
+  "results": [
+    {
+      "id": "ans-deep-001",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+      ],
+      "times_ms": [
+        19.043388999999934,
+        13.013554000000113,
+        12.182017999999971,
+        12.153516000000309,
+        11.983046999999715
+      ],
+      "response_bytes": 1442,
+      "approx_response_tokens": 361,
+      "leaf_read_bytes": 6472,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-002",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/headers/item/index.md#schema-bot_defense--policy--protected_app_endpoints--headers--item--regex_values",
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/headers/item/index.md#schema-bot_defense--policy--protected_app_endpoints--headers--item--regex_values",
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/bot_defense/policy/mobile_sdk_config/mobile_identifier/headers/item/index.md#schema-bot_defense--policy--mobile_sdk_config--mobile_identifier--headers--item--regex_values",
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/mobile_sdk_config/mobile_identifier/headers/item/index.md#schema-bot_defense--policy--mobile_sdk_config--mobile_identifier--headers--item--regex_values",
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--regex_values"
+      ],
+      "times_ms": [
+        458.8977570000002,
+        457.90692299999955,
+        461.5949690000007,
+        461.5330469999999,
+        504.5810849999998
+      ],
+      "response_bytes": 3509,
+      "approx_response_tokens": 878,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-003",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name"
+      ],
+      "times_ms": [
+        13.996026000000711,
+        13.11340999999993,
+        13.515637999999853,
+        13.61484500000006,
+        13.61830000000009
+      ],
+      "response_bytes": 1414,
+      "approx_response_tokens": 354,
+      "leaf_read_bytes": 2524,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-004",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/protected_application/index.md#xcsh_protected_application",
+        "xcsh://terraform-documentation/documentation/resources/protected_application/index.md#xcsh_protected_application"
+      ],
+      "times_ms": [
+        91.71766599999955,
+        99.73312100000021,
+        95.66577199999938,
+        90.4957400000003,
+        92.50721799999974
+      ],
+      "response_bytes": 1393,
+      "approx_response_tokens": 349,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-005",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#xcsh_http_loadbalancer"
+      ],
+      "times_ms": [
+        97.10757600000034,
+        99.12692500000048,
+        104.03349499999968,
+        100.0938500000002,
+        99.77914200000032
+      ],
+      "response_bytes": 1403,
+      "approx_response_tokens": 351,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-006",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#xcsh_http_loadbalancer"
+      ],
+      "times_ms": [
+        92.08542800000032,
+        108.38979500000005,
+        103.27414799999951,
+        97.21544899999935,
+        99.52445400000033
+      ],
+      "response_bytes": 1355,
+      "approx_response_tokens": 339,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-007",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#section"
+      ],
+      "times_ms": [
+        13.337054999999964,
+        13.41342700000041,
+        13.578596000000289,
+        14.524844000000485,
+        14.008381999999983
+      ],
+      "response_bytes": 2542,
+      "approx_response_tokens": 636,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-008",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#xcsh_http_loadbalancer"
+      ],
+      "times_ms": [
+        97.28644199999962,
+        93.25724300000002,
+        99.57236399999965,
+        93.46493199999986,
+        90.77705100000003
+      ],
+      "response_bytes": 1361,
+      "approx_response_tokens": 341,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-009",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 2,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/index.md#section"
+      ],
+      "times_ms": [
+        16.280832999999802,
+        16.338192999999592,
+        16.79659300000003,
+        16.203126999999768,
+        17.59641399999964
+      ],
+      "response_bytes": 2805,
+      "approx_response_tokens": 702,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-010",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/index.md#section"
+      ],
+      "times_ms": [
+        15.800143999999818,
+        16.738405999999486,
+        17.321514999999636,
+        16.342486999999892,
+        15.51383100000021
+      ],
+      "response_bytes": 2731,
+      "approx_response_tokens": 683,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-011",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/index.md#section"
+      ],
+      "times_ms": [
+        537.9227299999993,
+        528.6520859999982,
+        541.3088060000009,
+        524.1838129999996,
+        515.8309070000014
+      ],
+      "response_bytes": 4065,
+      "approx_response_tokens": 1017,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-012",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_and/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_and/cookie_match_v2/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/index.md#section"
+      ],
+      "times_ms": [
+        334.4249520000012,
+        374.358483,
+        349.28374299999996,
+        359.17733000000044,
+        334.9115460000012
+      ],
+      "response_bytes": 3425,
+      "approx_response_tokens": 857,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-013",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/index.md#section"
+      ],
+      "times_ms": [
+        13.45123699999931,
+        12.867566000000807,
+        12.54218199999923,
+        12.034440000001268,
+        12.62679399999979
+      ],
+      "response_bytes": 1246,
+      "approx_response_tokens": 312,
+      "leaf_read_bytes": 748,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-014",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/index.md#section"
+      ],
+      "times_ms": [
+        88.87585399999989,
+        86.66727399999945,
+        86.81909500000074,
+        87.65682600000036,
+        87.37429899999916
+      ],
+      "response_bytes": 1226,
+      "approx_response_tokens": 307,
+      "leaf_read_bytes": 748,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-015",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        88.58750200000031,
+        88.12696700000015,
+        87.4038789999995,
+        89.43140299999868,
+        88.31737799999974
+      ],
+      "response_bytes": 1373,
+      "approx_response_tokens": 344,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-016",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 3,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--host_rewrite",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--host_rewrite",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/disable_host_rewrite/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/disable_host_rewrite/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--host_rewrite"
+      ],
+      "times_ms": [
+        462.8853530000015,
+        473.6656010000006,
+        461.8982100000012,
+        457.85887900000125,
+        468.4617760000001
+      ],
+      "response_bytes": 3839,
+      "approx_response_tokens": 960,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-017",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        87.65628200000174,
+        86.98220600000059,
+        88.35435900000084,
+        89.5817960000004,
+        86.40525700000035
+      ],
+      "response_bytes": 1271,
+      "approx_response_tokens": 318,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-018",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        87.72298299999966,
+        88.27646800000002,
+        88.14653799999905,
+        88.05893500000093,
+        87.12480099999993
+      ],
+      "response_bytes": 1327,
+      "approx_response_tokens": 332,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-019",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        87.86779200000092,
+        88.9178009999996,
+        88.2558969999991,
+        87.88136399999712,
+        90.02812900000208
+      ],
+      "response_bytes": 1265,
+      "approx_response_tokens": 317,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-020",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix"
+      ],
+      "times_ms": [
+        13.295122000003175,
+        13.031267999998818,
+        13.338479000001826,
+        13.204180000000633,
+        13.2413489999999
+      ],
+      "response_bytes": 1509,
+      "approx_response_tokens": 378,
+      "leaf_read_bytes": 2065,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-021",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        90.88799800000197,
+        92.52256200000193,
+        93.83323699999892,
+        95.16023100000166,
+        91.53754099999787
+      ],
+      "response_bytes": 1293,
+      "approx_response_tokens": 324,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-022",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/index.md#section"
+      ],
+      "times_ms": [
+        16.080213000001095,
+        16.184564999999566,
+        16.117362000000867,
+        15.833547000002,
+        15.984960999998293
+      ],
+      "response_bytes": 2280,
+      "approx_response_tokens": 570,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-023",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        91.78770599999916,
+        91.80160199999955,
+        117.54504500000257,
+        98.19294799999989,
+        95.9768269999986
+      ],
+      "response_bytes": 1281,
+      "approx_response_tokens": 321,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-024",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        102.82529100000102,
+        106.75975299999845,
+        92.97420000000056,
+        92.17117699999653,
+        93.37822700000106
+      ],
+      "response_bytes": 1259,
+      "approx_response_tokens": 315,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-025",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        89.6200110000027,
+        90.61411500000031,
+        88.60683599999902,
+        90.63358599999992,
+        90.03597699999955
+      ],
+      "response_bytes": 1303,
+      "approx_response_tokens": 326,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-026",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/index.md#xcsh_workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/index.md#xcsh_workload"
+      ],
+      "times_ms": [
+        87.55247600000075,
+        87.59563499999786,
+        87.41958200000226,
+        87.42881599999964,
+        88.40385199999946
+      ],
+      "response_bytes": 1299,
+      "approx_response_tokens": 325,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-027",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/auto_host_rewrite/index.md#section"
+      ],
+      "times_ms": [
+        7.957343000001856,
+        7.923856999997952,
+        7.814424000000145,
+        7.951404999999795,
+        7.794974000000366
+      ],
+      "response_bytes": 1275,
+      "approx_response_tokens": 319,
+      "leaf_read_bytes": 952,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-028",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/incoming_port/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--redirect_route--incoming_port--port"
+      ],
+      "times_ms": [
+        9.784068000000843,
+        9.668300000001182,
+        9.64296800000011,
+        9.604760999998689,
+        9.710147000001598
+      ],
+      "response_bytes": 1358,
+      "approx_response_tokens": 340,
+      "leaf_read_bytes": 1771,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-029",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/equinix/index.md#section"
+      ],
+      "times_ms": [
+        7.340361999999004,
+        7.269327999998495,
+        7.2050989999988815,
+        7.2104269999981625,
+        7.212806999999884
+      ],
+      "response_bytes": 1094,
+      "approx_response_tokens": 274,
+      "leaf_read_bytes": 889,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-030",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        9.865202999997564,
+        9.742168000000675,
+        9.892612999999983,
+        10.046385000001465,
+        10.111875999999029
+      ],
+      "response_bytes": 671,
+      "approx_response_tokens": 168,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-031",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#section"
+      ],
+      "times_ms": [
+        8.961422000000312,
+        9.203676000000996,
+        8.96380599999975,
+        9.415562999998656,
+        9.06166200000007
+      ],
+      "response_bytes": 1237,
+      "approx_response_tokens": 310,
+      "leaf_read_bytes": 1548,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-032",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        7.530141999999614,
+        7.370300999999017,
+        7.563568999998097,
+        7.484302000000753,
+        7.511630000000878
+      ],
+      "response_bytes": 621,
+      "approx_response_tokens": 156,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-033",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/first_address/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/first_address/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/index.md#schema-equinix--not_managed--node_list--interface_list--ipv6_auto_config--router--dns_config--local_dns--configured_address",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/local_dns/last_address/index.md#section"
+      ],
+      "times_ms": [
+        810.0118570000013,
+        831.9596779999993,
+        842.6115800000007,
+        842.4333320000005,
+        857.3528590000024
+      ],
+      "response_bytes": 3921,
+      "approx_response_tokens": 981,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-034",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/aws/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/software_settings/waf_signatures/automatic/index.md#section"
+      ],
+      "times_ms": [
+        9.500796000000264,
+        9.298728000001574,
+        9.572453000000678,
+        9.072407999999996,
+        9.058655000000726
+      ],
+      "response_bytes": 1744,
+      "approx_response_tokens": 436,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-035",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/index.md#xcsh_securemesh_site_v2",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/index.md#xcsh_securemesh_site_v2"
+      ],
+      "times_ms": [
+        87.54802199999904,
+        80.7021249999998,
+        95.77175599999828,
+        81.93952400000126,
+        81.87399100000039
+      ],
+      "response_bytes": 1349,
+      "approx_response_tokens": 338,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-036",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        11.908353999999235,
+        11.56638600000224,
+        11.601274000000558,
+        11.76498900000297,
+        11.531906000000163
+      ],
+      "response_bytes": 597,
+      "approx_response_tokens": 150,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-037",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-equinix--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-equinix--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings"
+      ],
+      "times_ms": [
+        522.8649269999987,
+        489.84022600000026,
+        502.8756699999976,
+        546.7541150000034,
+        516.679490999999
+      ],
+      "response_bytes": 3478,
+      "approx_response_tokens": 870,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-038",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        18.891797000000224,
+        17.175018000001728,
+        16.79462500000227,
+        16.870881999999256,
+        16.61830799999734
+      ],
+      "response_bytes": 627,
+      "approx_response_tokens": 157,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-039",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_end/index.md#section"
+      ],
+      "times_ms": [
+        13.155446000000666,
+        9.27007500000036,
+        9.295532000000094,
+        9.480486000000383,
+        9.485473000000638
+      ],
+      "response_bytes": 1197,
+      "approx_response_tokens": 300,
+      "leaf_read_bytes": 931,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-040",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section"
+      ],
+      "times_ms": [
+        8.04279200000019,
+        8.108233999999356,
+        8.08802199999991,
+        8.195599999999104,
+        8.138366999999562
+      ],
+      "response_bytes": 1255,
+      "approx_response_tokens": 314,
+      "leaf_read_bytes": 1041,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-041",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/index.md#xcsh_aws_tgw_site",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/index.md#xcsh_aws_tgw_site"
+      ],
+      "times_ms": [
+        89.92678299999898,
+        90.73032899999816,
+        90.51331100000243,
+        91.06703000000198,
+        89.40041199999905
+      ],
+      "response_bytes": 1297,
+      "approx_response_tokens": 325,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-042",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 2,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/index.md#section"
+      ],
+      "times_ms": [
+        15.244596000000456,
+        15.084328000000824,
+        14.94126099999994,
+        15.48903799999971,
+        15.088465000000724
+      ],
+      "response_bytes": 3695,
+      "approx_response_tokens": 924,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-043",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 2,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/index.md#section"
+      ],
+      "times_ms": [
+        11.893503999999666,
+        11.531930000001012,
+        11.552131000000372,
+        11.718166000002384,
+        11.6023380000006
+      ],
+      "response_bytes": 3698,
+      "approx_response_tokens": 925,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-044",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#section"
+      ],
+      "times_ms": [
+        5.436899999996967,
+        5.320589999999356,
+        5.244613999999274,
+        5.206739000001107,
+        5.206887000000279
+      ],
+      "response_bytes": 1169,
+      "approx_response_tokens": 293,
+      "leaf_read_bytes": 912,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-045",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section"
+      ],
+      "times_ms": [
+        5.104780000001483,
+        5.097922000000835,
+        5.056196999998065,
+        5.084962000000814,
+        5.17612999999983
+      ],
+      "response_bytes": 1175,
+      "approx_response_tokens": 294,
+      "leaf_read_bytes": 962,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-046",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section"
+      ],
+      "times_ms": [
+        7.142688000003545,
+        7.313655000001745,
+        7.343434999998863,
+        7.193289000002551,
+        7.196745999997802
+      ],
+      "response_bytes": 1297,
+      "approx_response_tokens": 325,
+      "leaf_read_bytes": 1057,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-047",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_vpc_site/index.md#xcsh_aws_vpc_site",
+        "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/index.md#xcsh_aws_vpc_site"
+      ],
+      "times_ms": [
+        84.65690800000084,
+        84.51868100000138,
+        84.22472100000232,
+        84.61013200000161,
+        85.77336999999898
+      ],
+      "response_bytes": 1293,
+      "approx_response_tokens": 324,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-048",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section"
+      ],
+      "times_ms": [
+        5.944532000001345,
+        6.077800999999454,
+        5.958364999998594,
+        5.859959999997955,
+        5.76187199999913
+      ],
+      "response_bytes": 1781,
+      "approx_response_tokens": 446,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-049",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/azure_vnet_site/index.md#xcsh_azure_vnet_site",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/index.md#xcsh_azure_vnet_site"
+      ],
+      "times_ms": [
+        87.52452800000174,
+        87.1767749999999,
+        90.232301,
+        86.87351299999864,
+        88.17016499999954
+      ],
+      "response_bytes": 1365,
+      "approx_response_tokens": 342,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-050",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/gcp_vpc_site/index.md#xcsh_gcp_vpc_site",
+        "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/index.md#xcsh_gcp_vpc_site"
+      ],
+      "times_ms": [
+        84.96753399999943,
+        84.86261699999886,
+        84.81028700000024,
+        85.09974499999953,
+        91.16406600000118
+      ],
+      "response_bytes": 1293,
+      "approx_response_tokens": 324,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-051",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/index.md#section"
+      ],
+      "times_ms": [
+        6.028761999998096,
+        5.840467000001809,
+        5.86792499999865,
+        5.7042120000005525,
+        5.786082999999053
+      ],
+      "response_bytes": 2745,
+      "approx_response_tokens": 687,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-052",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#section"
+      ],
+      "times_ms": [
+        5.41038899999694,
+        5.627377999997407,
+        5.253662999999506,
+        5.317417000002024,
+        5.467369000001781
+      ],
+      "response_bytes": 1769,
+      "approx_response_tokens": 443,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-053",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/fleet/index.md#xcsh_fleet",
+        "xcsh://terraform-documentation/documentation/resources/fleet/index.md#xcsh_fleet"
+      ],
+      "times_ms": [
+        85.41005199999927,
+        84.17606999999771,
+        84.6292910000011,
+        88.1637120000014,
+        85.83736700000009
+      ],
+      "response_bytes": 1279,
+      "approx_response_tokens": 320,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-054",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/index.md#xcsh_voltstack_site",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/index.md#xcsh_voltstack_site"
+      ],
+      "times_ms": [
+        95.93382999999812,
+        97.81835299999875,
+        99.74059300000226,
+        94.99691000000166,
+        90.76319800000056
+      ],
+      "response_bytes": 1371,
+      "approx_response_tokens": 343,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-055",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 2,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#section"
+      ],
+      "times_ms": [
+        5.84595199999967,
+        5.766520000001037,
+        5.716022000000521,
+        5.723791000000347,
+        5.7419539999973495
+      ],
+      "response_bytes": 1907,
+      "approx_response_tokens": 477,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-deep-056",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/index.md#xcsh_voltstack_site",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/index.md#xcsh_voltstack_site"
+      ],
+      "times_ms": [
+        89.7431859999997,
+        90.81744500000059,
+        91.0779650000004,
+        92.47266200000013,
+        89.88952400000198
+      ],
+      "response_bytes": 1321,
+      "approx_response_tokens": 331,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-001",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#option-1-api-token-authentication",
+        "xcsh://terraform-documentation/documentation/resources/cminstance/properties/api_token/clear_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/api_testing/properties/domains/credentials/bearer_token/token/clear_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/api_testing/domains/credentials/bearer_token/token/clear_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/cminstance/properties/api_token/clear_secret_info/index.md#schema-api_token--clear_secret_info--provider_ref"
+      ],
+      "times_ms": [
+        798.5027880000016,
+        811.6777409999995,
+        789.926825999999,
+        806.8218269999998,
+        827.3515560000014
+      ],
+      "response_bytes": 3407,
+      "approx_response_tokens": 852,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-002",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/authentication/index.md#xcsh_authentication",
+        "xcsh://terraform-documentation/documentation/resources/authentication/index.md#xcsh_authentication"
+      ],
+      "times_ms": [
+        90.28139399999782,
+        87.40769400000136,
+        86.9398000000001,
+        87.35421399999905,
+        87.15943400000106
+      ],
+      "response_bytes": 1349,
+      "approx_response_tokens": 338,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-003",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#option-3-pem-certificate-authentication"
+      ],
+      "times_ms": [
+        5.849120999999286,
+        5.787030999999843,
+        5.956659000003128,
+        6.119081000004371,
+        5.856746000004932
+      ],
+      "response_bytes": 999,
+      "approx_response_tokens": 250,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-004",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        14.148670999995375,
+        13.344152000005124,
+        13.423531000000366,
+        13.087651000001642,
+        13.069013000000268
+      ],
+      "response_bytes": 635,
+      "approx_response_tokens": 159,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-005",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 3,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_purge_command/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/cdn_purge_command/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/cdn_purge_command/properties/index.md#schema-id",
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_purge_command/properties/index.md#schema-id"
+      ],
+      "times_ms": [
+        362.53742199999397,
+        362.4563649999982,
+        367.22127499999624,
+        354.48525399999926,
+        360.2093620000014
+      ],
+      "response_bytes": 2364,
+      "approx_response_tokens": 591,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-006",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 4,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#getting-started",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/dns_lb_pool/index.md#xcsh_dns_lb_pool"
+      ],
+      "times_ms": [
+        816.1235420000012,
+        808.8537549999965,
+        784.0593410000001,
+        791.1729500000001,
+        818.0489180000004
+      ],
+      "response_bytes": 2236,
+      "approx_response_tokens": 559,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-007",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/enhanced_firewall_policy/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/enhanced_firewall_policy/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/network_firewall/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#xcsh-provider"
+      ],
+      "times_ms": [
+        464.20109899999807,
+        464.4924699999974,
+        462.14823199999955,
+        481.88891399999557,
+        462.51170000000275
+      ],
+      "response_bytes": 2322,
+      "approx_response_tokens": 581,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-008",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md#import"
+      ],
+      "times_ms": [
+        51.66030000000319,
+        49.9904880000031,
+        51.09441399999923,
+        51.160213999995904,
+        59.086224999999104
+      ],
+      "response_bytes": 891,
+      "approx_response_tokens": 223,
+      "leaf_read_bytes": 626,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-009",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/lifecycle/import/index.md#import"
+      ],
+      "times_ms": [
+        54.0000280000022,
+        55.86813199999597,
+        52.81092800000624,
+        51.812755999999354,
+        55.8553299999985
+      ],
+      "response_bytes": 919,
+      "approx_response_tokens": 230,
+      "leaf_read_bytes": 647,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-010",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/rate_limiter/lifecycle/import/index.md#import"
+      ],
+      "times_ms": [
+        63.36241799999698,
+        63.661927000001015,
+        63.34124899999733,
+        55.351206999999704,
+        61.53193900000042
+      ],
+      "response_bytes": 919,
+      "approx_response_tokens": 230,
+      "leaf_read_bytes": 631,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-011",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 2,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_purge_command/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/cdn_purge_command/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp/index.md#section"
+      ],
+      "times_ms": [
+        436.37637099999847,
+        390.62059800000134,
+        358.9888590000046,
+        367.383256000001,
+        371.2510469999979
+      ],
+      "response_bytes": 2673,
+      "approx_response_tokens": 669,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-012",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/index.md#xcsh_dns_zone",
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/examples/index.md#examples",
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/properties/index.md#property-reference"
+      ],
+      "times_ms": [
+        82.99017199999798,
+        82.10874299999705,
+        82.8812889999972,
+        81.72859400000016,
+        81.69289099999878
+      ],
+      "response_bytes": 2167,
+      "approx_response_tokens": 542,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-013",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 5,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/service_policy/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/service_policy_rule/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/volumes/host_path/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/volumes/host_path/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/service_policy/lifecycle/import/index.md#import"
+      ],
+      "times_ms": [
+        784.2793099999981,
+        821.8687280000013,
+        818.9918719999987,
+        826.6497690000033,
+        818.5392030000003
+      ],
+      "response_bytes": 2602,
+      "approx_response_tokens": 651,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-014",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/alert_policy/lifecycle/import/index.md#import"
+      ],
+      "times_ms": [
+        53.925523999998404,
+        52.744654999994964,
+        51.20557700000063,
+        51.52586899999733,
+        57.048084000001836
+      ],
+      "response_bytes": 921,
+      "approx_response_tokens": 231,
+      "leaf_read_bytes": 631,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-015",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#xcsh_http_loadbalancer"
+      ],
+      "times_ms": [
+        105.00977600000624,
+        97.64666299999953,
+        96.61316100000113,
+        97.4207480000041,
+        98.8053660000005
+      ],
+      "response_bytes": 1375,
+      "approx_response_tokens": 344,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-016",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/lifecycle/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        57.31432200000563,
+        56.96415100000013,
+        55.961309999998775,
+        53.61121699999785,
+        54.88986699999805
+      ],
+      "response_bytes": 1025,
+      "approx_response_tokens": 257,
+      "leaf_read_bytes": 717,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-017",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/service_policy/lifecycle/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        56.79708499999833,
+        54.117080000003625,
+        51.47260699999606,
+        52.425993999997445,
+        52.2591820000016
+      ],
+      "response_bytes": 1035,
+      "approx_response_tokens": 259,
+      "leaf_read_bytes": 732,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-018",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/timeouts/index.md#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/index.md#schema-cookie_params--cookie_expiry",
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/index.md#schema-cookie_params--cookie_expiry",
+        "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/index.md#schema-authentication--cookie_params--cookie_expiry",
+        "xcsh://terraform-documentation/documentation/resources/virtual_host/properties/authentication/cookie_params/index.md#schema-authentication--cookie_params--cookie_expiry"
+      ],
+      "times_ms": [
+        811.9983429999993,
+        820.9886160000024,
+        824.634868000001,
+        813.1880299999975,
+        827.7266450000025
+      ],
+      "response_bytes": 2670,
+      "approx_response_tokens": 668,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-019",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/lifecycle/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        52.734551000001375,
+        52.42793999999412,
+        52.3447709999964,
+        52.80818700000236,
+        53.991691999995965
+      ],
+      "response_bytes": 1003,
+      "approx_response_tokens": 251,
+      "leaf_read_bytes": 742,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-020",
+      "kind": "answerable",
+      "passed": true,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/healthcheck/lifecycle/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        51.68929200000275,
+        50.796431000002485,
+        51.904523999997764,
+        50.21082000000024,
+        49.718510999999125
+      ],
+      "response_bytes": 985,
+      "approx_response_tokens": 247,
+      "leaf_read_bytes": 717,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-021",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/lifecycle/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        50.88161299999774,
+        51.12933599999815,
+        51.37014199999976,
+        52.640239999993355,
+        50.95724699999846
+      ],
+      "response_bytes": 1009,
+      "approx_response_tokens": 253,
+      "leaf_read_bytes": 702,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-022",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/lifecycle/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        50.31291799999599,
+        52.10596000000078,
+        50.78629699999874,
+        50.40461199999845,
+        50.1668920000011
+      ],
+      "response_bytes": 985,
+      "approx_response_tokens": 247,
+      "leaf_read_bytes": 722,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-023",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/index.md#xcsh_dns_zone_add_cryptokey",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/examples/index.md#examples",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/examples/action/index.md#action"
+      ],
+      "times_ms": [
+        41.682754000001296,
+        41.43659699999989,
+        42.03069400000095,
+        42.396043000000645,
+        43.44743700000254
+      ],
+      "response_bytes": 2378,
+      "approx_response_tokens": 595,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-024",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/index.md#xcsh_dns_zone_add_cryptokey",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_delete_cryptokey/index.md#xcsh_dns_zone_delete_cryptokey",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_edit_cryptokey/index.md#xcsh_dns_zone_edit_cryptokey",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_delete_cryptokey/examples/index.md#complete-configurations"
+      ],
+      "times_ms": [
+        42.66175099999964,
+        34.08092000000033,
+        33.24118399999861,
+        36.486439000000246,
+        35.67779999999766
+      ],
+      "response_bytes": 2346,
+      "approx_response_tokens": 587,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-025",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        69.84759599999961,
+        72.45336800000223,
+        64.57230200000049,
+        67.34315300000162,
+        74.31167900000582
+      ],
+      "response_bytes": 535,
+      "approx_response_tokens": 134,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-026",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/index.md#xcsh_access_active_session_terminate",
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/index.md#xcsh_access_active_sessions_terminate",
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md#property-reference"
+      ],
+      "times_ms": [
+        72.24149799999577,
+        72.29139399999985,
+        62.62266799999634,
+        59.8660499999969,
+        55.83846199999971
+      ],
+      "response_bytes": 2424,
+      "approx_response_tokens": 606,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-027",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        7.823582999997598,
+        7.785775999996986,
+        7.839253999998618,
+        6.70937799999956,
+        7.4823209999958635
+      ],
+      "response_bytes": 549,
+      "approx_response_tokens": 138,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-028",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_subscribe/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_unsubscribe/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_subscribe/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_unsubscribe/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_subscribe/index.md#xcsh_device_intelligence_subscribe"
+      ],
+      "times_ms": [
+        43.435044999998354,
+        42.92499400000088,
+        39.23473099999683,
+        37.699210999999195,
+        37.64952800000174
+      ],
+      "response_bytes": 2401,
+      "approx_response_tokens": 601,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-029",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        8.141995000005409,
+        8.141458999998576,
+        8.145385000003444,
+        8.077813999996579,
+        8.095486999998684
+      ],
+      "response_bytes": 519,
+      "approx_response_tokens": 130,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-030",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/index.md#xcsh_infraprotect_synchronize_configuration",
+        "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/examples/action/index.md#action"
+      ],
+      "times_ms": [
+        22.496673000001465,
+        22.46362599999702,
+        22.6558589999986,
+        22.54890699999669,
+        22.20418399999471
+      ],
+      "response_bytes": 2499,
+      "approx_response_tokens": 625,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-031",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/actions/site_signatures_update/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/site_upgrade_os/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/site_upgrade_sw/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_subscribe/lifecycle/index.md#lifecycle",
+        "xcsh://terraform-documentation/documentation/actions/device_intelligence_unsubscribe/lifecycle/index.md#lifecycle"
+      ],
+      "times_ms": [
+        121.82848499999818,
+        130.37103300000308,
+        118.24819600000046,
+        124.30477200000314,
+        130.141518000004
+      ],
+      "response_bytes": 2281,
+      "approx_response_tokens": 571,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-032",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        59.243389999996,
+        78.63487599999644,
+        53.0475030000016,
+        53.542201999996905,
+        54.69572600000538
+      ],
+      "response_bytes": 527,
+      "approx_response_tokens": 132,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-033",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/examples/index.md#complete-configurations",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/examples/ephemeral/index.md#ephemeral",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/lifecycle/index.md#lifecycle"
+      ],
+      "times_ms": [
+        156.97230400000262,
+        157.35678099999495,
+        158.29758199999924,
+        157.15684699999838,
+        174.43342899999698
+      ],
+      "response_bytes": 2546,
+      "approx_response_tokens": 637,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-034",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md#schema-token"
+      ],
+      "times_ms": [
+        85.26189799999702,
+        86.3162169999996,
+        93.674377000003,
+        93.07541800000035,
+        83.33230200000253
+      ],
+      "response_bytes": 962,
+      "approx_response_tokens": 241,
+      "leaf_read_bytes": 654,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-035",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md#extensions",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/index.md#schema-site",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/examples/ephemeral/index.md#ephemeral",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/examples/index.md#complete-configurations"
+      ],
+      "times_ms": [
+        128.7248660000041,
+        112.72137500000099,
+        111.95088899999973,
+        112.96766500000376,
+        111.77133999999933
+      ],
+      "response_bytes": 2462,
+      "approx_response_tokens": 616,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-036",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md#extensions",
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/index.md#schema-data"
+      ],
+      "times_ms": [
+        21.528386999998474,
+        21.19410799999605,
+        21.08653300000151,
+        20.514913999999408,
+        20.619173999999475
+      ],
+      "response_bytes": 1328,
+      "approx_response_tokens": 332,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-037",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/default_pool/use_tls/use_server_verification/index.md#schema-default_pool--use_tls--use_server_verification--trusted_ca_url",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/default_pool/use_tls/use_server_verification/index.md#schema-default_pool--use_tls--use_server_verification--trusted_ca_url"
+      ],
+      "times_ms": [
+        14.009726000003866,
+        13.899015000002692,
+        13.748019999999087,
+        13.76548300000286,
+        13.420995000000403
+      ],
+      "response_bytes": 1637,
+      "approx_response_tokens": 410,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-038",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/https/index.md#schema-https--port",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/https_auto_cert/index.md#schema-https_auto_cert--port",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md#schema-https_auto_cert--port",
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/https/index.md#schema-service--advertise_options--advertise_custom--ports--http_loadbalancer--https--port"
+      ],
+      "times_ms": [
+        570.9693269999989,
+        576.173192000002,
+        559.7844729999997,
+        563.1727489999976,
+        571.0200259999983
+      ],
+      "response_bytes": 2614,
+      "approx_response_tokens": 654,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-039",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_config/custom_security/index.md#schema-https--tls_parameters--tls_config--custom_security--cipher_suites",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https_auto_cert/tls_config/custom_security/index.md#schema-https_auto_cert--tls_config--custom_security--cipher_suites",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/https/tls_parameters/tls_config/custom_security/index.md#schema-https--tls_parameters--tls_config--custom_security--cipher_suites",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/https_auto_cert/tls_config/custom_security/index.md#schema-https_auto_cert--tls_config--custom_security--cipher_suites",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_cert_params/tls_config/custom_security/index.md#schema-https--tls_cert_params--tls_config--custom_security--cipher_suites"
+      ],
+      "times_ms": [
+        811.3206960000025,
+        908.9050599999973,
+        850.7858170000109,
+        790.6799150000006,
+        747.5205589999969
+      ],
+      "response_bytes": 3059,
+      "approx_response_tokens": 765,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-040",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/use_server_verification/index.md#schema-use_tls--use_server_verification--trusted_ca_url"
+      ],
+      "times_ms": [
+        17.754201000003377,
+        17.36436700000195,
+        17.267154000001028,
+        17.530243000001065,
+        17.139626000003773
+      ],
+      "response_bytes": 1078,
+      "approx_response_tokens": 270,
+      "leaf_read_bytes": 1995,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-041",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/authentication/index.md#xcsh_authentication",
+        "xcsh://terraform-documentation/documentation/resources/authentication/index.md#xcsh_authentication"
+      ],
+      "times_ms": [
+        84.39447000001383,
+        84.40107399999397,
+        84.10395699999935,
+        88.43905499999528,
+        83.60352099999727
+      ],
+      "response_bytes": 1317,
+      "approx_response_tokens": 330,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-042",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_parameters/use_mtls/index.md#schema-tls_tcp--tls_parameters--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp/tls_parameters/use_mtls/index.md#schema-tls_tcp--tls_parameters--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp_auto_cert/use_mtls/index.md#schema-tls_tcp_auto_cert--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/use_mtls/index.md#schema-tls_tcp--tls_cert_params--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp_auto_cert/use_mtls/index.md#schema-tls_tcp_auto_cert--use_mtls--client_certificate_optional"
+      ],
+      "times_ms": [
+        622.0199589999975,
+        643.290009999997,
+        671.8268299999909,
+        608.2931519999984,
+        622.6622379999899
+      ],
+      "response_bytes": 2869,
+      "approx_response_tokens": 718,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-043",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/use_mtls/index.md#schema-tls_tcp--tls_cert_params--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/use_mtls/index.md#schema-tls_tcp--tls_cert_params--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_cert_params/use_mtls/index.md#schema-https--tls_cert_params--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/https/tls_cert_params/use_mtls/index.md#schema-https--tls_cert_params--use_mtls--client_certificate_optional",
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/https/tls_cert_options/tls_cert_params/use_mtls/index.md#schema-https--tls_cert_options--tls_cert_params--use_mtls--client_certificate_optional"
+      ],
+      "times_ms": [
+        869.0286939999933,
+        836.7041709999903,
+        912.3290780000098,
+        842.9702799999941,
+        943.4270089999918
+      ],
+      "response_bytes": 2967,
+      "approx_response_tokens": 742,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-044",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp_auto_cert/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp_auto_cert/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/default_pool/use_tls/use_mtls/tls_certificates/private_key/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/default_pool/use_tls/use_mtls/tls_certificates/private_key/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/default_pool/use_tls/use_mtls/tls_certificates/private_key/clear_secret_info/index.md#schema-default_pool--use_tls--use_mtls--tls_certificates--private_key--clear_secret_info--provider_ref"
+      ],
+      "times_ms": [
+        913.5180170000094,
+        850.3338139999978,
+        916.4593500000046,
+        937.0036540000001,
+        798.6155319999962
+      ],
+      "response_bytes": 3552,
+      "approx_response_tokens": 888,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-045",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/certificate/index.md#xcsh_certificate",
+        "xcsh://terraform-documentation/documentation/data-sources/certificate_chain/index.md#xcsh_certificate_chain",
+        "xcsh://terraform-documentation/documentation/data-sources/certified_hardware/index.md#xcsh_certified_hardware",
+        "xcsh://terraform-documentation/documentation/data-sources/certified_hardware/properties/image_list/index.md#schema-image_list--provider_ref",
+        "xcsh://terraform-documentation/documentation/data-sources/certified_hardware/properties/vendor_model_list/index.md#schema-vendor_model_list--vendor"
+      ],
+      "times_ms": [
+        508.0241689999966,
+        500.56342700000096,
+        503.59155300000566,
+        501.66116899999906,
+        528.2163849999924
+      ],
+      "response_bytes": 2457,
+      "approx_response_tokens": 615,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-046",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/certificate_chain/properties/index.md#schema-certificate_url"
+      ],
+      "times_ms": [
+        6.40069300000323,
+        6.726049999997485,
+        7.31486899999436,
+        6.028258000005735,
+        6.432993000009446
+      ],
+      "response_bytes": 948,
+      "approx_response_tokens": 237,
+      "leaf_read_bytes": 1824,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-047",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/certificate_chain/properties/index.md#schema-certificate_url"
+      ],
+      "times_ms": [
+        5.662334999986342,
+        5.824648000008892,
+        5.798074999998789,
+        5.813484999991488,
+        5.785350999998627
+      ],
+      "response_bytes": 924,
+      "approx_response_tokens": 231,
+      "leaf_read_bytes": 1824,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-048",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        6.904615999999805,
+        6.7912819999910425,
+        6.704682000010507,
+        7.168100000009872,
+        6.944799999997485
+      ],
+      "response_bytes": 549,
+      "approx_response_tokens": 138,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-049",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/origin_servers/vn_private_ip/index.md#schema-origin_servers--vn_private_ip--ip",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md#schema-origin_servers--vn_private_ip--ip",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/origin_servers/private_ip/index.md#schema-origin_servers--private_ip--ip",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/private_ip/index.md#schema-origin_servers--private_ip--ip",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/origin_servers/private_ip/snat_pool/snat_pool/index.md#section"
+      ],
+      "times_ms": [
+        256.4976319999987,
+        274.59856300000683,
+        288.19887500000186,
+        254.71339699999953,
+        269.3411630000046
+      ],
+      "response_bytes": 2667,
+      "approx_response_tokens": 667,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-050",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/origin_servers/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/origin_servers/index.md#schema-origin_servers--labels",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/index.md#schema-origin_servers--labels"
+      ],
+      "times_ms": [
+        9.514538999996148,
+        9.101739999998244,
+        9.348517999998876,
+        9.298439000005601,
+        9.363861000005272
+      ],
+      "response_bytes": 2302,
+      "approx_response_tokens": 576,
+      "leaf_read_bytes": 1552,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-051",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/index.md#prerequisites",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/index.md#prerequisites",
+        "xcsh://terraform-documentation/documentation/resources/bgp_asn_set/index.md#prerequisites"
+      ],
+      "times_ms": [
+        392.0738239999919,
+        395.31989800000156,
+        396.76812300000165,
+        405.5490129999962,
+        405.9868560000032
+      ],
+      "response_bytes": 2235,
+      "approx_response_tokens": 559,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-052",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/virtual_network/index.md#xcsh_virtual_network",
+        "xcsh://terraform-documentation/documentation/resources/virtual_network/index.md#xcsh_virtual_network"
+      ],
+      "times_ms": [
+        88.36482400000386,
+        84.16871700000775,
+        84.79761900000449,
+        84.71536200000264,
+        84.93244000000414
+      ],
+      "response_bytes": 1287,
+      "approx_response_tokens": 322,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-053",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/health_checks/health_check/tcp_health_check/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/health_checks/health_check/tcp_health_check/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/dns_proxy/properties/origin_servers/health_checks/health_check/dns_health_check/index.md#schema-origin_servers--health_checks--health_check--dns_health_check--reverse",
+        "xcsh://terraform-documentation/documentation/data-sources/dns_proxy/properties/origin_servers/health_checks/health_check/dns_health_check/index.md#schema-origin_servers--health_checks--health_check--dns_health_check--reverse",
+        "xcsh://terraform-documentation/documentation/resources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/health_checks/health_check/icmp_health_check/index.md#origin_poolspoolsorigin_servershealth_checkshealth_checkicmp_health_check"
+      ],
+      "times_ms": [
+        566.5521299999964,
+        569.3424250000098,
+        578.745603000003,
+        564.4496650000074,
+        559.8287639999908
+      ],
+      "response_bytes": 3749,
+      "approx_response_tokens": 938,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-054",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/index.md#xcsh_origin_pool",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#xcsh_origin_pool"
+      ],
+      "times_ms": [
+        84.78490800000145,
+        84.18184499999916,
+        83.55236899999727,
+        84.90369399999327,
+        84.4559639999934
+      ],
+      "response_bytes": 1233,
+      "approx_response_tokens": 309,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-055",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/index.md#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/index.md#xcsh_cloud_credentials",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/examples/index.md#examples",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/timeouts/index.md#timeouts"
+      ],
+      "times_ms": [
+        453.1586569999927,
+        451.388454999993,
+        478.74412800000573,
+        508.4315570000035,
+        504.9525859999994
+      ],
+      "response_bytes": 2333,
+      "approx_response_tokens": 584,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-056",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--store_provider",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--store_provider",
+        "xcsh://terraform-documentation/documentation/data-sources/lma_region/properties/access_logs_s3_params/aws_credentials/secret_access_key/blindfold_secret_info/index.md#schema-access_logs_s3_params--aws_credentials--secret_access_key--blindfold_secret_info--store_provider",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/secret_key/clear_secret_info/index.md#schema-aws_secret_key--secret_key--clear_secret_info--provider_ref",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_secret_key/secret_key/clear_secret_info/index.md#schema-aws_secret_key--secret_key--clear_secret_info--provider_ref"
+      ],
+      "times_ms": [
+        195.44438100000843,
+        195.15114499999618,
+        196.60523400000238,
+        200.75975700000708,
+        195.1970949999959
+      ],
+      "response_bytes": 3136,
+      "approx_response_tokens": 784,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-057",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/index.md#xcsh_cloud_credentials",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/index.md#xcsh_cloud_credentials"
+      ],
+      "times_ms": [
+        85.01015600000392,
+        87.30066799999622,
+        85.6543820000079,
+        83.55355399999826,
+        82.9306179999985
+      ],
+      "response_bytes": 1289,
+      "approx_response_tokens": 323,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-058",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/index.md#xcsh_cloud_credentials",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/index.md#xcsh_cloud_credentials"
+      ],
+      "times_ms": [
+        83.94406300000264,
+        84.64927799999714,
+        81.46635299999616,
+        82.33289499999955,
+        82.31510200000776
+      ],
+      "response_bytes": 1303,
+      "approx_response_tokens": 326,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-059",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/token/index.md#prerequisites",
+        "xcsh://terraform-documentation/documentation/resources/bgp_routing_policy/index.md#prerequisites",
+        "xcsh://terraform-documentation/documentation/resources/api_crawler/index.md#prerequisites",
+        "xcsh://terraform-documentation/documentation/resources/api_testing/index.md#prerequisites",
+        "xcsh://terraform-documentation/documentation/resources/api_definition/index.md#prerequisites"
+      ],
+      "times_ms": [
+        524.9098310000118,
+        523.7412029999978,
+        534.4264279999916,
+        533.2977800000081,
+        513.8000170000014
+      ],
+      "response_bytes": 2169,
+      "approx_response_tokens": 543,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-060",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/api_crawler/index.md#xcsh_api_crawler",
+        "xcsh://terraform-documentation/documentation/resources/api_crawler/index.md#xcsh_api_crawler"
+      ],
+      "times_ms": [
+        83.53732299999683,
+        83.51751700000023,
+        83.28954899999371,
+        83.48547099999269,
+        83.44673900000635
+      ],
+      "response_bytes": 1245,
+      "approx_response_tokens": 312,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-061",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#xcsh_http_loadbalancer"
+      ],
+      "times_ms": [
+        93.84130000000005,
+        92.5580309999932,
+        92.43308699999761,
+        94.74557800000184,
+        93.96866799998679
+      ],
+      "response_bytes": 1337,
+      "approx_response_tokens": 335,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-062",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/default_route_pools/endpoint_subsets/index.md#default_route_poolsendpoint_subsets",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/default_route_pools/endpoint_subsets/index.md#default_route_poolsendpoint_subsets",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/default_pool_list/pools/endpoint_subsets/index.md#default_pool_listpoolsendpoint_subsets",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/default_pool_list/pools/endpoint_subsets/index.md#default_pool_listpoolsendpoint_subsets",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/origin_pools/endpoint_subsets/index.md#routessimple_routeorigin_poolsendpoint_subsets"
+      ],
+      "times_ms": [
+        654.606936000011,
+        656.1584299999959,
+        654.7948860000033,
+        664.5183340000076,
+        664.0056749999931
+      ],
+      "response_bytes": 2887,
+      "approx_response_tokens": 722,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-063",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp/tls_parameters/use_mtls/index.md#schema-tls_tcp--tls_parameters--use_mtls--trusted_ca_url",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp_auto_cert/use_mtls/index.md#schema-tls_tcp_auto_cert--use_mtls--trusted_ca_url",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_parameters/use_mtls/index.md#schema-tls_tcp--tls_parameters--use_mtls--trusted_ca_url",
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp_auto_cert/use_mtls/index.md#schema-tls_tcp_auto_cert--use_mtls--trusted_ca_url",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/use_mtls/index.md#schema-tls_tcp--tls_cert_params--use_mtls--trusted_ca_url"
+      ],
+      "times_ms": [
+        383.1778539999941,
+        380.45521200000076,
+        378.87673200000427,
+        376.77040300000226,
+        379.66756400000304
+      ],
+      "response_bytes": 2782,
+      "approx_response_tokens": 696,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-064",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/cdn_cache_rule/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_cache_rule/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/guides/network-allowlists/index.md#release-pinned-network-allowlists"
+      ],
+      "times_ms": [
+        762.3802339999966,
+        774.96695799999,
+        779.3613920000062,
+        772.320722000004,
+        815.1401810000098
+      ],
+      "response_bytes": 2293,
+      "approx_response_tokens": 574,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-065",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/health_checks/health_check/tcp_health_check/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/advanced_options/index.md#schema-advanced_options--panic_threshold",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/default_pool/advanced_options/index.md#schema-default_pool--advanced_options--panic_threshold",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/data-sources/tcp_loadbalancer/index.md#minimal-configuration"
+      ],
+      "times_ms": [
+        530.6288380000042,
+        516.2776339999982,
+        530.0277150000038,
+        555.5588019999996,
+        512.8357279999909
+      ],
+      "response_bytes": 2598,
+      "approx_response_tokens": 650,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-066",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_interface/properties/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-azure--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/baremetal/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-baremetal--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/equinix/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-equinix--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings"
+      ],
+      "times_ms": [
+        516.1378300000069,
+        515.367001999999,
+        541.2988420000038,
+        511.23291099999915,
+        531.9218540000002
+      ],
+      "response_bytes": 3660,
+      "approx_response_tokens": 915,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-067",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/examples/monitoring/index.md#monitoring",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/examples/disable-anonymization/index.md#disable-anonymization",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/examples/ai-enhancements/index.md#ai-enhancements",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/examples/bot-protection/index.md#bot-protection",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/examples/custom-blocking-page/index.md#custom-blocking-page"
+      ],
+      "times_ms": [
+        615.5536350000039,
+        634.3542099999904,
+        627.5233130000124,
+        605.8312290000031,
+        612.9362009999895
+      ],
+      "response_bytes": 2400,
+      "approx_response_tokens": 600,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-068",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/third_party_application/properties/api_specification/validation_all_spec_endpoints/validation_mode/validation_mode_active/enforcement_block/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/third_party_application/properties/api_specification/validation_all_spec_endpoints/validation_mode/response_validation_mode_active/enforcement_block/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/third_party_application/properties/api_specification/validation_custom_list/open_api_validation_rules/validation_mode/validation_mode_active/enforcement_block/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/third_party_application/properties/api_specification/validation_custom_list/open_api_validation_rules/validation_mode/response_validation_mode_active/enforcement_block/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/third_party_application/properties/api_specification/validation_all_spec_endpoints/validation_mode/validation_mode_active/index.md#section"
+      ],
+      "times_ms": [
+        228.19090799998958,
+        217.42698499999824,
+        220.16350900000543,
+        217.08897500000603,
+        221.44684200000484
+      ],
+      "response_bytes": 3454,
+      "approx_response_tokens": 864,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-069",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/service_policy_rule/properties/waf_action/index.md#waf_action",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/deploy_options/deploy_ce_sites/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/deploy_options/deploy_ce_sites/index.md#section"
+      ],
+      "times_ms": [
+        526.7540370000061,
+        524.4005630000029,
+        541.9100899999903,
+        553.1645130000106,
+        546.4183049999992
+      ],
+      "response_bytes": 3080,
+      "approx_response_tokens": 770,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-070",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/service_policy/properties/rule_list/rules/index.md#section"
+      ],
+      "times_ms": [
+        7.271537000007811,
+        7.131500999996206,
+        7.16621799999848,
+        7.058455999998841,
+        6.9746760000125505
+      ],
+      "response_bytes": 949,
+      "approx_response_tokens": 238,
+      "leaf_read_bytes": 1674,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-071",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/waf_exclusion_policy/properties/waf_exclusion_rules/app_firewall_detection_control/exclude_attack_type_contexts/index.md#waf_exclusion_rulesapp_firewall_detection_controlexclude_attack_type_contexts",
+        "xcsh://terraform-documentation/documentation/resources/service_policy_rule/properties/waf_action/app_firewall_detection_control/exclude_attack_type_contexts/index.md#waf_actionapp_firewall_detection_controlexclude_attack_type_contexts",
+        "xcsh://terraform-documentation/documentation/resources/waf_exclusion_policy/properties/waf_exclusion_rules/app_firewall_detection_control/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/service_policy/properties/rule_list/rules/spec/waf_action/app_firewall_detection_control/exclude_attack_type_contexts/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/waf_exclusion/waf_exclusion_inline_rules/rules/app_firewall_detection_control/exclude_attack_type_contexts/index.md#section"
+      ],
+      "times_ms": [
+        495.22984200000064,
+        519.5726360000117,
+        518.0749040000082,
+        520.5496609999973,
+        500.8849860000046
+      ],
+      "response_bytes": 3162,
+      "approx_response_tokens": 791,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-072",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        9.044316999992589,
+        8.635393000004115,
+        8.455916999999317,
+        9.212203999995836,
+        11.011736000000383
+      ],
+      "response_bytes": 561,
+      "approx_response_tokens": 141,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-073",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/app_firewall/properties/bot_protection_setting/index.md#schema-bot_protection_setting--suspicious_bot_action",
+        "xcsh://terraform-documentation/documentation/data-sources/app_firewall/properties/detection_settings/bot_protection_setting/index.md#schema-detection_settings--bot_protection_setting--suspicious_bot_action",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/bot_protection_setting/index.md#schema-bot_protection_setting--suspicious_bot_action",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/detection_settings/bot_protection_setting/index.md#schema-detection_settings--bot_protection_setting--suspicious_bot_action",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_protection_rules/api_endpoint_rules/client_matcher/ip_prefix_list/index.md#section"
+      ],
+      "times_ms": [
+        245.05460299999686,
+        255.78770200000145,
+        243.06612600000517,
+        232.77912999999535,
+        232.51301399999647
+      ],
+      "response_bytes": 2848,
+      "approx_response_tokens": 712,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-074",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/enhanced_firewall_policy/properties/rule_list/rules/applications/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/route/properties/routes/waf_type/app_firewall/app_firewall/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/waf_type/app_firewall/app_firewall/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_loadbalancer/properties/data_guard_rules/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/data_guard_rules/index.md#section"
+      ],
+      "times_ms": [
+        24.628679999994347,
+        23.605506000007153,
+        23.68269400000281,
+        23.46410699999251,
+        24.3056660000002
+      ],
+      "response_bytes": 2447,
+      "approx_response_tokens": 612,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-075",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/service_policy_rule/properties/query_params/index.md#query_params",
+        "xcsh://terraform-documentation/documentation/data-sources/service_policy_rule/properties/query_params/check_present/index.md#query_paramscheck_present",
+        "xcsh://terraform-documentation/documentation/data-sources/service_policy_rule/properties/query_params/check_not_present/index.md#query_paramscheck_not_present",
+        "xcsh://terraform-documentation/documentation/data-sources/service_policy/properties/rule_list/rules/spec/query_params/index.md#rule_listrulesspecquery_params",
+        "xcsh://terraform-documentation/documentation/data-sources/service_policy_rule/properties/request_constraints/max_query_size_none/index.md#request_constraintsmax_query_size_none"
+      ],
+      "times_ms": [
+        15.36859299999196,
+        15.232223000013619,
+        15.213038999994751,
+        15.31531299999915,
+        15.373114000001806
+      ],
+      "response_bytes": 2583,
+      "approx_response_tokens": 646,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-076",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/private_adn/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/securemesh_site_v2/properties/private_adn/index.md#schema-private_adn--private_adn",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_link/properties/enabled/index.md#schema-enabled--cloudlink_network_name",
+        "xcsh://terraform-documentation/documentation/resources/cloud_link/properties/enabled/index.md#schema-enabled--cloudlink_network_name",
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/direct_connect_enabled/hosted_vifs/site_registration_over_direct_connect/index.md#schema-direct_connect_enabled--hosted_vifs--site_registration_over_direct_connect--cloudlink_network_name"
+      ],
+      "times_ms": [
+        757.9722340000008,
+        758.9648029999953,
+        763.7512879999995,
+        768.0959339999972,
+        793.1229909999965
+      ],
+      "response_bytes": 2823,
+      "approx_response_tokens": 706,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-077",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/forwarding_class/properties/dscp/index.md#schema-dscp--dscp_class",
+        "xcsh://terraform-documentation/documentation/data-sources/forwarding_class/properties/index.md#schema-queue_id_to_use",
+        "xcsh://terraform-documentation/documentation/resources/forwarding_class/properties/dscp/index.md#schema-dscp--dscp_class",
+        "xcsh://terraform-documentation/documentation/resources/forwarding_class/properties/index.md#schema-queue_id_to_use",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/layer2_interface/l2vlan_interface/index.md#schema-layer2_interface--l2vlan_interface--vlan_id"
+      ],
+      "times_ms": [
+        470.4627770000079,
+        457.65405500000634,
+        461.540725999992,
+        454.6841480000003,
+        466.6564359999902
+      ],
+      "response_bytes": 2471,
+      "approx_response_tokens": 618,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-078",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/layer2_interface/l2vlan_interface/index.md#schema-layer2_interface--l2vlan_interface--device",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/layer2_interface/l2sriov_interface/index.md#schema-layer2_interface--l2sriov_interface--device",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/dedicated_management_interface/index.md#schema-dedicated_management_interface--device",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/dhcp_networks/index.md#schema-ethernet_interface--dhcp_server--dhcp_networks--network_prefix",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md#section"
+      ],
+      "times_ms": [
+        104.82877599999483,
+        104.85285500000464,
+        104.69375700000091,
+        105.12236900000426,
+        104.78432899998734
+      ],
+      "response_bytes": 2861,
+      "approx_response_tokens": 716,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-079",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/route/index.md#xcsh_route",
+        "xcsh://terraform-documentation/documentation/resources/route/properties/index.md#schema-description",
+        "xcsh://terraform-documentation/documentation/resources/route/examples/index.md#examples",
+        "xcsh://terraform-documentation/documentation/resources/route/lifecycle/import/index.md#import",
+        "xcsh://terraform-documentation/documentation/resources/route/properties/routes/match/index.md#section"
+      ],
+      "times_ms": [
+        484.9465360000031,
+        486.92374400001427,
+        491.13687200000277,
+        516.5276210000156,
+        592.047596999997
+      ],
+      "response_bytes": 2123,
+      "approx_response_tokens": 531,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-080",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/interface/index.md#schema-peers--external--interface--tenant",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/local_control_plane/bgp_config/peers/external/interface/index.md#schema-local_control_plane--bgp_config--peers--external--interface--tenant",
+        "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/family_inet/enable/aggregation/index.md#peersexternalfamily_inetenableaggregation",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/local_control_plane/bgp_config/peers/external/family_inet/enable/aggregation/index.md#local_control_planebgp_configpeersexternalfamily_inetenableaggregation",
+        "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/interface_list/interfaces/index.md#schema-peers--external--interface_list--interfaces--tenant"
+      ],
+      "times_ms": [
+        527.5868820000032,
+        546.9423059999826,
+        478.70696899999166,
+        481.05565599998226,
+        486.19230799999787
+      ],
+      "response_bytes": 2904,
+      "approx_response_tokens": 726,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-081",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        9.068487999989884,
+        8.949509999976726,
+        9.03563599998597,
+        9.00885099999141,
+        9.0586900000053
+      ],
+      "response_bytes": 585,
+      "approx_response_tokens": 147,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-082",
+      "kind": "answerable",
+      "passed": false,
+      "top5": true,
+      "rank": 2,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md#schema-cidr_blocks",
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/examples/data-source/index.md#data-source",
+        "xcsh://terraform-documentation/documentation/data-sources/network_data_intelligence/properties/index.md#schema-cidr_blocks",
+        "xcsh://terraform-documentation/documentation/data-sources/aws_tgw_site/properties/offline_survivability_mode/index.md#offline_survivability_mode"
+      ],
+      "times_ms": [
+        568.7177319999901,
+        585.7689119999995,
+        531.3534670000081,
+        568.7015830000164,
+        531.9752299999818
+      ],
+      "response_bytes": 2480,
+      "approx_response_tokens": 620,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-083",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/api_specification/validation_custom_list/settings/property_validation_settings_custom/query_parameters/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/api_specification/validation_all_spec_endpoints/settings/property_validation_settings_custom/query_parameters/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/api_specification/validation_custom_list/settings/property_validation_settings_custom/query_parameters/allow_additional_parameters/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/api_specification/validation_custom_list/settings/property_validation_settings_custom/query_parameters/disallow_additional_parameters/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bigip_virtual_server/properties/api_specification/validation_all_spec_endpoints/settings/property_validation_settings_custom/query_parameters/allow_additional_parameters/index.md#section"
+      ],
+      "times_ms": [
+        667.2386470000201,
+        702.9439609999827,
+        669.6638559999992,
+        671.8621839999978,
+        677.7706140000082
+      ],
+      "response_bytes": 3529,
+      "approx_response_tokens": 883,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ans-std-084",
+      "kind": "answerable",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/site/index.md#xcsh_site",
+        "xcsh://terraform-documentation/documentation/data-sources/site/properties/re_select/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/site/properties/admin_user_credentials/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/site/properties/index.md#schema-local_k8s_access_enabled",
+        "xcsh://terraform-documentation/documentation/data-sources/site/properties/private_connectivity/cloud_link/index.md#schema-private_connectivity--cloud_link--name"
+      ],
+      "times_ms": [
+        143.5095239999937,
+        141.13114000001224,
+        142.11032800000976,
+        140.36375899999985,
+        141.36354200000642
+      ],
+      "response_bytes": 2361,
+      "approx_response_tokens": 591,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-001",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/index.md#section"
+      ],
+      "times_ms": [
+        9.56001099999412,
+        9.3196009999956,
+        9.494982000003802,
+        9.508795999980066,
+        9.922006000007968
+      ],
+      "response_bytes": 1618,
+      "approx_response_tokens": 405,
+      "leaf_read_bytes": 1087,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-002",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/origin_servers/consul_service/site_locator/site/index.md#schema-origin_servers--consul_service--site_locator--site--namespace"
+      ],
+      "times_ms": [
+        10.96486200002255,
+        10.650834000000032,
+        10.711473000003025,
+        11.016632999991998,
+        10.739282999973511
+      ],
+      "response_bytes": 1430,
+      "approx_response_tokens": 358,
+      "leaf_read_bytes": 2137,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-003",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        13.828435000003083,
+        13.67271700000856,
+        13.703905000002123,
+        13.603457999997772,
+        13.481591999996454
+      ],
+      "response_bytes": 855,
+      "approx_response_tokens": 214,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-004",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/service_policy/properties/rule_list/rules/spec/index.md#section"
+      ],
+      "times_ms": [
+        10.038177000009455,
+        9.988318999996409,
+        9.923982000007527,
+        9.860467000020435,
+        9.93637700000545
+      ],
+      "response_bytes": 1618,
+      "approx_response_tokens": 405,
+      "leaf_read_bytes": 2846,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-005",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_network/properties/static_routes/node_interface/list/interface/index.md#schema-static_routes--node_interface--list--interface--tenant"
+      ],
+      "times_ms": [
+        9.785413000005065,
+        9.87497999999323,
+        9.826914999983273,
+        9.977195000014035,
+        9.7321069999889
+      ],
+      "response_bytes": 1411,
+      "approx_response_tokens": 353,
+      "leaf_read_bytes": 1360,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-006",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        15.818882999999914,
+        15.667171000008238,
+        15.929226999985985,
+        15.567980000021635,
+        15.825245999993058
+      ],
+      "response_bytes": 879,
+      "approx_response_tokens": 220,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-007",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        12.69861600000877,
+        12.890352000016719,
+        12.949288999981945,
+        12.920947000005981,
+        13.098873999988427
+      ],
+      "response_bytes": 867,
+      "approx_response_tokens": 217,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-008",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        15.098755000013625,
+        14.8573290000204,
+        14.880521000013687,
+        14.95205999998143,
+        15.218789000005927
+      ],
+      "response_bytes": 881,
+      "approx_response_tokens": 221,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-009",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        15.475861999992048,
+        15.403365000005579,
+        14.90216200001305,
+        15.152325000002747,
+        14.998010999988765
+      ],
+      "response_bytes": 923,
+      "approx_response_tokens": 231,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-010",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/azure_pfx_certificate/password/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/azure_pfx_certificate/password/clear_secret_info/index.md#section"
+      ],
+      "times_ms": [
+        9.718951000017114,
+        9.763026000000536,
+        10.323726999980863,
+        10.195154999993974,
+        10.215981000015745
+      ],
+      "response_bytes": 2278,
+      "approx_response_tokens": 570,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-011",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/simple_service/container/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/simple_service/container/index.md#section"
+      ],
+      "times_ms": [
+        12.7506670000148,
+        12.655235000012908,
+        12.694636000000173,
+        12.610989999986487,
+        12.224015999992844
+      ],
+      "response_bytes": 2014,
+      "approx_response_tokens": 504,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-012",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/http/index.md#section"
+      ],
+      "times_ms": [
+        13.841775000008056,
+        13.703643999993801,
+        13.70389899998554,
+        13.842898999981117,
+        13.661695000017062
+      ],
+      "response_bytes": 1617,
+      "approx_response_tokens": 405,
+      "leaf_read_bytes": 1196,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-013",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/tls_cert_params/certificates/index.md#schema-tls_tcp--tls_cert_params--certificates--name"
+      ],
+      "times_ms": [
+        10.121561000007205,
+        10.31484300000011,
+        10.057572000019718,
+        9.900878999993438,
+        9.9679790000082
+      ],
+      "response_bytes": 1369,
+      "approx_response_tokens": 343,
+      "leaf_read_bytes": 1973,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-014",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/aws_vpc_site/properties/index.md#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/index.md#schema-namespace"
+      ],
+      "times_ms": [
+        10.303020999999717,
+        10.397962000017287,
+        10.412791999988258,
+        10.312183000001824,
+        10.511662000004435
+      ],
+      "response_bytes": 1527,
+      "approx_response_tokens": 382,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-015",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        14.205054000020027,
+        14.20235199999297,
+        14.50754400002188,
+        14.47485400000005,
+        14.830761999997776
+      ],
+      "response_bytes": 853,
+      "approx_response_tokens": 214,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-016",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/both_web_and_mobile/mobile/index.md#section"
+      ],
+      "times_ms": [
+        13.857075999985682,
+        13.719098000001395,
+        13.516926999989664,
+        13.592619999981252,
+        13.510924000001978
+      ],
+      "response_bytes": 1630,
+      "approx_response_tokens": 408,
+      "leaf_read_bytes": 1294,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-017",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_cert_params/tls_config/custom_security/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/custom_hash_algorithms/index.md#section"
+      ],
+      "times_ms": [
+        13.80303099998855,
+        13.699689000000944,
+        13.843307999981334,
+        13.669985000015004,
+        13.764806999999564
+      ],
+      "response_bytes": 2353,
+      "approx_response_tokens": 589,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-018",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/advertise_custom/advertise_where/virtual_site_with_vip/index.md#schema-advertise_custom--advertise_where--virtual_site_with_vip--network"
+      ],
+      "times_ms": [
+        13.414737000013702,
+        13.582479000004241,
+        13.337709999992512,
+        13.380765999987489,
+        13.505741000000853
+      ],
+      "response_bytes": 1464,
+      "approx_response_tokens": 366,
+      "leaf_read_bytes": 1928,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-019",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/private_ip/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md#section"
+      ],
+      "times_ms": [
+        10.97328499998548,
+        10.942638000007719,
+        10.755364999989979,
+        10.589420999982394,
+        10.740959999995539
+      ],
+      "response_bytes": 2394,
+      "approx_response_tokens": 599,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-020",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/use_tls/use_server_verification/index.md#schema-use_tls--use_server_verification--trusted_ca_url"
+      ],
+      "times_ms": [
+        11.536199999973178,
+        11.378939999995055,
+        11.360715999995591,
+        11.811015000013867,
+        12.550118999992264
+      ],
+      "response_bytes": 1345,
+      "approx_response_tokens": 337,
+      "leaf_read_bytes": 1995,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-021",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section"
+      ],
+      "times_ms": [
+        9.513226999988547,
+        9.385206000006292,
+        9.292077999998583,
+        9.281515999988187,
+        9.350738999986788
+      ],
+      "response_bytes": 1197,
+      "approx_response_tokens": 300,
+      "leaf_read_bytes": 1357,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-022",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/advertise_custom/advertise_where/virtual_site_with_vip/index.md#schema-advertise_custom--advertise_where--virtual_site_with_vip--ip"
+      ],
+      "times_ms": [
+        9.802618000016082,
+        9.622696999984328,
+        9.895641000010073,
+        9.744876999990083,
+        9.942272000014782
+      ],
+      "response_bytes": 1393,
+      "approx_response_tokens": 349,
+      "leaf_read_bytes": 1502,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-023",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/mitigation/index.md#section"
+      ],
+      "times_ms": [
+        13.235260000015842,
+        13.293467999988934,
+        16.109066000004532,
+        17.558720000000903,
+        19.198778999998467
+      ],
+      "response_bytes": 1814,
+      "approx_response_tokens": 454,
+      "leaf_read_bytes": 1240,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-024",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/active_service_policies/policies/index.md#schema-active_service_policies--policies--namespace"
+      ],
+      "times_ms": [
+        24.628677999979118,
+        19.349508999992395,
+        17.036071000009542,
+        17.313759000011487,
+        17.986532000009902
+      ],
+      "response_bytes": 1407,
+      "approx_response_tokens": 352,
+      "leaf_read_bytes": 2230,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-025",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/default_pool_list/pools/index.md#section"
+      ],
+      "times_ms": [
+        14.549033000017516,
+        14.418945000012172,
+        14.279210000007879,
+        14.270762999978615,
+        14.243253000022378
+      ],
+      "response_bytes": 1691,
+      "approx_response_tokens": 423,
+      "leaf_read_bytes": 1596,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-026",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/waf_exclusion/waf_exclusion_inline_rules/rules/index.md#section"
+      ],
+      "times_ms": [
+        13.664269000000786,
+        13.70275599998422,
+        13.663501000002725,
+        13.443422000011196,
+        13.4861689999816
+      ],
+      "response_bytes": 1780,
+      "approx_response_tokens": 445,
+      "leaf_read_bytes": 2260,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-027",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/both_web_and_mobile/web/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/web_only/web/index.md#section"
+      ],
+      "times_ms": [
+        13.598677000001771,
+        13.465529999986757,
+        13.569585999997798,
+        13.653218999999808,
+        13.555612999974983
+      ],
+      "response_bytes": 2275,
+      "approx_response_tokens": 569,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-028",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/http/index.md#section"
+      ],
+      "times_ms": [
+        13.951177999988431,
+        14.00627600000007,
+        13.974424999993062,
+        13.993095999991056,
+        13.846080999996047
+      ],
+      "response_bytes": 1621,
+      "approx_response_tokens": 406,
+      "leaf_read_bytes": 1196,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-029",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/service_policy/properties/rule_list/rules/spec/mum_action/default/index.md#section"
+      ],
+      "times_ms": [
+        9.50994200000423,
+        9.672038999997312,
+        9.333838000020478,
+        9.444707999995444,
+        9.478754000010667
+      ],
+      "response_bytes": 1275,
+      "approx_response_tokens": 319,
+      "leaf_read_bytes": 828,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-030",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": true,
+      "rank": 1,
+      "matched_expected": 1,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/index.md#section"
+      ],
+      "times_ms": [
+        9.433474000019487,
+        9.151210000010906,
+        9.294932000018889,
+        9.173222000012174,
+        9.12394900000072
+      ],
+      "response_bytes": 1444,
+      "approx_response_tokens": 361,
+      "leaf_read_bytes": 941,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-031",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        12.52546900001471,
+        12.547418000001926,
+        12.729131000000052,
+        12.54515900000115,
+        12.462226000003284
+      ],
+      "response_bytes": 853,
+      "approx_response_tokens": 214,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-032",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        11.425411000003805,
+        11.577132000005804,
+        11.405089999985648,
+        11.383264999982202,
+        11.439786000002641
+      ],
+      "response_bytes": 857,
+      "approx_response_tokens": 215,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-033",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        10.331309999979567,
+        10.36927100000321,
+        10.380398000008427,
+        10.350621999998111,
+        10.432773999986239
+      ],
+      "response_bytes": 789,
+      "approx_response_tokens": 198,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-034",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        12.74518800000078,
+        12.668685999989975,
+        12.780215000006137,
+        12.821808999986388,
+        12.67007900000317
+      ],
+      "response_bytes": 847,
+      "approx_response_tokens": 212,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-035",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": false,
+      "destinations": [],
+      "times_ms": [
+        13.26455399999395,
+        13.299525000009453,
+        13.424973999994108,
+        13.375767999998061,
+        13.446259999996983
+      ],
+      "response_bytes": 841,
+      "approx_response_tokens": 211,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-036",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/password/index.md#section"
+      ],
+      "times_ms": [
+        9.13170599998557,
+        9.126088999997592,
+        9.131448000000091,
+        9.017362999991747,
+        9.058805000007851
+      ],
+      "response_bytes": 1622,
+      "approx_response_tokens": 406,
+      "leaf_read_bytes": 1092,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-037",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/configuration/index.md#section"
+      ],
+      "times_ms": [
+        11.756151999987196,
+        11.807627000001958,
+        11.715033999993466,
+        11.703888999996707,
+        12.017349000001559
+      ],
+      "response_bytes": 1259,
+      "approx_response_tokens": 315,
+      "leaf_read_bytes": 805,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-038",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/http/index.md#section"
+      ],
+      "times_ms": [
+        13.880223000014666,
+        13.761705000011716,
+        14.205374000011943,
+        14.127573000005214,
+        13.716336999990745
+      ],
+      "response_bytes": 1627,
+      "approx_response_tokens": 407,
+      "leaf_read_bytes": 1196,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-039",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-port"
+      ],
+      "times_ms": [
+        9.530468999990262,
+        9.64112399998703,
+        9.758264999982202,
+        9.630746999988332,
+        9.486482000007527
+      ],
+      "response_bytes": 1341,
+      "approx_response_tokens": 336,
+      "leaf_read_bytes": 2171,
+      "requires_model_uat": false
+    },
+    {
+      "id": "amb-040",
+      "kind": "ambiguous",
+      "passed": false,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": true,
+      "selection_correct": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md#schema-namespace"
+      ],
+      "times_ms": [
+        8.783101999986684,
+        8.631498000002466,
+        8.606123999983538,
+        8.697230000019772,
+        8.64797700001509
+      ],
+      "response_bytes": 1240,
+      "approx_response_tokens": 310,
+      "leaf_read_bytes": 1952,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-disc-001",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-002",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-003",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-004",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-005",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-006",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-007",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-008",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-009",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-disc-010",
+      "passed": null,
+      "behavior": "ordinary-discovery",
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-unsupp-001",
+      "kind": "control",
+      "passed": true,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        6.323923000018112,
+        6.246566999994684,
+        6.132634999987204,
+        6.207372000004398,
+        6.327158999978565
+      ],
+      "response_bytes": 609,
+      "approx_response_tokens": 153,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-unsupp-002",
+      "kind": "control",
+      "passed": true,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        3.9155700000119396,
+        3.9156199999852106,
+        3.9050180000194814,
+        3.84142900002189,
+        3.854289000009885
+      ],
+      "response_bytes": 577,
+      "approx_response_tokens": 145,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-unsupp-003",
+      "kind": "control",
+      "passed": true,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        6.640607000008458,
+        6.622332999977516,
+        6.600063999998383,
+        6.6567550000036135,
+        6.561800999974366
+      ],
+      "response_bytes": 597,
+      "approx_response_tokens": 150,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-unsupp-004",
+      "kind": "control",
+      "passed": true,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        4.118408000009367,
+        4.166027999977814,
+        4.221502000000328,
+        4.157520000007935,
+        4.1415020000131335
+      ],
+      "response_bytes": 587,
+      "approx_response_tokens": 147,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-unsupp-005",
+      "kind": "control",
+      "passed": true,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        6.268727999995463,
+        6.194488000008278,
+        6.169671000010567,
+        6.147960000002058,
+        6.242594999988796
+      ],
+      "response_bytes": 557,
+      "approx_response_tokens": 140,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-unsupp-006",
+      "kind": "control",
+      "passed": true,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        9.93438999998034,
+        9.931725000002189,
+        9.734094999992521,
+        9.768661999987671,
+        9.961080999986734
+      ],
+      "response_bytes": 601,
+      "approx_response_tokens": 151,
+      "leaf_read_bytes": null,
+      "requires_model_uat": false
+    },
+    {
+      "id": "ctrl-claim-001",
+      "kind": "control",
+      "passed": null,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        21.017482999974163,
+        19.857589999999618,
+        20.279116999998223,
+        20.217975000006845,
+        20.095303999987664
+      ],
+      "response_bytes": 937,
+      "approx_response_tokens": 235,
+      "leaf_read_bytes": null,
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-claim-002",
+      "kind": "control",
+      "passed": null,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [],
+      "times_ms": [
+        9.46979800000554,
+        9.234708999982104,
+        9.228077999985544,
+        9.213094000006095,
+        9.174502000008943
+      ],
+      "response_bytes": 655,
+      "approx_response_tokens": 164,
+      "leaf_read_bytes": null,
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-claim-003",
+      "kind": "control",
+      "passed": null,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_cache_rule/properties/timeouts/index.md#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/timeouts/index.md#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#optional",
+        "xcsh://terraform-documentation/documentation/resources/token/properties/index.md#schema-uid",
+        "xcsh://terraform-documentation/documentation/data-sources/token/properties/index.md#schema-uid"
+      ],
+      "times_ms": [
+        713.0154630000179,
+        662.6846079999814,
+        729.8497830000124,
+        734.9884100000199,
+        719.6765499999747
+      ],
+      "response_bytes": 2305,
+      "approx_response_tokens": 577,
+      "leaf_read_bytes": null,
+      "requires_model_uat": true
+    },
+    {
+      "id": "ctrl-claim-004",
+      "kind": "control",
+      "passed": null,
+      "top5": false,
+      "rank": null,
+      "matched_expected": 0,
+      "selected": false,
+      "selection_correct": null,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_site/properties/errors/error_obj/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_state/properties/errors/error_obj/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/service_policy_rule/properties/index.md#schema-client_name",
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/sriov_interfaces/sriov_interface/index.md#schema-sriov_interfaces--sriov_interface--number_of_vfs",
+        "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/sriov_interfaces/sriov_interface/index.md#schema-sriov_interfaces--sriov_interface--number_of_vfs"
+      ],
+      "times_ms": [
+        874.7291209999821,
+        854.6536030000134,
+        811.2675450000097,
+        809.0661580000015,
+        803.9262380000146
+      ],
+      "response_bytes": 2569,
+      "approx_response_tokens": 643,
+      "leaf_read_bytes": null,
+      "requires_model_uat": true
+    }
+  ]
+}

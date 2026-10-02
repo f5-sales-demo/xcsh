@@ -1,0 +1,46 @@
+{
+  "suite_sha256": "6deb592af8737b3d91085b5e28c939d8d928f5eb5243ae833d5ee754bb348d6a",
+  "provider_version": "v12.2.0",
+  "receipt_sha256": "f735dbfcb84536210bd396ec0d54477e662e005ad0b37b9e35f962fce5e79693",
+  "index": {
+    "sha256": "36bc4c943f824131b4967ef8ddc194e6eef7a59b2bc6b8278231f1d4e89e7bdd",
+    "size_bytes": 902631424,
+    "gzip_sha256": "7e667dffdd457cde10fdcdf72f90aedf99c37bc298378cd7c55a11f6f5e4f072",
+    "gzip_size_bytes": 78715948
+  },
+  "untouched_first_run": true,
+  "qualification_passed": false,
+  "rank_anchor_result_parity": true,
+  "answerable_correct": 12,
+  "answerable_count": 140,
+  "answerable_accuracy": 0.08571428571428572,
+  "answerable_top5": 0.21428571428571427,
+  "ambiguity_correct": 0,
+  "ambiguous_count": 40,
+  "unsupported_control_correct": 6,
+  "model_only_controls_unscored": 14,
+  "linux": {
+    "warm_p95_ms": 677.7706140000082,
+    "discovery_p95_ms": 774.96695799999,
+    "context_p95_ms": 0.11809099998208694,
+    "route_p95_ms": 774.96695799999,
+    "materialization_ms": 3186.439047,
+    "warm_measurement_count": 1215,
+    "total_response_bytes": 2030625,
+    "tool_calls": 1215,
+    "max_discovery_bytes": 4065,
+    "max_context_bytes": 6472
+  },
+  "mac": {
+    "warm_p95_ms": 999.0564169999852,
+    "discovery_p95_ms": 1132.09825000001,
+    "context_p95_ms": 0.07287500001257285,
+    "route_p95_ms": 1132.09825000001,
+    "materialization_ms": 1108.958875,
+    "warm_measurement_count": 1215,
+    "total_response_bytes": 2030625,
+    "tool_calls": 1215,
+    "max_discovery_bytes": 4065,
+    "max_context_bytes": 6472
+  }
+}
