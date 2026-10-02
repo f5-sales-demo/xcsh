@@ -361,3 +361,26 @@ test("direct property refinement uses field descriptions and keeps absent field 
 	);
 	expect(rankTerraformDirectProperties("HTTPS listener port", ["https"], tls)[0]?.anchor).toBe("schema-port");
 });
+
+test("declaration and lookup workflows target complete usage while field requests retain schema routing", () => {
+	expect(terraformTaskDestination("How do I declare an xcsh_malicious_user_mitigation policy?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(
+		terraformTaskDestination("Where is xcsh_cloud_credentials resource defined for provider connectivity?"),
+	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
+	expect(
+		terraformTaskDestination("How do I obtain a short-lived registry token using an ephemeral resource?"),
+	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
+	expect(terraformTaskDestination("How do I query an existing certificate using its data source?")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+	expect(
+		terraformTaskDestination("Which output attribute exposes the token on an ephemeral resource?"),
+	).toBeUndefined();
+	expect(
+		terraformTaskDestination("Where do I declare match rules inside the service policy resource?"),
+	).toBeUndefined();
+});

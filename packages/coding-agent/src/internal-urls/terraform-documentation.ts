@@ -744,6 +744,22 @@ export function terraformProviderSetupDestination(query: string): string | undef
 
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	const fieldRequest = /\b(?:fields?|attributes?|properties|parameters?|schema path|match rules|inside|under)\b/i.test(
+		query,
+	);
+	if (!fieldRequest) {
+		if (/\bdata[ -]source\b/i.test(query) && /\b(?:query|look up|lookup|read|inspect)\b/i.test(query))
+			return { role: "fundamentals", anchor: "root-configuration" };
+		if (
+			/\b(?:declare|defined|definition)\b.*\b(?:xcsh_[a-z0-9_]+|resource|policy)\b|\b(?:xcsh_[a-z0-9_]+|resource)\b.*\b(?:defined|definition)\b/i.test(
+				query,
+			)
+		)
+			return { role: "fundamentals", anchor: "minimal-configuration" };
+		if (/\bephemeral\b/i.test(query) && /\b(?:obtain|use|declare|create)\b/i.test(query))
+			return { role: "fundamentals", anchor: "minimal-configuration" };
+	}
+
 	if (
 		/\baction\b/i.test(query) &&
 		!/\b(?:fields?|attributes?|(?:property|properties)|ids?|namespace|parameters?)\b/i.test(query) &&

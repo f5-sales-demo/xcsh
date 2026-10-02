@@ -552,3 +552,20 @@ Full post-analysis regression35/140selected,49.2857%top5,scored24.1935%,
 discovery154.266ms,complete146.985ms. Accuracy/latency qualification remain failed.
 HTTPS mode relationships absent in metadata remain an explicit coverage gap;no
 validation constraints were inferred from provider names or descriptions.
+
+
+## Declaration usage routing and lexical fusion diagnostic
+
+Resource declarations/definitions and ephemeral usage target complete minimal
+configuration sections;data-source lookup usage targets root configuration. Field
+and nested-rule requests preserve schema routing. Red fixtures reproduce missing
+declaration route;476URLtests+workspacechecks pass. Full post-analysis regression
+40/140selected,50.7143%top5,discovery145.777ms,complete140.315ms. Still far below
+accuracy gate;no held-out qualification.
+
+Production/property ranking lists are complementary:31shared top5,38production
+only,28property only,43neither. Union97/140is below95percent. Precomputed reciprocal
+rank fusion reaches42first,88top5;no complete response latency measured. Fusion
+remains unshipped. Producer generic aliases apply to description words,spreading
+certificate/backend/authentication phrases broadly. Published automatic-cert
+description and missing top-level choice relationships require producer review.
