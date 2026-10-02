@@ -536,3 +536,19 @@ the first collision audit. Two parent-block labels accepted using benchmark
 patterns rather than exact-leaf evidence;their precision remains unresolved.
 All three source reviews are retained. Frozen suite remains unchanged/ineligible;
 no reviewed replacement or runtime qualification follows this audit.
+
+
+## Verified parent choice expansion
+
+A single selected property block with one verified direct-child conflict/choice
+group now returns its scoped alternatives instead of a false selected leaf.
+Exact branch terminology chooses that branch;broader word matching is not claimed
+for unresolved configuration choices. Facets/node scope apply;multiple groups
+are not expanded indiscriminately. Secret-storage red/green fixture reproduces
+parent false selection and checks both alternatives,exact branch and filtering.
+475URLtests+workspacechecks pass. Development storage ambiguity returns both
+clear and Blindfold destinations;answerable10/14,12top5remain unchanged.
+Full post-analysis regression35/140selected,49.2857%top5,scored24.1935%,
+discovery154.266ms,complete146.985ms. Accuracy/latency qualification remain failed.
+HTTPS mode relationships absent in metadata remain an explicit coverage gap;no
+validation constraints were inferred from provider names or descriptions.

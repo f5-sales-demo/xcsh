@@ -548,3 +548,87 @@ test("selected property blocks refine to direct fields without changing explicit
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("verified parent choice groups return storage alternatives instead of a false selected leaf", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-storage-choice-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const docs = ["private_key", "private_key.clear_secret_info", "private_key.blindfold_secret_info"].map(
+			(schema, index) => {
+				const docPath = `documentation/resources/fixture/properties/${schema.replaceAll(".", "/")}/index.md`;
+				const body = `<a id="section"></a>\n# ${schema}\nPrivate key storage.\n`;
+				return {
+					...original,
+					path: docPath,
+					body,
+					markdown: body,
+					sha256: terraformHash(body),
+					metadata: {
+						...original.metadata,
+						id: `choice-${index}`,
+						canonical_id: `choice-${index}`,
+						path: docPath,
+						role: "properties",
+						schema_path: schema.split("."),
+						aliases: index === 0 ? ["private key"] : [],
+						relationships:
+							index === 0
+								? [1, 2].map(i => ({
+										type: "conflicts" as const,
+										target_id: `choice-${i}`,
+										anchor: "section",
+										enforcement: "provider-schema" as const,
+										source: "fixture-validator",
+										group: "private_key:storage-choice",
+									}))
+								: [],
+					},
+				};
+			},
+		);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const content = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=configure%20private%20key%20storage&provider_name=fixture&provider_type=resources",
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(content).toContain("Narrowing choices");
+		expect(content).toContain("private_key/clear_secret_info/index.md");
+		expect(content).toContain("private_key/blindfold_secret_info/index.md");
+		expect(content).not.toContain("Selected leaf;");
+		expect(content).not.toContain("Broader word matching was needed");
+		const scoped = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=configure%20private%20key%20storage&provider_name=fixture&provider_type=resources&category=dns",
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(scoped).toContain("No results.");
+		const explicit = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=configure%20private_key.clear_secret_info&provider_name=fixture&provider_type=resources",
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(explicit).not.toContain("private_key/blindfold_secret_info/index.md");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

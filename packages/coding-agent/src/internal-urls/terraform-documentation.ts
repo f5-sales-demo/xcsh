@@ -1380,6 +1380,7 @@ export class TerraformDocumentationRepository {
 			args.push(limit);
 			let rows: SearchRow[] = [];
 			let broadened = false;
+			let unresolvedChoice = false;
 			// Exact schema terminology routes through indexed destinations, before passage ranking.
 			const providerFilter = filters.find(f => f.key === "provider_name");
 
@@ -1756,6 +1757,62 @@ export class TerraformDocumentationRepository {
 				).map(row => ({ ...row, raw_score: 200, score: 200 / 201 }));
 				broadened = false;
 			}
+			if (rows.length === 1 && rows[0]?.anchor === "section" && !taskDestination && !setupAnchor) {
+				const parent = rows[0];
+				const metadata = JSON.parse(parent.metadata) as TerraformMetadata;
+				const choiceClauses = [
+					"r.path=?",
+					"r.anchor='section'",
+					"r.type IN ('conflicts','choice')",
+					"r.choice_group IS NOT NULL",
+					"r.target_path!=r.path",
+				];
+				const choiceArgs: Array<string | number> = [parent.path];
+				for (const filter of filters) {
+					choiceClauses.push(
+						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=td.path AND f.facet=? AND f.value=?)",
+					);
+					choiceArgs.push(filter.key, filter.value);
+				}
+				if (node) {
+					choiceClauses.push(
+						"td.id IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants n ON d.parent_id=n.id) SELECT id FROM descendants)",
+					);
+					choiceArgs.push(node);
+				}
+				const alternatives = db
+					.query(
+						`SELECT td.path,td.metadata,s.anchor,s.heading,s.context_markdown markdown,r.choice_group FROM terraform_relationships r JOIN terraform_documents td ON td.path=r.target_path JOIN terraform_sections s ON s.path=td.path AND s.anchor=r.target_anchor WHERE ${choiceClauses.join(" AND ")} ORDER BY r.choice_group,td.path COLLATE BINARY LIMIT 30`,
+					)
+					.all(...choiceArgs) as Array<SearchRow & { choice_group: string }>;
+				const groups = new Map<string, SearchRow[]>();
+				for (const alternative of alternatives) {
+					const target = JSON.parse(alternative.metadata) as TerraformMetadata;
+					if (
+						target.schema_path.length !== metadata.schema_path.length + 1 ||
+						!metadata.schema_path.every((part, index) => target.schema_path[index] === part)
+					)
+						continue;
+					const group = groups.get(alternative.choice_group) ?? [];
+					if (!group.some(row => row.path === alternative.path && row.anchor === alternative.anchor))
+						group.push(alternative);
+					groups.set(alternative.choice_group, group);
+				}
+				const choices = [...groups.values()].filter(group => group.length >= 2 && group.length <= limit);
+				if (choices.length === 1) {
+					const named = choices[0]!.filter(row => {
+						const target = JSON.parse(row.metadata) as TerraformMetadata;
+						const phrase = target.schema_path.at(-1)!.replaceAll("_", " ");
+						return normalizedSearch.includes(` ${phrase} `);
+					});
+					rows = (named.length === 1 ? named : choices[0]!).map(row => ({
+						...row,
+						raw_score: parent.raw_score,
+						score: parent.score,
+					}));
+					unresolvedChoice = named.length !== 1;
+				}
+			}
 			const uniqueRows = new Map<string, SearchRow>();
 			for (const row of rows) {
 				const key = `${row.path}#${row.anchor}`;
@@ -1775,7 +1832,7 @@ export class TerraformDocumentationRepository {
 					metadata: JSON.parse(r.metadata) as TerraformMetadata,
 					ranking: r.raw_score,
 				})),
-				broadened,
+				broadened || unresolvedChoice,
 				search,
 			);
 			const prefix = `${provenance}\n\n# Terraform search: ${search}\n${selection === "leaf" ? "Selected leaf; read its complete section before drafting." : rows.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\n${broadened ? "Broader word matching was needed; verify candidates.\n" : ""}Scores are ranking values, not probabilities.`;
