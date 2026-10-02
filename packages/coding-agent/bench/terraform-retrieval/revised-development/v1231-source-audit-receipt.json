@@ -1,0 +1,30 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "frozen": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "review_sha256": "b1b52f08b99a91339ce73c8b91c22dc063ea5e36135c4f69eae9e8d9d9cd7ca1",
+  "reviewer": "existing Antigravity independent source reviewer",
+  "model": "Gemini 3.8 Flash (High)",
+  "reviewed_cases": 80,
+  "label_defects": [
+    "dev-revised-001",
+    "dev-revised-002",
+    "dev-revised-008",
+    "dev-revised-009",
+    "dev-revised-010",
+    "dev-revised-011",
+    "dev-revised-020",
+    "dev-revised-021",
+    "dev-revised-022",
+    "dev-revised-023",
+    "dev-revised-027",
+    "dev-revised-042"
+  ],
+  "verified_alternative_destinations": true,
+  "implementation_and_retrieval_outputs_withheld": true,
+  "conversation_ids": [
+    "88592665-ab0d-4cf3-8483-0a9c74a93d26"
+  ]
+}

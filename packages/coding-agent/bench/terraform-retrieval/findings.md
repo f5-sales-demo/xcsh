@@ -951,3 +951,22 @@ complete all 80 revised development cases with identical online/offline rankings
 scores, anchors, decisions and response hashes. Offline p95 is 33.978 ms Mac and
 28.604 ms Ubuntu. Digest-bound synthetic output is retained with
 indexed-task-local-intent-offline.json. This does not qualify an installed artifact.
+
+
+## Fresh v12.3.1 development-label source audit
+
+The authorized existing Antigravity reviewer audited all 80 development cases
+against exact pinned Markdown with implementation and results withheld. Review
+verdict is label-defects: twelve formerly answerable prompts omit same-role
+branch choices or target the wrong prefix/exact-path anchor. All reported
+alternative destinations were independently checked for exact source anchors.
+Review and digest-bound provenance are under revised-development/v1231-source-audit*.
+
+Original data is preserved. Derived source-audited-development.json keeps prompts
+and reclassifies those twelve cases as ambiguity, correcting the prefix anchor.
+It contains 48 answerable, 24 ambiguous and eight controls. The unchanged
+prototype selects 36/48 expected answerable leaves, with zero answerable wrong
+leaves and zero control leaf selections. One ambiguous action still selects a
+leaf: singular versus bulk termination is missing. This is development only,
+not 95% qualification; frozen replacement and installed model acceptance remain
+unstarted. Exact output is source-audited-indexed-development.json.gz.
