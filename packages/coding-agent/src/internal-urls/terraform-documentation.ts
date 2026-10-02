@@ -1046,12 +1046,15 @@ export class TerraformDocumentationRepository {
 				clauses.push("td.id IN (SELECT id FROM descendants)");
 			}
 			const sql = `${cte || "WITH "}scored AS (
-                SELECT td.path,td.metadata,p.anchor,p.heading,c.doc AS markdown,p.ordinal,
+                SELECT td.path,p.anchor,p.heading,p.ordinal,d.hash,
                   ABS(bm25(documents_fts,1.5,4.0,1.0)) raw_score
-                FROM documents_fts JOIN documents d ON d.id=documents_fts.rowid JOIN content c ON c.hash=d.hash
+                FROM documents_fts JOIN documents d ON d.id=documents_fts.rowid
                 JOIN terraform_passages p ON p.qmd_path=d.path JOIN terraform_documents td ON td.path=p.path WHERE ${clauses.join(" AND ")}),
-                ranked AS (SELECT *,ROW_NUMBER() OVER(PARTITION BY path ORDER BY raw_score DESC,ordinal ASC) rank FROM scored)
-                SELECT *,raw_score/(1+raw_score) score FROM ranked WHERE rank=1 ORDER BY raw_score DESC,path COLLATE BINARY,ordinal LIMIT ?`;
+                ranked AS (SELECT *,ROW_NUMBER() OVER(PARTITION BY path ORDER BY raw_score DESC,ordinal ASC) rank FROM scored),
+                selected AS (SELECT * FROM ranked WHERE rank=1 ORDER BY raw_score DESC,path COLLATE BINARY,ordinal LIMIT ?)
+                SELECT selected.*,td.metadata,c.doc AS markdown,raw_score/(1+raw_score) score
+                FROM selected JOIN terraform_documents td ON td.path=selected.path JOIN content c ON c.hash=selected.hash
+                ORDER BY raw_score DESC,selected.path COLLATE BINARY,ordinal`;
 			const statement = db.query(sql);
 			type SearchRow = {
 				path: string;

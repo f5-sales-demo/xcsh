@@ -245,3 +245,12 @@ JSON write repair exact retries:3/4 formerly failed controls now produce complet
 valid traces and pass activation/claim checks. ctrl-disc-008 still times out.
 Original invalid/truncated traces and first attempts remain retained. This repair
 does not change failed accuracy qualification or establish installed release UAT.
+
+## Deferred content loading
+
+Broad-query ranking no longer carries Markdown and metadata through the window
+ranking operation; only final selected rows load complete response content.
+Paired24-prompt development evaluation,5 repetitions: all complete responses
+identical; warm p95 before566.785ms,after138.183ms. This is development performance
+evidence, not held-out qualification. Indexed facets and exact-read behavior stay
+covered by focused snapshot and routing tests. Section ranker remains bench-only.

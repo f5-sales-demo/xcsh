@@ -1,0 +1,996 @@
+{
+  "development_only": true,
+  "qualified": false,
+  "results": [
+    {
+      "kind": "answerable",
+      "prompt": "We are storing our private key in a managed certificate resource using Blindfold secret management, and need to set the URI location pointing to our encrypted secret string.",
+      "provider": "certificate",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "private_key.blindfold_secret_info.location",
+          "description": "Location is the uri_ref. It could be in URL format for string:/// Or it could be a path if the store provider is an HTTP/HTTPS location.",
+          "path": "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md",
+          "anchor": "schema-private_key--blindfold_secret_info--location",
+          "ranking": 63.4,
+          "coverage": 0.5384615384615384
+        },
+        {
+          "schema_path": "private_key",
+          "description": "SecretType is used in an object to indicate a sensitive/confidential field.",
+          "path": "documentation/resources/certificate/properties/private_key/index.md",
+          "anchor": "section",
+          "ranking": 34,
+          "coverage": 0.23076923076923078
+        },
+        {
+          "schema_path": "private_key.blindfold_secret_info.store_provider",
+          "description": "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///.",
+          "path": "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md",
+          "anchor": "schema-private_key--blindfold_secret_info--store_provider",
+          "ranking": 33.4,
+          "coverage": 0.6153846153846154
+        },
+        {
+          "schema_path": "private_key.blindfold_secret_info.decryption_provider",
+          "description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+          "path": "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md",
+          "anchor": "schema-private_key--blindfold_secret_info--decryption_provider",
+          "ranking": 27.4,
+          "coverage": 0.38461538461538464
+        },
+        {
+          "schema_path": "private_key.clear_secret_info.provider_ref",
+          "description": "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///.",
+          "path": "documentation/resources/certificate/properties/private_key/clear_secret_info/index.md",
+          "anchor": "schema-private_key--clear_secret_info--provider_ref",
+          "ranking": 27.4,
+          "coverage": 0.5384615384615384
+        }
+      ],
+      "ms": 2.348157999999998
+    },
+    {
+      "kind": "answerable",
+      "prompt": "For our managed certificate resource, where do we supply the base64 encoded string secret URL when using clear secret private key information?",
+      "provider": "certificate",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "private_key.clear_secret_info.url",
+          "description": "URL of the secret. Currently supported URL schemes is string:///. For string:/// scheme, Secret needs to be encoded Base64 format. When asked for this secret, caller will GET Secret bytes after Base64 decoding.",
+          "path": "documentation/resources/certificate/properties/private_key/clear_secret_info/index.md",
+          "anchor": "schema-private_key--clear_secret_info--url",
+          "ranking": 69.4,
+          "coverage": 0.75
+        },
+        {
+          "schema_path": "certificate_url",
+          "description": "Certificate. Certificate or certificate chain in PEM format including the PEM headers.",
+          "path": "documentation/resources/certificate/properties/index.md",
+          "anchor": "schema-certificate_url",
+          "ranking": 46,
+          "coverage": 0.16666666666666666
+        },
+        {
+          "schema_path": "private_key",
+          "description": "SecretType is used in an object to indicate a sensitive/confidential field.",
+          "path": "documentation/resources/certificate/properties/private_key/index.md",
+          "anchor": "section",
+          "ranking": 32,
+          "coverage": 0.16666666666666666
+        },
+        {
+          "schema_path": "private_key.clear_secret_info.provider_ref",
+          "description": "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///.",
+          "path": "documentation/resources/certificate/properties/private_key/clear_secret_info/index.md",
+          "anchor": "schema-private_key--clear_secret_info--provider_ref",
+          "ranking": 31.4,
+          "coverage": 0.5833333333333334
+        },
+        {
+          "schema_path": "private_key.blindfold_secret_info",
+          "description": "BlindfoldSecretInfoType specifies information about the Secret managed by F5XC Secret Management.",
+          "path": "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md",
+          "anchor": "section",
+          "ranking": 25.7,
+          "coverage": 0.3333333333333333
+        }
+      ],
+      "ms": 0.8239669999999961
+    },
+    {
+      "kind": "answerable",
+      "prompt": "In our managed HTTP load balancer resource configuration, how do we enable automatic redirection of incoming unencrypted HTTP requests over to HTTPS?",
+      "provider": "http_loadbalancer",
+      "role": "resources",
+      "top1": false,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "https_auto_cert.http_redirect",
+          "description": "Redirect HTTP traffic to HTTPS.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
+          "anchor": "schema-https_auto_cert--http_redirect",
+          "ranking": 39.7,
+          "coverage": 0.4166666666666667
+        },
+        {
+          "schema_path": "https.http_redirect",
+          "description": "Redirect HTTP traffic to HTTPS.",
+          "path": "documentation/resources/http_loadbalancer/properties/https/index.md",
+          "anchor": "schema-https--http_redirect",
+          "ranking": 33.7,
+          "coverage": 0.3333333333333333
+        },
+        {
+          "schema_path": "https_auto_cert.http_protocol_options.http_protocol_enable_v1_only",
+          "description": "HTTP/1.1 Protocol OPTIONS for downstream connections.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/http_protocol_options/http_protocol_enable_v1_only/index.md",
+          "anchor": "section",
+          "ranking": 33.4,
+          "coverage": 0.3333333333333333
+        },
+        {
+          "schema_path": "https_auto_cert.http_protocol_options.http_protocol_enable_v1_v2",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/http_protocol_options/http_protocol_enable_v1_v2/index.md",
+          "anchor": "section",
+          "ranking": 31.4,
+          "coverage": 0.3333333333333333
+        },
+        {
+          "schema_path": "https_auto_cert.http_protocol_options.http_protocol_enable_v2_only",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/http_protocol_options/http_protocol_enable_v2_only/index.md",
+          "anchor": "section",
+          "ranking": 31.4,
+          "coverage": 0.3333333333333333
+        }
+      ],
+      "ms": 34.21038299999999
+    },
+    {
+      "kind": "answerable",
+      "prompt": "We need to override the default listening TCP port for HTTPS downstream traffic on our managed HTTP load balancer resource to a non-standard port.",
+      "provider": "http_loadbalancer",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "https.port",
+          "description": "Exclusive with HTTPS port to Listen.",
+          "path": "documentation/resources/http_loadbalancer/properties/https/index.md",
+          "anchor": "schema-https--port",
+          "ranking": 47.7,
+          "coverage": 0.2857142857142857
+        },
+        {
+          "schema_path": "https_auto_cert.port",
+          "description": "Exclusive with HTTPS port to Listen.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
+          "anchor": "schema-https_auto_cert--port",
+          "ranking": 47.7,
+          "coverage": 0.2857142857142857
+        },
+        {
+          "schema_path": "advertise_custom.advertise_where.use_default_port",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/http_loadbalancer/properties/advertise_custom/advertise_where/use_default_port/index.md",
+          "anchor": "section",
+          "ranking": 43.4,
+          "coverage": 0.14285714285714285
+        },
+        {
+          "schema_path": "default_pool.health_check_port",
+          "description": "Exclusive with Port used for performing health check.",
+          "path": "documentation/resources/http_loadbalancer/properties/default_pool/index.md",
+          "anchor": "schema-default_pool--health_check_port",
+          "ranking": 41.7,
+          "coverage": 0.14285714285714285
+        },
+        {
+          "schema_path": "default_pool.port",
+          "description": "Exclusive with Endpoint service is available on this port.",
+          "path": "documentation/resources/http_loadbalancer/properties/default_pool/index.md",
+          "anchor": "schema-default_pool--port",
+          "ranking": 41.7,
+          "coverage": 0.14285714285714285
+        }
+      ],
+      "ms": 32.925484
+    },
+    {
+      "kind": "answerable",
+      "prompt": "We want our managed HTTP load balancer to automatically provision and manage TLS certificates for our domains instead of providing our own custom certificates.",
+      "provider": "http_loadbalancer",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "https_auto_cert",
+          "description": "Choice for selecting HTTP proxy with bring your own certificates.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
+          "anchor": "section",
+          "ranking": 88,
+          "coverage": 0.35294117647058826
+        },
+        {
+          "schema_path": "https.tls_parameters.tls_certificates",
+          "description": "Users can add one or more certificates that share the same set of domains. For example, domain.com and *.domain.com - but use different signature algorithms.",
+          "path": "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md",
+          "anchor": "section",
+          "ranking": 47.4,
+          "coverage": 0.23529411764705882
+        },
+        {
+          "schema_path": "default_pool.use_tls.use_mtls.tls_certificates",
+          "description": "MTLS Client Certificate.",
+          "path": "documentation/resources/http_loadbalancer/properties/default_pool/use_tls/use_mtls/tls_certificates/index.md",
+          "anchor": "section",
+          "ranking": 45.1,
+          "coverage": 0.17647058823529413
+        },
+        {
+          "schema_path": "https_auto_cert.tls_config.custom_security",
+          "description": "This defines TLS protocol config including min/max versions and allowed ciphers.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/tls_config/custom_security/index.md",
+          "anchor": "section",
+          "ranking": 41.4,
+          "coverage": 0.35294117647058826
+        },
+        {
+          "schema_path": "https_auto_cert.use_mtls.client_certificate_optional",
+          "description": "Client certificate is optional. If the client has provided a certificate, the load balancer will verify it. If certification verification fails, the connection will be terminated. If the client does not provide a certificate, the connection will be accepted.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/use_mtls/index.md",
+          "anchor": "schema-https_auto_cert--use_mtls--client_certificate_optional",
+          "ranking": 39.4,
+          "coverage": 0.35294117647058826
+        }
+      ],
+      "ms": 36.40343299999999
+    },
+    {
+      "kind": "answerable",
+      "prompt": "When enabling upstream server TLS verification on our managed origin pool resource, which attribute defines the name of the trusted CA object used to validate the backend servers?",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "use_tls.use_server_verification.trusted_ca.name",
+          "description": "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then name will hold the referred object's(e.g. Route's) name.",
+          "path": "documentation/resources/origin_pool/properties/use_tls/use_server_verification/trusted_ca/index.md",
+          "anchor": "schema-use_tls--use_server_verification--trusted_ca--name",
+          "ranking": 71.1,
+          "coverage": 0.5294117647058824
+        },
+        {
+          "schema_path": "origin_servers.custom_endpoint_object.endpoint.name",
+          "description": "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then name will hold the referred object's(e.g. Route's) name.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/custom_endpoint_object/endpoint/index.md",
+          "anchor": "schema-origin_servers--custom_endpoint_object--endpoint--name",
+          "ranking": 59.1,
+          "coverage": 0.35294117647058826
+        },
+        {
+          "schema_path": "origin_servers.cbip_service.service_name",
+          "description": "Name of the discovered Classic BIG-IP virtual server to be used as origin.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/cbip_service/index.md",
+          "anchor": "schema-origin_servers--cbip_service--service_name",
+          "ranking": 55.4,
+          "coverage": 0.29411764705882354
+        },
+        {
+          "schema_path": "origin_servers.k8s_service.service_name",
+          "description": "Exclusive with K8s service name of the origin server will be listed, including the namespace and cluster-ID. For vK8s services, you need to enter a string with the format servicename.namespace:example-namespace\"frontend\", namespace is \"speedtest\" and cluster-ID is \"prod\", then you will enter \"frontend.speedtest:prod\".",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md",
+          "anchor": "schema-origin_servers--k8s_service--service_name",
+          "ranking": 53.4,
+          "coverage": 0.23529411764705882
+        },
+        {
+          "schema_path": "origin_servers.private_ip.segment.name",
+          "description": "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then name will hold the referred object's(e.g. Route's) name.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/private_ip/segment/index.md",
+          "anchor": "schema-origin_servers--private_ip--segment--name",
+          "ranking": 53.1,
+          "coverage": 0.35294117647058826
+        }
+      ],
+      "ms": 3.1183709999999962
+    },
+    {
+      "kind": "answerable",
+      "prompt": "How do we instruct our managed origin pool resource to validate backend server certificates using the platform's default Volterra trusted CA bundle?",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "use_tls.volterra_trusted_ca",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/origin_pool/properties/use_tls/volterra_trusted_ca/index.md",
+          "anchor": "section",
+          "ranking": 71.7,
+          "coverage": 0.2
+        },
+        {
+          "schema_path": "use_tls.use_server_verification.trusted_ca",
+          "description": "This type establishes a direct reference from one object(the referrer) to another(the referred). Such a reference is in form of tenant/namespace/name.",
+          "path": "documentation/resources/origin_pool/properties/use_tls/use_server_verification/trusted_ca/index.md",
+          "anchor": "section",
+          "ranking": 39.4,
+          "coverage": 0.26666666666666666
+        },
+        {
+          "schema_path": "use_tls.use_server_verification.trusted_ca_url",
+          "description": "Exclusive with Upload a Root CA Certificate specifically for this Origin Pool for verification of server's certificate.",
+          "path": "documentation/resources/origin_pool/properties/use_tls/use_server_verification/index.md",
+          "anchor": "schema-use_tls--use_server_verification--trusted_ca_url",
+          "ranking": 37.4,
+          "coverage": 0.4666666666666667
+        },
+        {
+          "schema_path": "origin_servers",
+          "description": "List of origin servers in this pool.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/index.md",
+          "anchor": "section",
+          "ranking": 26,
+          "coverage": 0.2
+        },
+        {
+          "schema_path": "origin_servers.consul_service.snat_pool",
+          "description": "SNAT Pool configuration.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/consul_service/snat_pool/index.md",
+          "anchor": "section",
+          "ranking": 23.4,
+          "coverage": 0.2
+        }
+      ],
+      "ms": 2.920404999999988
+    },
+    {
+      "kind": "answerable",
+      "prompt": "In a managed origin pool resource, where do we configure the public DNS hostname for an upstream origin server destination?",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "origin_servers.public_name.dns_name",
+          "description": "DNS Name",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/public_name/index.md",
+          "anchor": "schema-origin_servers--public_name--dns_name",
+          "ranking": 45.4,
+          "coverage": 0.5714285714285714
+        },
+        {
+          "schema_path": "origin_servers",
+          "description": "List of origin servers in this pool.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/index.md",
+          "anchor": "section",
+          "ranking": 38,
+          "coverage": 0.42857142857142855
+        },
+        {
+          "schema_path": "origin_servers.public_name",
+          "description": "Specify origin server with public DNS name.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/public_name/index.md",
+          "anchor": "section",
+          "ranking": 29.7,
+          "coverage": 0.5714285714285714
+        },
+        {
+          "schema_path": "origin_servers.public_ip",
+          "description": "Specify origin server with public IP address.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md",
+          "anchor": "section",
+          "ranking": 27.7,
+          "coverage": 0.42857142857142855
+        },
+        {
+          "schema_path": "origin_servers.private_name.dns_name",
+          "description": "DNS Name",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/private_name/index.md",
+          "anchor": "schema-origin_servers--private_name--dns_name",
+          "ranking": 27.4,
+          "coverage": 0.42857142857142855
+        }
+      ],
+      "ms": 3.167777000000001
+    },
+    {
+      "kind": "answerable",
+      "prompt": "Where do we specify the public IP address when adding an externally routable origin server to our managed origin pool resource?",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": false,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "origin_servers.public_ip",
+          "description": "Specify origin server with public IP address.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md",
+          "anchor": "section",
+          "ranking": 59.7,
+          "coverage": 0.5
+        },
+        {
+          "schema_path": "origin_servers.public_ip.ip",
+          "description": "Exclusive with Public IPv4 address.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md",
+          "anchor": "schema-origin_servers--public_ip--ip",
+          "ranking": 55.4,
+          "coverage": 0.4166666666666667
+        },
+        {
+          "schema_path": "advanced_options.disable_lb_source_ip_persistence",
+          "description": "IP address configuration",
+          "path": "documentation/resources/origin_pool/properties/advanced_options/disable_lb_source_ip_persistence/index.md",
+          "anchor": "section",
+          "ranking": 37.7,
+          "coverage": 0.16666666666666666
+        },
+        {
+          "schema_path": "advanced_options.enable_lb_source_ip_persistence",
+          "description": "IP address configuration",
+          "path": "documentation/resources/origin_pool/properties/advanced_options/enable_lb_source_ip_persistence/index.md",
+          "anchor": "section",
+          "ranking": 37.7,
+          "coverage": 0.16666666666666666
+        },
+        {
+          "schema_path": "origin_servers.private_ip.ip",
+          "description": "Exclusive with Private IPv4 address.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/private_ip/index.md",
+          "anchor": "schema-origin_servers--private_ip--ip",
+          "ranking": 35.4,
+          "coverage": 0.3333333333333333
+        }
+      ],
+      "ms": 4.09646699999999
+    },
+    {
+      "kind": "answerable",
+      "prompt": "We are attaching internal cluster workloads to our managed origin pool resource and need to specify the Kubernetes service name for endpoint discovery.",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "origin_servers.k8s_service.service_name",
+          "description": "Exclusive with K8s service name of the origin server will be listed, including the namespace and cluster-ID. For vK8s services, you need to enter a string with the format servicename.namespace:example-namespace\"frontend\", namespace is \"speedtest\" and cluster-ID is \"prod\", then you will enter \"frontend.speedtest:prod\".",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md",
+          "anchor": "schema-origin_servers--k8s_service--service_name",
+          "ranking": 79.4,
+          "coverage": 0.46153846153846156
+        },
+        {
+          "schema_path": "origin_servers.consul_service.service_name",
+          "description": "Consul service name of this origin server will be listed, including cluster-ID. The format is servicename:cluster-ID.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/consul_service/index.md",
+          "anchor": "schema-origin_servers--consul_service--service_name",
+          "ranking": 69.4,
+          "coverage": 0.3076923076923077
+        },
+        {
+          "schema_path": "origin_servers.cbip_service.service_name",
+          "description": "Name of the discovered Classic BIG-IP virtual server to be used as origin.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/cbip_service/index.md",
+          "anchor": "schema-origin_servers--cbip_service--service_name",
+          "ranking": 67.4,
+          "coverage": 0.3076923076923077
+        },
+        {
+          "schema_path": "origin_servers.k8s_service.site_locator.site.name",
+          "description": "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then name will hold the referred object's(e.g. Route's) name.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/k8s_service/site_locator/site/index.md",
+          "anchor": "schema-origin_servers--k8s_service--site_locator--site--name",
+          "ranking": 54.8,
+          "coverage": 0.38461538461538464
+        },
+        {
+          "schema_path": "origin_servers.k8s_service.site_locator.virtual_site.name",
+          "description": "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then name will hold the referred object's(e.g. Route's) name.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/k8s_service/site_locator/virtual_site/index.md",
+          "anchor": "schema-origin_servers--k8s_service--site_locator--virtual_site--name",
+          "ranking": 54.8,
+          "coverage": 0.38461538461538464
+        }
+      ],
+      "ms": 2.901804999999996
+    },
+    {
+      "kind": "answerable",
+      "prompt": "In our managed HTTP load balancer resource, how do we configure the expected HTTP response status code that indicates a user login transaction succeeded in the bot defense authentication policy?",
+      "provider": "http_loadbalancer",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result.success_conditions.status",
+          "description": "HTTP response status codes EmptyStatusCode response codes means it is not specified Continue status code OK status code Created status code Accepted status code Non Authoritative Information status code No Content status code Reset Content status code Partial Content status code Multi Status status code Already",
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md",
+          "anchor": "schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status",
+          "ranking": 81.6,
+          "coverage": 0.6470588235294118
+        },
+        {
+          "schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result.failure_conditions.status",
+          "description": "HTTP response status codes EmptyStatusCode response codes means it is not specified Continue status code OK status code Created status code Accepted status code Non Authoritative Information status code No Content status code Reset Content status code Partial Content status code Multi Status status code Already",
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md",
+          "anchor": "schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--status",
+          "ranking": 63.6,
+          "coverage": 0.5882352941176471
+        },
+        {
+          "schema_path": "bot_defense.policy.protected_app_endpoints.mitigation.block.status",
+          "description": "HTTP response status codes EmptyStatusCode response codes means it is not specified Continue status code OK status code Created status code Accepted status code Non Authoritative Information status code No Content status code Reset Content status code Partial Content status code Multi Status status code Already",
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/mitigation/block/index.md",
+          "anchor": "schema-bot_defense--policy--protected_app_endpoints--mitigation--block--status",
+          "ranking": 58.5,
+          "coverage": 0.4117647058823529
+        },
+        {
+          "schema_path": "routes.simple_route.advanced_options.retry_policy.retriable_status_codes",
+          "description": "HTTP status codes that should trigger a retry in addition to those specified by retry_on.",
+          "path": "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/retry_policy/index.md",
+          "anchor": "schema-routes--simple_route--advanced_options--retry_policy--retriable_status_codes",
+          "ranking": 56.8,
+          "coverage": 0.29411764705882354
+        },
+        {
+          "schema_path": "bot_defense.policy.protected_app_endpoints.flow_label.authentication.login.transaction_result",
+          "description": "Bot Defense Transaction ResultType.",
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/index.md",
+          "anchor": "section",
+          "ranking": 44.2,
+          "coverage": 0.35294117647058826
+        }
+      ],
+      "ms": 29.626450999999975
+    },
+    {
+      "kind": "answerable",
+      "prompt": "How can we increase the maximum allowable timeout duration for the initial creation operation of our managed HTTP load balancer resource?",
+      "provider": "http_loadbalancer",
+      "role": "resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "timeouts.create",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+          "path": "documentation/resources/http_loadbalancer/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--create",
+          "ranking": 45.7,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "timeouts.delete",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.",
+          "path": "documentation/resources/http_loadbalancer/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--delete",
+          "ranking": 41.7,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "timeouts.read",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.",
+          "path": "documentation/resources/http_loadbalancer/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--read",
+          "ranking": 37.7,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "timeouts.update",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+          "path": "documentation/resources/http_loadbalancer/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--update",
+          "ranking": 35.7,
+          "coverage": 0.18181818181818182
+        },
+        {
+          "schema_path": "default_pool.advanced_options.http_idle_timeout",
+          "description": "The idle timeout for upstream connection pool connections. The idle timeout is defined as the period in which there are no active requests. When the idle timeout is reached the connection will be closed. Note that request based timeouts mean that HTTP/2 PINGs will not keep the connection alive. This is specified in",
+          "path": "documentation/resources/http_loadbalancer/properties/default_pool/advanced_options/index.md",
+          "anchor": "schema-default_pool--advanced_options--http_idle_timeout",
+          "ranking": 35.4,
+          "coverage": 0.2727272727272727
+        }
+      ],
+      "ms": 31.070633000000015
+    },
+    {
+      "kind": "answerable",
+      "prompt": "We need to invoke the single active session termination action to invalidate a specific user session and need to specify the target session ID.",
+      "role": "actions",
+      "top1": false,
+      "top5": false,
+      "ranked": [],
+      "ms": 0.3864820000000009
+    },
+    {
+      "kind": "answerable",
+      "prompt": "Using the ephemeral artifact registry token resource, which computed sensitive attribute yields the short-lived FAR access token for pulling container images?",
+      "provider": "artifact_registry_token",
+      "role": "ephemeral-resources",
+      "top1": true,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "token",
+          "description": "Access token for the F5 Artifact Registry (FAR) This token can be used to authenticate with FAR when pulling related images for Kubernetes bot infrastructure.",
+          "path": "documentation/ephemeral-resources/artifact_registry_token/properties/index.md",
+          "anchor": "schema-token",
+          "ranking": 48,
+          "coverage": 0.5
+        },
+        {
+          "schema_path": "expiration_time",
+          "description": "Expiration Time. Expiration time of the token.",
+          "path": "documentation/ephemeral-resources/artifact_registry_token/properties/index.md",
+          "anchor": "schema-expiration_time",
+          "ranking": 2,
+          "coverage": 0.07142857142857142
+        }
+      ],
+      "ms": 0.18999400000001287
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "I need to set up authentication in our Terraform configuration so the xcsh provider can manage resources in our Distributed Cloud tenant.",
+      "provider": "authentication",
+      "role": "resources",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        {
+          "schema_path": "oidc_auth.oidc_well_known_config_url",
+          "description": "Exclusive with An OIDC well-known configuration URL that will be used to fetch authentication related endpoints.",
+          "path": "documentation/resources/authentication/properties/oidc_auth/index.md",
+          "anchor": "schema-oidc_auth--oidc_well_known_config_url",
+          "ranking": 3.7,
+          "coverage": 0.2222222222222222
+        },
+        {
+          "schema_path": "cookie_params",
+          "description": "Specifies different cookie related config parameters for authentication.",
+          "path": "documentation/resources/authentication/properties/cookie_params/index.md",
+          "anchor": "section",
+          "ranking": 2,
+          "coverage": 0.1111111111111111
+        },
+        {
+          "schema_path": "annotations",
+          "description": "Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects.",
+          "path": "documentation/resources/authentication/properties/index.md",
+          "anchor": "schema-annotations",
+          "ranking": 2,
+          "coverage": 0.1111111111111111
+        },
+        {
+          "schema_path": "labels",
+          "description": "Map of string keys and values that can be used to organize and categorize (scope and select) objects as chosen by the user. Values specified here will be used by selector expression.",
+          "path": "documentation/resources/authentication/properties/index.md",
+          "anchor": "schema-labels",
+          "ranking": 2,
+          "coverage": 0.1111111111111111
+        },
+        {
+          "schema_path": "name",
+          "description": "This is the name of configuration object. It has to be unique within the namespace. It can only be specified during create API and cannot be changed during replace API. The value of name has to follow DNS-1035 format.",
+          "path": "documentation/resources/authentication/properties/index.md",
+          "anchor": "schema-name",
+          "ranking": 2,
+          "coverage": 0.1111111111111111
+        }
+      ],
+      "ms": 0.6940480000000093
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "We want to configure TLS encryption on our HTTP load balancer frontend to terminate HTTPS customer traffic.",
+      "provider": "http_loadbalancer",
+      "role": "resources",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        {
+          "schema_path": "https.http_redirect",
+          "description": "Redirect HTTP traffic to HTTPS.",
+          "path": "documentation/resources/http_loadbalancer/properties/https/index.md",
+          "anchor": "schema-https--http_redirect",
+          "ranking": 23.7,
+          "coverage": 0.36363636363636365
+        },
+        {
+          "schema_path": "https_auto_cert.http_redirect",
+          "description": "Redirect HTTP traffic to HTTPS.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
+          "anchor": "schema-https_auto_cert--http_redirect",
+          "ranking": 23.7,
+          "coverage": 0.36363636363636365
+        },
+        {
+          "schema_path": "csrf_policy.all_load_balancer_domains",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/http_loadbalancer/properties/csrf_policy/all_load_balancer_domains/index.md",
+          "anchor": "section",
+          "ranking": 19.7,
+          "coverage": 0.18181818181818182
+        },
+        {
+          "schema_path": "https_auto_cert.tls_config",
+          "description": "This defines various OPTIONS to configure TLS configuration parameters.",
+          "path": "documentation/resources/http_loadbalancer/properties/https_auto_cert/tls_config/index.md",
+          "anchor": "section",
+          "ranking": 19.7,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "https.tls_cert_params.tls_config",
+          "description": "This defines various OPTIONS to configure TLS configuration parameters.",
+          "path": "documentation/resources/http_loadbalancer/properties/https/tls_cert_params/tls_config/index.md",
+          "anchor": "section",
+          "ranking": 19.4,
+          "coverage": 0.2727272727272727
+        }
+      ],
+      "ms": 28.097267000000016
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "We have an existing SSL private key that we want to supply to our managed certificate resource, but need to know which storage block to configure.",
+      "provider": "certificate",
+      "role": "resources",
+      "top1": false,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "private_key",
+          "description": "SecretType is used in an object to indicate a sensitive/confidential field.",
+          "path": "documentation/resources/certificate/properties/private_key/index.md",
+          "anchor": "section",
+          "ranking": 34,
+          "coverage": 0.23076923076923078
+        },
+        {
+          "schema_path": "private_key.blindfold_secret_info.store_provider",
+          "description": "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///.",
+          "path": "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md",
+          "anchor": "schema-private_key--blindfold_secret_info--store_provider",
+          "ranking": 15.4,
+          "coverage": 0.3076923076923077
+        },
+        {
+          "schema_path": "private_key.clear_secret_info.provider_ref",
+          "description": "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///.",
+          "path": "documentation/resources/certificate/properties/private_key/clear_secret_info/index.md",
+          "anchor": "schema-private_key--clear_secret_info--provider_ref",
+          "ranking": 15.4,
+          "coverage": 0.3076923076923077
+        },
+        {
+          "schema_path": "private_key.clear_secret_info",
+          "description": "ClearSecretInfoType specifies information about the Secret that is not encrypted.",
+          "path": "documentation/resources/certificate/properties/private_key/clear_secret_info/index.md",
+          "anchor": "section",
+          "ranking": 13.7,
+          "coverage": 0.23076923076923078
+        },
+        {
+          "schema_path": "private_key.blindfold_secret_info.decryption_provider",
+          "description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+          "path": "documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md",
+          "anchor": "schema-private_key--blindfold_secret_info--decryption_provider",
+          "ranking": 13.4,
+          "coverage": 0.23076923076923078
+        }
+      ],
+      "ms": 0.65166099999999
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "How do we configure server certificate validation for encrypted backend connections in our origin pool?",
+      "role": "resources",
+      "top1": false,
+      "top5": false,
+      "ranked": [],
+      "ms": 0.16326399999996966
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "We need to register upstream application servers into our origin pool to handle incoming requests.",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        {
+          "schema_path": "origin_servers",
+          "description": "List of origin servers in this pool.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/index.md",
+          "anchor": "section",
+          "ranking": 26,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "upstream_conn_pool_reuse_type",
+          "description": "Select upstream connection pool reuse state for every downstream connection. This configuration choice is for HTTP(S) LB only.",
+          "path": "documentation/resources/origin_pool/properties/upstream_conn_pool_reuse_type/index.md",
+          "anchor": "section",
+          "ranking": 24,
+          "coverage": 0.18181818181818182
+        },
+        {
+          "schema_path": "origin_servers.consul_service.snat_pool",
+          "description": "SNAT Pool configuration.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/consul_service/snat_pool/index.md",
+          "anchor": "section",
+          "ranking": 23.4,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "origin_servers.k8s_service.snat_pool",
+          "description": "SNAT Pool configuration.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/k8s_service/snat_pool/index.md",
+          "anchor": "section",
+          "ranking": 23.4,
+          "coverage": 0.2727272727272727
+        },
+        {
+          "schema_path": "origin_servers.private_ip.snat_pool",
+          "description": "SNAT Pool configuration.",
+          "path": "documentation/resources/origin_pool/properties/origin_servers/private_ip/snat_pool/index.md",
+          "anchor": "section",
+          "ranking": 23.4,
+          "coverage": 0.2727272727272727
+        }
+      ],
+      "ms": 3.321444999999983
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "We want to define when a user login transaction is considered successful in our load balancer bot defense flow.",
+      "role": "resources",
+      "top1": false,
+      "top5": false,
+      "ranked": [],
+      "ms": 0.1880689999999845
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "Our origin pool deployment takes a while to synchronize, so we need to adjust the lifecycle operation timeout in Terraform.",
+      "provider": "origin_pool",
+      "role": "resources",
+      "top1": false,
+      "top5": true,
+      "ranked": [
+        {
+          "schema_path": "timeouts.delete",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.",
+          "path": "documentation/resources/origin_pool/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--delete",
+          "ranking": 41.7,
+          "coverage": 0.23076923076923078
+        },
+        {
+          "schema_path": "timeouts.read",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.",
+          "path": "documentation/resources/origin_pool/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--read",
+          "ranking": 37.7,
+          "coverage": 0.23076923076923078
+        },
+        {
+          "schema_path": "timeouts.create",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+          "path": "documentation/resources/origin_pool/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--create",
+          "ranking": 35.7,
+          "coverage": 0.15384615384615385
+        },
+        {
+          "schema_path": "timeouts.update",
+          "description": "A string that can be (https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+          "path": "documentation/resources/origin_pool/properties/timeouts/index.md",
+          "anchor": "schema-timeouts--update",
+          "ranking": 35.7,
+          "coverage": 0.15384615384615385
+        },
+        {
+          "schema_path": "advanced_options.connection_timeout",
+          "description": "The timeout for new network connections to endpoints in the cluster. This is specified in milliseconds. The default value is 2 seconds.",
+          "path": "documentation/resources/origin_pool/properties/advanced_options/index.md",
+          "anchor": "schema-advanced_options--connection_timeout",
+          "ranking": 25.7,
+          "coverage": 0.23076923076923078
+        }
+      ],
+      "ms": 3.3446009999999546
+    },
+    {
+      "kind": "ambiguous",
+      "prompt": "We need to run an automated action to terminate compromised user access sessions in our tenant.",
+      "role": "actions",
+      "top1": false,
+      "top5": false,
+      "ranked": [],
+      "ms": 0.18151299999999537
+    },
+    {
+      "kind": "control",
+      "prompt": "Where can I find the public F5 Distributed Cloud network reference guide and IP allowlists for cloud egress?",
+      "role": "resources",
+      "top1": true,
+      "top5": false,
+      "ranked": [],
+      "ms": 0.11421200000000908
+    },
+    {
+      "kind": "control",
+      "prompt": "How do I configure the WireGuard VPN tunnel interface and peer public key parameters on our managed securemesh site?",
+      "provider": "securemesh_site",
+      "role": "resources",
+      "top1": false,
+      "top5": false,
+      "ranked": [
+        {
+          "schema_path": "custom_network_config.interface_list.interfaces.ethernet_interface.site_local_inside_network",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/securemesh_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/site_local_inside_network/index.md",
+          "anchor": "section",
+          "ranking": 14.8,
+          "coverage": 0.2
+        },
+        {
+          "schema_path": "custom_network_config.interface_list.interfaces.ethernet_interface.site_local_network",
+          "description": "This can be used for messages where no values are needed.",
+          "path": "documentation/resources/securemesh_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/site_local_network/index.md",
+          "anchor": "section",
+          "ranking": 14.8,
+          "coverage": 0.2
+        },
+        {
+          "schema_path": "custom_network_config.interface_list",
+          "description": "Configure network interfaces for this Secure Mesh site.",
+          "path": "documentation/resources/securemesh_site/properties/custom_network_config/interface_list/index.md",
+          "anchor": "section",
+          "ranking": 13.7,
+          "coverage": 0.2
+        },
+        {
+          "schema_path": "custom_network_config.interface_list.interfaces",
+          "description": "Configure network interfaces for this Secure Mesh site.",
+          "path": "documentation/resources/securemesh_site/properties/custom_network_config/interface_list/interfaces/index.md",
+          "anchor": "section",
+          "ranking": 13.4,
+          "coverage": 0.2
+        },
+        {
+          "schema_path": "custom_network_config.sli_config.static_routes.static_routes.node_interface",
+          "description": "On multinode site, this type holds the information about per node interfaces.",
+          "path": "documentation/resources/securemesh_site/properties/custom_network_config/sli_config/static_routes/static_routes/node_interface/index.md",
+          "anchor": "section",
+          "ranking": 12.8,
+          "coverage": 0.2
+        }
+      ],
+      "ms": 5.346343999999988
+    }
+  ]
+}
