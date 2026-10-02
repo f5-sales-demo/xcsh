@@ -869,3 +869,67 @@ test("exact scalar field identifiers retain all branches before context selectio
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("schema identifier underscores are literal rather than SQL wildcards", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-literal-field-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const docs = [
+			{ branch: "branch_a", field: "shared_flag", description: "A scalar flag." },
+			{
+				branch: "branch_z.more_context.deep_nested.another_level",
+				field: "sharedxflag",
+				description: "This differs from shared_flag.",
+			},
+		].map(record => {
+			const docPath = `documentation/resources/fixture/properties/${record.branch}/index.md`;
+			const anchor = `schema-${record.branch}--${record.field}`;
+			const body = `# ${record.branch}\n\n<a id="${anchor}"></a>\n### ${record.field}\n${record.description}\n`;
+			return {
+				...original,
+				path: docPath,
+				body,
+				markdown: body,
+				sha256: terraformHash(body),
+				metadata: {
+					...original.metadata,
+					id: record.branch,
+					canonical_id: record.branch,
+					path: docPath,
+					role: "properties",
+					schema_path: [record.branch],
+					aliases: [],
+					sections: [
+						{
+							schema_path: [...record.branch.split("."), record.field],
+							document_id: record.branch,
+							anchor,
+							description: record.description,
+							aliases: [],
+							flags: [],
+							relationships: [],
+						},
+					],
+				},
+			};
+		});
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const content = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=shared_flag%20under%20branch_z%20more_context%20deep_nested%20another_level&provider_name=fixture&provider_type=resources",
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(content).not.toContain("sharedxflag");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

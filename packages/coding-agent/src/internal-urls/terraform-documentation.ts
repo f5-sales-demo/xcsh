@@ -1728,11 +1728,11 @@ export class TerraformDocumentationRepository {
 					const exactClauses = [
 						"dest.provider_name=?",
 						"dest.anchor LIKE 'schema-%'",
-						`(${identifiers.map(() => "dest.schema_path=? OR dest.schema_path LIKE ?").join(" OR ")})`,
+						`(${identifiers.map(() => "dest.schema_path=? OR substr(dest.schema_path,-length(?))=?").join(" OR ")})`,
 					];
 					const exactArgs: Array<string | number> = [
 						providerFilter.value,
-						...identifiers.flatMap(term => [term, `%.${term}`]),
+						...identifiers.flatMap(term => [term, `.${term}`, `.${term}`]),
 					];
 					for (const filter of filters) {
 						exactClauses.push(
@@ -1824,11 +1824,16 @@ export class TerraformDocumentationRepository {
 					: metadata.schema_path;
 				if (schema.length >= 3) {
 					const suffix = schema.slice(-2).join(".");
-					const siblingClauses = ["dest.provider_name=?", "dest.provider_type=?", "dest.schema_path LIKE ?"];
+					const siblingClauses = [
+						"dest.provider_name=?",
+						"dest.provider_type=?",
+						"substr(dest.schema_path,-length(?))=?",
+					];
 					const siblingArgs: Array<string | number> = [
 						metadata.provider_name,
 						metadata.provider_type,
-						`%.${suffix}`,
+						`.${suffix}`,
+						`.${suffix}`,
 					];
 					for (const filter of filters) {
 						siblingClauses.push(

@@ -709,3 +709,13 @@ stay distinct. Red fixture reproduces precise named-branch query falsely marked
 broadened;484URLtests+workspacechecks pass. Published regression unchanged
 43/140selected,52.8571%top5,discovery122.274ms,complete113.286ms;no qualification.
 Provider exact-source documentation regeneration remains active.
+
+
+## Literal schema suffix matching
+
+Exact scalar and sibling suffix lookups treat underscores literally rather than
+SQL LIKE wildcards. A red fixture reproduced a confident sharedxflag selection
+for shared_flag with deeper matching context. Literal suffix comparisons repair
+that false destination;485URLtests+workspacechecks pass. Published regression
+43/140selected52.8571%top5unchanged,discovery112.092ms,complete107.889ms.
+No accuracy qualification. Provider documentation regeneration remains active.
