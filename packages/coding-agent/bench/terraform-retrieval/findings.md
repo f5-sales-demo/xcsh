@@ -729,3 +729,13 @@ qualifiers already excluded the alternatives. The diagonal fixture did not prove
 independent missing choices. Rule and fixture removed;production restored.
 Regression evidence retained without qualification or promotion. Provider2370
 CIbuild/vet/lint/security pass,race and Super-Linter remain live.
+
+
+## Current cross-platform regression parity
+
+Fresh bootstrapped Mac worktree and Ubuntu source a9149f5a5use the same reviewed
+gzip. All200case outcomes,destinations,ranks,responsebytes match. Complete
+discovery/context hashes match,including481scores and481contextreads. Five-repeat
+discoveryp95Mac94.062ms,Ubuntu104.610ms;complete91.413/101.019ms. Accuracy
+43/140and52.8571%top5still fails;ineligible suite regression only. Earlier dirty
+Mac worktree preserved. Final released installed acceptance remains unfinished.
