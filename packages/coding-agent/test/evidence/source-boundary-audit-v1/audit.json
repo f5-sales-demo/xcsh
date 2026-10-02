@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "fb6e63af2545331d0ae899f6faae6588af086b92",
+  "revision": "5d4c126fd2e633c974d8651b4f7c0aa3eefe448a",
   "fingerprint": "9d8d3feae83da48dd4759265c3cb8119d6c1575389f40d1e9d77616ed5f73006",
   "counts": {
     "total": 238,
@@ -54,6 +54,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -69,8 +70,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/autoresearch/index.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -269,6 +269,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -284,8 +285,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/debug/index.ts is individually classified as reviewed-mutation-adapter in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1027,6 +1027,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1042,8 +1043,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/acp/index.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1417,6 +1417,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1432,8 +1433,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1698,6 +1698,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1713,8 +1714,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1976,6 +1976,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -1991,8 +1992,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugins/index.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2627,6 +2627,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -2642,8 +2643,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/status-line/index.ts is individually classified as read-only-renderer in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3613,6 +3613,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
@@ -3628,8 +3629,7 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
-        "packages/coding-agent/test/connected-provider-reload.test.ts",
-        "packages/coding-agent/test/context-completion.test.ts"
+        "packages/coding-agent/test/connected-provider-reload.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3935,6 +3935,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -3950,8 +3951,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/defaults/index.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4987,6 +4987,7 @@
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
         "packages/coding-agent/test/agent-session-concurrent.test.ts",
         "packages/coding-agent/test/agent-session-context-promotion.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
@@ -4999,8 +5000,7 @@
         "packages/coding-agent/test/bench-instant-extension.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/acquire-helpers.test.ts",
-        "packages/coding-agent/test/browser/bridge-cert.test.ts"
+        "packages/coding-agent/test/browser/acquire-helpers.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/find.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6429,6 +6429,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -6444,8 +6445,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/tui/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6963,6 +6963,7 @@
         "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-session-api-catalog-preflight.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
@@ -6978,8 +6979,7 @@
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/typescript-edit-benchmark/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     }

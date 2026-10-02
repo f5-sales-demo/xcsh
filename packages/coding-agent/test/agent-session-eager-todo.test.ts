@@ -249,5 +249,36 @@ describe("AgentSession natural openings", () => {
 		await session.prompt("implement the approved repair");
 		expect(observedCalls[1]?.toolChoice).toBeUndefined();
 		expect(session.getPlanModeState()).toBeUndefined();
+		const execution = observedCalls[1]!;
+		expect(execution.messageTexts.some(text => text.includes("# Collaboration Mode: Default"))).toBe(true);
+		expect(
+			execution.messageRoles[
+				execution.messageTexts.findIndex(text => text.includes("# Collaboration Mode: Default"))
+			],
+		).toBe("developer");
 	});
+	it("supersedes restored Plan instructions when the persisted mode is Default", async () => {
+		session.sessionManager.appendModeChange("plan");
+		session.sessionManager.appendCustomMessageEntry("plan-mode-context", "# Collaboration Mode: Plan", false);
+		session.sessionManager.appendModeChange("none");
+		await session.prompt("execute the agreed task");
+		const execution = observedCalls[0]!;
+		const index = execution.messageTexts.findIndex(text => text.includes("# Collaboration Mode: Default"));
+		expect(index).toBeGreaterThanOrEqual(0);
+		expect(execution.messageRoles[index]).toBe("developer");
+		expect(execution.lastMessageText).toBe("execute the agreed task");
+	});
+});
+
+it("converts collaboration-mode context into a developer instruction", () => {
+	const result = convertToLlm([
+		{
+			role: "custom",
+			customType: "collaboration-mode",
+			content: "# Collaboration Mode: Default",
+			display: false,
+			timestamp: 1,
+		},
+	]);
+	expect(result[0]?.role).toBe("developer");
 });
