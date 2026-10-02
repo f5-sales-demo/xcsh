@@ -430,3 +430,27 @@ identical,p95148.863ms to117.772ms. Full post-analysis discovery p95149.606ms,
 complete response143.319ms. Regression remains29/140leaf,45.7143%top5;no accuracy
 qualification.468URLtests+workspacechecks pass. Phrase equality lookup experiment
 did not improve full regression and was discarded before commit.
+
+
+## Context guard and primary section rejection
+
+Generic alias/schema context guard passed focused tests but reduced full published
+regression leaf selection from29/140 to28/140. Top5 increased to48.5714%,
+discovery p95159.098ms;the exact session ID development case regressed. Guard
+removed before commit;receipt preserved. No production ranking change promoted.
+
+Primary ancestor-section ranking evaluated separately on the unchanged,ineligible
+suite reaches27/140first,53/140top5. Ranking-only p9537.061ms excludes complete
+responses and index creation. It remains experimental and unshipped. This fuller
+evaluation exposes provider-owner context loss and parent/field selection defects;
+no qualification claim follows either experiment.
+
+
+## Provider owner context
+
+Multiple ordinary provider-name mentions now prefer one named owning context
+introduced by in/under;explicit xcsh identifiers retain precedence. Comparisons
+remain undecided. Red fixture reproduced protected-application/CDN confusion;
+469 internal URL tests and workspace TypeScript checks pass after repair.
+Full post-analysis regression:29/140selected,46.4286%top5,discovery150.848ms,
+complete response144.425ms. Accuracy remains failed;this is no qualification.

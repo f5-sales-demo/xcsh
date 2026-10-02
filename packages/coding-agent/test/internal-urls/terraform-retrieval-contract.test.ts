@@ -246,3 +246,24 @@ test("repeated schema branches require deciding context even with unequal scores
 		"leaf",
 	);
 });
+
+test("provider identity follows the named owner instead of nested schema nouns", () => {
+	expect(
+		terraformProviderMention("login failure on protected application endpoints in a CDN load balancer", [
+			"protected_application",
+			"cdn_loadbalancer",
+		]),
+	).toBe("cdn_loadbalancer");
+	expect(
+		terraformProviderMention("response headers on HTTP load balancer ports in a stateful workload", [
+			"http_loadbalancer",
+			"workload",
+		]),
+	).toBe("workload");
+	expect(
+		terraformProviderMention("compare the workload and HTTP load balancer", ["workload", "http_loadbalancer"]),
+	).toBeUndefined();
+	expect(terraformProviderMention("xcsh_workload HTTP load balancer fields", ["workload", "http_loadbalancer"])).toBe(
+		"workload",
+	);
+});
