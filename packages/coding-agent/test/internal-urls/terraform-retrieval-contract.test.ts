@@ -4,6 +4,7 @@ import {
 	scoreTerraformAliasContext,
 	selectTerraformCandidate,
 	type TerraformMetadata,
+	terraformKnownQueryTerms,
 	terraformProviderMention,
 	terraformQueryIdentity,
 	terraformTaskDestination,
@@ -149,4 +150,13 @@ test("query role follows concrete provisioning versus lookup intent without trea
 	expect(terraformQueryIdentity("Look up existing certificate metadata").providerType).toBe("data-sources");
 	expect(terraformQueryIdentity("Configure my existing origin pool").providerType).toBe("resources");
 	expect(terraformQueryIdentity("Tell me about an origin pool")).not.toHaveProperty("providerType");
+});
+
+test("broad prose can narrow to known terms while unsupported exact fields stay fail-closed", () => {
+	const exists = (term: string) => ["port", "https", "fixture", "cookie_or"].some(word => term.includes(`"${word}"`));
+	expect(terraformKnownQueryTerms('"fixture"* AND "pleaseword"* AND "port"*', exists)).toEqual([
+		'"fixture"*',
+		'"port"*',
+	]);
+	expect(terraformKnownQueryTerms('"unsupported_field"*', exists)).toEqual([]);
 });

@@ -318,3 +318,9 @@ Duplicate aliases to one exact destination no longer cause false ambiguity or
 repeated search entries. Provider roles and different anchors remain distinct.
 462URLtests+workspacechecks pass. Full regression remains24/140 selected,
 31.4286%top5,discovery183.127ms;no qualification claim.
+
+Broad prose matching may omit absent ordinary words only when at least two indexed
+terms remain; exact unsupported identifiers still fail closed. Retained terms try
+AND before marked OR choices; broadened results never imply confident leaf selection.
+463URLtests+workspacechecks pass. Regression top5 improves31.4286% to33.5714%,
+leaf selection stays24/140;discovery187.902ms remains failed. Frozen labels unchanged.

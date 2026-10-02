@@ -694,6 +694,10 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	return undefined;
 }
 
+export function terraformKnownQueryTerms(query: string, exists: (term: string) => boolean): string[] {
+	return query.split(" AND ").filter(term => exists(term));
+}
+
 export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
 	const exact = [
 		...new Set([...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)].map(match => match[1]!.toLowerCase())),
@@ -1367,18 +1371,19 @@ export class TerraformDocumentationRepository {
 			if (unknownIdentifiers) rows = [];
 			if (!rows.length && !unknownIdentifiers) {
 				rows = query ? (statement.all(...args) as SearchRow[]) : [];
-				if (
-					!rows.length &&
-					query.includes(" AND ") &&
-					query
-						.split(" AND ")
-						.every(term =>
-							Boolean(db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(term)),
-						)
-				) {
-					args[node ? 1 : 0] = query.replaceAll(" AND ", " OR ");
-					rows = statement.all(...args) as SearchRow[];
-					broadened = rows.length > 0;
+				if (!rows.length && query.includes(" AND ")) {
+					const known = terraformKnownQueryTerms(query, term =>
+						Boolean(db.query("SELECT 1 FROM documents_fts WHERE documents_fts MATCH ? LIMIT 1").get(term)),
+					);
+					if (known.length >= 2) {
+						args[node ? 1 : 0] = known.join(" AND ");
+						rows = statement.all(...args) as SearchRow[];
+						if (!rows.length) {
+							args[node ? 1 : 0] = known.join(" OR ");
+							rows = statement.all(...args) as SearchRow[];
+						}
+						broadened = rows.length > 0;
+					}
 				}
 			}
 			const uniqueRows = new Map<string, SearchRow>();
