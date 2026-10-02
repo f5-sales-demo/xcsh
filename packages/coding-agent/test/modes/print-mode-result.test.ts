@@ -53,6 +53,41 @@ function fakeSession(
 }
 
 describe("print mode result", () => {
+	it("waits for the final large JSON record write before returning", async () => {
+		const { session } = fakeSession(assistantMessage("stop"));
+		let subscriber: ((event: any) => void) | undefined;
+		(session as any).subscribe = (callback: any) => {
+			subscriber = callback;
+			return () => {};
+		};
+		(session as any).prompt = async () =>
+			subscriber?.({
+				type: "agent_end",
+				messages: [assistantMessage("stop", [{ type: "text", text: "x".repeat(300_000) }])],
+			});
+		const original = process.stdout.write;
+		let finish: ((error?: Error | null) => void) | undefined;
+		let settled = false;
+		process.stdout.write = ((chunk: string | Uint8Array, callback?: (error?: Error | null) => void) => {
+			if (chunk.toString().length) finish = callback;
+			else callback?.();
+			return false;
+		}) as typeof process.stdout.write;
+		try {
+			const running = runPrintMode(session, { mode: "json", initialMessage: "fixture" }).then(() => {
+				settled = true;
+			});
+			await Bun.sleep(5);
+			expect(settled).toBe(false);
+			expect(finish).toBeDefined();
+			finish?.();
+			await running;
+			expect(settled).toBe(true);
+		} finally {
+			process.stdout.write = original;
+		}
+	});
+
 	it("returns failure for a JSON model error and leaves lifecycle disposal to main", async () => {
 		const { session, dispose } = fakeSession(assistantMessage("error"));
 

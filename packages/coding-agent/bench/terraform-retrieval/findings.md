@@ -234,3 +234,9 @@ Qualification runner now rejects provider version/source/receipt drift and requi
 explicit --regression for a changed index. Focused source-binding tests pass.
 Static guidance keeps provider-specific support in the offline bundled corpus and
 separates generic Terraform syntax from actual xcsh support. Workspace checks pass.
+
+Control trace failures isolated to final agent_end aggregate writes ending at
+about196KB before newline. A300KB print-mode regression reproduced returning
+before the actual record write callback. Print mode now waits for each write.
+14 print-mode regressions and workspace checks pass; exact control reruns pending.
+Original failed traces are preserved; no trace cleanup or inferred pass is used.
