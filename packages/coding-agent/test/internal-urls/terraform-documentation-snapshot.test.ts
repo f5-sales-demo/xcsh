@@ -774,3 +774,36 @@ test("property page title navigation is not indexed beside its canonical section
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("property search excludes validator code while exact context preserves it", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-prose-index-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		const body =
+			'<a id="section"></a>\n# Limit\nConnection limit.\n\n<a id="schema-value"></a>\n### value\nMaximum connections.\n\n```go\nvalidatornoise.Between(1,65535)\n```\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.role = "properties";
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const db = await repo.database();
+		expect(
+			db.query("SELECT count(*) count FROM documents_fts WHERE documents_fts MATCH ?").get("validatornoise"),
+		).toEqual({ count: 0 });
+		const full = (
+			await repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/${doc.path}#schema-value`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			)
+		).content;
+		expect(full).toContain("validatornoise.Between");
+		db.close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

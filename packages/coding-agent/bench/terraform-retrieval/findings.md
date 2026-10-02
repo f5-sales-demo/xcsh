@@ -685,3 +685,16 @@ unsupported identifiers remain intact.482URLtests+workspacechecks pass. Full
 regression43/140selected,52.8571%top5,discovery178.939ms,complete163.831ms
 remains failed. This improves candidate recall without a qualification claim.
 Provider post-merge aggregate passed;exact-source regeneration now active.
+
+
+## Prose-only property search content
+
+Property search excludes fenced validator/constraint code while complete sections
+and original Markdown remain stored for exact/context reads. Example/task pages
+retain code search. Red/green fixture confirms validator noise is absent from FTS
+and present in exact reads.483URLtests+workspacechecks pass. Two reviewed v12.2.0
+builds match SQLitec77d9f2c3cb49ad9bf06f06cd268de5f4ad5f9fc66ee4b8ccfe469a2515a5a6d
+745205760bytes,gzipd40c016952592b967421134942e2f8c477875b02637c8e0b6b2e91924ccff051
+65234569bytes. Published regression43/140selected,52.8571%top5,discovery129.868ms,
+complete119.610ms. Enriched preview44/140selected54.2857%top5. No accuracy
+qualification. Derived pin updated with source;tracked loader remains placeholder.

@@ -601,7 +601,11 @@ export async function buildTerraformIndex(
 					if (previous && previous.heading === p.heading && /^(schema-|section$)/.test(previous.anchor)) continue;
 					if (/^(Breadcrumbs|All schema paths|Next pages|Direct properties)$/i.test(p.heading)) continue;
 					const section = m.sections?.find(v => v.document_id === m.id && v.anchor === p.anchor);
-					const content = p.markdown.replace(/^Breadcrumbs:[\s\S]*?(?=^##|^<a)/m, "").replace(/^\|.*\|\s*$/gm, "");
+					const passageContent =
+						m.role === "properties" ? p.markdown.replace(/^([`~]{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm, "") : p.markdown;
+					const content = passageContent
+						.replace(/^Breadcrumbs:[\s\S]*?(?=^##|^<a)/m, "")
+						.replace(/^\|.*\|\s*$/gm, "");
 					const qmdPath = `${d.path}#${p.anchor}`;
 					const hash = terraformHash(`${d.sha256}\0${p.anchor}\0${content}`);
 					store.internal.insertContent(hash, content, "2000-01-01T00:00:00Z");
