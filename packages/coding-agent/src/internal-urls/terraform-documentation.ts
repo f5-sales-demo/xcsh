@@ -1424,6 +1424,7 @@ export class TerraformDocumentationRepository {
 				: undefined;
 			const normalizedSearch = ` ${search
 				.toLowerCase()
+				.replace(/\btimestamp\b/g, "time")
 				.replace(/[^a-z0-9]+/g, " ")
 				.trim()} `;
 			if (!setupAnchor && !filters.some(f => f.key === "provider_name")) {

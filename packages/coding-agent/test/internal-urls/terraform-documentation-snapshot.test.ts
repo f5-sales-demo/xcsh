@@ -993,3 +993,46 @@ test("direct field refinement preserves literal schema branch prefixes", async (
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("expiration timestamp wording resolves the exact time field before token", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-expiration-wording-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		const body =
+			'<a id="schema-token"></a>\n### token\nAccess token.\n<a id="schema-expiration_time"></a>\n### expiration_time\nExpiration time of the token.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.role = "properties";
+		doc.metadata.schema_path = [];
+		doc.metadata.aliases = [];
+		doc.metadata.sections = ["token", "expiration_time"].map(name => ({
+			schema_path: [name],
+			document_id: doc.metadata.id,
+			anchor: `schema-${name}`,
+			description: name === "token" ? "Access token." : "Expiration time of the token.",
+			aliases: [],
+			relationships: [],
+			flags: [],
+		}));
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const content = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=expiration%20timestamp%20of%20token&provider_name=fixture&provider_type=resources",
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(content).toContain("#schema-expiration_time");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
