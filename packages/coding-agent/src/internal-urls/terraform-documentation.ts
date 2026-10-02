@@ -8,7 +8,9 @@ import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
-import { populatePropertyIndex } from "./terraform-property-index";
+import { populatePropertyIndex, searchPropertyIndex } from "./terraform-property-index";
+import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
+import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
 
 export const TERRAFORM_ASSETS = ["terraform-docs.tar.gz", "manifest.json", "publication.json", "SHA256SUMS"] as const;
@@ -1409,6 +1411,131 @@ export class TerraformDocumentationRepository {
 				rows.length > limit ? `Continue: ${next.href}` : "",
 			);
 		} else if (search) {
+			const inferredTaskRole =
+				filters.find(f => f.key === "provider_type")?.value ?? terraformQueryIdentity(search).providerType;
+			const taskNames = (
+				db
+					.query(
+						"SELECT DISTINCT provider_name FROM terraform_documents WHERE (? IS NULL OR provider_type=?) ORDER BY provider_name",
+					)
+					.all(inferredTaskRole ?? null, inferredTaskRole ?? null) as Array<{ provider_name: string }>
+			).map(r => r.provider_name);
+			let taskProvider =
+				filters.find(f => f.key === "provider_name")?.value ?? terraformProviderMention(search, taskNames);
+			if (!taskProvider && inferredTaskRole === "actions") {
+				const matches = rankTerraformProviderNames(search, taskNames);
+				if (matches[0] && (!matches[1] || matches[0].score >= matches[1].score + 10))
+					taskProvider = matches[0].name;
+			}
+			const taskDecision = resolveIndexedTask(db, search, {
+				providerType: inferredTaskRole,
+				providerName: taskProvider,
+				inferredIdentity: !filters.some(f => f.key === "provider_name"),
+				filters,
+				node: node ?? undefined,
+			});
+			if (taskDecision?.destinations.length) {
+				const taskContent = boundedTerraformResponse(
+					`${provenance}\n\n# Terraform search: ${search}\n${taskDecision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : "Narrowing choices; clarify the missing authentication method, provider role, or action cardinality."}\nReason: ${taskDecision.reason}${taskDecision.reason === "Missing authentication method" ? `\nOverview: ${uri("documentation/provider/setup/index.md", "authentication-options", "context")}` : ""}`,
+					taskDecision.destinations
+						.slice(0, limit)
+						.map(
+							row =>
+								`Read: ${uri(row.path, row.anchor, "context")}\n${row.description}\n${prerequisites(row.path, row.anchor)}`,
+						),
+					4096,
+				);
+				return {
+					url: url.href,
+					content: taskContent,
+					contentType: "text/markdown",
+					size: Buffer.byteLength(taskContent),
+				};
+			}
+			if (
+				/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?)\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
+					search,
+				) &&
+				!/\b(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b/i.test(search) &&
+				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
+				(!/\bblock\b/i.test(search) || /\b(?:secret|credentials?)\b/i.test(search)) &&
+				!terraformTaskDestination(search) &&
+				!terraformProviderSetupDestination(search) &&
+				!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) &&
+				db.query("SELECT 1 FROM sqlite_master WHERE name=?").get("property_terms")
+			) {
+				const role =
+					filters.find(f => f.key === "provider_type")?.value ?? terraformQueryIdentity(search).providerType;
+				const provider = taskProvider;
+
+				const ranked = searchPropertyIndex(db, search, {
+					providerType: role,
+					providerName: provider,
+					filters,
+					node: node ?? undefined,
+				});
+				if (ranked[0]?.anchor === "section") {
+					const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(ranked[0].path) as {
+						metadata: string;
+					};
+					const metadata = JSON.parse(record.metadata) as TerraformMetadata;
+					const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);
+					if (refined[0]?.document_id === metadata.id) {
+						const field = db
+							.query(
+								"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE path=? AND anchor=?",
+							)
+							.get(ranked[0].path, refined[0].anchor) as RankedProperty | null;
+						if (field) ranked.splice(0, 1, { ...field, score: ranked[0].score, coverage: ranked[0].coverage });
+					}
+				}
+				const first = ranked[0];
+				const leaf = first?.schema_path.split(".").at(-1);
+				const clauses = filters.map(
+					() => "EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
+				);
+				const values: Array<string | null> = [
+					first?.provider_name ?? null,
+					role ?? null,
+					role ?? null,
+					leaf ?? null,
+					`.${leaf}`,
+					`.${leaf}`,
+					...filters.flatMap(f => [f.key, f.value]),
+				];
+				if (node) {
+					clauses.push(
+						"dest.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT path FROM descendants)",
+					);
+					values.push(node);
+				}
+				const alternatives = first
+					? (
+							db
+								.query(
+									`SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations dest WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND (schema_path=? OR substr(schema_path,-length(?))=?) ${clauses.length ? `AND ${clauses.join(" AND ")}` : ""} ORDER BY provider_type,schema_path`,
+								)
+								.all(...values) as RankedProperty[]
+						).map(row => ({ ...row, score: 0, coverage: 0 }))
+					: [];
+				const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives);
+				const shown = decision.kind === "leaf" ? decision.destinations : decision.destinations.slice(0, limit);
+				const prepared = boundedTerraformResponse(
+					`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\nReason: ${decision.reason}\nScores are ranking values, not probabilities.`,
+					shown.map(
+						row =>
+							`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
+					),
+					4096,
+					`Refine: xcsh://terraform-documentation/?search=${encodeURIComponent(search)}&node=${encodeURIComponent(node ?? "xcsh-docs:provider:xcsh:navigation")}`,
+				);
+				return {
+					url: url.href,
+					content: prepared,
+					contentType: "text/markdown",
+					size: Buffer.byteLength(prepared),
+				};
+			}
 			const navigationRequest =
 				/(?:which|what).*documentation|where.*(?:begin|start)|need.*(?:help|guidance)|(?:resource.*data[ -]source|data[ -]source.*resource)|explain.*fields/i.test(
 					search,

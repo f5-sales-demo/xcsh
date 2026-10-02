@@ -361,6 +361,8 @@ describe("Terraform snapshot ingestion", () => {
 				);
 			const all = (await read("")).content;
 			expect(all).toContain("Narrowing choices");
+			const limited = (await read("&limit=1")).content;
+			expect(limited).toContain("Narrowing choices");
 			expect(all).toContain("single_lb_app/enable_discovery/login/password");
 			expect(all).toContain("properties/enable_api_discovery/login/password");
 			const scoped = (await read("&category=security")).content;
@@ -1040,6 +1042,87 @@ test("expiration timestamp wording resolves the exact time field before token", 
 			)
 		).content;
 		expect(content).toContain("#schema-expiration_time");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("prepared production retrieval selects a paraphrased field and retains scoped exact reads", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-prepared-route-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const body = `<a id="schema-listen_port"></a>
+### listen_port
+HTTPS listening port for inbound requests.
+
+<a id="schema-idle_timeout"></a>
+### idle_timeout
+Idle connection timeout.
+`;
+		Object.assign(docs[0]!, { body, markdown: body, sha256: terraformHash(body), body_sha256: terraformHash(body) });
+		Object.assign(docs[0]!.metadata, {
+			role: "properties",
+			category: "networking",
+			capabilities: ["tls"],
+			tasks: ["configuration"],
+			sections: [
+				{
+					schema_path: ["listen_port"],
+					document_id: "fixture",
+					anchor: "schema-listen_port",
+					description: "HTTPS listening port for inbound requests.",
+					aliases: [],
+					relationships: [],
+					flags: ["optional"],
+				},
+				{
+					schema_path: ["idle_timeout"],
+					document_id: "fixture",
+					anchor: "schema-idle_timeout",
+					description: "Idle connection timeout.",
+					aliases: [],
+					relationships: [],
+					flags: ["optional"],
+				},
+			],
+		});
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const read = (suffix: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/${suffix}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const response = (
+			await read(
+				"?search=" +
+					encodeURIComponent(
+						"Which property on the fixture resource sets the HTTPS listening port for inbound requests?",
+					) +
+					"&category=networking&capability=tls&task=configuration",
+			)
+		).content;
+		expect(response).toContain("Reason: Separated candidate");
+		expect(response).toContain("Selected leaf;");
+		expect(response).toContain("#schema-listen_port");
+		expect(Buffer.byteLength(response)).toBeLessThanOrEqual(4096);
+		expect((await read("?search=fixture%20resource%20property%20listen_port&limit=1")).content).toContain(
+			"Selected leaf;",
+		);
+		const excluded = (
+			await read(
+				"?search=" +
+					encodeURIComponent("Which fixture resource property sets the HTTPS listening port?") +
+					"&category=security",
+			)
+		).content;
+		expect(excluded).toContain("No results.");
+		const exact = (await read("documentation/resources/fixture/index.md#schema-listen_port")).content;
+		expect(exact).toContain("HTTPS listening port for inbound requests.");
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });

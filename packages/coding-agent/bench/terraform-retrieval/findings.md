@@ -1029,3 +1029,27 @@ Exact digests and source hashes: bundled-property-index-integration.json.
 493 internal-URL tests and focused snapshot/index/delivery tests pass. Bundled
 prebuilt verification passes. The outer immutable index digest binds the integrated
 tables; the separate source-index digest is used only for side-index experiments.
+
+
+## Actual bundled adaptive resolver integration
+
+Production discovery now uses prepared indexed property ranking and complete
+scope collision selection for natural-language field requests. Indexed task
+routing returns exact authentication choices and protects omitted action
+cardinality. Explicit identifiers, overview/role requests and ordinary block
+requests retain existing paths; credential block questions use conservative
+property selection. Display limits do not reduce selection evidence. Exact reads
+and caller AND facets remain covered by regression tests. Shared selection/task
+modules live in src, with development re-exports.
+
+Actual production resolver measurements include full discovery and selected
+context reads, byte budgets and identical response hashes over five repetitions.
+Audited development: 39/48 correct leaves, zero answerable wrong leaves, zero
+ambiguous/control leaf selections and 48/48 expected destinations top-five.
+Original development: 9/14 correct leaves, zero answerable wrong leaves, three
+ambiguous leaf selections (labels still unaudited) and 13/14 top-five.
+494 internal URL tests and workspace checks pass. Timings ran alongside checks
+and are development measurements only, not cross-platform qualification. Raw
+reports and source digests are in production-adaptive-receipt.json. The retained
+95% gate, fresh independent frozen 200 cases, 40 installed model cases and release
+acceptance remain incomplete; PR stays draft without auto-merge.
