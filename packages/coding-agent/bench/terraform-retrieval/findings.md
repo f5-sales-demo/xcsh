@@ -1099,3 +1099,15 @@ interleaving, response drift and discovery budgets. Historical qualification
 reports remain unchanged; this corrects future measurement only, not scoring.
 Fresh candidate author and separate verifier handoff remain active source-only
 processes; no candidate is inspected by implementation, frozen or retrieved.
+
+Installed model UAT no longer accepts a document-only citation for an expected
+#section anchor. Every expected destination retains its exact anchor unless
+explicit match_document semantics were source-reviewed. Python compilation
+passes; final held-out model UAT remains unstarted pending independent freeze.
+
+Local licensed candidate compile stopped at the required Corporate Vertex build
+input XCSH_VERTEX_OAUTH_CLIENT_ID. No placeholder credentials or license bypass
+used. Terraform regeneration completed byte-identically to reviewed index before
+the build failed. Task index/loader restored from verified bytes; build-generated
+API files were preserved outside worktree then restored to HEAD. CI has the
+licensed inputs configured and is the next available compiled artifact route.

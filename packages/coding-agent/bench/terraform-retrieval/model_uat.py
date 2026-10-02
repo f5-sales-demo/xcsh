@@ -101,11 +101,6 @@ for case in cases:
             any(
                 normalized(citation) == normalized(want)
                 or (
-                    want.endswith("#section")
-                    and normalized(citation).split("#")[0]
-                    == normalized(want).split("#")[0]
-                )
-                or (
                     case.get("match_document")
                     and normalized(citation).split("#")[0]
                     == normalized(want).split("#")[0]
