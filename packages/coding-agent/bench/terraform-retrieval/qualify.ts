@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { TerraformDocumentationRepository, terraformHash, type TerraformEmbeddedAssets } from "../../src/internal-urls/terraform-documentation";
 import type { InternalUrl } from "../../src/internal-urls/types";
-import { scoreDestinations,validateQualificationSource, validateQualificationEligibility } from "./score";
+import { scoreDestinations,validateQualificationSource, validateQualificationEligibility, validatePreviewEvidence, type TerraformPreviewEvidence } from "./score";
 
 interface Case {id:string;prompt:string;kind:'answerable'|'ambiguous'|'control';expected:string[];match_document?:boolean;behavior?:string;clarification?:string;depth?:number;}
 const root=import.meta.dir;
@@ -17,6 +17,12 @@ const freeze=JSON.parse(await readFile(path.join(path.dirname(suiteFile),'freeze
 const suiteBytes=await readFile(suiteFile);const suiteName=path.basename(suiteFile);
 if(terraformHash(suiteBytes)!==freeze.files[suiteName])throw new Error('Frozen qualification suite hash mismatch');
 const regression=process.argv.includes("--regression");
+const previewFile=arg("--preview-evidence");
+const preview=previewFile?JSON.parse(await readFile(previewFile,"utf8")) as TerraformPreviewEvidence:undefined;
+validatePreviewEvidence(preview,assets.pin.index.sha256,regression);
+const reviewedPin=JSON.parse(await readFile(path.resolve(root,"../../../../tools/terraform-documentation-release.json"),"utf8"));
+if(regression&&reviewedPin.index?.sha256!==assets.pin.index.sha256&&!preview)throw new Error("Changed regression index requires --preview-evidence for source provenance");
+
 validateQualificationSource(freeze,assets.pin,regression);
 const eligibilityPath=path.join(path.dirname(suiteFile),"eligibility.json");
 const eligibility=await Bun.file(eligibilityPath).exists()?JSON.parse(await readFile(eligibilityPath,"utf8")):undefined;
@@ -59,6 +65,6 @@ for(const c of suite){
 }
 const p95=(values:number[])=>{const sorted=[...values].sort((a,b)=>a-b);return sorted[Math.ceil(sorted.length*.95)-1]??null;};
 const responseLatency=[...latency,...contextLatency];const answerable=results.filter(r=>'kind' in r&&r.kind==='answerable');const scored=results.filter(r=>r.passed!==null);
-const report={schema_version:1,post_analysis_regression:regression,source_provider_version:assets.pin.provider_version,source_commit:assets.pin.source_commit,index:assets.pin.index,suite_sha256:terraformHash(suiteBytes),frozen_source_provider_version:freeze.source_provider_version,platform:os.platform(),arch:os.arch(),materialization_ms:materializationMs,warm_p95_ms:p95(responseLatency),discovery_p95_ms:p95(latency),context_p95_ms:p95(contextLatency),route_p95_ms:p95(routeLatency),warm_measurement_count:responseLatency.length,discovery_measurement_count:latency.length,context_measurement_count:contextLatency.length,repetitions:5,model_network_ms:null,model_uat_required:true,max_discovery_bytes:maxBytes,max_context_bytes:maxContextBytes,total_response_bytes:totalBytes,tool_calls:callCount,index_file_bytes:(await stat(assets.indexGzipPath)).size,answerable_accuracy:answerable.filter(r=>r.passed).length/answerable.length,answerable_top5:answerable.filter(r=>'top5' in r&&r.top5).length/answerable.length,scored_accuracy:scored.filter(r=>r.passed).length/scored.length,overall_accuracy:null,qualification_passed:false,results};
+const report={schema_version:1,unpublished_preview:Boolean(preview),preview_source_commit:preview?.source_commit??null,source_provenance:preview?"unpublished corpus;release pin fields are baseline only":"immutable pinned release",post_analysis_regression:regression,source_provider_version:assets.pin.provider_version,source_commit:assets.pin.source_commit,index:assets.pin.index,suite_sha256:terraformHash(suiteBytes),frozen_source_provider_version:freeze.source_provider_version,platform:os.platform(),arch:os.arch(),materialization_ms:materializationMs,warm_p95_ms:p95(responseLatency),discovery_p95_ms:p95(latency),context_p95_ms:p95(contextLatency),route_p95_ms:p95(routeLatency),warm_measurement_count:responseLatency.length,discovery_measurement_count:latency.length,context_measurement_count:contextLatency.length,repetitions:5,model_network_ms:null,model_uat_required:true,max_discovery_bytes:maxBytes,max_context_bytes:maxContextBytes,total_response_bytes:totalBytes,tool_calls:callCount,index_file_bytes:(await stat(assets.indexGzipPath)).size,answerable_accuracy:answerable.filter(r=>r.passed).length/answerable.length,answerable_top5:answerable.filter(r=>'top5' in r&&r.top5).length/answerable.length,scored_accuracy:scored.filter(r=>r.passed).length/scored.length,overall_accuracy:null,qualification_passed:false,results};
 await writeFile(output,`${JSON.stringify(report,null,2)}\n`);(await repo.database()).close();
 console.log(JSON.stringify({...report,results:undefined}));

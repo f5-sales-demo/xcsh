@@ -618,3 +618,13 @@ answerables. Best10first,12top5;fixed8/5/2/1weights then evaluated full regressi
 p9540.531ms excludes full responses and startup. Low exact accuracy prevents
 promotion;no production or reviewed artifact change. Raw task-local digests retained.
 ProviderCIaggregate job names match protection;build,vet,lint pass,race/docs live.
+
+
+## Explicit unpublished preview binding
+
+Changed regression indexes require a digest-bound preview receipt and cannot run
+qualification. Reports identify unpublished source commit separately from baseline
+release-pin fields. Red/green scorer tests and end-to-end missing-receipt rejection
+pass;workspacechecks pass. Bound enriched-preview regression41/140selected,
+52.1429%top5,discovery154.920ms,complete148.480ms remains failed. No immutable
+provider publication or consumer pin update follows preview evidence.

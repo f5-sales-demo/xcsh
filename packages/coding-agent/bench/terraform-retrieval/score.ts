@@ -37,3 +37,18 @@ export function validateQualificationEligibility(
  if(audit.suite_sha256!==suiteHash)throw new Error("Benchmark eligibility audit digest mismatch");
  if(!audit.qualification_eligible&&!regression)throw new Error("Benchmark cannot qualify: "+audit.reason);
 }
+
+
+export interface TerraformPreviewEvidence {
+ preview:true;
+ unpublished_source:true;
+ provenance_pin_is_baseline:true;
+ source_commit:string;
+ index:{sha256:string};
+}
+export function validatePreviewEvidence(preview:TerraformPreviewEvidence|undefined,indexHash:string,regression:boolean):void {
+ if(!preview)return;
+ if(!regression)throw new Error("Unpublished preview requires explicit regression mode");
+ if(preview.preview!==true||preview.unpublished_source!==true||preview.provenance_pin_is_baseline!==true||!/^([a-f0-9]{40})$/.test(preview.source_commit))throw new Error("Invalid unpublished preview source evidence");
+ if(preview.index?.sha256!==indexHash)throw new Error("Preview evidence index mismatch");
+}

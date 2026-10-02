@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { scoreDestinations, validateQualificationEligibility, validateQualificationSource } from "./score";
+import { scoreDestinations, validateQualificationEligibility, validateQualificationSource, validatePreviewEvidence } from "./score";
 
 const a = "xcsh://terraform-documentation/documentation/resources/a/index.md#section";
 const b = "xcsh://terraform-documentation/documentation/resources/b/index.md#section";
@@ -34,4 +34,14 @@ test("a disqualified frozen benchmark may run only as explicit regression", () =
  expect(()=>validateQualificationEligibility(audit,"suite",true)).not.toThrow();
  expect(()=>validateQualificationEligibility(audit,"different",true)).toThrow("digest");
  expect(()=>validateQualificationEligibility(undefined,"suite",false)).not.toThrow();
+});
+
+
+test("unpublished preview evidence is regression-only and bound to the actual index", () => {
+ const preview={preview:true as const,unpublished_source:true as const,provenance_pin_is_baseline:true as const,source_commit:"a".repeat(40),index:{sha256:"b".repeat(64)}};
+ expect(()=>validatePreviewEvidence(preview,"b".repeat(64),true)).not.toThrow();
+ expect(()=>validatePreviewEvidence(preview,"b".repeat(64),false)).toThrow("regression");
+ expect(()=>validatePreviewEvidence(preview,"c".repeat(64),true)).toThrow("index");
+ expect(()=>validatePreviewEvidence({...preview,source_commit:"invalid"},"b".repeat(64),true)).toThrow("source");
+ expect(()=>validatePreviewEvidence(undefined,"b".repeat(64),true)).not.toThrow();
 });
