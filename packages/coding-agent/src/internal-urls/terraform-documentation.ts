@@ -725,9 +725,13 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 				? "data-sources"
 				: /\baction\b/i.test(search)
 					? "actions"
-					: /\bresource\b/i.test(search) || /\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search)
+					: /\bresource\b/i.test(search) ||
+							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
+							/\b(?:configure|provision|create|deploy|set|enable|disable|attach|register)\b/i.test(search)
 						? "resources"
-						: undefined;
+						: /\b(?:inspect|query|look up|lookup|read existing|retrieve existing)\b/i.test(search)
+							? "data-sources"
+							: undefined;
 	return {
 		...(names.length === 1 ? { providerPhrase: names[0]!.replaceAll("_", " ") } : {}),
 		...(providerType ? { providerType } : {}),

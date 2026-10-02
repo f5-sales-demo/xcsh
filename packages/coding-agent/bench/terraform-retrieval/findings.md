@@ -292,3 +292,8 @@ node constraints apply to task routes. Corpus checks select exact minimal app
 firewall,certificate data-source root,and healthcheck timeout anchors; requesting
 create/delete timeout fields returns both exact schema destinations.
 461 internal-URL tests and workspace checks pass. Qualification remains unresolved.
+
+Role inference now follows explicit provisioning/configuration versus lookup intent
+and does not mistake existing resources for data sources. Generic informational
+queries and competing roles stay undecided.462 internal-URL tests and workspace
+checks pass; explicit Terraform activation remains unchanged. Regression only.

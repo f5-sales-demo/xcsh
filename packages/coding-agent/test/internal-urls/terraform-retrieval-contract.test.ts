@@ -137,3 +137,13 @@ test("task destination distinguishes usage pages from schema fields", () => {
 	expect(terraformTaskDestination("Set HTTP connection idle timeout")).toBeUndefined();
 	expect(terraformTaskDestination("Set TLS certificate name")).toBeUndefined();
 });
+
+test("query role follows concrete provisioning versus lookup intent without treating existence as a data source", () => {
+	expect(terraformQueryIdentity("Provision a Virtual Network object in Terraform").providerType).toBe("resources");
+	expect(terraformQueryIdentity("Configure TLS on my HTTP load balancer").providerType).toBe("resources");
+	expect(terraformQueryIdentity("Set private IP backend servers in an origin pool").providerType).toBe("resources");
+	expect(terraformQueryIdentity("Inspect the status of an existing origin pool").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Look up existing certificate metadata").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Configure my existing origin pool").providerType).toBe("resources");
+	expect(terraformQueryIdentity("Tell me about an origin pool")).not.toHaveProperty("providerType");
+});
