@@ -682,6 +682,13 @@ export function scoreTerraformAliasContext(
 
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
 	if (/\bimport\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	if (
+		/\baction\b/i.test(query) &&
+		!/\b(?:field|attribute|property|properties|id|ids|namespace|parameter)\b/i.test(query) &&
+		/\b(?:which|declare|invoke|trigger|where|how)\b/i.test(query)
+	)
+		return { role: "fundamentals", anchor: "minimal-configuration" };
+
 	if (/\bminimal\s+configuration\b|\bminimal\s+(?:hcl\s+)?example\b/i.test(query))
 		return { role: "fundamentals", anchor: "minimal-configuration" };
 	if (/\broot\s+configuration\b/i.test(query)) return { role: "fundamentals", anchor: "root-configuration" };
@@ -696,6 +703,64 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 
 export function terraformKnownQueryTerms(query: string, exists: (term: string) => boolean): string[] {
 	return query.split(" AND ").filter(term => exists(term));
+}
+
+const TERRAFORM_IDENTITY_TERMS: Record<string, string> = {
+	remove: "delete",
+	removes: "delete",
+	upgrades: "upgrade",
+	deleting: "delete",
+	removal: "delete",
+	modify: "edit",
+	modifies: "edit",
+	modifying: "edit",
+	generate: "add",
+	creates: "add",
+	create: "add",
+	attach: "add",
+	adding: "add",
+	termination: "terminate",
+	terminating: "terminate",
+	invalidate: "terminate",
+	subscription: "subscribe",
+	subscribing: "subscribe",
+	unsubscribes: "unsubscribe",
+	unsubscribing: "unsubscribe",
+	synchronization: "synchronize",
+	synchronizing: "synchronize",
+	sync: "synchronize",
+	signatures: "signature",
+	cryptokeys: "cryptokey",
+	keys: "key",
+	nodes: "node",
+};
+export function rankTerraformProviderNames(
+	query: string,
+	names: readonly string[],
+): Array<{ name: string; score: number }> {
+	const normalize = (value: string) =>
+		(
+			value
+				.toLowerCase()
+				.replace(/operating[ -]system/g, "os")
+				.replace(/software/g, "sw")
+				.match(/[a-z0-9]+/g) ?? []
+		).map(term => TERRAFORM_IDENTITY_TERMS[term] ?? term);
+	const terms = new Set(normalize(query));
+	const batch = /\bmultiple\b|\bbulk\b|\bbatch\b/.test(query) || /\bsessions\b/.test(query);
+	const single = /\bsingle\b|\bone\b|\bspecific\b/.test(query);
+	return names
+		.map(name => {
+			const tokens = normalize(name.replaceAll("_", " "));
+			let score = tokens.filter(term => terms.has(term)).length * 10;
+			const operation = tokens.at(-1);
+			if (operation && terms.has(operation)) score += 20;
+			if (name.includes("sessions")) score += batch ? 15 : single ? -15 : 0;
+			else if (name.includes("session")) score += single ? 15 : batch ? -15 : 0;
+			return { name, score };
+		})
+		.filter(row => row.score >= 20)
+		.sort((a, b) => b.score - a.score || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
 export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
@@ -1103,15 +1168,28 @@ export class TerraformDocumentationRepository {
 				.replace(/[^a-z0-9]+/g, " ")
 				.trim()} `;
 			if (!filters.some(f => f.key === "provider_name")) {
+				const identityRole = filters.find(filter => filter.key === "provider_type")?.value;
 				const names = db
 					.query(
-						"SELECT DISTINCT provider_name value FROM terraform_documents WHERE provider_name!='xcsh' ORDER BY provider_name",
+						"SELECT DISTINCT provider_name value FROM terraform_documents WHERE provider_name!='xcsh' AND (? IS NULL OR provider_type=?) ORDER BY provider_name",
 					)
-					.all() as Array<{ value: string }>;
-				const named = terraformProviderMention(
+					.all(identityRole ?? null, identityRole ?? null) as Array<{ value: string }>;
+				let named = terraformProviderMention(
 					search,
 					names.map(name => name.value),
 				);
+				if (!named && filters.find(filter => filter.key === "provider_type")?.value === "actions") {
+					const actionNames = db
+						.query(
+							"SELECT DISTINCT provider_name value FROM terraform_documents WHERE provider_type='actions' ORDER BY provider_name",
+						)
+						.all() as Array<{ value: string }>;
+					const matches = rankTerraformProviderNames(
+						search,
+						actionNames.map(row => row.value),
+					);
+					if (matches[0] && (!matches[1] || matches[0].score >= matches[1].score + 10)) named = matches[0].name;
+				}
 				if (named) filters.push({ key: "provider_name", value: named });
 			}
 			const clauses = ["documents_fts MATCH ?", "d.active=1"];

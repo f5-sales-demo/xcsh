@@ -324,3 +324,13 @@ terms remain; exact unsupported identifiers still fail closed. Retained terms tr
 AND before marked OR choices; broadened results never imply confident leaf selection.
 463URLtests+workspacechecks pass. Regression top5 improves31.4286% to33.5714%,
 leaf selection stays24/140;discovery187.902ms remains failed. Frozen labels unchanged.
+
+## Descriptive action identity
+
+Provider-name matching is scoped to explicit provider role. Descriptive action
+verbs resolve against reviewed action names with operation and single/batch scope.
+Action declaration/invocation requests route exact minimal configuration sections;
+field/attribute requests retain schema routing. Corpus checks select cryptokey
+delete,single-session terminate,site OS upgrade.464URLtests+workspacechecks pass.
+Post-analysis regression33/140leaf(23.5714%),top5 40%,discovery203.052ms still
+fails qualification. Frozen suite remains ineligible and unchanged.

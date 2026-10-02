@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	boundedTerraformResponse,
+	rankTerraformProviderNames,
 	scoreTerraformAliasContext,
 	selectTerraformCandidate,
 	type TerraformMetadata,
@@ -140,6 +141,15 @@ test("task destination distinguishes usage pages from schema fields", () => {
 	expect(terraformTaskDestination("Which create and delete timeout attributes are in the schema?")).toBeUndefined();
 	expect(terraformTaskDestination("Set HTTP connection idle timeout")).toBeUndefined();
 	expect(terraformTaskDestination("Set TLS certificate name")).toBeUndefined();
+	expect(terraformTaskDestination("Which action removes a cryptokey?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("Declare an action to terminate a session")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+	expect(terraformTaskDestination("Which id field does the termination action require?")).toBeUndefined();
 });
 
 test("query role follows concrete provisioning versus lookup intent without treating existence as a data source", () => {
@@ -159,4 +169,28 @@ test("broad prose can narrow to known terms while unsupported exact fields stay 
 		'"port"*',
 	]);
 	expect(terraformKnownQueryTerms('"unsupported_field"*', exists)).toEqual([]);
+});
+
+test("operation identity resolves descriptive action names and keeps execution scope", () => {
+	const names = [
+		"dns_zone_add_cryptokey",
+		"dns_zone_edit_cryptokey",
+		"dns_zone_delete_cryptokey",
+		"access_active_session_terminate",
+		"access_active_sessions_terminate",
+		"site_upgrade_os",
+		"site_upgrade_sw",
+	];
+	expect(rankTerraformProviderNames("Invoke an action to remove a cryptokey from a DNS zone", names)[0]?.name).toBe(
+		"dns_zone_delete_cryptokey",
+	);
+	expect(
+		rankTerraformProviderNames("Declare an action to terminate a single active access session", names)[0]?.name,
+	).toBe("access_active_session_terminate");
+	expect(rankTerraformProviderNames("Terminate multiple active user access sessions", names)[0]?.name).toBe(
+		"access_active_sessions_terminate",
+	);
+	expect(rankTerraformProviderNames("Upgrade a site's operating system", names)[0]?.name).toBe("site_upgrade_os");
+	const ambiguous = rankTerraformProviderNames("Maintain cryptokeys in a DNS zone", names);
+	expect(ambiguous.filter(row => row.score === ambiguous[0]?.score)).toHaveLength(3);
 });
