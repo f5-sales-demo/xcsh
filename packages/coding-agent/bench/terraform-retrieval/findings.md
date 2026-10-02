@@ -130,3 +130,12 @@ and benchmark requirements only, followed by a separate verifier session. Neithe
 receives retrieval code or prior results. Candidate authoring is not freezing or
 qualification. Final freeze binds the published immutable documentation snapshot;
 review must verify coverage, exact anchors, depth, ambiguity and source evidence.
+
+## Independent suite scoring before freeze
+
+The new suite requires every permitted ambiguity destination within the top five,
+rather than accepting a single destination as adequate clarification evidence.
+Exact answerable selection still requires the first destination and exact anchor.
+Leaf context read bytes now count in total response bytes. Two focused scorer
+tests pass. These rules were set before freezing or running the independent suite.
+No prior benchmark qualification result is recalculated or upgraded.
