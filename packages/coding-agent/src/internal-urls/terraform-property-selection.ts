@@ -201,6 +201,19 @@ export function selectPropertyDestination(
 			b--;
 		}
 		if (a < 0 && b < 0) continue;
+		const servicePair =
+			(parts.includes("service") && otherParts.includes("stateful_service")) ||
+			(parts.includes("stateful_service") && otherParts.includes("service"));
+		if (
+			servicePair &&
+			!/\b(?:stateless|stateful|stateful_service)\b/i.test(queryText) &&
+			!/\bservice[./]|\b(?:under|branch|path)\s+`?service`?\b/i.test(queryText)
+		)
+			return {
+				kind: "choices",
+				destinations: collisions.slice(0, 5),
+				reason: "Missing stateless or stateful service architecture",
+			};
 		if (propertyRequestsDirectObjectField(queryText, first) && otherParts.length > parts.length) continue;
 
 		const operators = new Set(["and", "or", "none"]);

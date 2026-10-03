@@ -343,3 +343,10 @@ test("explicit boolean flag type excludes numeric field evidence",()=>{
  const flag={...row("redirect",35),type:"bool",description:"Redirect traffic."};const port={...row("port",50),type:"number",description:"Incoming traffic port."};
  expect(selectPropertyDestination("Which boolean flag enables traffic redirect?",[port,flag]).destinations[0]?.schema_path).toBe("redirect");
 });
+
+test("generic service wording cannot choose stateless versus stateful architecture",()=>{
+ const a={...row("service.ports.tls.default_security",50),anchor:"section"};const b={...row("stateful_service.ports.tls.default_security",1),anchor:"section"};
+ expect(selectPropertyDestination("Which block selects default security for workload service ports?",[a],[b]).kind).toBe("choices");
+ expect(selectPropertyDestination("Which block selects default security for stateless workload service ports?",[a],[b]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Which block selects default security for stateful service ports?",[b],[a]).kind).toBe("leaf");
+});
