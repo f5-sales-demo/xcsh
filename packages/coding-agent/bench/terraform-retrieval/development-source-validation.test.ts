@@ -15,3 +15,9 @@ test("ambiguous cases need multiple verified destinations and missing context",(
  expect(validateDevelopmentCases([{...ambiguous,expected:[uri]}],destinations).some(x=>x.includes("ambiguous"))).toBe(true);
  expect(validateDevelopmentCases([candidate,candidate],destinations).some(x=>x.includes("duplicate"))).toBe(true);
 });
+
+test("same-role alternatives cannot be excluded by invented resource intent",()=>{
+ const data=destinations[1]!;const peer={...data,uri:data.uri.replace("schema-name","schema-peer"),schema_path:"peer.name"};
+ const item={...candidate,prompt:"Read the name via data.xcsh_fixture data source",expected:[data.uri],alternatives:[{destination:uri,excluded_by:"The user requests a data source, not a resource."},{destination:peer.uri,excluded_by:"Prompt explicitly configures a managed resource, not querying a data source."}]};
+ expect(validateDevelopmentCases([item],[...destinations,peer]).some(error=>error.includes("contradictory role exclusion"))).toBe(true);
+});

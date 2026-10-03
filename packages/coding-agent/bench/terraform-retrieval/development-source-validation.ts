@@ -26,6 +26,15 @@ export function validateDevelopmentCases(cases:readonly DevelopmentCase[],source
    if(item.expected.length<2||!item.missing_context?.trim())fail("ambiguous case needs verified alternatives and missing context");
    if(!evidence(item.source_evidence))fail("missing source evidence");
   }else if(!item.behavior?.trim())fail("control requires expected behavior");
+  const expectedRole=byUri.get(item.expected[0]??"")?.provider_type;
+  const explicitData=/\bdata[ -]source\b|\bdata\.xcsh_[a-z0-9_]+/i.test(item.prompt);
+  const explicitResource=/\bmanaged\b[^.!?]*\bresource\b|\bresource\.xcsh_[a-z0-9_]+/i.test(item.prompt);
+  for(const alternative of item.alternatives??[]){
+   const other=byUri.get(alternative.destination);
+   if(other?.provider_type!==expectedRole)continue;
+   if(explicitData&&!explicitResource&&/prompt[^.!?]*(?:configures|provisions|declares)[^.!?]*managed resource/i.test(alternative.excluded_by)) fail(`contradictory role exclusion ${alternative.destination}`);
+   if(explicitResource&&!explicitData&&/prompt[^.!?]*(?:queries|requests|reads)[^.!?]*data[ -]source/i.test(alternative.excluded_by)) fail(`contradictory role exclusion ${alternative.destination}`);
+  }
   for(const alternative of item.alternatives??[])if(!byUri.has(alternative.destination)||!alternative.excluded_by?.trim())fail("invalid alternative adjudication");
  }
  return errors;

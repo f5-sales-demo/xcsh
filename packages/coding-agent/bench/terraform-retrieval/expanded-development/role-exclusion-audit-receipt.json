@@ -1,0 +1,17 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_review_provisional": true,
+  "labels_changed": false,
+  "report": "role-exclusion-audit.json.gz",
+  "sha256": "bb4945c075d5fdb193b9a06a9f5600e7e9d214a08fe899551ed7dbabfd86a26a",
+  "gzip_sha256": "1e519c8c003e835f2f323cedeeb822077f1298e7a4dc4b1bdfc6bbb5a3ff2494",
+  "errors": 94,
+  "affected_cases": [
+    "case-013"
+  ],
+  "limitations": [
+    "Reviewer case013 exclusions contradict explicit data-source intent; semantic uniqueness unproven.",
+    "Original labels and all prior measured outcomes remain preserved."
+  ]
+}
