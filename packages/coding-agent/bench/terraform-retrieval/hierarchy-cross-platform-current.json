@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "e38dc5ab2",
+  "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+  "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "ambiguous_cases": 29,
+  "complete_choice_routes": 24,
+  "response_differences": [],
+  "mac_p95_ms": 41.845124999999825,
+  "linux_p95_ms": 36.73604199999954,
+  "max_response_bytes": 4056,
+  "report_sha256": {
+    "hierarchy-mac-current.json": "5814c6b8a4548c5fbc54517066421fe66566c0bafcbbaa1d36a5903a018bf42c",
+    "hierarchy-linux-current.json": "a55d0cb0288c2bebef04c39723dc784cc706b564539151f2ac01c11f8df8c438"
+  },
+  "limitations": [
+    "Development continuation audit only; independent heldout and installed-model qualification incomplete."
+  ]
+}
