@@ -89,6 +89,9 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
+export function propertyRequestsRootField(text: string): boolean {
+	return /\b(?:top[ -]level|root[ -]level|root)\s+(?:attribute|field|property|parameter|argument|flag)\b/i.test(text);
+}
 export function propertySchemaIdentifiers(text: string): string[] {
 	const request = text.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "");
 	return [

@@ -332,3 +332,9 @@ test("enum examples are not mistaken for unsupported field identifiers",()=>{
  expect(selectPropertyDestination("Which field sets loadbalancer_algorithm (such as ROUND_ROBIN or LEAST_ACTIVE)?",[field]).kind).toBe("leaf");
  expect(selectPropertyDestination("Which field sets invented_algorithm?",[field]).kind).toBe("none");
 });
+
+test("explicit top-level field scope excludes nested reference fields",()=>{
+ const root=row("name",30),nested=row("metadata.name",50);
+ expect(selectPropertyDestination("Which top-level attribute specifies name?",[nested,root]).destinations[0]?.schema_path).toBe("name");
+ expect(selectPropertyDestination("Which attribute specifies name?",[nested,root]).kind).toBe("choices");
+});

@@ -6,6 +6,7 @@ import {
 	propertyQueryTerms,
 	propertyRequestedText,
 	propertyRequestsBlock,
+	propertyRequestsRootField,
 	propertySchemaIdentifiers,
 	rankPropertyScope,
 } from "./terraform-property-ranking";
@@ -160,6 +161,7 @@ export function searchPropertyIndex(
 		args.push(scope.providerName);
 	}
 
+	if (propertyRequestsRootField(query)) clauses.push("instr(schema_path, char(46))=0");
 	const identifiers = propertySchemaIdentifiers(query).filter(
 		term => !db.query("SELECT 1 FROM property_scopes WHERE provider_name=?").get(term),
 	);

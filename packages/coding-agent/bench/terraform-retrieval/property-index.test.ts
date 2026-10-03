@@ -200,3 +200,8 @@ test("example enum constants do not constrain schema-path candidates",()=>{
  const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);INSERT INTO terraform_destinations VALUES('resources','fixture','loadbalancer_algorithm','algorithm','schema-algorithm','Load balancing algorithm')");populatePropertyIndex(db);
  expect(searchPropertyIndex(db,"Which field sets loadbalancer_algorithm (such as ROUND_ROBIN or LEAST_ACTIVE)?",{providerName:"fixture"})[0]?.schema_path).toBe("loadbalancer_algorithm");db.close();
 });
+
+test("explicit top-level scope constrains indexed candidates before limiting",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);INSERT INTO terraform_destinations VALUES('resources','fixture','name','root','schema-name','Name.'),('resources','fixture','nested.name','nested','schema-nested-name','Name name name.')");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Which top-level attribute specifies name?",{providerName:"fixture"},1).map(row=>row.schema_path)).toEqual(["name"]);db.close();
+});

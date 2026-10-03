@@ -6,6 +6,7 @@ import {
 	propertyRequestedText,
 	propertyRequestsBlock,
 	propertyRequestsDirectObjectField,
+	propertyRequestsRootField,
 	propertySchemaIdentifiers,
 	propertyTerms,
 } from "./terraform-property-ranking";
@@ -40,6 +41,10 @@ export function selectPropertyDestination(
 	input: readonly RankedProperty[],
 	alternatives: readonly RankedProperty[] = [],
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
+	if (propertyRequestsRootField(queryText)) {
+		input = input.filter(row => !row.schema_path.includes("."));
+		alternatives = alternatives.filter(row => !row.schema_path.includes("."));
+	}
 	const query = new Set(propertyQueryTerms(queryText));
 	const identifiers = propertySchemaIdentifiers(queryText).filter(
 		term => ![...input, ...alternatives].some(row => row.provider_name === term),
