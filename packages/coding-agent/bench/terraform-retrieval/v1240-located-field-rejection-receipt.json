@@ -1,0 +1,33 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "rejected": true,
+  "reason": "Located-field syntax recognition did not improve measured retrieval outcomes; reverted.",
+  "report": "v1240-located-field-rejected.json.gz",
+  "sha256": "49b124b6374a66bb998fc826374e9551e367bd426fbf46fda68fe209727c46b7",
+  "gzip_sha256": "6cfabc82ab2d2f0ac6feaaf8c51836df468c7b364506396b621fabe34a844fd7",
+  "patch_sha256": "7cbc63c082cc8765d64f9b6322109125652a23ac703af2ff8b45c2f6d3da8670",
+  "summary": {
+    "development_only": true,
+    "qualification_passed": false,
+    "actual_production_resolver": true,
+    "regression_only": false,
+    "provider_version": "v12.4.0",
+    "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+    "index_sha256": "2acf7ce8a1a730f242d486222497c547b641d72c38425e66b59b1b5a4ac4f893",
+    "suite_sha256": "d4e8b18868e97de8414078be22c8032510193f561f360ec5a21f2509a4064fa1",
+    "cold_materialization_ms": 1823.611576,
+    "warm_p95_ms": 35.631413000000066,
+    "answerable": 43,
+    "correct_leaf": 29,
+    "wrong_leaf": 3,
+    "ambiguous_leaf": 0,
+    "control_leaf": 0,
+    "answerable_top5": 38,
+    "limitations": [
+      "Development labels only; no independently frozen qualification.",
+      "Complete resolver discovery and selected context timed; model/network time excluded.",
+      "No compiled installed artifact acceptance."
+    ]
+  }
+}
