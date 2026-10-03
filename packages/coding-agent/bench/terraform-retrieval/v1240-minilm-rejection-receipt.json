@@ -1,0 +1,118 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "network_disabled_evaluation": true,
+  "rejected": true,
+  "reason": "Fusion does not improve development leaf ranking and misses required top-five destinations.",
+  "vector": {
+    "development_only": true,
+    "qualification_passed": false,
+    "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+    "provider_version": "v12.4.0",
+    "corpus_sha256": "fb8ed598e102fb2fa8cd59a63bae665b16d1013675b1bdd46c9d2fdf236410ab",
+    "vector_sha256": "8fb1c43d88686f1d5286ac2e01d2418e479778ef0bc0d8c6daa91b3f7d64bd12",
+    "rows": 39565,
+    "dimensions": 384,
+    "vector_bytes": 60771968,
+    "materialization_ms": 212120.6417500507,
+    "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "preparation_sha256": "c6b5ee01ecbad6e4b85309ad37937dfd7282cd208e5cdb1365a22af53c11a9a0",
+    "builder_sha256": "ea1638504fe1382b168a12487686a5fd0d171385c091141c0a23000146612c70",
+    "input_format": "description role provider-name schema-path; underscores and dots become spaces",
+    "max_tokens": 179,
+    "model_limit": 256,
+    "over_model_limit": 0
+  },
+  "files": [
+    {
+      "path": "v1240-minilm-broad-report.json.gz",
+      "sha256": "4db230860c8346d04807de6ec16b849357ff5f2f0eb6619586df45501a5ddda3",
+      "gzip_sha256": "9bc9948697c86a9a5fd4a04cd31422536c736f7c32e43ecf4e3ac8f76ca106ec",
+      "summary": {
+        "development_only": true,
+        "property_only": false,
+        "query_prefix": "",
+        "qualification_passed": false,
+        "production_imported": false,
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "corpus_sha256": "fb8ed598e102fb2fa8cd59a63bae665b16d1013675b1bdd46c9d2fdf236410ab",
+        "vector_sha256": "8fb1c43d88686f1d5286ac2e01d2418e479778ef0bc0d8c6daa91b3f7d64bd12",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "evaluator_sha256": "d757fbcf5577cf00d4f81946d3c5ac74399d16d4631fb4129ba49bd6e16d8b5d",
+        "lexical_sha256": "06ac35540bec8f6742ca1d4e37851c88ccbb5c20d36e6519501b304020c51852",
+        "expected_outside_property_corpus": [
+          "dev-broad-030",
+          "dev-broad-031"
+        ],
+        "answerable": 43,
+        "top1": 34,
+        "top5": 41,
+        "semantic_route_p95_ms": 68.97352496162057,
+        "limitations": [
+          "Lexical precomputed separately; no complete response latency qualification.",
+          "Candidate ranking only; no confidence selection or prerequisite rendering.",
+          "Local offline embedding runtime, not bundled production dependency."
+        ]
+      }
+    },
+    {
+      "path": "v1240-minilm-revised-report.json.gz",
+      "sha256": "e8a5d9aedd2639594cf2c41bcfb3e941141579987016f9ea5d400162e8cad866",
+      "gzip_sha256": "e646463ff424fb7b7a4a20931ac0061b81a7d5cb4fbc4feed7bc3d6893451f97",
+      "summary": {
+        "development_only": true,
+        "property_only": false,
+        "query_prefix": "",
+        "qualification_passed": false,
+        "production_imported": false,
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "corpus_sha256": "fb8ed598e102fb2fa8cd59a63bae665b16d1013675b1bdd46c9d2fdf236410ab",
+        "vector_sha256": "8fb1c43d88686f1d5286ac2e01d2418e479778ef0bc0d8c6daa91b3f7d64bd12",
+        "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+        "evaluator_sha256": "d757fbcf5577cf00d4f81946d3c5ac74399d16d4631fb4129ba49bd6e16d8b5d",
+        "lexical_sha256": "02bfb6d19f81946057be6aec981e5d3be56e63c13b5ad9b5ac9728495a13e6d5",
+        "expected_outside_property_corpus": [
+          "dev-revised-030",
+          "dev-revised-031"
+        ],
+        "answerable": 48,
+        "top1": 34,
+        "top5": 46,
+        "semantic_route_p95_ms": 82.00476306956261,
+        "limitations": [
+          "Lexical precomputed separately; no complete response latency qualification.",
+          "Candidate ranking only; no confidence selection or prerequisite rendering.",
+          "Local offline embedding runtime, not bundled production dependency."
+        ]
+      }
+    },
+    {
+      "path": "v1240-minilm-lexical.json.gz",
+      "sha256": "06ac35540bec8f6742ca1d4e37851c88ccbb5c20d36e6519501b304020c51852",
+      "gzip_sha256": "426613032b76f59af604eb95ee63dd7e37e6aa7209e547211df5306ad27ecb92",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "source_index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0"
+      }
+    },
+    {
+      "path": "v1240-minilm-revised-lexical.json.gz",
+      "sha256": "02bfb6d19f81946057be6aec981e5d3be56e63c13b5ad9b5ac9728495a13e6d5",
+      "gzip_sha256": "93bb0db1190e6f68eed44acf65e0212b23bf1fc2c892978fe5e094a5e6707541",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+        "source_index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0"
+      }
+    }
+  ],
+  "limitations": [
+    "Lexical candidate generation precomputed; embedding and fusion timing does not qualify complete response latency.",
+    "No confidence selection, complete sections, prerequisites, installed model or compiled cross-platform evidence.",
+    "No exposed qualification suites used."
+  ]
+}
