@@ -1403,3 +1403,9 @@ applied yet, no qualification claim. Exact raw receipt: terminology-source-revie
 Provider follow-up #2378 / PR #2379 independently fixes lifecycle alias scope,
 passes 28 metadata/documentation tests and corpus-wide classification audit.
 Consumer remains draft; provider follow-up CI/merge is pending.
+
+First terminology verifier is rejected after following documentation symlinks
+into prior source review workspace and reading author traces. No verdict used.
+Replacement session receives 467 copied pinned source pages, per-file digest
+manifest, candidate bytes, and explicit workspace-only read boundary. No
+symlinks or previous traces. Verification remains pending and proposals unapplied.

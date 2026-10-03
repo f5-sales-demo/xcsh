@@ -9,5 +9,16 @@
   "unresolved": 10,
   "target_documents_and_anchors_verified": 40,
   "semantic_verification_pending": true,
-  "production_imported": false
+  "production_imported": false,
+  "first_verifier_rejected": {
+    "conversation": "cf27cec3-bb78-43c7-a330-2f5f8e23ceda",
+    "reason": "Verifier followed symlink into previous author/reviewer workspace and read traces; discarded without using any verdict."
+  },
+  "replacement_verifier": {
+    "conversation": "7edfd699-88b4-478e-b633-cbdd8af751c8",
+    "copied_source_pages": 467,
+    "symlinks": false,
+    "source_digest_manifest": true,
+    "pending": true
+  }
 }
