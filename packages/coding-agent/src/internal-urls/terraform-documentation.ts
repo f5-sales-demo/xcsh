@@ -1503,14 +1503,16 @@ export class TerraformDocumentationRepository {
 			}
 			if (
 				(Boolean(propertyRequestedText(search)) ||
-					/\b(?:configuration|schema) block\b|\bwhich block\b/i.test(search) ||
+					/\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(search) ||
 					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
 						search,
 					)) &&
 				!/\b(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b/i.test(search) &&
 				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
 				(!/\bblock\b/i.test(search) ||
-					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b/i.test(search)) &&
+					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(
+						search,
+					)) &&
 				!terraformTaskDestination(search) &&
 				!terraformProviderSetupDestination(search) &&
 				!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) &&
@@ -1525,8 +1527,8 @@ export class TerraformDocumentationRepository {
 					providerName: provider,
 					filters,
 					node: node ?? undefined,
-				});
-				if (ranked[0]?.anchor === "section") {
+				}).filter(row => !/\bblock\b/i.test(search) || row.anchor === "section");
+				if (ranked[0]?.anchor === "section" && !/\bblock\b/i.test(search)) {
 					const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(ranked[0].path) as {
 						metadata: string;
 					};

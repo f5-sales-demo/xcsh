@@ -530,6 +530,15 @@ test("selected property blocks refine to direct fields without changing explicit
 		doc.metadata.aliases = ["public ip"];
 		doc.metadata.sections = [
 			{
+				schema_path: ["origin_servers", "public_ip"],
+				document_id: doc.metadata.id,
+				anchor: "section",
+				description: "Public IP origin server.",
+				aliases: [],
+				relationships: [],
+				flags: [],
+			},
+			{
 				schema_path: ["origin_servers", "public_ip", "ip"],
 				document_id: doc.metadata.id,
 				anchor: "schema-origin_servers--public_ip--ip",
@@ -555,6 +564,9 @@ test("selected property blocks refine to direct fields without changing explicit
 			"#schema-origin_servers--public_ip--ip",
 		);
 		expect((await read("configure public IP origin server block")).content).toContain("#section");
+		const block = (await read("Which schema documentation page covers the public IP origin server block?")).content;
+		expect(block).toContain("Reason:");
+		expect(block).toContain("#section");
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });
