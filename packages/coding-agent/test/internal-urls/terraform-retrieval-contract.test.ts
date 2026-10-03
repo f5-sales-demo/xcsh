@@ -810,3 +810,11 @@ test("on-a provider ownership outranks an incidental longer nested entity", () =
 	).toBe("cdn_loadbalancer");
 	expect(terraformProviderMention("Compare HTTP load balancer and protected application", names)).toBeUndefined();
 });
+
+test("documentation lookup does not imply the data-source role", () => {
+	expect(terraformQueryIdentity("Look up the schema and examples for xcsh_fixture").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Inspect documentation for xcsh_fixture").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Look up an existing xcsh_fixture object").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Inspect data source xcsh_fixture schema").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Read xcsh_fixture resource documentation").providerType).toBe("resources");
+});

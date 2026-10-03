@@ -1048,12 +1048,16 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 		/\b(?:configure|set|specify)\b.*\bor\b.*\b(?:reference|inspect|read)\b|\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(
 			search,
 		);
+	const documentationLookup =
+		/\b(?:read|look up|lookup|inspect|query)\b.*\b(?:documentation|docs|schema|examples?|reference)\b/i.test(
+			search,
+		) && !/\bexisting\b/i.test(search);
 	const providerType =
 		explicitRoles.size > 1
 			? undefined
 			: explicitRoles.size === 1
 				? [...explicitRoles][0]
-				: competingRoles
+				: competingRoles || documentationLookup
 					? undefined
 					: /\bephemeral(?: resource)?\b/i.test(search)
 						? "ephemeral-resources"
