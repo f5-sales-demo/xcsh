@@ -530,3 +530,20 @@ test("incidental action narration cannot erase resource noun scope",()=>{
  const root={...row("name",50)},nested={...row("service.name",49)};
  expect(selectPropertyDestination("Specify the service name using name attribute in xcsh_fixture resource before executing an action",[root,nested]).kind).not.toBe("leaf");
 });
+
+test("explicit dotted schema scope excludes reordered peers and retains unsupported path rejection",()=>{
+ const a=row("alpha.beta.port",30),b=row("beta.alpha.port",100);
+ expect(selectPropertyDestination("Which field sets port under alpha.beta?",[b,a],[b]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("Which field sets port under alpha.missing?",[b,a]).kind).toBe("none");
+});
+
+test("alternative and negative dotted paths cannot decide a leaf by score gap",()=>{
+ const rows=[row("alpha_one.beta_two.port",100),row("gamma_three.delta_four.port",10)];
+ for(const q of ["port under alpha_one.beta_two or under gamma_three.delta_four","port under alpha_one.beta_two and under gamma_three.delta_four","port not under alpha_one.beta_two"])
+ expect(selectPropertyDestination(q,rows).kind).toBe("choices");
+});
+
+test("path alternatives retain ordinary contradiction exclusions",()=>{
+ const rows=[row("outside.ipv4.addr",100),row("outside.ipv6.addr",50),row("inside.ipv4.addr",40)];
+ expect(selectPropertyDestination("outside IPv4 address not under alpha.beta",rows).destinations.map(r=>r.schema_path)).toEqual(["outside.ipv4.addr"]);
+});

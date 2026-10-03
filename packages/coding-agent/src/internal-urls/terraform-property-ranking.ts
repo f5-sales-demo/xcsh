@@ -160,8 +160,47 @@ export function propertyRequestsRootField(text: string): boolean {
 		text,
 	);
 }
+function schemaPathMentions(text: string) {
+	const query = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	return [
+		...query.matchAll(
+			/\b(under|within|inside|schema path|branch|path|or|and)\s+(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
+		),
+	].map(match => {
+		const suffix = query.slice(match.index! + match[0].length);
+		const path = !match[2] && /^(?:\s+[a-z]|\s*[!?]|\s*$)/.test(suffix) ? match[3]!.replace(/\.$/, "") : match[3]!;
+		const clause =
+			query
+				.slice(0, match.index)
+				.split(/[;!?\n]|\.(?=\s)/)
+				.at(-1) ?? "";
+		return {
+			start: match.index!,
+			end: match.index! + match[0].length,
+			path,
+			qualifier: match[1]!,
+			negative: /\b(?:not|no|without)\s+(?:(?:necessarily|a|an|the)\s+){0,3}$/.test(clause),
+		};
+	});
+}
+export function propertyMentionedSchemaPaths(text: string): string[] {
+	return [...new Set(schemaPathMentions(text).map(match => match.path))];
+}
+export function propertyExplicitSchemaPaths(text: string): string[] {
+	const matches = schemaPathMentions(text);
+	if (matches.length !== 1) return [];
+	const match = matches[0]!;
+	return !match.negative && !["or", "and"].includes(match.qualifier) ? [match.path] : [];
+}
+export function propertyMatchesExplicitPaths(text: string, candidate: PropertyCandidate): boolean {
+	return propertyExplicitSchemaPaths(text).every(path => `.${candidate.schema_path}.`.includes(`.${path}.`));
+}
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
-	const request = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	const requiredPaths = propertyExplicitSchemaPaths(text);
+	const mentions = schemaPathMentions(request).filter(mention => !requiredPaths.includes(mention.path));
+	for (const mention of mentions.reverse())
+		request = request.slice(0, mention.start) + " " + request.slice(mention.end);
 	return [
 		...new Set(
 			(request.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(

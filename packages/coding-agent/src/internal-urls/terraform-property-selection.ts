@@ -2,7 +2,10 @@ import { interpretTerraformLifecycle, lifecycleEvidence, type TerraformLifecycle
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
 	type PropertyCandidate,
+	propertyExplicitSchemaPaths,
+	propertyMatchesExplicitPaths,
 	propertyMatchesWorkloadArchitecture,
+	propertyMentionedSchemaPaths,
 	propertyNamesCollection,
 	propertyQueryTerms,
 	propertyRequestedBlockText,
@@ -50,6 +53,10 @@ export function selectPropertyDestination(
 	const identityPeers = [...input, ...alternatives];
 	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
+	input = input.filter(row => propertyMatchesExplicitPaths(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesExplicitPaths(queryText, row));
+	if (propertyExplicitSchemaPaths(queryText).length && !input.length && !alternatives.length)
+		return { kind: "none", destinations: [], reason: "Unsupported explicit schema path" };
 	const requestedType = propertyRequestedType(queryText);
 	if (requestedType) {
 		input = input.filter(row => row.type == null || row.type === requestedType);
@@ -77,6 +84,27 @@ export function selectPropertyDestination(
 	)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
 
+	const pathMentions = propertyMentionedSchemaPaths(queryText);
+	if (pathMentions.length && !propertyExplicitSchemaPaths(queryText).length) {
+		const candidates = [
+			...new Map(
+				[...input, ...alternatives]
+					.filter(identifiersMatch)
+					.filter(row => !contradicts(query, row))
+					.map(row => [`${row.path}#${row.anchor}`, row]),
+			).values(),
+		].sort(
+			(a, b) =>
+				b.score - a.score ||
+				(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
+				(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
+		);
+		return {
+			kind: candidates.length ? "choices" : "none",
+			destinations: candidates.slice(0, 5),
+			reason: "Alternative or negated schema path intent",
+		};
+	}
 	const lifecycle = context?.lifecycle ?? interpretTerraformLifecycle(queryText);
 	if (lifecycle?.field) {
 		const operations = lifecycle.operations.length ? lifecycle.operations : ["create", "read", "update", "delete"];

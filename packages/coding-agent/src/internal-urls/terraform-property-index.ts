@@ -3,6 +3,7 @@ import type { Database } from "bun:sqlite";
 import {
 	type PropertyCandidate,
 	preparePropertyScope,
+	propertyExplicitSchemaPaths,
 	propertyQueryTerms,
 	propertyRequestedText,
 	propertyRequestedType,
@@ -210,6 +211,10 @@ export function searchPropertyIndex(
 	const identifiers = propertySchemaIdentifiers(query).filter(
 		term => !db.query("SELECT 1 FROM property_scopes WHERE provider_name=?").get(term),
 	);
+	for (const path of propertyExplicitSchemaPaths(query)) {
+		clauses.push("instr('.' || schema_path || '.',?)>0");
+		args.push(`.${path}.`);
+	}
 	for (const identifier of identifiers) {
 		if (!propertySchemaIdentifiers(query, "workload").includes(identifier)) {
 			clauses.push("(provider_name='workload' OR instr('.' || schema_path || '.',?)>0)");

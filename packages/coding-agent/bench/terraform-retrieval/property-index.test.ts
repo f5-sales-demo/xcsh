@@ -248,3 +248,50 @@ test("unscoped architecture alternatives retain workload paths without relaxing 
  expect(searchPropertyIndex(db,query,{providerType:"data-sources"})).toEqual([]);
  db.close();
 });
+
+test("explicit dotted schema paths bind contiguous segments rather than unordered words",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","beta.alpha.port","alpha.betax.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Which field sets port under alpha.beta?",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["alpha.beta.port"]);
+ expect(searchPropertyIndex(db,"Which field sets port under alpha.missing?",{providerName:"fixture"})).toEqual([]);
+ expect(searchPropertyIndex(db,"Which field sets port under alpha.beta?",{providerType:"data-sources"})).toEqual([]);db.close();
+});
+
+test("explicit path parser does not truncate malformed tokens or lose scope to earlier wording",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","gamma.delta.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ for(const query of ["under alpha.beta.1missing", "under alpha.beta-missing", "No rewrite is needed. Which field sets port under alpha.missing?", "port or timeout under alpha.missing"])
+ expect(searchPropertyIndex(db,query,{providerName:"fixture"})).toEqual([]);
+ for(const query of ["port under alpha.beta or under gamma.delta", "port under alpha.beta and under gamma.delta", "port under alpha.beta, or gamma.delta"])
+ expect(searchPropertyIndex(db,query,{providerName:"fixture"})).toHaveLength(2);
+ db.close();
+});
+
+test("suppressed dotted path intent cannot leak into underscore identifier filters",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha_one.beta_two.port","gamma_three.delta_four.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"port under alpha_one.beta_two or under gamma_three.delta_four",{providerName:"fixture"})).toHaveLength(2);
+ expect(searchPropertyIndex(db,"port not under alpha_one.beta_two",{providerName:"fixture"})).toHaveLength(2);db.close();
+});
+
+test("bare alternative paths and quoted malformed endings remain literal",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha_one.beta_two.port","gamma_three.delta_four.port","alpha.beta.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ const rows=searchPropertyIndex(db,"port under alpha_one.beta_two or gamma_three.delta_four",{providerName:"fixture"});expect(rows).toHaveLength(3);
+ expect(searchPropertyIndex(db,"Which field sets port under `alpha.beta.`?",{providerName:"fixture"})).toEqual([]);db.close();
+});
+
+test("conjunction-only and repeated path mentions are choices; malformed dotted punctuation stays literal",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","gamma.delta.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ for(const query of ["port or alpha.beta","port under alpha.beta or alpha.beta","port under alpha.beta and under alpha.beta"])
+ expect(searchPropertyIndex(db,query,{providerName:"fixture"})).toHaveLength(2);
+ expect(searchPropertyIndex(db,"port under alpha.beta., with TLS enabled",{providerName:"fixture"})).toEqual([]);db.close();
+});
+
+test("sentence punctuation and ignored mention spans preserve independent identifiers",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","alpha_one.beta_two.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Port under alpha.beta. Use TLS.",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["alpha.beta.port"]);
+ expect(searchPropertyIndex(db,"set field alpha_one.beta_two_extra, not under alpha_one.beta_two",{providerName:"fixture"})).toEqual([]);db.close();
+});
