@@ -1490,3 +1490,9 @@ resume-pending=true recovery on main; it forces normal build/generation/receipt
 checks without applying stale patch. Source main b97deb3ce05abfe4ab0f01dd8cc9569aa5cf8ebf
 includes both reviewed metadata fixes and unrelated runtime recovery. No new
 snapshot pin, no qualification claim.
+
+Broader configuration-verb property route with trailing rejected alternative
+excluded achieves original top-five 14/14 but only 9/14 selected, ambiguous
+leaf selections 1; audited 47/48 selected and 48/48 top-five. Complete warm
+p95 79.280/31.673 ms. Rejected for promotion; production source restored.
+Exact patch/raw receipts: configuration-route-rejection-receipt.json.
