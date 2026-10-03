@@ -652,3 +652,12 @@ test("application firewall resource terminology resolves the provider owner", ()
 		"app_firewall",
 	);
 });
+
+test("health check monitor terminology identifies its provider owner", () => {
+	expect(
+		terraformProviderMention("Where is the response timeout property documented for a health check monitor?", [
+			"healthcheck",
+			"workload",
+		]),
+	).toBe("healthcheck");
+});

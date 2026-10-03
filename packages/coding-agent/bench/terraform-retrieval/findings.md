@@ -1662,3 +1662,20 @@ source now includes all roles for every audited family,10940pages with hashes.
 Full all-role re-adjudication active; previous corrected-development labels/counts
 are provisional and cannot certify uniqueness. No held-out corpus changed.
 Status: broad-development/all-role-review-status.json.
+
+All-role source re-audit completes80unchanged prompts:43answerable29ambiguous
+8controls,126targets and10940source-file hashes verified. Earlier false-absence
+role audit rejected. Final derived development corpus preserved separately;
+complete resolver selects43/43answerable leaves,top-five43/43,zero ambiguous
+or control leaves. This is reviewed exposed development material, never
+qualification. Original/frozen labels and failed receipts stay unchanged.
+Receipt: all-role-broad-development-receipt.json.
+
+All-role broader development clarifications show all permitted destinations
+in top-five for only17/29cases; several require hierarchical choices (>5leaves),
+others miss targets. Zero false selections alone does not qualify clarification.
+Health check provider terminology now maps healthcheck, returning exact resource
+and data-source timeout choices instead of unrelated workload checks. Complete
+43/43answerable development remains,zero ambiguous/control leaves. Exact
+receipts: healthcheck-development-receipt.json and all-role-ambiguity-coverage.json.
+No held-out qualification claim.

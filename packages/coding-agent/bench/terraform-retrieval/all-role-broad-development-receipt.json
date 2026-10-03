@@ -1,0 +1,27 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "actual_production_resolver": true,
+  "regression_only": false,
+  "provider_version": "v12.3.1",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+  "cold_materialization_ms": 1728.478388,
+  "warm_p95_ms": 29.99159899999995,
+  "answerable": 43,
+  "correct_leaf": 43,
+  "wrong_leaf": 0,
+  "ambiguous_leaf": 0,
+  "control_leaf": 0,
+  "answerable_top5": 43,
+  "limitations": [
+    "Development labels only; no independently frozen qualification.",
+    "Complete resolver discovery and selected context timed; model/network time excluded.",
+    "No compiled installed artifact acceptance.",
+    "Derived all-role development labels reviewed after exposure; not independent held-out qualification."
+  ],
+  "raw_sha256": "a264478226a46a7ad887022bed13572b58e5a4ea586f56ee0c1193d1cafcd4b0",
+  "gzip_sha256": "ab17e1f3c047bde35992e780d824d1767bbf36f8a2812e4dccfc48ba6d9cfcea",
+  "review_sha256": "f9d426abfc33f0dc7347830ec6f6fcf595f4cf7081a683c31f909af144043890"
+}
