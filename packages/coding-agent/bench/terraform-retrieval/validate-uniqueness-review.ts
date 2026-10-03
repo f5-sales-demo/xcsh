@@ -1,0 +1,9 @@
+import {Database} from "bun:sqlite";
+import {readFile,writeFile} from "node:fs/promises";
+import {terraformHash} from "../../src/internal-urls/terraform-documentation";
+import {validateUniquenessReview,type ReviewCase,type UniquenessReview} from "./uniqueness-review-validation";
+const arg=(name:string)=>{const i=process.argv.indexOf(name);return i<0?undefined:process.argv[i+1]};
+const index=arg("--index"),suite=arg("--suite"),review=arg("--review"),output=arg("--output");if(!index||!suite||!review||!output)throw new Error("--index --suite --review --output required");
+const [caseBytes,reviewBytes]=await Promise.all([readFile(suite),readFile(review)]);const payload=JSON.parse(caseBytes.toString()),reviewed=JSON.parse(reviewBytes.toString());if(!payload.development_only||reviewed.source_only!==true||reviewed.qualification_passed!==false)throw new Error("Development source-only review required");
+const db=new Database(index,{readonly:true});const sections=new Map((db.query("SELECT path,anchor,context_markdown FROM terraform_sections ORDER BY path,anchor").all() as {path:string;anchor:string;context_markdown:string}[]).map(row=>[`xcsh://terraform-documentation/${row.path}#${row.anchor}`,row.context_markdown]));db.close();
+const errors=validateUniquenessReview(payload.cases as ReviewCase[],reviewed.case_reviews as UniquenessReview[],sections);const result={source_only:true,development_only:true,qualification_passed:false,suite_sha256:terraformHash(caseBytes),review_sha256:terraformHash(reviewBytes),index_sha256:terraformHash(await readFile(index)),cases:payload.cases.length,errors,limitations:["Quote existence and exact destination validation only; semantic exclusion reasoning still needs independent review."]};await writeFile(output,JSON.stringify(result,null,2)+"\n");console.log(JSON.stringify(result));if(errors.length)process.exitCode=1;
