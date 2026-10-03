@@ -10,6 +10,38 @@ export interface FrozenClarificationTree {
 	root: FrozenClarificationNode;
 }
 
+interface AuthoredRequest {
+	query: string;
+	caller_filters: Record<string, string>;
+}
+interface AuthoredBranch {
+	child_request: AuthoredRequest;
+	branches?: AuthoredBranch[];
+	terminal_expected?: string;
+}
+interface AuthoredTree {
+	max_depth: number;
+	root_request: AuthoredRequest;
+	branches: AuthoredBranch[];
+}
+export function normalizeClarificationTree(tree: FrozenClarificationTree | AuthoredTree): FrozenClarificationTree {
+	if ("root" in tree) return tree;
+	const request = (r: AuthoredRequest) => {
+		const url = new URL("xcsh://terraform-documentation/");
+		url.searchParams.set("search", r.query);
+		for (const [key, value] of Object.entries(r.caller_filters)) url.searchParams.set(key, value);
+		return url.href;
+	};
+	const node = (b: AuthoredBranch): FrozenClarificationNode => ({
+		request: request(b.child_request),
+		...(b.branches ? { children: b.branches.map(node) } : { expected: b.terminal_expected }),
+	});
+	return {
+		max_depth: tree.max_depth,
+		root: { request: request(tree.root_request), children: tree.branches.map(node) },
+	};
+}
+
 const exactDestination = (value: string) => {
 	const uri = new URL(value);
 	if (uri.protocol !== "xcsh:" || uri.host !== "terraform-documentation")

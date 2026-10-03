@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	evaluateClarificationTree,
+	normalizeClarificationTree,
 	validateClarificationTree,
 	type FrozenClarificationTree,
 } from "./clarification-tree";
@@ -101,4 +102,23 @@ test("frozen requests reject duplicate parameters and non-discovery destinations
 		"Unsupported",
 	);
 	expect(() => validateClarificationTree({ ...tree, root: { ...tree.root, request: leafA } })).toThrow("request");
+});
+
+test("authored descriptive requests adapt without changing decisions or targets", () => {
+	const adapted = normalizeClarificationTree({
+		max_depth: 1,
+		root_request: { query: "fixture", caller_filters: {} },
+		branches: [
+			{
+				child_request: { query: "fixture", caller_filters: { provider_type: "resources" } },
+				terminal_expected: leafA,
+			},
+			{
+				child_request: { query: "fixture", caller_filters: { provider_type: "data-sources" } },
+				terminal_expected: leafB,
+			},
+		],
+	});
+	expect(adapted).toEqual(tree);
+	validateClarificationTree(adapted);
 });

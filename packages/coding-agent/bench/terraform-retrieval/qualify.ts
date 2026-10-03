@@ -8,7 +8,11 @@ import {
 	terraformHash,
 } from "../../src/internal-urls/terraform-documentation";
 import type { InternalUrl } from "../../src/internal-urls/types";
-import { evaluateClarificationTree, type FrozenClarificationTree } from "./clarification-tree";
+import {
+	evaluateClarificationTree,
+	normalizeClarificationTree,
+	type FrozenClarificationTree,
+} from "./clarification-tree";
 import { measureCompleteRetrieval } from "./complete-measurement";
 import {
 	scoreDestinations,
@@ -71,7 +75,12 @@ if (await Bun.file(treeFile).exists()) {
 	const protocolFile = path.join(root, "clarification-qualification-protocol.md");
 	if (terraformHash(await readFile(protocolFile)) !== freeze.clarification_protocol_sha256)
 		throw new Error("Frozen clarification scoring protocol mismatch");
-	trees = JSON.parse(treeBytes.toString());
+	trees = Object.fromEntries(
+		Object.entries(JSON.parse(treeBytes.toString())).map(([id, tree]) => [
+			id,
+			normalizeClarificationTree(tree as Parameters<typeof normalizeClarificationTree>[0]),
+		]),
+	);
 	const heldout = JSON.parse(await readFile(path.join(path.dirname(suiteFile), "heldout.json"), "utf8")) as Case[];
 	if (Object.keys(trees).some(id => !heldout.some(c => c.id === id && c.kind === "ambiguous")))
 		throw new Error("Frozen tree requires an ambiguous suite case");
