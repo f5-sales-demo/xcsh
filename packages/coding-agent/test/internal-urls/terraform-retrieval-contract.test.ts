@@ -691,3 +691,17 @@ test("lookup and ephemeral computed values remain property questions", () => {
 		anchor: "root-configuration",
 	});
 });
+
+test("named data source values are not usage examples", () => {
+	for (const q of [
+		"Query xcsh_fixture data source to inspect listen_port",
+		"Read served domains from xcsh_fixture data source",
+		"Query xcsh_fixture data source to retrieve configured receivers",
+	]) {
+		expect(terraformTaskDestination(q)).toBeUndefined();
+	}
+	expect(terraformTaskDestination("Query xcsh_fixture data source")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});

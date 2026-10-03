@@ -170,3 +170,9 @@ test("explicit provider identity in trailing context cannot replace requested na
  expect(propertyRequestedText("Specify the namespace parameter when declaring xcsh_artifact_registry_token.")).not.toContain("artifact_registry_token");
  expect(rankPropertyScope("Specify the namespace parameter when declaring xcsh_artifact_registry_token.",scope)[0]?.schema_path).toBe("namespace");
 });
+
+test("lookup value phrases preserve requested fields without provider identity",()=>{
+ expect(propertyRequestedText("Query xcsh_fixture data source to inspect the configured listen_port.")).toContain("listen_port");
+ expect(propertyRequestedText("Read served domains from an edge distribution via xcsh_fixture data source.")).toContain("domains");
+ expect(propertyRequestedText("Query xcsh_fixture data source")).toBeUndefined();
+});
