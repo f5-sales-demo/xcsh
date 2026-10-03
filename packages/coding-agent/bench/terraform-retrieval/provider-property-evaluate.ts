@@ -9,6 +9,7 @@ import {
 	terraformQueryIdentity,
 } from "../../src/internal-urls/terraform-documentation";
 import { searchPropertyIndex } from "../../src/internal-urls/terraform-property-index";
+import { fuseCandidateRoutes } from "./candidate-union";
 import { resolveIndexedTask } from "./indexed-task-route";
 import { searchProviderDiscovery, validateProviderDiscovery } from "./provider-discovery";
 import { validateQualificationEligibility } from "./score";
@@ -24,6 +25,7 @@ validateProviderDiscovery(providers, {
 });
 const raw = await readFile(arg("--suite"));
 const regression = process.argv.includes("--regression");
+const union = process.argv.includes("--union");
 const eligibilityFile = path.join(path.dirname(arg("--suite")), "eligibility.json");
 if (await Bun.file(eligibilityFile).exists())
 	validateQualificationEligibility(
@@ -65,7 +67,7 @@ for (const [i, c] of cases.entries()) {
 				db,
 				c.prompt,
 				{ providerType: provider.provider_type, providerName: provider.provider_name },
-				100,
+				500,
 			)
 				.slice(0, 5)
 				.map((r, n) => ({
@@ -82,7 +84,17 @@ for (const [i, c] of cases.entries()) {
 		);
 		destinations = task?.destinations.length
 			? task.destinations.map(r => `xcsh://terraform-documentation/${r.path}#${r.anchor}`)
-			: [...new Set(ranked.map(r => r.uri))].slice(0, 5);
+			: union
+				? fuseCandidateRoutes(
+						[
+							searchPropertyIndex(db, c.prompt, { providerType: role, providerName: named }, 500)
+								.slice(0, 100)
+								.map(r => `xcsh://terraform-documentation/${r.path}#${r.anchor}`),
+							[...new Set(ranked.map(r => r.uri))],
+						],
+						5,
+					).map(r => r.uri)
+				: [...new Set(ranked.map(r => r.uri))].slice(0, 5);
 		timings.push(performance.now() - start);
 	}
 	results.push({
@@ -101,6 +113,7 @@ const report = {
 	qualification_passed: false,
 	production_imported: false,
 	selection_policy: false,
+	candidate_union: union,
 	suite_sha256: terraformHash(raw),
 	source_commit: pin.source_commit,
 	source_index_sha256: terraformHash(await readFile(arg("--source"))),

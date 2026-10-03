@@ -1,0 +1,78 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "selection_policy": false,
+  "reports": {
+    "audited": {
+      "file": "candidate-union-audited.json.gz",
+      "raw_sha256": "7dd186016e730ad3b018550a7fbd31d10e467907897ec94adc62b1ffceff2c09",
+      "gzip_sha256": "cc066be04c1dc12da5fb58f0cd5f952339c62ac449ed0fb33252e2eacbc8a102",
+      "development_only": true,
+      "post_analysis_regression": false,
+      "qualification_passed": false,
+      "production_imported": false,
+      "selection_policy": false,
+      "candidate_union": true,
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 48,
+      "top1": 47,
+      "top5": 48,
+      "candidate_route_p95_ms": 67.46590200000173,
+      "limitations": [
+        "Provider BM25 plus reciprocal rank fusion experiment only.",
+        "Candidate retrieval excludes confidence selection, response rendering and model time."
+      ]
+    },
+    "original": {
+      "file": "candidate-union-original.json.gz",
+      "raw_sha256": "67a739afdeeef845a46fefac1b4cc268c315eef7e0a3bc0a24dc6434a5a2ee59",
+      "gzip_sha256": "4c0c2ba6a84b99afa354ba3b5c67ba06401f5239b32a4792df37cc2853ecd8ea",
+      "development_only": true,
+      "post_analysis_regression": false,
+      "qualification_passed": false,
+      "production_imported": false,
+      "selection_policy": false,
+      "candidate_union": true,
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 14,
+      "top1": 10,
+      "top5": 12,
+      "candidate_route_p95_ms": 91.800792,
+      "limitations": [
+        "Provider BM25 plus reciprocal rank fusion experiment only.",
+        "Candidate retrieval excludes confidence selection, response rendering and model time."
+      ]
+    },
+    "v4_regression": {
+      "file": "candidate-union-v4_regression.json.gz",
+      "raw_sha256": "79243347feeda192a890a31b4061a1c1d528b31159ab325fdf84020b8a3a179c",
+      "gzip_sha256": "229d48c8f4cb23eac581ca1a028a9388586db12967659a6934f63eb1d8d76504",
+      "development_only": true,
+      "post_analysis_regression": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "selection_policy": false,
+      "candidate_union": true,
+      "suite_sha256": "fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 140,
+      "top1": 37,
+      "top5": 75,
+      "candidate_route_p95_ms": 118.47209199999998,
+      "limitations": [
+        "Provider BM25 plus reciprocal rank fusion experiment only.",
+        "Candidate retrieval excludes confidence selection, response rendering and model time."
+      ]
+    }
+  },
+  "source_files": {
+    "candidate-union.ts": "523c8475d061943a45b525e8220f120eaf5fa39a67a52718168ce39b20006885",
+    "provider-property-evaluate.ts": "e9c424b5998082dae1af8f42a7f023df2721aeb185b4730e17127e8fa9cfd685"
+  }
+}

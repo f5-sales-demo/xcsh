@@ -1265,3 +1265,12 @@ coverage. Exposed v4 explicit regression ranks 33/140 first and 61/140 top-five.
 No selection or response rendering is measured, and prototype is not promoted.
 A guard rejects exposed frozen suites without explicit --regression. Exact raw
 reports and source digest are retained in provider-property-receipt.json.
+
+Development-only union preserves global property candidates alongside provider
+route candidates using duplicate-safe deterministic reciprocal rank fusion.
+Six union/provider tests pass. Audited development reaches 47/48 first and 48/48
+top-five; original remains 10/14 first and 12/14 top-five, still below production
+coverage. Exposed v4 regression reaches 37/140 first and 75/140 top-five at
+118.472 ms candidate p95, excluding selection/rendering. Not promoted. Raw
+reports/source digests: candidate-union-receipt.json. A fresh untouched suite
+would still be required for any future qualification after redesign.
