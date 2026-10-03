@@ -1450,3 +1450,11 @@ Combined provider #2382 source passes full Python discovery: 67 tests in
 38.543 seconds. Current CI is queued/running; immutable snapshot publication
 remains serialized behind earlier On Merge release build. Consumer pin remains
 v12.3.1 and PR draft, auto-merge absent; no fresh qualification performed.
+
+Pinned offline cross-encoder/ms-marco-MiniLM-L-6-v2 revision
+233902d25c440f23af6f7d6e94d2946bac0bee0a reranks twenty precomputed lexical
+property candidates. Development ranks 6/14 original and 28/48 audited first,
+12/14 and 42/48 top-five. Reranking alone p95 is 226.631/219.140 ms, before
+lexical retrieval, selection or rendering. Rejected on accuracy and latency.
+Exact source/model/raw/evaluator hashes retained: cross-encoder-rejection-receipt.json.
+No production dependency, no frozen suite evaluation.
