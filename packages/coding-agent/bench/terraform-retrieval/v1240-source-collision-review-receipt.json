@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_only_review": true,
+  "review_sha256": "7ea65f5b424a8af03c8f17355e08a3c18cd25bce3ea6d0b56db33114118a0c60",
+  "gzip_sha256": "7ac1cfb0a0b5e220d03d911e4115af3238d912b6aa5166fceb8496c4eb038201",
+  "counts": {
+    "valid": 87,
+    "unresolved": 35,
+    "corrected": 0,
+    "total": 122
+  },
+  "labels_changed": false,
+  "review_limitations": [
+    "Some unresolved alternatives include data-source roles despite explicit managed-resource intent; do not accept as corrected labels.",
+    "35 unresolved cases cannot certify benchmark uniqueness.",
+    "First untouched qualification failure remains preserved; this review cannot qualify exposed suite."
+  ],
+  "verified_resolved_runtime_example": "FlashArray location resource-container request selects exact canonical leaf after retained intent fixes."
+}
