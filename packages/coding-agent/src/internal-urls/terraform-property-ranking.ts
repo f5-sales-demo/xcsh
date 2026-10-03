@@ -144,7 +144,6 @@ export function rankPropertyScope(
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
 			if (asksField && row.anchor === "section") score -= 12;
-			if (asksField && row.anchor !== "section" && leafComplete) score += 12;
 			if (
 				!asksField &&
 				/\bblock\b/i.test(queryText) &&
