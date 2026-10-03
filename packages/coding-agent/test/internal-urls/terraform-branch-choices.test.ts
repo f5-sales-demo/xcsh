@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { terraformBranchChoices } from "../../src/internal-urls/terraform-branch-choices";
+import { terraformBranchChoices, terraformRoleChoices } from "../../src/internal-urls/terraform-branch-choices";
 
 const rows = Array.from({ length: 9 }, (_, index) => ({
 	provider_type: "resources",
@@ -37,4 +37,13 @@ test("supplied endpoint and field qualifiers skip already decided hierarchy bran
 		"mobile.success.cookies.login.cookies_none",
 		"mobile.success.cookies.login.cookies_or",
 	]);
+});
+
+test("role choices precede branch choices when equivalent leaves exceed the response limit", () => {
+	const all = [...rows.slice(0, 3), ...rows.slice(0, 3).map(row => ({ ...row, provider_type: "data-sources" }))];
+	expect(terraformRoleChoices(all)).toEqual(["data-sources", "resources"]);
+	expect(terraformRoleChoices(rows)).toEqual([]);
+	expect(
+		terraformRoleChoices(all.map((row, index) => (index ? row : { ...row, description: "Different meaning" }))),
+	).toEqual([]);
 });

@@ -8,7 +8,7 @@ import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
-import { terraformBranchChoices } from "./terraform-branch-choices";
+import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
 import { populatePropertyIndex, searchPropertyIndex } from "./terraform-property-index";
 import { propertyRequestedText } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
@@ -1573,6 +1573,42 @@ export class TerraformDocumentationRepository {
 						).map(row => ({ ...row, score: 0, coverage: 0 }))
 					: [];
 				const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives);
+
+				if (decision.kind === "choices" && first) {
+					const equivalent = [
+						...new Map(
+							[...decision.destinations, ...alternatives]
+								.filter(
+									row => row.provider_name === first.provider_name && row.description === first.description,
+								)
+								.map(row => [`${row.provider_type}:${row.schema_path}`, row]),
+						).values(),
+					];
+					const roles = terraformRoleChoices(equivalent, limit);
+					if (
+						roles.length &&
+						decision.destinations.every(
+							row => row.provider_name === first.provider_name && row.description === first.description,
+						)
+					) {
+						const roleContent = boundedTerraformResponse(
+							`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing provider role.\nReason: Equivalent property destinations span provider roles.`,
+							roles.map(role => {
+								const next = new URL(url.href);
+								next.searchParams.set("provider_type", role);
+								next.searchParams.set("provider_name", first.provider_name);
+								return `## ${role}: xcsh_${first.provider_name}\nRefine: ${next.href}`;
+							}),
+							4096,
+						);
+						return {
+							url: url.href,
+							content: roleContent,
+							contentType: "text/markdown",
+							size: Buffer.byteLength(roleContent),
+						};
+					}
+				}
 				if (
 					decision.kind === "choices" &&
 					first &&

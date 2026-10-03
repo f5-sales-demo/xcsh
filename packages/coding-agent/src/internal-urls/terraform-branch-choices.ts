@@ -52,3 +52,20 @@ export function terraformBranchChoices(rows: readonly PropertyCandidate[], limit
 	}
 	return [];
 }
+
+export function terraformRoleChoices(rows: readonly PropertyCandidate[], limit = 5): string[] {
+	const first = rows[0];
+	if (
+		!first ||
+		rows.length <= limit ||
+		rows.some(
+			row =>
+				row.provider_name !== first.provider_name ||
+				row.description !== first.description ||
+				row.schema_path.split(".").at(-1) !== first.schema_path.split(".").at(-1),
+		)
+	)
+		return [];
+	const roles = [...new Set(rows.map(row => row.provider_type))].sort();
+	return roles.length > 1 && roles.length <= limit ? roles : [];
+}

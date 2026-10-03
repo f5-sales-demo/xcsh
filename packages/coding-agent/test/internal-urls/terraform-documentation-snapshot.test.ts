@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createGzip, gzipSync } from "node:zlib";
@@ -1359,6 +1359,46 @@ test("equivalent leaf discovery refines through indexed branches within response
 			expect([...content.matchAll(/^Read: /gm)]).toHaveLength(3);
 			expect(content).not.toContain("Selected leaf;");
 		}
+
+		const dataDocs = docs.map(doc => ({
+			...doc,
+			path: doc.path.replace("/resources/", "/data-sources/"),
+			metadata: {
+				...doc.metadata,
+				id: `data:${doc.metadata.id}`,
+				canonical_id: `data:${doc.metadata.canonical_id}`,
+				provider_type: "data-sources",
+				parent_id: doc.metadata.parent_id ? `data:${doc.metadata.parent_id}` : null,
+				sections: doc.metadata.sections?.map(section => ({
+					...section,
+					document_id: `data:${section.document_id}`,
+				})),
+			},
+		}));
+		const roleIndex = path.join(root, "role-index.sqlite");
+		await buildTerraformIndex([...docs, ...dataDocs], pin, roleIndex);
+		await mkdir(path.join(root, "role"), { recursive: true });
+		const roleRepo = await fixtureRepository(path.join(root, "role"), pin, roleIndex);
+		const roleUrl = new URL(url.href);
+		roleUrl.searchParams.delete("provider_type");
+		const roleResponse = (
+			await roleRepo.resolve(Object.assign(roleUrl, { rawHost: "terraform-documentation" }) as InternalUrl)
+		).content;
+		expect(roleResponse).toContain("missing provider role");
+		expect(roleResponse).not.toContain("Selected leaf;");
+		const roleRefs = [...roleResponse.matchAll(/^Refine: (.+)$/gm)].map(match => match[1]!);
+		expect(roleRefs).toHaveLength(2);
+		for (const ref of roleRefs) {
+			const roleNext = new URL(ref);
+			expect(roleNext.searchParams.get("search")).toBe(query);
+			const branchContent = (
+				await roleRepo.resolve(Object.assign(roleNext, { rawHost: "terraform-documentation" }) as InternalUrl)
+			).content;
+			expect(branchContent).toContain("missing schema branch");
+			expect([...branchContent.matchAll(/^Refine: /gm)]).toHaveLength(3);
+			expect(Buffer.byteLength(branchContent)).toBeLessThanOrEqual(4096);
+		}
+		(await roleRepo.database()).close();
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });
