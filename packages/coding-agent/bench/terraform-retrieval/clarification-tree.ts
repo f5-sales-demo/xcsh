@@ -124,7 +124,38 @@ export async function evaluateClarificationTree(
 		if (node.children) {
 			if (selected) findings.push(`Premature leaf: ${node.request}`);
 			if (reads.length) findings.push(`Off-tree leaf candidates: ${node.request}`);
-			const actual = [...measured.discovery.matchAll(/^Refine: (\S+)/gm)].map(match => requestIdentity(match[1]!));
+			const pages = [measured.discovery];
+			const seenPages = new Set([requestIdentity(node.request)]);
+			let page = measured.discovery;
+			for (let count = 0; count < 5; count++) {
+				const link = page.match(/^Continue: (\S+)/m)?.[1];
+				if (!link) break;
+				const next = new URL(link);
+				const original = new URL(node.request);
+				const cursor = next.searchParams.get("choice_after");
+				next.searchParams.delete("choice_after");
+				if (
+					!cursor ||
+					!/^[1-9][0-9]*$/.test(cursor) ||
+					requestIdentity(next.href) !== requestIdentity(original.href) ||
+					seenPages.has(requestIdentity(link))
+				) {
+					findings.push(`Unsafe or repeated choice pagination: ${node.request}`);
+					break;
+				}
+				seenPages.add(requestIdentity(link));
+				const continuation = await measureCompleteRetrieval(read, link, repetitions);
+				responses.push({ request: link, ...continuation });
+				page = continuation.discovery;
+				pages.push(page);
+				if (page.includes("Selected leaf;") || /^Read: /m.test(page))
+					findings.push(`Choice pagination changed decision: ${node.request}`);
+				if (count === 4 && /^Continue: /m.test(page))
+					findings.push(`Choice pagination exceeds bound: ${node.request}`);
+			}
+			const actual = pages.flatMap(content =>
+				[...content.matchAll(/^Refine: (\S+)/gm)].map(match => requestIdentity(match[1]!)),
+			);
 			const expected = node.children.map(child => requestIdentity(child.request));
 			if (
 				actual.length !== expected.length ||

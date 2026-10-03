@@ -1363,6 +1363,18 @@ test("equivalent leaf discovery refines through indexed branches within response
 		) as InternalUrl;
 		const response = (await repo.resolve(url)).content;
 		expect(response).toContain("missing schema branch");
+		const pageUrl = new URL(url.href);
+		pageUrl.searchParams.set("choice_after", "1");
+		const page = (await repo.resolve(Object.assign(pageUrl, { rawHost: "terraform-documentation" }) as InternalUrl))
+			.content;
+		expect([...page.matchAll(/^Refine: /gm)]).toHaveLength(2);
+		expect(page).not.toContain("choice_after=1");
+		const invalidPage = new URL(url.href);
+		invalidPage.searchParams.set("choice_after", "99");
+		await expect(
+			repo.resolve(Object.assign(invalidPage, { rawHost: "terraform-documentation" }) as InternalUrl),
+		).rejects.toThrow("continuation");
+
 		expect(Buffer.byteLength(response)).toBeLessThanOrEqual(4096);
 		const refinements = [...response.matchAll(/^Refine: (.+)$/gm)].map(match => match[1]!);
 		expect(refinements).toHaveLength(3);

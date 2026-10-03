@@ -9,6 +9,7 @@ import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
+import { terraformChoiceResponse } from "./terraform-choice-response";
 import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
 import { propertyRequestedText, propertyRequestsBlock } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
@@ -1264,6 +1265,7 @@ export class TerraformDocumentationRepository {
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const allowed = new Set([
 			"search",
+			"choice_after",
 			"provider_type",
 			"provider_name",
 			"role",
@@ -1295,6 +1297,9 @@ export class TerraformDocumentationRepository {
 		if (limitValue !== null && !/^(?:[1-9]|10)$/.test(limitValue))
 			throw new Error("Terraform search limit must be 1 to 10");
 		const limit = limitValue === null ? 5 : Number(limitValue);
+		const choiceAfter = url.searchParams.get("choice_after");
+		if (choiceAfter !== null && (!search || documentPath || !/^(?:0|[1-9][0-9]*)$/.test(choiceAfter)))
+			throw new Error("Invalid Terraform choice continuation");
 		const view = url.searchParams.get("view");
 		if (view !== null && !["hint", "context", "full"].includes(view)) throw new Error("Invalid Terraform view");
 		const node = url.searchParams.get("node");
@@ -1307,7 +1312,7 @@ export class TerraformDocumentationRepository {
 		if (url.searchParams.has("cursor") && documentPath) throw new Error("Terraform cursor requires discovery");
 		if (documentPath && (search || node || facet || limitValue || facetNames.some(k => url.searchParams.has(k))))
 			throw new Error("Terraform discovery requires the inventory path");
-		if (facet && (search || node || view || url.hash || url.searchParams.has("after")))
+		if (facet && (search || node || view || url.hash || choiceAfter !== null || url.searchParams.has("after")))
 			throw new Error("Invalid Terraform facet combination");
 		if (!documentPath && (view || url.hash || url.searchParams.has("after")))
 			throw new Error("Terraform view requires a document path");
@@ -1500,6 +1505,7 @@ export class TerraformDocumentationRepository {
 				node: node ?? undefined,
 			});
 			if (taskDecision?.destinations.length) {
+				if (choiceAfter !== null) throw new Error("Terraform choice continuation requires branch choices");
 				const taskContent = boundedTerraformResponse(
 					`${provenance}\n\n# Terraform search: ${search}\n${taskDecision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : "Narrowing choices; clarify the missing authentication method, provider role, or action cardinality."}\nReason: ${taskDecision.reason}${taskDecision.reason === "Missing authentication method" ? `\nOverview: ${uri("documentation/provider/setup/index.md", "authentication-options", "context")}` : ""}`,
 					taskDecision.destinations
@@ -1663,15 +1669,18 @@ export class TerraformDocumentationRepository {
 							} | null,
 					);
 					if (destinations.length && destinations.every(row => row !== null)) {
-						const branchContent = boundedTerraformResponse(
+						const branchContent = terraformChoiceResponse(
 							`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing schema branch.\nReason: ${decision.reason}\nEquivalent property destinations require a branch decision.`,
 							destinations.map(row => {
 								const next = new URL(url.href);
+								next.searchParams.delete("choice_after");
 								next.searchParams.set("node", row!.id);
 								next.searchParams.set("provider_type", first.provider_type);
 								next.searchParams.set("provider_name", first.provider_name);
 								return `## ${row!.summary}\nHint: ${uri(row!.path, row!.anchor, "hint")}\nRefine: ${next.href}`;
 							}),
+							url,
+							choiceAfter,
 							4096,
 						);
 						return {
@@ -1682,6 +1691,7 @@ export class TerraformDocumentationRepository {
 						};
 					}
 				}
+				if (choiceAfter !== null) throw new Error("Terraform choice continuation no longer matches branch choices");
 				const shown = decision.kind === "leaf" ? decision.destinations : decision.destinations.slice(0, limit);
 				const continuation = new URL(url.href);
 				continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");

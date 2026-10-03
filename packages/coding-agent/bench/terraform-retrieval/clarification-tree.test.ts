@@ -147,3 +147,23 @@ test("equivalent refinement parameter order does not change the frozen branch", 
 	});
 	expect((await evaluateClarificationTree(read, scopedTree, 1)).passed).toBe(true);
 });
+
+test("bounded same-scope choice pagination covers frozen alternatives without loops", async () => {
+	const page = root + "&choice_after=1";
+	const read = async (uri: string) => ({
+		content:
+			uri === root
+				? `Narrowing choices;\nRefine: ${a}\nContinue: ${page}`
+				: uri === page
+					? `Narrowing choices;\nRefine: ${b}`
+					: uri === a
+						? `Selected leaf;\nRead: ${leafA}`
+						: uri === b
+							? `Selected leaf;\nRead: ${leafB}`
+							: "Source section.",
+	});
+	expect((await evaluateClarificationTree(read, tree, 1)).passed).toBe(true);
+	const unsafe = async (uri: string) =>
+		uri === root ? { content: `Refine: ${a}\nContinue: ${root}&provider_type=resources&choice_after=1` } : read(uri);
+	expect((await evaluateClarificationTree(unsafe, tree, 1)).passed).toBe(false);
+});
