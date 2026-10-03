@@ -15,8 +15,13 @@
   "provider_source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
   "offline_smoke_marker": "XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK",
   "limitations": [
-    "Raw CLI candidate, not a published Homebrew route.",
-    "Package Gatekeeper assessment still unverified locally.",
+    "Candidate package verified without installation; published Homebrew route remains unverified.",
     "Frozen retrieval accuracy gate remains failed."
-  ]
+  ],
+  "package_sha256": "9975e9ae5c0596762d48ee0a1b5611f6ff5c7f5af59268417feb5e2df9e43d96",
+  "package_bytes": 331935461,
+  "installer_signature_verified": true,
+  "notarization_trusted": true,
+  "gatekeeper_install_assessment": "accepted Notarized Developer ID",
+  "stapled_ticket_validated": true
 }

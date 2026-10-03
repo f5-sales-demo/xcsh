@@ -1245,3 +1245,10 @@ HOME. Raw CLI Gatekeeper execute assessment rejects as not an app; this check is
 not counted as passed. Receipt: installed-candidate-mac-receipt.json. Package
 assessment and published Homebrew acceptance remain unverified; frozen accuracy
 gate remains failed. Development activation model run remains unfinished.
+
+Mac arm64 candidate package passes Developer ID Installer signature, Apple
+notarization trust, Gatekeeper install assessment and stapled ticket validation
+on Mac. Digest/size and outcomes are recorded in installed-candidate-mac-receipt.json.
+Candidate CI run 37079682221 is SUCCESS with all compiled/signing jobs; release
+publication jobs remain skipped. Published Homebrew/Ubuntu release acceptance
+and accuracy qualification remain incomplete.
