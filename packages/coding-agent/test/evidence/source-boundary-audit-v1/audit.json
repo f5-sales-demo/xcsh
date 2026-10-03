@@ -356,9 +356,9 @@
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
+        "packages/coding-agent/test/internal-urls/terraform-documentation-snapshot.test.ts",
         "packages/coding-agent/test/internal-urls/terraform-documentation.test.ts",
-        "packages/coding-agent/test/internal-urls/terraform-retrieval-contract.test.ts",
-        "packages/coding-agent/test/join-patch.test.ts"
+        "packages/coding-agent/test/internal-urls/terraform-retrieval-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
