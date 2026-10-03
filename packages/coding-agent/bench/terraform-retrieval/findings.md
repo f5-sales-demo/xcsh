@@ -1477,3 +1477,16 @@ improve complete development retrieval: 10/14 original,47/48 audited, with
 automatic certificate query still returning existing-certificate branches.
 Rejected; production source restored. Exact patch/raw receipts retained in
 positive-alias-rejection-receipt.json. No held-out or production promotion.
+
+On Merge metadata run 37091576861 completes generated provider build/vet/tests
+and canonical documentation, but correctly rejects PR creation because protected
+main moved after generation. Exact error: Protected main changed after generation;
+dispatch from the new source. No stale generated artifact applied or published.
+Current-main On Merge run 37094248021 is already queued; follow its source-bound
+reconciliation. Consumer remains pinned v12.3.1, draft and unqualified.
+
+Governance-only current-main run skips generation. Dispatched existing On Merge
+resume-pending=true recovery on main; it forces normal build/generation/receipt
+checks without applying stale patch. Source main b97deb3ce05abfe4ab0f01dd8cc9569aa5cf8ebf
+includes both reviewed metadata fixes and unrelated runtime recovery. No new
+snapshot pin, no qualification claim.
