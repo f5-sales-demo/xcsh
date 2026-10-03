@@ -281,7 +281,19 @@ function Install-Binary {
         } | ConvertTo-Json -Compress
         [System.IO.File]::WriteAllText($StagedReceipt, $Receipt, [System.Text.UTF8Encoding]::new($false))
 
-        Move-Item -Force $StagedBinary $OutPath
+        # Antivirus scanning and short-lived native workers can retain a Windows
+        # file handle briefly after the version probe exits. Retry only sharing
+        # violations; permission and other failures remain immediate errors.
+        for ($MoveAttempt = 0; ; $MoveAttempt++) {
+            try {
+                Move-Item -Force $StagedBinary $OutPath -ErrorAction Stop
+                break
+            } catch {
+                $NativeError = $_.Exception.HResult -band 0xFFFF
+                if ($NativeError -notin @(32, 33) -or $MoveAttempt -ge 19) { throw }
+                Start-Sleep -Milliseconds 500
+            }
+        }
         # Commit the receipt last so only a complete installer run grants ownership.
         Move-Item -Force $StagedReceipt $ReceiptPath
         Get-ChildItem -Path $InstallDir -Filter "pi_natives.*.node" -File -ErrorAction SilentlyContinue |
