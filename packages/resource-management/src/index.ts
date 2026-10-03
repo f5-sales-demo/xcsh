@@ -9,6 +9,7 @@ export type { ExportedManifest, ManifestOutputFormat, MinimalExportFilter } from
 export { applyMinimalExportFilter, formatManifestOutput, toManifest, toManifestList } from "./manifest-export";
 export { ManifestParseError, parseManifests } from "./manifest-parser";
 export { formatValidationErrors, validateManifest, validateManifests } from "./manifest-validator";
+export * from "./map-constraints";
 export type { RunResourceOperationOptions } from "./operation-runner";
 export { formatResourceOperationReport, readManifestInputs, runResourceOperation } from "./operation-runner";
 export {
