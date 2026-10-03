@@ -8,6 +8,7 @@ import tar from "tar-stream";
 import {
 	buildTerraformIndex,
 	TerraformDocumentationRepository,
+	type TerraformMetadata,
 	type TerraformPin,
 	terraformHash,
 	verifyTerraformSnapshot,
@@ -705,6 +706,95 @@ test("verified sibling type choices remain undecided without an exact type ident
 		const prose = (await read("configure automatic certificate management")).content;
 		expect(prose).toContain("Selected leaf;");
 		expect(prose).toContain("automatic_tls/index.md");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("provider type choices take precedence over unrelated child conflict groups", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-type-choice-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const modes = ["https", "https_auto_cert"];
+		const docs = modes.map((mode, index) => {
+			const docPath = `documentation/resources/fixture/properties/${mode}/index.md`;
+			const body = `<a id="section"></a>\n# TLS mode\nTLS encryption.\n`;
+			return {
+				...original,
+				path: docPath,
+				body,
+				markdown: body,
+				sha256: terraformHash(body),
+				metadata: {
+					...original.metadata,
+					id: mode,
+					canonical_id: mode,
+					path: docPath,
+					role: "properties",
+					schema_path: [mode],
+					aliases: index === 0 ? ["https", "existing certificates"] : ["automatic certificate management"],
+					relationships: [
+						{
+							type: "choice" as const,
+							target_id: modes[1 - index]!,
+							anchor: "section",
+							enforcement: "provider-choice" as const,
+							source: "receipt-pinned-immutable-oneof",
+							group: "type",
+						},
+					],
+				},
+			};
+		});
+		for (const [i, child] of ["first_a", "first_b", "second_a", "second_b"].entries()) {
+			const parent = docs[0]!;
+			const childPath = `documentation/resources/fixture/properties/https/${child}/index.md`;
+			docs.push({
+				...parent,
+				path: childPath,
+				metadata: {
+					...parent.metadata,
+					id: child,
+					canonical_id: child,
+					path: childPath,
+					schema_path: ["https", child],
+					aliases: [],
+					relationships: [],
+				},
+			});
+			(parent.metadata.relationships as NonNullable<TerraformMetadata["relationships"]>).push({
+				type: "conflicts",
+				target_id: child,
+				anchor: "section",
+				enforcement: "provider-schema",
+				source: "ast-validator",
+				group: i < 2 ? "first" : "second",
+			});
+		}
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}&provider_name=fixture&provider_type=resources`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		const vague = (await read("configure HTTPS")).content;
+		expect(vague).toContain("Narrowing choices");
+		expect(vague).toContain("https/index.md");
+		expect(vague).toContain("https_auto_cert/index.md");
+		const explicit = (await read("configure https_auto_cert")).content;
+		expect(explicit).toContain("Selected leaf;");
+		expect(explicit).toContain("https_auto_cert/index.md");
+		const prose = (await read("configure automatic certificate management")).content;
+		expect(prose).toContain("Selected leaf;");
+		expect(prose).toContain("https_auto_cert/index.md");
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });

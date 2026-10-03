@@ -663,9 +663,11 @@ export function terraformNamedChoice(
 			.trim();
 	const question = ` ${normalize(query)} `;
 	const identifiers: string[] = query.toLowerCase().match(/[a-z][a-z0-9_]*/g) ?? [];
-	const exact = choices.flatMap((choice, index) =>
+	const mentioned = choices.flatMap((choice, index) =>
 		identifiers.includes(choice.schema_path.at(-1) ?? "") ? [index] : [],
 	);
+	if (mentioned.length > 1 && /\band\b|\bor\b|\bcompare\b/i.test(query)) return undefined;
+	const exact = mentioned.filter(index => !["https", "http"].includes(choices[index]!.schema_path.at(-1) ?? ""));
 	if (exact.length === 1) return exact[0];
 	if (exact.length > 1) return undefined;
 
@@ -2110,6 +2112,7 @@ export class TerraformDocumentationRepository {
 					)
 					.all(...choiceArgs) as Array<SearchRow & { choice_group: string; enforcement: string }>;
 				const groups = new Map<string, SearchRow[]>();
+				const providerChoiceGroups = new Set<string>();
 				for (const alternative of alternatives) {
 					const target = JSON.parse(alternative.metadata) as TerraformMetadata;
 					const directChild =
@@ -2120,12 +2123,20 @@ export class TerraformDocumentationRepository {
 						target.schema_path.length === metadata.schema_path.length &&
 						target.schema_path.slice(0, -1).every((part, index) => metadata.schema_path[index] === part);
 					if (!directChild && !siblingType) continue;
+					if (siblingType) providerChoiceGroups.add(alternative.choice_group);
 					const group = groups.get(alternative.choice_group) ?? (siblingType ? [parent] : []);
 					if (!group.some(row => row.path === alternative.path && row.anchor === alternative.anchor))
 						group.push(alternative);
 					groups.set(alternative.choice_group, group);
 				}
-				const choices = [...groups.values()].filter(group => group.length >= 2 && group.length <= limit);
+				const choices = [...groups.entries()]
+					.filter(
+						([key, group]) =>
+							(!providerChoiceGroups.size || providerChoiceGroups.has(key)) &&
+							group.length >= 2 &&
+							group.length <= limit,
+					)
+					.map(([, group]) => group);
 				if (choices.length === 1) {
 					const choice = terraformNamedChoice(
 						search,

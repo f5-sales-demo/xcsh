@@ -1516,3 +1516,11 @@ Kubernetes from Consul. Complete development route selects exact k8s service
 name, improving original selections to 11/14, zero wrong answerable leaves;
 audited remains 47/48. Original ambiguous selections remain 2. This is development
 evidence only; independent gate unmet. Exact receipts: k8s-alias-development-receipt.json.
+
+Provider-choice groups now take precedence over incidental child-field conflicts
+when narrowing a selected block. Generic HTTP/HTTPS words do not select a
+certificate architecture; exact distinguishing identifiers and aliases remain
+supported. Fixture verifies type choices with two unrelated child conflict groups.
+Complete development answerable selections remain 11/14,47/48, zero wrong
+answerable leaves; original ambiguous selected leaves drop from 2 to 1.
+Exact receipts: provider-choice-development-receipt.json. Not qualification.

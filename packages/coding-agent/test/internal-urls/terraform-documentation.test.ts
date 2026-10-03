@@ -3,6 +3,7 @@ import {
 	parseTerraformPin,
 	rewriteTerraformLinks,
 	scoreTerraformAliasContext,
+	terraformNamedChoice,
 	terraformPassages,
 	terraformProviderMention,
 	terraformProviderSetupDestination,
@@ -96,4 +97,15 @@ test("alias branch scoring recognizes Kubernetes schema terminology", () => {
 	).toBeGreaterThan(
 		scoreTerraformAliasContext(query, "origin_servers.consul_service.service_name", ["origin", "pool"]),
 	);
+});
+
+test("common protocol wording does not choose a certificate architecture", () => {
+	const choices = [
+		{ schema_path: ["https"], aliases: ["existing certificates"] },
+		{ schema_path: ["https_auto_cert"], aliases: ["automatic certificates"] },
+	];
+	expect(terraformNamedChoice("Terminate HTTPS traffic with TLS encryption", choices)).toBeUndefined();
+	expect(terraformNamedChoice("HTTPS with automatic certificates", choices)).toBe(1);
+	expect(terraformNamedChoice("Use existing certificates for HTTPS", choices)).toBe(0);
+	expect(terraformNamedChoice("Configure https_auto_cert", choices)).toBe(1);
 });
