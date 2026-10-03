@@ -108,7 +108,10 @@ for case in cases:
         )
         exact_read = any(
             any(
-                normalized(read) == normalized(want)
+                (
+                    normalized(read) == normalized(want)
+                    and required_read_coverage([read], [want])
+                )
                 or (
                     case.get("match_document")
                     and normalized(read).split("#")[0] == normalized(want).split("#")[0]
