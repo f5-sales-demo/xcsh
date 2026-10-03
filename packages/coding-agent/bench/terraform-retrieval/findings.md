@@ -1274,3 +1274,15 @@ coverage. Exposed v4 regression reaches 37/140 first and 75/140 top-five at
 118.472 ms candidate p95, excluding selection/rendering. Not promoted. Raw
 reports/source digests: candidate-union-receipt.json. A fresh untouched suite
 would still be required for any future qualification after redesign.
+
+
+## Global property weight experiment rejected
+
+A source-bound global term-weight table was evaluated with the same bounded
+candidates and complete experimental route as provider-local weighting. Two
+red/green tests verify one corpus denominator, duplicate term handling and source
+drift rejection. Global weighting selects 35/48 audited development and 7/14
+original, versus matched local 47/48 and 9/14; it selects an unsupported control
+leaf in each set. Rejected and not imported by production. Complete response
+hashes/budgets remain checked across five repetitions. Raw matched reports and
+source hashes: global-weight-rejection-receipt.json. No qualification claim.
