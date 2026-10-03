@@ -66,6 +66,14 @@ const names = [...new Set(rows.map(row => row.provider_name))].sort();
 const results = [];
 for (const [index, c] of (parsed.cases ?? parsed).entries()) {
 	const role = terraformQueryIdentity(c.prompt).providerType;
+	const query = args.includes("--normalize-verbs")
+		? c.prompt
+				.replace(/\bcreation\b/gi, "create")
+				.replace(/\bmodification\b/gi, "update")
+				.replace(/\bdeletion\b/gi, "delete")
+				.replace(/\bprovision(?:ing)?\b/gi, "create")
+				.replace(/\bvalidate\b/gi, "verification")
+		: c.prompt;
 	const provider = terraformProviderMention(c.prompt, names);
 	const scopeList = [...scopes.values()].filter(
 		scope =>
@@ -77,7 +85,7 @@ for (const [index, c] of (parsed.cases ?? parsed).entries()) {
 	for (let repeat = 0; repeat < 5; repeat++) {
 		const before = performance.now();
 		const candidates = scopeList
-			.flatMap(scope => rankPropertyScope(c.prompt, scope))
+			.flatMap(scope => rankPropertyScope(query, scope))
 			.sort(
 				(a, b) =>
 					b.score - a.score ||
@@ -106,6 +114,7 @@ await writeFile(
 			development_only: true,
 			qualification_passed: false,
 			production_imported: false,
+			normalized_verbs: args.includes("--normalize-verbs"),
 			reviewed_rules_sha256: args.includes("--reviewed-rules")
 				? terraformHash(await readFile(arg("--reviewed-rules")))
 				: null,

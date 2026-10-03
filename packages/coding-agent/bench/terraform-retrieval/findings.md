@@ -1430,3 +1430,11 @@ and 39/48 audited first; top-five 13/14 and 41/48. Original top-five gains one,
 first choices unchanged. Metadata correctness does not qualify retrieval; candidate
 ranker remains unpromoted. Source/rule hashes and raw receipts retained in
 reviewed-property-candidate-receipt.json. Provider PR #2382 carries reviewed rules.
+
+Development-only verb normalization (creation/create, modification/update,
+deletion/delete, provision/create, validate/verification) regresses original
+first destination to 9/14, leaves audited 39/48 and top-five 13/14,41/48.
+Rejected and not imported by production. Raw rule/source-bound reports:
+normalized-property-candidate-rejection-receipt.json. Provider #2382 raw review
+fixtures are now deterministic gzip to preserve authoritative bytes under CI
+formatting; no scanner exemptions or evidence alterations.
