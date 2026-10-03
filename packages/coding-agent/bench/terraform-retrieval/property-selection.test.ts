@@ -547,3 +547,12 @@ test("path alternatives retain ordinary contradiction exclusions",()=>{
  const rows=[row("outside.ipv4.addr",100),row("outside.ipv6.addr",50),row("inside.ipv4.addr",40)];
  expect(selectPropertyDestination("outside IPv4 address not under alpha.beta",rows).destinations.map(r=>r.schema_path)).toEqual(["outside.ipv4.addr"]);
 });
+
+test("repeated leaf words in ancestors cannot defeat explicit parent capability context",()=>{
+ const a={...row("protection.policy.mobile_sdk_config",100),anchor:"section",description:"Mobile SDK configuration."};
+ const b={...row("advanced_protection.both_web_and_mobile.mobile_sdk_config",95),anchor:"section",description:"Mobile identifier headers."};
+ expect(selectPropertyDestination("Configure mobile_sdk_config in protection policy on xcsh_fixture",[a,b]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Configure mobile_sdk_config in protection policy on xcsh_fixture",[a,b]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("Configure mobile_sdk_config on xcsh_fixture",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("Configure mobile_sdk_config for policy and web on xcsh_fixture",[a,b]).kind).toBe("choices");
+});

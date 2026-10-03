@@ -445,8 +445,11 @@ export function selectPropertyDestination(
 
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
 		if (requestedTerms.length && other.schema_path.split(".").at(-1) === parts.at(-1)) {
-			const ownContext = new Set(propertyTerms(parts.slice(0, -1).join(" ")));
-			const peerContext = new Set(propertyTerms(other.schema_path.split(".").slice(0, -1).join(" ")));
+			const leafTerms = new Set(propertyTerms(parts.at(-1) ?? ""));
+			const ownContext = new Set(propertyTerms(parts.slice(0, -1).join(" ")).filter(term => !leafTerms.has(term)));
+			const peerContext = new Set(
+				propertyTerms(other.schema_path.split(".").slice(0, -1).join(" ")).filter(term => !leafTerms.has(term)),
+			);
 			if (
 				requestedTerms.some(term => ownContext.has(term) && !peerContext.has(term)) &&
 				!requestedTerms.some(term => peerContext.has(term) && !ownContext.has(term))
