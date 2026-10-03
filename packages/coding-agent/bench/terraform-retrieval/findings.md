@@ -1198,3 +1198,12 @@ budgets, exact anchor validators and deep Bot Defense leaf links pass. Candidate
 receipt: installed-candidate-linux-receipt.json. Frozen accuracy remains failed;
 this installed smoke is not model or release qualification. Mac candidate fix
 run 37079682221 is queued and does not publish release.
+
+Generic decryption/storage provider questions no longer route to root provider
+authentication. Supply/specify verbs carry configuration resource intent, while
+configure-or-reference mixed intent remains undecided. Generic endpoint and
+authentication nouns do not bind provider ownership without role wording; exact
+xcsh identifiers remain authoritative. Three red/green source tests cover these
+failures. 497 internal-URL tests and workspace checks pass. Audited development
+remains 47/48 with zero wrong/ambiguous/control leaves; original remains 9/14.
+No new held-out claim; frozen v4 first failure remains unchanged.

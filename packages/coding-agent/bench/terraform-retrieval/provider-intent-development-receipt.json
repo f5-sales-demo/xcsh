@@ -1,0 +1,57 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "reports": {
+    "audited": {
+      "file": "provider-intent-development-audited.json.gz",
+      "raw_sha256": "5f1ae83c5c1905a270f7b02341e1e4d99ac689c377d7c836602712b2b60e9088",
+      "gzip_sha256": "406d29b65e21cfa88502fdb0541a6d3a52a6c6f519129f9092ef292d93f90124",
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "cold_materialization_ms": 1780.01143,
+      "warm_p95_ms": 38.04145200000039,
+      "answerable": 48,
+      "correct_leaf": 47,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 48,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ]
+    },
+    "original": {
+      "file": "provider-intent-development-original.json.gz",
+      "raw_sha256": "720d76912ed2b86368d199dc9e1814a8047a3e89e9a3eb2c9d287fb6f619911e",
+      "gzip_sha256": "57a463ee1cf0f5ff6132c8116061745b5e1f3b0cbddc33e8b761e1e23a7f9c9a",
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "cold_materialization_ms": 1851.464138,
+      "warm_p95_ms": 89.70017299999972,
+      "answerable": 14,
+      "correct_leaf": 9,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 3,
+      "control_leaf": 0,
+      "answerable_top5": 13,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ]
+    }
+  },
+  "source_sha256": "9a681c6b78c1bdf9f69b255ae58de493a921d943b33bf432828a9e1dc6c5332c"
+}

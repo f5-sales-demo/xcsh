@@ -790,6 +790,7 @@ export function scoreTerraformAliasContext(
 }
 
 export function terraformProviderSetupDestination(query: string): string | undefined {
+	if (/\b(?:decryption|secret store|store provider|storage provider)\b/i.test(query)) return undefined;
 	if (/\b(?:resource|data[ -]source|action|ephemeral)\b/i.test(query)) return undefined;
 	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
 	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
@@ -963,6 +964,11 @@ export function terraformProviderMention(search: string, names: readonly string[
 	const query = ` ${normalize(search)} `;
 	const found = names
 		.filter(name => query.includes(` ${normalize(name)} `))
+		.filter(name => {
+			if (!["endpoint", "authentication", "setup", "xcsh"].includes(name)) return true;
+			const phrase = normalize(name);
+			return ["resource", "data source", "action"].some(role => query.includes(` ${phrase} ${role} `));
+		})
 		.sort((a, b) => normalize(b).length - normalize(a).length || (a < b ? -1 : a > b ? 1 : 0));
 	if (found.length > 1) {
 		if (/\b(?:compare|versus|vs|between)\b/.test(query)) return undefined;
@@ -988,7 +994,10 @@ export function terraformProviderMention(search: string, names: readonly string[
 export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
-	const competingRoles = /\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(search);
+	const competingRoles =
+		/\b(?:configure|set|specify)\b.*\bor\b.*\b(?:reference|inspect|read)\b|\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(
+			search,
+		);
 	const providerType = competingRoles
 		? undefined
 		: /\bephemeral(?: resource)?\b/i.test(search)
@@ -999,7 +1008,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 					? "actions"
 					: /\bresource\b/i.test(search) ||
 							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-							/\b(?:(?:declare|declaring)|(?:define|defining)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+							/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|specif(?:y|ying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
 								search,
 							)
 						? "resources"

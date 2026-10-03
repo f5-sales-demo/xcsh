@@ -3,6 +3,9 @@ import {
 	parseTerraformPin,
 	rewriteTerraformLinks,
 	terraformPassages,
+	terraformProviderMention,
+	terraformProviderSetupDestination,
+	terraformQueryIdentity,
 	terraformSearchQuery,
 } from "../../src/internal-urls/terraform-documentation";
 
@@ -52,4 +55,35 @@ describe("Terraform documentation", () => {
 	test("rejects unpinned snapshot identities", () => {
 		expect(() => parseTerraformPin({})).toThrow("Invalid Terraform snapshot identity");
 	});
+});
+
+test("secret decryption and storage providers are not root provider authentication", () => {
+	expect(
+		terraformProviderSetupDestination("Where are credentials for the API crawler secret store provider configured?"),
+	).toBeUndefined();
+	expect(
+		terraformProviderSetupDestination("Which decryption provider authenticates crawler password secrets?"),
+	).toBeUndefined();
+	expect(terraformProviderSetupDestination("Configure API token authentication for the xcsh provider")).toBe(
+		"option-1-api-token-authentication",
+	);
+});
+
+test("configuration verbs imply resource intent while read and mixed intent remain distinct", () => {
+	expect(terraformQueryIdentity("Where do I supply a TLS certificate?").providerType).toBe("resources");
+	expect(terraformQueryIdentity("How do I specify the backend address?").providerType).toBe("resources");
+	expect(terraformQueryIdentity("Where do I configure or reference the backend port?").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Read an existing certificate data source").providerType).toBe("data-sources");
+});
+
+test("generic descriptive nouns do not assert a provider owner", () => {
+	const names = ["endpoint", "authentication", "http_loadbalancer", "certificate"];
+	expect(
+		terraformProviderMention("set response status for authentication on protected endpoints", names),
+	).toBeUndefined();
+	expect(terraformProviderMention("certificate resource configuration", names)).toBe("certificate");
+	expect(terraformProviderMention("HTTP load balancer Bot Defense authentication status", names)).toBe(
+		"http_loadbalancer",
+	);
+	expect(terraformProviderMention("xcsh_endpoint namespace", names)).toBe("endpoint");
 });
