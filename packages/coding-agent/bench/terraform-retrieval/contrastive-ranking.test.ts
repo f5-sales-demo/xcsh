@@ -245,3 +245,9 @@ test("documented object lists and scalar lists retain their requested property l
  expect(rankPropertyScope("Which field sets a rule item in xcsh_fixture?",scope)[0]?.schema_path).toBe("rules.rule");
  expect(rankPropertyScope("In xcsh_fixture, specify the list of regular expression patterns",scope)[0]?.schema_path).toBe("conditions.regex_values");
 });
+
+test("one matching collection word does not outweigh the requested branch context", () => {
+ const scope=preparePropertyScope([{...row("login.results.regex_values","A list of regular expressions matching input."),type:"list"},{...row("cluster.expressions","Kubernetes selector expressions."),type:"list"},{...row("login.results","Login transaction result conditions.","section"),type:"object",nesting:"list"}]);
+ const rows=rankPropertyScope("In xcsh_fixture, specify the list of regular expression patterns for matching login transaction results",scope);
+ expect(rows.findIndex(row=>row.schema_path==="login.results.regex_values")).toBeLessThan(rows.findIndex(row=>row.schema_path==="cluster.expressions"));
+});

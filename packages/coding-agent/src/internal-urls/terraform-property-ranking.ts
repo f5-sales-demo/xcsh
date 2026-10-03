@@ -220,7 +220,7 @@ export function rankPropertyScope(
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
 			if (propertyRequestsDirectObjectField(queryText, row)) score += 12;
-			if (propertyNamesCollection(queryText, row)) score += 36;
+			if (propertyNamesCollection(queryText, row) && total > 0 && coverage / total >= 0.35) score += 36;
 			else if (asksField && row.anchor === "section") score -= 12;
 			if (
 				row.anchor === "section" &&
