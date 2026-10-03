@@ -1,0 +1,53 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "model_cases": 40,
+  "automated_trace_passes": 24,
+  "independent_review_rejected": true,
+  "rejection_reason": "Reviewer accessed other review workspaces despite source/trace-only assignment.",
+  "rejected_trace_sha256": "fb847053562d72a282e6f0a2042a0817ee6dcb979bd19d391a5a17121afc3dbc",
+  "rejected_trace_gzip_sha256": "8b3ac1b2d2f1dadcf414555308a742753874ca7614576d050a3a8402f8e4e319",
+  "direct_checks": {
+    "terraform_citation_files": 57,
+    "missing_files": 0,
+    "citation_anchors": 56,
+    "missing_anchors": 0,
+    "hcl_fences_parsed": 34,
+    "full_block_field_paths_checked": 72,
+    "unsupported_full_block_paths": 0,
+    "unparseable_snippet": "heldout-059 emits an expression-only token reference; not a complete HCL configuration",
+    "false_live_claims_observed": 0
+  },
+  "content_failures": [
+    {
+      "id": "heldout-151",
+      "reason": "Drafts clear-secret HCL before resolving clear/encrypted secret choice."
+    },
+    {
+      "id": "heldout-152",
+      "reason": "Drafts ingress/egress example before missing gateway model is supplied."
+    },
+    {
+      "id": "heldout-155",
+      "reason": "Selects resource region field while role remains ambiguous."
+    },
+    {
+      "id": "heldout-169",
+      "reason": "Chooses site placement while site/virtual-site and VIP choices are undecided."
+    },
+    {
+      "id": "heldout-170",
+      "reason": "Chooses one JavaScript insertion path without resolving requested ambiguity."
+    },
+    {
+      "id": "heldout-175",
+      "reason": "Drafts batch/folder choices without needed selection."
+    }
+  ],
+  "limitations": [
+    "Partial HCL fragments and field support do not prove complete configuration validity.",
+    "No Terraform execution; no live apply evidence.",
+    "Candidate source542024e6a predates latest routing fixes.",
+    "Other automated failures remain failed; reviewed label defects do not qualify the suite."
+  ]
+}
