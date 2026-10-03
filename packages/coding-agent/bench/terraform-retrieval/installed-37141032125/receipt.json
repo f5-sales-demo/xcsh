@@ -1,0 +1,19 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "candidate_commit": "90a280a58f1fc079e004ee5c597b83e4269332ed",
+  "build_run": 37141032125,
+  "complete_response_parity": true,
+  "cases": 43,
+  "mac_binary_sha256": "06ed69a5fc5af32a162159cb9d133074ba1b6b7cac6035751c562f3258ebc810",
+  "linux_binary_sha256": "eaef73c545b6a0775de2b8716e838c9845202949514f808948f7ffc9145c6da2",
+  "mac_p95_ms": 34.79216700000006,
+  "linux_p95_ms": 40.781062999999904,
+  "mac_network_disabled": "sandbox-exec deny network",
+  "linux_network_disabled": "unshare --net",
+  "limitations": [
+    "Installed candidate development only; v6 heldout failed.",
+    "Candidate predates ownership fix.",
+    "No installed model40qualification."
+  ]
+}

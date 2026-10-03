@@ -1012,9 +1012,15 @@ export function terraformProviderMention(search: string, names: readonly string[
 			);
 		});
 		if (declaredOwners.length === 1) return declaredOwners[0];
+		const onOwners = found.filter(name =>
+			new RegExp(`\\b(on (?:a |an |the |our |my ))(?:managed |stateful )?${normalize(name)}\\b`).test(query),
+		);
+		if (onOwners.length === 1) return onOwners[0];
 		const owners = found.filter(name => {
 			const phrase = normalize(name);
-			return new RegExp(`\\b(?:in|under) (?:a |an |the |our |my )?(?:managed |stateful )?${phrase}\\b`).test(query);
+			return new RegExp(
+				`\\b(?:(?:in|under) (?:a |an |the |our |my )?|on (?:a |an |the |our |my ))(?:managed |stateful )?${phrase}\\b`,
+			).test(query);
 		});
 		if (owners.length === 1) return owners[0];
 	}

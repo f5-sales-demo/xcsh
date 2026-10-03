@@ -793,3 +793,20 @@ test("a named property block definition is not a resource declaration example", 
 		terraformTaskDestination("In xcsh_fixture resource, where is the definition of the routes list block?"),
 	).toBeUndefined();
 });
+
+test("on-a provider ownership outranks an incidental longer nested entity", () => {
+	const names = ["http_loadbalancer", "protected_application", "cdn_loadbalancer"];
+	expect(
+		terraformProviderMention(
+			"On an HTTP load balancer, configure login response fields in protected application endpoints",
+			names,
+		),
+	).toBe("http_loadbalancer");
+	expect(
+		terraformProviderMention(
+			"Login response fields in protected application endpoints on a CDN load balancer",
+			names,
+		),
+	).toBe("cdn_loadbalancer");
+	expect(terraformProviderMention("Compare HTTP load balancer and protected application", names)).toBeUndefined();
+});
