@@ -1,0 +1,171 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "property_index_version": 4,
+  "index": {
+    "sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+    "size_bytes": 794988544,
+    "gzip_sha256": "4c738aaa4627ca44ff6bbd722eeb21edc9852368373a239b13db6c818b843867",
+    "gzip_size_bytes": 71969527
+  },
+  "deterministic_builds": 2,
+  "correct_answerable": 91,
+  "answerable_total": 140,
+  "top5_answerable": 118,
+  "development_correct": 43,
+  "development_total": 43,
+  "reports": {
+    "local-alias-regression": {
+      "file": "v1240-local-alias-regression.json.gz",
+      "sha256": "73213f27b30367ba2a6513cc731041c399a410ec6cf1aff635012fefb545fea4",
+      "gzip_sha256": "45fecd5f81e0b647a2491e79758a8469956e2041c1dbda742e8bc4c7302f2e50",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+          "size_bytes": 792915968,
+          "gzip_sha256": "4de2e1fcf2a6858ee639835728cbabedac2a82b28498843e408ce1b945ade691",
+          "gzip_size_bytes": 71617233
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1807.5964490000001,
+        "warm_p95_ms": 33.14064800000051,
+        "discovery_p95_ms": 55.58067200000005,
+        "context_p95_ms": 0.2084210000011808,
+        "route_p95_ms": 55.60085999999865,
+        "warm_measurement_count": 2290,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 745,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3975,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3981780,
+        "tool_calls": 2290,
+        "index_file_bytes": 71617233,
+        "answerable_accuracy": 0.65,
+        "answerable_top5": 0.8428571428571429,
+        "scored_accuracy": 0.6105263157894737,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    },
+    "local-alias-development": {
+      "file": "v1240-local-alias-development.json.gz",
+      "sha256": "3473eda2e7af4a3b0618ec87d2e6be5307aff19e9ef84511c11b794854c902af",
+      "gzip_sha256": "2a10b0ac6580cb9abf37f59a0ade07a779f16e7cc357a416fb1dd23455cdddaa",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1866.444284,
+        "warm_p95_ms": 31.99454199999991,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "leaf-union-regression": {
+      "file": "v1240-leaf-union-regression.json.gz",
+      "sha256": "eb4acd8354e30238887d5b9ce414e287aaf74dc31224ec2c9d1039177c27e7b7",
+      "gzip_sha256": "16d11493e540ba2d920ae9dcb81b576f92355980151db02d3af34c4647b2a9c8",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+          "size_bytes": 794988544,
+          "gzip_sha256": "4c738aaa4627ca44ff6bbd722eeb21edc9852368373a239b13db6c818b843867",
+          "gzip_size_bytes": 71969527
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 3027.319861,
+        "warm_p95_ms": 41.83555499999966,
+        "discovery_p95_ms": 54.92397699999856,
+        "context_p95_ms": 0.2627410000004602,
+        "route_p95_ms": 54.94376600000032,
+        "warm_measurement_count": 2290,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 745,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3975,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3952700,
+        "tool_calls": 2290,
+        "index_file_bytes": 71969527,
+        "answerable_accuracy": 0.65,
+        "answerable_top5": 0.8428571428571429,
+        "scored_accuracy": 0.6105263157894737,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    },
+    "leaf-union-final-development": {
+      "file": "v1240-leaf-union-final-development.json.gz",
+      "sha256": "cd59dc07b9131a1e4ab09f1a2dae7765fc7f323743a0e76dada64b2277d75c69",
+      "gzip_sha256": "7fba41122e2a79802a7e1ad13e5b6b294a2dbe98b1e8c29b83ca9fd9819d9d01",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1743.423288,
+        "warm_p95_ms": 31.72374400000035,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "Exposed suite remains regression-only; firstuntouchedfailurepreserved.",
+    "Latestindexrequiresfinalcross-platformandinstalledartifactqualification."
+  ]
+}
