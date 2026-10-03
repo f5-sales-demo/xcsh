@@ -15,3 +15,10 @@ test("threshold does not excuse unsupported claims or missing top-five destinati
  const claim=evidence();claim.model.results[0]!.unsupported_field_claims=1;expect(evaluateAcceptanceGates(claim).passed).toBe(false);
  const latency=evidence();latency.platforms[0]!.warm_p95_ms=150.001;expect(evaluateAcceptanceGates(latency).passed).toBe(false);
 });
+
+test("missing claims evidence, depth coverage, and malformed latency never pass",()=>{
+ const shallow=evidence();for(const c of shallow.cases)c.depth=1;expect(evaluateAcceptanceGates(shallow).passed).toBe(false);
+ const latency=evidence();latency.platforms[0]!.warm_p95_ms=Number.NaN;expect(evaluateAcceptanceGates(latency).passed).toBe(false);
+ const offline=evidence();offline.platforms[0]!.offline_installed_verified=false;expect(evaluateAcceptanceGates(offline).passed).toBe(false);
+ const model=evidence();model.model.results[0]!.trace_reviewed=false;expect(evaluateAcceptanceGates(model).passed).toBe(false);
+});
