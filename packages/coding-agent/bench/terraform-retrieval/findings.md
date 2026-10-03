@@ -431,7 +431,6 @@ complete response143.319ms. Regression remains29/140leaf,45.7143%top5;no accurac
 qualification.468URLtests+workspacechecks pass. Phrase equality lookup experiment
 did not improve full regression and was discarded before commit.
 
-
 ## Context guard and primary section rejection
 
 Generic alias/schema context guard passed focused tests but reduced full published
@@ -445,7 +444,6 @@ responses and index creation. It remains experimental and unshipped. This fuller
 evaluation exposes provider-owner context loss and parent/field selection defects;
 no qualification claim follows either experiment.
 
-
 ## Provider owner context
 
 Multiple ordinary provider-name mentions now prefer one named owning context
@@ -454,7 +452,6 @@ remain undecided. Red fixture reproduced protected-application/CDN confusion;
 469 internal URL tests and workspace TypeScript checks pass after repair.
 Full post-analysis regression:29/140selected,46.4286%top5,discovery150.848ms,
 complete response144.425ms. Accuracy remains failed;this is no qualification.
-
 
 ## Provider credential setup routing
 
@@ -479,7 +476,6 @@ A fresh independent source-only reviewer is auditing all200existing labels in
 an isolated task workspace. No retrieval code/results or prior review findings
 were supplied. This audit does not replace or modify the frozen benchmark and
 cannot confer runtime qualification.
-
 
 ## Grammatical task identity and experiment scope correction
 
@@ -515,7 +511,6 @@ Frozen suites/first-run evidence remain unchanged. Exact CI jscpd5.0.10passes9.5
 against unchanged10%threshold. Current unversioned jscpd differs;CIversion is the
 relevant verification authority. Workspace checks and focused snapshot tests pass.
 
-
 ## Direct property refinement
 
 A single selected property block may refine to a clearly requested direct field
@@ -527,7 +522,6 @@ development14answerable reaches10selected,12top5,p95123.328ms.474URLtests and
 workspacechecks pass. Full ineligible-suite regression remains35/140selected,
 49.2857%top5,discovery149.465ms,complete147.005ms. No qualification claim.
 
-
 ## Completed source-only adjudication
 
 Fresh20case adjudication returned SUCCESS:ten ambiguous answerable labels and
@@ -536,7 +530,6 @@ the first collision audit. Two parent-block labels accepted using benchmark
 patterns rather than exact-leaf evidence;their precision remains unresolved.
 All three source reviews are retained. Frozen suite remains unchanged/ineligible;
 no reviewed replacement or runtime qualification follows this audit.
-
 
 ## Verified parent choice expansion
 
@@ -552,7 +545,6 @@ Full post-analysis regression35/140selected,49.2857%top5,scored24.1935%,
 discovery154.266ms,complete146.985ms. Accuracy/latency qualification remain failed.
 HTTPS mode relationships absent in metadata remain an explicit coverage gap;no
 validation constraints were inferred from provider names or descriptions.
-
 
 ## Declaration usage routing and lexical fusion diagnostic
 
@@ -570,7 +562,6 @@ remains unshipped. Producer generic aliases apply to description words,spreading
 certificate/backend/authentication phrases broadly. Published automatic-cert
 description and missing top-level choice relationships require producer review.
 
-
 ## Verified sibling type navigation and producer preview
 
 Provider-choice relationships between sibling schema types now preserve alternatives
@@ -587,7 +578,6 @@ bdf34d8c66197097177d05e9fe40e0b4b73f86aee861f62651237c521df8da34,
 897630208bytes,gzip77935872bytes. Unpublished source and baseline provenance
 explicitly disclosed;reviewed bundled pin unchanged.
 
-
 ## Reviewed choice terminology
 
 Verified choice groups accept branch-exclusive reviewed aliases as deciding context.
@@ -599,7 +589,6 @@ corpus regression remains40/140selected,50.7143%top5,discovery155.102ms,complete
 Provider153108c50c lint/security pass,but requiredCI37009759185remains pending
 without jobs and no deployment approvals;no retry or restart inferred from delay.
 
-
 ## Whole-segment context experiment rejected
 
 Whole-segment bonuses improved enriched-preview development from10/14to12/14
@@ -608,7 +597,6 @@ destinations. Bonuses and Kubernetes rescue mapping were discarded before commit
 Full preview is explicitly unpublished with baseline provenance;no pin update or
 qualification claim. ProviderCI37009759185has begun jobs after pending wait;
 constitution,mock,shell,and example checks pass,build/docs checks remain active.
-
 
 ## Direct property BM25 rejection
 
@@ -619,7 +607,6 @@ p9540.531ms excludes full responses and startup. Low exact accuracy prevents
 promotion;no production or reviewed artifact change. Raw task-local digests retained.
 ProviderCIaggregate job names match protection;build,vet,lint pass,race/docs live.
 
-
 ## Explicit unpublished preview binding
 
 Changed regression indices require a digest-bound preview receipt and cannot run
@@ -628,7 +615,6 @@ release-pin fields. Red/green scorer tests and end-to-end missing-receipt reject
 pass;workspacechecks pass. Bound enriched-preview regression41/140selected,
 52.1429%top5,discovery154.920ms,complete148.480ms remains failed. No immutable
 provider publication or consumer pin update follows preview evidence.
-
 
 ## Full semantic hybrid regression rejection
 
@@ -642,7 +628,6 @@ exact retry used retained model cache and succeeded. Original raw count defect
 Evaluator now derives counts from supplied suite. Task server stopped. Hybrid
 remains unshipped and does not meet accuracy or latency gates.
 
-
 ## Scoped lookup grammar
 
 Declaration/definition verbs infer resource role;querying/reading/inspecting
@@ -653,7 +638,6 @@ and workspacechecks pass. Final regression42/140selected,51.4286%top5,
 discovery169.120ms,complete158.809ms remains failed. Provider source all CI
 passes except exact-head linked-issue workflow still queued. No gate bypass.
 
-
 ## Scoped exact-identifier support
 
 Exact identifiers must appear inside the caller-selected provider/role/facet/node
@@ -663,7 +647,6 @@ workspacechecks and scoped integration pass. Published regression unchanged
 42/140selected,51.4286%top5,discovery192.545ms,complete176.715ms;qualification
 remains failed. CIregex spelling fragments and report terminology repaired.
 Provider all implementation checks pass;exact-head issue check remains queued.
-
 
 ## Property title navigation deduplication
 
@@ -676,7 +659,6 @@ Published regression43/140selected,51.4286%top5,discovery149.741ms,complete
 142.963ms. Unpublished enriched preview44/140selected,52.1429%top5;still no
 accuracy qualification. Tracked asset loader restored to null placeholder.
 
-
 ## Provider-scoped passage query
 
 Indexed provider identity is removed from passage terms after filter inference;
@@ -685,7 +667,6 @@ unsupported identifiers remain intact.482URLtests+workspacechecks pass. Full
 regression43/140selected,52.8571%top5,discovery178.939ms,complete163.831ms
 remains failed. This improves candidate recall without a qualification claim.
 Provider post-merge aggregate passed;exact-source regeneration now active.
-
 
 ## Prose-only property search content
 
@@ -699,7 +680,6 @@ builds match SQLitec77d9f2c3cb49ad9bf06f06cd268de5f4ad5f9fc66ee4b8ccfe469a2515a5
 complete119.610ms. Enriched preview44/140selected54.2857%top5. No accuracy
 qualification. Derived pin updated with source;tracked loader remains placeholder.
 
-
 ## Scoped exact scalar destinations
 
 Explicit scalar identifiers query verified destination anchors within caller scope
@@ -710,7 +690,6 @@ broadened;484URLtests+workspacechecks pass. Published regression unchanged
 43/140selected,52.8571%top5,discovery122.274ms,complete113.286ms;no qualification.
 Provider exact-source documentation regeneration remains active.
 
-
 ## Literal schema suffix matching
 
 Exact scalar and sibling suffix lookups treat underscores literally rather than
@@ -719,7 +698,6 @@ for shared_flag with deeper matching context. Literal suffix comparisons repair
 that false destination;485URLtests+workspacechecks pass. Published regression
 43/140selected52.8571%top5unchanged,discovery112.092ms,complete107.889ms.
 No accuracy qualification. Provider documentation regeneration remains active.
-
 
 ## All-branch-context rule rejected
 
@@ -730,7 +708,6 @@ independent missing choices. Rule and fixture removed;production restored.
 Regression evidence retained without qualification or promotion. Provider2370
 CIbuild/vet/lint/security pass,race and Super-Linter remain live.
 
-
 ## Current cross-platform regression parity
 
 Fresh bootstrapped Mac worktree and Ubuntu source a9149f5a5use the same reviewed
@@ -739,7 +716,6 @@ discovery/context hashes match,including481scores and481contextreads. Five-repea
 discoveryp95Mac94.062ms,Ubuntu104.610ms;complete91.413/101.019ms. Accuracy
 43/140and52.8571%top5still fails;ineligible suite regression only. Earlier dirty
 Mac worktree preserved. Final released installed acceptance remains unfinished.
-
 
 ## Literal branch prefix refinement
 
@@ -757,7 +733,6 @@ selections, 34 expected destinations in top five) and 52 task requests (34 corre
 Broader source-only development authoring is underway with the existing reviewer;
 its material will remain separate from any new held-out qualification suite.
 
-
 ## Provider-scoped field and context ranking experiment
 
 A separate development ranker weights direct field wording, descriptions and
@@ -773,7 +748,6 @@ An evaluator count defect caused absent IDs to group ambiguous cases as property
 cases. The corrected evaluator assigns synthetic development IDs; both raw
 results and the original defect digest are retained. No held-out qualification
 was run or claimed. The experiment remains outside production imports.
-
 
 ## Canonical property terms and combined development route
 
@@ -793,7 +767,6 @@ candidate queries/ranking, excluding post-ranking refinement, lifecycle routing,
 responses and confidence. Preparation now reports index construction as well as
 term preparation. No production import, confidence or held-out qualification.
 
-
 ## Property selection and complete-scope collision experiment
 
 Seven selection tests cover omitted branches, role collisions, low coverage,
@@ -811,7 +784,6 @@ collision lookup. It is explicitly estimated rendering-route timing, not measure
 integrated complete-response latency. Original mislabeled timing report digests
 are preserved. Twelve ranker/selection tests and workspace checks pass. No
 production imports or held-out qualification; source-label defects remain.
-
 
 ## Explicit branch exclusion and documented-vocabulary coverage
 
@@ -832,7 +804,6 @@ development sets; rankings reach48/58and12/14first. This remains insufficient
 for promotion. In-memory FTS and preloaded scope statistics remain experimental;
 final indexed artifact, installed routes and valid held-out qualification are
 unverified. No production module imports this experiment.
-
 
 ## Prepared property index and explicit field/block intent
 
@@ -856,7 +827,6 @@ Ambiguous-query candidate differences are retained and prevent broad parity
 claims. Prototype remains outside production;complete targeted route,filters,
 continuations,installed artifact and valid held-out qualification remain required.
 
-
 ## Targeted complete route and prepared-index provenance
 
 The complete property experiment now queries prepared terms and only requested
@@ -874,7 +844,6 @@ SHA2567aae0c725d33ce1d012e571c74ec68f464b913a742366c188a7d8d39e1a42785.
 This is a prototype artifact outside the reviewed bundled pin. Bundled generation
 integration, cross-platform complete responses and installed qualification remain
 unfinished. Twenty-two ranking/selection/index tests and workspace checks pass.
-
 
 ## Indexed task route and requested field vocabulary
 
@@ -952,7 +921,6 @@ scores, anchors, decisions and response hashes. Offline p95 is 33.978 ms Mac and
 28.604 ms Ubuntu. Digest-bound synthetic output is retained with
 indexed-task-local-intent-offline.json. This does not qualify an installed artifact.
 
-
 ## Fresh v12.3.1 development-label source audit
 
 The authorized existing Antigravity reviewer audited all 80 development cases
@@ -980,7 +948,6 @@ leaves, zero ambiguous leaf selections and zero control leaf selections. All
 pass. p95 is 28.928 ms Ubuntu. Raw synthetic results and source hashes are
 source-audited-cardinality-development*. Production integration and the retained
 95% qualification gate remain unfinished.
-
 
 ## Prepared terminology v2 and conservative selection evidence
 
@@ -1015,7 +982,6 @@ is 45/46 and 46/46. Original remains 9/14 selected. Forty-three focused tests
 pass. Exact development raw reports and source hashes are retained in
 where-field-development-receipt.json. No production promotion or qualification.
 
-
 ## Bundled prepared-property tables integration
 
 The production index builder now generates prepared property tables with exact
@@ -1029,7 +995,6 @@ Exact digests and source hashes: bundled-property-index-integration.json.
 493 internal-URL tests and focused snapshot/index/delivery tests pass. Bundled
 prebuilt verification passes. The outer immutable index digest binds the integrated
 tables; the separate source-index digest is used only for side-index experiments.
-
 
 ## Actual bundled adaptive resolver integration
 
@@ -1053,7 +1018,6 @@ and are development measurements only, not cross-platform qualification. Raw
 reports and source digests are in production-adaptive-receipt.json. The retained
 95% gate, fresh independent frozen 200 cases, 40 installed model cases and release
 acceptance remain incomplete; PR stays draft without auto-merge.
-
 
 ## Qualified branch and scalar evidence in production selection
 
@@ -1165,7 +1129,6 @@ workload TLS paths; fresh verifier returns needs-attention with four findings on
 those paths/depth/subset entries. It remains unfrozen and unrun. Final source-only
 author correction and another fresh verifier handoff are active. Candidate build
 run 37075887687 includes source-loader preparation fix; no release publication.
-
 
 ## New independently frozen v4 qualification failure
 
@@ -1281,7 +1244,6 @@ Five cases emitted HCL; reviewed fields are documented for setup/tunnel examples
 but ambiguity drafts and exact citation failures prevent acceptance. Reports and
 digests are retained in model-activation-development-receipt.json; raw synthetic
 traces remain task-local. These modified exposed prompts cannot qualify release.
-
 
 ## Separate indexed provider-description development experiment
 
