@@ -101,7 +101,10 @@ export function selectPropertyDestination(
 		requestedTerms = propertyQueryTerms(intent.split(/\bfor\b|\breferenced in\b/i)[0]!).filter(
 			term => !generic.has(term),
 		);
-		const local = new Set(propertyTerms(`${first.schema_path} ${first.description}`));
+		const local = new Set([
+			...propertyTerms(`${first.schema_path} ${first.description}`),
+			...(first.evidence_terms ?? []),
+		]);
 		const matches = requestedTerms.filter(term => local.has(term)).length;
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)
 			return {
@@ -211,7 +214,10 @@ export function selectPropertyDestination(
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
 		if (requestedTerms.length) {
 			const matched = (row: PropertyCandidate) => {
-				const terms = new Set(propertyTerms(`${row.schema_path} ${row.description}`));
+				const terms = new Set([
+					...propertyTerms(`${row.schema_path} ${row.description}`),
+					...(row.evidence_terms ?? []),
+				]);
 				return new Set(requestedTerms.filter(term => terms.has(term)));
 			};
 			const firstMatches = matched(first),

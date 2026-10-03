@@ -7,6 +7,7 @@ export interface PropertyCandidate {
 	anchor: string;
 	description: string;
 	aliases?: string[];
+	evidence_terms?: string[];
 }
 const stop = new Set(
 	"a an the and to of for in on with by as from at we our my your i how which what where can do does is are be been have has it this that its resource managed provider terraform field attribute property parameter configure configures configuration configuring defining define declares declare declaring specified specifies specify sets set setting outputs output generated existing list string boolean block schema using use when need".split(
@@ -195,7 +196,12 @@ export function rankPropertyScope(
 				aliasTerms: _aliasTerms,
 				...candidate
 			} = row;
-			return { ...candidate, score: Number(score.toFixed(12)), coverage: total ? coverage / total : 0 };
+			return {
+				...candidate,
+				...(row.aliasTerms.length ? { evidence_terms: row.aliasTerms } : {}),
+				score: Number(score.toFixed(12)),
+				coverage: total ? coverage / total : 0,
+			};
 		})
 		.sort(
 			(a, b) =>

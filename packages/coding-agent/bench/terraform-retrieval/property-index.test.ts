@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
 import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./property-index";
+import { selectPropertyDestination } from "./property-selection";
 import { preparePropertyScope, rankPropertyScope } from "./contrastive-ranking";
 test("indexed prepared property terms preserve provider-scoped ranking", () => {
 	const db = new Database(":memory:");
@@ -119,5 +120,13 @@ test("reviewed destination aliases participate in scoped property retrieval",()=
  db.exec("INSERT INTO terraform_destinations VALUES('resources','fixture','tls.location','tls','schema-location','Encrypted secret location.'); INSERT INTO terraform_aliases VALUES('resources','fixture','existing certificate reference','tls','schema-location')");
  populatePropertyIndex(db);
  expect(searchPropertyIndex(db,"existing certificate reference",{providerName:"fixture"})[0]?.schema_path).toBe("tls.location");
+ const query="Which property specifies existing certificate reference?";expect(selectPropertyDestination(query,searchPropertyIndex(db,query,{providerName:"fixture"})).kind).toBe("leaf");
  expect(searchPropertyIndex(db,"existing certificate reference",{providerType:"data-sources"})).toEqual([]);db.close();
+});
+
+test("shared reviewed aliases cannot choose an omitted provider role",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); CREATE TABLE terraform_aliases(provider_type,provider_name,alias,path,anchor)");
+ for(const role of ["resources","data-sources"]){db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)").run(role,"fixture","tls.location",role,"schema-location","Encrypted secret location.");db.prepare("INSERT INTO terraform_aliases VALUES(?,?,?,?,?)").run(role,"fixture","certificate location",role,"schema-location");}
+ populatePropertyIndex(db);const ranked=searchPropertyIndex(db,"which property specifies certificate location",{providerName:"fixture"});
+ expect(ranked).toHaveLength(2);expect(selectPropertyDestination("which property specifies certificate location",ranked).kind).toBe("choices");db.close();
 });
