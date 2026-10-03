@@ -15,6 +15,8 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+# Digest validation keeps each distinct provenance boundary visible.
+# pylint: disable=too-many-locals
 def validate_inputs(
     corpus_path: Path,
     lexical_path: Path,
@@ -97,6 +99,7 @@ def main() -> None:
     ):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--property-only", action="store_true")
+    parser.add_argument("--query-prefix", default="")
     args = parser.parse_args()
     corpus, lexical, receipt = validate_inputs(
         args.corpus,
@@ -107,10 +110,13 @@ def main() -> None:
         args.model,
         args.preparation,
     )
-    import numpy as np  # noqa: PLC0415 - validate provenance before model load
+    # Validate provenance before loading optional model dependencies.
+    # pylint: disable=import-outside-toplevel
+    import numpy as np  # noqa: PLC0415
     import torch  # noqa: PLC0415
     from hybrid_ranking import fuse_rankings  # noqa: PLC0415
     from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+    # pylint: enable=import-outside-toplevel
 
     torch.set_num_threads(4)
     rows = corpus["destinations"]
@@ -142,7 +148,9 @@ def main() -> None:
         for _repeat in range(5):
             before = time.perf_counter()
             query = model.encode(
-                case["prompt"], normalize_embeddings=True, convert_to_numpy=True
+                args.query_prefix + case["prompt"],
+                normalize_embeddings=True,
+                convert_to_numpy=True,
             )
             query /= np.linalg.norm(query)
             embedded = time.perf_counter()
@@ -182,6 +190,7 @@ def main() -> None:
     report = {
         "development_only": True,
         "property_only": args.property_only,
+        "query_prefix": args.query_prefix,
         "qualification_passed": False,
         "production_imported": False,
         "source_commit": corpus["source_commit"],

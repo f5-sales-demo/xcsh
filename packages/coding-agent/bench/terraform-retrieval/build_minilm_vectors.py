@@ -9,6 +9,8 @@ from pathlib import Path
 from minilm_experiment import digest
 
 
+# The receipt records independent artifact, token and timing evidence.
+# pylint: disable=too-many-locals
 def main() -> None:
     """Keep source bytes, input format, token coverage and runtime provenance."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -43,9 +45,12 @@ def main() -> None:
         + row["schema_path"].replace(".", " ").replace("_", " ")
         for row in rows
     ]
+    # Validate provenance before loading optional model dependencies.
+    # pylint: disable=import-outside-toplevel
     import numpy as np  # noqa: PLC0415
     import torch  # noqa: PLC0415
     from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+    # pylint: enable=import-outside-toplevel
 
     torch.set_num_threads(4)
     model = SentenceTransformer(str(args.model), local_files_only=True, device="cpu")

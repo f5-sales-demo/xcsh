@@ -1353,3 +1353,11 @@ fit the 256-token model limit, maximum 179; build takes 187.284 seconds.
 Not promoted. Runs overlapped on one host, so latency is diagnostic only and
 not complete-response or cross-host qualification. Exact vector/model/source
 receipts and raw reports: minilm-plain-input-rejection-receipt.json.
+
+A separate BGE-small-en-v1.5 development experiment pins upstream revision
+5c38ec7c405ec4b44b94cc5a9bb96e735b38267a and 11 local model files. The
+existing isolated Python runtime builds canonical property vectors offline;
+no production dependency. Its documented query instruction is recorded via
+an explicit evaluator option. Vector generation is active; no accuracy claim.
+Preparation receipt: bge-development-preparation.json. Python lint and mypy
+pass for the file-based harness; optional model imports follow digest checks.
