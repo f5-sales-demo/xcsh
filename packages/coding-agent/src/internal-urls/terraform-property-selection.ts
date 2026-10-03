@@ -146,6 +146,45 @@ export function selectPropertyDestination(
 				(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
 				(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
 		);
+	const polarity = /\benabl(?:e|ed|es|ing)\b/i.test(queryText)
+		? "enable"
+		: /\bdisabl(?:e|ed|es|ing)\b/i.test(queryText)
+			? "disable"
+			: undefined;
+	const choiceName = (row: PropertyCandidate) =>
+		row.schema_path
+			.split(".")
+			.at(-1)
+			?.match(/^(enable|disable)_(.+)$/);
+	const namedChoices = ranked.filter(row => {
+		const name = choiceName(row);
+		return row.anchor === "section" && name && propertyTerms(name[2]!).every(term => query.has(term));
+	});
+	const pair = namedChoices.find(row =>
+		namedChoices.some(peer => {
+			const a = choiceName(row)!,
+				b = choiceName(peer)!;
+			return (
+				row.provider_name === peer.provider_name &&
+				row.provider_type === peer.provider_type &&
+				a[1] !== b[1] &&
+				a[2] === b[2] &&
+				row.schema_path.split(".").slice(0, -1).join(".") === peer.schema_path.split(".").slice(0, -1).join(".")
+			);
+		}),
+	);
+	const scalarIntent =
+		ranked[0]?.anchor.startsWith("schema-") &&
+		ranked[0].coverage >= 0.35 &&
+		propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").length > 0 &&
+		propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").every(term => query.has(term));
+	if (
+		pair &&
+		!scalarIntent &&
+		(!polarity || (/\benabl(?:e|ed|es|ing)\b/i.test(queryText) && /\bdisabl(?:e|ed|es|ing)\b/i.test(queryText))) &&
+		!namedChoices.some(row => propertySchemaIdentifiers(queryText).includes(choiceName(row)![0]))
+	)
+		return { kind: "choices", destinations: namedChoices.slice(0, 5), reason: "Missing enable or disable choice" };
 	const first = ranked[0];
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
 	const filterTerms = /\b(?:field|attribute|property|parameter|argument)\b\s+filters?\s+.+?\s+by\b/i.test(queryText)

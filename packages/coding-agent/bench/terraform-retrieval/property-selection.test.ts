@@ -474,3 +474,28 @@ test("canonical branch nouns and descriptive negative architecture clauses remai
  expect(selectPropertyDestination("workload port: service branch or stateful_service branch",[a,b]).kind).toBe("choices");
  expect(selectPropertyDestination("workload port, not a service that is stateful",[a,b]).kind).toBe("choices");
 });
+
+test("capability enable-disable requests preserve the caller's explicit choice", () => {
+ const a={...row("enable_feature_discovery",50),anchor:"section"},b={...row("disable_feature_discovery",90),anchor:"section"};
+ expect(selectPropertyDestination("set feature discovery",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("set enable_feature_discovery",[a,b]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("enable or disable feature discovery",[a,b]).kind).toBe("choices");
+});
+
+test("fully named scalar intent is not replaced by capability block choices", () => {
+ const field={...row("enable_feature_discovery.hostname",100),coverage:1};
+ const a={...row("enable_feature_discovery",1),anchor:"section"},b={...row("disable_feature_discovery",1),anchor:"section"};
+ expect(selectPropertyDestination("Configure xcsh_fixture feature discovery hostname",[field,a,b]).destinations[0]?.schema_path).toBe(field.schema_path);
+});
+
+test("capability pairs cannot cross provider identity or role", () => {
+ const a={...row("enable_feature_discovery",50),anchor:"section"},b={...row("disable_feature_discovery",49,"data-sources"),anchor:"section"};
+ expect(selectPropertyDestination("set feature discovery",[a,b]).reason).not.toBe("Missing enable or disable choice");
+ expect(selectPropertyDestination("set feature discovery",[a,{...b,provider_type:"resources",provider_name:"other"}]).reason).not.toBe("Missing enable or disable choice");
+});
+
+test("capability polarity recognizes enabling and disabling inflections", () => {
+ const a={...row("enable_feature_discovery",20),anchor:"section"},b={...row("disable_feature_discovery",100),anchor:"section"};
+ expect(selectPropertyDestination("Configure disabling feature discovery",[a,b]).reason).not.toBe("Missing enable or disable choice");
+ expect(selectPropertyDestination("Configure enabling feature discovery",[{...a,score:100},{...b,score:20}]).reason).not.toBe("Missing enable or disable choice");
+});

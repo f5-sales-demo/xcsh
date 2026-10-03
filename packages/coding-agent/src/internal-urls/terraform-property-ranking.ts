@@ -364,9 +364,27 @@ export function rankPropertyScope(
 				(local + context * 0.6) * (total ? (coverage / total) ** 2 : 0) +
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
+			const capabilityTerms = row.leaf.filter(term => !["enable", "disable"].includes(term));
+			const capabilityBlock =
+				row.anchor === "section" &&
+				row.leaf.some(term => ["enable", "disable"].includes(term)) &&
+				capabilityTerms.length >= 2 &&
+				capabilityTerms.every(term => target.includes(term)) &&
+				!scope.rows.some(
+					peer =>
+						peer.anchor.startsWith("schema-") &&
+						peer.schema_path
+							.replace(/(^|\.)(?:enable|disable)_/g, "$1")
+							.startsWith(`${row.schema_path.replace(/(^|\.)(?:enable|disable)_/g, "$1")}.`) &&
+						peer.leaf.length > 0 &&
+						peer.leaf.every(term => target.includes(term)),
+				) &&
+				/\b(?:configure|set|specify|enable|disable|select|choose)\b/i.test(queryText) &&
+				!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText);
+			if (capabilityBlock) score += 24;
 			if (propertyRequestsDirectObjectField(queryText, row)) score += 12;
 			if (propertyNamesCollection(queryText, row) && total > 0 && coverage / total >= 0.35) score += 36;
-			else if (asksField && row.anchor === "section") score -= 12;
+			else if (asksField && row.anchor === "section" && !capabilityBlock) score -= 12;
 			if (
 				row.anchor === "section" &&
 				row.leaf.length >= 2 &&

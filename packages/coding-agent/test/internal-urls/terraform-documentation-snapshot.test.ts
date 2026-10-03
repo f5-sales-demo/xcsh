@@ -1107,6 +1107,23 @@ test("direct field refinement preserves literal schema branch prefixes", async (
 		).content;
 		expect(content).not.toContain("#schema-branchxa--port");
 		expect(content).toContain("branch_a/index.md?view=context#section");
+		for (const suffix of ["", "&node=branch_a"]) {
+			const normalizedAlias = (
+				await repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?search=" +
+								encodeURIComponent("configure backend-servers port") +
+								"&provider_name=fixture&provider_type=resources" +
+								suffix,
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				)
+			).content;
+			expect(normalizedAlias).toContain("branch_a/index.md?view=context#section");
+			expect(normalizedAlias).not.toContain("#schema-branchxa--port");
+		}
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });
@@ -1766,6 +1783,64 @@ test("querying an object name selects the root property rather than nested names
 			expect(response.content).toContain("Selected leaf;");
 			expect(response.content).toContain("#schema-domains");
 		}
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("generic configure requests retain ancestor context through indexed property routing", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-configure-context-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		doc.metadata.role = "properties";
+		const body =
+			'<a id="schema-domains"></a>\n### domains\nType: `list`.\n\nDomains for the proxy.\n\n<a id="schema-check_policy--domains"></a>\n### check_policy domains\nType: `list`.\n\nDomains for request origin checking.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = [
+			{
+				schema_path: ["domains"],
+				document_id: doc.metadata.id,
+				anchor: "schema-domains",
+				description: "Domains for the proxy.",
+				aliases: [],
+				relationships: [],
+				flags: ["required"],
+				type: "list",
+			},
+			{
+				schema_path: ["check_policy", "domains"],
+				document_id: doc.metadata.id,
+				anchor: "schema-check_policy--domains",
+				description: "Domains for request origin checking.",
+				aliases: [],
+				relationships: [],
+				flags: ["optional"],
+				type: "list",
+			},
+		];
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const content = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=" +
+							encodeURIComponent("Configure check policy domains on xcsh_fixture"),
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(content).toContain("#schema-check_policy--domains");
+		expect(content).not.toContain(
+			"Read: xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=context#schema-domains\n",
+		);
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });

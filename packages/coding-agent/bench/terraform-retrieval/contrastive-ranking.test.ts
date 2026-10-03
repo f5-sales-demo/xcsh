@@ -446,3 +446,19 @@ test("qualified negation and examples do not become positive workload architectu
  expect(rankPropertyScope("workload port (for example service.public)",preparePropertyScope(candidates))).toHaveLength(2);
  expect(rankPropertyScope("workload port, not under service.public",preparePropertyScope(candidates))).toHaveLength(2);
 });
+
+test("configuration capability requests rank named blocks above incidental prose fields", () => {
+ const scope=preparePropertyScope([
+ row("enable_feature_discovery", "Settings for feature discovery.","section"),
+ row("disable_feature_discovery", "No values needed.","section"),
+ row("pool.connection_limit", "Maximum HTTP connections. Feature API details."),
+ ]);
+ const rows=rankPropertyScope("Set feature discovery on xcsh_fixture",scope);
+ expect(["enable_feature_discovery", "disable_feature_discovery"]).toContain(rows[0]?.schema_path);
+ expect(rows.find(x=>x.schema_path==="disable_feature_discovery")!.score).toBeGreaterThan(rows.find(x=>x.schema_path==="pool.connection_limit")!.score);
+});
+
+test("capability pairs cannot outrank a fully named scalar through the opposite block", () => {
+ const scope=preparePropertyScope([row("enable_feature_discovery","Settings.","section"),row("disable_feature_discovery","Empty option.","section"),row("enable_feature_discovery.hostname","Hostname for discovery.")]);
+ expect(rankPropertyScope("Configure xcsh_fixture feature discovery hostname",scope)[0]?.schema_path).toBe("enable_feature_discovery.hostname");
+});
