@@ -8,6 +8,7 @@ import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
+import { terraformBranchChoices } from "./terraform-branch-choices";
 import { populatePropertyIndex, searchPropertyIndex } from "./terraform-property-index";
 import { propertyRequestedText } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
@@ -1570,6 +1571,62 @@ export class TerraformDocumentationRepository {
 						).map(row => ({ ...row, score: 0, coverage: 0 }))
 					: [];
 				const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives);
+				if (
+					decision.kind === "choices" &&
+					first &&
+					decision.destinations.every(
+						row =>
+							row.provider_type === first.provider_type &&
+							row.provider_name === first.provider_name &&
+							row.description === first.description,
+					)
+				) {
+					const equivalent = [
+						...new Map(
+							[...decision.destinations, ...alternatives]
+								.filter(
+									row =>
+										row.provider_type === first.provider_type &&
+										row.provider_name === first.provider_name &&
+										row.description === first.description,
+								)
+								.map(row => [row.schema_path, row]),
+						).values(),
+					];
+					const branches = terraformBranchChoices(equivalent, limit, search);
+					const destinations = branches.map(
+						schemaPath =>
+							db
+								.query(
+									"SELECT td.id,td.path,td.summary,dest.anchor FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path WHERE dest.provider_type=? AND dest.provider_name=? AND dest.schema_path=? AND dest.anchor=?",
+								)
+								.get(first.provider_type, first.provider_name, schemaPath, "section") as {
+								id: string;
+								path: string;
+								summary: string;
+								anchor: string;
+							} | null,
+					);
+					if (destinations.length && destinations.every(row => row !== null)) {
+						const branchContent = boundedTerraformResponse(
+							`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing schema branch.\nReason: ${decision.reason}\nEquivalent property destinations require a branch decision.`,
+							destinations.map(row => {
+								const next = new URL(url.href);
+								next.searchParams.set("node", row!.id);
+								next.searchParams.set("provider_type", first.provider_type);
+								next.searchParams.set("provider_name", first.provider_name);
+								return `## ${row!.summary}\nHint: ${uri(row!.path, row!.anchor, "hint")}\nRefine: ${next.href}`;
+							}),
+							4096,
+						);
+						return {
+							url: url.href,
+							content: branchContent,
+							contentType: "text/markdown",
+							size: Buffer.byteLength(branchContent),
+						};
+					}
+				}
 				const shown = decision.kind === "leaf" ? decision.destinations : decision.destinations.slice(0, limit);
 				const prepared = boundedTerraformResponse(
 					`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\nReason: ${decision.reason}\nScores are ranking values, not probabilities.`,

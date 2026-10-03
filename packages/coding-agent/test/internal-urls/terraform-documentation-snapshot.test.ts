@@ -1228,3 +1228,127 @@ Idle connection timeout.
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("equivalent leaf discovery refines through indexed branches within response budgets", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-branch-refine-"));
+	try {
+		const pin = await fixture(root);
+		const original = (await verifyTerraformSnapshot(root, pin))[0]!;
+		const docs = [];
+		for (const outer of ["and", "or", "none"]) {
+			const parentId = `cookies_${outer}`;
+			const parentPath = `documentation/resources/fixture/properties/cookies_${outer}/index.md`;
+			const body = `<a id="section"></a>\n# cookies ${outer}\nCookie match choices.\n`;
+			docs.push({
+				...original,
+				path: parentPath,
+				body,
+				markdown: body,
+				sha256: terraformHash(body),
+				metadata: {
+					...original.metadata,
+					id: parentId,
+					canonical_id: parentId,
+					path: parentPath,
+					role: "properties",
+					schema_path: [parentId],
+					summary: `cookies ${outer}`,
+					aliases: [],
+					parent_id: null,
+					sections: [],
+				},
+			});
+			for (const inner of ["and", "or", "none"]) {
+				const parts = [parentId, `cookie_${inner}`];
+				const id = parts.join(".");
+				const docPath = `documentation/resources/fixture/properties/${parts.join("/")}/index.md`;
+				const anchor = `schema-${parts.join("--")}--case_sensitive`;
+				const text = `<a id="section"></a>\n# Cookie match\n\n<a id="${anchor}"></a>\n### case_sensitive\nCookie case sensitivity.\n`;
+				docs.push({
+					...original,
+					path: docPath,
+					body: text,
+					markdown: text,
+					sha256: terraformHash(text),
+					metadata: {
+						...original.metadata,
+						id,
+						canonical_id: id,
+						path: docPath,
+						role: "properties",
+						schema_path: parts,
+						summary: "Cookie match",
+						aliases: [],
+						parent_id: parentId,
+						sections: [
+							{
+								schema_path: [...parts, "case_sensitive"],
+								document_id: id,
+								anchor,
+								description: "Cookie case sensitivity.",
+								aliases: [],
+								flags: ["optional"],
+								relationships: [],
+							},
+						],
+					},
+				});
+			}
+		}
+		const rootBody = '<a id="section"></a>\n# Cookie settings\nCookie match choices.\n';
+		docs.push({
+			...original,
+			body: rootBody,
+			markdown: rootBody,
+			sha256: terraformHash(rootBody),
+			metadata: {
+				...original.metadata,
+				id: "cookie-root",
+				canonical_id: "cookie-root",
+				role: "properties",
+				schema_path: [],
+				summary: "Cookie settings",
+				aliases: [],
+				parent_id: null,
+				sections: ["and", "or", "none"].map(outer => ({
+					schema_path: [`cookies_${outer}`],
+					document_id: `cookies_${outer}`,
+					anchor: "section",
+					description: "Cookie match choices.",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+				})),
+			},
+		});
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const query = "which field sets cookie case sensitivity";
+		const url = Object.assign(
+			new URL(
+				`xcsh://terraform-documentation/?search=${encodeURIComponent(query)}&provider_name=fixture&provider_type=resources`,
+			),
+			{ rawHost: "terraform-documentation" },
+		) as InternalUrl;
+		const response = (await repo.resolve(url)).content;
+		expect(response).toContain("missing schema branch");
+		expect(Buffer.byteLength(response)).toBeLessThanOrEqual(4096);
+		const refinements = [...response.matchAll(/^Refine: (.+)$/gm)].map(match => match[1]!);
+		expect(refinements).toHaveLength(3);
+		for (const ref of refinements) {
+			const next = new URL(ref);
+			expect(next.searchParams.get("search")).toBe(query);
+			expect(next.searchParams.get("provider_type")).toBe("resources");
+			const content = (
+				await repo.resolve(Object.assign(next, { rawHost: "terraform-documentation" }) as InternalUrl)
+			).content;
+			expect(Buffer.byteLength(content)).toBeLessThanOrEqual(4096);
+			expect([...content.matchAll(/^Read: /gm)]).toHaveLength(3);
+			expect(content).not.toContain("Selected leaf;");
+		}
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
