@@ -1,0 +1,13 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "report_sha256": "0ce929b1dd985b2a5473b8bc52ae9b77c51e36063bfeb29e14ec864056b0c64a",
+  "gzip_sha256": "204edb1c4bc9e59e4c5a095effc54afa696bfce9462d79d731d16d5a6d35d1f9",
+  "correct_answerable": 76,
+  "answerable_total": 140,
+  "top5_answerable": 97,
+  "warm_p95_ms": 57.40476800000033,
+  "route_p95_ms": 79.49891399999979,
+  "first_untouched_qualification": "59/140 correct; failed and preserved",
+  "consumer_draft": true
+}
