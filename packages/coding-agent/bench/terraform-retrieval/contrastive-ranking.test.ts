@@ -373,3 +373,11 @@ test("imperative property intent does not require a literal provider name",()=>{
  const scope=preparePropertyScope([row("login.failure_conditions.regex_values","Regular expressions to match the input."),row("login.failure_conditions","Failure conditions.","section")]);
  expect(rankPropertyScope("On a fixture proxy, specify regular expressions matching failed login responses",scope)[0]?.schema_path).toBe("login.failure_conditions.regex_values");
 });
+
+
+test("plural regular-expression values identify the scalar regex list",()=>{
+ expect(propertyQueryTerms("list of regular expressions")).toEqual(propertyQueryTerms("regex_values"));
+ expect(propertyQueryTerms("regular expression algorithm")).not.toContain("value");
+ const scope=preparePropertyScope([row("login.failure_conditions.regex_values","List of regular expressions matching the input."),row("login.failure_conditions","Failure Conditions.","section")]);
+ expect(rankPropertyScope("Specify regular expressions matching failed login responses",scope)[0]?.schema_path).toBe("login.failure_conditions.regex_values");
+});

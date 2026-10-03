@@ -78,6 +78,7 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\b(?:arguments?|flags?)\b/g, "")
 			.replace(/\b(?:whether|should)\b/g, "")
 			.replace(/\b(?:criteria|criterion)\b/g, "conditions")
+			.replace(/\bregular expressions\b/g, "regex values")
 			.replace(
 				/\b(?:active\s+)?hostnames?\s+(?:routed|served)\s+by\s+(?:the\s+)?(?:proxy|load[ -]?balancer)\b/g,
 				"domains matched host authority",
