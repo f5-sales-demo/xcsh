@@ -1,0 +1,25 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "accepted_semantic_review": false,
+  "counts": {
+    "valid": 117,
+    "ambiguous": 23
+  },
+  "files": [
+    {
+      "path": "source-review.json.gz",
+      "sha256": "c19a035265b53d51ec72a7afdebcb4f20aeadc60a0863ea02ccdd505d89175f1",
+      "gzip_sha256": "8e353050c31c34f42debf1c6e7091244e9420bb0cb02d633c727ea3dcad983e9"
+    },
+    {
+      "path": "validation.json.gz",
+      "sha256": "c956de8e33b5de897ab75a6645ce961866772a8307c1183c244b9a999c36aee7",
+      "gzip_sha256": "0549cb78d759bdc847620f8728059c2f29ca61570f43700b5f652995085b9d27"
+    }
+  ],
+  "limitations": [
+    "Exactquote/peeraccountingpassed,butexplicitstatelesscontextwasignoredandcrossprovideralternativesremainunreviewed.",
+    "Originalfrozenlabels/scoresunchanged;reportawaitssemanticrepair."
+  ]
+}
