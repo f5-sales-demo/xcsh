@@ -1,0 +1,27 @@
+{
+  "qualification_passed": false,
+  "production_retained": false,
+  "reason": "Generic provide verb inferred resources and hid action site_names; no development improvement, exposed v6selection41to40. Fully reverted.",
+  "files": [
+    {
+      "path": "terraform-provide-rejected.patch.gz",
+      "sha256": "a7a267e8a3e6b024eeb4dd2e43beb5725131925db4b3645693138f6f6de45c8f",
+      "gzip_sha256": "5c2fd21c5f74a23148ef3dfa8e3e57815f384fd41d48d338310703f2902c22ba"
+    },
+    {
+      "path": "terraform-v1240-provide-development.json.gz",
+      "sha256": "0f2090853e393406272543576e63ac78495b0141c34ac87778fa8cdba8d33200",
+      "gzip_sha256": "417f7114ac30b44c1ebdf026ea4a14f5450265ef25c93fd25f153ba9c1f0c7c4"
+    },
+    {
+      "path": "terraform-v1240-provide-broad.json.gz",
+      "sha256": "d14dcf07b8106781608d2e96a682bc45064d8539b395d628acbc85c592f99070",
+      "gzip_sha256": "fb8d51a87eaf090edfb5b78cb1acbcc4a2b61da59aec03a2ed1feb4ee653df41"
+    },
+    {
+      "path": "terraform-v1240-provide-v6-regression.json.gz",
+      "sha256": "9d2c830567bffa6103abcd1f8d03443538ba1495e9c58b158609e5063b25c748",
+      "gzip_sha256": "77d746dc7de7cf2c3a2e8f55a5eae4fe310acf1ad768c692ce8025a30d15caf8"
+    }
+  ]
+}
