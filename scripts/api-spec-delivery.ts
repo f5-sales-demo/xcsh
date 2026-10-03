@@ -228,6 +228,7 @@ function expectedSpecAssetNames(releaseTag: string): string[] {
 	const reportAssets = Number(releaseTag.match(/^v([0-9]+)\./)?.[1]) >= 9 ? ["upstream-contract-changes.json"] : [];
 	return [
 		...reportAssets,
+		...(Number(releaseTag.match(/^v([0-9]+)\./)?.[1]) >= 10 ? ["enrichment-coverage.json"] : []),
 		"api-catalog.json",
 		"concurrency_contracts.json",
 		`f5xc-api-specs-${releaseTag}.zip`,

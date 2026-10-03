@@ -14,6 +14,7 @@ import type {
 	ApiCatalogOperation,
 } from "./api-catalog-types";
 import type { ApiSpecDomainResource, ApiSpecIndex } from "./api-spec-types";
+import { formatMapConstraints, type MapConstraints } from "./map-constraints";
 import type { InternalResource, InternalUrl } from "./types";
 
 function normalizeApiPath(apiPath: string): string {
@@ -282,6 +283,7 @@ function sanitizeTableCell(text: string): string {
 
 function formatConstraints(constraints: Record<string, unknown> | undefined): string {
 	if (!constraints) return "--";
+	if (constraints.constraintType === "map") return formatMapConstraints(constraints as unknown as MapConstraints);
 	const parts: string[] = [];
 	if (constraints.pattern) parts.push(`pattern: \`${constraints.pattern}\``);
 	if (constraints.maxLength != null) parts.push(`maxLength: ${constraints.maxLength}`);
