@@ -1385,3 +1385,10 @@ exact reports/source digests: alias-property-rejection-receipt.json.
 The existing independent reviewer is auditing sparse descriptions and terminology
 in a source-only workspace, with no retrieval or benchmark inputs. This is
 development review, not a new freeze or qualification.
+
+Pinned source description audit counts 5,792 identical empty-message destinations
+across 88 provider families (2,898 resource, 2,894 data-source) and 512 lifecycle
+timeout destinations. Generic reference boilerplate repeats for 1,337 name,
+1,337 namespace and 1,328 tenant destinations. These are source sparsity counts,
+not qualification. Exact index/source receipt: property-description-quality-receipt.json.
+Independent source review is active; no semantic replacements inferred yet.
