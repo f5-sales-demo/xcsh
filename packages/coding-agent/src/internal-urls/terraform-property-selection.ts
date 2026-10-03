@@ -6,6 +6,7 @@ import {
 	propertyRequestedText,
 	propertyRequestsBlock,
 	propertyRequestsDirectObjectField,
+	propertySchemaIdentifiers,
 	propertyTerms,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
@@ -40,8 +41,8 @@ export function selectPropertyDestination(
 	alternatives: readonly RankedProperty[] = [],
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
 	const query = new Set(propertyQueryTerms(queryText));
-	const identifiers = (queryText.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
-		term => !term.startsWith("xcsh_") && ![...input, ...alternatives].some(row => row.provider_name === term),
+	const identifiers = propertySchemaIdentifiers(queryText).filter(
+		term => ![...input, ...alternatives].some(row => row.provider_name === term),
 	);
 	if (
 		identifiers.some(

@@ -326,3 +326,9 @@ test("a literal direct field request does not require choosing nested references
  expect(selectPropertyDestination("Read the name attribute of an existing object via xcsh_fixture data source",[direct,nested]).kind).toBe("leaf");
  expect(selectPropertyDestination("Read receiver name attribute via xcsh_fixture data source",[{...nested,score:50},direct]).destinations[0]?.schema_path).toBe("receivers.name");
 });
+
+test("enum examples are not mistaken for unsupported field identifiers",()=>{
+ const field={...row("loadbalancer_algorithm",40),description:"Load balancing algorithm.",coverage:1};
+ expect(selectPropertyDestination("Which field sets loadbalancer_algorithm (such as ROUND_ROBIN or LEAST_ACTIVE)?",[field]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Which field sets invented_algorithm?",[field]).kind).toBe("none");
+});

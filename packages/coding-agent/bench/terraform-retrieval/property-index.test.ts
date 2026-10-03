@@ -195,3 +195,8 @@ test("conflicting property shape metadata cannot silently overwrite indexed evid
  const put=db.prepare("INSERT INTO terraform_documents VALUES(?)");for(const nesting of ["list","single"])put.run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:["rules"],type:"object",nesting}]}));
  expect(()=>populatePropertyIndex(db)).toThrow("Conflicting property shape");db.close();
 });
+
+test("example enum constants do not constrain schema-path candidates",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);INSERT INTO terraform_destinations VALUES('resources','fixture','loadbalancer_algorithm','algorithm','schema-algorithm','Load balancing algorithm')");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Which field sets loadbalancer_algorithm (such as ROUND_ROBIN or LEAST_ACTIVE)?",{providerName:"fixture"})[0]?.schema_path).toBe("loadbalancer_algorithm");db.close();
+});

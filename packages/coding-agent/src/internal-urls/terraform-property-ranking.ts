@@ -71,6 +71,7 @@ export function propertyQueryTerms(text: string): string[] {
 			.toLowerCase()
 			.replace(/\bxcsh_[a-z0-9_]+\b/g, "")
 			.replace(/\b(?:arguments?|flags?)\b/g, "")
+			.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "")
 			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
 			.replace(/mutual[ -]+tls/g, "mtls")
@@ -87,6 +88,16 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bbefore forwarding\b/g, "upstream")
 			.replace(/\bpermits\b/g, "permit"),
 	);
+}
+export function propertySchemaIdentifiers(text: string): string[] {
+	const request = text.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "");
+	return [
+		...new Set(
+			(request.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
+				term => !term.startsWith("xcsh_"),
+			),
+		),
+	];
 }
 export function propertyRequestsBlock(text: string): boolean {
 	if (/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return false;
