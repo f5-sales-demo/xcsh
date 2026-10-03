@@ -8,6 +8,15 @@ export interface WebSearchUserLocation {
 	timezone?: string;
 }
 
+/** Null is an omission sentinel at the tool/programmatic input boundary. */
+export interface WebSearchUserLocationInput {
+	type: "approximate";
+	city?: string | null;
+	region?: string | null;
+	country?: string | null;
+	timezone?: string | null;
+}
+
 export interface WebSearchParams {
 	query: string;
 	recency?: WebSearchRecency;
@@ -20,6 +29,10 @@ export interface WebSearchParams {
 	blocked_domains?: string[];
 	user_location?: WebSearchUserLocation;
 }
+
+export type WebSearchInputParams = Omit<WebSearchParams, "user_location"> & {
+	user_location?: WebSearchUserLocationInput | null;
+};
 
 export type ValidationResult = { valid: true } | { valid: false; error: string };
 
@@ -52,8 +65,11 @@ function validateDomainList(name: string, list: string[] | undefined): Validatio
 	return null;
 }
 
-function validateUserLocation(loc: WebSearchUserLocation | undefined): ValidationResult | null {
+function validateUserLocation(loc: WebSearchUserLocationInput | null | undefined): ValidationResult | null {
 	if (loc === undefined) return null;
+	if (loc === null || typeof loc !== "object" || Array.isArray(loc)) {
+		return fail("user_location must be an approximate location object");
+	}
 	if (loc.type !== "approximate") {
 		return fail(`user_location.type must be "approximate" (received "${String(loc.type)}")`);
 	}
@@ -76,7 +92,7 @@ function validateUserLocation(loc: WebSearchUserLocation | undefined): Validatio
 	return null;
 }
 
-export function validateWebSearchParams(params: WebSearchParams): ValidationResult {
+export function validateWebSearchParams(params: WebSearchInputParams): ValidationResult {
 	if (typeof params.query !== "string" || params.query.trim().length === 0) {
 		return fail("query must be a non-empty string");
 	}
@@ -118,12 +134,24 @@ export function validateWebSearchParams(params: WebSearchParams): ValidationResu
 	return { valid: true };
 }
 
-export function normalizeUserLocation(loc: WebSearchUserLocation | undefined): WebSearchUserLocation | undefined {
-	if (loc === undefined) return undefined;
-	const next: WebSearchUserLocation = { type: loc.type };
-	if (loc.city !== undefined) next.city = loc.city;
-	if (loc.region !== undefined) next.region = loc.region;
-	if (loc.timezone !== undefined) next.timezone = loc.timezone;
-	if (loc.country !== undefined) next.country = loc.country.toUpperCase();
-	return next;
+/** Normalize optional fields while preserving malformed values for validation. */
+export function normalizeUserLocation(
+	loc: WebSearchUserLocationInput | null | undefined,
+): WebSearchUserLocationInput | undefined {
+	if (loc === undefined || loc === null) return undefined;
+	if (typeof loc !== "object" || Array.isArray(loc)) return loc;
+	const next: WebSearchUserLocationInput = { type: loc.type };
+	for (const field of ["city", "region", "country", "timezone"] as const) {
+		const value = loc[field];
+		if (value === undefined || value === null) continue;
+		if (typeof value === "string") {
+			const trimmed = value.trim();
+			if (trimmed.length === 0) continue;
+			next[field] = field === "country" ? trimmed.toUpperCase() : trimmed;
+		} else {
+			next[field] = value;
+		}
+	}
+	// Invalid or missing types must still reach validation, even with no details.
+	return next.type === "approximate" && Object.keys(next).length === 1 ? undefined : next;
 }
