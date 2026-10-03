@@ -1314,3 +1314,10 @@ Warm embedding-only runtime comparison across eight development queries, five
 measured repetitions after warmup, exceeds 150 ms in default and CPU modes.
 The exact semantic experiment remains unpromoted; runtime receipts are retained
 with semantic-v1231-development-receipt.json.
+
+A separate isolated CPU MiniLM experiment pins model revision
+1110a243fdf4706b3f48f1d95db1a4f5529b4d41 and verifies all 11 model files.
+Warm embedding smoke is 6.259 ms p95 on four development queries, with 384
+dimensions and 256-token model limit. This is not qualification. Exact v12.3.1
+destination vectors are materializing; no production dependency introduced.
+Runtime/package/model hashes and limitations: minilm-development-preparation.json.
