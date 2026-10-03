@@ -146,6 +146,7 @@ export function searchPropertyIndex(
 		providerName?: string;
 		filters?: Array<{ key: string; value: string }>;
 		node?: string;
+		schemaPaths?: string[];
 	},
 	limit = 500,
 ) {
@@ -153,6 +154,10 @@ export function searchPropertyIndex(
 	if (!terms.length) return [];
 	const clauses = ["property_search MATCH ?"];
 	const args: string[] = [terms.map(term => `"${term}"`).join(" OR ")];
+	if (scope.schemaPaths?.length) {
+		clauses.push(`schema_path IN (${scope.schemaPaths.map(() => "?").join(",")})`);
+		args.push(...scope.schemaPaths);
+	}
 	if (scope.providerType) {
 		clauses.push("provider_type=?");
 		args.push(scope.providerType);

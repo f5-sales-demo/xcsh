@@ -1567,9 +1567,16 @@ export class TerraformDocumentationRepository {
 					filters.find(f => f.key === "provider_type")?.value ?? terraformQueryIdentity(search).providerType;
 				const provider = taskProvider;
 
+				const timeoutPaths =
+					/\b(?:operation|lifecycle)\s+timeouts?\b|\btimeouts?\s+block\b|\b(?:creation|destruction|deletion|modification)\b/i.test(
+						search,
+					)
+						? terraformTimeoutOperations(search).map(operation => `timeouts.${operation}`)
+						: [];
 				const ranked = searchPropertyIndex(db, search, {
 					providerType: role,
 					providerName: provider,
+					schemaPaths: timeoutPaths,
 					filters,
 					node: node ?? undefined,
 				}).filter(row => !propertyRequestsBlock(search) || row.anchor === "section");
