@@ -9,7 +9,11 @@ import subprocess
 import time
 from pathlib import Path
 
-from model_trace import successful_read_paths, validate_model_activation
+from model_trace import (
+    has_clarification_question,
+    successful_read_paths,
+    validate_model_activation,
+)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
@@ -118,13 +122,7 @@ for case in cases:
         terraform_reads = [
             r for r in reads if r.startswith("xcsh://terraform-documentation/")
         ]
-        clarification = bool(
-            re.search(
-                r"\?|clarif|resource.*data.source|data.source.*resource",
-                text,
-                re.IGNORECASE,
-            )
-        )
+        clarification = has_clarification_question(text)
         claim_text = re.sub(
             r"not verified by (?:a )?live apply|not (?:live[- ]?)?apply evidence|not successfully applied",
             "",

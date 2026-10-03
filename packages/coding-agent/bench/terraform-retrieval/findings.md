@@ -1266,3 +1266,9 @@ idle-timeout route without requiring the word property. Audited development
 remains 47/48; original improves 9/14 to 10/14 with zero wrong answerable leaves.
 497 internal URL tests and workspace checks pass. No held-out claim; exposed
 v4 remains regression-only and frozen failure unchanged.
+
+Clarification trace detection now strips fenced code, Markdown link targets and
+bare URLs before looking for a user-facing question. Previously ?view=context
+inside citations incorrectly passed ambiguity checks. Red/green test reproduces
+this; four Python trace tests, Ruff and compilation pass. Original model report
+will be retained; stricter regrading is separate development evidence.

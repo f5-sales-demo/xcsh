@@ -3,7 +3,11 @@
 
 import unittest
 
-from model_trace import successful_read_paths, validate_model_activation
+from model_trace import (
+    has_clarification_question,
+    successful_read_paths,
+    validate_model_activation,
+)
 
 
 class ModelTraceTests(unittest.TestCase):
@@ -67,3 +71,15 @@ class ModelTraceTests(unittest.TestCase):
                 {"id": "c", "kind": "control", "prompt": "API docs"},
             ]
         )
+
+    def test_citation_query_is_not_clarification(self) -> None:
+        """URL query markers cannot count as a missing-value question."""
+        self.assertFalse(
+            has_clarification_question(
+                "Use [docs](xcsh://terraform-documentation/test.md?view=context#section)."
+            )
+        )
+        self.assertTrue(
+            has_clarification_question("Do you use a P12 bundle or separate PEM files?")
+        )
+        self.assertFalse(has_clarification_question("```hcl\n# which value?\n```"))
