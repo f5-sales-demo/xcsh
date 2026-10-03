@@ -293,3 +293,10 @@ test("imperative scalar requests exclude matching ancestor blocks",()=>{
  const rows=[{provider_type:"resources",provider_name:"fixture",schema_path:"routing.dual_stack",path:"block",anchor:"section",description:"Dual-stack IPv4 or IPv6 address.",score:60,coverage:1},{provider_type:"resources",provider_name:"fixture",schema_path:"routing.dual_stack.ipv4.addr",path:"field",anchor:"schema-field",description:"IPv4 address.",score:55,coverage:1}];
  expect(selectPropertyDestination("In xcsh_fixture, specify the dual-stack IPv4 address.",rows).destinations[0]?.path).toBe("field");
 });
+
+test("field function verbs cannot select an unrelated supported algorithm",()=>{
+ const candidate={...row("default_pool.loadbalancer_algorithm",80),description:"Algorithm to distribute requests across backend servers.",coverage:0.6};
+ for(const verb of ["configures","controls","determines"]){
+  expect(selectPropertyDestination(`Which property ${verb} HTTP/3 BBR congestion control parameters?`,[candidate]).kind).toBe("choices");
+ }
+});

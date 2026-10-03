@@ -87,10 +87,16 @@ export function selectPropertyDestination(
 	if (first.coverage < 0.35 || first.score <= 0)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient query coverage" };
 	let requestedTerms: string[] = [];
-	const intent = queryText.match(
-		/\b(?:sets?|provides?|enables?|accepts?|specifies|specify|specifying|holds?|retrieves?)\b\s+(.+)/i,
-	)?.[1];
-	if (intent && /\b(?:attribute|field|property|parameter|option)\b/i.test(queryText)) {
+	const intent =
+		propertyRequestedText(queryText) ??
+		queryText.match(
+			/\b(?:sets?|provides?|enables?|accepts?|specifies|specify|specifying|holds?|retrieves?)\b\s+(.+)/i,
+		)?.[1];
+	if (
+		intent &&
+		(/\b(?:attribute|field|property|parameter|option)\b/i.test(queryText) ||
+			Boolean(propertyRequestedText(queryText)))
+	) {
 		const generic = new Set(["option", "native", "directly", "allow", "added"]);
 		requestedTerms = propertyQueryTerms(intent.split(/\bfor\b|\breferenced in\b/i)[0]!).filter(
 			term => !generic.has(term),

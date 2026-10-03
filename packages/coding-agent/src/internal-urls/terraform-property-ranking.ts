@@ -67,6 +67,8 @@ export function propertyQueryTerms(text: string): string[] {
 	return propertyTerms(
 		text
 			.toLowerCase()
+			.replace(/operating[ -]+system/g, "os")
+			.replace(/active operational state/g, "active")
 			.replace(/load[ -]+balancer/g, "loadbalancer")
 			.replace(/application[ -]+firewall/g, "app firewall")
 			.replace(/\bsource network address translation\b/g, "snat")
@@ -83,7 +85,7 @@ export function propertyRequestsBlock(text: string): boolean {
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
 	const field = text.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?)\s+)?(.+)/i,
 	)?.[1];
 	const operation =
 		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
