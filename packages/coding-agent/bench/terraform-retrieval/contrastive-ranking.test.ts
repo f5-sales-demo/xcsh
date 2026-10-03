@@ -315,3 +315,9 @@ test("response criteria use condition vocabulary without implying a status code"
  expect(rankPropertyScope("Define login failure criteria in xcsh_fixture",scope)[0]?.schema_path).toBe("login.failure_conditions");
  expect(rankPropertyScope("Which field sets response status code for login failure criteria?",scope)[0]?.schema_path).toBe("login.failure_conditions.status");
 });
+
+test("served hostnames mean domains while backend hostnames retain DNS identity",()=>{
+ expect(propertyQueryTerms("active hostnames routed by the proxy")).toContain("domain");
+ expect(propertyQueryTerms("hostnames served by the load balancer")).toContain("domain");
+ expect(propertyQueryTerms("backend hostname")).toContain("dns");
+});
