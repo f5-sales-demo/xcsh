@@ -775,3 +775,15 @@ test("lifecycle operation wording excludes incidental verbs and conflicts", () =
 	expect(terraformTimeoutOperations("timeout for read operation")).toEqual(["read"]);
 	expect(terraformTimeoutOperations("timeout for resource modification")).toEqual(["update"]);
 });
+
+test("parsed named blocks bypass general declaration examples", () => {
+	expect(
+		terraformTaskDestination(
+			"In xcsh_fixture, where do I declare a direct response route block to return status and body?",
+		),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Where do I declare xcsh_fixture resource block?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
