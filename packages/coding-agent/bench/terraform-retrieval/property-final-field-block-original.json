@@ -1,0 +1,30 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "provider_version": "v12.3.1",
+  "property_cases": 14,
+  "correct_leaf": 9,
+  "false_leaf": 0,
+  "clarifications": 5,
+  "property_first": 12,
+  "property_top5": 13,
+  "preparation_ms": 756.425784,
+  "scope_preparation_ms": 404.56756399999995,
+  "experimental_complete_route_p95_ms": 32.54644999999982,
+  "limitations": [
+    "Measured route includes candidate query, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+    "Development labels have known defects and unresolved same-role ambiguities.",
+    "Experimental in-memory FTS and preloaded scope statistics remain outside production. Cold artifact materialization, final indexed storage and installed acceptance remain unverified."
+  ],
+  "complete_results": {
+    "artifact": "property-final-field-block-original.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "d245796b613950615596cbef74b72241f20544110c61cc3d755fb6d754f3bedb",
+    "uncompressed_bytes": 104058,
+    "compressed_sha256": "f3d74436f186487b1e2ef59d7f1224411df4d537647763650638d119193c38d1",
+    "compressed_bytes": 13580
+  }
+}

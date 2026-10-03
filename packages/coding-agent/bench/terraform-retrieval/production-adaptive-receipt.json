@@ -1,0 +1,64 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_search_route_integrated": true,
+  "reports": {
+    "audited": {
+      "raw_sha256": "eaa9f01dc5395cff38d506c10f02c1ee6ba4c4cbd9899ccc5f537a5c36e67713",
+      "gzip_sha256": "1f41588be7e2a2e503ad18e3253cde52cbf59ba85a28058e6c2719e8e9ca6352",
+      "report_file": "production-adaptive-audited.json.gz",
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "cold_materialization_ms": 1700.536879,
+      "warm_p95_ms": 59.001798999999664,
+      "answerable": 48,
+      "correct_leaf": 39,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 48,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ]
+    },
+    "original": {
+      "raw_sha256": "b5c2c5893877d8210532e55aedc0bc8faa05269401c2688240b03895311b6bdc",
+      "gzip_sha256": "ca1ac0e2ff1f9f15b8519419f98ef9fd841a7c16fd2723f2f7962dea837cb3aa",
+      "report_file": "production-adaptive-original.json.gz",
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "cold_materialization_ms": 1725.441743,
+      "warm_p95_ms": 85.85565099999985,
+      "answerable": 14,
+      "correct_leaf": 9,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 3,
+      "control_leaf": 0,
+      "answerable_top5": 13,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ]
+    }
+  },
+  "source_files": {
+    "terraform-documentation.ts": "45fc8f4469d3fdbca7452e7f6d55114317cc2c46e4cf4bf32bc1242067f7e907",
+    "terraform-property-ranking.ts": "514c72293afebd6acfd9f12a511616726117803aa93b4f33a2c9381b39172d49",
+    "terraform-property-index.ts": "141f25cb7bb70d17edd0f45ce1488e79a5b2b5e5c55d17c981e1d17523a2430f",
+    "terraform-property-selection.ts": "8c13ea49c4cd630219931c69bc97bebfa71b6f0de81c98dc1a359c70bae07a42",
+    "terraform-task-route.ts": "26b84643c8186454365e263d63bbc94430b03b5420989e3c280e7588221824b2"
+  }
+}

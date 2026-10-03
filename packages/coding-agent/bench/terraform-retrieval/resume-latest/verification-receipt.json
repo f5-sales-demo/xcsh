@@ -1,0 +1,63 @@
+{
+  "qualification_passed": false,
+  "source_commit": "d2978f62c34ada5e18d2c4ae9b6d53bc5268f173",
+  "full_ts": {
+    "result": "failed",
+    "coding_agent_pass": 9466,
+    "coding_agent_skip": 562,
+    "coding_agent_fail": 1,
+    "failure": "worker startup deadline exceeded"
+  },
+  "serial_coding_agent": {
+    "pass": 9254,
+    "skip": 562,
+    "fail": 0,
+    "files": 932,
+    "elapsed_seconds": 483.13
+  },
+  "isolated_worker": {
+    "pass": 2,
+    "fail": 0
+  },
+  "serial_worker": {
+    "pass": 2,
+    "fail": 0
+  },
+  "files": [
+    {
+      "path": "full-ts-concurrent.log.gz",
+      "sha256": "d838e80867b1de9a9687e6f22cfe88e1ec5f555dec074e9e7079267cd3d1ade8",
+      "gzip_sha256": "fc944b963f7b68becd5b1fc1b6aebc473652475e6f7f116677ec7e193164ca6b"
+    },
+    {
+      "path": "coding-agent-serial.log.gz",
+      "sha256": "b4d9669a9c30fc2c2a72211ebc62fff73b200ddffc8e9ca14e67d803501c7946",
+      "gzip_sha256": "b69b126054038ef5751f3107870aca8922cc7b6345ff899c648272584a8b8ea9"
+    },
+    {
+      "path": "worker-isolated.log.gz",
+      "sha256": "e52eb495345f7a5edca7d997bab96512b80edd913f4bc092c67006f4e528d74d",
+      "gzip_sha256": "dbf6b8c5f778794007178ef8324991ae28dfb66e9bedcbafa7b2d2bc03493586"
+    },
+    {
+      "path": "worker-serial.log.gz",
+      "sha256": "e03ca18f94c82c8d686e228832dfb3a705a0207669af2280bf3df040e1b6a1bc",
+      "gzip_sha256": "57d0328f8bfc5e80546460549424ddc5ffff932549f85755cdd6a4f751cd263b"
+    },
+    {
+      "path": "fresh-review-first.json.gz",
+      "sha256": "3767249c4627863dc7fd174e4c70768cb50b9cf6cf735ee2029ab57ebeaf1245",
+      "gzip_sha256": "b71371ea03db527598faeb12734e3f1d7d82178576a33cb947a5c71d75694cc0"
+    },
+    {
+      "path": "fresh-review-first-validation.json.gz",
+      "sha256": "7cd5ea19ebc935394bd08d2d293a39ce66c6f27057f44d1f126ada8fce7d54b7",
+      "gzip_sha256": "c7f168b5b585814b5d53e38768577531cb6062c13456a8ec52046b975082c538"
+    }
+  ],
+  "limitations": [
+    "Serial coding-agent rerun covers test/; initial workspace suite also covers additional package files. Original full-suite failure retained.",
+    "Fresh source review first batch still fails exact quote validation.",
+    "Installed model and held-out qualification unfulfilled."
+  ]
+}

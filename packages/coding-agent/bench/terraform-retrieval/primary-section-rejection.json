@@ -1,0 +1,24 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "materialization_ms": 0.06002600000000058,
+  "index_bytes": 35741696,
+  "answerable": 140,
+  "top1": 27,
+  "top5": 53,
+  "p95": 37.061352999999144,
+  "post_analysis_regression": true,
+  "production_promoted": false,
+  "timing_scope": "ranking only; excludes full resolver response and cold index creation",
+  "source_provider_version": "v12.2.0",
+  "source_commit": "b53aad4062cce8c72c387720a614043232d129b9",
+  "rejection_reason": "Primary direct-property candidate ranking reaches27/140first and53/140top5;insufficient recall and no qualified selection route.",
+  "complete_results": {
+    "artifact": "primary-section-rejection.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "ff3bce66db5a888a2524a39446b3206366fdbfec3f7122c082f41465223b5a41",
+    "uncompressed_bytes": 975766,
+    "compressed_sha256": "4b767b25c01d67610762328bbf1547e2b2f0dda23b34a0c78d7e0d9989c87f94",
+    "compressed_bytes": 88085
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "consumer_source_commit": "eca11f8ae",
+  "cases_compared": 200,
+  "comparison_fields": [
+    "passed",
+    "top5",
+    "rank",
+    "matched_expected",
+    "selected",
+    "selection_correct",
+    "destinations",
+    "response_bytes",
+    "leaf_read_bytes"
+  ],
+  "differences": [],
+  "index": {
+    "sha256": "c77d9f2c3cb49ad9bf06f06cd268de5f4ad5f9fc66ee4b8ccfe469a2515a5a6d",
+    "size_bytes": 745205760,
+    "gzip_sha256": "d40c016952592b967421134942e2f8c477875b02637c8e0b6b2e91924ccff051",
+    "gzip_size_bytes": 65234569
+  },
+  "mac": {
+    "warm_p95_ms": 83.33862500000032,
+    "discovery_p95_ms": 85.65429200000017,
+    "materialization_ms": 1199.347791
+  },
+  "ubuntu": {
+    "warm_p95_ms": 96.42131400000017,
+    "discovery_p95_ms": 99.89275099999941,
+    "materialization_ms": 2815.139756
+  },
+  "answerable_accuracy": 0.30714285714285716,
+  "answerable_top5": 0.5285714285714286,
+  "mac_raw_sha256": "414979c0055c904b444a7a857e0823a0aff3f71530cbcb442da6db48e260816b",
+  "ubuntu_raw_sha256": "d7ceaa7465df08047bcb74796af8ac921e4906749287fc4b5eb44ff2833b6e43",
+  "limitations": [
+    "Mac source files copied from verified Ubuntu branch into existing bootstrapped worktree; Git unavailable due Xcode license.",
+    "Complete response hash parity was not repeated for this focused follow-up.",
+    "Installed release and held-out qualification remain unfinished."
+  ]
+}

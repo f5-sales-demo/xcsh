@@ -1,0 +1,34 @@
+{
+  "final_result_received": true,
+  "status": "SUCCESS",
+  "verdict": "label-defects",
+  "reviewed_case_count": 200,
+  "suite_sha256": "6deb592af8737b3d91085b5e28c939d8d928f5eb5243ae833d5ee754bb348d6a",
+  "review_sha256": "e1735145dcfefcea9e9dcebb80f50b09c9dc87050f00ff2873a495f54cb0aa3d",
+  "invalid_ids": [
+    "ans-deep-020",
+    "ans-deep-053",
+    "ans-std-052",
+    "amb-002",
+    "amb-006",
+    "amb-008",
+    "amb-011",
+    "amb-014",
+    "amb-040"
+  ],
+  "disagrees_with_existing_collision_audit_ids": [
+    "ans-deep-007",
+    "ans-deep-008",
+    "ans-deep-009",
+    "ans-deep-010",
+    "ans-deep-011",
+    "ans-deep-012",
+    "ans-deep-013",
+    "ans-deep-014",
+    "ans-deep-017",
+    "ans-deep-021",
+    "ans-deep-028"
+  ],
+  "qualification_passed": false,
+  "resolution": "Conflicting source reviews require adjudication. Frozen suite remains ineligible and unchanged."
+}

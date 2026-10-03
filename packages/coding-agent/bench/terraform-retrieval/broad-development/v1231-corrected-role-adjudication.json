@@ -1,0 +1,31 @@
+{
+  "source_only": true,
+  "cases": [
+    {
+      "id": "dev-broad-007",
+      "valid_unique_role": false,
+      "reason": "The prompt asks 'Which parameter specifies the expected HTTP status code string for login success conditions in a CloudFront protected application endpoint?'. This grammatical usage of 'specifies' inquires about schema field function/definition rather than expressing imperative user configuration intent ('Where do I configure/specify...'). With all provider roles available in source-all-roles.json, both documentation/resources/protected_application and documentation/data-sources/protected_application exist in the canonical documentation and expose the identical 'status' enum attribute under cloudfront.protected_endpoints.flow_label.authentication.login.transaction_result.success_conditions. Because role-distinguishing intent is absent and both valid destinations exist, the prompt is ambiguous between the resource and data-source roles.",
+      "exact_targets": [
+        "xcsh://terraform-documentation/documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status",
+        "xcsh://terraform-documentation/documentation/data-sources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+      ],
+      "evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:204-212",
+        "documentation/data-sources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:180-188"
+      ]
+    },
+    {
+      "id": "dev-broad-025",
+      "valid_unique_role": false,
+      "reason": "The prompt asks 'Which parameter specifies the ending IPv6 address for a DHCP address pool on a VoltStack site ethernet interface router?'. This grammatical phrasing inquires about parameter function rather than expressing imperative user configuration intent ('Where do I configure/specify...'). With full provider roles available in source-all-roles.json, both documentation/resources/voltstack_site and documentation/data-sources/voltstack_site exist in the canonical documentation and expose the identical 'end_ip' parameter under custom_network_config.interface_list.interfaces.ethernet_interface.ipv6_auto_config.router.stateful.dhcp_networks.pools. Because the prompt omits role-specifying context, the query is ambiguous between the resource and data-source roles.",
+      "exact_targets": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip",
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip"
+      ],
+      "evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:75-83",
+        "documentation/data-sources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:67-75"
+      ]
+    }
+  ]
+}

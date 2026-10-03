@@ -1,0 +1,29 @@
+{
+  "source_only": true,
+  "qualification_passed": false,
+  "network_disabled": true,
+  "report": "v1240-shape-mac-corpus-views.json.gz",
+  "sha256": "90f4cb70232d192e08bb1bc6d6866283f2848bfbac827e48721353da56fd775e",
+  "gzip_sha256": "15312162f455fdf62161108f250c1c98b1fd753e91083fe85a63a8b6fde714b3",
+  "corpus_view_counts_and_limits_equal": true,
+  "summary": {
+    "source_only": true,
+    "qualification_passed": false,
+    "provider_version": "v12.4.0",
+    "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+    "documents": 18958,
+    "hints": 18958,
+    "contexts": 19143,
+    "max_hint_bytes": 4084,
+    "max_context_bytes": 15226,
+    "continuations": 185,
+    "full_reads": 19143,
+    "oversized_full_reads": 113,
+    "elapsed_ms": 3499.6652500000005,
+    "failures": [],
+    "limitations": [
+      "Source corpus views and full-read destinations only; no semantic accuracy or installed-model acceptance.",
+      "Repeated full reads counted per context response."
+    ]
+  }
+}

@@ -1,0 +1,274 @@
+{
+  "cases": [
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#section"
+      ],
+      "id": "ans-deep-007",
+      "reason": "Prompt asks where to configure blindfolded secret credentials for simple login crawler password when discovery is enabled, but omits whether configuration belongs under top-level API discovery (enable_api_discovery) or single load balancer app ML discovery (single_lb_app.enable_discovery). Because both modes provide identical crawler password secret configuration blocks, the absence of mode qualifier is genuine ambiguity.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/index.md:4: description: \"Specifies the settings used for API discovery.\"",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/index.md:4: description: \"Specifies the settings used for API discovery.\"",
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:26: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#section"
+      ],
+      "id": "ans-deep-008",
+      "reason": "Prompt queries clear secret info for the simple login crawler password in discovery crawling, but lacks qualification distinguishing top-level API discovery (enable_api_discovery) from per-app discovery (single_lb_app.enable_discovery). Both branches share the described password configuration block, resulting in genuine ambiguity.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/index.md:4: description: \"Specifies the settings used for API discovery.\"",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/index.md:4: description: \"Specifies the settings used for API discovery.\"",
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md:26: <a id=\"section\"></a>",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/index.md#section"
+      ],
+      "id": "ans-deep-009",
+      "reason": "Prompt queries cookie operator rules for mobile endpoint success evaluation in bot_endpoint_policy data source, but does not specify whether matching evaluates cookies_none, cookies_and, or cookies_or. All three parent nesting candidates provide identical cookie_operator schema blocks.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/index.md:27: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/index.md:27: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/index.md#section"
+      ],
+      "id": "ans-deep-010",
+      "reason": "Prompt asks for the individual cookie matcher block under cookie operator for mobile endpoint success evaluation, omitting whether the parent operator belongs to cookies_none, cookies_and, or cookies_or.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/index.md:28: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/index.md:28: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_or/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/index.md#section"
+      ],
+      "id": "ans-deep-011",
+      "reason": "Prompt queries where cookie_or logical rule is defined for mobile transaction success criteria without specifying whether it targets direct cookie_v2.cookies_or or nested cookie_or operators under cookies_none, cookies_and, or cookies_or.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_or/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_and/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_and/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/index.md#section"
+      ],
+      "id": "ans-deep-012",
+      "reason": "Prompt queries cookie_and operator block for mobile endpoint success criteria without specifying whether it targets direct cookie_v2.cookies_and or nested cookie_and conditions under parent cookies_none, cookies_and, or cookies_or.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_and/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_and/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_and/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/index.md:27: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_none/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_none/index.md#section"
+      ],
+      "id": "ans-deep-013",
+      "reason": "Prompt queries where cookie_none is specified for mobile transaction success criteria without distinguishing between top-level cookie_v2.cookies_none and nested cookie_none matchers under cookies_none, cookies_and, or cookies_or.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/index.md:27: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_none/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_none/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_none/index.md:29: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_anything/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_anything/index.md#section"
+      ],
+      "id": "ans-deep-014",
+      "reason": "Prompt asks for the schema path representing cookie_anything in mobile success criteria without specifying whether parent nesting is cookies_none, cookies_and, or cookies_or.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_anything/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_and/cookie_operator/cookie/cookie_anything/index.md:29: <a id=\"section\"></a>",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_anything/index.md:29: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md#section"
+      ],
+      "id": "ans-deep-017",
+      "reason": "Prompt specifies disabling caching on a custom route object for xcsh_workload, but omits branch qualifiers distinguishing stateless (service) from stateful (stateful_service), and custom site (advertise_custom) from public (advertise_on_public), leaving six identical candidate paths across these branches.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md:27: <a id=\"section\"></a>",
+        "documentation/resources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md:27: <a id=\"section\"></a>",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md:28: <a id=\"section\"></a>",
+        "documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/custom_route_object/caching_disable/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#section"
+      ],
+      "id": "ans-deep-020",
+      "reason": "Prompt requests configuration for a simple route path match prefix under a stateful service advertised on 'public ports' (plural), which conflicts with the frozen label's single port schema block port and points to multi_ports.ports. Moreover, anchor existence alone does not establish uniqueness between the single and multi-port schema branches.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:28: <a id=\"section\"></a>",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124: <a id=\"schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix\"></a>",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:29: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-021",
+      "reason": "Prompt asks where to configure route redirect destination parameters for a stateful workload advertised on a public port. The prompt contains all necessary branch qualifiers: stateful (stateful_service), public (advertise_on_public), and the singular qualifier 'a public port' which uniquely aligns with the single port block port ('Advertise single port') rather than the multi-port list block multi_ports ('Advertise multiple ports'). The frozen block-level destination is uniquely identified.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/index.md:4: description: \"Advertise single port.\"",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/index.md:4: description: \"Advertise multiple ports.\"",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#section"
+      ],
+      "id": "ans-deep-028",
+      "reason": "Prompt queries redirect route parameters for 'custom port stateful services' in xcsh_workload data source. This phrasing conflates custom site advertising (advertise_custom.ports) with public port advertising (advertise_on_public.port), failing to provide the branch qualifier to resolve between custom-site and public options.",
+      "source_evidence": [
+        "documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/index.md:4: description: \"Advertise this workload via loadbalancer on specific sites.\"",
+        "documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/index.md:4: description: \"Advertise this workload via loadbalancer on Internet with default VIP.\"",
+        "documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:28: <a id=\"section\"></a>",
+        "documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:28: <a id=\"section\"></a>"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-deep-053",
+      "reason": "Prompt asks where in fleet storage device configuration a clear secret URL can be specified for Pure Storage FlashArray API tokens. The enclosing configuration block clear_secret_info#section is the correct canonical block target under flash_arrays.api_token for this 'Where...' query, consistent with benchmark block resolution patterns. Reviewer B's claim of a property-to-block defect is an over-extension because the block itself uniquely contains and configures this secret info.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/clear_secret_info/index.md:27: <a id=\"section\"></a>",
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/clear_secret_info/index.md:71: <a id=\"schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--clear_secret_info--url\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "ans-std-052",
+      "reason": "Prompt asks where to configure private IP addresses residing inside a virtual network for origin servers. The frozen label targets origin_servers.vn_private_ip#section ('Specify origin server with IP on Virtual Network'), which is the proper block-level destination for standard-depth cases. Reviewer B's property-to-block defect claim is invalid; standard-depth queries across the suite deliberately resolve to enclosing block sections.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md:21: <a id=\"section\"></a>",
+        "documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md:25: Specify origin server with IP on Virtual Network.",
+        "documentation/resources/origin_pool/properties/origin_servers/vn_private_ip/index.md:51: <a id=\"schema-origin_servers--vn_private_ip--ip\"></a>"
+      ],
+      "valid": true
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-002",
+      "reason": "Case exhibits a provider_role metadata defect. In the benchmark schema, provider_role represents document role (matching frontmatter role in 194 of 200 cases), but here is labeled 'properties' while both expected destination documents are fundamentals specifications with frontmatter role 'fundamentals'.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/index.md:5: xcsh_docs: {\"aliases\": [\"origin pool\"], ... \"role\": \"fundamentals\", ...}",
+        "documentation/resources/origin_pool/index.md:31: ## Minimal configuration",
+        "documentation/data-sources/origin_pool/index.md:60: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-006",
+      "reason": "Case exhibits a provider_role metadata defect. The frozen label specifies provider_role 'properties', but both destination documents are fundamentals documents with frontmatter role 'fundamentals'.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/index.md:5: xcsh_docs: {\"aliases\": [\"dns zone\"], ... \"role\": \"fundamentals\", ...}",
+        "documentation/resources/dns_zone/index.md:31: ## Minimal configuration",
+        "documentation/data-sources/dns_zone/index.md:73: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-008",
+      "reason": "Case exhibits a provider_role metadata defect. The frozen label assigns provider_role 'properties', but both destination documents are fundamentals documents with frontmatter role 'fundamentals'.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/index.md:5: xcsh_docs: {\"aliases\": [\"alert policy\"], ... \"role\": \"fundamentals\", ...}",
+        "documentation/resources/alert_policy/index.md:26: ## Minimal configuration",
+        "documentation/data-sources/alert_policy/index.md:55: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-011",
+      "reason": "Case exhibits a provider_role metadata defect. The frozen label assigns provider_role 'properties', but both destination documents are fundamentals documents with frontmatter role 'fundamentals'.",
+      "source_evidence": [
+        "documentation/resources/container_registry/index.md:5: xcsh_docs: {\"aliases\": [\"container registry\"], ... \"role\": \"fundamentals\", ...}",
+        "documentation/resources/container_registry/index.md:27: ## Minimal configuration",
+        "documentation/data-sources/container_registry/index.md:56: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-014",
+      "reason": "Case exhibits a provider_role metadata defect. The frozen label assigns provider_role 'properties', but both destination documents are fundamentals documents with frontmatter role 'fundamentals'.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/index.md:5: xcsh_docs: {\"aliases\": [\"aws vpc site\"], ... \"role\": \"fundamentals\", ...}",
+        "documentation/resources/aws_vpc_site/index.md:31: ## Minimal configuration",
+        "documentation/data-sources/aws_vpc_site/index.md:60: ## Root configuration"
+      ],
+      "valid": false
+    },
+    {
+      "alternative_destinations": [],
+      "id": "amb-040",
+      "reason": "Case exhibits a provider_role metadata defect. The frozen label assigns provider_role 'properties', but the expected destination documents have document roles 'fundamentals' and 'import'.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/index.md:5: xcsh_docs: {\"aliases\": [\"http loadbalancer\"], ... \"role\": \"fundamentals\", ...}",
+        "documentation/resources/http_loadbalancer/index.md:41: ## Minimal configuration",
+        "documentation/resources/http_loadbalancer/lifecycle/import/index.md:5: xcsh_docs: {\"aliases\": [\"http loadbalancer\"], ... \"role\": \"import\", ...}",
+        "documentation/resources/http_loadbalancer/lifecycle/import/index.md:12: # Import"
+      ],
+      "valid": false
+    }
+  ],
+  "limitations": [
+    "Audit performed strictly via read-only source inspection of canonical documentation/ and cases.json without runtime retrieval, Terraform execution, or network access.",
+    "Collision analysis examined schema tree structures, OneOf siblings, repeated blocks, and semantic phrasing within provider roles.",
+    "This benchmark source-collision adjudication evaluates destination uniqueness and schema metadata integrity without modifying frozen benchmark labels."
+  ],
+  "verdict": "label-defects"
+}

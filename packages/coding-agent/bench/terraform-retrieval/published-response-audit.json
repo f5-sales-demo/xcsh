@@ -1,0 +1,15 @@
+{
+  "provider_version": "v12.2.0",
+  "index": {
+    "sha256": "36bc4c943f824131b4967ef8ddc194e6eef7a59b2bc6b8278231f1d4e89e7bdd",
+    "size_bytes": 902631424,
+    "gzip_sha256": "7e667dffdd457cde10fdcdf72f90aedf99c37bc298378cd7c55a11f6f5e4f072",
+    "gzip_size_bytes": 78715948
+  },
+  "documents": 18954,
+  "responses": 37908,
+  "max_hint_bytes": 4084,
+  "max_context_bytes": 15155,
+  "errors": [],
+  "qualified": false
+}

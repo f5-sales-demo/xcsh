@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
 	parseTerraformPin,
 	rewriteTerraformLinks,
+	scoreTerraformAliasContext,
+	terraformNamedChoice,
 	terraformPassages,
+	terraformProviderMention,
+	terraformProviderSetupDestination,
+	terraformQueryIdentity,
 	terraformSearchQuery,
 } from "../../src/internal-urls/terraform-documentation";
 
@@ -52,4 +57,55 @@ describe("Terraform documentation", () => {
 	test("rejects unpinned snapshot identities", () => {
 		expect(() => parseTerraformPin({})).toThrow("Invalid Terraform snapshot identity");
 	});
+});
+
+test("secret decryption and storage providers are not root provider authentication", () => {
+	expect(
+		terraformProviderSetupDestination("Where are credentials for the API crawler secret store provider configured?"),
+	).toBeUndefined();
+	expect(
+		terraformProviderSetupDestination("Which decryption provider authenticates crawler password secrets?"),
+	).toBeUndefined();
+	expect(terraformProviderSetupDestination("Configure API token authentication for the xcsh provider")).toBe(
+		"option-1-api-token-authentication",
+	);
+});
+
+test("configuration verbs imply resource intent while read and mixed intent remain distinct", () => {
+	expect(terraformQueryIdentity("Where do I supply a TLS certificate?").providerType).toBe("resources");
+	expect(terraformQueryIdentity("How do I specify the backend address?").providerType).toBe("resources");
+	expect(terraformQueryIdentity("Where do I configure or reference the backend port?").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Read an existing certificate data source").providerType).toBe("data-sources");
+});
+
+test("generic descriptive nouns do not assert a provider owner", () => {
+	const names = ["endpoint", "authentication", "http_loadbalancer", "certificate"];
+	expect(
+		terraformProviderMention("set response status for authentication on protected endpoints", names),
+	).toBeUndefined();
+	expect(terraformProviderMention("certificate resource configuration", names)).toBe("certificate");
+	expect(terraformProviderMention("HTTP load balancer Bot Defense authentication status", names)).toBe(
+		"http_loadbalancer",
+	);
+	expect(terraformProviderMention("xcsh_endpoint namespace", names)).toBe("endpoint");
+});
+
+test("alias branch scoring recognizes Kubernetes schema terminology", () => {
+	const query = "Specify the Kubernetes service name for endpoint discovery";
+	expect(
+		scoreTerraformAliasContext(query, "origin_servers.k8s_service.service_name", ["origin", "pool"]),
+	).toBeGreaterThan(
+		scoreTerraformAliasContext(query, "origin_servers.consul_service.service_name", ["origin", "pool"]),
+	);
+});
+
+test("common protocol wording does not choose a certificate architecture", () => {
+	const choices = [
+		{ schema_path: ["https"], aliases: ["existing certificates"] },
+		{ schema_path: ["https_auto_cert"], aliases: ["automatic certificates"] },
+	];
+	expect(terraformNamedChoice("Terminate HTTPS traffic with TLS encryption", choices)).toBeUndefined();
+	expect(terraformNamedChoice("HTTPS with automatic certificates", choices)).toBe(1);
+	expect(terraformNamedChoice("Use existing certificates for HTTPS", choices)).toBe(0);
+	expect(terraformNamedChoice("Configure https_auto_cert", choices)).toBe(1);
 });

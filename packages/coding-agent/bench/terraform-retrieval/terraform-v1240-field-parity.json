@@ -1,0 +1,23 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+  "cases": 80,
+  "response_differences": 0,
+  "network_disabled": true,
+  "reports": {
+    "terraform-v1240-field-mac-offline": {
+      "sha256": "6290c8aec95113d444fe5a610f3ff3d42b734877c2844713a71d3784dc2d2fd4",
+      "gzip_sha256": "cf648e74c0cfc2488144075e41575f934b7867f83852c313d066d297212821b1",
+      "p95_ms": 31.69574999999986
+    },
+    "terraform-v1240-field-linux-offline": {
+      "sha256": "55277d7a39e9ba4fea640be62799401216beb0cfb31ec045a66fad8612614c69",
+      "gzip_sha256": "fc2a26b47eb75e522615d541039d2dbc9c93d934887635d63afb16802e9c1e12",
+      "p95_ms": 32.160351999999875
+    }
+  },
+  "limitations": [
+    "Source development route only; final installed artifact qualification remains incomplete."
+  ]
+}

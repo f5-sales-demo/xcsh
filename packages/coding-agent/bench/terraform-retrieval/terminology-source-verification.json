@@ -1,0 +1,572 @@
+{
+  "source_only": true,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "candidate_sha256": "67c0f90069909181b427a3e26668eae899f99246d8bd751fccea7940b88828d5",
+  "verdict": "narrowed",
+  "reviewed_entries": 30,
+  "entries": [
+    {
+      "index": 0,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures the timeout duration for resource creation.",
+      "corrected_aliases": [
+        "create timeout",
+        "creation duration"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/timeouts/#schema-timeouts--create",
+      "verbatim_support": "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+      "reason": "Verbatim source defines Go ParseDuration syntax for create timeout; candidate claim of operational wait behavior is unentailed and narrowed to conservative configuration."
+    },
+    {
+      "index": 1,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures the timeout duration for read operations during refresh or planning.",
+      "corrected_aliases": [
+        "read timeout",
+        "refresh timeout",
+        "read duration"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/timeouts/#schema-timeouts--read",
+      "verbatim_support": "Read operations occur during any refresh or planning operation when refresh is enabled.",
+      "reason": "Verbatim source documents read operations during refresh or planning; narrowed to remove operational wait semantics and speculative query aliases."
+    },
+    {
+      "index": 2,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures the timeout duration for resource update operations.",
+      "corrected_aliases": [
+        "update timeout",
+        "update duration",
+        "modification timeout"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/timeouts/#schema-timeouts--update",
+      "verbatim_support": "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+      "reason": "Verbatim source defines duration syntax for update timeout; candidate claim of operational wait behavior is unentailed and narrowed to conservative configuration."
+    },
+    {
+      "index": 3,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures the timeout duration for resource deletion, applicable only if changes are saved into state before destroy.",
+      "corrected_aliases": [
+        "delete timeout",
+        "destroy timeout",
+        "deletion duration"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/timeouts/#schema-timeouts--delete",
+      "verbatim_support": "Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.",
+      "reason": "Verbatim source documents state persistence prerequisite for delete operations; narrowed to remove operational wait semantics and speculative deadline alias."
+    },
+    {
+      "index": 4,
+      "verdict": "narrowed",
+      "corrected_summary": "Guidance on configuring supported operation timeouts for xcsh_network_interface using Terraform duration strings such as 30m.",
+      "corrected_aliases": [
+        "resource timeouts",
+        "operation timeouts",
+        "timeouts guide",
+        "lifecycle timeouts"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/lifecycle/timeouts/",
+      "verbatim_support": "Configure the supported operation timeouts in the [timeouts](https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/timeouts/). Use Terraform duration strings such as `30m`.",
+      "reason": "Verbatim lifecycle guidance refers to supported operation timeouts rather than unentailed CRUD operation timeouts; narrowed accordingly."
+    },
+    {
+      "index": 5,
+      "verdict": "narrowed",
+      "corrected_summary": "Action execution semantics: invoked via Terraform action triggers or terraform apply -invoke without maintaining a resource lifecycle.",
+      "corrected_aliases": [
+        "action invocation",
+        "action execution",
+        "action lifecycle"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/actions/site_upgrade_sw/lifecycle/",
+      "verbatim_support": "Invoke this action using Terraform action triggers or `terraform apply -invoke`. The action executes its documented operation; it does not maintain a resource lifecycle. Inspect asynchronous operations separately where described by the API.",
+      "reason": "Verbatim lifecycle source states the action does not maintain a resource lifecycle; narrowed to remove unentailed timeout claims and speculative one-time action alias."
+    },
+    {
+      "index": 6,
+      "verdict": "narrowed",
+      "corrected_summary": "Ephemeral resource evaluation lifecycle: opened during evaluation and closed when its lifecycle ends without storing values in plans or state.",
+      "corrected_aliases": [
+        "ephemeral lifecycle",
+        "ephemeral evaluation"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/ephemeral-resources/kubernetes_manifests/lifecycle/",
+      "verbatim_support": "Terraform opens this ephemeral resource during evaluation and closes it when its lifecycle ends. Ephemeral values are not stored in plans or state. Use returned credentials only in contexts that permit ephemeral values.",
+      "reason": "Narrowed to verbatim evaluation lifecycle wording; removed speculative plan/apply phrasing and unentailed aliases."
+    },
+    {
+      "index": 7,
+      "verdict": "approved",
+      "corrected_summary": "Provider-level configuration and credentials setup for authenticating to F5 Distributed Cloud via API token, PKCS#12 bundle, or PEM certificates.",
+      "corrected_aliases": [
+        "provider setup",
+        "provider configuration",
+        "authentication setup",
+        "credentials configuration"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/provider/setup/",
+      "verbatim_support": "The XCSH Terraform provider supports multiple authentication methods: 1. API Token \u2014 Token-based bearer authentication 2. P12 Certificate \u2014 Mutual TLS authentication using a PKCS#12 bundle (recommended for production) 3. PEM Certificate \u2014 Certificate-based authentication using separate PEM certificate and private key files",
+      "reason": "Verbatim provider overview documents provider setup and all three authentication methods; proposed aliases correctly replace misplaced upstream import aliases."
+    },
+    {
+      "index": 8,
+      "verdict": "approved",
+      "corrected_summary": "Bearer token string used for API token authentication against F5 Distributed Cloud; can be set via XCSH_API_TOKEN.",
+      "corrected_aliases": [
+        "api token",
+        "bearer token",
+        "auth token",
+        "xcsh api token"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/provider/setup/#argument-reference",
+      "verbatim_support": "* `api_token` \u2014 F5 Distributed Cloud API token (`String`, Sensitive). Can also be set with the `XCSH_API_TOKEN` environment variable.",
+      "reason": "Verbatim argument reference and Option 1 authentication documentation explicitly confirm bearer token purpose and XCSH_API_TOKEN environment variable."
+    },
+    {
+      "index": 9,
+      "verdict": "approved",
+      "corrected_summary": "Filesystem path to PKCS#12 (.p12) bundle for mutual TLS authentication to F5 Distributed Cloud; requires p12_password.",
+      "corrected_aliases": [
+        "p12 certificate file",
+        "pkcs12 bundle",
+        "client certificate file",
+        "mtls p12"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/provider/setup/#argument-reference",
+      "verbatim_support": "* `api_p12_file` \u2014 Path to a PKCS#12 certificate bundle file (`String`). Can also be set with the `XCSH_P12_FILE` environment variable. Requires `p12_password`.",
+      "reason": "Verbatim argument reference and Option 2 authentication documentation explicitly confirm PKCS#12 bundle path, mutual TLS purpose, and p12_password requirement."
+    },
+    {
+      "index": 10,
+      "verdict": "approved",
+      "corrected_summary": "Base tenant console URL without /api suffix for F5 Distributed Cloud API requests; configurable via XCSH_API_URL.",
+      "corrected_aliases": [
+        "tenant url",
+        "console url",
+        "api endpoint",
+        "base url"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/provider/setup/#optional",
+      "verbatim_support": "* `api_url` \u2014 F5 Distributed Cloud API URL (`String`). Base URL **without** `/api` suffix. Required. No default. Set to your tenant URL (for example, `https://<XC_TENANT>.console.ves.volterra.io`). Can also be set with the `XCSH_API_URL` environment variable.",
+      "reason": "Verbatim argument reference explicitly specifies base URL format without /api suffix and XCSH_API_URL environment variable."
+    },
+    {
+      "index": 11,
+      "verdict": "narrowed",
+      "corrected_summary": "Filesystem path to PEM-encoded certificate file for certificate-based authentication; paired with api_key and configurable via XCSH_CERT.",
+      "corrected_aliases": [
+        "pem certificate",
+        "client cert file",
+        "api cert",
+        "tls certificate path"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/provider/setup/#argument-reference",
+      "verbatim_support": "* `api_cert` and `api_key` \u2014 Paths to PEM-encoded certificate and private key files (`String`). Can also be set with the `XCSH_CERT` and `XCSH_KEY` environment variables.",
+      "reason": "Verbatim Option 3 specifies Certificate-based authentication rather than mTLS; narrowed to match documented certificate-based authentication."
+    },
+    {
+      "index": 12,
+      "verdict": "approved",
+      "corrected_summary": "Queries and inspects existing F5 Distributed Cloud Network Interface configuration by name and namespace as read-only computed state.",
+      "corrected_aliases": [
+        "lookup network interface",
+        "read network interface",
+        "inspect network interface",
+        "network interface data source"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/network_interface/",
+      "verbatim_support": "# Look up an existing NetworkInterface by name\ndata \"xcsh_network_interface\" \"example\" {\n  name      = \"example-network-interface\"\n  namespace = \"staging\"\n}",
+      "reason": "Correctly describes inspection of existing network interface configuration by name and namespace in accordance with data-source query semantics."
+    },
+    {
+      "index": 13,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures an F5 Distributed Cloud Network Interface resource in the specified namespace.",
+      "corrected_aliases": [
+        "manage network interface",
+        "create network interface",
+        "network interface resource"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/",
+      "verbatim_support": "# Basic NetworkInterface configuration\nresource \"xcsh_network_interface\" \"example\" {\n  name      = \"example-network-interface\"\n  namespace = \"staging\"\n}",
+      "reason": "Resources describe configuration; narrowed from operational CRUD verbs to conservative configuration description."
+    },
+    {
+      "index": 14,
+      "verdict": "narrowed",
+      "corrected_summary": "Timeout in milliseconds for new network connections to endpoints in the cluster (default: 2 seconds / 2000ms).",
+      "corrected_aliases": [
+        "endpoint connection timeout",
+        "upstream connection timeout",
+        "connection timeout"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/origin_pool/properties/advanced_options/#schema-advanced_options--connection_timeout",
+      "verbatim_support": "The timeout for new network connections to endpoints in the cluster. This is specified in milliseconds. The default value is 2 seconds. Server applies default when omitted. Recommended: `2000`.",
+      "reason": "Verbatim source specifies network connection timeout in milliseconds for cluster endpoints; narrowed to remove unentailed TCP/TLS socket claims and unverified transport aliases."
+    },
+    {
+      "index": 15,
+      "verdict": "approved",
+      "corrected_summary": "Specifies tenant user idle session expiration duration in hours (allowed range: 1 to 720 hours).",
+      "corrected_aliases": [
+        "session idle timeout hours",
+        "cookie expiration hours",
+        "idle duration hours"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/tenant_configuration/properties/user_session_expiration/idle_timeout/hours/",
+      "verbatim_support": "Represents the cookie duration in hours. Provider validators: int64validator.Between(1, 720).",
+      "reason": "Verbatim source description and schema validator int64validator.Between(1, 720) strictly support the summary and aliases."
+    },
+    {
+      "index": 16,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables circuit breaker for the origin pool.",
+      "corrected_aliases": [
+        "disable circuit breaker",
+        "no circuit breaker"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/origin_pool/properties/advanced_options/disable_circuit_breaker/",
+      "verbatim_support": "validators.ConflictingObjectAttributes(\"circuit_breaker\", \"disable_circuit_breaker\"), validators.ConflictingObjectAttributes(\"default_circuit_breaker\", \"disable_circuit_breaker\"); x-ves-oneof-field-circuit_breaker_choice: [\"circuit_breaker\",\"default_circuit_breaker\",\"disable_circuit_breaker\"]",
+      "reason": "Choice marker conflicting with circuit_breaker and default_circuit_breaker; narrowed to remove unentailed failure-based shedding runtime claim."
+    },
+    {
+      "index": 17,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables load balancer source IP persistence for the origin pool.",
+      "corrected_aliases": [
+        "disable source ip persistence",
+        "disable lb source ip persistence"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/origin_pool/properties/advanced_options/disable_lb_source_ip_persistence/",
+      "verbatim_support": "validators.ConflictingObjectAttributes(\"disable_lb_source_ip_persistence\", \"enable_lb_source_ip_persistence\"); x-ves-oneof-field-lb_source_ip_persistence_choice: [\"disable_lb_source_ip_persistence\",\"enable_lb_source_ip_persistence\"]",
+      "reason": "Choice marker conflicting with enable_lb_source_ip_persistence; narrowed to remove unentailed affinity and sticky sessions terminology."
+    },
+    {
+      "index": 18,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables outlier detection and endpoint ejection for the origin pool.",
+      "corrected_aliases": [
+        "disable outlier detection",
+        "disable endpoint ejection"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/origin_pool/properties/advanced_options/disable_outlier_detection/",
+      "verbatim_support": "validators.ConflictingObjectAttributes(\"disable_outlier_detection\", \"outlier_detection\"); x-ves-oneof-field-outlier_detection_choice: [\"disable_outlier_detection\",\"outlier_detection\"]",
+      "reason": "Choice marker conflicting with outlier_detection; narrowed to eliminate unentailed passive health checking claim."
+    },
+    {
+      "index": 19,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures no request limit per connection to the origin server.",
+      "corrected_aliases": [
+        "no request limit",
+        "disable max requests per connection",
+        "no request limit per connection"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/origin_pool/properties/advanced_options/no_request_limit_per_connection/",
+      "verbatim_support": "validators.ConflictingObjectAttributes(\"max_requests_per_connection\", \"no_request_limit_per_connection\"); x-ves-oneof-field-max_requests_per_connection_choice: [\"max_requests_per_connection\",\"no_request_limit_per_connection\"]",
+      "reason": "Choice marker conflicting with max_requests_per_connection; narrowed to eliminate unverified persistent HTTP unlimited transport claims."
+    },
+    {
+      "index": 20,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables PROXY protocol on connections to origin pool servers.",
+      "corrected_aliases": [
+        "disable proxy protocol",
+        "no proxy protocol"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/origin_pool/properties/advanced_options/disable_proxy_protocol/",
+      "verbatim_support": "validators.ConflictingObjectAttributes(\"disable_proxy_protocol\", \"proxy_protocol_v1\"), validators.ConflictingObjectAttributes(\"disable_proxy_protocol\", \"proxy_protocol_v2\"); x-ves-oneof-field-proxy_protocol_choice: [\"disable_proxy_protocol\",\"proxy_protocol_v1\",\"proxy_protocol_v2\"]",
+      "reason": "Choice marker conflicting with proxy_protocol_v1 and proxy_protocol_v2; narrowed to remove unentailed HAProxy branding and header references."
+    },
+    {
+      "index": 21,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables link quality monitoring on the dedicated network interface.",
+      "corrected_aliases": [
+        "disable interface monitoring",
+        "monitoring disabled",
+        "disable link quality monitoring"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/dedicated_interface/monitor_disabled/",
+      "verbatim_support": "x-ves-oneof-field-monitoring_choice: [\"monitor\",\"monitor_disabled\"]; Direct sibling 'monitor' configures 'Link Quality Monitoring configuration for a network interface.'",
+      "reason": "Choice marker mutually exclusive with monitor block (Link Quality Monitoring); narrowed to remove unentailed probing terminology."
+    },
+    {
+      "index": 22,
+      "verdict": "narrowed",
+      "corrected_summary": "Designates this dedicated network interface as the primary interface.",
+      "corrected_aliases": [
+        "primary interface",
+        "set primary"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/dedicated_interface/is_primary/",
+      "verbatim_support": "x-ves-oneof-field-primary_choice: [\"is_primary\",\"not_primary\"]; Type: [\"object\", {}]. Optional.",
+      "reason": "Choice marker mutually exclusive with not_primary; narrowed to remove unentailed primary default egress/outside claims."
+    },
+    {
+      "index": 23,
+      "verdict": "narrowed",
+      "corrected_summary": "Applies dedicated interface configuration cluster-wide across the site rather than to a specific node.",
+      "corrected_aliases": [
+        "cluster wide interface",
+        "cluster scope"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/network_interface/properties/dedicated_interface/cluster/",
+      "verbatim_support": "x-ves-oneof-field-node_choice: [\"cluster\",\"node\"]; Sibling 'node' description: 'Exclusive with Configuration will apply to a device on the given node of the site.'",
+      "reason": "Choice marker mutually exclusive with node-specific binding; narrowed to conservative site-level cluster wording and conservative aliases."
+    },
+    {
+      "index": 24,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables health checking for the DNS load balancer A-record pool.",
+      "corrected_aliases": [
+        "disable dns health check",
+        "no health check a pool"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/dns_lb_pool/properties/a_pool/disable_health_check/",
+      "verbatim_support": "x-ves-oneof-field-health_check_choice: [\"disable_health_check\",\"health_check\"]; Parent: a_pool property reference.",
+      "reason": "Choice marker mutually exclusive with health_check in a_pool; narrowed to remove guessed runtime resolution effects."
+    },
+    {
+      "index": 25,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables JavaScript insertion for Cloudflare-protected applications.",
+      "corrected_aliases": [
+        "disable js insert",
+        "no javascript insertion"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/protected_application/properties/cloudflare/disable_js_insert/",
+      "verbatim_support": "x-ves-oneof-field-java_script_choice: [\"disable_js_insert\",\"js_insertion_rules\",\"manual_js_insert\"]; Parent: cloudflare properties.",
+      "reason": "Choice marker conflicting with JavaScript insertion mechanisms; narrowed to remove unentailed telemetry claims."
+    },
+    {
+      "index": 26,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables Mobile SDK configuration for the protected application.",
+      "corrected_aliases": [
+        "disable mobile sdk",
+        "no mobile sdk"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/protected_application/properties/cloudflare/disable_mobile_sdk/",
+      "verbatim_support": "x-ves-oneof-field-mobile_sdk_choice: [\"disable_mobile_sdk\",\"mobile_sdk_config\"]; Parent: cloudflare properties.",
+      "reason": "Choice marker mutually exclusive with mobile_sdk_config; narrowed to remove unentailed telemetry enforcement and speculative protection aliases."
+    },
+    {
+      "index": 27,
+      "verdict": "narrowed",
+      "corrected_summary": "Disables client mutual TLS (mTLS) authentication for the syslog TLS server.",
+      "corrected_aliases": [
+        "disable syslog mtls",
+        "no mtls"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/log_receiver/properties/syslog/tls_server/mtls_disabled/",
+      "verbatim_support": "x-ves-oneof-field-mtls_choice: [\"mtls_disabled\",\"mtls_enable\"]; Parent: syslog.tls_server properties.",
+      "reason": "Choice marker mutually exclusive with mtls_enable; narrowed to remove speculative one-way tls alias and retain concise configuration summary."
+    },
+    {
+      "index": 28,
+      "verdict": "narrowed",
+      "corrected_summary": "Configures matching CDN requests to bypass cache.",
+      "corrected_aliases": [
+        "cache bypass",
+        "no cache"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/cdn_cache_rule/properties/cache_rules/cache_bypass/",
+      "verbatim_support": "x-ves-oneof-field-cache_actions: [\"cache_bypass\",\"eligible_for_cache\"]; Parent: cache_rules properties.",
+      "reason": "Choice marker mutually exclusive with eligible_for_cache; narrowed to eliminate guessed runtime forwarding effects and speculative aliases."
+    },
+    {
+      "index": 29,
+      "verdict": "narrowed",
+      "corrected_summary": "Applies the default route to all route tables in the Azure VNet attachment.",
+      "corrected_aliases": [
+        "all route tables"
+      ],
+      "exact_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/cloud_connect/properties/azure_vnet_site/vnet_attachments/vnet_list/default_route/all_route_tables/",
+      "verbatim_support": "x-ves-oneof-field-default_route_choice: [\"all_route_tables\",\"selective_route_tables\"]; Parent: default_route properties.",
+      "reason": "Choice marker mutually exclusive with selective_route_tables; narrowed to eliminate unentailed propagation wording and informal aliases."
+    }
+  ],
+  "unresolved": [
+    {
+      "provider_type": "data-sources",
+      "collection": "user_identification",
+      "schema_path": [
+        "rules",
+        "none"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/none/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Enable this option. Upstream description: This can be used for messages where no values are needed. Direct properties: This is an empty object or choice marker. It has no direct properties.",
+      "review_basis": "Generic empty message in an ordered rule list; source does not document whether selecting 'none' bypasses identification, halts rule evaluation, or returns a null identifier.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/none/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "ike_phase1_profile",
+      "schema_path": [
+        "use_default_keylifetime"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/ike_phase1_profile/properties/use_default_keylifetime/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Configuration parameter for use default keylifetime. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "Source gives only generic empty message and provides no numerical default duration, time unit, or renegotiation interval.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/ike_phase1_profile/properties/use_default_keylifetime/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "k8s_pod_security_policy",
+      "schema_path": [
+        "psp_spec",
+        "no_runtime_class"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/k8s_pod_security_policy/properties/psp_spec/no_runtime_class/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: \"single\". Computed. Configuration parameter for no runtime class. Upstream description: This can be used for messages where no values are needed. x-ves-oneof-field-runtime_class_choice: [\"no_runtime_class\"]",
+      "review_basis": "OneOf 'runtime_class_choice' contains only the single item 'no_runtime_class' with generic empty description; source cannot verify whether this allows any runtime class or prohibits runtime classes.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/k8s_pod_security_policy/properties/psp_spec/no_runtime_class/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "k8s_pod_security_policy",
+      "schema_path": [
+        "psp_spec",
+        "no_se_linux_options"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/k8s_pod_security_policy/properties/psp_spec/no_se_linux_options/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: \"single\". Computed. Configuration parameter for no se linux options. Upstream description: This can be used for messages where no values are needed. x-ves-oneof-field-se_linux_choice: [\"no_se_linux_options\"]",
+      "review_basis": "OneOf 'se_linux_choice' contains only a single option 'no_se_linux_options' with generic empty description; source lacks documentation on SELinux policy enforcement.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/k8s_pod_security_policy/properties/psp_spec/no_se_linux_options/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "user_identification",
+      "schema_path": [
+        "rules",
+        "client_city"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/client_city/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Enable this option. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "Empty choice marker without documentation on the underlying geo-IP database, resolution pipeline, or fallback behavior when city is unknown.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/client_city/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "user_identification",
+      "schema_path": [
+        "rules",
+        "client_asn"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/client_asn/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "Generic empty message; source does not document string format, numeric format, or Autonomous System lookup source.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/client_asn/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "user_identification",
+      "schema_path": [
+        "rules",
+        "tls_fingerprint"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/tls_fingerprint/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "Coexists alongside 'ja4_tls_fingerprint', but source fails to specify the algorithm or fingerprint standard (e.g., JA3 vs raw cipher digest) used by 'tls_fingerprint'.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/tls_fingerprint/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "user_identification",
+      "schema_path": [
+        "rules",
+        "ip_and_ja4_tls_fingerprint"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/ip_and_ja4_tls_fingerprint/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Enable this option. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "Composite identifier lacking documentation on delimiter format, hashing combination, or evaluation precedence between IP and JA4 fingerprint.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/user_identification/properties/rules/ip_and_ja4_tls_fingerprint/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "network_interface",
+      "schema_path": [
+        "dedicated_interface",
+        "not_primary"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/network_interface/properties/dedicated_interface/not_primary/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Configuration parameter for not primary. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "While is_primary designates the primary routing role, source does not define the functional failover, routing weight, or metrics applied when 'not_primary' is selected.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/network_interface/properties/dedicated_interface/not_primary/",
+      "whether_evidence_is_sufficient": false
+    },
+    {
+      "provider_type": "data-sources",
+      "collection": "network_interface",
+      "schema_path": [
+        "ethernet_interface",
+        "cluster"
+      ],
+      "exact_destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/network_interface/properties/ethernet_interface/cluster/",
+      "current_source_description": "This can be used for messages where no values are needed.",
+      "proposed_summary": null,
+      "proposed_aliases": [],
+      "verbatim_source_evidence": "Type: [\"object\", {}]. Computed. Enable this option. Upstream description: This can be used for messages where no values are needed.",
+      "review_basis": "Source does not verify whether cluster-level ethernet interface configuration requires identical physical network interfaces across all cluster nodes or designates a virtual shared interface.",
+      "evidence_is_sufficient": false,
+      "aliases": [],
+      "destination_uri": "https://f5-sales-demo.github.io/terraform-provider-xcsh/data-sources/network_interface/properties/ethernet_interface/cluster/",
+      "whether_evidence_is_sufficient": false
+    }
+  ]
+}

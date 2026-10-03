@@ -1,0 +1,38 @@
+{
+  "status": "SUCCESS",
+  "reviewed_case_count": 20,
+  "suite_sha256": "6deb592af8737b3d91085b5e28c939d8d928f5eb5243ae833d5ee754bb348d6a",
+  "review_sha256": "86d6222772957736fb125e3b8246b5853944a43b27868b0bb3c47f5c84df16c1",
+  "invalid_ids": [
+    "ans-deep-007",
+    "ans-deep-008",
+    "ans-deep-009",
+    "ans-deep-010",
+    "ans-deep-011",
+    "ans-deep-012",
+    "ans-deep-013",
+    "ans-deep-014",
+    "ans-deep-017",
+    "ans-deep-020",
+    "ans-deep-028",
+    "amb-002",
+    "amb-006",
+    "amb-008",
+    "amb-011",
+    "amb-014",
+    "amb-040"
+  ],
+  "adjudicator_accepts": [
+    "ans-deep-021",
+    "ans-deep-053",
+    "ans-std-052"
+  ],
+  "unresolved_exact_leaf_rationale_ids": [
+    "ans-deep-053",
+    "ans-std-052"
+  ],
+  "limitation": "Acceptance of two parent block destinations cites benchmark resolution patterns, which are insufficient to prove exact leaf accuracy under the user plan. Their precision remains unresolved.",
+  "qualification_passed": false,
+  "frozen_suite_modified": false,
+  "eligibility": "ineligible"
+}

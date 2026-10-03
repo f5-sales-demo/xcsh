@@ -1,0 +1,24 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "4bec1295c529c263f4fff604f8b28904795c8559",
+  "index_sha256": "9b6a74267d17f062fa381449bbc44f7f6bbadce5161ba25e41fafac07a07fb24",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "answerable": 60,
+  "correct_leaf": 23,
+  "top5": 43,
+  "discovery_p95_ms": 102.39731100000063,
+  "limitations": [
+    "Unreviewed development candidate; no held-out qualification.",
+    "Control activation and unsupported-field behavior require separate semantic/model review."
+  ],
+  "consumer_source_commit": "4d791d476",
+  "complete_results": {
+    "artifact": "asn-field-development.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "4889cf3ba2d34866241a2933caedf26a01c6825abd6b33c3660736ed19c168f3",
+    "uncompressed_bytes": 74901,
+    "compressed_sha256": "159cd8b9db099169aade20611d991abd8cf0880a143abdfc3227a193f0e6769b",
+    "compressed_bytes": 8815
+  }
+}

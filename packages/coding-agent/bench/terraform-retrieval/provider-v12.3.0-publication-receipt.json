@@ -1,0 +1,37 @@
+{
+  "provider_version": "v12.3.0",
+  "snapshot_tag": "documentation-v12.3.0",
+  "source_commit": "4bec1295c529c263f4fff604f8b28904795c8559",
+  "document_count": 18958,
+  "retrieval_metadata_version": 1,
+  "receipt_sha256": "5818156d16199d94b7cb9edbbf48e7bc859d27c24ba1b3b7d22566f5aace42c0",
+  "provider_immutable": true,
+  "snapshot_immutable": true,
+  "provider_asset_count": 13,
+  "snapshot_asset_count": 9,
+  "normal_release_run": 37031256903,
+  "normal_release_conclusion": "success",
+  "source_pr": 2367,
+  "regeneration_pr": 2372,
+  "regeneration_artifact_sha256": "14cb25cfb40acdb63e3e35da2076638129f1ef91e66b2eb0716c1e477cbb8b77",
+  "index": {
+    "sha256": "9b6a74267d17f062fa381449bbc44f7f6bbadce5161ba25e41fafac07a07fb24",
+    "size_bytes": 740073472,
+    "gzip_sha256": "af2a3feb3edcc480f6de7e3aec097759a6f0f3f03bee120aaed6f8f99cc292be",
+    "gzip_size_bytes": 64815806
+  },
+  "matching_index_builds": 3,
+  "source_tests": {
+    "internal_url_tests": 488,
+    "workspace_checks_passed": true
+  },
+  "qualification_passed": false,
+  "narrow_relevance_smoke_passed": false,
+  "narrow_relevance_smoke_failure": "where do I put login success rules",
+  "frozen_previous_suite_source_mismatch_rejected": true,
+  "limitations": [
+    "Installed released acceptance remains unfinished.",
+    "Old v12.2.0 benchmark does not qualify new source.",
+    "Revised development labels remain under review."
+  ]
+}

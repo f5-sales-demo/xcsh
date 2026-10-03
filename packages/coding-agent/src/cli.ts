@@ -217,6 +217,17 @@ if (process.env.XCSH_SMOKE_TEST_QMD === "1") {
 	}
 }
 
+if (process.env.XCSH_MEASURE_TERRAFORM_REQUESTS) {
+	try {
+		const { runTerraformMeasurement } = await import("./terraform-measurement");
+		process.stdout.write(`${await runTerraformMeasurement(process.env.XCSH_MEASURE_TERRAFORM_REQUESTS)}\n`);
+		process.exit(0);
+	} catch (error) {
+		process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+		process.exit(1);
+	}
+}
+
 if (process.env.XCSH_SMOKE_TEST_TERRAFORM_DOCUMENTATION === "1") {
 	try {
 		const { runTerraformDocumentationSmoke } = await import("./terraform-documentation-smoke");

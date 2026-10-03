@@ -1,0 +1,10 @@
+{
+  "postrun_source_audit": true,
+  "qualification_passed": false,
+  "frozen_labels_changed": false,
+  "reported_label_defects": 22,
+  "invalid_alternative_destinations": 27,
+  "review_accepted": false,
+  "review_sha256": "aa6481d340544907ca44372f9b56a3b3995e3c9dd62384ba7925ed157b0e21fa",
+  "corrected_file_based_audit_pending": true
+}

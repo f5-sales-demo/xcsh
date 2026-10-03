@@ -1,0 +1,40 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "destinations": 39565,
+  "empty_message_destinations": 5792,
+  "empty_message_families": 88,
+  "empty_message_roles": {
+    "data-sources": 2894,
+    "resources": 2898
+  },
+  "timeout_destinations": 512,
+  "most_common_descriptions": [
+    [
+      "This can be used for messages where no values are needed.",
+      5792
+    ],
+    [
+      "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then name will hold the referred object's(e.g. Route's) name.",
+      1337
+    ],
+    [
+      "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then namespace will hold the referred object's(e.g. Route's) namespace.",
+      1337
+    ],
+    [
+      "When a configuration object(e.g. Virtual_host) refers to another(e.g route) then tenant will hold the referred object's(e.g. Route's) tenant.",
+      1328
+    ],
+    [
+      "This type establishes a direct reference from one object(the referrer) to another(the referred). Such a reference is in form of tenant/namespace/name.",
+      692
+    ]
+  ],
+  "limitations": [
+    "Counts measure source description sparsity, not retrieval accuracy or semantic correctness.",
+    "Generic description replacements require independently verified source meaning; identifiers alone do not establish validation or live behavior."
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "506c2a5a5",
+  "provider_version": "v12.3.1",
+  "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+  "cases": 80,
+  "cross_platform_and_offline_response_differences": [],
+  "mac_offline_route": "sandbox-exec deny network",
+  "linux_offline_route": "unshare --net as robin",
+  "reports": {
+    "role-branch-mac.json": {
+      "sha256": "b1f3218419e2e2633779266569fd80c05c2fe1491c5773603895d001dd039aa0",
+      "warm_p95_ms": 30.89449999999988,
+      "answerable_correct": 43
+    },
+    "role-branch-linux.json": {
+      "sha256": "618f06fd7939d13b2f2157353ec03139e4c230fd3d805c749fa2ad01f4791a99",
+      "warm_p95_ms": 31.409961000000294,
+      "answerable_correct": 43
+    },
+    "role-branch-mac-offline.json": {
+      "sha256": "d1e68326b2c3fddefdf86c3e7169da0de6acd29deafe6c073547a0404dff1ffa",
+      "warm_p95_ms": 29.423749999999927,
+      "answerable_correct": 43
+    },
+    "role-branch-linux-offline.json": {
+      "sha256": "858dce7d2226c555f72cf44f29279538521d9b944db6b185e7a23e738a7be560",
+      "warm_p95_ms": 30.948965999999928,
+      "answerable_correct": 43
+    }
+  },
+  "limitations": [
+    "Source resolver development only; not compiled installed qualification."
+  ]
+}

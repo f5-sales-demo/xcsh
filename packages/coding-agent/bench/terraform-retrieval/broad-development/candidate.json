@@ -1,0 +1,1058 @@
+{
+  "cases": [
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider"
+      ],
+      "id": "dev-broad-001",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When declaring an HTTP load balancer resource with automated API discovery crawler credentials, which property specifies the decryption provider name for the crawler password secret?",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location"
+      ],
+      "id": "dev-broad-002",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an HTTP loadbalancer resource with API discovery crawler settings enabled, where do you configure the location URI for the encrypted crawler password secret?",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:67-75"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider"
+      ],
+      "id": "dev-broad-003",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When creating a CDN load balancer resource with API crawler discovery, what attribute sets the secret management access decryption provider for crawler login credentials?",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name"
+      ],
+      "id": "dev-broad-004",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a protected application resource defining CloudFront protected endpoints, which attribute configures the HTTP header name evaluated for login failure conditions?",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--regex_values"
+      ],
+      "id": "dev-broad-005",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Where in a protected application resource with CloudFront login flow labels do you specify the list of regular expression patterns to match transaction failure?",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:67-75"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name"
+      ],
+      "id": "dev-broad-006",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When configuring login flow label transaction success criteria in a protected application resource, which property defines the case-insensitive HTTP header name?",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-cloudfront--protected_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+      ],
+      "id": "dev-broad-007",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which parameter specifies the expected HTTP status code string for login success conditions in a CloudFront protected application endpoint?",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:67-75"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md#schema-items--object--spec--gc_spec--infra--hw_info--chassis--asset_tag"
+      ],
+      "id": "dev-broad-008",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When querying the site registrations data source, what field retrieves the chassis asset tag discovered from system hardware DMI data?",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md#schema-items--object--spec--gc_spec--infra--hw_info--chassis--serial"
+      ],
+      "id": "dev-broad-009",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a site registrations data source query, which property exposes the chassis serial number reported by customer edge infrastructure hardware?",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:53-61"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_state/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md#schema-items--object--spec--gc_spec--infra--hw_info--chassis--asset_tag"
+      ],
+      "id": "dev-broad-010",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When filtering site registrations by state using the data source, which attribute outputs the chassis asset tag of registered node hardware?",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations_by_state/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_site/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md#schema-items--object--spec--gc_spec--infra--hw_info--chassis--serial"
+      ],
+      "id": "dev-broad-011",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a site-specific registration data source lookup, which property provides the discovered chassis serial number from the infrastructure hardware spec?",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations_by_site/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:53-61"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section"
+      ],
+      "id": "dev-broad-012",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which configuration block defines the dual-stack next-hop IP addresses for an outside static route in an AWS Transit Gateway site resource?",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-vn_config--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+      ],
+      "id": "dev-broad-013",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an AWS Transit Gateway site resource with dual-stack outside static routes, which property configures the IPv4 next-hop gateway address in dot-decimal notation?",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-vn_config--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+      ],
+      "id": "dev-broad-014",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When defining dual-stack static routes for an AWS TGW site resource, what attribute sets the IPv6 next-hop address string?",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section"
+      ],
+      "id": "dev-broad-015",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which block in an Azure VNet site resource configures dual-stack next-hop routing parameters for an outside static route?",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+      ],
+      "id": "dev-broad-016",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Where in an Azure VNet site resource declaration do you specify the IPv4 next-hop address for a dual-stack custom static route?",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+      ],
+      "id": "dev-broad-017",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an Azure VNet site resource with dual-stack static routing, which property holds the colon-separated IPv6 next-hop gateway address?",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section"
+      ],
+      "id": "dev-broad-018",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which schema block specifies dual-stack next-hop addresses for custom outside static routes in a GCP VPC site resource?",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+      ],
+      "id": "dev-broad-019",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When declaring a GCP VPC site resource with ingress/egress gateways, which attribute sets the IPv4 next-hop address for dual-stack outside routes?",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/index.md#section"
+      ],
+      "id": "dev-broad-020",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which block inside a distributed workload resource defines custom specific HTTP load balancer routes for an advertised stateful service port?",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/index.md#section"
+      ],
+      "id": "dev-broad-021",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a workload resource configuring stateful service ports, which block defines a simple route matching rule under custom HTTP route options?",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 10,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--path"
+      ],
+      "id": "dev-broad-022",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which string attribute specifies the prefix path to match for a simple route in a workload stateful service HTTP loadbalancer configuration?",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 10,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect"
+      ],
+      "id": "dev-broad-023",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a workload resource defining a redirect route on a stateful service port, which parameter configures the target host for redirection?",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--network_prefix"
+      ],
+      "id": "dev-broad-024",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When defining ethernet interface DHCP networks on a VoltStack site resource, which attribute sets the IPv6 network prefix?",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 10,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip"
+      ],
+      "id": "dev-broad-025",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which parameter specifies the ending IPv6 address for a DHCP address pool on a VoltStack site ethernet interface router?",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_none/request_body_match/exact_value/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--request_body--request_body_none--request_body_match--exact_value--case_insensitive"
+      ],
+      "id": "dev-broad-026",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a bot endpoint policy data source lookup for protected mobile endpoints, what boolean attribute indicates case-insensitive exact matching on request body?",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_none/request_body_match/exact_value/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 12,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_none--cookie_operator--cookie--cookie_or--cookie_match_v2--case_sensitive"
+      ],
+      "id": "dev-broad-027",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When inspecting a bot endpoint policy data source for mobile success cookie criteria, which boolean field determines case sensitivity for cookie match rules?",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 8,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md#schema-custom_network_config--slo_config--static_v6_routes--static_routes--node_interface--list--interface--name"
+      ],
+      "id": "dev-broad-028",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a secure mesh site resource configuring custom network static IPv6 routes, which attribute defines the target network interface reference name?",
+      "source_evidence": [
+        "documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md:49-57"
+      ]
+    },
+    {
+      "depth": 9,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--blindfold_secret_info--location"
+      ],
+      "id": "dev-broad-029",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When defining storage device parameters for a fleet resource, which attribute configures the encrypted secret location URI for a FlashArray API token?",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 0,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#argument-reference"
+      ],
+      "id": "dev-broad-030",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Where in the xcsh provider setup guide can I find the root provider block argument reference listing all supported configuration options?",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-91"
+      ]
+    },
+    {
+      "depth": 0,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#option-1-api-token-authentication"
+      ],
+      "id": "dev-broad-031",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which section of the provider setup documentation demonstrates authenticating to F5 Distributed Cloud using an API token?",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:103-111"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md#schema-token"
+      ],
+      "id": "dev-broad-032",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When requesting an ephemeral artifact registry token, which attribute provides the generated authentication token string?",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-45"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md#schema-expiration_time"
+      ],
+      "id": "dev-broad-033",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an ephemeral artifact registry token resource, which property outputs the expiration timestamp of the generated token?",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/index.md#schema-content_type"
+      ],
+      "id": "dev-broad-034",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When declaring an ephemeral Kubernetes manifests resource, which attribute defines the MIME content type of the manifest payload?",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md#schema-extensions--type_url"
+      ],
+      "id": "dev-broad-035",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an ephemeral Kubernetes manifests resource with extension objects, which property specifies the type URL identifying the extension schema?",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md:28-36"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_add_cryptokey/properties/index.md#schema-key_type"
+      ],
+      "id": "dev-broad-036",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When executing a DNS zone crypto key addition action, which parameter designates whether the key is a Key Signing Key or Zone Signing Key?",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/dns_zone_edit_cryptokey/properties/index.md#schema-active"
+      ],
+      "id": "dev-broad-037",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an administrative action to modify a DNS zone crypto key, which boolean attribute toggles the active operational state of the key?",
+      "source_evidence": [
+        "documentation/actions/dns_zone_edit_cryptokey/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/site_upgrade_sw/properties/index.md#schema-software_version"
+      ],
+      "id": "dev-broad-038",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When initiating an edge site software upgrade action, which parameter specifies the target software version string?",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_sw/properties/index.md:27-35"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md#schema-ids"
+      ],
+      "id": "dev-broad-039",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an administrative action to terminate multiple active user sessions, which attribute accepts the list of session identifier strings to revoke?",
+      "source_evidence": [
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/site_signatures_update/properties/index.md#schema-site_names"
+      ],
+      "id": "dev-broad-040",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When triggering an action to update attack signatures across customer edge sites, which property takes the list of target site names?",
+      "source_evidence": [
+        "documentation/actions/site_signatures_update/properties/index.md:29-37"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/site_upgrade_os/properties/index.md#schema-os_version"
+      ],
+      "id": "dev-broad-041",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a customer edge site operating system upgrade action, which parameter defines the target operating system release version?",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md#schema-domains"
+      ],
+      "id": "dev-broad-042",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When creating an HTTP load balancer managed resource, which attribute defines the list of fully qualified domain names served by the virtual host?",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/index.md:28-36"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/index.md#schema-advanced_options--connection_timeout"
+      ],
+      "id": "dev-broad-043",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an origin pool resource configuration, which property under advanced options sets the maximum connection timeout in milliseconds to upstream servers?",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/advanced_options/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#section"
+      ],
+      "id": "dev-broad-044",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which configuration block in a managed application firewall resource enables blocking enforcement mode?",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/properties/secondary/index.md#schema-secondary--primary_servers"
+      ],
+      "id": "dev-broad-045",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a managed secondary DNS zone resource, which property defines the list of authoritative primary server IP addresses for zone transfers?",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md#schema-certificate_url"
+      ],
+      "id": "dev-broad-046",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When configuring a TLS certificate resource, which attribute specifies the URL reference to the uploaded certificate string or bundle?",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/index.md:23-31"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/k8s_cluster/properties/cluster_scoped_access_permit/index.md#section"
+      ],
+      "id": "dev-broad-047",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which schema block in a Kubernetes cluster resource permits cluster-scoped administrative access?",
+      "source_evidence": [
+        "documentation/resources/k8s_cluster/properties/cluster_scoped_access_permit/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 4,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/tunnel_interface/static_ip/node_static_ip/index.md#schema-tunnel_interface--static_ip--node_static_ip--default_gw"
+      ],
+      "id": "dev-broad-048",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When defining a static IP for a node tunnel network interface resource, which attribute configures the IP address of the default gateway?",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/tunnel_interface/static_ip/node_static_ip/index.md:57-65"
+      ]
+    },
+    {
+      "depth": 3,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/index.md#schema-peers--external--asn"
+      ],
+      "id": "dev-broad-049",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a managed BGP routing resource, which property configures the Autonomous System Number for an external BGP peer?",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:55-63"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md#schema-description"
+      ],
+      "id": "dev-broad-050",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When declaring an administrative namespace resource, which attribute provides an optional human-readable description of the tenant namespace?",
+      "source_evidence": [
+        "documentation/resources/namespace/properties/index.md:23-31"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/alert_policy/properties/receivers/index.md#schema-receivers--name"
+      ],
+      "id": "dev-broad-051",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a managed alert policy resource, which property specifies the receiver name referenced in alert delivery rules?",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:37-45"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/limits/index.md#schema-limits--total_number"
+      ],
+      "id": "dev-broad-052",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a rate limiter resource, which property specifies the total maximum number of requests allowed within the limit time period?",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/properties/limits/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/api_definition/properties/index.md#schema-swagger_specs"
+      ],
+      "id": "dev-broad-053",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In an API definition resource declaration, which attribute supplies the list of Swagger or OpenAPI specification URLs?",
+      "source_evidence": [
+        "documentation/resources/api_definition/properties/index.md:39-47"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/tenant_configuration/properties/tenant_details/index.md#schema-tenant_details--display_name"
+      ],
+      "id": "dev-broad-054",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When declaring a tenant configuration resource, which property configures the organization display name in tenant details?",
+      "source_evidence": [
+        "documentation/resources/tenant_configuration/properties/tenant_details/index.md:23-31"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_user_account/properties/aws_provider/index.md#schema-aws_provider--aws_account_number"
+      ],
+      "id": "dev-broad-055",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a managed cloud user account resource with AWS provider integration, which attribute specifies the 12-digit AWS account number?",
+      "source_evidence": [
+        "documentation/resources/cloud_user_account/properties/aws_provider/index.md:23-31"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md#schema-registry"
+      ],
+      "id": "dev-broad-056",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When configuring a container registry resource for customer edge workloads, which attribute specifies the registry server domain?",
+      "source_evidence": [
+        "documentation/resources/container_registry/properties/index.md:33-41"
+      ]
+    },
+    {
+      "depth": 4,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/cdn_cache_rule/properties/cache_rules/eligible_for_cache/scheme_proxy_host_request_uri/index.md#schema-cache_rules--eligible_for_cache--scheme_proxy_host_request_uri--cache_ttl"
+      ],
+      "id": "dev-broad-057",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "In a managed CDN cache rule resource configured for proxy host request URIs, which property sets the cache retention TTL in seconds?",
+      "source_evidence": [
+        "documentation/resources/cdn_cache_rule/properties/cache_rules/eligible_for_cache/scheme_proxy_host_request_uri/index.md:31-39"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/index.md#section"
+      ],
+      "id": "dev-broad-058",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which configuration block inside a security service policy resource configures the allow list rule set?",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/allow_list/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/route/properties/routes/index.md#schema-routes--request_headers_to_remove"
+      ],
+      "id": "dev-broad-059",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "When defining route rule actions on a managed route resource, which property specifies request headers to strip before forwarding?",
+      "source_evidence": [
+        "documentation/resources/route/properties/routes/index.md:65-73"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/index.md#section"
+      ],
+      "id": "dev-broad-060",
+      "kind": "answerable",
+      "missing_context": "",
+      "prompt": "Which configuration block in a cloud credentials resource configures AWS secret key credentials for cloud provider access?",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-port",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/index.md#schema-port"
+      ],
+      "id": "dev-broad-061",
+      "kind": "ambiguous",
+      "missing_context": "Whether the query seeks to declare the port on a managed origin pool resource or inspect the port from an existing origin pool data source.",
+      "prompt": "Where is the backend listener port property documented for an origin pool?",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:33-41",
+        "documentation/data-sources/origin_pool/properties/index.md:33-41"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/dns_zone/properties/secondary/index.md#schema-secondary--primary_servers",
+        "xcsh://terraform-documentation/documentation/data-sources/dns_zone/properties/secondary/index.md#schema-secondary--primary_servers"
+      ],
+      "id": "dev-broad-062",
+      "kind": "ambiguous",
+      "missing_context": "Whether the primary server addresses are being configured on a managed secondary DNS zone resource or read from an existing secondary DNS zone data source.",
+      "prompt": "Where in the documentation do you specify primary server addresses for a secondary DNS zone?",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:43-51",
+        "documentation/data-sources/dns_zone/properties/secondary/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/app_firewall/properties/blocking/index.md#section"
+      ],
+      "id": "dev-broad-063",
+      "kind": "ambiguous",
+      "missing_context": "Whether the caller is configuring the blocking mode block on an application firewall resource or reading it from a data source.",
+      "prompt": "Which schema documentation page covers the blocking enforcement mode block for an application firewall?",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20-28",
+        "documentation/data-sources/app_firewall/properties/blocking/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/dedicated_interface/index.md#schema-dedicated_interface--mtu",
+        "xcsh://terraform-documentation/documentation/data-sources/network_interface/properties/dedicated_interface/index.md#schema-dedicated_interface--mtu"
+      ],
+      "id": "dev-broad-064",
+      "kind": "ambiguous",
+      "missing_context": "Whether the caller is configuring the MTU on a managed network interface resource or reading it from a network interface data source.",
+      "prompt": "Where is the maximum transmission unit (MTU) property documented for a dedicated network interface?",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/dedicated_interface/index.md:47-55",
+        "documentation/data-sources/network_interface/properties/dedicated_interface/index.md:47-55"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/alert_policy/properties/receivers/index.md#schema-receivers--name",
+        "xcsh://terraform-documentation/documentation/data-sources/alert_policy/properties/receivers/index.md#schema-receivers--name"
+      ],
+      "id": "dev-broad-065",
+      "kind": "ambiguous",
+      "missing_context": "Whether the alert receiver name is being declared on an alert policy resource or read from an alert policy data source.",
+      "prompt": "Where is the notification receiver name property defined for an alert policy?",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:37-45",
+        "documentation/data-sources/alert_policy/properties/receivers/index.md:37-45"
+      ]
+    },
+    {
+      "depth": 3,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/index.md#schema-peers--external--asn",
+        "xcsh://terraform-documentation/documentation/data-sources/bgp/properties/peers/external/index.md#schema-peers--external--asn"
+      ],
+      "id": "dev-broad-066",
+      "kind": "ambiguous",
+      "missing_context": "Whether the external peer ASN is being configured on a managed BGP resource or queried from an existing BGP data source.",
+      "prompt": "Where in BGP peer configuration is the autonomous system number (ASN) specified for an external BGP peer?",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:55-63",
+        "documentation/data-sources/bgp/properties/peers/external/index.md:55-63"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md#schema-timeout",
+        "xcsh://terraform-documentation/documentation/data-sources/healthcheck/properties/index.md#schema-timeout"
+      ],
+      "id": "dev-broad-067",
+      "kind": "ambiguous",
+      "missing_context": "Whether the health check timeout is being set on a managed health check resource or queried from a health check data source.",
+      "prompt": "Where is the overall response timeout property documented for a health check monitor?",
+      "source_evidence": [
+        "documentation/resources/healthcheck/properties/index.md:43-51",
+        "documentation/data-sources/healthcheck/properties/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 0,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#option-2-p12-certificate-authentication",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#option-3-pem-certificate-authentication"
+      ],
+      "id": "dev-broad-068",
+      "kind": "ambiguous",
+      "missing_context": "Whether mutual TLS authentication to F5 Distributed Cloud is configured using a PKCS#12 bundle or separate PEM certificate and private key files.",
+      "prompt": "Where in the documentation is certificate-based mutual TLS authentication configured for the xcsh provider?",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:123-131",
+        "documentation/provider/setup/index.md:145-153"
+      ]
+    },
+    {
+      "depth": 6,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md#section"
+      ],
+      "id": "dev-broad-069",
+      "kind": "ambiguous",
+      "missing_context": "Whether the header secret value is supplied using encrypted blindfold secret metadata or plaintext secret information.",
+      "prompt": "Which block documents configuring secret credentials added to request headers on an HTTP load balancer simple route?",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/blindfold_secret_info/index.md:20-28",
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 3,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md#section"
+      ],
+      "id": "dev-broad-070",
+      "kind": "ambiguous",
+      "missing_context": "Whether automatic DHCP IP address assignment on the interface begins from the start of the address pool or from the end.",
+      "prompt": "Where is the automatic IP allocation method documented for an ethernet interface DHCP server?",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md:20-28",
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md#schema-id",
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md#schema-ids"
+      ],
+      "id": "dev-broad-071",
+      "kind": "ambiguous",
+      "missing_context": "Whether the administrative action targets a single active session ID via access_active_session_terminate or a batch list of session IDs via access_active_sessions_terminate.",
+      "prompt": "Which administrative action documentation covers revoking active user access sessions?",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/properties/index.md:21-29",
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-29"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/azure_client_secret/index.md#section"
+      ],
+      "id": "dev-broad-072",
+      "kind": "ambiguous",
+      "missing_context": "Whether the cloud credential resource is being configured for AWS secret access credentials or Azure client application secret credentials.",
+      "prompt": "Where in cloud credentials do you configure secret access credentials for public cloud integration?",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-28",
+        "documentation/resources/cloud_credentials/properties/azure_client_secret/index.md:20-28"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-073",
+      "kind": "control",
+      "missing_context": "The F5 Distributed Cloud (xcsh) provider block does not support direct AWS IAM role ARN or STS assume-role parameters; authentication is strictly restricted to API tokens, PKCS#12 bundles, or PEM certificates.",
+      "prompt": "How do I configure an AWS IAM role ARN or STS assume-role parameter in the root xcsh provider configuration?",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-91"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-074",
+      "kind": "control",
+      "missing_context": "The HTTP load balancer schema does not provide a property for configuring HTTP/3 transport congestion control algorithms.",
+      "prompt": "Which property on an HTTP load balancer resource configures custom HTTP/3 BBR congestion control algorithm parameters?",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/index.md:28-36"
+      ]
+    },
+    {
+      "depth": 2,
+      "expected": [],
+      "id": "dev-broad-075",
+      "kind": "control",
+      "missing_context": "The DNS zone schema does not expose configurable NSEC3 salt iteration count attributes in its DNSSEC configuration.",
+      "prompt": "Where in the primary DNS zone resource do I set the NSEC3 salt iteration count for DNSSEC signing?",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md:43-51"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-076",
+      "kind": "control",
+      "missing_context": "The application firewall resource schema does not support configuring custom machine learning training datasets or retraining intervals.",
+      "prompt": "What parameter in the application firewall configuration specifies custom machine learning training dataset URLs for threat detection?",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/index.md:23-31"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-077",
+      "kind": "control",
+      "missing_context": "Network interface configurations support ethernet, dedicated, layer 2, and tunnel interfaces, but do not provide a native WireGuard private key property.",
+      "prompt": "Where can I define a WireGuard private key attribute directly on a customer edge network interface resource?",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/index.md:285-293"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-078",
+      "kind": "control",
+      "missing_context": "Origin pools do not support a native gRPC-Web transcoding schema property.",
+      "prompt": "Which configuration option in an origin pool resource enables native gRPC-Web to gRPC backend transcoding?",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:33-41"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-079",
+      "kind": "control",
+      "missing_context": "The ephemeral artifact registry token resource only exposes expiration_time, namespace, and token attributes; bandwidth throttling is not supported.",
+      "prompt": "Which attribute in an ephemeral artifact registry token sets a maximum download bandwidth rate limit in megabits per second?",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-45"
+      ]
+    },
+    {
+      "depth": 1,
+      "expected": [],
+      "id": "dev-broad-080",
+      "kind": "control",
+      "missing_context": "The ephemeral kubernetes manifests resource accepts raw manifest content and extensions, but does not provide a Helm repository URL parameter.",
+      "prompt": "What property allows specifying an upstream Helm chart repository URL in an ephemeral Kubernetes manifests resource?",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-29"
+      ]
+    }
+  ],
+  "limitations": [
+    "The corpus is strictly constrained to the static offline documentation set and schema specifications published in documentation/ and source.json; runtime F5 Distributed Cloud API behaviors and live tenant validations are not represented.",
+    "Prompts intentionally paraphrase terminology and omit exact Terraform resource identifiers while retaining sufficient product and role semantics to achieve unambiguous destination resolution for answerable queries.",
+    "Provider setup queries target human-oriented markdown argument reference sections rather than schema attribute anchors due to absence of machine-readable schema metadata in provider/setup/index.md.",
+    "Controls represent realistic discovery queries for features supported in broader cloud ecosystem tooling (e.g. AWS IAM assume-role, WireGuard keys, Helm repository URLs) that are unsupported in the xcsh provider schema."
+  ]
+}

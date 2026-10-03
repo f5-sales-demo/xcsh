@@ -1,0 +1,29 @@
+{
+  "preview": true,
+  "unpublished_source": true,
+  "provenance_pin_is_baseline": true,
+  "source_commit": "f53a37f42e842e49baaa7c0848ee65c5f36d723a",
+  "document_count": 18958,
+  "build_ms": 30181.182857,
+  "index": {
+    "sha256": "9cd0b6f5cc1505f180de95811e8ff8686b4f8bcec781009b881ea7e76ace1c6a",
+    "size_bytes": 739811328,
+    "gzip_sha256": "e635b3ff870fd51d6a04bf2901482677aaf107e06cdf6eadc99499f00ffb1015",
+    "gzip_size_bytes": 64641360
+  },
+  "source_pr": 2374,
+  "source_merge_commit": "674401be78391f726e2d990531c01978e82777f9",
+  "corpus_audit": {
+    "baseline": "documentation-v12.3.0",
+    "documents": 18958,
+    "body_changes": [],
+    "identity_changes": [],
+    "destination_changes": [],
+    "login_success_alias_destinations_before": 736,
+    "login_success_alias_destinations_after": 10,
+    "removed_alias_destinations": 726,
+    "added_alias_destinations": 0,
+    "source_only": true,
+    "qualification_passed": false
+  }
+}

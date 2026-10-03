@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "5d4c126fd2e633c974d8651b4f7c0aa3eefe448a",
-  "fingerprint": "9d8d3feae83da48dd4759265c3cb8119d6c1575389f40d1e9d77616ed5f73006",
+  "revision": "b618608f90ea69adf68c046c4feb6f12ac4077f4",
+  "fingerprint": "49e2fe6e1efe65faccd334a18df5a7697f110e23d0089e75312500a5846bd510",
   "counts": {
     "total": 238,
     "components": 96,
@@ -357,8 +357,8 @@
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
         "packages/coding-agent/test/internal-urls/terraform-documentation.test.ts",
-        "packages/coding-agent/test/join-patch.test.ts",
-        "packages/coding-agent/test/marketplace/recommended.test.ts"
+        "packages/coding-agent/test/internal-urls/terraform-retrieval-contract.test.ts",
+        "packages/coding-agent/test/join-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3699,7 +3699,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "adc3d6d003980eedf29630556da1fc1c768742262839bd86c4b9742086a0d72f",
+      "sha256": "3b7ebf50238f14a34e93ad9b378f652e43f1fcca21bf080355e3d2d394b8204e",
       "exports": [
         "PrintModeOptions",
         "buildJsonAgentEventLine",

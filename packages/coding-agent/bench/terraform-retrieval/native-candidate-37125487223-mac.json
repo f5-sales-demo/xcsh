@@ -1,0 +1,18 @@
+{
+  "candidate_only": true,
+  "qualification_passed": false,
+  "workflow_run": 37125487223,
+  "workflow_conclusion": "success",
+  "candidate_source_commit": "00606aebd4af87f3b6af68a5684a47cc5ec3d3cc",
+  "provider_version": "v12.4.0",
+  "document_count": 18958,
+  "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+  "binary_sha256": "ca2cfe6846f5d568ed44855f8af9407dab20475bd117c1994f1cb3b926ba7416",
+  "binary_bytes": 576710368,
+  "signature_strict_verified": true,
+  "network_disabled_smoke": "XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK",
+  "limitations": [
+    "Older compiled candidate; current terminology/index/parser changes are not included.",
+    "Smoke covers inventory,filtered search,facets,explicit anchor,deep leaf,and missing lookup; excludes200case qualification and40installed model UAT."
+  ]
+}

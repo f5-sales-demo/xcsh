@@ -1,0 +1,26 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "4bec1295c529c263f4fff604f8b28904795c8559",
+  "index_sha256": "9cd0b6f5cc1505f180de95811e8ff8686b4f8bcec781009b881ea7e76ace1c6a",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "answerable": 60,
+  "correct_leaf": 22,
+  "top5": 42,
+  "discovery_p95_ms": 88.73909999999978,
+  "unpublished_preview": true,
+  "preview_source_commit": "f53a37f42e842e49baaa7c0848ee65c5f36d723a",
+  "baseline_pin_fields": true,
+  "limitations": [
+    "Unreviewed development candidate; no held-out qualification.",
+    "Control activation and unsupported-field behavior require separate semantic/model review."
+  ],
+  "complete_results": {
+    "artifact": "provider-2373-preview-development.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "cc102ddd0ac11d376f52b7530c4c33fe9e8739f23330f05f06f9c1b1022cc1a7",
+    "uncompressed_bytes": 75031,
+    "compressed_sha256": "15d5af933ca5d314e5257aae8338b6641b7d4561c07967495010000aea956882",
+    "compressed_bytes": 8805
+  }
+}

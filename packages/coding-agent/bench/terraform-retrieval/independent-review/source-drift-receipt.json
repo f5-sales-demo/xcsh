@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "candidate_sha256": "f8fa4f3b59e95109ce8e976cfc23c91f1d28a9ce050da66e4caca57f8c27ac84",
+  "verdict": "approve",
+  "reviewer_model": "Gemini 3.8 Flash (High)",
+  "conversation": "848fce88-00cf-4ecc-99ab-cacbe96303a4",
+  "affected_case_ids": [
+    "amb-017"
+  ],
+  "files": {
+    "documentation/resources/http_loadbalancer/properties/http/index.md": "dd001da1c70b13f67201529c22cba5d30b79d089ffa1b09259a06ef43f05f3d6",
+    "documentation/resources/http_loadbalancer/properties/https/index.md": "ec6c06ee75555233ab279cb93a75a8c13949f038b98724d69df732e064705b9a",
+    "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md": "403c9ba3548026ea344d20df3103df3e8438d0dee1f35b90b2a15bb034898793"
+  },
+  "review": {
+    "affected_case_ids": [
+      "amb-017"
+    ],
+    "findings": [
+      "Independently inspected all three changed listener pages in regenerated-source/documentation/resources/http_loadbalancer/properties/{http,https,https_auto_cert}/index.md against original documentation/ and final-candidate.json.",
+      "Anchor verification: Anchor <a id=\"section\"></a> and all section anchors (schema-http--*, schema-https--*, schema-https_auto_cert--*) are preserved identically in all three regenerated documentation files.",
+      "Schema digest update: The provider_schema_digest in frontmatter updated from sha256:e63a07e98b4893c041a6f79be7e19c64babfe543fc6847c17641037e084e1c7c to sha256:d20ce271369d414e9d5661659e153a5441a9bde0053a466518eae9b8b5ab32fd via provider generator v9.0.1; schema structures, types, and block hierarchy remain completely intact.",
+      "Replacement guidance: Added lifecycle recreation guidance ('Changing this type selection requires recreation and may interrupt service. Supported settings within the same selected type remain updatable.') documents ForceNew recreation behavior between OneOf alternatives and does not alter HCL block syntax or schema validity.",
+      "Body changes: Removal of the redundant markdown link list ('OneOf alternatives in this subsection:') in http/index.md does not invalidate quoted source evidence; the quoted string 'Type: \\\"object\\\". single nested block, Optional.' remains present verbatim at line 16 across all three files.",
+      "Affected case verification: amb-017 is the only case targeting the three changed listener files in its expected URIs; its prompt, clarification, permitted choices (http, https, https_auto_cert), expected URIs, and source evidence remain 100% valid and supported.",
+      "Subtree and control case check: Adjacent listener cases ans-std-037, ans-std-038, ans-std-039, ans-std-044, and ctrl-unsupp-002 were verified; their destination documents and negative expectations are completely unaffected.",
+      "Candidate preservation: final-candidate.json was preserved completely unchanged with no mutations."
+    ],
+    "limitations": [
+      "Read-only source review conducted strictly on local files without executing retrieval, running Terraform, or accessing external networks.",
+      "Source-change review evaluates documentation and schema drift only; immutable published snapshot verification remains required before final freeze.",
+      "This review confirms benchmark validity on regenerated source; it is not a qualification run or human acceptance."
+    ],
+    "reviewed_files": [
+      "final-candidate.json",
+      "documentation/resources/http_loadbalancer/properties/http/index.md",
+      "regenerated-source/documentation/resources/http_loadbalancer/properties/http/index.md",
+      "documentation/resources/http_loadbalancer/properties/https/index.md",
+      "regenerated-source/documentation/resources/http_loadbalancer/properties/https/index.md",
+      "documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md",
+      "regenerated-source/documentation/resources/http_loadbalancer/properties/https_auto_cert/index.md"
+    ],
+    "verdict": "approve"
+  },
+  "frozen": false,
+  "qualification_passed": false
+}

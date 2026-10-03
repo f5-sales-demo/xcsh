@@ -1,0 +1,25 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "property_cases": 58,
+  "correct_leaf": 11,
+  "false_leaf": 0,
+  "clarifications": 47,
+  "limitations": [
+    "Estimated rendering route adds precomputed ranking measurements; collision lookup and integrated tool timing remain unverified.",
+    "Selection sees only top-five candidates; complete collision validation remains required.",
+    "Development labels are defective and cannot qualify release."
+  ],
+  "estimated_rendered_route_p95_ms": 25.75073100000006,
+  "original_measurement_report_sha256": "b460ef48f3c862e29c1d687af3d99120389b0d6d2bf291569a89440b19f15a00",
+  "complete_results": {
+    "artifact": "property-selection-revised.json.gz",
+    "uncompressed_sha256": "d8bd8a58680b725c7b32f588577655751a18fd0a1a6c9cb538420018a2addf21",
+    "uncompressed_bytes": 96476,
+    "compressed_sha256": "b028a00d8d7e4c560b8e51edf142fdec840cebe764844a29c82d0325eb3f15ae",
+    "compressed_bytes": 6794,
+    "encoding": "gzip"
+  }
+}

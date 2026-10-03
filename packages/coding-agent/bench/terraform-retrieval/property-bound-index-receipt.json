@@ -1,0 +1,18 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "property_cases": 58,
+  "property_first": 49,
+  "property_top5": 56,
+  "index_build_ms": 1160.523045,
+  "index_bytes": 56631296,
+  "index_sha256": "7aae0c725d33ce1d012e571c74ec68f464b913a742366c188a7d8d39e1a42785",
+  "ranking_p95_ms": 33.63287300000047,
+  "limitations": [
+    "Targeted prepared-term SQL prototype; excludes complete response rendering, selection and installed acceptance.",
+    "Source labels contain known defects."
+  ]
+}

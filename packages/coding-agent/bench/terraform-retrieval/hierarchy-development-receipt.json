@@ -1,0 +1,70 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "change": "Indexed equivalent-leaf branch refinement preserves unresolved choices and exact destinations.",
+  "checks": {
+    "internal_url_tests": 510,
+    "selection_ranking_tests": 51,
+    "task_scoring_tests": 16,
+    "focused_hierarchy_tests": 23,
+    "workspace_check_ts": "passed"
+  },
+  "reports": {
+    "hierarchy-all-role-development": {
+      "file": "hierarchy-all-role-development.json.gz",
+      "sha256": "cfa782e71a6b2fe63d32e95cb4ce8eeb0b43766f19f8293ecd75fd116dbf9fb4",
+      "gzip_sha256": "407b6e7f410f34455597c2c95977dc46cabdaaba081aba5303d367770d47a232",
+      "bytes": 73780,
+      "gzip_bytes": 12075,
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.3.1",
+        "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+        "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1805.1374640000001,
+        "warm_p95_ms": 35.34867200000008,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "hierarchy-choice-development": {
+      "file": "hierarchy-choice-development.json.gz",
+      "sha256": "267075b2e0bab7351fbfb63ca1ed813192159fcaae75e071f7495c687266f943",
+      "gzip_sha256": "97a1091c49ae51b11617b8b0687a4aec9c97cb7b51c9db1278be7d241f163fef",
+      "bytes": 21140,
+      "gzip_bytes": 5137,
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "provider_version": "v12.3.1",
+        "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+        "ambiguous": 29,
+        "complete_choice_routes": 21,
+        "warm_p95_ms": 83.73687900000004,
+        "max_response_bytes": 4043,
+        "limitations": [
+          "Development labels only. Hierarchy continuation coverage is separate from top-five leaf retrieval.",
+          "No installed model or cross-platform acceptance."
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "Eight ambiguous development cases still lack complete expected choice coverage.",
+    "No held-out qualification, installed model, release or cross-platform acceptance."
+  ]
+}

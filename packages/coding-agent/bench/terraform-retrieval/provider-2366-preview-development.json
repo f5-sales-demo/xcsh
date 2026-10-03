@@ -1,0 +1,19 @@
+{
+  "development_only": true,
+  "unpublished_preview": true,
+  "qualification_passed": false,
+  "pin_changed": false,
+  "provider_source_commit": "153108c50c2796f34a693f0e075953c1c7eed02e",
+  "index": {
+    "sha256": "bdf34d8c66197097177d05e9fe40e0b4b73f86aee861f62651237c521df8da34",
+    "size_bytes": 897630208,
+    "gzip_sha256": "3b8865c3c2936b9845223c808ed88742a40f429ae4ca72c4f6df78a3c7f0d2e4",
+    "gzip_size_bytes": 77935872
+  },
+  "answerable": 14,
+  "correct_selected": 10,
+  "top5": 12,
+  "raw_result_sha256": "aa75155f473986057671bb8eb1fb8db4b335c635c927286ad6c136852485bddd",
+  "warm_discovery_p95_ms": 224.81179499999962,
+  "limitation": "Timing from development run while CI/tests also active;not matched qualification. Metadata enrichment preserves precision fixtures but remaining cases unresolved."
+}

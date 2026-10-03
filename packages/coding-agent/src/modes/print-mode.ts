@@ -75,6 +75,14 @@ export function buildJsonAgentEventLine(event: AgentSessionEvent): string | unde
 
 export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<0 | 1> {
 	const { mode, messages = [], initialMessage, initialImages } = options;
+	const outputWrites: Promise<void>[] = [];
+	const writeOutput = (line: string) => {
+		outputWrites.push(
+			new Promise<void>((resolve, reject) => {
+				process.stdout.write(line, error => (error ? reject(error) : resolve()));
+			}),
+		);
+	};
 
 	// Emit session header for JSON mode.
 	if (mode === "json") {
@@ -83,7 +91,7 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 		// has no prompt and therefore would otherwise retain lazy persistence.
 		await session.sessionManager.ensureOnDisk();
 		const line = buildJsonSessionHeaderLine(session.sessionManager.getHeader(), session.model, session.thinkingLevel);
-		if (line) process.stdout.write(line);
+		if (line) writeOutput(line);
 	}
 	// Set up extensions for print mode (no UI, no command context)
 	const extensionRunner = session.extensionRunner;
@@ -195,7 +203,7 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 	session.subscribe(event => {
 		if (mode === "json") {
 			const line = buildJsonAgentEventLine(event);
-			if (line) process.stdout.write(line);
+			if (line) writeOutput(line);
 		}
 	});
 
@@ -220,18 +228,12 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 			process.stderr.write(`${assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`}\n`);
 		} else {
 			const text = finalAnswerText(assistantMsg);
-			if (text) process.stdout.write(`${text}\n`);
+			if (text) writeOutput(`${text}\n`);
 		}
 	}
 
-	// Ensure stdout is fully flushed before returning
-	// This prevents race conditions where the process exits before all output is written
-	const { promise, resolve, reject } = Promise.withResolvers<void>();
-	process.stdout.write("", err => {
-		if (err) reject(err);
-		else resolve();
-	});
-	await promise;
+	// Await each record's actual write; an empty write can complete before a large Bun pipe write drains.
+	await Promise.all(outputWrites);
 
 	return failed ? 1 : 0;
 }

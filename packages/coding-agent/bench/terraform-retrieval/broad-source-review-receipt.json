@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_only": true,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "conversation": "d404e9c5-4869-4dfd-9095-998ae345ba43",
+  "review_sha256": "354a2d647c1ca79bf831072d22b1d7ca61b7bad4907474a78a98bb3a6738964b",
+  "gzip_sha256": "7ece2f51bcd0d8e38eb68fc6192112a9526252537c7a1b167f668326382c5137",
+  "reviewed_cases": 80,
+  "target_destinations_verified": 115,
+  "source_file_hashes_verified": 6475,
+  "collision_adjudication_pending": 15
+}

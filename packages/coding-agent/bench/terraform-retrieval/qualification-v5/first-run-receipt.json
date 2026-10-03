@@ -1,0 +1,83 @@
+{
+  "qualification_passed": false,
+  "first_untouched_run": true,
+  "provider_version": "v12.4.0",
+  "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "index_sha256": "cfe5abc1032ddd1eb874f1cab0f3e25e42c555f40db3f2ce2d209db563d98326",
+  "answerable_correct": 59,
+  "answerable_total": 140,
+  "answerable_top5": 79,
+  "scored_correct": 71,
+  "scored_total": 190,
+  "warm_p95_ms": 83.16532899999947,
+  "route_p95_ms": 96.22581100000025,
+  "max_discovery_bytes": 4090,
+  "max_context_bytes": 7852,
+  "files": {
+    "heldout.json": {
+      "file": "heldout.json.gz",
+      "sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+      "gzip_sha256": "cb31cf4a525762ac925515dee772e584c9e2d6f00e526f1120a7ffffe2297df0",
+      "bytes": 156265,
+      "gzip_bytes": 16490
+    },
+    "independent-review.json": {
+      "file": "independent-review.json.gz",
+      "sha256": "62f59c3ead12eb8cd74aac4f454f25b7574b1622b92d2eb7825c9548ff537f75",
+      "gzip_sha256": "8194bef3c91c0c7de812680d5dce0317abac65c6c5b418213b0519278314a5fc",
+      "bytes": 66085,
+      "gzip_bytes": 3214
+    },
+    "first-linux.json": {
+      "file": "first-linux.json.gz",
+      "sha256": "56140f28d000f08ff83acadbc0066dce43dd27d5cb9728340576d37bfa093cd4",
+      "gzip_sha256": "058c539736a95315f91a365b71135d9df5a5cd2e2393dd872181fceaee1f9953",
+      "bytes": 355547,
+      "gzip_bytes": 47322
+    },
+    "model-subset.json": {
+      "file": "model-subset.json.gz",
+      "sha256": "6ddffee088bc923b4eb43580aa425325ced439ae95e14bf9b06c76c12160ea51",
+      "gzip_sha256": "a9e0b1dec7b725726907f1f604a6d7e84e686641fed1094113066213b52d3e36",
+      "bytes": 38475,
+      "gzip_bytes": 5851
+    },
+    "development-separation.json": {
+      "file": "development-separation.json.gz",
+      "sha256": "1bad1c4ce7ada82530bd80e9225906adddfb7a602ffad42c0f88081871d69bb3",
+      "gzip_sha256": "133c22ad6142f6a0b78541cd664d7be987b833d7b3914b6af99cbc87d19dc1e1",
+      "bytes": 593,
+      "gzip_bytes": 364
+    },
+    "clarification-trees.json": {
+      "file": "clarification-trees.json.gz",
+      "sha256": "177762da242c8ef41553e599eb657b641ed0a5b9a9c178e54aa727330b9bb89b",
+      "gzip_sha256": "73f232ba02cb259b5cc4bd9d7c8dd5388fc1de78894d69eec40247b4848fd785",
+      "bytes": 111399,
+      "gzip_bytes": 4207
+    },
+    "author-report.json": {
+      "file": "author-report.json.gz",
+      "sha256": "6093e39f33d0f3c5eae15b35af1c2abf90ff39e4131db1dd0e4b2135dca4dcd5",
+      "gzip_sha256": "5e67a137ccd980eed2d55219334ed11c68f73bc76af7b914969d6ddceb34dd81",
+      "bytes": 2543,
+      "gzip_bytes": 1079
+    },
+    "eligibility.json": {
+      "file": "eligibility.json.gz",
+      "sha256": "5d6a5aa0e99c7184be457989eadbcb005e95ab9f51491ba0ddc1fb483fad0a5a",
+      "gzip_sha256": "ef1893977cea94491722fd5b196cdb180a4b3df97c997c0785218e3ae2d42d3f",
+      "bytes": 320,
+      "gzip_bytes": 251
+    },
+    "freeze.json": {
+      "file": "freeze.json.gz",
+      "sha256": "bea7d312f57b494066bd35aa62e2e7fc1d7e5e6e251e8593dc07ef01bbf53809",
+      "gzip_sha256": "e90b2d38729d4fab48e70211623bbe8b39362a9e66438be470a9fe704ec42b8a",
+      "bytes": 1163,
+      "gzip_bytes": 651
+    }
+  },
+  "consumer_draft": true,
+  "auto_merge": false
+}

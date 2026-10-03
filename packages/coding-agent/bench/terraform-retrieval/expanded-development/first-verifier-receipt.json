@@ -1,0 +1,35 @@
+{
+  "source_only": true,
+  "development_only": true,
+  "qualification_passed": false,
+  "retrieval_evaluated": false,
+  "verdict": "needs-attention",
+  "repair_pending": true,
+  "files": [
+    {
+      "path": "first-verifier-review.json.gz",
+      "sha256": "520d82ac4271268e70f2bf3664bee5c7bf07a9ba6c2df93d8f54329bdde1e71e",
+      "gzip_sha256": "2dd51e1524daeeccc11187af11f8b1da98313839f695f00d9baf1d9ff1a01c29"
+    },
+    {
+      "path": "first-verifier-corrected-development.json.gz",
+      "sha256": "25ef2004c3568481b862cd24f10e933417769f17b5f5bc690c8880f7ebdfd3f6",
+      "gzip_sha256": "693232977e82789f88f46fc14295989750de455524c9efb97ca51f00f9bcf8da"
+    },
+    {
+      "path": "first-verifier-reviewed-structure.json.gz",
+      "sha256": "14c8a63ff67c90ba8f1625fc9df50145c48340b1820bdbc2c4985781a9dfd28d",
+      "gzip_sha256": "8b1ad3aefbc182cbbd477d60a4a043dfbf275499d53971045d5fd768717d7c75"
+    },
+    {
+      "path": "first-verifier-verifier.stream.jsonl.gz",
+      "sha256": "0247f898e197f579deb2fd37c5ac2a69ab8ea0a4d8713ded9587443bb844a75a",
+      "gzip_sha256": "e53d00d880bcfbd8db1dd8979258894123c8a8898d633c3f5ae548931859833e"
+    }
+  ],
+  "limitations": [
+    "Seven unresolved architecture/specification branches excluded from tentative scoring.",
+    "First verifier correction contains12unknown destinations in three ambiguous cases; repair required before retrieval evaluation.",
+    "Explicit tool paths stayed within workspace; command excerpts are truncated."
+  ]
+}

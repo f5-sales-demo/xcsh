@@ -1,0 +1,8 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "structural_validation_passed": true,
+  "verified_depth8_count": 32,
+  "errors": [],
+  "semantic_review_required": true
+}

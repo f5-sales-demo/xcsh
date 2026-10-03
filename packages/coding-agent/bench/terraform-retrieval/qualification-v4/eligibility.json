@@ -1,0 +1,6 @@
+{
+  "suite_sha256": "fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d",
+  "qualification_eligible": false,
+  "reason": "First untouched run failed accuracy and the suite is now exposed; later changed implementations may run only as explicit regression, never replacement held-out qualification",
+  "first_run_preserved": true
+}

@@ -1,0 +1,33 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_source_commit": "725673fbcca1238f45a86e80156f1e32475f78f9",
+  "source_commit": "4bec1295c529c263f4fff604f8b28904795c8559",
+  "index_sha256": "9b6a74267d17f062fa381449bbc44f7f6bbadce5161ba25e41fafac07a07fb24",
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "cases_compared": 80,
+  "comparison_fields": [
+    "selected",
+    "destinations",
+    "top5",
+    "correct_leaf",
+    "complete_choices",
+    "response_bytes"
+  ],
+  "differences": [],
+  "correct_leaf": 22,
+  "answerable": 60,
+  "top5": 42,
+  "mac_discovery_p95_ms": 71.83612499999981,
+  "ubuntu_discovery_p95_ms": 87.65858500000013,
+  "raw_digests": {
+    "v123-mac-development.json": "f262038c5122e179f22485071d6af8c9875f4e1548fe328a033dbc89c2c553ab",
+    "v123-linux-development.json": "0da0c6968f24da2b43ad1f2f59bc3e29bb5bdf5bcafaa5ee99f832cdf4a5b2b8"
+  },
+  "limitations": [
+    "Development candidate has known label defects and remaining branch review concerns.",
+    "Five-repetition discovery only; complete response latency and hashes not measured.",
+    "Mac exact source/pin copied into existing bootstrapped worktree because Git requires Xcode license acceptance.",
+    "Installed release acceptance remains unfinished."
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "benchmark_tests": 161,
+  "workspace_check_ts": "pass",
+  "offline_parity": {
+    "cases": 43,
+    "response_hashes_and_destinations_equal": true
+  },
+  "source_sha256": "815026967ba7d6bc63e8caf44887d7d459eba0ca9f37ad79912a2db01bd6a225",
+  "files": [
+    {
+      "path": "v1240-root-development.json.gz",
+      "sha256": "b3b1b9d83b944f1c8e1f528ff5196b40af08ad786ef03a58669a3f3c0de3f5ba",
+      "gzip_sha256": "dfe1c54409c4b839060a3ab9a60daf902fa7dacb3258dab03469414f9718d7ce",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 1735.115023,
+        "warm_p95_ms": 36.09471799999983,
+        "answerable": 40,
+        "correct_leaf": 35,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-root-broad.json.gz",
+      "sha256": "682407b98cf8bc9728a7b035450d48c2c32716fa786fea0da5f157ccae08b3e7",
+      "gzip_sha256": "bcda2ce2d009a03545f7054fa14613415c15db0eecc0e1c197279d8d4f90431f",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2509.534327,
+        "warm_p95_ms": 61.45256299999983,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-root-regression.json.gz",
+      "sha256": "927ddad125af7f51d6204cbee6c4b054a4fc816891909e69b987ee623677b09c",
+      "gzip_sha256": "50dc530cdc94495616f29ec86371d61709c74974841044a4810d2053e83c9de9",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+          "size_bytes": 800915456,
+          "gzip_sha256": "4cac4cda89d79163b3cbd532b2d3588d7f7663d473c147676e3e90f35755e577",
+          "gzip_size_bytes": 72608838
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1829.7664100000002,
+        "warm_p95_ms": 120.07656499999939,
+        "discovery_p95_ms": 149.8724280000024,
+        "context_p95_ms": 0.78726800000004,
+        "route_p95_ms": 149.89493400000356,
+        "warm_measurement_count": 2305,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 760,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 4084,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 4038125,
+        "tool_calls": 2305,
+        "index_file_bytes": 72608838,
+        "answerable_accuracy": 0.6714285714285714,
+        "answerable_top5": 0.8642857142857143,
+        "scored_accuracy": 0.6368421052631579,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    },
+    {
+      "path": "v1240-root-mac.json.gz",
+      "sha256": "2bf9ebb6c0b57c0586ff9bc579344472002a88ae12650dda6142423997506c41",
+      "gzip_sha256": "668039124eaa06cc67ed325f70931766b3564661104aae860e20873021b94da2",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 369.621209,
+        "warm_p95_ms": 36.098916999999915,
+        "answerable": 40,
+        "correct_leaf": 35,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-root-linux.json.gz",
+      "sha256": "74f96e5cf8b7dfdfd0f02a6ee37431c322f72cdaeb46a565adee2582352e3f34",
+      "gzip_sha256": "4ae01557269f5e4088fb25b4e196003cd9a452181d2a643da401ccd74c77e170",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 4483.566444,
+        "warm_p95_ms": 200.5782989999998,
+        "answerable": 40,
+        "correct_leaf": 35,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-root-linux-repeat.json.gz",
+      "sha256": "8d1144594f7e4aec9d6848f4cce43be17f82554d3f1f6ddd4e2ef0558036cff7",
+      "gzip_sha256": "c9ca08f4135da8dd0b4d32fe08096e4c48b3441c98c3d30b4a594985cb95496d",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 1766.47081,
+        "warm_p95_ms": 103.30477599999995,
+        "answerable": 40,
+        "correct_leaf": 35,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Exposed qualification suite is regression only.",
+    "No latest installed model or held-out qualification.",
+    "First Linux offline latency run overlapped workspace checks and exposed regression; repeated without these jobs, both retained."
+  ]
+}

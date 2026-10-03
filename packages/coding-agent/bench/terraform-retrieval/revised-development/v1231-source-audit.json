@@ -1,0 +1,895 @@
+{
+  "cases": [
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider"
+      ],
+      "id": "dev-revised-001",
+      "reason": "Label defect: In xcsh_http_loadbalancer, automated API discovery crawler credentials can be configured either under top-level enable_api_discovery or under single_lb_app.enable_discovery. The prompt omits the branch choice between top-level API discovery and single LB app discovery, creating multiple indistinguishable destinations with identical password secret decryption_provider fields.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:61-92",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:62-93"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location"
+      ],
+      "id": "dev-revised-002",
+      "reason": "Label defect: In xcsh_http_loadbalancer, API discovery crawler settings can be declared under enable_api_discovery or single_lb_app.enable_discovery. The prompt omits the branch choice between top-level and single LB app discovery, leaving the encrypted crawler password secret location URI ambiguous between both paths.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:93-108",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:94-152"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-003",
+      "reason": "Valid answerable destination: In xcsh_cdn_loadbalancer, API discovery crawler configuration exists exclusively under enable_api_discovery (single_lb_app is not present), uniquely resolving to blindfold_secret_info.decryption_provider.",
+      "source_evidence": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md:61-92"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-004",
+      "reason": "Valid answerable destination: Prompt specifies CloudFront protected endpoints and login failure conditions, uniquely resolving to failure_conditions.name.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:80-95"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-005",
+      "reason": "Valid answerable destination: Prompt specifies CloudFront login flow labels and transaction failure regex patterns, uniquely resolving to failure_conditions.regex_values.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md:150-165"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-006",
+      "reason": "Valid answerable destination: In xcsh_protected_application, login transaction_result criteria are uniquely defined under cloudfront protected endpoints, resolving to success_conditions.name.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:80-95"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-007",
+      "reason": "Valid answerable destination: Prompt specifies CloudFront protected endpoints and expected HTTP status code for login success, uniquely resolving to success_conditions.status.",
+      "source_evidence": [
+        "documentation/resources/protected_application/properties/cloudfront/protected_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md:208-223"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations/properties/items/get_spec/infra/hw_info/chassis/index.md#schema-items--get_spec--infra--hw_info--chassis--asset_tag"
+      ],
+      "id": "dev-revised-008",
+      "reason": "Label defect: The site_registrations data source exposes discovered hardware DMI info through two parallel representations under items: items.object.spec.gc_spec.infra.hw_info.chassis.asset_tag and items.get_spec.infra.hw_info.chassis.asset_tag. The prompt omits the representation branch choice, creating genuine ambiguity between these two valid destinations.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:34-49",
+        "documentation/data-sources/site_registrations/properties/items/get_spec/infra/hw_info/chassis/index.md:32-39"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations/properties/items/get_spec/infra/hw_info/chassis/index.md#schema-items--get_spec--infra--hw_info--chassis--serial"
+      ],
+      "id": "dev-revised-009",
+      "reason": "Label defect: In the site_registrations data source, chassis serial number is exposed under both items.object.spec.gc_spec.infra.hw_info.chassis.serial and items.get_spec.infra.hw_info.chassis.serial. The prompt omits the representation branch choice, creating indistinguishable destinations.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:42-57",
+        "documentation/data-sources/site_registrations/properties/items/get_spec/infra/hw_info/chassis/index.md:40-47"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_state/properties/items/get_spec/infra/hw_info/chassis/index.md#schema-items--get_spec--infra--hw_info--chassis--asset_tag"
+      ],
+      "id": "dev-revised-010",
+      "reason": "Label defect: In the site_registrations_by_state data source, chassis asset tag is exposed under both items.object.spec.gc_spec.infra.hw_info.chassis.asset_tag and items.get_spec.infra.hw_info.chassis.asset_tag. The prompt omits the representation branch choice.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations_by_state/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:34-49",
+        "documentation/data-sources/site_registrations_by_state/properties/items/get_spec/infra/hw_info/chassis/index.md:32-39"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_site/properties/items/get_spec/infra/hw_info/chassis/index.md#schema-items--get_spec--infra--hw_info--chassis--serial"
+      ],
+      "id": "dev-revised-011",
+      "reason": "Label defect: In the site_registrations_by_site data source, chassis serial number is exposed under both items.object.spec.gc_spec.infra.hw_info.chassis.serial and items.get_spec.infra.hw_info.chassis.serial. The prompt omits the representation branch choice.",
+      "source_evidence": [
+        "documentation/data-sources/site_registrations/by_site/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md:42-57",
+        "documentation/data-sources/site_registrations_by_site/properties/items/get_spec/infra/hw_info/chassis/index.md:40-47"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-012",
+      "reason": "Valid answerable destination: Explicitly specifies single-stack IPv4 routing for custom outside static routes on an AWS Transit Gateway site, uniquely resolving to nexthop_address.ipv4.addr.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-013",
+      "reason": "Valid answerable destination: Explicitly specifies dual-stack outside static routes and IPv4 next-hop address on an AWS Transit Gateway site, uniquely resolving to nexthop_address.dual_stack.ipv4.addr.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-014",
+      "reason": "Valid answerable destination: Explicitly specifies dual-stack outside static routes and IPv6 next-hop address on an AWS Transit Gateway site, uniquely resolving to nexthop_address.dual_stack.ipv6.addr.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-015",
+      "reason": "Valid answerable destination: Explicitly specifies standard single-stack IPv4 next-hop address for custom outside static routes in Azure VNet site voltstack_cluster_ar, uniquely resolving to nexthop_address.ipv4.addr.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-016",
+      "reason": "Valid answerable destination: Explicitly specifies custom outside dual-stack static route IPv4 next-hop address in Azure VNet site voltstack_cluster_ar, uniquely resolving to nexthop_address.dual_stack.ipv4.addr.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-017",
+      "reason": "Valid answerable destination: Explicitly specifies dual-stack outside static route IPv6 next-hop address in Azure VNet site voltstack_cluster_ar, uniquely resolving to nexthop_address.dual_stack.ipv6.addr.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-018",
+      "reason": "Valid answerable destination: Explicitly specifies standard single-stack IPv4 next-hop address for custom outside static routes in GCP VPC site ingress_egress_gw, uniquely resolving to nexthop_address.ipv4.addr.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-019",
+      "reason": "Valid answerable destination: Explicitly specifies dual-stack outside routes IPv4 next-hop address in GCP VPC site ingress_egress_gw, uniquely resolving to nexthop_address.dual_stack.ipv4.addr.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:59-75"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--redirect_route--path--path",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--specific_routes--routes--redirect_route--path--path"
+      ],
+      "id": "dev-revised-020",
+      "reason": "Label defect: In xcsh_workload stateful_service, HTTP load balancer redirect routes can be declared under advertise_custom, advertise_on_public.port, or advertise_on_public.multi_ports. The prompt omits the advertise variant branch choice, leaving multiple identical route structures indistinguishable.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md:69-84",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md:69-123",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/redirect_route/path/index.md:70-124"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix"
+      ],
+      "id": "dev-revised-021",
+      "reason": "Label defect: In xcsh_workload stateful_service, simple route prefix matching exists under advertise_custom, advertise_on_public.port, and advertise_on_public.multi_ports. The prompt omits the advertise variant branch choice.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124-139",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124-176",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:125-177"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--specific_routes--routes--simple_route--path--prefix"
+      ],
+      "id": "dev-revised-022",
+      "reason": "Label defect: The prompt asks for prefix path matching (prefix path to match for a simple route), but the expected anchor targets the exact path attribute (...--path--path). Furthermore, the prompt omits the advertise variant under advertise_options, which exists under advertise_custom and advertise_on_public variants.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:69-84",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124-176",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:124-176",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/simple_route/path/index.md:125-177"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect"
+      ],
+      "id": "dev-revised-023",
+      "reason": "Label defect: In xcsh_workload stateful_service redirect routes, host_redirect is defined under advertise_custom, advertise_on_public.port, and advertise_on_public.multi_ports. The prompt omits the advertise variant branch choice.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:72-87",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:72-102",
+        "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md:73-103"
+      ],
+      "valid": false,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-024",
+      "reason": "Valid answerable destination: Uniquely identifies network_prefix for ethernet interface IPv6 stateful DHCP auto-configuration on a VoltStack site resource.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md:83-98"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-025",
+      "reason": "Valid answerable destination: Uniquely identifies ending IPv6 address (end_ip) for DHCP networks address pools in VoltStack site ethernet interface router stateful configuration.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md:79-94"
+      ],
+      "valid": true,
+      "verified_depth": 10
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-026",
+      "reason": "Valid answerable destination: Uniquely resolves to case_insensitive under protected_mobile_endpoints request_body_none exact_value match criteria in the bot_endpoint_policy data source.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/request_body/request_body_none/request_body_match/exact_value/index.md:34-49"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_none/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_or--cookie_operator--cookie--cookie_none--cookie_match_v2--case_sensitive"
+      ],
+      "id": "dev-revised-027",
+      "reason": "Label defect: The nesting order of cookie combinators in the bot_endpoint_policy data source is symmetric/commutative (cookies_none...cookie_or vs cookies_or...cookie_none), both representing mobile success criteria where none of the cookies match under an OR combination and exposing identical case_sensitive attributes. The prompt omits the operator nesting precedence choice.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md:38-53",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_none/cookie_match_v2/index.md:38-45"
+      ],
+      "valid": false,
+      "verified_depth": 12
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-028",
+      "reason": "Valid answerable destination: Uniquely identifies target network interface reference name under custom_network_config SLO static IPv6 routes in securemesh_site.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site/properties/custom_network_config/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md:114-129"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-029",
+      "reason": "Valid answerable destination: Explicitly specifies Blindfold encrypted secret management for FlashArray API token in fleet storage devices, uniquely resolving to blindfold_secret_info.location.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md:94-109"
+      ],
+      "valid": true,
+      "verified_depth": 9
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-030",
+      "reason": "Valid answerable destination: Targets the root provider block argument reference section in the xcsh provider setup documentation.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-031",
+      "reason": "Valid answerable destination: Targets the API token authentication subsection (Option 1) in the provider setup documentation.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:103-122"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-032",
+      "reason": "Valid answerable destination: Uniquely identifies the computed token attribute in the ephemeral artifact registry token resource.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:37-52"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-033",
+      "reason": "Valid answerable destination: Uniquely identifies expiration_time in the ephemeral artifact registry token resource.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-034",
+      "reason": "Valid answerable destination: Uniquely identifies content_type attribute in the ephemeral Kubernetes manifests resource.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-035",
+      "reason": "Valid answerable destination: Uniquely identifies type_url under extensions in the ephemeral Kubernetes manifests resource.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/extensions/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-036",
+      "reason": "Valid answerable destination: Uniquely identifies key_type parameter in the dns_zone_add_cryptokey action.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/properties/index.md:33-48"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-037",
+      "reason": "Valid answerable destination: Uniquely identifies the active boolean parameter in the dns_zone_edit_cryptokey action.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_edit_cryptokey/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-038",
+      "reason": "Valid answerable destination: Uniquely identifies software_version parameter in the site_upgrade_sw action.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_sw/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-039",
+      "reason": "Valid answerable destination: Specifically specifies terminating multiple active user sessions and passing a list of session identifiers, uniquely resolving to ids in the access_active_sessions_terminate action.",
+      "source_evidence": [
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-040",
+      "reason": "Valid answerable destination: Uniquely identifies site_names parameter in the site_signatures_update action.",
+      "source_evidence": [
+        "documentation/actions/site_signatures_update/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-041",
+      "reason": "Valid answerable destination: Uniquely identifies os_version parameter in the site_upgrade_os action.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+      ],
+      "id": "dev-revised-042",
+      "reason": "Label defect: In aws_vpc_site ingress_egress_gw outside_static_routes, IPv4 next-hop gateway address can be configured under standard single-stack IPv4 (nexthop_address.ipv4.addr) or dual-stack IPv4 (nexthop_address.dual_stack.ipv4.addr). Unlike cases 012/015/018, the prompt omits the routing stack choice (single-stack vs dual-stack).",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md:59-75",
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md:60-107"
+      ],
+      "valid": false,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-043",
+      "reason": "Valid answerable destination: Uniquely identifies start_ip attribute for DHCP network address pools in unmanaged OpenStack site interfaces within securemesh_site_v2.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/openstack/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md:139-155"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-044",
+      "reason": "Valid answerable destination: Uniquely identifies prefixes attribute in SNAT pool configuration for BIG-IP HTTP proxy private IP origin servers.",
+      "source_evidence": [
+        "documentation/resources/bigip_http_proxy/properties/origin_pools/pools/origin_servers/origin_servers/private_ip/snat_pool/snat_pool/index.md:55-70"
+      ],
+      "valid": true,
+      "verified_depth": 8
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-045",
+      "reason": "Valid answerable destination: Explicitly specifies managed secondary DNS zone resource, uniquely resolving to primary_servers under secondary zone configuration in xcsh_dns_zone resource.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:33-48"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-046",
+      "reason": "Valid answerable destination: Uniquely identifies certificate_url in xcsh_certificate resource.",
+      "source_evidence": [
+        "documentation/resources/certificate/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-047",
+      "reason": "Valid answerable destination: Uniquely identifies cluster_scoped_access_permit block in xcsh_k8s_cluster resource.",
+      "source_evidence": [
+        "documentation/resources/k8s_cluster/properties/cluster_scoped_access_permit/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-048",
+      "reason": "Valid answerable destination: Uniquely identifies default_gw under node_static_ip for tunnel network interface in xcsh_network_interface resource.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/tunnel_interface/static_ip/node_static_ip/index.md:23-38"
+      ],
+      "valid": true,
+      "verified_depth": 4
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-049",
+      "reason": "Valid answerable destination: Explicitly specifies managed BGP routing resource, uniquely resolving to peers.external.asn in xcsh_bgp resource.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:33-48"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-050",
+      "reason": "Valid answerable destination: Uniquely identifies description property in administrative namespace resource (xcsh_namespace).",
+      "source_evidence": [
+        "documentation/resources/namespace/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-051",
+      "reason": "Valid answerable destination: Explicitly specifies managed alert policy resource, uniquely resolving to receivers.name in xcsh_alert_policy resource.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-052",
+      "reason": "Valid answerable destination: Uniquely identifies total_number attribute under limits block in xcsh_rate_limiter resource.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/properties/limits/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-053",
+      "reason": "Valid answerable destination: Uniquely identifies swagger_specs list attribute in xcsh_api_definition resource.",
+      "source_evidence": [
+        "documentation/resources/api_definition/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-054",
+      "reason": "Valid answerable destination: Uniquely identifies display_name under tenant_details in xcsh_tenant_configuration resource.",
+      "source_evidence": [
+        "documentation/resources/tenant_configuration/properties/tenant_details/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-055",
+      "reason": "Valid answerable destination: Uniquely identifies aws_account_number under aws_provider in xcsh_cloud_user_account resource.",
+      "source_evidence": [
+        "documentation/resources/cloud_user_account/properties/aws_provider/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-056",
+      "reason": "Valid answerable destination: Uniquely identifies registry server domain attribute in xcsh_container_registry resource.",
+      "source_evidence": [
+        "documentation/resources/container_registry/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-057",
+      "reason": "Valid answerable destination: Uniquely identifies cache_ttl under eligible_for_cache scheme_proxy_host_request_uri in xcsh_cdn_cache_rule resource.",
+      "source_evidence": [
+        "documentation/resources/cdn_cache_rule/properties/cache_rules/eligible_for_cache/scheme_proxy_host_request_uri/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 4
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-058",
+      "reason": "Valid answerable destination: Uniquely identifies allow_list configuration block in xcsh_service_policy resource.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/allow_list/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-059",
+      "reason": "Valid answerable destination: Uniquely identifies request_headers_to_remove property under routes in xcsh_route resource.",
+      "source_evidence": [
+        "documentation/resources/route/properties/routes/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-060",
+      "reason": "Valid answerable destination: Uniquely identifies aws_secret_key block in xcsh_cloud_credentials resource.",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/index.md#schema-port"
+      ],
+      "id": "dev-revised-061",
+      "reason": "Valid ambiguous case: The prompt asks where to configure or reference the default backend service port for an origin pool without specifying managed resource vs data source. Both xcsh_origin_pool resource and data source define the port attribute.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:21-36",
+        "documentation/data-sources/origin_pool/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/dns_zone/properties/secondary/index.md#schema-secondary--primary_servers"
+      ],
+      "id": "dev-revised-062",
+      "reason": "Valid ambiguous case: The prompt asks for primary DNS server IP addresses for secondary zone transfers without specifying managed resource vs data source. Both secondary DNS zone documentation files define primary_servers.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/secondary/index.md:33-48",
+        "documentation/data-sources/dns_zone/properties/secondary/index.md:33-48"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/app_firewall/properties/blocking/index.md#section"
+      ],
+      "id": "dev-revised-063",
+      "reason": "Valid ambiguous case: The prompt asks where the blocking mode block is specified in application firewall configuration without distinguishing between resource and data source.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md:20-32",
+        "documentation/data-sources/app_firewall/properties/blocking/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_interface/properties/dedicated_interface/index.md#schema-dedicated_interface--mtu"
+      ],
+      "id": "dev-revised-064",
+      "reason": "Valid ambiguous case: The prompt asks for MTU property documentation on a dedicated network interface without specifying managed resource vs data source.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/dedicated_interface/index.md:21-36",
+        "documentation/data-sources/network_interface/properties/dedicated_interface/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/alert_policy/properties/receivers/index.md#schema-receivers--name"
+      ],
+      "id": "dev-revised-065",
+      "reason": "Valid ambiguous case: The prompt asks where the notification receiver name property is defined for an alert policy without specifying resource vs data source.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/receivers/index.md:21-36",
+        "documentation/data-sources/alert_policy/properties/receivers/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/bgp/properties/peers/external/index.md#schema-peers--external--asn"
+      ],
+      "id": "dev-revised-066",
+      "reason": "Valid ambiguous case: The prompt asks where the ASN is specified for an external BGP peer without specifying resource vs data source.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/peers/external/index.md:33-48",
+        "documentation/data-sources/bgp/properties/peers/external/index.md:33-48"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/healthcheck/properties/index.md#schema-timeout"
+      ],
+      "id": "dev-revised-067",
+      "reason": "Valid ambiguous case: The prompt asks for overall response timeout property for a health check monitor without specifying resource vs data source.",
+      "source_evidence": [
+        "documentation/resources/healthcheck/properties/index.md:21-36",
+        "documentation/data-sources/healthcheck/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md#option-3-pem-certificate-authentication"
+      ],
+      "id": "dev-revised-068",
+      "reason": "Valid ambiguous case: The prompt asks where certificate-based mutual TLS authentication is configured for the xcsh provider without specifying PKCS#12 bundle (Option 2) vs separate PEM files (Option 3).",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:123-144",
+        "documentation/provider/setup/index.md:145-167"
+      ],
+      "valid": true,
+      "verified_depth": 0
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md#section"
+      ],
+      "id": "dev-revised-069",
+      "reason": "Valid ambiguous case: The prompt asks which block documents secret credentials added to request headers on an HTTP load balancer simple route without specifying blindfold encrypted secret info vs plaintext clear secret info.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/blindfold_secret_info/index.md:26-52",
+        "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md:26-52"
+      ],
+      "valid": true,
+      "verified_depth": 6
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md#section"
+      ],
+      "id": "dev-revised-070",
+      "reason": "Valid ambiguous case: The prompt asks where the automatic IP allocation method is documented for an ethernet interface DHCP server without specifying whether allocation begins from the start or from the end of the pool range.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md:20-32",
+        "documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 3
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md#schema-ids"
+      ],
+      "id": "dev-revised-071",
+      "reason": "Valid ambiguous case: The prompt asks which administrative action documentation covers revoking active user access sessions without specifying single session termination (access_active_session_terminate) vs bulk session termination (access_active_sessions_terminate).",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/properties/index.md:21-36",
+        "documentation/actions/access_active_sessions_terminate/properties/index.md:21-36"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/azure_client_secret/index.md#section"
+      ],
+      "id": "dev-revised-072",
+      "reason": "Valid ambiguous case: The prompt asks where in cloud credentials secret access credentials for public cloud integration are configured without specifying AWS (aws_secret_key) vs Azure (azure_client_secret).",
+      "source_evidence": [
+        "documentation/resources/cloud_credentials/properties/aws_secret_key/index.md:20-32",
+        "documentation/resources/cloud_credentials/properties/azure_client_secret/index.md:20-32"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-073",
+      "reason": "Valid control case: AWS IAM role ARN / STS assume-role parameters are unsupported in the root xcsh provider configuration; authentication is limited to api_token, api_p12_file, and api_cert/api_key.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md:83-100"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-074",
+      "reason": "Valid control case: Custom HTTP/3 BBR congestion control parameters are unsupported in the xcsh_http_loadbalancer resource schema.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/index.md:1-50"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-075",
+      "reason": "Valid control case: NSEC3 salt iteration count configuration for DNSSEC signing is unsupported in the xcsh_dns_zone resource schema.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md:1-35"
+      ],
+      "valid": true,
+      "verified_depth": 2
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-076",
+      "reason": "Valid control case: Custom machine learning training dataset URLs for threat detection are unsupported in the application firewall configuration schema.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/index.md:1-35"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-077",
+      "reason": "Valid control case: WireGuard private key configuration is unsupported on customer edge network interface resources in the xcsh provider.",
+      "source_evidence": [
+        "documentation/resources/network_interface/properties/index.md:1-40"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-078",
+      "reason": "Valid control case: Native gRPC-Web to gRPC backend transcoding options are unsupported in the xcsh_origin_pool resource schema.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/index.md:1-45"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-079",
+      "reason": "Valid control case: Maximum download bandwidth rate limit attributes are unsupported in the ephemeral xcsh_artifact_registry_token schema.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/properties/index.md:1-45"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    },
+    {
+      "alternative_destinations": [],
+      "id": "dev-revised-080",
+      "reason": "Valid control case: Upstream Helm chart repository URLs are unsupported in the ephemeral xcsh_kubernetes_manifests resource schema.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/properties/index.md:1-40"
+      ],
+      "valid": true,
+      "verified_depth": 1
+    }
+  ],
+  "limitations": [
+    "The corpus is strictly constrained to the static offline documentation set and schema specifications published in documentation/ and source.json; runtime F5 Distributed Cloud API behaviors and live tenant validations are not represented.",
+    "Prompts intentionally paraphrase terminology and omit exact Terraform resource identifiers while retaining sufficient product and role semantics to achieve unambiguous destination resolution for answerable queries.",
+    "Provider setup queries target human-oriented markdown argument reference sections rather than schema attribute anchors due to absence of machine-readable schema metadata in provider/setup/index.md.",
+    "Controls represent realistic discovery queries for features supported in broader cloud ecosystem tooling (e.g. AWS IAM assume-role, WireGuard keys, Helm repository URLs) that are unsupported in the xcsh provider schema.",
+    "Audit strictly evaluated all 80 development cases against offline canonical documentation in documentation/ and canonical assets recorded in source.json without executing retrieval pipelines, Terraform CLI operations, or external network requests.",
+    "Sibling branch evaluation identified genuine destination ambiguities where prompts omitted structural choices across same-role sibling paths, including API crawler discovery branches, dual hardware output representations, advertise options variants, static-route stack choices, and symmetric cookie match combinators."
+  ],
+  "verdict": "label-defects"
+}

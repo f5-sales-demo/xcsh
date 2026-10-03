@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "source_only": true,
+  "context_review_required": true,
+  "potential_collision_cases": 122,
+  "answerable_cases": 140,
+  "report_sha256": "5f324b1a16395410974d8685faba64f1ca432e339397aae1c8c9bdec40f0f9c4",
+  "gzip_sha256": "02aa7f57141c3b047be68aabf92bbbb6a39cbbb7a85d3053f6fd9bd23c6464be",
+  "labels_changed": false,
+  "first_untouched_failure_preserved": true,
+  "limitation": "Inventory does not determine whether query context resolves each alternative."
+}

@@ -1,0 +1,39 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "protocol_status": "proposal pending independent freeze",
+  "initial_revision_accepted": false,
+  "initial_revision_rejection": "Added schema export, fixed two-turn cap, model-answer byte cap and omitted controls; scope corrected in follow-up.",
+  "corrected_revision_received": true,
+  "corrected_revision_frozen": false,
+  "artifacts": {
+    "review.json": {
+      "file": "clarification-review.json.gz",
+      "sha256": "5b4761dd95d4356456ad8baacb058901bc7e499f2be04859980e2baa3d7ba914",
+      "gzip_sha256": "696f73fe9847a4d74d1b37d33e41ec35f29383791fa7adc7ed3083ebcfba6968",
+      "bytes": 10365,
+      "gzip_bytes": 3803
+    },
+    "revised-protocol.md": {
+      "file": "clarification-revised-protocol.md.gz",
+      "sha256": "a111911814241badf0f62efcc41b10a9e05322e6fb0b40ee741588cc2993cebe",
+      "gzip_sha256": "807e308ca77b368409d3baf1e8bbf4dec0a07dc1623c190c0a4b5330932b097e",
+      "bytes": 13670,
+      "gzip_bytes": 4903
+    },
+    "review.corrected.json": {
+      "file": "clarification-review.corrected.json.gz",
+      "sha256": "2c673902ed0c50f47cc97b4bafab5a44e985b043100d134e058438b5033e9656",
+      "gzip_sha256": "c5acc38bcf05e2e285ae46684a76477a1c51ca5d544eb00644611e4618609ac2",
+      "bytes": 10891,
+      "gzip_bytes": 3934
+    },
+    "revised-protocol.corrected.md": {
+      "file": "clarification-revised-protocol.corrected.md.gz",
+      "sha256": "c1796046984b157731fc179d2251499bcc2d6e1bbdddfd43c1ebb3a86992e071",
+      "gzip_sha256": "90f7090033808ee685cdb97adfd2fee6fac1a240a61916b4b809cb48206587ef",
+      "bytes": 15089,
+      "gzip_bytes": 5040
+    }
+  }
+}

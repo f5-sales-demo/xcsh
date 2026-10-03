@@ -42,3 +42,42 @@ describe("Corporate Vertex release build credentials", () => {
 		}
 	});
 });
+
+it("full native qualification builds licensed candidate binaries without publishing", async () => {
+	const workflow = await Bun.file(workflowPath).text();
+	for (const name of ["prepare-documentation-index", "build-release", "build-sign-macos"]) {
+		const job = workflow.split(`  ${name}:`)[1]!.split(/\n {2}[a-z][a-z0-9-]*:/)[0]!;
+		expect(job).toContain("github.event_name == 'workflow_dispatch' && inputs.full_native_matrix");
+	}
+	for (const name of ["create-release", "publish-npm"]) {
+		const job = workflow.split(`  ${name}:`)[1]!.split(/\n {2}[a-z][a-z0-9-]*:/)[0]!;
+		expect(job).not.toContain("inputs.full_native_matrix");
+	}
+});
+
+it("native sandbox tests reset optional Terraform loader before importing the source CLI", async () => {
+	const workflow = parse(await Bun.file(workflowPath).text()) as WorkflowDocument;
+	for (const name of ["native-linux-x64-baseline", "native"]) {
+		const steps = workflow.jobs?.[name]?.steps ?? [];
+		const reset = steps.findIndex(s => s.run?.includes("generate-terraform-documentation-index --reset"));
+		const sandbox = steps.findIndex(s => s.run?.includes("sandbox-check.test.ts"));
+		expect(reset).toBeGreaterThanOrEqual(0);
+		expect(reset).toBeLessThan(sandbox);
+	}
+});
+
+it("native-dependent source shard resets optional loader before CLI imports", async () => {
+	const workflow = parse(await Bun.file(workflowPath).text()) as WorkflowDocument;
+	const steps = workflow.jobs?.["test-typescript-native"]?.steps ?? [];
+	const reset = steps.findIndex(s => s.run?.includes("generate-terraform-documentation-index --reset"));
+	const test = steps.findIndex(s => s.run?.includes("--shard=native-dependent"));
+	expect(reset).toBeGreaterThanOrEqual(0);
+	expect(reset).toBeLessThan(test);
+});
+
+it("candidate Mac provenance uses the package version for branch dispatches", async () => {
+	const workflow = await Bun.file(workflowPath).text();
+	const job = workflow.split("  build-sign-macos:")[1]!.split(/\n {2}[a-z][a-z0-9-]*:/)[0]!;
+	expect(job).toContain("GITHUB_REF_TYPE");
+	expect(job).toContain("packages/coding-agent/package.json");
+});

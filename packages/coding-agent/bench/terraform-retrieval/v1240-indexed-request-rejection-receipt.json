@@ -1,0 +1,111 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "rejected": true,
+  "reason": "Indexed vocabulary denominator hides unsupported query concepts; Helm repository URL control falsely selected and exposed accuracy regressed.",
+  "patch_sha256": "f9c0fa464fc53048639bfadf935ec2ea7d65f78a144074bf8e53e8693babed0b",
+  "files": [
+    {
+      "path": "v1240-indexed-request-rejected-expanded.json.gz",
+      "sha256": "df8aeb65dc520098a3a467d88127b5e9be796762e0c2a1fb0f5010a55e9eab8e",
+      "gzip_sha256": "b56bff36f16698b010b6096aad1a0c35b5bc9895b4b909b1fc69013feab168d2",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "54ed4ffae96b185df4e9dc8d3b4b4bbf7aa654a55402331477396e10df4ff4ea",
+        "suite_sha256": "d4e8b18868e97de8414078be22c8032510193f561f360ec5a21f2509a4064fa1",
+        "cold_materialization_ms": 1860.1669940000002,
+        "warm_p95_ms": 34.424069000000145,
+        "answerable": 43,
+        "correct_leaf": 30,
+        "wrong_leaf": 2,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 38,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-indexed-request-rejected-broad.json.gz",
+      "sha256": "669d30301cfaf7c8c64779708e197564b10015f07ec2f02c6c04c31676c4a038",
+      "gzip_sha256": "16a4b355397495d58722ce45c2afc23358abe3ecb161b2911bad5173e96d4a04",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "54ed4ffae96b185df4e9dc8d3b4b4bbf7aa654a55402331477396e10df4ff4ea",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 3020.993275,
+        "warm_p95_ms": 46.35992399999941,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 1,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-indexed-request-rejected-regression.json.gz",
+      "sha256": "82be8d1fc476ce5bab108dc589d8095c15abd5b69591638864c1cfecbdc25c4c",
+      "gzip_sha256": "29ea75eb4cbde393975cdb3eb1590c93bd5ac34a99b57ba217498c61919a9c34",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "54ed4ffae96b185df4e9dc8d3b4b4bbf7aa654a55402331477396e10df4ff4ea",
+          "size_bytes": 795435008,
+          "gzip_sha256": "35c67408c4c3db731c28c606e72a7c9458fab7995753543aa3a2b82d384dd2d9",
+          "gzip_size_bytes": 72045150
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1940.368143,
+        "warm_p95_ms": 55.62044100000276,
+        "discovery_p95_ms": 59.54332699999941,
+        "context_p95_ms": 0.44806299999982,
+        "route_p95_ms": 59.56897899999967,
+        "warm_measurement_count": 2135,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 590,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 4006,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3801435,
+        "tool_calls": 2135,
+        "index_file_bytes": 72045150,
+        "answerable_accuracy": 0.6285714285714286,
+        "answerable_top5": 0.8571428571428571,
+        "scored_accuracy": 0.6,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    }
+  ]
+}

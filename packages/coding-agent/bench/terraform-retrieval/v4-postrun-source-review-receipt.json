@@ -1,0 +1,12 @@
+{
+  "postrun_source_audit": true,
+  "qualification_passed": false,
+  "frozen_labels_changed": false,
+  "reviewed_cases": 200,
+  "reported_label_defects": 22,
+  "review_sha256": "fee29920cf6e5175798ca4edc9c2bf548d995efcd1ecf021ad50da68ef279e61",
+  "verified_alternatives": 36,
+  "invalid_alternatives": 0,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "retrieval_results_withheld": true
+}

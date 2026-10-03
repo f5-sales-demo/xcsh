@@ -1,0 +1,25 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "suite_sha256": "c0c960ac7d515a1536066bb7edf6ab1f32aa37e37c6b05f5ff10dff8820b3ab8",
+  "property_cases": 58,
+  "correct_leaf": 10,
+  "false_leaf": 0,
+  "clarifications": 48,
+  "limitations": [
+    "Estimated rendering route adds precomputed ranking measurements; collision lookup and integrated tool timing remain unverified.",
+    "Repeated leaf destinations are validated against the indexed provider scope; task and role inference remains experimental.",
+    "Development labels are defective and cannot qualify release."
+  ],
+  "estimated_rendered_route_p95_ms": 25.75480000000006,
+  "original_measurement_report_sha256": "2d2296842088b0e31e30ea51ee59449eb539b480d7405174ae652fef71fbc576",
+  "complete_results": {
+    "artifact": "property-selection-described-revised.json.gz",
+    "uncompressed_sha256": "ff6493dc829f14ecf54547df2e78181156d38073a1168f643e56d1e2b9299af2",
+    "uncompressed_bytes": 97485,
+    "compressed_sha256": "10839e95ddd675ce07e9f91cf84432404d610379129e8350731f5b39c29b77d8",
+    "compressed_bytes": 6799,
+    "encoding": "gzip"
+  }
+}

@@ -1,0 +1,920 @@
+[
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 9,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name"
+    ],
+    "id": "case-ans-001",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "In HTTP load balancer Bot Defense policy, which property specifies the HTTP header name for login failure conditions?",
+    "provider_role": "resource",
+    "schema_path": [
+      "bot_defense",
+      "policy",
+      "protected_app_endpoints",
+      "flow_label",
+      "authentication",
+      "login",
+      "transaction_result",
+      "failure_conditions",
+      "name"
+    ],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name",
+      "A case-insensitive HTTP header name"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 9,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status"
+    ],
+    "id": "case-ans-006",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "What field defines the expected HTTP status codes for successful user authentication in Bot Defense login transaction results?",
+    "provider_role": "resource",
+    "schema_path": [
+      "bot_defense",
+      "policy",
+      "protected_app_endpoints",
+      "flow_label",
+      "authentication",
+      "login",
+      "transaction_result",
+      "success_conditions",
+      "status"
+    ],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status",
+      "HTTP response status codes EmptyStatusCode response codes means it is not specified Continue status code OK status code Created status code Accepted status code Non Authoritative Information status code No Content status code Reset Content status code Partial Content status code Multi Status status code Already"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 8,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--url"
+    ],
+    "id": "case-ans-011",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "api-management",
+    "prompt": "What attribute defines the string:/// URL holding the Base64-encoded clear secret password for API crawler login?",
+    "provider_role": "resource",
+    "schema_path": [
+      "enable_api_discovery",
+      "api_crawler",
+      "api_crawler_config",
+      "domains",
+      "simple_login",
+      "password",
+      "clear_secret_info",
+      "url"
+    ],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--url",
+      "URL of the secret"
+    ]
+  },
+  {
+    "id": "case-ans-016",
+    "prompt": "Where is the IPv4 nexthop address configured for dual-stack outside static routes on a GCP VPC site ingress-egress gateway resource?",
+    "kind": "answerable",
+    "provider_role": "resource",
+    "product_family": "cloud",
+    "behavior": "answerable",
+    "clarification": "",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+    ],
+    "schema_path": [
+      "ingress_egress_gw",
+      "outside_static_routes",
+      "static_route_list",
+      "custom_static_route",
+      "nexthop",
+      "nexthop_address",
+      "dual_stack",
+      "ipv4",
+      "addr"
+    ],
+    "depth": 9,
+    "permitted_choices": [],
+    "source_evidence": [
+      "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+      "IPv4 Address in string form with dot-decimal notation."
+    ]
+  },
+  {
+    "id": "case-ans-021",
+    "prompt": "What attribute defines the clear secret URL holding the API token for Pure Storage FlashBlade arrays under fleet storage configuration?",
+    "kind": "answerable",
+    "provider_role": "resource",
+    "product_family": "infrastructure",
+    "behavior": "answerable",
+    "clarification": "",
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/clear_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--clear_secret_info--url"
+    ],
+    "schema_path": [
+      "storage_device_list",
+      "storage_devices",
+      "pure_service_orchestrator",
+      "arrays",
+      "flash_blade",
+      "flash_blades",
+      "api_token",
+      "clear_secret_info",
+      "url"
+    ],
+    "depth": 9,
+    "permitted_choices": [],
+    "source_evidence": [
+      "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/clear_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--clear_secret_info--url",
+      "URL of the secret. Currently supported URL schemes is string:///. For string:/// scheme, Secret needs to be encoded Base64 format. When asked for this secret, caller will GET Secret bytes after Base64 decoding."
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 8,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--fixed_ip_map"
+    ],
+    "id": "case-ans-026",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "Which property maps MAC addresses to fixed IPv6 address assignments for stateful routing on AWS node interfaces?",
+    "provider_role": "resource",
+    "schema_path": [
+      "aws",
+      "not_managed",
+      "node_list",
+      "interface_list",
+      "ipv6_auto_config",
+      "router",
+      "stateful",
+      "fixed_ip_map"
+    ],
+    "source_evidence": [
+      "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--fixed_ip_map",
+      "Fixed MAC address to IPv6 assignments, Key: MAC address, Val"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 8,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-azure--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--exclude"
+    ],
+    "id": "case-ans-031",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "How do I specify excluded IP address ranges for DHCP pools on Azure SecureMesh Site v2 node interfaces?",
+    "provider_role": "resource",
+    "schema_path": [
+      "azure",
+      "not_managed",
+      "node_list",
+      "interface_list",
+      "dhcp_server",
+      "dhcp_networks",
+      "pools",
+      "exclude"
+    ],
+    "source_evidence": [
+      "documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-azure--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--exclude",
+      "Exclude this address range from DHCP allocation"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 8,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--fixed_ip_map"
+    ],
+    "id": "case-ans-036",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "Which attribute maps fixed MAC addresses to IPv6 assignments for stateful routers on Voltstack site interfaces?",
+    "provider_role": "resource",
+    "schema_path": [
+      "custom_network_config",
+      "interface_list",
+      "interfaces",
+      "ethernet_interface",
+      "ipv6_auto_config",
+      "router",
+      "stateful",
+      "fixed_ip_map"
+    ],
+    "source_evidence": [
+      "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--fixed_ip_map",
+      "Fixed MAC address to IPv6 assignments, Key: MAC address, Val"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 9,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+    ],
+    "id": "case-ans-041",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "Which attribute sets the IPv6 nexthop address in dual-stack static route lists on AWS TGW site inside networks?",
+    "provider_role": "resource",
+    "schema_path": [
+      "vn_config",
+      "inside_static_routes",
+      "static_route_list",
+      "custom_static_route",
+      "nexthop",
+      "nexthop_address",
+      "dual_stack",
+      "ipv6",
+      "addr"
+    ],
+    "source_evidence": [
+      "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+      "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 9,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+    ],
+    "id": "case-ans-046",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "Where do I configure the IPv4 nexthop address for dual-stack static routes on inside networks in Azure VNet site?",
+    "provider_role": "resource",
+    "schema_path": [
+      "ingress_egress_gw",
+      "inside_static_routes",
+      "static_route_list",
+      "custom_static_route",
+      "nexthop",
+      "nexthop_address",
+      "dual_stack",
+      "ipv4",
+      "addr"
+    ],
+    "source_evidence": [
+      "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+      "IPv4 Address in string form with dot-decimal notation"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 9,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+    ],
+    "id": "case-ans-051",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "Which property sets the IPv6 nexthop address for dual-stack outside static routes on Azure VNet site ingress gateways?",
+    "provider_role": "resource",
+    "schema_path": [
+      "ingress_egress_gw_ar",
+      "outside_static_routes",
+      "static_route_list",
+      "custom_static_route",
+      "nexthop",
+      "nexthop_address",
+      "dual_stack",
+      "ipv6",
+      "addr"
+    ],
+    "source_evidence": [
+      "documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+      "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/provider/setup/index.md#authenticating-to-f5-distributed-cloud"
+    ],
+    "id": "case-ans-056",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "administration",
+    "prompt": "How do I configure provider credentials and authentication methods (API token, P12 certificate, or PEM) in the XCSH Terraform provider?",
+    "provider_role": "provider",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/provider/setup/index.md#authenticating-to-f5-distributed-cloud",
+      "The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/index.md#root-configuration"
+    ],
+    "id": "case-ans-061",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Which action allows terminating a single specific active access user session?",
+    "provider_role": "action",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/actions/access_active_session_terminate/index.md#root-configuration",
+      "Terminate an active access session"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/actions/infraprotect_synchronize_configuration/index.md#root-configuration"
+    ],
+    "id": "case-ans-066",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Where is the infraprotect synchronization action documented for synchronizing DDoS protection settings?",
+    "provider_role": "action",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/actions/infraprotect_synchronize_configuration/index.md#root-configuration",
+      "Synchronize InfraProtect configuration"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/service_policy/lifecycle/import/index.md#import"
+    ],
+    "id": "case-ans-071",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Where is the import documentation for service_policy resources?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/service_policy/lifecycle/import/index.md#import",
+      "Importing an existing resource requires its name"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 3,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md#section"
+    ],
+    "id": "case-ans-076",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Where do I attach server TLS certificates under HTTPS listener TLS parameters on an HTTP loadbalancer?",
+    "provider_role": "resource",
+    "schema_path": [
+      "https",
+      "tls_parameters",
+      "tls_certificates"
+    ],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md#section",
+      "Configuration for tls certificates"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 3,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/consul_service/inside_network/index.md#section"
+    ],
+    "id": "case-ans-081",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "How do I target a Consul service backend server running on the inside network in an origin pool?",
+    "provider_role": "resource",
+    "schema_path": [
+      "origin_servers",
+      "consul_service",
+      "inside_network"
+    ],
+    "source_evidence": [
+      "documentation/resources/origin_pool/properties/origin_servers/consul_service/inside_network/index.md#section",
+      "Configuration for inside network"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 3,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#schema-origin_servers--public_ip--ip"
+    ],
+    "id": "case-ans-086",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "Where do I configure public IP addresses for origin pool member servers?",
+    "provider_role": "resource",
+    "schema_path": [
+      "origin_servers",
+      "public_ip",
+      "ip"
+    ],
+    "source_evidence": [
+      "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#schema-origin_servers--public_ip--ip",
+      "Public IP address of the origin server"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/service_policy/index.md#root-configuration"
+    ],
+    "id": "case-ans-091",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Which data source is used to inspect an existing security service policy?",
+    "provider_role": "data-source",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/data-sources/service_policy/index.md#root-configuration",
+      "xcsh_service_policy data source documentation"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/tunnel/index.md#root-configuration"
+    ],
+    "id": "case-ans-096",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "How do I read tunnel attributes and status using the tunnel data source?",
+    "provider_role": "data-source",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/data-sources/tunnel/index.md#root-configuration",
+      "xcsh_tunnel data source documentation"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/user_identification/index.md#root-configuration"
+    ],
+    "id": "case-ans-101",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Where do I find the data source for user identification policy rules?",
+    "provider_role": "data-source",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/data-sources/user_identification/index.md#root-configuration",
+      "xcsh_user_identification data source documentation"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 2,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/more_option/index.md#schema-more_option--idle_timeout"
+    ],
+    "id": "case-ans-106",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "How do I set the HTTP client connection idle timeout under advanced load balancer options?",
+    "provider_role": "resource",
+    "schema_path": [
+      "more_option",
+      "idle_timeout"
+    ],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/more_option/index.md#schema-more_option--idle_timeout",
+      "The amount of time that an HTTP connection is kept idle in milliseconds"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 1,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/source_ip_stickiness/index.md#section"
+    ],
+    "id": "case-ans-111",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "How do I configure client session persistence based on source IP stickiness on an HTTP load balancer?",
+    "provider_role": "resource",
+    "schema_path": [
+      "source_ip_stickiness"
+    ],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/source_ip_stickiness/index.md#section",
+      "Configuration for source ip stickiness"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 1,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allow_all_response_codes/index.md#section"
+    ],
+    "id": "case-ans-116",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "security",
+    "prompt": "Where do I set an App Firewall to allow all HTTP response codes without inspection?",
+    "provider_role": "resource",
+    "schema_path": [
+      "allow_all_response_codes"
+    ],
+    "source_evidence": [
+      "documentation/resources/app_firewall/properties/allow_all_response_codes/index.md#section",
+      "Configuration for allow all response codes"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 1,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/dns_lb_health_check/properties/http_health_check/index.md#section"
+    ],
+    "id": "case-ans-121",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "dns",
+    "prompt": "How do I configure port numbers for HTTP health checks in DNS load balancing?",
+    "provider_role": "resource",
+    "schema_path": [
+      "http_health_check"
+    ],
+    "source_evidence": [
+      "documentation/resources/dns_lb_health_check/properties/http_health_check/index.md#section",
+      "Configuration for http health check"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 1,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/alert_receiver/properties/pagerduty/index.md#section"
+    ],
+    "id": "case-ans-126",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "monitoring",
+    "prompt": "Where do I set the PagerDuty integration webhook URL on an alert receiver?",
+    "provider_role": "resource",
+    "schema_path": [
+      "pagerduty"
+    ],
+    "source_evidence": [
+      "documentation/resources/alert_receiver/properties/pagerduty/index.md#section",
+      "Configuration for pagerduty"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 1,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section"
+    ],
+    "id": "case-ans-131",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "Where do I configure unencrypted plain TCP listener settings on a TCP load balancer?",
+    "provider_role": "resource",
+    "schema_path": [
+      "tcp"
+    ],
+    "source_evidence": [
+      "documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section",
+      "Configuration for tcp"
+    ]
+  },
+  {
+    "behavior": "answerable",
+    "clarification": "",
+    "depth": 2,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/advertise_policy/properties/where/site/index.md#section"
+    ],
+    "id": "case-ans-136",
+    "kind": "answerable",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "Where do I configure site network attachment destinations on an advertise policy?",
+    "provider_role": "resource",
+    "schema_path": [
+      "where",
+      "site"
+    ],
+    "source_evidence": [
+      "documentation/resources/advertise_policy/properties/where/site/index.md#section",
+      "Configuration for site"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you want to manage the HTTP load balancer as a mutable Terraform resource or look up an existing one using a read-only data source.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#root-configuration"
+    ],
+    "id": "case-amb-001",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/index.md#root-configuration"
+    ],
+    "product_family": "load-balancing",
+    "prompt": "How do I configure xcsh_http_loadbalancer in my Terraform root module?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/index.md#root-configuration",
+      "xcsh_http_loadbalancer resource documentation"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you are creating a rate limiter resource or querying an existing rate limiter data source.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/rate_limiter/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/rate_limiter/index.md#root-configuration"
+    ],
+    "id": "case-amb-006",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/rate_limiter/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/rate_limiter/index.md#root-configuration"
+    ],
+    "product_family": "security",
+    "prompt": "How do I set up xcsh_rate_limiter?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/rate_limiter/index.md#root-configuration",
+      "xcsh_rate_limiter resource documentation"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you want to advertise the VIP on the public internet default VIP or configure custom site advertisement.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/advertise_on_public_default_vip/index.md#section",
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/advertise_custom/index.md#section"
+    ],
+    "id": "case-amb-011",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/advertise_on_public_default_vip/index.md#section",
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/advertise_custom/index.md#section"
+    ],
+    "product_family": "networking",
+    "prompt": "How do I advertise my HTTP load balancer VIP?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/properties/advertise_on_public_default_vip/index.md#section",
+      "Configuration for advertise on public default vip"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you want unencrypted plain TCP or TLS termination for your TCP load balancer.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section",
+      "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/index.md#section"
+    ],
+    "id": "case-amb-016",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section",
+      "xcsh://terraform-documentation/documentation/resources/tcp_loadbalancer/properties/tls_tcp/index.md#section"
+    ],
+    "product_family": "load-balancing",
+    "prompt": "Where do I define listener transport options for a TCP load balancer?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section",
+      "Configuration for tcp"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether your backend origin server is configured via public IP address or Kubernetes service.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#section",
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md#section"
+    ],
+    "id": "case-amb-021",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#section",
+      "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/k8s_service/index.md#section"
+    ],
+    "product_family": "load-balancing",
+    "prompt": "How do I configure origin server endpoints in an origin pool?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#section",
+      "Configuration for public ip"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you want to match headers by substring containment or exact value match.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/contain_value/index.md#section",
+      "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/exact_value/index.md#section"
+    ],
+    "id": "case-amb-026",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/contain_value/index.md#section",
+      "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/exact_value/index.md#section"
+    ],
+    "product_family": "security",
+    "prompt": "How do I configure mobile endpoint header matching in bot endpoint policy data sources?",
+    "provider_role": "data-source",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/contain_value/index.md#section",
+      "Configuration for contain value"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you are creating a new namespace resource or querying an existing namespace with a data source.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/namespace/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/namespace/index.md#root-configuration"
+    ],
+    "id": "case-amb-031",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/namespace/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/namespace/index.md#root-configuration"
+    ],
+    "product_family": "administration",
+    "prompt": "What is the schema for xcsh_namespace?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/namespace/index.md#root-configuration",
+      "xcsh_namespace resource documentation"
+    ]
+  },
+  {
+    "behavior": "clarify",
+    "clarification": "Please clarify whether you want to manage an API crawler resource or query an existing crawler data source.",
+    "depth": 0,
+    "expected": [
+      "xcsh://terraform-documentation/documentation/resources/api_crawler/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/api_crawler/index.md#root-configuration"
+    ],
+    "id": "case-amb-036",
+    "kind": "ambiguous",
+    "permitted_choices": [
+      "xcsh://terraform-documentation/documentation/resources/api_crawler/index.md#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/api_crawler/index.md#root-configuration"
+    ],
+    "product_family": "api-management",
+    "prompt": "Where is xcsh_api_crawler documented?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/api_crawler/index.md#root-configuration",
+      "xcsh_api_crawler resource documentation"
+    ]
+  },
+  {
+    "behavior": "ordinary-discovery",
+    "clarification": "",
+    "depth": 0,
+    "expected": [],
+    "id": "case-ctl-001",
+    "kind": "control",
+    "permitted_choices": [],
+    "product_family": "administration",
+    "prompt": "Where in the F5 Distributed Cloud web console can I view our organization's current billing plan and active invoices?",
+    "provider_role": "none",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/index.md",
+      "This query asks about SaaS account billing in the management web console, which is handled via general platform discovery and must not activate Terraform configuration."
+    ]
+  },
+  {
+    "behavior": "ordinary-discovery",
+    "clarification": "",
+    "depth": 0,
+    "expected": [],
+    "id": "case-ctl-005",
+    "kind": "control",
+    "permitted_choices": [],
+    "product_family": "networking",
+    "prompt": "What is the network IP range used by F5 Distributed Cloud Regional Edges for outbound traffic inspection?",
+    "provider_role": "none",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/guides/network-allowlists/index.md",
+      "Querying public network allowlists is informative networking documentation discovery and does not generate Terraform infrastructure changes."
+    ]
+  },
+  {
+    "behavior": "unsupported",
+    "clarification": "",
+    "depth": 0,
+    "expected": [],
+    "id": "case-ctl-009",
+    "kind": "control",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "How do I configure quantum_safe_key_exchange on my HTTPS load balancer TLS parameters?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "corpus-search:quantum_safe_key_exchange",
+      "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; quantum_safe_key_exchange is completely unsupported in xcsh v12.3.1."
+    ]
+  },
+  {
+    "behavior": "no-live-claim",
+    "clarification": "",
+    "depth": 0,
+    "expected": [],
+    "id": "case-ctl-017",
+    "kind": "control",
+    "permitted_choices": [],
+    "product_family": "load-balancing",
+    "prompt": "What is the current active TCP connection count on our live production HTTP load balancer in the Frankfurt edge region right now?",
+    "provider_role": "resource",
+    "schema_path": [],
+    "source_evidence": [
+      "documentation/resources/http_loadbalancer/index.md#root-configuration",
+      "Live runtime telemetry and active TCP connection counts are operational metrics available only at runtime and cannot be substantiated by static Terraform documentation."
+    ]
+  }
+]

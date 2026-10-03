@@ -1,0 +1,58 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "base_commit": "de334d44e3c7a360fa6fe641c917835fd3c7d892",
+  "source_files": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "b5ad4ac6f19829c512b63445236edaba7b4804f9354824ba2d09f687a32f5929",
+    "packages/coding-agent/src/internal-urls/terraform-property-selection.ts": "cfb6b4c74424179c1a726d5da3fb716f8c3b1c3ab52dcc1325b4628a9f2013d8",
+    "packages/coding-agent/src/internal-urls/terraform-lifecycle.ts": "2d54a1f3df70487910b6bf86385024f51263921d3226138e91c874f61edce19c"
+  },
+  "focused_tests": {
+    "mac": 245,
+    "ubuntu": 245
+  },
+  "workspace_check_ts": {
+    "mac": "pass",
+    "ubuntu": "pass"
+  },
+  "targeted_cases": 13,
+  "source_and_compiled_response_parity": true,
+  "candidate_scope": "Compiled offline resolver harness using the production repository and verified bundled index; not full installed CLI or model acceptance.",
+  "candidates": {
+    "mac_sha256": "2ee51fcf645260f874fbd5751ed06b81dc10aa8700d9f1a9407f388b041dceb6",
+    "ubuntu_sha256": "40f9cfe522627e9d757e5d0627a503d3afa415d10e72c0f0456e1fa92a046d33"
+  },
+  "red_runs": {
+    "interpretation_and_selection": "2 failures confirmed before implementation",
+    "complete_resolver": "creation request failed with Insufficient requested operation evidence on unchanged draft source"
+  },
+  "regression": {
+    "baseline": {
+      "correct_leaf": 94,
+      "answerable_top5": 121
+    },
+    "final": {
+      "correct_leaf": 94,
+      "answerable_top5": 121
+    },
+    "answerable": 140,
+    "total": 200,
+    "exposed_suite": true,
+    "qualification_passed": false
+  },
+  "limitations": [
+    "Full installed CLI/model qualification is outside these targeted checks.",
+    "Existing exposed suites remain regression-only; retained >=95% gate is not met.",
+    "No corpus, index-format, producer Markdown/schema or immutable publication receipt changes."
+  ],
+  "index": {
+    "sha256": "a19c8e92ab448d10c812ab7f781aba2fb59ab671e5bdf10dee60e51d2f1f0a33",
+    "size_bytes": 796012544,
+    "gzip_sha256": "a657580fe6e665f2195a25f2fe09699eb8e97a0c2265d18aba3aee0a43082db7",
+    "gzip_size_bytes": 72076441
+  },
+  "provider_source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "delivery_base_commit": "240baf5d0ffd7c15fe2600a569f8557b7970633a",
+  "rebased_focused_tests": 250,
+  "rebased_ubuntu_check_ts": "pass"
+}

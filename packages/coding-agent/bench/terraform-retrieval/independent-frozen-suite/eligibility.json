@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "suite_sha256": "6deb592af8737b3d91085b5e28c939d8d928f5eb5243ae833d5ee754bb348d6a",
+  "qualification_eligible": false,
+  "reason": "Independent source-collision review found nonunique answerable labels; frozen prompts remain unchanged.",
+  "invalid_case_ids": [
+    "ans-deep-007",
+    "ans-deep-008",
+    "ans-deep-009",
+    "ans-deep-010",
+    "ans-deep-011",
+    "ans-deep-012",
+    "ans-deep-013",
+    "ans-deep-014",
+    "ans-deep-017",
+    "ans-deep-021",
+    "ans-deep-028"
+  ],
+  "audit": "../independent-review/collision-label-audit.json",
+  "regression_only": true
+}

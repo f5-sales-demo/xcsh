@@ -1,0 +1,24 @@
+{
+  "source_only": true,
+  "development_only": true,
+  "qualification_passed": false,
+  "accepted": false,
+  "reason": "One alternative anchor invalid; repair pending. Original section-only quote validator omitted canonical frontmatter/breadcrumbs; document-level validation distinguishes this from fabricated source.",
+  "files": [
+    {
+      "path": "uniqueness-final-first-review.json.gz",
+      "sha256": "aa3eeea33a1337bd87c7dfe2b13f8b29bd2581396dd9d0df7b447cafe0134c1f",
+      "gzip_sha256": "a4b800433a79074853a61c70ff11e24c2bf4e5d3db02951758967856d86c111e"
+    },
+    {
+      "path": "uniqueness-final-first-resume.stream.jsonl.gz",
+      "sha256": "df745f4f9c3733f7803caba5b5c10f0dea8b2ac2bc884559f2c975321233ca56",
+      "gzip_sha256": "9fad2475cf592cd6bfa0e79fe229649ef0aff32e62b278dd1c3cc26f98ae73eb"
+    },
+    {
+      "path": "uniqueness-final-first-document-quote-validation.json.gz",
+      "sha256": "ee9e28249dca1f1879a78b946150abf552673380bcd517840cdf6bcf3f9d0abc",
+      "gzip_sha256": "3a4e2b8ccf8b326e32f8e9b0a6da43261cb9d596e87274bbf16231f3b845efbc"
+    }
+  ]
+}

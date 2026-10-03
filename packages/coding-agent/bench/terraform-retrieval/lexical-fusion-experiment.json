@@ -1,0 +1,14 @@
+{
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "answerable": 140,
+  "first": 42,
+  "top5": 88,
+  "union_top5_ceiling": 97,
+  "timing_scope": "offline fusion of precomputed candidates;no complete response latency measured",
+  "inputs": {
+    "production": "verified-choice-regression.json.gz",
+    "property_ranker": "path-ranking-experiment.json"
+  }
+}

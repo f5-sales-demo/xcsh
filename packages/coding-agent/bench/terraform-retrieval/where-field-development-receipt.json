@@ -1,0 +1,76 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "reports": {
+    "audited": {
+      "raw_sha256": "383ac3c8fe0e68fb3d6162f851a8b365a1d91ddc3c922c1dfba90918788878cf",
+      "gzip_sha256": "3c7753ed56ae6a5056b4725c2427a805c58178e3ce910974944a9e15bb7afe17",
+      "report_file": "where-field-development-audited.json.gz",
+      "development_only": true,
+      "qualification_passed": false,
+      "production_promoted": false,
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "provider_version": "v12.3.1",
+      "answerable_cases": 48,
+      "answerable_correct_leaf": 40,
+      "answerable_false_leaf": 0,
+      "ambiguous_cases": 24,
+      "ambiguous_leaf_selections": 0,
+      "control_cases": 8,
+      "control_leaf_selections": 0,
+      "property_cases": 46,
+      "correct_leaf": 38,
+      "false_leaf": 0,
+      "clarifications": 8,
+      "property_first": 45,
+      "property_top5": 46,
+      "preparation_ms": 0.05388500000000107,
+      "experimental_complete_route_p95_ms": 27.351998999999523,
+      "limitations": [
+        "Measured route includes candidate query, provider/task identity, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+        "Development labels have known defects and unresolved same-role ambiguities.",
+        "Experimental route uses prepared terms and scope weights via targeted indexed SQL, with exact source reads. Bundled index integration, cold materialization and installed acceptance remain unverified."
+      ]
+    },
+    "original": {
+      "raw_sha256": "9ad88644f738e97484a3c2d6fd39062b6e3f19d3904f36d906ba9091d8260384",
+      "gzip_sha256": "799bd4df9ed25da39130e7f57bdfd01956f1780806eb6a8403d8e5cbaa16b790",
+      "report_file": "where-field-development-original.json.gz",
+      "development_only": true,
+      "qualification_passed": false,
+      "production_promoted": false,
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "provider_version": "v12.3.1",
+      "answerable_cases": 14,
+      "answerable_correct_leaf": 9,
+      "answerable_false_leaf": 0,
+      "ambiguous_cases": 8,
+      "ambiguous_leaf_selections": 3,
+      "control_cases": 2,
+      "control_leaf_selections": 0,
+      "property_cases": 14,
+      "correct_leaf": 9,
+      "false_leaf": 0,
+      "clarifications": 5,
+      "property_first": 12,
+      "property_top5": 13,
+      "preparation_ms": 0.05338299999999663,
+      "experimental_complete_route_p95_ms": 32.74512800000002,
+      "limitations": [
+        "Measured route includes candidate query, provider/task identity, ranking, refinement, lifecycle routing, indexed collisions, selection and bounded discovery/context rendering. Model and network time excluded.",
+        "Development labels have known defects and unresolved same-role ambiguities.",
+        "Experimental route uses prepared terms and scope weights via targeted indexed SQL, with exact source reads. Bundled index integration, cold materialization and installed acceptance remain unverified."
+      ]
+    }
+  },
+  "source_files": {
+    "contrastive-ranking.ts": "e04c1ddb9b81aa75fccb147f1f0a0ab941382d5b087acbb5f44a4b0e90e95563",
+    "property-selection.ts": "b310404d61ef903c824be4fb6990704421080cb752a011c0c1a8701e25cbbda3",
+    "property-index.ts": "6ed47e733c6e879454d2a2563532a0baa7c8d434a23aefb939b88c58e4872a36",
+    "indexed-task-route.ts": "3975c2a9e4334aee60dcf38cffe28e2ba816584201534fed2f41020859ccb3ad",
+    "targeted-complete-property-route.ts": "005432675415ebe97e14ccc8bab62fab51845ceefbe1d3a3ac235d44e20dd597"
+  }
+}

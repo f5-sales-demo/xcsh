@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source_provider_version": "v12.1.2",
+  "source_commit": "38b94aa2e7178544f29f4df416772b744ab47c9b",
+  "consumer_commit": "9f50645ac8fe5bfcfcd0db4b020fe13f47c5f5d4",
+  "heldout_count": 200,
+  "answerable_count": 140,
+  "ambiguous_count": 40,
+  "control_count": 20,
+  "depth8_answerable_count": 50,
+  "model_subset_count": 40,
+  "files": {
+    "heldout.json": "ef5593e887792ece9a70dad5f671405941fee1de144aeb3d93f1b03472aed40f",
+    "model-subset.json": "303a381fbebfdedc19bffcaa7bab4ad52448e1748042da680b4d3def67b9fda5"
+  },
+  "stage": "final-untouched-v3",
+  "development_overlap": 0,
+  "prior_answerable_destinations_overlap": 0,
+  "limitations": [
+    "Synthetic property questions use path context and do not independently qualify unconstrained vague paraphrases.",
+    "This final disjoint set follows two earlier failed suites; their failures are retained. No code tuning against this set is permitted.",
+    "No tuning against this set is permitted before claiming held-out qualification."
+  ]
+}

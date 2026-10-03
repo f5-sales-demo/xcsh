@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "frozen_at": "2026-10-02T23:46:02.536487+00:00",
+  "source_provider_version": "v12.3.1",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "source_root": "documentation",
+  "receipt_sha256": "da1e6c3148a7083e8b374f45a3f8a5d04d3275a349aa348e2015ec60f1c039bd",
+  "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "candidate_sha256": "332114e17f3dbf2e5943391d8df5baaf7445c50034ea9ddb99cb7dda15f33d08",
+  "independent_review_sha256": "f8cf99948dd91022a4080ce6b08d2f771fdc56e5fb8cd2a48f03c3d9c96e4b2b",
+  "heldout_count": 200,
+  "answerable_count": 140,
+  "ambiguous_count": 40,
+  "controls_count": 20,
+  "depth8_answerable_count": 55,
+  "model_subset_count": 40,
+  "retrieval_run": false,
+  "implementation_and_retrieval_outputs_withheld": true,
+  "files": {
+    "heldout.json": "fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d",
+    "model-subset.json": "cb45a50029e7fc2bc6f06c7ed2667839ed168ec9617691a0a51508bce42cead1",
+    "independent-review.json": "f8cf99948dd91022a4080ce6b08d2f771fdc56e5fb8cd2a48f03c3d9c96e4b2b"
+  }
+}

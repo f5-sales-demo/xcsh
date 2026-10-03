@@ -1,0 +1,12 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_review_complete": true,
+  "reason": "All roles copied and exact targets verified; earlier review preserved as provisional. Final derived corpus is development only.",
+  "initial_source_pages": 6475,
+  "corrected_source_pages": 10940,
+  "rejected_role_review_sha256": "e3bdb82ad60530e4a3f15b6e21e8b22288868c6bf02a60d72e36359d58e22511",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "all_role_adjudication_pending": false,
+  "final_review_sha256": "f9d426abfc33f0dc7347830ec6f6fcf595f4cf7081a683c31f909af144043890"
+}

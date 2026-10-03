@@ -1,0 +1,38 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "quote_validation_passed": true,
+  "semantic_uniqueness_independently_reviewed": true,
+  "counts": {
+    "total": 43,
+    "valid": 40,
+    "ambiguous": 3,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "path": "quote-reviewed-review-v2.json.gz",
+      "sha256": "5f61e11762fa9bff9faf256c3c4d1c2a29054edd476e0a020d2b4a4a4ce9e62b",
+      "gzip_sha256": "3d55cf6d7ec39cc49675457bf606e51be9d12a5d26f46806ea0a32ee60023e6a"
+    },
+    {
+      "path": "quote-reviewed-validated-review-v2.json.gz",
+      "sha256": "e9d8d3092f829bb8e54f00046d8146334fec7cf89f9ae359e9ad83c298bcf9d1",
+      "gzip_sha256": "7e7c6c7eab7f29eaea7b3140a3bc6233b2e1d9d81605cfb1331947b5ae486554"
+    },
+    {
+      "path": "quote-reviewed-derived-development.json.gz",
+      "sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+      "gzip_sha256": "1b2bf98b23a3a2ab9100081a46684fd8dc9c3e428350916343353ca31ba79df2"
+    },
+    {
+      "path": "quote-reviewed-anchor-repair.stream.jsonl.gz",
+      "sha256": "d66bd9ccf5853a65d4f29baddf112b45fb1bb0d8b613490a8f0c597326871cb9",
+      "gzip_sha256": "01a408e1e7cbade7dcd710d05f8ff28c0966af798356eb5e4014b166132b85c1"
+    }
+  ],
+  "limitations": [
+    "Development-only correction; no held-out claim and all original labels retained.",
+    "Quote validation does not independently prove alternative completeness; matching-scope ambiguity still needs scrutiny."
+  ]
+}

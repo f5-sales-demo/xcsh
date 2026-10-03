@@ -1,0 +1,194 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "checks": {
+    "focused_tests": 218,
+    "workspace_check_ts": "pass"
+  },
+  "files": [
+    {
+      "path": "v1240-collection-coverage-development.json.gz",
+      "sha256": "646c18b901ca6adff68435d9d05de320641f85ad37f236efefc7c5a049b13b4d",
+      "gzip_sha256": "cd13ac611559ce49f6c8004b7e3af1e670367bdc84002ab31b9fb063ae9f5d89",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1768.2382890000001,
+        "warm_p95_ms": 33.897915999999896,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-collection-coverage-regression.json.gz",
+      "sha256": "f3bef96a9f16028e4959c2cac00738f67bc1ebad7a465ce1535201e905296695",
+      "gzip_sha256": "06bff5f9dc29bba309919e0451d6cd2b4f677da75afc690aabd3241b0e416d84",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+          "size_bytes": 795410432,
+          "gzip_sha256": "b3452c584a0b99a7ba6dc600d41875918318c9ff1d19bd487ee26623020ba2fc",
+          "gzip_size_bytes": 72045271
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1843.38149,
+        "warm_p95_ms": 35.30335600000035,
+        "discovery_p95_ms": 65.70204000000012,
+        "context_p95_ms": 0.24886400000013964,
+        "route_p95_ms": 65.72805700000026,
+        "warm_measurement_count": 2305,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 760,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3976,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3980200,
+        "tool_calls": 2305,
+        "index_file_bytes": 72045271,
+        "answerable_accuracy": 0.6714285714285714,
+        "answerable_top5": 0.8642857142857143,
+        "scored_accuracy": 0.631578947368421,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    },
+    {
+      "path": "v1240-collection-coverage-mac-offline.json.gz",
+      "sha256": "446e9b2b02ab3929bf40b671967895396537de4a4d0fe20ac79450b24cbdf14b",
+      "gzip_sha256": "6655089b83b0c906d159f8e440a7c3e3b94b9a8e4b4fe7e3b3217bda2c903d29",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 510.70225000000005,
+        "warm_p95_ms": 32.889708000000155,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-collection-coverage-linux-offline.json.gz",
+      "sha256": "27cea2fe64f80fc1a9d73b11b3a1400ad7a32b0916424a2da5a96638537e259d",
+      "gzip_sha256": "3d82c172a95d63553fba8c3ce0d03a30b91f8124100b9415eca521c72f5f5b41",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2040.2771120000002,
+        "warm_p95_ms": 47.28370399999994,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-collection-coverage-prior-mac-full-regression.json.gz",
+      "sha256": "fcaed09b6b43640ac03827fb087dde278a5bc2cc9b9f231499d301872a8f8e1a",
+      "gzip_sha256": "f8a85fbac1f501cb8bdd97e2e64561176e4048a995293dbb9f9844ca42461f8b",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+          "size_bytes": 795410432,
+          "gzip_sha256": "b3452c584a0b99a7ba6dc600d41875918318c9ff1d19bd487ee26623020ba2fc",
+          "gzip_size_bytes": 72045271
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "materialization_ms": 485.65920900000003,
+        "warm_p95_ms": 31.40308399999958,
+        "discovery_p95_ms": 44.77149999999892,
+        "context_p95_ms": 0.11787499999991269,
+        "route_p95_ms": 44.78179200000159,
+        "warm_measurement_count": 2305,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 760,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3976,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3980055,
+        "tool_calls": 2305,
+        "index_file_bytes": 72045271,
+        "answerable_accuracy": 0.6714285714285714,
+        "answerable_top5": 0.8571428571428571,
+        "scored_accuracy": 0.631578947368421,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    }
+  ],
+  "limitations": [
+    "Exposed regression only; no independent qualification.",
+    "Mac full regression preceded collection coverage guard; Mac/Ubuntu development parity includes guard."
+  ],
+  "offline_parity": {
+    "cases": 80,
+    "response_hashes_and_destinations_equal": true
+  }
+}

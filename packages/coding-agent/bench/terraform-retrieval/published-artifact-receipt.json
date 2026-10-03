@@ -1,0 +1,20 @@
+{
+  "provider_version": "v12.2.0",
+  "provider_release": "https://github.com/f5-sales-demo/terraform-provider-xcsh/releases/tag/v12.2.0",
+  "snapshot": "documentation-v12.2.0",
+  "snapshot_release": "https://github.com/f5-sales-demo/terraform-provider-xcsh/releases/tag/documentation-v12.2.0",
+  "provider_workflow": 36973029653,
+  "snapshot_workflow": 36977389418,
+  "source_commit": "b53aad4062cce8c72c387720a614043232d129b9",
+  "receipt_sha256": "f735dbfcb84536210bd396ec0d54477e662e005ad0b37b9e35f962fce5e79693",
+  "asset_match": "published assets match exact-tag candidate",
+  "deterministic_linux_index": "two matching builds",
+  "logical_mac_linux_tables": "all hashes match; SQLite storage bytes differ",
+  "offline_compiled_smoke": {
+    "linux": "unshare --net passed",
+    "mac": "sandbox-exec deny network passed"
+  },
+  "consumer_released": false,
+  "homebrew_acceptance": false,
+  "qualification_passed": false
+}

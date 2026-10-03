@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "frozen_labels_unchanged": true,
+  "report_sha256": "e3ddbe57f8064c475c5ba5c12171d85c25143a263695444a92c083df2113411e",
+  "cases_with_unreviewed_peers": 100,
+  "peer_records": 1549,
+  "limitations": [
+    "Candidate peers are review obligations,not proof all100prompts ambiguous.",
+    "Post-result audit cannot requalify frozen suite."
+  ]
+}

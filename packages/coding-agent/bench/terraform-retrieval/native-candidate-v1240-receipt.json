@@ -1,0 +1,20 @@
+{
+  "qualification_passed": false,
+  "candidate_only": true,
+  "workflow_run": 37112179923,
+  "workflow_conclusion": "success",
+  "source_commit": "542024e6a8688b166bd3665e213848add9d6e42a",
+  "provider_version": "v12.4.0",
+  "linux_binary_sha256": "f334ee35b8effda0059db694553a6f6a6ae247573236fb86b0938d0b457dfa5f",
+  "linux_provenance_verified": true,
+  "linux_network_disabled_smoke": "passed",
+  "model_40_run": "four partitions in progress; regression only",
+  "limitations": [
+    "Candidate predates post-qualification routing fixes.",
+    "No consumer release or >=95 qualification."
+  ],
+  "mac_binary_sha256": "69c008c232ed7a036e561844acff803530ea5cbcaec5772529a61157f9587d92",
+  "mac_signature_verified": true,
+  "mac_provenance_verified": true,
+  "mac_network_disabled_smoke": "passed"
+}

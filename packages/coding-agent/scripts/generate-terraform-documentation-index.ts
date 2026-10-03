@@ -5,10 +5,12 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import {
 	buildTerraformIndex,
 	parseTerraformPin,
-	TERRAFORM_ASSETS,
+	terraformAssetEnvelope,
 	terraformHash,
 	verifyTerraformSnapshot,
 } from "../src/internal-urls/terraform-documentation";
+
+import { fetchTerraformSnapshot } from "./terraform-snapshot-download";
 
 const root = path.join(import.meta.dir, "../../..");
 const generated = path.join(import.meta.dir, "../src/internal-urls/.documentation-generated/terraform");
@@ -28,7 +30,7 @@ async function main(): Promise<void> {
 	const inputIndex = process.argv.indexOf("--input-dir");
 	const input = inputIndex < 0 ? generated : process.argv[inputIndex + 1]!;
 	if (inputIndex < 0 && !process.argv.includes("--use-existing")) {
-		const identityResponse = await fetch(
+		const identityResponse = await fetchTerraformSnapshot(
 			`https://api.github.com/repos/${pin.source_repository}/releases/tags/${pin.release_tag}`,
 			{ headers: { Accept: "application/vnd.github+json" } },
 		);
@@ -42,12 +44,7 @@ async function main(): Promise<void> {
 		};
 		if (release.tag_name !== pin.release_tag || release.draft || release.prerelease || !release.immutable)
 			throw new Error("Terraform release must be published and immutable");
-		if (
-			release.assets
-				.map(a => a.name)
-				.sort()
-				.join() !== [...TERRAFORM_ASSETS].sort().join()
-		)
+		if (!terraformAssetEnvelope(release.assets.map(a => a.name)))
 			throw new Error("Terraform release asset membership mismatch");
 		for (const asset of release.assets)
 			if (
@@ -55,8 +52,8 @@ async function main(): Promise<void> {
 				asset.digest !== `sha256:${pin.assets[asset.name]!.sha256}`
 			)
 				throw new Error("Terraform GitHub asset provenance mismatch");
-		for (const name of TERRAFORM_ASSETS) {
-			const response = await fetch(
+		for (const name of Object.keys(pin.assets)) {
+			const response = await fetchTerraformSnapshot(
 				`https://github.com/${pin.source_repository}/releases/download/${pin.release_tag}/${name}`,
 			);
 			if (!response.ok) throw new Error(`Terraform snapshot download failed: ${name}: ${response.status}`);

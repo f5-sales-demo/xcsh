@@ -1,0 +1,31 @@
+{
+  "source_only": true,
+  "qualification_passed": false,
+  "network_disabled": true,
+  "script": "packages/coding-agent/bench/terraform-retrieval/audit-corpus-views.ts",
+  "script_sha256": "f85e487485dbd14a6b3220b2c9400ffe5efef303c9f081bd53c3d333e688379d",
+  "report": "v1240-reproducible-corpus-view-audit.json.gz",
+  "sha256": "c29f63cd61c43ae2c3df25ae963cf37aa4ce56c0fdcfc6fb74ca2a95acec857e",
+  "gzip_sha256": "48f9efa90c3a17af719da233d2bc8edbbd72dff267d7f74431bef6deece6c3e2",
+  "command": "sudo -n unshare --net runuser -u robin -- /home/robin/.bun/bin/bun packages/coding-agent/bench/terraform-retrieval/audit-corpus-views.ts --assets <embedded-assets.json> --cache <cache> --output <report.json>",
+  "summary": {
+    "source_only": true,
+    "qualification_passed": false,
+    "provider_version": "v12.4.0",
+    "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+    "documents": 18958,
+    "hints": 18958,
+    "contexts": 19143,
+    "max_hint_bytes": 4084,
+    "max_context_bytes": 15226,
+    "continuations": 185,
+    "full_reads": 19143,
+    "oversized_full_reads": 113,
+    "elapsed_ms": 6046.312886,
+    "failures": [],
+    "limitations": [
+      "Source corpus views and full-read destinations only; no semantic accuracy or installed-model acceptance.",
+      "Repeated full reads counted per context response."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "retrieval_evaluated": false,
+  "independent_review": "pending",
+  "files": [
+    {
+      "path": "original-candidate.json.gz",
+      "sha256": "0fe07a1d7e87d4f7f50b2cb41f2c38566c1d3368cfffe2fc196e05be477e2793",
+      "gzip_sha256": "2d04e84bc281d8732f39bd563b8876b0820654ede63fe21440562750b8b17d52"
+    },
+    {
+      "path": "original-candidate-normalized.json.gz",
+      "sha256": "65590702f9d8c003068d3397f4e5eeed2d6e41d02a19b4bc1ae777737da224a5",
+      "gzip_sha256": "e291d28b32749377bb2884e850a13f70b2ea8783550904b891bef552d7bbe834"
+    },
+    {
+      "path": "original-normalized-structure-review.json.gz",
+      "sha256": "ecd188f7c0bca84b523036c4390dbfad100d4a6f4eee8951e0befe84684e7614",
+      "gzip_sha256": "cb88750e58be85ef468bb8cf3c56e8bc2b1169b48d1607db8db95b391bd388d1"
+    },
+    {
+      "path": "original-author.stream.jsonl.gz",
+      "sha256": "3726df89c23c3c51f6ca39c2b18651a3f2bc4692c9c45c682b7c9f66702057c5",
+      "gzip_sha256": "82a9d8f8673f57472fbcc12d8646352554f2d9f01024f40966e79c311c083939"
+    }
+  ],
+  "normalization": "Mechanical kind-name conversion and scalar/null expected destination conversion to arrays; prompts and labels unchanged.",
+  "limitations": [
+    "Author candidate contains structural failures and unverified uniqueness; must not qualify retrieval.",
+    "Every alternative must be adjudicated independently; count alone does not establish completeness."
+  ]
+}

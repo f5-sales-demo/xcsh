@@ -1,0 +1,90 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "rejected": true,
+  "preparation": {
+    "development_only": true,
+    "qualification_passed": false,
+    "production_imported": false,
+    "model_revision": {
+      "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+    },
+    "model_files": [
+      {
+        "path": "README.md",
+        "sha256": "7c0ec39941d0d1d766ccde671f592971d82fe45b7eea550a80d1ea864ebc3baa"
+      },
+      {
+        "path": "config.json",
+        "sha256": "380e02c93f431831be65d99a4e7e5f67c133985bf2e77d9d4eba46847190bacc"
+      },
+      {
+        "path": "model.safetensors",
+        "sha256": "821d1aa69520101d6e0737f78a042ae25b19e5cb9160701909d10434f4aeb0ae"
+      },
+      {
+        "path": "special_tokens_map.json",
+        "sha256": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6"
+      },
+      {
+        "path": "tokenizer.json",
+        "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+      },
+      {
+        "path": "tokenizer_config.json",
+        "sha256": "a5c2e5a7b1a29a0702cd28c08a399b5ecc110c263009d17f7e3b415f25905fd8"
+      },
+      {
+        "path": "vocab.txt",
+        "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      }
+    ]
+  },
+  "evaluator_sha256": "e03f09735fc5aea38c666e1119571d1e274f01d93df3cec1d7aaefd4bd9aabaa",
+  "runs": [
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "model_revision": {
+        "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+      },
+      "answerable": 14,
+      "top1": 6,
+      "top5": 12,
+      "rerank_p95_ms": 226.6312069259584,
+      "limitations": [
+        "Twenty precomputed lexical property candidates only; selection, rendering and lexical retrieval latency excluded.",
+        "Not independent qualification or installed runtime."
+      ],
+      "raw_sha256": "403aad0ed489d77387640c2e57f6d72db420722a945bf4ce8112380e89def9f7",
+      "gzip_sha256": "7c3172a13474217ff232d7cf879fc1c57b8e6c0eda29054ec4e35c22a2f00742"
+    },
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "model_revision": {
+        "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+      },
+      "answerable": 48,
+      "top1": 28,
+      "top5": 42,
+      "rerank_p95_ms": 219.13961798418313,
+      "limitations": [
+        "Twenty precomputed lexical property candidates only; selection, rendering and lexical retrieval latency excluded.",
+        "Not independent qualification or installed runtime."
+      ],
+      "raw_sha256": "5353771126451287ec2b8502b726666fdc3740f766e06aa7b86a863739dd03b6",
+      "gzip_sha256": "344fd05a5aebd798c1e1a2423977d77673c04b6b20087fc539267f2b84465a78"
+    }
+  ]
+}

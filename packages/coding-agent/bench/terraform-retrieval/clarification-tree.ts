@@ -1,0 +1,180 @@
+import { measureCompleteRetrieval } from "./complete-measurement";
+
+export interface FrozenClarificationNode {
+	request: string;
+	children?: FrozenClarificationNode[];
+	expected?: string;
+}
+export interface FrozenClarificationTree {
+	max_depth: number;
+	root: FrozenClarificationNode;
+}
+
+interface AuthoredRequest {
+	query: string;
+	caller_filters: Record<string, string>;
+}
+interface AuthoredBranch {
+	child_request: AuthoredRequest;
+	branches?: AuthoredBranch[];
+	terminal_expected?: string;
+}
+interface AuthoredTree {
+	max_depth: number;
+	root_request: AuthoredRequest;
+	branches: AuthoredBranch[];
+}
+export function normalizeClarificationTree(tree: FrozenClarificationTree | AuthoredTree): FrozenClarificationTree {
+	if ("root" in tree) return tree;
+	const request = (r: AuthoredRequest) => {
+		const url = new URL("xcsh://terraform-documentation/");
+		url.searchParams.set("search", r.query);
+		for (const [key, value] of Object.entries(r.caller_filters)) url.searchParams.set(key, value);
+		return url.href;
+	};
+	const node = (b: AuthoredBranch): FrozenClarificationNode => ({
+		request: request(b.child_request),
+		...(b.branches ? { children: b.branches.map(node) } : { expected: b.terminal_expected }),
+	});
+	return {
+		max_depth: tree.max_depth,
+		root: { request: request(tree.root_request), children: tree.branches.map(node) },
+	};
+}
+
+const requestIdentity = (value: string) => {
+	const uri = new URL(value);
+	uri.searchParams.sort();
+	return uri.href;
+};
+const exactDestination = (value: string) => {
+	const uri = new URL(value);
+	if (uri.protocol !== "xcsh:" || uri.host !== "terraform-documentation")
+		throw new Error("Invalid frozen Terraform destination");
+	uri.search = "";
+	return uri.href;
+};
+
+export function validateClarificationTree(tree: FrozenClarificationTree): void {
+	if (!Number.isInteger(tree.max_depth) || tree.max_depth < 1 || tree.max_depth > 40)
+		throw new Error("Invalid frozen clarification depth");
+	const requests = new Set<string>();
+	const leaves = new Set<string>();
+	const visit = (node: FrozenClarificationNode, parent: FrozenClarificationNode | undefined, depth: number) => {
+		if (depth > tree.max_depth) throw new Error("Frozen clarification exceeds reviewed depth");
+		const uri = new URL(node.request);
+		const allowed = new Set([
+			"search",
+			"node",
+			"provider_type",
+			"provider_name",
+			"role",
+			"category",
+			"capability",
+			"task",
+			"limit",
+		]);
+		for (const key of uri.searchParams.keys())
+			if (!allowed.has(key)) throw new Error("Unsupported frozen clarification parameter");
+		for (const key of uri.searchParams.keys())
+			if (uri.searchParams.getAll(key).length !== 1) throw new Error("Duplicate frozen clarification parameter");
+		if (uri.protocol !== "xcsh:" || uri.host !== "terraform-documentation" || uri.pathname !== "/" || uri.hash)
+			throw new Error("Invalid frozen clarification request");
+		if (!uri.searchParams.get("search")) throw new Error("Frozen clarification requires query");
+		if (requests.has(uri.href)) throw new Error("Frozen clarification loop or duplicate request");
+		requests.add(uri.href);
+		if (parent) {
+			const previous = new URL(parent.request);
+			for (const [key, value] of previous.searchParams) {
+				if (key === "node") continue; // Source audit must verify strict descendant narrowing.
+				if (uri.searchParams.get(key) !== value) throw new Error("Frozen clarification drops caller scope");
+			}
+			if (uri.href === previous.href) throw new Error("Frozen clarification does not narrow scope");
+		}
+		if (node.children) {
+			if (node.expected || node.children.length < 2 || node.children.length > 5)
+				throw new Error("Frozen clarification requires two to five exclusive branches");
+			for (const child of node.children) visit(child, node, depth + 1);
+		} else {
+			if (!node.expected) throw new Error("Frozen clarification terminal destination missing");
+			const leaf = exactDestination(node.expected);
+			if (leaves.has(leaf)) throw new Error("Frozen clarification branches overlap");
+			leaves.add(leaf);
+		}
+	};
+	visit(tree.root, undefined, 0);
+	if (leaves.size < 2) throw new Error("Frozen clarification is not ambiguous");
+}
+
+// The independent source audit must separately attest each node, descendant
+// partition and omitted decision. Runtime evaluation cannot establish necessity.
+export async function evaluateClarificationTree(
+	read: (uri: string) => Promise<{ content: string }>,
+	tree: FrozenClarificationTree,
+	repetitions = 5,
+) {
+	validateClarificationTree(tree);
+	const findings: string[] = [];
+	const responses: Array<Awaited<ReturnType<typeof measureCompleteRetrieval>> & { request: string }> = [];
+	const visit = async (node: FrozenClarificationNode) => {
+		const measured = await measureCompleteRetrieval(read, node.request, repetitions);
+		responses.push({ request: node.request, ...measured });
+		const selected = measured.discovery.includes("Selected leaf;");
+		const reads = [...measured.discovery.matchAll(/^Read: (\S+)/gm)].map(match => exactDestination(match[1]!));
+		if (node.children) {
+			if (selected) findings.push(`Premature leaf: ${node.request}`);
+			if (reads.length) findings.push(`Off-tree leaf candidates: ${node.request}`);
+			const pages = [measured.discovery];
+			const seenPages = new Set([requestIdentity(node.request)]);
+			let page = measured.discovery;
+			for (let count = 0; count < 5; count++) {
+				const link = page.match(/^Continue: (\S+)/m)?.[1];
+				if (!link) break;
+				const next = new URL(link);
+				const original = new URL(node.request);
+				const cursor = next.searchParams.get("choice_after");
+				next.searchParams.delete("choice_after");
+				if (
+					!cursor ||
+					!/^[1-9][0-9]*$/.test(cursor) ||
+					requestIdentity(next.href) !== requestIdentity(original.href) ||
+					seenPages.has(requestIdentity(link))
+				) {
+					findings.push(`Unsafe or repeated choice pagination: ${node.request}`);
+					break;
+				}
+				seenPages.add(requestIdentity(link));
+				const continuation = await measureCompleteRetrieval(read, link, repetitions);
+				responses.push({ request: link, ...continuation });
+				page = continuation.discovery;
+				pages.push(page);
+				if (page.includes("Selected leaf;") || /^Read: /m.test(page))
+					findings.push(`Choice pagination changed decision: ${node.request}`);
+				if (count === 4 && /^Continue: /m.test(page))
+					findings.push(`Choice pagination exceeds bound: ${node.request}`);
+			}
+			const actual = pages.flatMap(content =>
+				[...content.matchAll(/^Refine: (\S+)/gm)].map(match => requestIdentity(match[1]!)),
+			);
+			const expected = node.children.map(child => requestIdentity(child.request));
+			if (
+				actual.length !== expected.length ||
+				new Set(actual).size !== actual.length ||
+				actual.some(uri => !expected.includes(uri))
+			)
+				findings.push(`Missing or extra frozen branches: ${node.request}`);
+			// Visit declared branches only; never probe unreviewed returned links.
+			for (const child of node.children) await visit(child);
+		} else if (!selected || reads[0] !== exactDestination(node.expected!) || !measured.context) {
+			findings.push(`Incorrect terminal leaf or missing actual context read: ${node.request}`);
+		}
+	};
+	await visit(tree.root);
+	return {
+		passed: findings.length === 0,
+		findings,
+		responses,
+		tool_calls: responses.reduce((sum, row) => sum + row.toolCalls, 0),
+		total_response_bytes: responses.reduce((sum, row) => sum + row.totalBytes, 0),
+	};
+}

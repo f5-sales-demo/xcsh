@@ -1,0 +1,45 @@
+{
+  "provider_version": "v12.3.1",
+  "snapshot_tag": "documentation-v12.3.1",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "document_count": 18958,
+  "retrieval_metadata_version": 1,
+  "receipt_sha256": "da1e6c3148a7083e8b374f45a3f8a5d04d3275a349aa348e2015ec60f1c039bd",
+  "provider_immutable": true,
+  "snapshot_immutable": true,
+  "provider_asset_count": 13,
+  "snapshot_asset_count": 9,
+  "normal_release_run": 37051672705,
+  "normal_release_conclusion": "success",
+  "source_pr": 2374,
+  "regeneration_pr": 2376,
+  "regeneration_artifact_sha256": "5460f996dae344bd9612fd153c75f4ead87d013aa9d3f892f6ed750b87e1f564",
+  "index": {
+    "sha256": "09891b1d6af55eff591a2562c0e758777bad61a12a3d19f95bfefaa58934e4b6",
+    "size_bytes": 739745792,
+    "gzip_sha256": "78d178c0f0d3952465441a088f7f16891569ceb2a2efc6400aa40eda95fdf21c",
+    "gzip_size_bytes": 64790128
+  },
+  "matching_index_builds": 3,
+  "source_tests": {
+    "internal_url_tests": 493,
+    "workspace_checks_passed": true
+  },
+  "qualification_passed": false,
+  "narrow_relevance_smoke_passed": null,
+  "narrow_relevance_smoke_failure": "Not rerun against final publication;preview passes login-success cases and fails old existing-certificate expectation.",
+  "frozen_previous_suite_source_mismatch_rejected": true,
+  "limitations": [
+    "Installed released acceptance remains unfinished.",
+    "Old v12.2.0 benchmark does not qualify new source.",
+    "Revised development labels remain under review."
+  ],
+  "core_source_smoke_passed": true,
+  "bounded_view_audit": {
+    "documents": 18958,
+    "responses": 37916,
+    "max_hint_bytes": 4084,
+    "max_context_bytes": 15155,
+    "errors": []
+  }
+}

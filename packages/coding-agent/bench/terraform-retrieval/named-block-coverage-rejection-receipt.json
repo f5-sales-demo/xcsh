@@ -1,0 +1,84 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "rejected": true,
+  "production_imported": false,
+  "patch_sha256": "c644edb20d3f281cf60d29501713fd8b9d9ca56dd92cb4ab8c02f72a116c49bf",
+  "runs": [
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "regression_only": false,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "cold_materialization_ms": 1672.4066990000001,
+      "warm_p95_ms": 69.11411300000009,
+      "answerable": 14,
+      "correct_leaf": 12,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 13,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ],
+      "raw_sha256": "e9b9eb2f3ebc6bbcd684076de9135d4f8a1930c1c8fcfb98bca8488f544db702",
+      "gzip_sha256": "06f36d1044b50940a5333f9b8f1a07c6f58904bf37b744aaadeaeb44cb68aa08"
+    },
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "regression_only": false,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "cold_materialization_ms": 1676.3406929999999,
+      "warm_p95_ms": 36.62942699999985,
+      "answerable": 48,
+      "correct_leaf": 47,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 48,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ],
+      "raw_sha256": "571347c3eb1539aa7ca9d7df3841db4fa36667e3ec4ec607d428cb28156dc3fc",
+      "gzip_sha256": "3f3a3d2ce5b941772d85c8a2169079a7d9bd5a83459ae050fa01b83fbf5f07bc"
+    },
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "regression_only": false,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "e9fc6bb233fc92824bc83c12395bb546cc9f0cb0c3cf33fdb3a7e155231e2ccc",
+      "cold_materialization_ms": 1678.042989,
+      "warm_p95_ms": 31.875976000000037,
+      "answerable": 45,
+      "correct_leaf": 40,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 45,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ],
+      "raw_sha256": "287f11a5d7ea8da4c0b0b4c82d348002d7cebbaa4774772ebc1d734cc0bc56e0",
+      "gzip_sha256": "f6e90fc0e875c6abbd796fbfb35823a55f66dfc0dd5f945187edee56ba56db76"
+    }
+  ]
+}

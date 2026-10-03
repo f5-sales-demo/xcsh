@@ -1,0 +1,23 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "b53aad4062cce8c72c387720a614043232d129b9",
+  "index_sha256": "c77d9f2c3cb49ad9bf06f06cd268de5f4ad5f9fc66ee4b8ccfe469a2515a5a6d",
+  "suite_sha256": "430306652dbe4c1a1694dfbd6b26ce56655d592bf7b1a045335f20ff632dc57f",
+  "answerable": 60,
+  "correct_leaf": 17,
+  "top5": 33,
+  "discovery_p95_ms": 108.461553000001,
+  "limitations": [
+    "Unreviewed development candidate; no held-out qualification.",
+    "Control activation and unsupported-field behavior require separate semantic/model review."
+  ],
+  "complete_results": {
+    "artifact": "baseline.json.gz",
+    "encoding": "gzip",
+    "uncompressed_sha256": "017d1da30ee4568bc25e4bb1d88ae21f48513b27e588d6dbf0875b08afa8267a",
+    "uncompressed_bytes": 72705,
+    "compressed_sha256": "b591a1acacd6cd21272cc43b53272162ee9e6085c7391010c133e9b7cfd37bb2",
+    "compressed_bytes": 8819
+  }
+}

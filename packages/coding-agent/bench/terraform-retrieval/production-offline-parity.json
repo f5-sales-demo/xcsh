@@ -1,0 +1,29 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "actual_production_resolver": true,
+  "cases": 80,
+  "repetitions": 5,
+  "network_disabled": true,
+  "identical_destinations_selections_context_bytes_and_response_hashes": true,
+  "linux_p95_ms": 35.826217000000725,
+  "mac_p95_ms": 32.60429199999999,
+  "linux_materialization_ms": 1830.537686,
+  "mac_materialization_ms": 1141.057708,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+  "raw_sha256": {
+    "linux": "5215ba2b0e49fafee49cea121fe441931bd9479fd7e40179299ad7a5dfae7f9c",
+    "mac": "e7872c177a6b2b80a4740919631303f0c7f132318b3a4c9841b981f68c96d3b9"
+  },
+  "limitations": [
+    "Development suite; no independently frozen qualification.",
+    "Mac uses copied production modules and existing bootstrapped dependencies; no compiled installed acceptance.",
+    "Linux reused verified cache while Mac materialized a new cache; cold timings are not a matched cold comparison."
+  ],
+  "gzip_sha256": {
+    "linux": "6641715fb8bf709132a785032f542e60e04082c4153572153bff9e375690a36b",
+    "mac": "1b273e1a918cf10ae1905da64c4c96416213c28fa587c092d992a028b438bfb7"
+  }
+}

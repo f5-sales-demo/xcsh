@@ -7,7 +7,18 @@ description: |
 
 # F5 XC Terraform Provider
 
-Every response MUST include a ```terraform code block. Output code first, then write it to a `.tf` file with `xcsh_write_file`.
+For explicit Terraform questions, begin with the bundled `xcsh://terraform-documentation/` search and read the
+selected complete section before answering. Cite its exact destination and bundled provider version. When
+retrieval reports narrowing choices, ask one focused question about the missing provider role or schema branch
+and wait for the answer before drafting HCL. Missing user-specific values such as certificate location also
+require clarification before populating those values. Explain documented alternatives without supplying
+parallel HCL drafts while the destination is undecided.
+
+Generate a Terraform code block when the user asks for HCL and the documented destination is resolved. Write a
+`.tf` file with `xcsh_write_file` when the user asks to create or edit files. Documentation answers and
+clarification questions do not require code or file writes. Verify every field and nested block against the
+bundled exact sections; templates below are starting examples and must be checked against that version.
+Distinguish documented provider validation from observed live-apply evidence.
 
 REGISTRY-FIRST: before adding any external `required_providers` entry, read
 `xcsh://registry/provider/<namespace>/<type>`. Before invoking a Registry module, read
@@ -98,8 +109,11 @@ Labels: add labels = { env="prod" }. Import: terraform import xcsh_namespace.exa
 
 Troubleshoot: "one of X must be set" = add empty block. "unsupported argument" = check template. Output corrected resource block.
 Troubleshooting detail: **Unsupported argument** means the installed provider schema and configuration disagree;
-read the relevant `xcsh://terraform/<category>/<resource>` entry and the selected provider version before changing
+read the relevant exact `xcsh://terraform-documentation/` section and the selected provider version before changing
 HCL. A **State lock** must be investigated for an active writer first; use `terraform force-unlock <lock-id>` only
 when the user instructs it and the stale lock identity is verified. Provider installation failures require checking
 the exact source, version constraint, lock file, Registry availability, and any `dev_overrides` before retrying.
 Destroy: terraform destroy -target=xcsh_{type}.{label}
+
+
+When citing exact property documentation, distinguish provider validators/defaults and schema field flags from receipt-pinned upstream constraints. Describe a limit as provider-enforced only when the provider schema or validator code documents it. Label limits found only in upstream metadata as documented upstream constraints; neither source establishes successful live apply.

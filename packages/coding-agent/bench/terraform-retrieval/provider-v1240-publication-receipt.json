@@ -1,0 +1,12 @@
+{
+  "provider_version": "v12.4.0",
+  "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "provider_release_immutable": true,
+  "provider_assets": 13,
+  "provider_published_at": "2026-10-03T08:44:23Z",
+  "tag_signature_verified": true,
+  "documentation_publication_run": 37110720898,
+  "documentation_status": "queued",
+  "qualification_passed": false,
+  "consumer_pin_changed": false
+}

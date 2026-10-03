@@ -1,0 +1,84 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "correct_answerable": 91,
+  "answerable_total": 140,
+  "development_correct": 43,
+  "development_total": 43,
+  "reports": {
+    "purpose-weight-scoped-development": {
+      "file": "v1240-purpose-weight-scoped-development.json.gz",
+      "sha256": "be675659fb8ac4bbf3b4d838832023e320a16ca9a9ed3df1bb4d06c35756dd60",
+      "gzip_sha256": "c326027e6fd35100f29395ce9ee697661b4354e9cf6c455b335f05d850f78f6c",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1784.914761,
+        "warm_p95_ms": 30.69110399999954,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "purpose-weight-scoped-regression": {
+      "file": "v1240-purpose-weight-scoped-regression.json.gz",
+      "sha256": "b2107e32aba2e1355c2ea51ee035d4f0c50def4d503726d77b9838bb6d822d9b",
+      "gzip_sha256": "2754e2bfcf5997ada6af311b8160e349fee447e2119a9ff62179608a386b8f45",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+          "size_bytes": 794988544,
+          "gzip_sha256": "4c738aaa4627ca44ff6bbd722eeb21edc9852368373a239b13db6c818b843867",
+          "gzip_size_bytes": 71969527
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1769.084271,
+        "warm_p95_ms": 35.64962999999989,
+        "discovery_p95_ms": 55.08988400000089,
+        "context_p95_ms": 0.1923900000001595,
+        "route_p95_ms": 55.11041000000114,
+        "warm_measurement_count": 2290,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 745,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3975,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3981780,
+        "tool_calls": 2290,
+        "index_file_bytes": 71969527,
+        "answerable_accuracy": 0.65,
+        "answerable_top5": 0.8428571428571429,
+        "scored_accuracy": 0.6105263157894737,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    }
+  }
+}

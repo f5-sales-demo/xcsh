@@ -128,6 +128,9 @@ describe("API catalog preflight", () => {
 	it.each([
 		"What is F5 XC WAAP?",
 		"Show the Terraform resource for an F5 XC HTTP load balancer",
+		"In the xcsh dns zone delete cryptokey action, where is key id documented?",
+		"In the xcsh http loadbalancer resource, where is https / port documented?",
+		"Explain the xcsh cloud credential data source property type.",
 		"Troubleshoot why my F5 XC HTTP load balancer is returning 503",
 		"What is the AWS Application Load Balancer API endpoint?",
 		"What endpoint creates an AWS origin pool?",

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "candidate_sha256": "f8fa4f3b59e95109ce8e976cfc23c91f1d28a9ce050da66e4caca57f8c27ac84",
+  "source_preparation": {
+    "source_commit": "183149e97a049ed8b5803251fb10ddc9c34f1480",
+    "source_root": "documentation",
+    "provider_version": "pending normal release",
+    "status": "review preparation only; freeze waits for published snapshot"
+  },
+  "author": {
+    "model": "Gemini 3.8 Flash (High)",
+    "conversation": "3a31278f-558c-49ea-b318-22bd87969a74",
+    "version": "1.2.14"
+  },
+  "verifier": {
+    "model": "Gemini 3.8 Flash (High)",
+    "conversation": "875b4a7c-ce4a-4a99-bcee-3f8408d8a523",
+    "version": "1.2.14"
+  },
+  "previous_reviews": [
+    "needs-attention",
+    "needs-attention"
+  ],
+  "implementation_and_previous_retrieval_results_withheld": true,
+  "reviewed_cases": 200,
+  "verdict": "approve",
+  "findings": [],
+  "coverage_assessment": [
+    "Evaluated complete 200-case suite in final-candidate.json against canonical documentation: 140 answerable, 40 ambiguous, and 20 control cases.",
+    "Product family coverage verified across 11 families: security (45), load-balancing (44), infrastructure (40), container (23), administration (14), networking (11), dns (8), cdn (6), identity (4), monitoring (3), and api-management (2).",
+    "Provider role coverage verified across 6 roles: properties (127), fundamentals (42), overview (19), import (10), timeouts (1), and reference (1).",
+    "Schema depth analysis confirms 56 answerable cases targeting schema depth >= 8 (depth 8: 27, depth 9: 24, depth 10: 5), meeting and exceeding the threshold of >= 50 deep cases. Leaf schema paths and depth 9 annotations for ans-deep-001, ans-deep-002, and ans-deep-003 were verified against leaf anchors and xcsh_docs metadata.",
+    "Domain coverage verified across all required areas: provider authentication (ans-std-001 to ans-std-004), resource imports (ans-std-005 to ans-std-014, amb-040), timeouts (ans-std-015 to ans-std-022, amb-038, amb-039), actions (ans-std-023 to ans-std-032, amb-031 to amb-035), ephemeral resources (ans-std-033 to ans-std-036, amb-036, amb-037), nested TLS (ans-std-037, ans-std-038, ans-std-043, ans-std-044, amb-017, amb-020, amb-021), Bot Defense successful logins (ans-deep-001 to ans-deep-006), existing certificates (ans-std-045 to ans-std-048, amb-001), backend servers (ans-std-040, ans-std-049 to ans-std-053, amb-019, amb-020, amb-025), and credential setup (ans-deep-007, ans-deep-008, ans-std-054 to ans-std-056, amb-030).",
+    "Independent verification of repairs from verifier-review.json and verifier-revision-review.json: (1) Leaf schema paths and depths for ans-deep-001, ans-deep-002, ans-deep-003 corrected to depth 9 with leaf attributes (status, regex_values, name); (2) Corrected ans-deep-009 entity reference from non-existent xcsh_bot_defense_policy to canonical xcsh_bot_endpoint_policy data source; (3) Harmonized answerable timeout prompts (ans-std-015 to ans-std-022) so property duration attributes point to properties/timeouts/index.md#section while usage guidance points to lifecycle/timeouts/index.md#timeouts; (4) Replaced artificial timeout ambiguities amb-038 and amb-039 with genuine architectural ambiguities (application tenancy single vs multi app, and backend port routing mode); (5) Refactored all 40 ambiguous cases to concrete HCL requests requesting configuration drafting with unstated operational parameters, eliminating mechanical comparative (versus), toggle (between enabled and disabled), and schema-enumerating prompts; (6) amb-008 rewritten from single-destination data source lookup to genuine resource vs data source ambiguity with unstated origin/ownership; (7) amb-001 refined to request drafting private key block with missing secret storage representation (clear vs blindfold), eliminating tension with leaf destinations.",
+    "Control verification confirmed: 10 ordinary-discovery controls (ctrl-disc-001 to ctrl-disc-010) correctly test non-Terraform activation boundaries with empty expected destinations; 6 unsupported-field controls (ctrl-unsupp-001 to ctrl-unsupp-006) were independently verified via corpus-wide search across all 18,954 markdown files to be absent from the provider schema; 4 no-live-claim controls (ctrl-claim-001 to ctrl-claim-004) accurately reflect provider architectural limits (including commit snapshot provenance in ctrl-claim-001 and lack of provider functions in ctrl-claim-004 verified verbatim in documentation/provider/setup/index.md).",
+    "Model subset composition verified at 28 answerable, 8 ambiguous, and 4 controls, successfully testing HCL drafting (ans-deep-001, ans-deep-003, ans-deep-020, amb-001, amb-003, etc.), missing certificate values (amb-001), source commit provenance (ctrl-claim-001), supported fields, and exact leaf reads (ans-deep-001, ans-deep-003). Replaced synthetic ambiguous cases amb-002 and amb-038 in the subset with genuine architectural choices.",
+    "Natural user language and diversity confirmed: 97 of 140 answerable prompts and 10 of 40 ambiguous prompts omit the xcsh_ prefix in favor of everyday developer terminology; zero prompts use explicit dotted schema paths; all 140 answerable destinations are completely unique and uniquely identified by prompt context without hidden path clues or invented values."
+  ],
+  "limitations": [
+    "Read-only independent inspection performed strictly on final-candidate.json, brief.md, source.json, and canonical documentation/ without inspecting retrieval code, executing retrieval, running Terraform, or querying external networks.",
+    "Verification evaluated semantic uniqueness, ambiguity validity, anchor existence, and schema depth against local authoritative Markdown files and xcsh_docs frontmatter metadata; runtime retrieval performance and scoring were out of scope.",
+    "Source repository status in source.json is recorded as 'review preparation only; freeze waits for published snapshot' (commit 183149e97a049ed8b5803251fb10ddc9c34f1480, provider_version 'pending normal release'). Benchmark freeze remains gated until the immutable metadata-v1 snapshot is published.",
+    "Automated independent review only; does not constitute explicit human acceptance of user-facing features or release qualification."
+  ],
+  "frozen": false,
+  "retrieval_run": false,
+  "qualification_passed": false
+}

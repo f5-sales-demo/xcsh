@@ -1,0 +1,14 @@
+{
+  "qualification_passed": false,
+  "source_commit": "916d8312968e0acb19e38e2a64e1aa2e70071120",
+  "pass": 9254,
+  "skip": 562,
+  "fail": 0,
+  "files": 932,
+  "elapsed_seconds": 494.06,
+  "log_sha256": "2b62b32b8ac656a329db5364b5ef96a8d52c918e525094902c10a0da8059e5fd",
+  "gzip_sha256": "7edd5cd2b88c48037c2c4c78759c43bccab06a1226a8a4c7dfd31dc6feb659f4",
+  "limitations": [
+    "Package test/ serial rerun; installed and heldout qualification incomplete."
+  ]
+}

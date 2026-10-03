@@ -1,0 +1,121 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "ambiguous": 29,
+  "all_alternatives_top5": 17,
+  "failures": [
+    {
+      "id": "dev-broad-011",
+      "expected_count": 2,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_site/properties/items/get_spec/infra/hw_info/chassis/index.md#schema-items--get_spec--infra--hw_info--chassis--serial",
+        "xcsh://terraform-documentation/documentation/data-sources/site_registrations_by_site/properties/items/object/spec/gc_spec/infra/hw_info/chassis/index.md#schema-items--object--spec--gc_spec--infra--hw_info--chassis--serial"
+      ],
+      "prompt": "In a site-specific registration data source lookup, which property provides the discovered chassis serial number from the infrastructure hardware spec?"
+    },
+    {
+      "id": "dev-broad-016",
+      "expected_count": 6,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr"
+      ],
+      "prompt": "Where in an Azure VNet site resource declaration do you specify the IPv4 next-hop address for a dual-stack custom static route?"
+    },
+    {
+      "id": "dev-broad-017",
+      "expected_count": 6,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr"
+      ],
+      "prompt": "In an Azure VNet site resource with dual-stack static routing, which property holds the colon-separated IPv6 next-hop gateway address?"
+    },
+    {
+      "id": "dev-broad-022",
+      "expected_count": 6,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/data-sources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--prefix"
+      ],
+      "prompt": "Which string attribute specifies the prefix path to match for a simple route in a workload stateful service HTTP loadbalancer configuration?"
+    },
+    {
+      "id": "dev-broad-023",
+      "expected_count": 3,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#schema-stateful_service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/specific_routes/routes/redirect_route/route_redirect/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--specific_routes--routes--redirect_route--route_redirect--host_redirect"
+      ],
+      "prompt": "In a workload resource defining a redirect route on a stateful service port, which parameter configures the target host for redirection?"
+    },
+    {
+      "id": "dev-broad-027",
+      "expected_count": 9,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_and/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_none--cookie_operator--cookie--cookie_and--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_none/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_none--cookie_operator--cookie--cookie_none--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_none--cookie_operator--cookie--cookie_or--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_and/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_or--cookie_operator--cookie--cookie_and--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_none/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_or--cookie_operator--cookie--cookie_none--cookie_match_v2--case_sensitive",
+        "xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_success/cookie_v2/cookies_or/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_success--cookie_v2--cookies_or--cookie_operator--cookie--cookie_or--cookie_match_v2--case_sensitive"
+      ],
+      "prompt": "When inspecting a bot endpoint policy data source for mobile success cookie criteria, which boolean field determines case sensitivity for cookie match rules?"
+    },
+    {
+      "id": "dev-broad-063",
+      "expected_count": 2,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/app_firewall/properties/blocking/index.md#section"
+      ],
+      "prompt": "Which schema documentation page covers the blocking enforcement mode block for an application firewall?"
+    },
+    {
+      "id": "dev-broad-067",
+      "expected_count": 2,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md#schema-timeout",
+        "xcsh://terraform-documentation/documentation/data-sources/healthcheck/properties/index.md#schema-timeout"
+      ],
+      "prompt": "Where is the overall response timeout property documented for a health check monitor?"
+    },
+    {
+      "id": "dev-broad-069",
+      "expected_count": 2,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/blindfold_secret_info/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/request_headers_to_add/secret_value/clear_secret_info/index.md#section"
+      ],
+      "prompt": "Which block documents configuring secret credentials added to request headers on an HTTP load balancer simple route?"
+    },
+    {
+      "id": "dev-broad-070",
+      "expected_count": 4,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_start/index.md#section",
+        "xcsh://terraform-documentation/documentation/data-sources/network_interface/properties/ethernet_interface/dhcp_server/automatic_from_end/index.md#section"
+      ],
+      "prompt": "Where is the automatic IP allocation method documented for an ethernet interface DHCP server?"
+    },
+    {
+      "id": "dev-broad-071",
+      "expected_count": 2,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md#schema-id",
+        "xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md#schema-ids"
+      ],
+      "prompt": "Which administrative action documentation covers revoking active user access sessions?"
+    },
+    {
+      "id": "dev-broad-072",
+      "expected_count": 2,
+      "missing": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/azure_client_secret/index.md#section"
+      ],
+      "prompt": "Where in cloud credentials do you configure secret access credentials for public cloud integration?"
+    }
+  ]
+}

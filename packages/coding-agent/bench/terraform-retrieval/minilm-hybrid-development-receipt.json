@@ -1,0 +1,38 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+  "vector_sha256": "5bf241306f0c35c4c05b27c056533ee0e41913893dba1a67e967b9f0b02f4089",
+  "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+  "answerable": 48,
+  "top1": 38,
+  "top5": 45,
+  "semantic_route_p95_ms": 13.808288960717618,
+  "limitations": [
+    "Lexical precomputed separately; no complete response latency qualification.",
+    "Candidate ranking only; no confidence selection or prerequisite rendering.",
+    "Local offline embedding runtime, not bundled production dependency."
+  ],
+  "vectors": {
+    "development_only": true,
+    "qualification_passed": false,
+    "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+    "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+    "rows": 39565,
+    "dimensions": 384,
+    "vector_bytes": 60771968,
+    "vector_sha256": "5bf241306f0c35c4c05b27c056533ee0e41913893dba1a67e967b9f0b02f4089",
+    "materialization_ms": 206173.98748197593,
+    "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+  },
+  "token_audit": {
+    "destinations": 39565,
+    "over_model_limit": 0,
+    "max_tokens": 179,
+    "model_limit": 256
+  },
+  "raw_sha256": "7615c00e5dd73e15b1da8f77c087fc0329ec6bcbdc3e9d2cc06077a613a42717",
+  "gzip_sha256": "1e07148ad5b14e0f4a2038791cd4033d982600c51f1213601e4f33bf82eb05b7"
+}

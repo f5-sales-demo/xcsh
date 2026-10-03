@@ -1,0 +1,45 @@
+{
+  "source_only": true,
+  "qualification_passed": false,
+  "network_disabled": true,
+  "files": [
+    {
+      "path": "v1240-shape-view-audit.json.gz",
+      "sha256": "7a6c66db0f7fe248ed86a22def4b94dc5f0b8672a7c645f6539ac5a1d9e8146d",
+      "gzip_sha256": "62a29d377066becc651318d1b5b52e9e714e3b25bf0ee12f5e562ea6abdd11d9",
+      "report": {
+        "source_only": true,
+        "qualification_passed": false,
+        "provider_version": "v12.4.0",
+        "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+        "documents": 18958,
+        "views": 37916,
+        "max_hint_bytes": 4084,
+        "max_context_bytes": 15226,
+        "continuations": 177,
+        "oversized": 88,
+        "elapsed_ms": 2854.459578,
+        "failures": []
+      }
+    },
+    {
+      "path": "v1240-shape-continuation-audit.json.gz",
+      "sha256": "e73651066cb98ddadbd18e192add6884e7196c82568becd0e353d63b44425726",
+      "gzip_sha256": "709ff14c66e0b8c600e4a6e34fba84426cceda6c909291cc15753148103a9e57",
+      "report": {
+        "source_only": true,
+        "qualification_passed": false,
+        "index_sha256": "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
+        "documents": 18958,
+        "continuations": 185,
+        "full_reads": 19143,
+        "oversized_full_reads": 113,
+        "failures": []
+      }
+    }
+  ],
+  "limitations": [
+    "Complete-corpus source view/navigation verification; excludes installed model and compiled artifact.",
+    "Full reads may repeat for each context continuation; counts are successful calls rather than unique sections."
+  ]
+}

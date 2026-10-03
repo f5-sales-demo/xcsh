@@ -1,0 +1,30 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "source_commit": "9917b1058",
+  "combined_tests": 586,
+  "test_files": 50,
+  "workspace_check_ts": "passed",
+  "provider_generation_pr": 2397,
+  "provider_generation_merge": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "provider_tag": "v12.4.0",
+  "provider_release_run": 37107801825,
+  "provider_release_status": "provider and documentation-v12.4.0 published immutable",
+  "consumer_draft": true,
+  "auto_merge": false,
+  "remaining": [
+    "immutable provider release and documentation snapshot",
+    "reviewed consumer pin and deterministic index",
+    "independent 200/40 freeze and qualification",
+    "installed model and final Mac/Ubuntu offline/latency acceptance",
+    "consumer release/install verification"
+  ],
+  "new_qualification_status": "Failed first untouched v5; retained >=95 gate; suite now regression-only",
+  "latest_regression_answerable": 74,
+  "latest_regression_total": 140,
+  "current_development_answerable": 43,
+  "current_development_total": 43,
+  "native_candidate_run": 37112179923,
+  "native_candidate_source": "542024e6a",
+  "native_candidate_status": "Linux built,mac signing in progress; older than current fixes"
+}

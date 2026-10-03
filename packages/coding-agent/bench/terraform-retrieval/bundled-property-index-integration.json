@@ -1,0 +1,24 @@
+{
+  "production_index_tables_integrated": true,
+  "production_search_route_integrated": false,
+  "qualification_passed": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "provider_version": "v12.3.1",
+  "index": {
+    "sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+    "size_bytes": 781434880,
+    "gzip_sha256": "8453c709295174edd520e8c8f785a9e9fc362676756acce2768d895f7e1bee1d",
+    "gzip_size_bytes": 70980995
+  },
+  "prepared_index_version": 2,
+  "canonical_destinations": 39565,
+  "prepared_destinations": 39565,
+  "sqlite_integrity_check": "ok",
+  "snapshot_tests": 17,
+  "internal_url_tests": 493,
+  "source_files": {
+    "terraform-property-index.ts": "141f25cb7bb70d17edd0f45ce1488e79a5b2b5e5c55d17c981e1d17523a2430f",
+    "terraform-property-ranking.ts": "514c72293afebd6acfd9f12a511616726117803aa93b4f33a2c9381b39172d49",
+    "terraform-documentation.ts": "03fcaf6a1e0a5b205837a79557e55657c1912234c487b1d73a3351f91db86d00"
+  }
+}

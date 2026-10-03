@@ -1,0 +1,55 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "verdict": "label-defects",
+  "case_count": 80,
+  "source_suite_sha256": "430306652dbe4c1a1694dfbd6b26ce56655d592bf7b1a045335f20ff632dc57f",
+  "review_sha256": "14b2aad733ec95be617e232fbe9480f60d80f6931a27154e46f05c856e3f98f0",
+  "invalid_ids": [
+    "dev-broad-007",
+    "dev-broad-022",
+    "dev-broad-025"
+  ],
+  "depth_disagreements": [
+    {
+      "id": "dev-broad-012",
+      "declared": 8,
+      "verified": 7
+    },
+    {
+      "id": "dev-broad-015",
+      "declared": 8,
+      "verified": 7
+    },
+    {
+      "id": "dev-broad-018",
+      "declared": 8,
+      "verified": 7
+    },
+    {
+      "id": "dev-broad-020",
+      "declared": 8,
+      "verified": 7
+    },
+    {
+      "id": "dev-broad-021",
+      "declared": 9,
+      "verified": 8
+    },
+    {
+      "id": "dev-broad-058",
+      "declared": 2,
+      "verified": 1
+    },
+    {
+      "id": "dev-broad-060",
+      "declared": 2,
+      "verified": 1
+    },
+    {
+      "id": "dev-broad-072",
+      "declared": 2,
+      "verified": 1
+    }
+  ]
+}

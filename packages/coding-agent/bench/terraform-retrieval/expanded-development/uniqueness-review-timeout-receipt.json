@@ -1,0 +1,17 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_review_provisional": true,
+  "status": "timed-out-no-final-artifact",
+  "resume_status": "running",
+  "review_conversation": "68d73af5-2266-4e26-a1e9-8fa8c90c86db",
+  "resume_pid": 278277,
+  "trace": "uniqueness-review-timeout.jsonl.gz",
+  "sha256": "cb82654f7f2916a7cc7e08f23e344ebefd6cc189157ce8cb1b4862a3a7e2b7a7",
+  "gzip_sha256": "25fa5c1ac72940bdfe3786db6723df238e3307ed1e241d5d64d20e3e5bca7d57",
+  "limitations": [
+    "Partial source audit is not approval; no final review artifact exists.",
+    "Original43answerablelabels remain provisional,including same-role branch exclusions; scores are development diagnostics only.",
+    "Resume uses sameconversation and priorwork; independent quote validation required before acceptance."
+  ]
+}

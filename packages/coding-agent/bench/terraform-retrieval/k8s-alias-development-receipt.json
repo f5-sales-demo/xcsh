@@ -1,0 +1,54 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "runs": [
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "cold_materialization_ms": 2065.3027730000003,
+      "warm_p95_ms": 77.60122700000011,
+      "answerable": 14,
+      "correct_leaf": 11,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 2,
+      "control_leaf": 0,
+      "answerable_top5": 13,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ],
+      "raw_sha256": "601ae00acd647c615523d7bd6d15292ca3dabfdb5f8d63d0fa3a3029af68178b",
+      "gzip_sha256": "9a64edda44cb817047ec5c69657c0410a4e21ed48fb27d11a9f648d668ce7c97"
+    },
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "cold_materialization_ms": 2234.986546,
+      "warm_p95_ms": 34.405097999999725,
+      "answerable": 48,
+      "correct_leaf": 47,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 48,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance."
+      ],
+      "raw_sha256": "eec20c0297f45fd56d1fd6f51aaf7a7c3bf416f05e50d9440ea627d6e05fb69c",
+      "gzip_sha256": "cad3339d34a5445b4a6f0862bfcaae643faac118e016b658dee4af09b14fb4ad"
+    }
+  ]
+}

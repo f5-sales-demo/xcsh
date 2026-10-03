@@ -1,0 +1,29 @@
+{
+  "qualification_passed": false,
+  "frozen_scores_unchanged": true,
+  "post_result_source_observations": [
+    {
+      "id": "case-041",
+      "prompt": "Configure an IPv4 nexthop address for inside static routes under dual_stack in xcsh_azure_vnet_site.",
+      "missing_context": "standard ingress_egress_gw versus assisted ingress_egress_gw_ar",
+      "source_paths": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md",
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md"
+      ]
+    },
+    {
+      "id": "case-025",
+      "missing_context": "public single-port, public multi-port, or custom workload advertisement",
+      "source_paths": [
+        "documentation/resources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/https/disable_path_normalize/index.md",
+        "documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/disable_path_normalize/index.md",
+        "documentation/resources/workload/properties/service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https/disable_path_normalize/index.md"
+      ]
+    }
+  ],
+  "limitations": [
+    "Post-result observations do not repair or requalify frozen suite.",
+    "Independent-review approval was insufficient to prove all uniqueness claims.",
+    "Activation failures also preserved separately."
+  ]
+}

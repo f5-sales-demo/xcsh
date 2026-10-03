@@ -1,0 +1,269 @@
+{
+  "experiment_only": true,
+  "suite": "development only",
+  "model": "embeddinggemma:300m",
+  "model_manifest_sha256": "85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+  "corpus_sha256": "9991804b9644879356a867f9e3e7c3b686beb5a2dc78149a141f282a5cfbf913",
+  "documents": 18267,
+  "vector_bytes": 56116352,
+  "dimensions": 768,
+  "materialization_ms": 157333.1702229334,
+  "warm_p95_ms": 240.3783060144633,
+  "development_top1": 0.0,
+  "development_top5": 0.16666666666666666,
+  "section_anchor_selection": false,
+  "results": [
+    {
+      "id": "development-001",
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port"
+      ],
+      "top5": false,
+      "top1": false,
+      "times_ms": [
+        180.14394503552467,
+        181.18357099592686,
+        197.08731409627944,
+        191.10113207716495,
+        195.376937976107
+      ],
+      "ranked": [
+        {
+          "path": "documentation/resources/http_loadbalancer/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:example:resource",
+          "score": 0.7643736600875854
+        },
+        {
+          "path": "documentation/resources/tcp_loadbalancer/examples/with-listen-port/index.md",
+          "document_id": "xcsh-docs:resources:tcp_loadbalancer:example:with-listen-port",
+          "score": 0.7642308473587036
+        },
+        {
+          "path": "documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/index.md",
+          "document_id": "xcsh-docs:resources:workload:properties:stateful_service:advertise_options:advertise_custom:ports:http_loadbalancer",
+          "score": 0.7368215918540955
+        },
+        {
+          "path": "documentation/resources/http_loadbalancer/lifecycle/import/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:import",
+          "score": 0.7358270287513733
+        },
+        {
+          "path": "documentation/resources/http_loadbalancer/lifecycle/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:lifecycle",
+          "score": 0.735465943813324
+        }
+      ]
+    },
+    {
+      "id": "development-002",
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-port"
+      ],
+      "top5": false,
+      "top1": false,
+      "times_ms": [
+        196.9887079903856,
+        240.99313595797867,
+        213.93715997692198,
+        177.98995808698237,
+        217.97202108427882
+      ],
+      "ranked": [
+        {
+          "path": "documentation/resources/origin_pool/examples/port/index.md",
+          "document_id": "xcsh-docs:resources:origin_pool:example:port",
+          "score": 0.816795289516449
+        },
+        {
+          "path": "documentation/resources/origin_pool/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:origin_pool:example:resource",
+          "score": 0.7345404624938965
+        },
+        {
+          "path": "documentation/data-sources/origin_pool/examples/data-source/index.md",
+          "document_id": "xcsh-docs:data-sources:origin_pool:example:data-source",
+          "score": 0.6936895847320557
+        },
+        {
+          "path": "documentation/resources/tcp_loadbalancer/examples/with-listen-port/index.md",
+          "document_id": "xcsh-docs:resources:tcp_loadbalancer:example:with-listen-port",
+          "score": 0.6877506971359253
+        },
+        {
+          "path": "documentation/resources/origin_pool/examples/multiple-origins/index.md",
+          "document_id": "xcsh-docs:resources:origin_pool:example:multiple-origins",
+          "score": 0.6804651021957397
+        }
+      ]
+    },
+    {
+      "id": "development-003",
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md#schema-name"
+      ],
+      "top5": false,
+      "top1": false,
+      "times_ms": [
+        218.40405999682844,
+        196.54178398195654,
+        186.7708310019225,
+        197.21559097524732,
+        240.3783060144633
+      ],
+      "ranked": [
+        {
+          "path": "documentation/resources/namespace/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:namespace:example:resource",
+          "score": 0.7615904808044434
+        },
+        {
+          "path": "documentation/resources/namespace/lifecycle/import/index.md",
+          "document_id": "xcsh-docs:resources:namespace:import",
+          "score": 0.6941651105880737
+        },
+        {
+          "path": "documentation/resources/discovery/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:discovery:example:resource",
+          "score": 0.692838191986084
+        },
+        {
+          "path": "documentation/resources/namespace/lifecycle/timeouts/index.md",
+          "document_id": "xcsh-docs:resources:namespace:timeouts",
+          "score": 0.691662073135376
+        },
+        {
+          "path": "documentation/resources/container_registry/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:container_registry:example:resource",
+          "score": 0.6906477212905884
+        }
+      ]
+    },
+    {
+      "id": "development-004",
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md#schema-name"
+      ],
+      "top5": false,
+      "top1": false,
+      "times_ms": [
+        183.86820005252957,
+        176.07346700970083,
+        176.86410807073116,
+        176.15508707240224,
+        191.93168997298926
+      ],
+      "ranked": [
+        {
+          "path": "documentation/resources/certificate/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:certificate:example:resource",
+          "score": 0.7289994955062866
+        },
+        {
+          "path": "documentation/resources/certificate_chain/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:certificate_chain:example:resource",
+          "score": 0.6849668025970459
+        },
+        {
+          "path": "documentation/resources/certificate/lifecycle/timeouts/index.md",
+          "document_id": "xcsh-docs:resources:certificate:timeouts",
+          "score": 0.6806159615516663
+        },
+        {
+          "path": "documentation/data-sources/certificate/examples/data-source/index.md",
+          "document_id": "xcsh-docs:data-sources:certificate:example:data-source",
+          "score": 0.6730287075042725
+        },
+        {
+          "path": "documentation/resources/certificate/lifecycle/import/index.md",
+          "document_id": "xcsh-docs:resources:certificate:import",
+          "score": 0.671197235584259
+        }
+      ]
+    },
+    {
+      "id": "development-005",
+      "expected": [
+        "xcsh://terraform-documentation/documentation/data-sources/dns_zone/properties/index.md#schema-name"
+      ],
+      "top5": false,
+      "top1": false,
+      "times_ms": [
+        186.02863396517932,
+        194.85404004808515,
+        180.84123998414725,
+        185.7134490273893,
+        194.60146001074463
+      ],
+      "ranked": [
+        {
+          "path": "documentation/data-sources/dns_zone/examples/data-source/index.md",
+          "document_id": "xcsh-docs:data-sources:dns_zone:example:data-source",
+          "score": 0.7546967267990112
+        },
+        {
+          "path": "documentation/resources/dns_zone/examples/resource/index.md",
+          "document_id": "xcsh-docs:resources:dns_zone:example:resource",
+          "score": 0.7202078104019165
+        },
+        {
+          "path": "documentation/data-sources/dns_zone_cryptokeys/examples/data-source/index.md",
+          "document_id": "xcsh-docs:data-sources:dns_zone_cryptokeys:example:data-source",
+          "score": 0.7018197774887085
+        },
+        {
+          "path": "documentation/data-sources/endpoint/properties/dns_name_advanced/index.md",
+          "document_id": "xcsh-docs:data-sources:endpoint:properties:dns_name_advanced",
+          "score": 0.6942400932312012
+        },
+        {
+          "path": "documentation/data-sources/dns_proxy/examples/data-source/index.md",
+          "document_id": "xcsh-docs:data-sources:dns_proxy:example:data-source",
+          "score": 0.6781641244888306
+        }
+      ]
+    },
+    {
+      "id": "development-006",
+      "expected": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/index.md#section"
+      ],
+      "top5": true,
+      "top1": false,
+      "times_ms": [
+        185.70442299824208,
+        208.7161949602887,
+        188.08722693938762,
+        184.99982205685228,
+        190.87376398965716
+      ],
+      "ranked": [
+        {
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/both_web_and_mobile/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:properties:bot_defense_advanced_protection:both_web_and_mobile",
+          "score": 0.7525637149810791
+        },
+        {
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/web_only/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:properties:bot_defense_advanced_protection:web_only",
+          "score": 0.7474073171615601
+        },
+        {
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:properties:bot_defense_advanced_protection",
+          "score": 0.746626615524292
+        },
+        {
+          "path": "documentation/data-sources/http_loadbalancer/properties/bot_defense_advanced_protection/index.md",
+          "document_id": "xcsh-docs:data-sources:http_loadbalancer:properties:bot_defense_advanced_protection",
+          "score": 0.7375140190124512
+        },
+        {
+          "path": "documentation/resources/http_loadbalancer/properties/bot_defense_advanced_protection/mobile_only/index.md",
+          "document_id": "xcsh-docs:resources:http_loadbalancer:properties:bot_defense_advanced_protection:mobile_only",
+          "score": 0.734108567237854
+        }
+      ]
+    }
+  ]
+}

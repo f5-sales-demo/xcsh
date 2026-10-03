@@ -1,0 +1,68 @@
+{
+  "candidate_only": true,
+  "provider_source": "1beecf718da380e8bae128957b20b4da34f4187a",
+  "model": "openai-codex/gpt-6.1-sol",
+  "cases": [
+    {
+      "case": "namespace",
+      "trace_sha256": "53ae002ec6e20c2a183b3f1902629a4a5831b846e51b650c6ed90e551520e785",
+      "hcl_sha256": [
+        "35e477ebdb3bec1f93de8b7f05b80c8c86ed4760e50805227e2969ee6b43831b"
+      ],
+      "documented_fields": [
+        "name"
+      ],
+      "fields_exist": true,
+      "exact_citations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/namespace/index.md?view=context"
+      ],
+      "no_terraform_execution": true,
+      "candidate_preview_disclosed": true,
+      "requires_release_rerun": true
+    },
+    {
+      "case": "origin-pool",
+      "trace_sha256": "624716a7abc8871fcfe3c34e3f200ef028036178c75a334cb4bf26c47d7ce13c",
+      "hcl_sha256": [
+        "deb5e026ce297a17d36b6adac3f3dc2ac9ae2b851f8e9a57b9b6a235e7e2f8d9"
+      ],
+      "documented_fields": [
+        "name",
+        "namespace",
+        "port",
+        "no_tls",
+        "origin_servers",
+        "origin_servers.public_ip",
+        "origin_servers.public_ip.ip"
+      ],
+      "fields_exist": true,
+      "exact_citations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md?view=context#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md?view=context#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md?view=context#schema-origin_servers--public_ip--ip",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md?view=context#schema-port",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md?view=context#section"
+      ],
+      "no_terraform_execution": true,
+      "candidate_preview_disclosed": true,
+      "requires_release_rerun": true
+    },
+    {
+      "case": "certificate-clarification",
+      "trace_sha256": "17dd4a17d93d4a8690ba7b84834fd807a848fba09ac6d301856845af573b06b4",
+      "hcl_sha256": [],
+      "documented_fields": [],
+      "fields_exist": true,
+      "exact_citations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_cert_params/certificates/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md?view=context#schema-https--tls_parameters--tls_certificates--certificate_url",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/private_key/index.md?view=context#section"
+      ],
+      "no_terraform_execution": true,
+      "candidate_preview_disclosed": true,
+      "requires_release_rerun": true
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_promoted": false,
+  "timing_scope": "property-index BM25 queries only;excludes complete responses and index startup",
+  "development_sha256": "899283c26d137e3cecf4b15bb96baba042995c82590b02aba81d8c61de21223e",
+  "regression_sha256": "ac811b62fdbcbcdc397649da8857c2e52bd3b91655e217ec443b4a1a6edf6920",
+  "development_grid": [
+    {
+      "weights": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "answerable": 14,
+      "first": 10,
+      "top5": 11,
+      "p95": 43.130349000000024
+    },
+    {
+      "weights": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "answerable": 14,
+      "first": 10,
+      "top5": 12,
+      "p95": 31.83436699999993
+    },
+    {
+      "weights": [
+        6,
+        3,
+        2,
+        0.1
+      ],
+      "answerable": 14,
+      "first": 9,
+      "top5": 12,
+      "p95": 39.753557
+    },
+    {
+      "weights": [
+        8,
+        2,
+        2,
+        0
+      ],
+      "answerable": 14,
+      "first": 9,
+      "top5": 12,
+      "p95": 43.64931799999977
+    },
+    {
+      "weights": [
+        4,
+        1,
+        2,
+        0.2
+      ],
+      "answerable": 14,
+      "first": 9,
+      "top5": 12,
+      "p95": 34.95185799999945
+    },
+    {
+      "weights": [
+        2,
+        4,
+        2,
+        0.2
+      ],
+      "answerable": 14,
+      "first": 9,
+      "top5": 12,
+      "p95": 49.20120399999905
+    }
+  ],
+  "fixed_weights": [
+    8,
+    5,
+    2,
+    1
+  ],
+  "property_cases": 88,
+  "task_cases_outside_scope": 52,
+  "property_first": 17,
+  "property_top5": 62,
+  "ranking_p95_ms": 40.53075600000011,
+  "reason": "Low exact destination accuracy;direct BM25 not promoted. Existing production and semantic experiments still insufficient."
+}

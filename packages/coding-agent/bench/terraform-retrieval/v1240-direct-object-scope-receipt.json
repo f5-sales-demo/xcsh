@@ -1,0 +1,149 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_draft_required": true,
+  "checks": {
+    "focused_tests": 213,
+    "workspace_check_ts": "pass"
+  },
+  "files": [
+    {
+      "path": "v1240-direct-object-scope-development.json.gz",
+      "sha256": "0caaa7abb3038226c59c764946152ac302938c601ed0c3f02ce4d09e3b687d60",
+      "gzip_sha256": "d7f8431a03e6d17cc6449f8fe3fd520bb36138a9f85befb285ebdf53031d4ccb",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2313.287771,
+        "warm_p95_ms": 45.14283299999988,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-direct-object-scope-regression.json.gz",
+      "sha256": "fc8f2efb386dfee3ef10f0b1e4c130779247da54e419a08f05b23f6437895580",
+      "gzip_sha256": "18575144a6d84b6bcc447cfcff29bce6b0fd3b8a19f8c731ac0f57f0762bd04b",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+          "size_bytes": 794988544,
+          "gzip_sha256": "4c738aaa4627ca44ff6bbd722eeb21edc9852368373a239b13db6c818b843867",
+          "gzip_size_bytes": 71969527
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 2256.737149,
+        "warm_p95_ms": 70.62336200000573,
+        "discovery_p95_ms": 94.83860599999934,
+        "context_p95_ms": 0.4605280000014318,
+        "route_p95_ms": 94.87658899999951,
+        "warm_measurement_count": 2305,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 760,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3976,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3976150,
+        "tool_calls": 2305,
+        "index_file_bytes": 71969527,
+        "answerable_accuracy": 0.6642857142857143,
+        "answerable_top5": 0.8571428571428571,
+        "scored_accuracy": 0.6263157894736842,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    },
+    {
+      "path": "v1240-direct-object-scope-mac-offline.json.gz",
+      "sha256": "d8480221dfab7ab6606d8c8841481dd0a4ed46853b7f94c652b388d91480069d",
+      "gzip_sha256": "01293a547202a7cc3929230201732e21eb2d066a18f7e65ae57622a1cfde84b5",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 648.956292,
+        "warm_p95_ms": 37.601166999999805,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-direct-object-scope-linux-offline.json.gz",
+      "sha256": "80427c2d633df0b1ae9eb75aeb03c207310de6aecf34777724c85cf047b1527f",
+      "gzip_sha256": "6bc2c303ae9ae9fdaf76470dbed1604792eabd11fe19dd199c60e3311d2cdf1f",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2451.411503,
+        "warm_p95_ms": 51.32639700000027,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Exposed suite remains regression only; no new independent held-out qualification.",
+    "Source-only offline parity; latest compiled and installed model qualification remain pending."
+  ],
+  "offline_parity": {
+    "cases": 80,
+    "response_hashes_and_destinations_equal": true
+  }
+}

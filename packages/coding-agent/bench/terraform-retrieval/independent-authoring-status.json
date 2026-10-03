@@ -1,0 +1,38 @@
+{
+  "qualification_passed": false,
+  "frozen": false,
+  "retrieval_run": false,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "candidate_sha256": "e4b7a9a7d27fe432cf6c8ef59d1a4aecdcd68d26140eb57a9202eb609b710e4b",
+  "structural_validation_passed": false,
+  "structural_errors": 129,
+  "verified_depth8": 0,
+  "authoring_conversation": "e21cc60e-c93b-4a72-aa2d-57910d69b76d",
+  "authoring_model": "Gemini 3.8 Flash (High)",
+  "source_only_revision_started": true,
+  "retrieval_results_withheld": true,
+  "limitations": [
+    "Initial print window ended with partial output; same conversation resumed.",
+    "Completed candidate failed structure and remains unrun; source-only revision pending.",
+    "Independent review and final freeze are not complete."
+  ],
+  "independent_review": {
+    "verdict": "needs-attention",
+    "reviewed_cases": 200,
+    "findings": 8,
+    "review_sha256": "3ff2a83a0170a7c890987577b04cdea72171861da8b251ef1e30ceae83656ee3",
+    "source_only": true
+  },
+  "source_only_revision_pending": true,
+  "revision_candidate": {
+    "sha256": "ec19a5d8fd8df3ac7d7e53261213f5c2da3ffe2d173074a61bbbf172b10a9b6d",
+    "verified_depth8": 45,
+    "structural_validation_passed": false,
+    "review_verdict": "needs-attention",
+    "review_findings": 4,
+    "review_sha256": "2ae625a5e3e786ec6a8dbab8cfbdcef28a2aa9ad4b7ca5a1fdb630b6f2d0f733",
+    "frozen": false,
+    "retrieval_run": false
+  },
+  "final_source_only_correction_pending": true
+}
