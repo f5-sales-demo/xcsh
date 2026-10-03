@@ -1,0 +1,152 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "first_run_preserved": true,
+  "property_index_version": 3,
+  "provider_version": "v12.4.0",
+  "index": {
+    "sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+    "size_bytes": 792915968,
+    "gzip_sha256": "4de2e1fcf2a6858ee639835728cbabedac2a82b28498843e408ce1b945ade691",
+    "gzip_size_bytes": 71617233
+  },
+  "deterministic_builds": 2,
+  "combined_tests": 595,
+  "reports": {
+    "intent-guard-final-development": {
+      "file": "v1240-intent-guard-final-development.json.gz",
+      "sha256": "88844b8965242383c7239d1bafe3da6fc139d3d655ec7dcd656de46a9d4f3e12",
+      "gzip_sha256": "b63dc73d06c8aee0f2ad31458b3eb9708f2cafc007a3d7ebc53e881a491ab1f7",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "cfe5abc1032ddd1eb874f1cab0f3e25e42c555f40db3f2ce2d209db563d98326",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1760.242156,
+        "warm_p95_ms": 32.56723499999998,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "provider-term-development": {
+      "file": "v1240-provider-term-development.json.gz",
+      "sha256": "f85c1883c6b3d314f61a652cfadf411c0cc514e71eb4cf886016c70de82e58d8",
+      "gzip_sha256": "4de32eec8cbb9b983619eeb0abe7cc0b01abf2a64558e087aa72bf84854a5f0a",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "cfe5abc1032ddd1eb874f1cab0f3e25e42c555f40db3f2ce2d209db563d98326",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2216.63659,
+        "warm_p95_ms": 56.297551999999996,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "alias-weighted-development": {
+      "file": "v1240-alias-weighted-development.json.gz",
+      "sha256": "7ae10f3e544009dfc88ee157b5431b5f1688932099b91501b80ecf2da90db3cf",
+      "gzip_sha256": "7230e44ec3913004790d18e241bcc88a8bdbd2f4af8717ab6fb9210b78188ca6",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2874.520994,
+        "warm_p95_ms": 37.82539999999972,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "alias-weighted-regression": {
+      "file": "v1240-alias-weighted-regression.json.gz",
+      "sha256": "42421ea9b52a8cc418ac69427e0c77d85c8a6526a6473bf337358733c1427678",
+      "gzip_sha256": "0df903cf363b316b3dfb3f16c37b63761a1e60b5aa71869670b0b16e82839991",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+          "size_bytes": 792915968,
+          "gzip_sha256": "4de2e1fcf2a6858ee639835728cbabedac2a82b28498843e408ce1b945ade691",
+          "gzip_size_bytes": 71617233
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1795.057517,
+        "warm_p95_ms": 55.29091300000073,
+        "discovery_p95_ms": 83.43178699999953,
+        "context_p95_ms": 0.28006900000036694,
+        "route_p95_ms": 83.45747800000026,
+        "warm_measurement_count": 2250,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 705,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 4073,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3903000,
+        "tool_calls": 2250,
+        "index_file_bytes": 71617233,
+        "answerable_accuracy": 0.5428571428571428,
+        "answerable_top5": 0.7,
+        "scored_accuracy": 0.5263157894736842,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    }
+  },
+  "limitations": [
+    "Exposed v5 cannot qualify future changes.",
+    "Latest compiled candidates use an earlier index and source.",
+    "Fresh independent qualification and installed final artifact acceptance remain required."
+  ]
+}
