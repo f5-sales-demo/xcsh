@@ -1,0 +1,18 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/bench/terraform-retrieval/qualify.ts": "ca09a0a59ee019ac2b04c6bbd678e51f25412764205ed3544d7d0d477e488262",
+    "packages/coding-agent/bench/terraform-retrieval/source-evidence-preflight.ts": "6b3ec9d2b60f1b8a339ae316499735f6677beaa946b68b0da2c2058f5f94a06b"
+  },
+  "focused_tests": "344 pass,0 fail",
+  "harness_bundle": "Bun bundle with external package dependencies passes; full dependency bundle lacks optional platform packages",
+  "regression_execution": "Exposedv6runsinregressionmodeandremainsqualificationfalse",
+  "regression_sha256": "6639a6a01427b6aff92a8223c652c7a53bf6f14ffff58085bd467f5f0e351efb",
+  "full_package": "running source frozen",
+  "limitations": [
+    "Structural checks do not prove semantic uniqueness or reviewer independence.",
+    "Independent freeze and final installed qualification remain unmet.",
+    "No merge or release authorized."
+  ]
+}

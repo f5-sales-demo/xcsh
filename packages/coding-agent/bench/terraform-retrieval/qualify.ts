@@ -13,6 +13,7 @@ import {
 	normalizeClarificationTree,
 	type FrozenClarificationTree,
 } from "./clarification-tree";
+import { validateCaseSourceEvidence, type CaseSourceEvidence, type EvidenceDestination, validateSourceEvidenceUri, validateSourceEvidenceBinding } from "./source-evidence-preflight";
 import { measureCompleteRetrieval } from "./complete-measurement";
 import {
 	scoreDestinations,
@@ -111,6 +112,31 @@ const repo = new TerraformDocumentationRepository(assets, cache);
 const coldStart = performance.now();
 await repo.database();
 const materializationMs = performance.now() - coldStart;
+if (!regression) {
+ const evidenceName = "case-source-evidence.json";
+ const evidenceBytes = await readFile(path.join(path.dirname(suiteFile), evidenceName));
+ const sourceReviewBytes = await readFile(path.join(path.dirname(suiteFile), "independent-review.json"));
+ validateSourceEvidenceBinding(freeze,JSON.parse(sourceReviewBytes.toString()),terraformHash(evidenceBytes),terraformHash(sourceReviewBytes));
+ const evidence = JSON.parse(evidenceBytes.toString()) as CaseSourceEvidence[];
+ const db = await repo.database();
+ const destinations = db.query("SELECT provider_name,schema_path,description,path,anchor FROM terraform_destinations ORDER BY path,anchor").all() as Array<{provider_name:string;schema_path:string;description:string;path:string;anchor:string}>;
+ const needed = new Set(evidence.flatMap(record => [...record.answer_sections.map(section=>section.uri),...record.peer_adjudications.map(peer=>peer.uri)]));
+ const source: EvidenceDestination[] = destinations.map(row=>({...row,uri:`xcsh://terraform-documentation/${row.path}#${row.anchor}`,markdown:""}));
+ const byUri = new Map(source.map(row=>[row.uri,row]));
+ for (const uri of needed) {
+ const url = new URL(uri);
+ if(!validateSourceEvidenceUri(uri)) throw new Error("Invalid source evidence URI");
+ const docPath=url.pathname.slice(1), anchor=url.hash.slice(1);
+ const section=db.query("SELECT context_markdown FROM terraform_sections WHERE path=? AND anchor=?").get(docPath,anchor) as {context_markdown:string}|null;
+ if(!section) throw new Error(`Missing evidence section ${uri}`);
+ const row=byUri.get(uri);
+ if(row) row.markdown=section.context_markdown;
+ else source.push({uri,provider_name:"",schema_path:"",description:"",markdown:section.context_markdown});
+ }
+ const errors=validateCaseSourceEvidence(suite,evidence,source);
+ if(errors.length) throw new Error(`Frozen source evidence preflight failed: ${errors.slice(0,20).join("; ")}`);
+}
+
 const read = (uri: string) =>
 	repo.resolve(Object.assign(new URL(uri), { rawHost: "terraform-documentation" }) as InternalUrl);
 const normalize = (uri: string) => {
