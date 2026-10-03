@@ -23,6 +23,7 @@ parser.add_argument("--suite", type=Path, required=True)
 parser.add_argument("--freeze", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--provider-version", required=True)
+parser.add_argument("--regression", action="store_true")
 parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
 parser.add_argument("--partition-index", type=int, default=0)
 parser.add_argument("--partition-count", type=int, default=1)
@@ -32,6 +33,9 @@ suite_bytes = args.suite.read_bytes()
 if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json"]:
     HASH_MISMATCH = "Frozen model subset hash mismatch"
     raise ValueError(HASH_MISMATCH)
+if freeze.get("post_analysis_regression") and not args.regression:
+    regression_error = "Exposed or derived model suite requires --regression"
+    raise ValueError(regression_error)
 all_cases = json.loads(suite_bytes)
 INDEPENDENT_FREEZE_VERSION = 2
 if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
@@ -237,6 +241,7 @@ for case in cases:
                 "automated_trace_accuracy": sum(r["passed"] for r in results)
                 / len(results),
                 "manual_review_required": True,
+                "post_analysis_regression": args.regression,
                 "qualification_passed": False,
                 "complete": len(results) == len(cases),
                 "partition_index": args.partition_index,
