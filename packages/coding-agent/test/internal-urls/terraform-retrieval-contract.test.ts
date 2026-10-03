@@ -850,3 +850,14 @@ test("query property phrases bypass root configuration without changing role", (
 		anchor: "root-configuration",
 	});
 });
+
+test("provider environment variable names are setup vocabulary rather than resource identities", () => {
+	expect(
+		terraformProviderSetupDestination(
+			"How do I configure environment variables XCSH_API_URL and XCSH_API_TOKEN to authenticate the xcsh provider?",
+		),
+	).toBe("option-1-api-token-authentication");
+	expect(
+		terraformProviderSetupDestination("Configure xcsh_cloud_credentials provider authentication"),
+	).toBeUndefined();
+});

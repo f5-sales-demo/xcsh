@@ -828,8 +828,37 @@ export function scoreTerraformAliasContext(
 }
 
 export function terraformProviderSetupDestination(query: string): string | undefined {
+	if (/\b(?:aws|azure|gcp|google|oci|oracle)\s+(?:terraform\s+)?provider\b/i.test(query)) return undefined;
+	query = query.replace(
+		/\bso\s+(?:the\s+)?xcsh\s+provider\s+can\s+(?:manage|read|configure)\s+(?:resources|data sources|actions)\b/gi,
+		" xcsh provider ",
+	);
+	const env: string[] = query.match(/\bXCSH_[A-Z0-9_]+\b/g) ?? [];
+	if (
+		/\bprovider\b/i.test(query) &&
+		/\b(?:authentication|authenticate|credentials?|environment|argument reference)\b/i.test(query) &&
+		env.length &&
+		!/\b(?:resources?|data[ -]sources?|actions?|ephemeral|decryption|secret store|store provider|storage provider)\b/i.test(
+			query,
+		)
+	) {
+		const anchors = new Set<string>();
+		if (/\bpem\b/i.test(query)) anchors.add("option-3-pem-certificate-authentication");
+		if (/\bp12\b|\bpkcs[ #_-]?12\b/i.test(query)) anchors.add("option-2-p12-certificate-authentication");
+		if (/\bapi[ -]token\b/i.test(query)) anchors.add("option-1-api-token-authentication");
+		if (env.includes("XCSH_API_TOKEN")) anchors.add("option-1-api-token-authentication");
+		if (env.some(name => ["XCSH_P12_FILE", "XCSH_P12_PASSWORD"].includes(name)))
+			anchors.add("option-2-p12-certificate-authentication");
+		if (env.some(name => ["XCSH_CERT", "XCSH_KEY", "XCSH_CACERT"].includes(name)))
+			anchors.add("option-3-pem-certificate-authentication");
+		return anchors.size === 1 ? [...anchors][0] : "authentication-options";
+	}
+	query = query.replace(
+		/\bXCSH_(?:API_URL|API_TOKEN|P12_FILE|P12_PASSWORD|CACERT|CERT|KEY)\b/g,
+		" environment variable ",
+	);
 	if (/\b(?:decryption|secret store|store provider|storage provider)\b/i.test(query)) return undefined;
-	if (/\b(?:resource|data[ -]source|action|ephemeral)\b/i.test(query)) return undefined;
+	if (/\b(?:resources?|data[ -]sources?|actions?|ephemeral)\b/i.test(query)) return undefined;
 	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
 	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
 		return undefined;
@@ -1554,10 +1583,10 @@ export class TerraformDocumentationRepository {
 				filters,
 				node: node ?? undefined,
 			});
-			if (taskDecision?.destinations.length) {
+			if (taskDecision && (taskDecision.destinations.length || taskDecision.kind === "none")) {
 				if (choiceAfter !== null) throw new Error("Terraform choice continuation requires branch choices");
 				const taskContent = boundedTerraformResponse(
-					`${provenance}\n\n# Terraform search: ${search}\n${taskDecision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : "Narrowing choices; clarify the missing authentication method, provider role, or action cardinality."}\nReason: ${taskDecision.reason}${taskDecision.reason === "Missing authentication method" ? `\nOverview: ${uri("documentation/provider/setup/index.md", "authentication-options", "context")}` : ""}`,
+					`${provenance}\n\n# Terraform search: ${search}\n${taskDecision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : taskDecision.kind === "none" ? "No results. Caller scope has no compatible destination." : "Narrowing choices; clarify the missing authentication method, provider role, or action cardinality."}\nReason: ${taskDecision.reason}${taskDecision.reason === "Missing authentication method" ? `\nOverview: ${uri("documentation/provider/setup/index.md", "authentication-options", "context")}` : ""}`,
 					taskDecision.destinations
 						.slice(0, limit)
 						.map(
