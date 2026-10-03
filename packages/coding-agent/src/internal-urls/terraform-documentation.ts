@@ -1137,7 +1137,22 @@ export function selectTerraformCandidate(
 			// Require a phrase identifying the branch, not merely its common leaf.
 			const firstBranch = firstPath.slice(0, a + 1).filter(segment => !otherPath.includes(segment));
 
-			const named = (segments: string[]) => segments.some(segment => question.includes(` ${normalize(segment)} `));
+			const named = (segments: string[]) =>
+				segments.some(segment => {
+					const phrase = normalize(segment);
+					const singular = phrase
+						.split(" ")
+						.map(word =>
+							word.endsWith("s") &&
+							word.length > 4 &&
+							!["https", "status"].includes(word) &&
+							!word.endsWith("ss")
+								? word.slice(0, -1)
+								: word,
+						)
+						.join(" ");
+					return question.includes(` ${phrase} `) || question.includes(` ${singular} `);
+				});
 			if (!named(firstBranch)) return "choices";
 		}
 	}

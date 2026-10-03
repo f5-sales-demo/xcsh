@@ -1604,3 +1604,12 @@ hashes verify. Mechanical identical-description suffix audit exposes15remaining
 answerable collision cases; same source-only reviewer adjudicates before any
 corrected suite use. First review bytes preserved unchanged, no qualification
 or retrieval-result sharing. Receipts: broad-source-review-receipt.json.
+
+Source-only collision adjudication completes80unchanged prompts:45answerable,
+27ambiguous,8controls,121exacttargets verified. Original/first review unchanged.
+Derived broader development baseline selects39/45,43/45top-five,zero wrong or
+ambiguous/control leaves. Singular/plural schema branch phrase normalization
+raises selected40/45 without false leaves; original12/14 and audited47/48
+preserved. Red/green outside-static-route fixture retains omitted-side choices.
+Corrected corpus remains development-only, not a new held-out freeze.
+Exact source/review/raw receipts: broad-adjudicated-development-receipt.json.

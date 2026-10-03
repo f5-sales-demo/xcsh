@@ -585,3 +585,25 @@ test("typed relationship enforcement cannot promote advisory dependencies to val
 		} as TerraformMetadata),
 	).not.toThrow();
 });
+
+test("singular route prose identifies the exclusive outside branch", () => {
+	const m = metadata();
+	const first = {
+		path: "outside.md",
+		anchor: "section",
+		metadata: { ...m, schema_path: ["vn_config", "outside_static_routes", "custom_static_route", "dual_stack"] },
+		ranking: 100,
+	};
+	const inside = {
+		...first,
+		path: "inside.md",
+		metadata: { ...m, schema_path: ["vn_config", "inside_static_routes", "custom_static_route", "dual_stack"] },
+		ranking: 1,
+	};
+	expect(
+		selectTerraformCandidate([first, inside], false, "dual-stack next-hop IP addresses for an outside static route"),
+	).toBe("leaf");
+	expect(selectTerraformCandidate([first, inside], false, "dual-stack next-hop IP addresses for a static route")).toBe(
+		"choices",
+	);
+});
