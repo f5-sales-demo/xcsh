@@ -1,0 +1,16 @@
+{
+  "review_rejected": true,
+  "reason": "Source-only reviewer read ambiguity-coverage.json and hierarchy-coverage-current.json, violating no-results boundary.",
+  "trace_sha256": "5eed8f927c62e7c55911ff7992597ed31c0b9149e27a2ac9a2571cbf8962bf13",
+  "steps": [
+    588,
+    590,
+    592
+  ],
+  "qualification_passed": false,
+  "trace_file": "rejected-source-only-review-trace.jsonl.gz",
+  "trace_gzip_sha256": "7e5052420dced1fca2fe7279731f52c840a33e2d85d507b3149e5a00943429fb",
+  "trace_bytes": 194144,
+  "trace_gzip_bytes": 21509,
+  "replacement_workspace": "isolated source-only choice audit"
+}
