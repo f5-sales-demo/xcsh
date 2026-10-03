@@ -557,3 +557,31 @@ test("a third candidate with an omitted provider role cannot be hidden by rank s
 	};
 	expect(selectTerraformCandidate([first, second, otherRole], false, "TLS port")).toBe("choices");
 });
+
+test("typed relationship enforcement cannot promote advisory dependencies to validation", () => {
+	const base = { target_id: "target", anchor: "section", source: "verified-source" };
+	for (const [type, enforcement] of [
+		["requires", "upstream-advisory"],
+		["advisory", "provider-schema"],
+		["requires", "provider-choice"],
+	]) {
+		expect(() =>
+			validateTerraformRetrievalMetadata({
+				...metadata(),
+				relationships: [{ ...base, type, enforcement }],
+			} as TerraformMetadata),
+		).toThrow();
+	}
+	expect(() =>
+		validateTerraformRetrievalMetadata({
+			...metadata(),
+			relationships: [{ ...base, type: "advisory", enforcement: "upstream-advisory" }],
+		} as TerraformMetadata),
+	).not.toThrow();
+	expect(() =>
+		validateTerraformRetrievalMetadata({
+			...metadata(),
+			relationships: [{ ...base, type: "choice", enforcement: "provider-choice" }],
+		} as TerraformMetadata),
+	).not.toThrow();
+});

@@ -1590,3 +1590,10 @@ not only second-ranked row. Red/green third-candidate fixture verifies rank gaps
 do not choose an omitted resource/data-source role. Complete development selected
 leaves remain 12/14 original,47/48 audited, zero wrong/ambiguous/control selections.
 Exact receipts: all-candidate-role-development-receipt.json. No qualification claim.
+
+Consumer relationship validator rejects mismatched advisory/schema/choice
+enforcement pairings. Red/green fixture proves upstream advice cannot be
+promoted to requires or schema validation. Full pinned corpus pairings audit
+passes: 41 upstream advisories,5014 schema requirements,25244 schema conflicts,
+9 provider choices,96 schema choices; zero invalid pairings. Development label
+review remains source-only and active. No qualification claim.

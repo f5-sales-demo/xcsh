@@ -99,7 +99,10 @@ export function validateTerraformRetrievalMetadata(m: TerraformMetadata): void {
 			typeof r.target_id !== "string" ||
 			typeof r.anchor !== "string" ||
 			typeof r.source !== "string" ||
-			!["provider-schema", "upstream-advisory", "provider-choice"].includes(r.enforcement)
+			!["provider-schema", "upstream-advisory", "provider-choice"].includes(r.enforcement) ||
+			(r.enforcement === "upstream-advisory" && r.type !== "advisory") ||
+			(r.type === "advisory" && r.enforcement !== "upstream-advisory") ||
+			(r.enforcement === "provider-choice" && !["choice", "conflicts"].includes(r.type))
 		)
 			throw new Error("Invalid Terraform typed relationship");
 }
