@@ -1,0 +1,16 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "total": 40,
+  "automated_trace_passes": 24,
+  "model": "openai-codex/gpt-6.1-sol",
+  "candidate_commit": "542024e6a8688b166bd3665e213848add9d6e42a",
+  "provider_version": "v12.4.0",
+  "report_sha256": "92d12fa07c2cee5c3b216655bccd4860a17b2260dd706f5ebbd9b6a9eed1159b",
+  "gzip_sha256": "a22fd95a50b49672de44e09efb2bf9b2bf9a1d3d9b56f71a5e2fb9468abb9492",
+  "source_content_review": "in progress",
+  "limitations": [
+    "Candidate predates current routing fixes.",
+    "Trace checks alone cannot certify HCL support or clarification quality."
+  ]
+}
