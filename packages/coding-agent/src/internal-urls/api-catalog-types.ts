@@ -25,6 +25,8 @@ export interface ApiCatalogMinimumPayloadDiagnostic {
 }
 
 export interface ApiCatalogFieldMeta {
+	readonly console?: { readonly resources: Readonly<Record<string, Readonly<Record<string, unknown>>>> };
+
 	readonly type: string;
 	readonly wireName?: string;
 	readonly description?: string;
