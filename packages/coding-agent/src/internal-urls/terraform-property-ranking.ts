@@ -70,6 +70,7 @@ export function propertyQueryTerms(text: string): string[] {
 		text
 			.toLowerCase()
 			.replace(/\bxcsh_[a-z0-9_]+\b/g, "")
+			.replace(/\b(?:arguments?|flags?)\b/g, "")
 			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
 			.replace(/mutual[ -]+tls/g, "mtls")
@@ -88,14 +89,14 @@ export function propertyQueryTerms(text: string): string[] {
 	);
 }
 export function propertyRequestsBlock(text: string): boolean {
-	if (/\b(?:field|attribute|property|parameter)\b/i.test(text)) return false;
+	if (/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return false;
 	if (/\b(?:select|choose|enable|disable)\b/i.test(text)) return true;
 	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
 }
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
 	const field = text.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?)\s+)?(.+)/i,
 	)?.[1];
 	const operation =
 		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
@@ -125,7 +126,7 @@ export function propertyRequestedText(text: string): string | undefined {
 export function propertyRequestsCollection(text: string): boolean {
 	return (
 		/\b(?:list|collection|set|array)\s+of\b/i.test(propertyRequestedText(text) ?? text) &&
-		!/\b(?:item|element|entry|field|attribute|property|parameter)\b/i.test(text)
+		!/\b(?:item|element|entry|field|attribute|property|parameter|argument|flag)\b/i.test(text)
 	);
 }
 export function propertyNamesCollection(text: string, candidate: PropertyCandidate): boolean {
@@ -140,7 +141,7 @@ export function propertyNamesCollection(text: string, candidate: PropertyCandida
 }
 export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
 	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
-	if (!/\b(?:field|attribute|property|parameter)\b/i.test(queryText)) return false;
+	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText)) return false;
 	const request = propertyRequestedText(queryText);
 	if (!request) return false;
 	const generic = new Set(["object", "configured", "assigned", "computed", "value"]);
@@ -173,7 +174,7 @@ export function rankPropertyScope(
 	const ask = request ?? queryText;
 	const asksField =
 		Boolean(request) ||
-		/\b(field|attribute|property|parameter)\b/i.test(queryText) ||
+		/\b(field|attribute|property|parameter|argument|flag)\b/i.test(queryText) ||
 		(!propertyRequestsBlock(queryText) && /\bwhere\b.*\b(?:specify|set)\b/i.test(queryText));
 	const requested = asksField ? new Set(propertyQueryTerms(ask)) : new Set<string>();
 	const query = propertyQueryTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
@@ -225,7 +226,7 @@ export function rankPropertyScope(
 				row.leaf.length >= 2 &&
 				leafComplete &&
 				/\b(?:configure|select|enable|choose)\b/i.test(queryText) &&
-				!/\b(?:field|attribute|property|parameter)\b/i.test(queryText)
+				!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText)
 			)
 				score += 24;
 			if (

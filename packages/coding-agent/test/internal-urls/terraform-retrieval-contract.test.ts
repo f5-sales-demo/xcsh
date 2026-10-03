@@ -731,3 +731,14 @@ test("collection requests preserve the complete property instead of selecting an
 		)[0]?.anchor,
 	).toBe("schema-prefix");
 });
+
+test("explicit action arguments and boolean flags remain property requests", () => {
+	expect(
+		terraformTaskDestination("In xcsh_fixture action, which argument specifies the software version?"),
+	).toBeUndefined();
+	expect(
+		terraformTaskDestination(
+			"Which required identifier argument specifies the key to delete in xcsh_fixture action?",
+		),
+	).toBeUndefined();
+});

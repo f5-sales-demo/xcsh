@@ -260,3 +260,8 @@ test("selector expressions do not imply regular expression matching", () => {
  expect(rankPropertyScope("regular expression patterns",scope)[0]?.schema_path).toBe("matching.regex_values");
  expect(rankPropertyScope("Kubernetes selector expressions",scope)[0]?.schema_path).toBe("selector.expressions");
 });
+
+test("argument and flag phrasing preserve requested values", () => {
+ expect(propertyRequestedText("Which argument specifies the software version in xcsh_fixture action?")).toContain("software version");
+ expect(propertyRequestedText("Which boolean flag enables automatic redirection in xcsh_fixture?")).toContain("automatic redirection");
+});

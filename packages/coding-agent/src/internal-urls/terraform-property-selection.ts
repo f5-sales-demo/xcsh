@@ -64,7 +64,7 @@ export function selectPropertyDestination(
 				!(
 					row.anchor === "section" &&
 					!propertyNamesCollection(queryText, row) &&
-					(/\b(?:field|attribute|property|parameter)\b/i.test(queryText) ||
+					(/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) ||
 						Boolean(propertyRequestedText(queryText))) &&
 					!propertyRequestsBlock(queryText) &&
 					[...unique.values()].some(other => {

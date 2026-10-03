@@ -1,0 +1,28 @@
+{
+  "accepted": false,
+  "qualification_passed": false,
+  "reason": "Repair reviewer searched outside workspace; repair results rejected.",
+  "initial_answerable_review_retained_separately": true,
+  "files": [
+    {
+      "path": "source-review-repair.stream.jsonl.gz",
+      "sha256": "d18e430d410441e97e74413feb5b4c4a97af3d9a5677b9a2eea8d6010a309ed3",
+      "gzip_sha256": "df5979c9321ac0b152f991d5f1e410a9909f0d9cb78a1593b8d8bc6e5ef54fa4"
+    },
+    {
+      "path": "source-review-repair-rejection.json.gz",
+      "sha256": "aebfe45510e27e8a5feac9ac32ca7ec175d3ebd50368467b69c707057318299d",
+      "gzip_sha256": "74155f99f77771bffcaa61e2f82e17240921a193960bb277e94ce8c538797281"
+    },
+    {
+      "path": "source-review-reviewed-answerable-development.json.gz",
+      "sha256": "d4e8b18868e97de8414078be22c8032510193f561f360ec5a21f2509a4064fa1",
+      "gzip_sha256": "9d3c812445810a71ef90246515c4a595b25762d9a06b71f53b5b3f40df69f20e"
+    },
+    {
+      "path": "source-review-answerable-structure.json.gz",
+      "sha256": "084d4663e5329b7467d017a35e426c88ad62f6e31876547b89dea8027c73fe99",
+      "gzip_sha256": "c8d377d8f678b7896e90ccfa056890779abfe0c0646d2d838531242c4cd28d44"
+    }
+  ]
+}

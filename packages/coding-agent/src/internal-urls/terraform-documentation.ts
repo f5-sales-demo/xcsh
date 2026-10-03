@@ -841,7 +841,7 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 			/\b(?:read|fetch|retrieve|lookup|specify|configure|computed)\b.*\b(?:name|id|number|process|token|address|port|status|value|parameter)\b/i.test(
 				query,
 			)) ||
-		/\b(?:fields?|attributes?|property|properties|parameters?|schema path|match rules|inside|under)\b|\b(?:declare|configure|specify|set)\b.*\b(?:address|port|name|value|prefix|status|header|timeout|number)\b/i.test(
+		/\b(?:fields?|attributes?|property|properties|parameters?|arguments?|flags?|schema path|match rules|inside|under)\b|\b(?:declare|configure|specify|set)\b.*\b(?:address|port|name|value|prefix|status|header|timeout|number)\b/i.test(
 			query,
 		);
 	const scopedLookup =
@@ -866,7 +866,9 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 
 	if (
 		/\baction\b/i.test(query) &&
-		!/\b(?:fields?|attributes?|(?:property|properties)|ids?|namespace|parameters?)\b/i.test(query) &&
+		!/\b(?:fields?|attributes?|(?:property|properties)|ids?|namespace|parameters?|arguments?|flags?)\b/i.test(
+			query,
+		) &&
 		/\b(?:which|declare|invoke|trigger|where|how)\b/i.test(query)
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
@@ -1531,7 +1533,7 @@ export class TerraformDocumentationRepository {
 				(Boolean(propertyRequestedText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
 					/\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(search) ||
-					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
+					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?|arguments?|flags?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
 						search,
 					)) &&
 				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
