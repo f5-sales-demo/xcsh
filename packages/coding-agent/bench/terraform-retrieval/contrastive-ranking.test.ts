@@ -297,3 +297,9 @@ test("schema plurals retain the same terms as their query counterparts",()=>{
  expect(propertyTerms("retries")).toEqual(propertyTerms("retry"));
  expect(propertyTerms("policies")).toEqual(propertyTerms("policy"));
 });
+
+test("boolean predicate grammar preserves its documented subject and state",()=>{
+ expect(propertyQueryTerms("whether the key is active")).toEqual(propertyQueryTerms("key active"));
+ expect(propertyQueryTerms("whether a response should be blocked")).toEqual(propertyQueryTerms("response blocked"));
+ expect(propertyQueryTerms("whether unsupported bandwidth is limited")).toContain("bandwidth");
+});

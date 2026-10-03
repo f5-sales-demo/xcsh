@@ -74,6 +74,7 @@ export function propertyQueryTerms(text: string): string[] {
 			.toLowerCase()
 			.replace(/\bxcsh_[a-z0-9_]+\b/g, "")
 			.replace(/\b(?:arguments?|flags?)\b/g, "")
+			.replace(/\b(?:whether|should)\b/g, "")
 			.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "")
 			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
