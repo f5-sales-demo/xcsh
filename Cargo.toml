@@ -9,7 +9,7 @@ exclude = [
 resolver = "3"
 
 [workspace.package]
-version = "22.8.1"
+version = "22.8.2"
 edition = "2024"
 license = "MIT"
 authors = ["Can Boluk"]
