@@ -123,6 +123,7 @@ describe("placeholder hygiene", () => {
 
 	it("exempts only the opaque compressed QMD index payload", () => {
 		expect([...OPAQUE_GENERATED_ARTIFACTS]).toEqual([
+			"packages/coding-agent/src/internal-urls/terraform-index.generated.ts",
 			"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
 		]);
 		const qmdIndex = fs.readFileSync(
