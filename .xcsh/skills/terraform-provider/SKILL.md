@@ -114,3 +114,6 @@ HCL. A **State lock** must be investigated for an active writer first; use `terr
 when the user instructs it and the stale lock identity is verified. Provider installation failures require checking
 the exact source, version constraint, lock file, Registry availability, and any `dev_overrides` before retrying.
 Destroy: terraform destroy -target=xcsh_{type}.{label}
+
+
+When citing exact property documentation, distinguish provider validators/defaults and schema field flags from receipt-pinned upstream constraints. Describe a limit as provider-enforced only when the provider schema or validator code documents it. Label limits found only in upstream metadata as documented upstream constraints; neither source establishes successful live apply.
