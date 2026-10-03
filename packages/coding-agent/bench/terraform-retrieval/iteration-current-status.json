@@ -2,7 +2,7 @@
   "qualification_passed": false,
   "development_only": true,
   "source_commit": "15cc3f973",
-  "combined_tests": 609,
+  "combined_tests": 616,
   "workspace_checks": "passed",
   "development_selected": 43,
   "development_answerable": 43,
@@ -12,7 +12,7 @@
   "report_gzip_sha256": "3d2d4888e63ddd93146e04b77495f3483b1c921ed7128055e070d373c233949f",
   "first_untouched_answerable_correct": 59,
   "first_untouched_answerable_total": 140,
-  "latest_exposed_regression_correct": 89,
+  "latest_exposed_regression_correct": 91,
   "latest_exposed_regression_total": 140,
   "installed_model_trace_passes": 24,
   "installed_model_total": 40,
@@ -20,9 +20,9 @@
   "documentation_release": "documentation-v12.4.0",
   "consumer_draft": true,
   "auto_merge": false,
-  "property_index_version": 3,
-  "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
-  "latest_exposed_regression_top5": 119,
+  "property_index_version": 4,
+  "index_sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+  "latest_exposed_regression_top5": 118,
   "source_only_collision_cases_pending_review": 122,
   "development_mac_p95_ms": 39.68604200000027,
   "development_linux_p95_ms": 37.82539999999972,
@@ -33,5 +33,9 @@
     "labels_changed": false
   },
   "current_development_answerable": 43,
-  "current_development_total": 43
+  "current_development_total": 43,
+  "development_correct": 43,
+  "development_total": 43,
+  "complete_development_ambiguity_routes": 24,
+  "development_ambiguous_cases": 29
 }
