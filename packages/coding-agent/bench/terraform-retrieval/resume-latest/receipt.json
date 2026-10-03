@@ -1,0 +1,52 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "candidate_source_commit": "dc75006e4d2c73fcbd3d725eca8b9edf68d7ebf4",
+  "main_commit": "fc9679ea59b7f69a1f2af473c88482f0d6500c02",
+  "post_rebase": {
+    "tests_pass": 409,
+    "live_tests_skip": 58,
+    "tests_fail": 0,
+    "workspace_check_ts": "pass",
+    "docs_quality_tests_pass": 28,
+    "authority_digest_mismatches": 0
+  },
+  "files": [
+    {
+      "path": "development.json.gz",
+      "sha256": "c4d5e0bb2663caa3332a78a11690ca76fa034e3ab6d2ca2253f801ba028b5243",
+      "gzip_sha256": "ebeaba186a97feed3496fcd9feefa5cc60f006276a71eee51f28056a8abb3176"
+    },
+    {
+      "path": "review-original.json.gz",
+      "sha256": "5c18275e9f0a18d8464ffcaf3ed90dfd1f8ddd753002fdb5fb992c5aad1fc7d4",
+      "gzip_sha256": "23814bbb191a28d14d82c8336f5beced8766abf72b3e643c32e3ba9304d74d78"
+    },
+    {
+      "path": "review-quote-validation.json.gz",
+      "sha256": "49ad6d8a1e251a8465b5b807aa8423571b9d60c4bef20795d1391844f38f9602",
+      "gzip_sha256": "16b22bc06f8901804128e72ad501519f67e614738fd03936ba6aa409fc5ac3b2"
+    },
+    {
+      "path": "direct-root-rejected-development.json.gz",
+      "sha256": "30af61191cb7f20704860e4cfb6e6d5cbb2520c8941594596e61ec1fa42894f7",
+      "gzip_sha256": "45fd5f39f780f7c2087c70535f2e1ad94a9419e060a68afcfe17580ad219d3a9"
+    },
+    {
+      "path": "direct-root-rejected-regression.json.gz",
+      "sha256": "a6c66f065e7c817bd9cb1e593fc7ee10520758fc9e02d1f116457e750c0831c8",
+      "gzip_sha256": "34e7dc53e8a21121d69d635b91a7056182de931a75906ef66fa02d4114bd8d41"
+    },
+    {
+      "path": "direct-root-rejected.patch.gz",
+      "sha256": "7741c824db9eb02690489ab7fb392f28ac234a553ed65b72f645ebeefeb904ef",
+      "gzip_sha256": "d4e5e0d133ed8c7c4ed10f288f73de3767eb8b20f030dd4e81379459088d03c1"
+    }
+  ],
+  "limitations": [
+    "Original source review failed exact-quote validation and is not accepted adjudication.",
+    "Direct scope parser experiment had no selection benefit and was reverted.",
+    "Full TypeScript tests and CI still running.",
+    "Frozen qualification and latest installed model qualification remain unfulfilled."
+  ]
+}
