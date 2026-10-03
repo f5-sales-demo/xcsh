@@ -462,3 +462,13 @@ test("capability pairs cannot outrank a fully named scalar through the opposite 
  const scope=preparePropertyScope([row("enable_feature_discovery","Settings.","section"),row("disable_feature_discovery","Empty option.","section"),row("enable_feature_discovery.hostname","Hostname for discovery.")]);
  expect(rankPropertyScope("Configure xcsh_fixture feature discovery hostname",scope)[0]?.schema_path).toBe("enable_feature_discovery.hostname");
 });
+
+test("explicit field labels carry action value intent without operation narration", () => {
+ expect(propertyRequestedText("Specify the target site name with site attribute when executing xcsh_fixture action.")).toBe("site");
+ expect(propertyRequestedText("Specify the target release with software_version when running xcsh_fixture action.")).toBe("software_version");
+ expect(propertyRequestedText("Specify the key_type attribute when adding a key in xcsh_fixture action.")).toBe("key_type");
+});
+
+test("type descriptions are not mistaken for explicit field labels",()=>{
+ expect(propertyRequestedText("Specify the target port using numeric field in xcsh_fixture resource")).not.toBe("numeric");
+});

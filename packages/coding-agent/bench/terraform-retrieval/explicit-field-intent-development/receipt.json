@@ -1,0 +1,184 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "base_commit": "05b72bfb8a9b66abccc7c544245110cc3997921a",
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "1d0476ae3f87bc730d41f45e0b8ec707531b536900e8f23567b6cb942d6db2c8",
+    "packages/coding-agent/src/internal-urls/terraform-property-selection.ts": "d99a28f8d1159d4f81489745deaaa77a21bbaab4f08a6ed5c8a5da7438a14215"
+  },
+  "reports": {
+    "reviewed-development.json.gz": {
+      "uncompressed_sha256": "5a0883bc8c4c59622ffab0045a466765d3eff9e1ea48205973b241a5703c6f3e",
+      "compressed_sha256": "1ce48f57163fb58a821a499fca2f9bffda633e859af079e433e1b919830ed43a",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 2462.2606750000004,
+        "warm_p95_ms": 73.42405700000018,
+        "answerable": 40,
+        "correct_leaf": 38,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "broad-development.json.gz": {
+      "uncompressed_sha256": "e1de86c1d9da7769bf1dd2c0766f3852aed862461e7004c4b082939950b0f93b",
+      "compressed_sha256": "54a4a97451998d12a7c4d37da2f904a1c1ba42859e04e69f6710d98a935df3a0",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 2026.0486699999997,
+        "warm_p95_ms": 39.510147999999845,
+        "answerable": 43,
+        "correct_leaf": 42,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "peer-development.json.gz": {
+      "uncompressed_sha256": "3ca86bdde3b1bbb075b9ed9fab604cc30cec33a61346da025149700ad12aff8b",
+      "compressed_sha256": "a175abad36df9faa4617cd6b3bf05a2762a6a7c39cb764fffc2274cf25d697aa",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "0fbb30835cb6c1dd71d21e4f079f86e24a3be24a1a6cbc341c7f82a702c7d0de",
+        "cold_materialization_ms": 1835.900313,
+        "warm_p95_ms": 97.96164099999987,
+        "answerable": 94,
+        "correct_leaf": 70,
+        "wrong_leaf": 4,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 75,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "v6-regression.json.gz": {
+      "uncompressed_sha256": "b2e63b774b147a76acd8aec4459389cc3a468efb4777226f7332f63b2cb91bb5",
+      "compressed_sha256": "b32f0f6dee38199f0d223455d776982fc08237ea50e59d859b53e42952746158",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": true,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "23ec48945ba12546fba7de87959b7d5ac7c080581d4b5229815b593d6aae0c47",
+        "cold_materialization_ms": 2391.7471090000004,
+        "warm_p95_ms": 107.49049600000217,
+        "answerable": 140,
+        "correct_leaf": 71,
+        "wrong_leaf": 4,
+        "ambiguous_leaf": 4,
+        "control_leaf": 5,
+        "answerable_top5": 94,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "mac-offline.json.gz": {
+      "uncompressed_sha256": "653a9780ad8ffc1425c0c38b1850c962a73692b9511975e7570cfab05a670dc6",
+      "compressed_sha256": "86eca8bee026e780fc568e6308b6f047f9bfa777a842f61b4a375056a584dffc",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 347.142791,
+        "warm_p95_ms": 35.28920800000003,
+        "answerable": 40,
+        "correct_leaf": 38,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "linux-offline.json.gz": {
+      "uncompressed_sha256": "d084876d3d0515e5dc58cef7031c5413c1dbc5acc1c61870a2b0f391b303d1a9",
+      "compressed_sha256": "4fa5409e0832bfeb53a1aaccab25fb19fe42f338cc5a96ed0f702c5cc9e858b8",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+        "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+        "cold_materialization_ms": 1849.394945,
+        "warm_p95_ms": 49.96199799999977,
+        "answerable": 40,
+        "correct_leaf": 38,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 40,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    }
+  },
+  "checks": {
+    "focused": "306 pass,0 fail",
+    "check_ts": "passed",
+    "source_review": "approved",
+    "offline": "40 complete Mac/Ubuntu responses equal",
+    "full_package": "running; source frozen"
+  },
+  "limitations": [
+    "Exposed v6 remains regression only.",
+    "No release or merge authorized."
+  ]
+}

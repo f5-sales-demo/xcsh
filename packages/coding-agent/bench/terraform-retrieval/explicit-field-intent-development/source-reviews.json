@@ -1,0 +1,28 @@
+{
+  "source_only": true,
+  "qualification_passed": false,
+  "final_source_review": "approved",
+  "route": "Ubuntu Codex ChatGPT sign-in",
+  "reviews": {
+    "terraform-explicit-intent-review.txt": {
+      "sha256": "ada7efb689f8d8153979d8bf9ac9e58c0a30bc30591e5089183445285bc08275",
+      "text": "Source approval withheld: two concrete routing problems reproduced with read-only, in-memory source probes.\n\n- **P1 \u2014 Nested scope is erased.** \u201cSpecify the name within service with name attribute in xcsh_fixture resource\u201d extracts only `name`, ranks root `name` above `service.name`, and selects the root leaf. Preserve explicit nesting context before allowing the [direct-field shortcut](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-selection.ts:190).\n- **P2 \u2014 Type adjectives become field labels.** \u201cSpecify the target port using numeric field\u2026\u201d extracts `numeric` and rejects the supported numeric `port` through insufficient operation evidence. The [label matcher](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:224) needs to distinguish type descriptions from identifiers.\n\nAlso, the peer check is **not unfiltered**: `input` and `alternatives` have already undergone type filtering. A differently typed root peer from another role disappears before the identity check.\n\n`git diff --check` passed. No edits, subagents, GitHub changes, or benchmark authoring. This is source review only; I did not independently verify the reported 301 passes or benchmark qualification."
+    },
+    "terraform-explicit-intent-rereview.txt": {
+      "sha256": "75f319cd1eeae8bf7a876c38b27a8ca2c490eacee06547562d1b4a574d83552d",
+      "text": "One concrete correctness finding blocks source approval:\n\n- **P1 \u2014 \u201cin service\u201d loses nested scope.** [terraform-property-ranking.ts:234](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:234) suppresses label narrowing for `within/inside/under`, but omits `in`. Reproduced read-only: \u201cSpecify the name in service using name attribute in xcsh_fixture data source\u201d narrows to `name`, then the new shortcut selects root `name` over `service.name`. Preserve schema-qualified `in` context in both label narrowing and the direct-root guard; distinguish it from provider narration.\n\nThe pre-filter identity-peer capture addresses the reported disappearing-role-peer issue.\n\nNo edits, subagents, GitHub changes, or benchmark qualification performed."
+    },
+    "terraform-explicit-scope-review.txt": {
+      "sha256": "3793795c101b8ff8b66148f8928d4bef38ac6a4ef66d9a951dd04a3c235a1a59",
+      "text": "One concrete scoping defect remains:\n\n- **P1 \u2014 Field-label narrowing drops noun qualifiers.** At [terraform-property-ranking.ts:240](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:240), `Specify the service name using name attribute in xcsh_fixture data source` becomes just `name`. The guard misses the `service name` qualifier, allowing the new shortcut to select root `name` over `service.name`. Reproduced directly with those two candidates: result was `leaf`, root `name`, reason `Exact documented object identity field`.\n\nPreserve noun qualifiers when narrowing labeled fields, or reject the direct-root shortcut when they remain unresolved.\n\nSource-only approval withheld for this defect. No edits, subagents, GitHub changes, or benchmark qualification performed."
+    },
+    "terraform-explicit-action-review.txt": {
+      "sha256": "8a0a793f9c048d204ea199681b98463ef368b87dd7739b1c3d72e978d0e518e8",
+      "text": "One concrete correctness issue remains:\n\n- **P2 \u2014 Action narration erases resource scope** at [terraform-property-ranking.ts:242](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:242). The gate accepts `action` anywhere in the query. For \u201cSpecify the service name using name attribute in xcsh_fixture resource before executing an action,\u201d `propertyRequestedText` returns `name`, discarding `service`. A read-only source reproduction confirms the new shortcut selects root `name` over `service.name`, even with coverage `0.1`. Bind label narrowing to the requested action target rather than incidental action narration.\n\nSource-only approval withheld for this issue. No edits, subagents, GitHub changes, or benchmark runs; no benchmark qualification claims."
+    },
+    "terraform-explicit-target-review.txt": {
+      "sha256": "37a56c61202111bed2414bbae311a7b7fff5dc8bda7cb846740c18427bf13f83",
+      "text": "Source-only approval: no concrete correctness, scoping, or routing defects found in the current diff.\n\nAction label narrowing requires explicit XCSH action wording and rejects resource/data-source wording. Nested qualifiers guard both narrowing and the direct-root shortcut. Identity peers are captured before type and architecture filtering.\n\n`git diff --check` passed. No edits or test runs; the reported 306 passes were not independently verified. No benchmark qualification claims."
+    }
+  }
+}

@@ -499,3 +499,34 @@ test("capability polarity recognizes enabling and disabling inflections", () => 
  expect(selectPropertyDestination("Configure disabling feature discovery",[a,b]).reason).not.toBe("Missing enable or disable choice");
  expect(selectPropertyDestination("Configure enabling feature discovery",[{...a,score:100},{...b,score:20}]).reason).not.toBe("Missing enable or disable choice");
 });
+
+test("an exact object identity query selects direct fields despite unrelated context", () => {
+ const root={...row("name",30,"data-sources"),description:"Configuration object name.",coverage:0.1};
+ const nested={...row("policy.query_parameter.query_param_name",29,"data-sources"),description:"Masks query parameter name."};
+ expect(selectPropertyDestination("Query the name of an existing policy using data source xcsh_fixture",[root,nested]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Query the service name of an existing policy using data source xcsh_fixture",[root,nested]).kind).not.toBe("leaf");
+ const resource={...root,provider_type:"resources"};
+ expect(selectPropertyDestination("Query the name of an existing object",[root,resource]).kind).toBe("choices");
+});
+
+test("explicit field labels preserve nested qualifiers and role peers before type filtering",()=>{
+ const root={...row("name",50,"data-sources"),type:"string"},nested={...row("service.name",49,"data-sources"),type:"string"};
+ expect(selectPropertyDestination("Specify the name within service with name attribute in xcsh_fixture data source",[root,nested]).kind).not.toBe("leaf");
+ const peer={...root,provider_type:"resources",type:"number"};
+ expect(selectPropertyDestination("Which string field specifies name?",[root,peer]).kind).toBe("choices");
+});
+
+test("in a named schema branch cannot select an unrelated root field",()=>{
+ const root={...row("name",50,"data-sources"),type:"string"},nested={...row("service.name",49,"data-sources"),type:"string"};
+ expect(selectPropertyDestination("Specify the name in service using name attribute in xcsh_fixture data source",[root,nested]).kind).not.toBe("leaf");
+});
+
+test("resource field labels retain noun-qualified nested scope",()=>{
+ const root={...row("name",50,"data-sources")},nested={...row("service.name",49,"data-sources")};
+ expect(selectPropertyDestination("Specify the service name using name attribute in xcsh_fixture data source",[root,nested]).kind).not.toBe("leaf");
+});
+
+test("incidental action narration cannot erase resource noun scope",()=>{
+ const root={...row("name",50)},nested={...row("service.name",49)};
+ expect(selectPropertyDestination("Specify the service name using name attribute in xcsh_fixture resource before executing an action",[root,nested]).kind).not.toBe("leaf");
+});

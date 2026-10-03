@@ -190,6 +190,14 @@ export function propertyRequestedBlockText(text: string): string | undefined {
 	const definition = text.match(/\bdefinition\s+of\s+(?:the\s+)?(.+?)\s+(?:list\s+|configuration\s+)?block\b/i)?.[1];
 	return (definition ?? before ?? after)?.split(/\b(?:during|when|to|in|under|within|for)\b/i)[0]?.trim();
 }
+export function propertyHasNestedQualifier(text: string): boolean {
+	return (
+		/\b(?:within|inside|under)\b/i.test(text) ||
+		/\bin\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|terraform\b|resource\b|data[ -]source\b|provider\b|action\b))[a-z][a-z0-9_]*(?:\b|[./])/i.test(
+			text,
+		)
+	);
+}
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
 	const fieldText = text.replace(
@@ -219,6 +227,35 @@ export function propertyRequestedText(text: string): string | undefined {
 		text.match(
 			/\b(?:specify|set|provide|supply)\b\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|resource\b|data[ -]source\b|provider\b))(.+)/i,
 		)?.[1];
+	const rawLabeledField =
+		text.match(
+			/\b(?:with|using)\s+(?:the\s+)?([a-z][a-z0-9_]*)\s+(?:field|attribute|property|parameter|argument|flag)\b/i,
+		)?.[1] ??
+		text.match(
+			/\b(?:specify|set|provide|supply)\s+(?:the\s+)?([a-z][a-z0-9]*_[a-z0-9_]+)\s+(?:field|attribute|property|parameter|argument|flag)\b/i,
+		)?.[1] ??
+		text.match(
+			/\b(?:with|using)\s+([a-z][a-z0-9]*_[a-z0-9_]+)\s+when\s+(?:running|executing|adding|invoking)\b/i,
+		)?.[1];
+	const labeledField =
+		rawLabeledField &&
+		/\b(?:xcsh_[a-z0-9_]+\s+action|action\s+xcsh_[a-z0-9_]+)\b/i.test(text) &&
+		!/\b(?:resource|data[ -]source)\b/i.test(text) &&
+		!propertyHasNestedQualifier(text) &&
+		![
+			"numeric",
+			"number",
+			"string",
+			"boolean",
+			"bool",
+			"scalar",
+			"list",
+			"optional",
+			"required",
+			"computed",
+		].includes(rawLabeledField.toLowerCase())
+			? rawLabeledField
+			: undefined;
 	const queryProperty = text.match(
 		/\bquery\s+((?:(?:the|an?)\s+)?(?:[a-z][a-z0-9_-]*\s+){0,2}(?:name|id|status|address|port|token|value))\s+of\s+[^.!?]+/i,
 	)?.[1];
@@ -250,6 +287,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		identifierField ??
 		classificationField ??
 		field ??
+		labeledField ??
 		operation ??
 		lookup ??
 		queryProperty ??
@@ -280,6 +318,7 @@ export function propertyNamesCollection(text: string, candidate: PropertyCandida
 }
 export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
 	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
+	if (propertyHasNestedQualifier(queryText)) return false;
 	if (
 		!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) &&
 		!/\bquery\s+(?:(?:the|an?)\s+)?(?:name|id|status|address|port|token|value)\s+of\b/i.test(queryText)

@@ -47,6 +47,7 @@ export function selectPropertyDestination(
 	alternatives: readonly RankedProperty[] = [],
 	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
+	const identityPeers = [...input, ...alternatives];
 	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	const requestedType = propertyRequestedType(queryText);
@@ -187,6 +188,14 @@ export function selectPropertyDestination(
 		return { kind: "choices", destinations: namedChoices.slice(0, 5), reason: "Missing enable or disable choice" };
 	const first = ranked[0];
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
+	if (propertyRequestsDirectObjectField(queryText, first) && first.score > 0) {
+		const peers = identityPeers.filter(
+			row => row.schema_path === first.schema_path && row.anchor.startsWith("schema-"),
+		);
+		if (peers.some(row => row.provider_type !== first.provider_type || row.provider_name !== first.provider_name))
+			return { kind: "choices", destinations: peers.slice(0, 5), reason: "Missing provider identity or role" };
+		return { kind: "leaf", destinations: [first], reason: "Exact documented object identity field" };
+	}
 	const filterTerms = /\b(?:field|attribute|property|parameter|argument)\b\s+filters?\s+.+?\s+by\b/i.test(queryText)
 		? propertyQueryTerms(propertyRequestedText(queryText) ?? "")
 		: [];
