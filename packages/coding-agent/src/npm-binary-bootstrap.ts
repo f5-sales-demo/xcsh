@@ -58,6 +58,7 @@ export function releaseValidationEnvironment(environment: NodeJS.ProcessEnv): No
 	const validationEnvironment = { ...environment };
 	delete validationEnvironment.XCSH_SMOKE_TEST_QMD;
 	delete validationEnvironment.XCSH_SMOKE_TEST_TERRAFORM_DOCUMENTATION;
+	delete validationEnvironment.XCSH_MEASURE_TERRAFORM_REQUESTS;
 	delete validationEnvironment.XCSH_SMOKE_TEST_SPECS;
 	delete validationEnvironment.XCSH_SMOKE_TEST_VERTEX_AUTH;
 	return validationEnvironment;
