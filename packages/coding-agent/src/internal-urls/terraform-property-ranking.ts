@@ -79,10 +79,10 @@ export function propertyQueryTerms(text: string): string[] {
 export function propertyRequestedText(text: string): string | undefined {
 	if (/\bblock\b/i.test(text)) return undefined;
 	const field = text.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?)\s+)?(.+)/i,
 	)?.[1];
 	const operation = text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1];
-	return (field ?? operation)?.split(/\bfor\b|\breferenced in\b/i)[0]?.trim();
+	return (field ?? operation)?.split(/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b/i)[0]?.trim();
 }
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 	const prepared = rows.map(row => ({

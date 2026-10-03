@@ -143,3 +143,11 @@ test("compound provider prose uses the indexed schema vocabulary", () => {
 	expect(propertyQueryTerms("HTTP load balancer routes")).toEqual(propertyQueryTerms("http_loadbalancer routes"));
 	expect(propertyQueryTerms("Application firewall blocking")).toEqual(propertyQueryTerms("app_firewall blocking"));
 });
+
+test("field function verbs keep requested values separate from enclosing configuration", () => {
+    expect(propertyRequestedText("Which parameter configures the target host for redirection?")).toBe("the target host for redirection?");
+    expect(propertyRequestedText("Which property controls the interval for polling?")).toBe("the interval for polling?");
+    expect(propertyRequestedText("Which property determines the name for an external peer?")).toBe("the name");
+    const scope=preparePropertyScope([row("service.port.target_port","Port the workload is listening on."),row("service.redirect_route.host_redirect","Host to redirect requests to.")]);
+    expect(rankPropertyScope("In a workload resource defining a redirect route on a service port, which parameter configures the target host for redirection?",scope)[0]?.schema_path).toBe("service.redirect_route.host_redirect");
+});
