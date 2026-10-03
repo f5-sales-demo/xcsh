@@ -1501,3 +1501,11 @@ Second current-main recovery 37094893902 also completes generation but rejects
 PR creation with Protected main changed after generation; dispatch from the new
 source. No stale patch applied. User directs finishing current iteration evidence,
 fetching latest, rebasing consumer, then resuming. Qualification gate retained.
+
+User-requested iteration close, latest fetch and consumer rebase completes.
+Rebased source 586260fe9429e7781b39e1f7dcf5e72c3dc931e3 is byte-identical to
+pre-rebase tree; latest xcsh main is ancestor. All 497 URL tests and workspace
+check:ts pass. Explicit lease push verifies PR #4687 new head, still draft and
+auto-merge absent. Latest provider source 35f9297c4764a7b016ac120d37f5d11e33cd9541
+normal On Merge run 37097445026 active; resume from it. Qualification remains
+failed/unfulfilled, consumer pin still v12.3.1. Receipt: iteration-rebase-receipt.json.

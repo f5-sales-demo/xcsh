@@ -1,0 +1,31 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "pre_rebase_head": "065dfc9ae",
+  "post_rebase_head": "586260fe9429e7781b39e1f7dcf5e72c3dc931e3",
+  "base": "342ffb64ff65a6cf8c2309f3af398474499f1a58",
+  "tree_byte_identical": true,
+  "url_tests": {
+    "passed": 497,
+    "failed": 0
+  },
+  "workspace_check_ts": "passed",
+  "github_push": "explicit force-with-lease verified",
+  "consumer_draft": true,
+  "auto_merge": false,
+  "provider_latest": "35f9297c4764a7b016ac120d37f5d11e33cd9541",
+  "provider_run": 37097445026,
+  "provider_run_status": "in_progress",
+  "provider_metadata_prs_merged": [
+    2379,
+    2382
+  ],
+  "immutable_consumer_pin": "documentation-v12.3.1",
+  "remaining": [
+    "Provider canonical snapshot publication from stable latest source",
+    "Consumer reviewed pin update and artifact verification",
+    "Retrieval accuracy improvements",
+    "Fresh independent 200/40 qualification at >=95 percent",
+    "Consumer merge/release and installed Mac Ubuntu acceptance"
+  ]
+}
