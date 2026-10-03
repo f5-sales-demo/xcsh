@@ -1463,3 +1463,114 @@ test("materialization rejects a digest-valid incompatible prepared property inde
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("lifecycle fields share interpretation through the complete resolver and binding scope", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-lifecycle-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		const ops = ["create", "read", "update", "delete"];
+		const body =
+			'<a id="section"></a>\n# timeouts\nOperation timeout configuration.\n' +
+			ops
+				.map(op => `<a id="schema-timeouts--${op}"></a>\n### ${op}\nTimeout duration for ${op} operation.\n`)
+				.join("");
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.role = "properties";
+		doc.metadata.schema_path = ["timeouts"];
+		doc.metadata.aliases = [];
+		doc.metadata.sections = [
+			{
+				schema_path: ["timeouts"],
+				document_id: doc.metadata.id,
+				anchor: "section",
+				description: "Operation timeout configuration.",
+				aliases: [],
+				relationships: [],
+				flags: ["optional"],
+				type: "object",
+			},
+			...ops.map(op => ({
+				schema_path: ["timeouts", op],
+				document_id: doc.metadata.id,
+				anchor: `schema-timeouts--${op}`,
+				description: `Timeout duration for ${op} operation.`,
+				aliases: [],
+				relationships: [],
+				flags: ["optional"],
+				type: "string",
+			})),
+		];
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const read = (uri: string) =>
+			repo.resolve(Object.assign(new URL(uri), { rawHost: "terraform-documentation" }) as InternalUrl);
+		const query = (text: string, suffix = "&provider_name=fixture&provider_type=resources") =>
+			read(`xcsh://terraform-documentation/?search=${encodeURIComponent(text)}${suffix}`);
+		for (const [word, op] of [
+			["creation", "create"],
+			["destruction", "delete"],
+			["read operation", "read"],
+			["refresh operation", "read"],
+			["modification", "update"],
+			["update", "update"],
+		]) {
+			const result = await query(`Which resource field sets the maximum duration permitted for Fixture ${word}?`);
+			expect(result.content).toContain("Selected leaf;");
+			expect(result.content).toContain(`#schema-timeouts--${op}`);
+			expect(result.size).toBeLessThanOrEqual(4096);
+			const uri = result.content.match(/^Read: (\S+)/m)![1]!;
+			expect((await read(uri)).content).toContain(`Timeout duration for ${op} operation.`);
+		}
+		const multi = (
+			await query(
+				"Which timeout field controls creation and destruction?",
+				"&provider_name=fixture&provider_type=resources&limit=1",
+			)
+		).content;
+		expect(multi).not.toContain("Selected leaf;");
+		expect(multi).toContain("#schema-timeouts--create");
+		expect(multi).toContain("#schema-timeouts--delete");
+		for (const text of [
+			"Which timeout field?",
+			"Read the documentation for the timeout field",
+			"Which initial timeout field?",
+			"Which timeout field is not for creation?",
+			"Which timeout field controls creation rather than deletion?",
+			"Which field sets retry counts for creation timeout?",
+		])
+			expect((await query(text)).content).not.toContain("Selected leaf;");
+		expect((await query("Which field controls creation timeout?", "&provider_name=fixture")).content).not.toContain(
+			"Selected leaf;",
+		);
+		expect(
+			(await query("Which resource field controls creation timeout?", "&provider_type=resources")).content,
+		).not.toContain("Selected leaf;");
+		expect(
+			(
+				await query(
+					"Which field controls creation timeout?",
+					"&provider_name=fixture&provider_type=resources&category=networking",
+				)
+			).content,
+		).not.toContain("#schema-timeouts--create");
+		expect(
+			(
+				await query(
+					"Which field controls creation timeout?",
+					"&provider_name=fixture&provider_type=resources&node=fixture",
+				)
+			).content,
+		).toContain("Selected leaf;");
+		expect((await query("Which String field controls creation timeout?")).content).toContain("Selected leaf;");
+		expect((await query("Which Boolean field controls creation timeout?")).content).not.toContain("Selected leaf;");
+		expect((await query("Which timeouts block?")).content).toContain("#section");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

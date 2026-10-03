@@ -10,6 +10,7 @@ import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
 import { terraformChoiceResponse } from "./terraform-choice-response";
+import { interpretTerraformLifecycle } from "./terraform-lifecycle";
 import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
 import { propertyRequestedText, propertyRequestsBlock, propertyRequestsCollection } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
@@ -963,19 +964,7 @@ export function rankTerraformProviderNames(
 }
 
 export function terraformTimeoutOperations(query: string): string[] {
-	if (
-		!/\btimeouts?\b|\bduration\b/i.test(query) ||
-		/\b(?:connection|idle|request|response|tls|handshake)\b/i.test(query)
-	)
-		return [];
-	const terms = query.toLowerCase();
-	const operations: Array<[string, RegExp]> = [
-		["create", /\b(?:create|creation|creating|initial)\b/],
-		["read", /\b(?:read|refresh|inspect)\b/],
-		["update", /\b(?:update|modification|modify)\b/],
-		["delete", /\b(?:delete|deletion|destroy|destruction)\b/],
-	];
-	return operations.filter(([, pattern]) => pattern.test(terms)).map(([name]) => name);
+	return interpretTerraformLifecycle(query)?.operations ?? [];
 }
 
 export function terraformProviderMention(search: string, names: readonly string[]): string | undefined {
@@ -1567,12 +1556,15 @@ export class TerraformDocumentationRepository {
 					filters.find(f => f.key === "provider_type")?.value ?? terraformQueryIdentity(search).providerType;
 				const provider = taskProvider;
 
-				const timeoutPaths =
-					/\b(?:operation|lifecycle)\s+timeouts?\b|\btimeouts?\s+block\b|\b(?:creation|destruction|deletion|modification)\b/i.test(
-						search,
-					)
-						? terraformTimeoutOperations(search).map(operation => `timeouts.${operation}`)
-						: [];
+				const lifecycle = interpretTerraformLifecycle(search);
+				const timeoutPaths = lifecycle
+					? lifecycle.field
+						? (lifecycle.operations.length ? lifecycle.operations : ["create", "read", "update", "delete"]).map(
+								operation => `timeouts.${operation}`,
+							)
+						: ["timeouts"]
+					: [];
+
 				const ranked = searchPropertyIndex(db, search, {
 					providerType: role,
 					providerName: provider,
@@ -1600,13 +1592,14 @@ export class TerraformDocumentationRepository {
 				const clauses = filters.map(
 					() => "EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
 				);
+				const alternativeScope = lifecycle
+					? `dest.schema_path IN (${timeoutPaths.map(() => "?").join(",")})`
+					: "(schema_path=? OR substr(schema_path,-length(?))=?)";
 				const values: Array<string | null> = [
 					first?.provider_name ?? null,
 					role ?? null,
 					role ?? null,
-					leaf ?? null,
-					`.${leaf}`,
-					`.${leaf}`,
+					...(lifecycle ? timeoutPaths : [leaf ?? null, `.${leaf}`, `.${leaf}`]),
 					...filters.flatMap(f => [f.key, f.value]),
 				];
 				if (node) {
@@ -1619,12 +1612,20 @@ export class TerraformDocumentationRepository {
 					? (
 							db
 								.query(
-									`SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations dest WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND (schema_path=? OR substr(schema_path,-length(?))=?) ${clauses.length ? `AND ${clauses.join(" AND ")}` : ""} ORDER BY provider_type,schema_path`,
+									`SELECT provider_type,provider_name,schema_path,path,anchor,description,type,nesting,flags FROM property_terms dest WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND ${alternativeScope} ${clauses.length ? `AND ${clauses.join(" AND ")}` : ""} ORDER BY provider_type,schema_path`,
 								)
 								.all(...values) as RankedProperty[]
-						).map(row => ({ ...row, score: 0, coverage: 0 }))
+						).map(row => ({
+							...row,
+							...(row.flags == null ? {} : { flags: JSON.parse(row.flags as unknown as string) as string[] }),
+							score: 0,
+							coverage: 0,
+						}))
 					: [];
-				const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives);
+				const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives, {
+					lifecycle,
+					identityResolved: Boolean(provider && role),
+				});
 
 				if (decision.kind === "choices" && first) {
 					const equivalent = [
@@ -1724,7 +1725,10 @@ export class TerraformDocumentationRepository {
 					}
 				}
 				if (choiceAfter !== null) throw new Error("Terraform choice continuation no longer matches branch choices");
-				const shown = decision.kind === "leaf" ? decision.destinations : decision.destinations.slice(0, limit);
+				const shown =
+					decision.kind === "leaf" || (lifecycle?.operations.length ?? 0) > 1
+						? decision.destinations
+						: decision.destinations.slice(0, limit);
 				const continuation = new URL(url.href);
 				continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
 				const prepared = boundedTerraformResponse(

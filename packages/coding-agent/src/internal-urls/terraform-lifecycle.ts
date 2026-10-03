@@ -1,0 +1,42 @@
+// One conservative interpretation shared by retrieval and selection.
+export interface TerraformLifecycleIntent {
+	operations: string[];
+	field: boolean;
+	evidence: string;
+}
+export function interpretTerraformLifecycle(query: string): TerraformLifecycleIntent | undefined {
+	if (
+		!/\btimeouts?\b|\bduration\b/i.test(query) ||
+		/\b(?:connection|idle|request|response|tls|handshake|probe)\b/i.test(query)
+	)
+		return undefined;
+	const block = /\btimeouts?\s+block\b/i.test(query) && !/\b(?:field|attribute|property|parameter)\b/i.test(query);
+	const clauses = query.split(/[.!?;]+/).filter(clause => /\btimeouts?\b|\bduration\b/i.test(clause));
+	const evidence = clauses
+		.join(" ")
+		.replace(
+			/\b(?:read|refresh|inspect|update|modify|create|delete)\s+(?:the\s+)?(?:timeout\s+)?(?:documentation|docs|guide|page)\b/gi,
+			"documentation",
+		);
+	const patterns: Array<[string, RegExp]> = [
+		["create", /\b(?:create|creation|creating)\b/i],
+		["read", /\brefresh\b|\bread\s+operation\b|\boperation\s+read\b|\bread\s+timeout\b/i],
+		["update", /\b(?:update|modification|modify|modifying)\b/i],
+		["delete", /\b(?:delete|deletion|destroy|destruction|deleting)\b/i],
+	];
+	if (!/\btimeouts?\b/i.test(query) && !patterns.some(([, pattern]) => pattern.test(evidence))) return undefined;
+	const conflicting = /\b(?:not|never|except|without|rather than|instead of)\b/i.test(evidence);
+	return {
+		operations: conflicting ? [] : patterns.filter(([, pattern]) => pattern.test(evidence)).map(([name]) => name),
+		field: !block,
+		evidence,
+	};
+}
+export function lifecycleEvidence(evidence: string): string {
+	return evidence
+		.replace(/\bmaximum duration permitted\b/gi, "duration")
+		.replace(/\b(?:creation|creating)\b/gi, "create")
+		.replace(/\b(?:destruction|deletion|destroy|deleting)\b/gi, "delete")
+		.replace(/\b(?:modification|modify|modifying)\b/gi, "update")
+		.replace(/\brefresh\b/gi, "read");
+}

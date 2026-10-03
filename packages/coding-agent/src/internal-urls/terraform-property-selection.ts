@@ -1,3 +1,4 @@
+import { interpretTerraformLifecycle, lifecycleEvidence, type TerraformLifecycleIntent } from "./terraform-lifecycle";
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
 	type PropertyCandidate,
@@ -41,6 +42,7 @@ export function selectPropertyDestination(
 	queryText: string,
 	input: readonly RankedProperty[],
 	alternatives: readonly RankedProperty[] = [],
+	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
 	const requestedType = propertyRequestedType(queryText);
 	if (requestedType) {
@@ -61,6 +63,45 @@ export function selectPropertyDestination(
 		)
 	)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
+
+	const lifecycle = context?.lifecycle ?? interpretTerraformLifecycle(queryText);
+	if (lifecycle?.field) {
+		const operations = lifecycle.operations.length ? lifecycle.operations : ["create", "read", "update", "delete"];
+		const rows = [
+			...new Map(
+				[...alternatives, ...input]
+					.filter(
+						row =>
+							operations.some(op => row.schema_path === `timeouts.${op}`) &&
+							identifiers.every(id => row.schema_path.split(".").includes(id)),
+					)
+					.map(row => [`${row.path}#${row.anchor}`, row]),
+			).values(),
+		];
+		if (rows.length) {
+			const choices = {
+				kind: "choices" as const,
+				destinations: rows,
+				reason: "Missing or unsupported lifecycle operation",
+			};
+			if (
+				lifecycle.operations.length !== 1 ||
+				context?.identityResolved === false ||
+				new Set(rows.map(row => `${row.provider_type}:${row.provider_name}`)).size !== 1
+			)
+				return choices;
+			const first = rows[0]!;
+			const intent = lifecycleEvidence(lifecycle.evidence);
+			const requested = propertyQueryTerms(intent);
+			const local = new Set(propertyTerms(`${first.schema_path} ${first.description} ${first.provider_name}`));
+			if (
+				/\b(?:retry|retries|count)\b/i.test(intent) ||
+				(requested.length && requested.filter(term => local.has(term)).length / requested.length < 0.35)
+			)
+				return choices;
+			return { kind: "leaf", destinations: [first], reason: "Exact documented lifecycle operation" };
+		}
+	}
 
 	const unique = new Map<string, RankedProperty>();
 	for (const row of input.filter(row =>

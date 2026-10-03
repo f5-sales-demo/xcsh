@@ -1,0 +1,173 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "index": {
+    "sha256": "a19c8e92ab448d10c812ab7f781aba2fb59ab671e5bdf10dee60e51d2f1f0a33",
+    "size_bytes": 796012544,
+    "gzip_sha256": "a657580fe6e665f2195a25f2fe09699eb8e97a0c2265d18aba3aee0a43082db7",
+    "gzip_size_bytes": 72076441
+  },
+  "results": [
+    {
+      "prompt": "Which resource field sets the maximum duration permitted for Namespace creation?",
+      "expected": "create",
+      "passed": true,
+      "leaf": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create"
+      ],
+      "response_sha256": "763abcc3bacaaca75f1a775400657b0a55edd65fdf6c2e4360e176a5d311696e",
+      "bytes": 908
+    },
+    {
+      "prompt": "Which field sets the maximum duration permitted for Resource destruction in xcsh_namespace?",
+      "expected": "delete",
+      "passed": true,
+      "leaf": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--delete"
+      ],
+      "response_sha256": "6b5ec462dc425cc36602bf5c81f6f41f6c2fd057caca389462230ae212930031",
+      "bytes": 993
+    },
+    {
+      "prompt": "Which resource field sets the timeout for Namespace refresh operation?",
+      "expected": "read",
+      "passed": true,
+      "leaf": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--read"
+      ],
+      "response_sha256": "d4d7eb3e79dabaa59b761447aaf45ebd0a7f15d46d442346231345c4d4957b56",
+      "bytes": 910
+    },
+    {
+      "prompt": "Which resource field sets the timeout for Namespace read operation?",
+      "expected": "read",
+      "passed": true,
+      "leaf": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--read"
+      ],
+      "response_sha256": "bd5473287439abaa0000199f89a254b229f2f2787e563d5037fe2e0fb3bafeed",
+      "bytes": 905
+    },
+    {
+      "prompt": "Which resource field sets the timeout for Namespace modification?",
+      "expected": "update",
+      "passed": true,
+      "leaf": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--update"
+      ],
+      "response_sha256": "4bb2e1f1986d7274a0d2fdbc49176db3edbad4c2e86d54380a26c9c68e6877d9",
+      "bytes": 888
+    },
+    {
+      "prompt": "Which resource field controls Namespace creation and destruction timeout?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--delete"
+      ],
+      "response_sha256": "879afce3fad715a18c7a05ad1798e6c8b9124c657b975ee99c38bf46ef5198ac",
+      "bytes": 1294
+    },
+    {
+      "prompt": "Which resource field controls Namespace timeout?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--update"
+      ],
+      "response_sha256": "d985e46f3f8b80292a77a6c532be1212a0b7ab10b5b489eec4dfdb0a8f4856d5",
+      "bytes": 1874
+    },
+    {
+      "prompt": "Read the documentation for the resource Namespace timeout field",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--update"
+      ],
+      "response_sha256": "9336637f8240238201da00362b6b19cafd460d4931b3391c01a536f93d3b26d9",
+      "bytes": 1901
+    },
+    {
+      "prompt": "Which resource field sets Namespace initial timeout?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--update"
+      ],
+      "response_sha256": "e64bce314503a304aceb50d0522adc08e6bb4f064e3a5bd5e2a3cf82164cd036",
+      "bytes": 1882
+    },
+    {
+      "prompt": "Which resource field sets Namespace timeout not for creation?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--delete",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--read",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--update"
+      ],
+      "response_sha256": "3b9ac67e85d3cf26c09980f8a422780b22046daa1b11fa15972ffe57dc16a137",
+      "bytes": 1904
+    },
+    {
+      "prompt": "Which resource field sets retry counts for Namespace creation timeout?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create"
+      ],
+      "response_sha256": "75e1da447467a63921343faaea8c779d893166c3378ddc5642f9c36fd06a544b",
+      "bytes": 925
+    },
+    {
+      "prompt": "Which field sets Namespace creation timeout?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/timeouts/index.md?view=context#schema-timeouts--create"
+      ],
+      "response_sha256": "a2678c59eb65b3b3ff6701e773df1e301cc4f5482cd31b9298de887976b2a1db",
+      "bytes": 873
+    },
+    {
+      "prompt": "Which resource field controls creation timeout?",
+      "expected": "choices",
+      "passed": true,
+      "leaf": false,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/timeouts/index.md?view=context#schema-timeouts--create",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/timeouts/index.md?view=context#schema-timeouts--create"
+      ],
+      "response_sha256": "5190fd5e9aa0197f64bf4c134e2f19d31e206e8476761867fa26f02e5e78a92a",
+      "bytes": 2138
+    }
+  ]
+}

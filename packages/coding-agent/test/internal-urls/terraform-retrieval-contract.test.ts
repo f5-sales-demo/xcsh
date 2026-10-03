@@ -224,6 +224,7 @@ test("operation timeouts are distinct from transport timeouts and general usage"
 	expect(terraformTimeoutOperations("increase HTTP connection idle timeout")).toEqual([]);
 	expect(terraformTimeoutOperations("show lifecycle timeout usage guidance")).toEqual([]);
 	expect(terraformTimeoutOperations("configure backend request timeout")).toEqual([]);
+	expect(terraformTimeoutOperations("Configure timeout duration in seconds for resource probe")).toEqual([]);
 });
 
 test("repeated schema branches require deciding context even with unequal scores", () => {
@@ -758,4 +759,19 @@ test("explicit provider role wins over incidental query and action nouns", () =>
 	expect(
 		terraformQueryIdentity("Read data.xcsh_fixture or configure resource.xcsh_fixture").providerType,
 	).toBeUndefined();
+});
+
+test("lifecycle operation wording excludes incidental verbs and conflicts", () => {
+	for (const query of [
+		"Read the documentation for the timeout field",
+		"Read timeout documentation",
+		"initial timeout field",
+		"not creation timeout",
+		"creation timeout rather than deletion timeout",
+		"inspect timeout documentation",
+	])
+		expect(terraformTimeoutOperations(query)).toEqual([]);
+	expect(terraformTimeoutOperations("maximum duration permitted for Namespace creation")).toEqual(["create"]);
+	expect(terraformTimeoutOperations("timeout for read operation")).toEqual(["read"]);
+	expect(terraformTimeoutOperations("timeout for resource modification")).toEqual(["update"]);
 });
