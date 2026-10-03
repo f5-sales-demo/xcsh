@@ -72,6 +72,10 @@ export function validateManifest(
 		}
 	}
 
+	if (resolved?.validateFields && options.operation !== "identity") {
+		errors.push(...resolved.validateFields(manifest.rawObject, options.operation === "update" ? "update" : "create"));
+	}
+
 	return { result: { valid: errors.length === 0, errors, warnings }, resolved };
 }
 
