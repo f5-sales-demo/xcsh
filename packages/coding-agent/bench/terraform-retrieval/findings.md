@@ -1207,3 +1207,12 @@ xcsh identifiers remain authoritative. Three red/green source tests cover these
 failures. 497 internal-URL tests and workspace checks pass. Audited development
 remains 47/48 with zero wrong/ambiguous/control leaves; original remains 9/14.
 No new held-out claim; frozen v4 first failure remains unchanged.
+
+Explicit post-analysis v4 regression after generic provider/role fixes: 24/140
+selected (17.14%) and 61/140 top-five (43.57%). First untouched results remain
+unchanged and qualification remains failed. Raw regression receipt is retained.
+Frozen model subset has explicit Terraform/HCL activation in only 1/28 answerable
+cases; initial installed run followed intended ordinary API discovery. Partial
+traces are preserved and the mismatched run stopped. A separate development-only
+activation-prefixed suite is prepared; frozen prompts stay unchanged. It cannot
+qualify the 40-prompt installed gate.
