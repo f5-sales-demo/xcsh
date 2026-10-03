@@ -1620,3 +1620,8 @@ child port passages. Development broader expected top-five improves43/45to45/45
 with40/45selected and zero false leaves preserved. Original12/14,audited47/48
 unchanged,zero ambiguous/control leaves. Full541regressiontests pass. Exact
 receipts: indexed-block-development-receipt.json. Independent qualification unmet.
+
+Explicit block-name exception to minimum query coverage passes unit fixture but
+improves no complete development selections (12/14,47/48,40/45 unchanged).
+Rejected and production source restored; exact patch/raw receipts preserved in
+named-block-coverage-rejection-receipt.json. Indexed block recall fix retained.
