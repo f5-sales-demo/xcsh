@@ -28,3 +28,13 @@ test("lifecycle selection uses complete operation evidence and keeps every named
 	])
 		expect(selectPropertyDestination(query, rows).kind).not.toBe("leaf");
 });
+
+test("property documentation wording preserves an entire timeout block request", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	expect(
+		interpretTerraformLifecycle(
+			"Where in the xcsh_namespace property documentation is the entire nested timeouts configuration block described?",
+		)?.field,
+	).toBe(false);
+	expect(interpretTerraformLifecycle("Which property inside the timeouts block controls creation?")?.field).toBe(true);
+});

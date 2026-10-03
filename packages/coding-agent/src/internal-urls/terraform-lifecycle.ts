@@ -10,7 +10,10 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 		/\b(?:connection|idle|request|response|tls|handshake|probe)\b/i.test(query)
 	)
 		return undefined;
-	const block = /\btimeouts?\s+block\b/i.test(query) && !/\b(?:field|attribute|property|parameter)\b/i.test(query);
+	const question = query.replace(/\bproperty\s+(?:documentation|reference)\b/gi, "documentation");
+	const block =
+		/\btimeouts?\s+(?:configuration\s+)?block\b/i.test(question) &&
+		!/\b(?:field|attribute|property|parameter)\b/i.test(question);
 	const clauses = query.split(/[.!?;]+/).filter(clause => /\btimeouts?\b|\bduration\b/i.test(clause));
 	const evidence = clauses
 		.join(" ")
