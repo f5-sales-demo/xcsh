@@ -1281,3 +1281,17 @@ Five cases emitted HCL; reviewed fields are documented for setup/tunnel examples
 but ambiguity drafts and exact citation failures prevent acceptance. Reports and
 digests are retained in model-activation-development-receipt.json; raw synthetic
 traces remain task-local. These modified exposed prompts cannot qualify release.
+
+
+## Separate indexed provider-description development experiment
+
+A compact source-bound provider index uses canonical names, maintained summaries,
+reviewed aliases and taxonomy/task facets, with deterministic BM25 ranking.
+Identity records are distinct by provider type/name; duplicate navigation pages
+cannot crowd out choices. AND facet scope, role separation, deterministic ties
+and provenance/version rejection pass four tests. Two builds are byte-identical:
+307,200 bytes SHA256 fbefa7f44ee0a6bd26b919fddec2b13d36ea321d806859a2674cdc0df9fca9b7.
+Provider top-five is 47/48 audited development and 14/14 original; top-one is
+30/48 and 11/14. Query p95 is under 1 ms; this excludes leaf retrieval/rendering.
+Prototype remains outside production and cannot qualify release. Raw reports
+and digests: provider-discovery-receipt.json.
