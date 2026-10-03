@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_only": true,
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "review_sha256": "67c0f90069909181b427a3e26668eae899f99246d8bd751fccea7940b88828d5",
+  "conversation": "291829d1-0833-4d84-8e2a-153ef0c2cdb0",
+  "proposed": 30,
+  "unresolved": 10,
+  "target_documents_and_anchors_verified": 40,
+  "semantic_verification_pending": true,
+  "production_imported": false
+}

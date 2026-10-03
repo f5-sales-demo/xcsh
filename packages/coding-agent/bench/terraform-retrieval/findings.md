@@ -1392,3 +1392,14 @@ timeout destinations. Generic reference boilerplate repeats for 1,337 name,
 1,337 namespace and 1,328 tenant destinations. These are source sparsity counts,
 not qualification. Exact index/source receipt: property-description-quality-receipt.json.
 Independent source review is active; no semantic replacements inferred yet.
+
+Source-only independent reviewer returns 30 proposed summary/terminology entries
+and 10 unresolved cases, file SHA-256
+67c0f90069909181b427a3e26668eae899f99246d8bd751fccea7940b88828d5.
+All 40 referenced documents/anchors exist in the pinned index. Several proposed
+clauses exceed quoted evidence, including default egress and telemetry enforcement;
+a separate source-only verifier is checking/narrowing every entry. No proposals
+applied yet, no qualification claim. Exact raw receipt: terminology-source-review-receipt.json.
+Provider follow-up #2378 / PR #2379 independently fixes lifecycle alias scope,
+passes 28 metadata/documentation tests and corpus-wide classification audit.
+Consumer remains draft; provider follow-up CI/merge is pending.
