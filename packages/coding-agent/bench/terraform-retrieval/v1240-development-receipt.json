@@ -1,0 +1,33 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "report_file": "v1240-all-role-development.json.gz",
+  "report_sha256": "cd9bec0d8f7fff61974faf41d8523f15e80e517b8406efcbca80bb41815c4ed6",
+  "gzip_sha256": "e45533b2faf1d5f57575498029ba79785ad74163297e1287f5d1093d4877ac09",
+  "summary": {
+    "development_only": true,
+    "qualification_passed": false,
+    "actual_production_resolver": true,
+    "regression_only": false,
+    "provider_version": "v12.4.0",
+    "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+    "index_sha256": "cfe5abc1032ddd1eb874f1cab0f3e25e42c555f40db3f2ce2d209db563d98326",
+    "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+    "cold_materialization_ms": 2786.63798,
+    "warm_p95_ms": 32.21412799999962,
+    "answerable": 43,
+    "correct_leaf": 43,
+    "wrong_leaf": 0,
+    "ambiguous_leaf": 0,
+    "control_leaf": 0,
+    "answerable_top5": 43,
+    "limitations": [
+      "Development labels only; no independently frozen qualification.",
+      "Complete resolver discovery and selected context timed; model/network time excluded.",
+      "No compiled installed artifact acceptance."
+    ]
+  },
+  "limitations": [
+    "Development labels from v12.3.1 retained; no held-out qualification."
+  ]
+}
