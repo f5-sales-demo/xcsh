@@ -640,3 +640,15 @@ test("section field flags nesting and cardinality reject malformed schema hints"
 		} as TerraformMetadata),
 	).not.toThrow();
 });
+
+test("application firewall resource terminology resolves the provider owner", () => {
+	expect(
+		terraformProviderMention(
+			"Which configuration block in a managed application firewall resource enables blocking?",
+			["app_firewall", "dns_zone"],
+		),
+	).toBe("app_firewall");
+	expect(terraformProviderMention("Inspect an application firewall data source", ["app_firewall", "dns_zone"])).toBe(
+		"app_firewall",
+	);
+});

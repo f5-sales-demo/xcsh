@@ -1632,3 +1632,10 @@ passes; all39565pinned sections have valid flag/nesting metadata. This prevents
 malformed schema hints supporting unsupported HCL guidance; no runtime or
 qualification claim. Provider latest source c1a829f010d run37102921503 remains
 active after superseding previous spec delivery run.
+
+Provider ownership normalizes documented application firewall terminology to
+app_firewall, preserving explicit resource/data-source contexts. Red/green test
+passes. Development selected counts12/14,47/48,40/45 unchanged; queried owner
+now correctly scoped, sparse-description confidence remains unresolved. No
+threshold loosening or qualification claim. Exact raw receipts:
+application-firewall-development-receipt.json.
