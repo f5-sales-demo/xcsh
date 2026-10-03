@@ -607,3 +607,36 @@ test("singular route prose identifies the exclusive outside branch", () => {
 		"choices",
 	);
 });
+
+test("section field flags nesting and cardinality reject malformed schema hints", () => {
+	const section = {
+		schema_path: ["tls", "port"],
+		document_id: "fixture",
+		anchor: "schema-tls--port",
+		description: "Port.",
+		aliases: [],
+		relationships: [],
+		flags: ["optional"],
+	};
+	for (const change of [
+		{ flags: ["invented"] },
+		{ flags: [3] },
+		{ nesting: "unknown" },
+		{ min_items: -1 },
+		{ max_items: 1.5 },
+		{ min_items: 3, max_items: 2 },
+	]) {
+		expect(() =>
+			validateTerraformRetrievalMetadata({
+				...metadata(),
+				sections: [{ ...section, ...change }],
+			} as TerraformMetadata),
+		).toThrow();
+	}
+	expect(() =>
+		validateTerraformRetrievalMetadata({
+			...metadata(),
+			sections: [{ ...section, nesting: "list", min_items: 1, max_items: 2 }],
+		} as TerraformMetadata),
+	).not.toThrow();
+});

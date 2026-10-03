@@ -43,6 +43,9 @@ export interface TerraformSection {
 	aliases: string[];
 	relationships: TerraformRelationship[];
 	flags: string[];
+	nesting?: string | null;
+	min_items?: number | null;
+	max_items?: number | null;
 }
 export interface TerraformMetadata {
 	retrieval_version?: number;
@@ -89,6 +92,14 @@ export function validateTerraformRetrievalMetadata(m: TerraformMetadata): void {
 			!Array.isArray(section.aliases) ||
 			!section.aliases.every(v => typeof v === "string") ||
 			!Array.isArray(section.flags) ||
+			!section.flags.every(flag =>
+				["required", "optional", "computed", "sensitive", "deprecated", "write_only"].includes(flag),
+			) ||
+			(section.nesting != null && !["single", "list", "set", "map"].includes(section.nesting)) ||
+			[section.min_items, section.max_items].some(
+				value => value != null && (!Number.isSafeInteger(value) || value < 0),
+			) ||
+			(section.min_items != null && section.max_items != null && section.min_items > section.max_items) ||
 			!Array.isArray(section.relationships)
 		)
 			throw new Error("Invalid Terraform retrieval section");

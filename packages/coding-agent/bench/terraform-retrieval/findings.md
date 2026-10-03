@@ -1625,3 +1625,10 @@ Explicit block-name exception to minimum query coverage passes unit fixture but
 improves no complete development selections (12/14,47/48,40/45 unchanged).
 Rejected and production source restored; exact patch/raw receipts preserved in
 named-block-coverage-rejection-receipt.json. Indexed block recall fix retained.
+
+Section metadata validator verifies known field flags, nesting modes and integer
+nonnegative min/max cardinality ordering. Red/green malformed-schema fixture
+passes; all39565pinned sections have valid flag/nesting metadata. This prevents
+malformed schema hints supporting unsupported HCL guidance; no runtime or
+qualification claim. Provider latest source c1a829f010d run37102921503 remains
+active after superseding previous spec delivery run.
