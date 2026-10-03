@@ -210,3 +210,8 @@ test("enabling configuration choices remains distinct from explicit boolean fiel
 test("passive field wording retains requested value without choosing a role",()=>{
  expect(propertyRequestedText("Where in BGP configuration is the autonomous system number specified for an external peer?")).toBe("the autonomous system number");
 });
+
+test("trailing purpose cannot rank an unrelated field over the requested domains",()=>{
+ const scope=preparePropertyScope([row("domains","Host domains accepting traffic."),row("http_redirect","HTTP traffic redirection."),row("testing.domain","Testing domain.")]);
+ expect(rankPropertyScope("Specify domains to handle HTTP traffic in xcsh_fixture",scope)[0]?.schema_path).toBe("domains");
+});

@@ -164,9 +164,17 @@ export function rankPropertyScope(
 				total += w;
 				if (union.has(term)) coverage += w;
 				if (row.context.includes(term)) context += w;
-				if (row.leaf.includes(term)) local += w * 3;
-				else if (row.descriptionTerms.includes(term)) local += w;
-				else if (row.aliasTerms.includes(term)) local += w * 0.25;
+				const localWeight =
+					asksField &&
+					/\bto\s+(?:handle|match|configure|enable|provide)\b|\bwhen\s+(?:declaring|configuring|reading)\b|\bof\s+(?:an? |the )?(?:existing |managed )?(?:resource|load balancer|site|object)\b/i.test(
+						queryText,
+					) &&
+					!target.includes(term)
+						? 0.35
+						: 1;
+				if (row.leaf.includes(term)) local += w * 3 * localWeight;
+				else if (row.descriptionTerms.includes(term)) local += w * localWeight;
+				else if (row.aliasTerms.includes(term)) local += w * 0.25 * localWeight;
 			}
 			const localTerms = new Set([...row.leaf, ...row.descriptionTerms]);
 			let precision = 0;
