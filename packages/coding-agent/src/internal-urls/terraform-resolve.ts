@@ -1,11 +1,12 @@
-import type { TerraformCategory, TerraformIndex, TerraformResource } from "./terraform-types";
+import type { CanonicalTerraformIndex, TerraformCategory, TerraformIndex, TerraformResource } from "./terraform-types";
 import type { InternalResource, InternalUrl } from "./types";
 
 export interface TerraformResolver {
 	resolve(url: InternalUrl): Promise<InternalResource>;
 }
 
-export function createTerraformResolver(index: TerraformIndex): TerraformResolver {
+export function createTerraformResolver(index: TerraformIndex | CanonicalTerraformIndex): TerraformResolver {
+	if ("schema_version" in index) return createCanonicalTerraformResolver(index);
 	const resources = normalizeResources(index.resources);
 	const categoryBySlug = new Map<string, TerraformCategory>();
 	for (const cat of index.categories) {
@@ -187,4 +188,29 @@ function truncateAt(s: string, maxLen: number): string {
 	if (s.length <= maxLen) return s;
 	const cut = s.lastIndexOf(" ", maxLen - 3);
 	return `${s.slice(0, cut > 0 ? cut : maxLen - 3)}...`;
+}
+
+function createCanonicalTerraformResolver(index: CanonicalTerraformIndex): TerraformResolver {
+	return {
+		async resolve(url: InternalUrl): Promise<InternalResource> {
+			const query = (url.rawPathname ?? url.pathname).replace(/^\/+|\/+$/g, "");
+			const parts = query.split("/");
+			const name = parts.at(-1) ?? "";
+			const matches = index.pages.filter(page => !query || page.provider_name === name || page.category === name);
+			const pages = query ? matches : matches.filter(page => page.role === "fundamentals");
+			const rows = pages.map(page => `- [${page.title}: ${page.role}](${page.source_url}) — ${page.summary}`);
+			return makeResource(
+				url,
+				[
+					`# Terraform documentation (${index.providerTag ?? index.provider})`,
+					"",
+					`Provider source: ${index.providerCommit ?? "canonical corpus"}`,
+					"",
+					"Follow the indexed source links for exact configuration, required fields and validation constraints.",
+					"",
+					...(rows.length ? rows : ["No matching canonical documentation pages."]),
+				].join("\n"),
+			);
+		},
+	};
 }

@@ -76,7 +76,7 @@ import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { TerraformDocumentationRepository } from "./terraform-documentation";
 import { EMBEDDED_TERRAFORM_DOCUMENTATION } from "./terraform-documentation-assets.generated";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
-import type { TerraformIndex } from "./terraform-types";
+import type { CanonicalTerraformIndex, TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 
 const SCHEME_PREFIX = "xcsh://";
@@ -113,16 +113,16 @@ const EMPTY_TERRAFORM_INDEX: TerraformIndex = {
 	resources: [],
 };
 
-let _terraformCache: { index: TerraformIndex } | null = null;
+let _terraformCache: { index: TerraformIndex | CanonicalTerraformIndex } | null = null;
 
-function loadTerraformIndex(): TerraformIndex {
+function loadTerraformIndex(): TerraformIndex | CanonicalTerraformIndex {
 	if (_terraformCache) return _terraformCache.index;
 	try {
 		const mod = require("./terraform-index.generated") as {
-			TERRAFORM_INDEX?: TerraformIndex;
+			TERRAFORM_INDEX?: TerraformIndex | CanonicalTerraformIndex;
 		};
 		const index = mod.TERRAFORM_INDEX ?? EMPTY_TERRAFORM_INDEX;
-		if (Object.keys(index.resources).length === 0) {
+		if (("schema_version" in index ? index.pages.length : index.resources.length) === 0) {
 			logger.warn("terraform index loaded but contains 0 resources");
 		}
 		_terraformCache = { index };
@@ -629,7 +629,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const documentationEntry = `- [${DOCUMENTATION_HOST}/](${SCHEME_PREFIX}${DOCUMENTATION_HOST}/) — pinned offline F5 product and support documentation`;
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
 		const tf = loadTerraformIndex();
-		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
+		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${"schema_version" in tf ? tf.pages.length : tf.resources.length} entries, ${"schema_version" in tf ? tf.providerTag : tf.version})`;
 		const registryEntry = `- [${REGISTRY_HOST}/provider/<namespace>/<type>](${SCHEME_PREFIX}${REGISTRY_HOST}/provider/hashicorp/random) — live Terraform provider and module Registry metadata`;
 		const entries = [
 			"- [user](xcsh://user) — local person profile; [schema](xcsh://user/schema)",
