@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "qualification_passed": false,
+  "source_commit": "4a235b3d94da3a8eb2f86b94a7adac31fe5c82e4",
+  "provider_version": "v12.4.0",
+  "documentation_tag": "documentation-v12.4.0",
+  "provider_source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+  "delivery_policy": "Keep merged code; draft fixes; do not release until retained qualification gates pass.",
+  "verified": {
+    "provider_and_documentation_releases": "Live GitHub read-only verification: both immutable and published",
+    "source_package_tests": {
+      "pass": 9607,
+      "skip": 562,
+      "fail": 0,
+      "files": 968,
+      "seconds": 496.01
+    },
+    "terraform_focused_tests": 338,
+    "source_review": "Ubuntu ChatGPT sign-in read-only approval",
+    "offline_source_development": "40 complete response hashes match Mac/Ubuntu",
+    "draft_pr": 4710
+  },
+  "accuracy": {
+    "peer_development_only": {
+      "answerable": 94,
+      "correct_leaf": 78,
+      "wrong_leaf": 5,
+      "answerable_top5": 79,
+      "suite_sha256": "0fbb30835cb6c1dd71d21e4f079f86e24a3be24a1a6cbc341c7f82a702c7d0de"
+    },
+    "exposed_v6_regression_only": {
+      "answerable": 140,
+      "correct_leaf": 79,
+      "wrong_leaf": 5,
+      "answerable_top5": 98,
+      "suite_sha256": "23ec48945ba12546fba7de87959b7d5ac7c080581d4b5229815b593d6aae0c47"
+    }
+  },
+  "remaining": [
+    {
+      "requirement": "Independently authored/reviewed frozen200cases140/40/20including50depth8answerable",
+      "state": "missing eligible suite; six prior exposed suites remain regression-only"
+    },
+    {
+      "requirement": "95percentoverall and answerable accuracy; everyanswerabletop5; zerounsupportedclaims",
+      "state": "unmet; development/regression metrics do not qualify"
+    },
+    {
+      "requirement": "40installedmodel28/8/4 trace/read/citation/HCL/clarification checks",
+      "state": "unmet; previous model subset activation defects and diagnostic failures retained"
+    },
+    {
+      "requirement": "Final-source Mac/Ubuntu compiled offline five-repeat latency/parity",
+      "state": "missing; installed candidate90a280a58predates current fixes"
+    },
+    {
+      "requirement": "Coldmaterialization/startup/contextbytes/tokens/toolcalls/indexsizes/security/navigation",
+      "state": "partial earlier evidence; exact final artifact audit required"
+    },
+    {
+      "requirement": "Consumer merge/release and installed Homebrew/Ubuntu acceptance",
+      "state": "not authorized while gate unmet; PR4710draft/automergeoff"
+    }
+  ],
+  "benchmark_integrity": {
+    "original_labels_unchanged": true,
+    "source_label_audit": "16exposeddevelopmentcases source-only audit awaiting corrected peer/child evidence validation",
+    "heldout_retuning_prohibited": true
+  },
+  "limitations": [
+    "Readiness inventory is not acceptance authority.",
+    "All live/source/artifact receipts must match the final frozen candidate before qualification."
+  ]
+}
