@@ -1292,3 +1292,11 @@ Two source-bound deterministic role/ranking tests pass. Rejected and not importe
 by production; raw evidence retained in fielded-bm25-rejection-receipt.json.
 The prior task-local semantic service is stopped; separate offline hybrid
 evaluation would require verified runtime restart and exact v12.3.1 vectors.
+
+A separate offline semantic/hybrid development experiment is preparing vectors
+from exact v12.3.1 canonical destinations. All four embeddinggemma:300m model
+blobs verify against cached manifest; no stale v12.2.0 vectors reused. Task-local
+loopback runtime and digest-bound corpus are separate from production. Vector
+materialization is active; evaluator waits for its exact completion receipt.
+Semantic input generation rejects exposed suites without explicit regression.
+Preparation receipt: semantic-v1231-preparation.json. No qualification claim.
