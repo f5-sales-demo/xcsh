@@ -1,0 +1,83 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "rejected": true,
+  "reason": "Generic named block route expanded incorrect selections; reverted.",
+  "files": [
+    {
+      "path": "v1240-named-block-route-rejected-development.json.gz",
+      "sha256": "22139ef314c6d371dcd61555a145d93003da4348cfea7b24e80640af0cda9ba9",
+      "gzip_sha256": "9c3b1a868b496a59b40927e4d6a8b4224397c2ca86291409fc66fe1ba9febed8",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "54ed4ffae96b185df4e9dc8d3b4b4bbf7aa654a55402331477396e10df4ff4ea",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1884.609463,
+        "warm_p95_ms": 33.558374999999614,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    {
+      "path": "v1240-named-block-route-rejected-regression.json.gz",
+      "sha256": "2cd2b1f8e62e77540ed83bc5a93186d48e1dafd6ca3eb54a38a5174c2ab5924b",
+      "gzip_sha256": "501e62901776891ef13cf81d49fa3d7203b5bfb653cc0bb72992423d803661ae",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "54ed4ffae96b185df4e9dc8d3b4b4bbf7aa654a55402331477396e10df4ff4ea",
+          "size_bytes": 795435008,
+          "gzip_sha256": "35c67408c4c3db731c28c606e72a7c9458fab7995753543aa3a2b82d384dd2d9",
+          "gzip_size_bytes": 72045150
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1758.965608,
+        "warm_p95_ms": 31.31516099999999,
+        "discovery_p95_ms": 38.38458900000023,
+        "context_p95_ms": 0.3230780000012601,
+        "route_p95_ms": 38.4081070000002,
+        "warm_measurement_count": 2345,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 800,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 3976,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 3995655,
+        "tool_calls": 2345,
+        "index_file_bytes": 72045150,
+        "answerable_accuracy": 0.6642857142857143,
+        "answerable_top5": 0.8571428571428571,
+        "scored_accuracy": 0.631578947368421,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    }
+  ]
+}
