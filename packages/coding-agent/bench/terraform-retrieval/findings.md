@@ -1438,3 +1438,10 @@ Rejected and not imported by production. Raw rule/source-bound reports:
 normalized-property-candidate-rejection-receipt.json. Provider #2382 raw review
 fixtures are now deterministic gzip to preserve authoritative bytes under CI
 formatting; no scanner exemptions or evidence alterations.
+
+Provider #2379 merges as c0facb7987db742a86d548674e5c894c8eb7ab5a after
+PR-specific generation/example and race checks. Provider #2382 merges current
+main into branch, resolves overlapping generator/tests retaining both fixes,
+and passes all 30 combined metadata/documentation tests plus Ruff/Pylint.
+Combined branch source 3870927535. Normal serialized On Merge regeneration
+is pending; no new immutable snapshot or consumer qualification yet.
