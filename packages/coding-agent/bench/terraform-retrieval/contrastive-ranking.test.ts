@@ -176,3 +176,10 @@ test("lookup value phrases preserve requested fields without provider identity",
  expect(propertyRequestedText("Read served domains from an edge distribution via xcsh_fixture data source.")).toContain("domains");
  expect(propertyRequestedText("Query xcsh_fixture data source")).toBeUndefined();
 });
+
+test("listener wording and plural prefixes share literal field vocabulary",()=>{
+ expect(propertyQueryTerms("listening port")).toEqual(propertyTerms("listen_port"));
+ expect(propertyQueryTerms("IPv4 prefixes")).toEqual(propertyTerms("ipv4_prefix"));
+ const scope=preparePropertyScope([row("listen_port","Listening port."),row("tcp","TCP listener configuration.","section")]);
+ expect(rankPropertyScope("Specify the listening port number in xcsh_fixture resource block",scope)[0]?.schema_path).toBe("listen_port");
+});

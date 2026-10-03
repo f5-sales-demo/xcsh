@@ -70,11 +70,13 @@ export function propertyQueryTerms(text: string): string[] {
 		text
 			.toLowerCase()
 			.replace(/operating[ -]+system/g, "os")
+			.replace(/\b(?:listening|listener)\b/g, "listen")
+			.replace(/\bprefixes\b/g, "prefix")
 			.replace(/active operational state/g, "active")
 			.replace(/load[ -]+balancer/g, "loadbalancer")
 			.replace(/application[ -]+firewall/g, "app firewall")
 			.replace(/\bsource network address translation\b/g, "snat")
-			.replace(/\bip address prefixes\b/g, "prefixes")
+			.replace(/\bip address prefix(?:es)?\b/g, "prefix")
 			.replace(/\bstrip(?:ping|ped)?\b/g, "remove")
 			.replace(/\bbefore forwarding\b/g, "upstream")
 			.replace(/\bpermits\b/g, "permit"),
