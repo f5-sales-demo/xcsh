@@ -330,7 +330,7 @@ jobs:
         run: bash scripts/ci-bun-install.sh
 
       - name: Remove stale generated files
-        if: steps.main_delivery.outputs.applied != 'true'
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
         run: |
           rm -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
           rm -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
@@ -339,7 +339,7 @@ jobs:
           rm -f packages/resource-management/src/defaults-metadata.generated.ts
 
       - name: Generate exact API spec and catalog indexes
-        if: steps.main_delivery.outputs.applied != 'true'
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
         working-directory: packages/coding-agent
         env:
           API_SPECS_TAG: ${{ steps.delivery.outputs.release_tag }}
@@ -352,7 +352,7 @@ jobs:
           bun run generate-api-catalog-qmd-index
 
       - name: Generate Terraform index
-        if: steps.main_delivery.outputs.applied != 'true'
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
         working-directory: packages/coding-agent
         env:
           API_SPECS_TAG: ${{ steps.delivery.outputs.release_tag }}
@@ -363,7 +363,7 @@ jobs:
         run: bun run generate-terraform-index
 
       - name: Generate exact minimum-settings defaults table
-        if: steps.main_delivery.outputs.applied != 'true'
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
         working-directory: packages/resource-management
         env:
           API_SPECS_TAG: ${{ steps.delivery.outputs.release_tag }}
