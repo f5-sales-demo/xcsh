@@ -1,0 +1,5 @@
+Approve for development only. No remaining concrete bugs found in the current diff.
+
+Static review confirms descriptive duration/value/limit text after the timeouts block preserves block intent; value phrases before in/inside/under/within select field intent; entire/whole/complete wording preserves block intent. Tests cover network timeout exclusion and conflicting operations returning choices.
+
+No edits, tests, network access, or benchmarks performed.

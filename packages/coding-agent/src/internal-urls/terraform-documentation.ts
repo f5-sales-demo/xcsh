@@ -1603,7 +1603,7 @@ export class TerraformDocumentationRepository {
 					schemaPaths: timeoutPaths,
 					filters,
 					node: node ?? undefined,
-				}).filter(row => !propertyRequestsBlock(search) || row.anchor === "section");
+				}).filter(row => lifecycle?.field || !propertyRequestsBlock(search) || row.anchor === "section");
 				if (ranked[0]?.anchor === "section" && !propertyRequestsBlock(search)) {
 					const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(ranked[0].path) as {
 						metadata: string;

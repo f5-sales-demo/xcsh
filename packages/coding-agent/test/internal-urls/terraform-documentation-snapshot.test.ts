@@ -1526,6 +1526,16 @@ test("lifecycle fields share interpretation through the complete resolver and bi
 			const uri = result.content.match(/^Read: (\S+)/m)![1]!;
 			expect((await read(uri)).content).toContain(`Timeout duration for ${op} operation.`);
 		}
+		for (const [word, op] of [
+			["creation", "create"],
+			["read", "read"],
+			["update", "update"],
+			["deletion", "delete"],
+		]) {
+			const result = await query(`Configure the ${word} timeout duration in the timeouts block for xcsh_fixture.`);
+			expect(result.content).toContain(`schema-timeouts--${op}`);
+			expect(result.content).toContain("Selected leaf;");
+		}
 		const multi = (
 			await query(
 				"Which timeout field controls creation and destruction?",
