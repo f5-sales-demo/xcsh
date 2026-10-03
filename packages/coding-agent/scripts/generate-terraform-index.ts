@@ -15,7 +15,7 @@ const LOCAL_JSON_PATH = path.resolve(
 );
 
 const GITHUB_RAW_URL =
-	"https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/main/docs/terraform-llms-index.json";
+	"https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/main/documentation/terraform-llms-index.json";
 const PROVIDER_REPOSITORY = "f5-sales-demo/terraform-provider-xcsh";
 const PROVIDER_TAG_PATTERN = /^v\d+\.\d+\.\d+$/;
 
@@ -39,7 +39,7 @@ export function exactProviderIndexUrl(providerCommit: string): string {
 	if (!/^[0-9a-f]{40}$/.test(providerCommit)) {
 		throw new Error(`TERRAFORM_PROVIDER_COMMIT must be a full lowercase Git SHA, got ${providerCommit}`);
 	}
-	return `https://raw.githubusercontent.com/${PROVIDER_REPOSITORY}/${providerCommit}/docs/terraform-llms-index.json`;
+	return `https://raw.githubusercontent.com/${PROVIDER_REPOSITORY}/${providerCommit}/documentation/terraform-llms-index.json`;
 }
 
 function exactProviderIdentity(env: Record<string, string | undefined>): { commit: string; tag: string } | undefined {

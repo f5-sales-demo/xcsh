@@ -4,7 +4,7 @@ import { exactProviderIndexUrl, loadTerraformIndex } from "../../scripts/generat
 
 const PROVIDER_TAG = "v3.73.0";
 const PROVIDER_COMMIT = "a".repeat(40);
-const EXACT_URL = `https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/${PROVIDER_COMMIT}/docs/terraform-llms-index.json`;
+const EXACT_URL = `https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/${PROVIDER_COMMIT}/documentation/terraform-llms-index.json`;
 const GENERATOR_PATH = path.resolve(import.meta.dir, "../../scripts/generate-terraform-index.ts");
 
 describe("Terraform index exact provider delivery", () => {
