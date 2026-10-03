@@ -171,3 +171,11 @@ test("literal schema segments constrain retrieval before the candidate budget",(
  expect(searchPropertyIndex(db,"which field holds name under oidc_auth",{providerName:"fixture"},2).map(row=>row.path)).toEqual(["target"]);
  expect(searchPropertyIndex(db,"which field holds name under missing_schema",{providerName:"fixture"},2)).toEqual([]);db.close();
 });
+
+test("literal leaf names supplement broad passage candidates without escaping scope",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const insert=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(let i=0;i<30;i++)insert.run("resources","fixture",`branch${i}.other`,`decoy${i}`,"schema-other","name ".repeat(100));
+ insert.run("resources","fixture","name","target","schema-name","Object identifier.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"which field specifies name",{providerName:"fixture"},1).some(row=>row.path==="target")).toBe(true);
+ expect(searchPropertyIndex(db,"which field specifies name",{providerName:"absent"},1)).toEqual([]);db.close();
+});

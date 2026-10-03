@@ -4,6 +4,8 @@ import {
 	type PropertyCandidate,
 	preparePropertyScope,
 	propertyQueryTerms,
+	propertyRequestedText,
+	propertyRequestsBlock,
 	rankPropertyScope,
 } from "./terraform-property-ranking";
 export interface PropertyIndexSource {
@@ -14,7 +16,7 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 	const row = db
 		.query("SELECT schema_version,source_commit,source_index_sha256 FROM property_index_provenance")
 		.get() as { schema_version: number; source_commit: string; source_index_sha256: string } | null;
-	if (row?.schema_version !== 3) throw new Error("Unsupported property index version");
+	if (row?.schema_version !== 4) throw new Error("Unsupported property index version");
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
 }
@@ -30,9 +32,10 @@ export function populatePropertyIndex(
  CREATE TABLE property_scopes(provider_type TEXT,provider_name TEXT,destination_count INTEGER,PRIMARY KEY(provider_type,provider_name));
  CREATE TABLE property_scope_terms(provider_type TEXT,provider_name TEXT,term TEXT,weight REAL,PRIMARY KEY(provider_type,provider_name,term));
  CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
+ CREATE INDEX property_leaf_lookup ON property_terms(leaf,provider_name,provider_type);
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
-		3,
+		4,
 		source?.sourceCommit ?? "",
 		source?.sourceIndexSha256 ?? "",
 	);
@@ -156,8 +159,30 @@ export function searchPropertyIndex(
 			`SELECT provider_type,provider_name,schema_path FROM property_search WHERE ${clauses.join(" AND ")} ORDER BY bm25(property_search),provider_type,provider_name,schema_path LIMIT ?`,
 		)
 		.all(...args, limit) as { provider_type: string; provider_name: string; schema_path: string }[];
+	const requested = propertyQueryTerms(propertyRequestedText(query) ?? query);
+	const leafKeys = [
+		...new Set(
+			requested.flatMap((term, index) => [
+				JSON.stringify([term]),
+				...(index + 1 < requested.length ? [JSON.stringify(requested.slice(index, index + 2))] : []),
+				...(index + 2 < requested.length ? [JSON.stringify(requested.slice(index, index + 3))] : []),
+			]),
+		),
+	];
+	const exact = propertyRequestsBlock(query)
+		? []
+		: (db
+				.query(
+					`SELECT provider_type,provider_name,schema_path FROM property_terms property_search WHERE ${clauses.slice(1).join(" AND ") || "1=1"} AND leaf IN (${leafKeys.map(() => "?").join(",")}) ORDER BY provider_type,provider_name,schema_path LIMIT ?`,
+				)
+				.all(...args.slice(1), ...leafKeys, limit) as typeof candidates);
+	const union = [
+		...new Map(
+			[...exact, ...candidates].map(row => [`${row.provider_type}:${row.provider_name}:${row.schema_path}`, row]),
+		).values(),
+	];
 	const groups = new Map<string, string[]>();
-	for (const row of candidates) {
+	for (const row of union) {
 		const key = `${row.provider_type}|${row.provider_name}`;
 		const group = groups.get(key) ?? [];
 		group.push(row.schema_path);

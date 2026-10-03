@@ -49,9 +49,9 @@
 		}
 	},
 	"index": {
-		"sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
-		"size_bytes": 792915968,
-		"gzip_sha256": "4de2e1fcf2a6858ee639835728cbabedac2a82b28498843e408ce1b945ade691",
-		"gzip_size_bytes": 71617233
+		"sha256": "a25e7973b282204fab35b365ec808e436159c2c1e72c60d0bdc17fabd366daf0",
+		"size_bytes": 794988544,
+		"gzip_sha256": "4c738aaa4627ca44ff6bbd722eeb21edc9852368373a239b13db6c818b843867",
+		"gzip_size_bytes": 71969527
 	}
 }
