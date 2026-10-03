@@ -1223,7 +1223,7 @@ Idle connection timeout.
 		expect(
 			(
 				await read(
-					"?search=" + encodeURIComponent("Specify the HTTPS listening port in an xcsh_fixture resource block"),
+					`?search=${encodeURIComponent("Specify the HTTPS listening port in an xcsh_fixture resource block")}`,
 				)
 			).content,
 		).toContain("#schema-listen_port");
