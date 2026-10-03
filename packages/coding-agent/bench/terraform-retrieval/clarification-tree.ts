@@ -26,9 +26,21 @@ export function validateClarificationTree(tree: FrozenClarificationTree): void {
 	const visit = (node: FrozenClarificationNode, parent: FrozenClarificationNode | undefined, depth: number) => {
 		if (depth > tree.max_depth) throw new Error("Frozen clarification exceeds reviewed depth");
 		const uri = new URL(node.request);
-        const allowed = new Set(["search","node","provider_type","provider_name","role","category","capability","task","limit"]);
-        for (const key of uri.searchParams.keys()) if(!allowed.has(key)) throw new Error("Unsupported frozen clarification parameter");
-        for (const key of uri.searchParams.keys()) if(uri.searchParams.getAll(key).length!==1) throw new Error("Duplicate frozen clarification parameter");
+		const allowed = new Set([
+			"search",
+			"node",
+			"provider_type",
+			"provider_name",
+			"role",
+			"category",
+			"capability",
+			"task",
+			"limit",
+		]);
+		for (const key of uri.searchParams.keys())
+			if (!allowed.has(key)) throw new Error("Unsupported frozen clarification parameter");
+		for (const key of uri.searchParams.keys())
+			if (uri.searchParams.getAll(key).length !== 1) throw new Error("Duplicate frozen clarification parameter");
 		if (uri.protocol !== "xcsh:" || uri.host !== "terraform-documentation" || uri.pathname !== "/" || uri.hash)
 			throw new Error("Invalid frozen clarification request");
 		if (!uri.searchParams.get("search")) throw new Error("Frozen clarification requires query");
@@ -77,8 +89,12 @@ export async function evaluateClarificationTree(
 			if (reads.length) findings.push(`Off-tree leaf candidates: ${node.request}`);
 			const actual = [...measured.discovery.matchAll(/^Refine: (\S+)/gm)].map(match => new URL(match[1]!).href);
 			const expected = node.children.map(child => new URL(child.request).href);
-			if (actual.length !== expected.length || new Set(actual).size !== actual.length ||
-				actual.some(uri => !expected.includes(uri))) findings.push(`Missing or extra frozen branches: ${node.request}`);
+			if (
+				actual.length !== expected.length ||
+				new Set(actual).size !== actual.length ||
+				actual.some(uri => !expected.includes(uri))
+			)
+				findings.push(`Missing or extra frozen branches: ${node.request}`);
 			// Visit declared branches only; never probe unreviewed returned links.
 			for (const child of node.children) await visit(child);
 		} else if (!selected || reads[0] !== exactDestination(node.expected!) || !measured.context) {
@@ -86,7 +102,11 @@ export async function evaluateClarificationTree(
 		}
 	};
 	await visit(tree.root);
-	return { passed: findings.length === 0, findings, responses,
+	return {
+		passed: findings.length === 0,
+		findings,
+		responses,
 		tool_calls: responses.reduce((sum, row) => sum + row.toolCalls, 0),
-		total_response_bytes: responses.reduce((sum, row) => sum + row.totalBytes, 0) };
+		total_response_bytes: responses.reduce((sum, row) => sum + row.totalBytes, 0),
+	};
 }

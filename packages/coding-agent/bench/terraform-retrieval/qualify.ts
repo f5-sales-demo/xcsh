@@ -64,14 +64,17 @@ const suite = JSON.parse(suiteBytes.toString()) as Case[];
 const treeFile = path.join(path.dirname(suiteFile), "clarification-trees.json");
 let trees: Record<string, FrozenClarificationTree> = {};
 if (await Bun.file(treeFile).exists()) {
-    if (freeze.schema_version!==2) throw new Error("Clarification trees require an independently reviewed freeze");
-    const treeBytes = await readFile(treeFile);
-    if (terraformHash(treeBytes) !== freeze.files?.["clarification-trees.json"]) throw new Error("Frozen clarification tree digest mismatch");
-    const protocolFile=path.join(root,"clarification-qualification-protocol.md");
-    if (terraformHash(await readFile(protocolFile)) !== freeze.clarification_protocol_sha256) throw new Error("Frozen clarification scoring protocol mismatch");
-    trees=JSON.parse(treeBytes.toString());
-    const heldout=JSON.parse(await readFile(path.join(path.dirname(suiteFile),"heldout.json"),"utf8")) as Case[];
-    if (Object.keys(trees).some(id=>!heldout.some(c=>c.id===id && c.kind==="ambiguous"))) throw new Error("Frozen tree requires an ambiguous suite case");
+	if (freeze.schema_version !== 2) throw new Error("Clarification trees require an independently reviewed freeze");
+	const treeBytes = await readFile(treeFile);
+	if (terraformHash(treeBytes) !== freeze.files?.["clarification-trees.json"])
+		throw new Error("Frozen clarification tree digest mismatch");
+	const protocolFile = path.join(root, "clarification-qualification-protocol.md");
+	if (terraformHash(await readFile(protocolFile)) !== freeze.clarification_protocol_sha256)
+		throw new Error("Frozen clarification scoring protocol mismatch");
+	trees = JSON.parse(treeBytes.toString());
+	const heldout = JSON.parse(await readFile(path.join(path.dirname(suiteFile), "heldout.json"), "utf8")) as Case[];
+	if (Object.keys(trees).some(id => !heldout.some(c => c.id === id && c.kind === "ambiguous")))
+		throw new Error("Frozen tree requires an ambiguous suite case");
 }
 
 if (freeze.schema_version === 2) {
@@ -113,35 +116,111 @@ for (const c of suite) {
 		continue;
 	}
 
-    if (trees[c.id]) {
-        const tree=trees[c.id]!;
-        if (new URL(tree.root.request).searchParams.get("search")!==c.prompt) throw new Error("Frozen clarification prompt mismatch");
+	if (trees[c.id]) {
+		const tree = trees[c.id]!;
+		if (new URL(tree.root.request).searchParams.get("search") !== c.prompt)
+			throw new Error("Frozen clarification prompt mismatch");
 
-        const db=await repo.database();
-        const targets:string[]=[];
-        const auditTree=(node: FrozenClarificationTree["root"],parentNode?: string)=>{
-            const request=new URL(node.request);const scopeNode=request.searchParams.get("node");
-            if(scopeNode && !db.query("SELECT 1 FROM terraform_documents WHERE id=?").get(scopeNode)) throw new Error("Frozen clarification node missing from source");
-            if(parentNode && scopeNode!==parentNode && !db.query("WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE parent_id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT 1 FROM descendants WHERE id=?").get(parentNode,scopeNode)) throw new Error("Frozen clarification node is not a strict descendant");
-            if(node.children){for(const child of node.children)auditTree(child,scopeNode??parentNode);return;}
-            const target=new URL(node.expected!);target.search="";targets.push(target.href);
-            const documentPath=target.pathname.slice(1);const anchor=decodeURIComponent(target.hash.slice(1));
-            const record=db.query("SELECT id FROM terraform_documents WHERE path=?").get(documentPath) as {id:string}|null;
-            if(!record || !anchor || !db.query("SELECT 1 FROM terraform_sections WHERE path=? AND anchor=?").get(documentPath,anchor))throw new Error("Frozen clarification terminal anchor missing from source");
-            if(scopeNode && !db.query("WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT 1 FROM descendants WHERE id=?").get(scopeNode,record.id))throw new Error("Frozen terminal escapes reviewed node");
-            for(const key of ["provider_type","provider_name","role","category","capability","task"]){const value=request.searchParams.get(key);if(value && !db.query("SELECT 1 FROM terraform_facets WHERE path=? AND facet=? AND value=?").get(documentPath,key,value))throw new Error("Frozen terminal escapes caller filters");}
-        };
-        auditTree(tree.root);
-        const expected=c.expected.map(uri=>normalize(uri));
-        if(targets.length!==expected.length || targets.some(uri=>!expected.includes(uri)))throw new Error("Frozen clarification leaves do not partition expected destinations");
-const evaluated=await evaluateClarificationTree(read,tree,5);
-        const first=evaluated.responses[0]!;
-        for(const row of evaluated.responses){latency.push(...row.discoveryTimes);contextLatency.push(...row.contextTimes);routeLatency.push(...row.routeTimes);maxBytes=Math.max(maxBytes,row.maxDiscoveryBytes);maxContextBytes=Math.max(maxContextBytes,row.maxContextBytes);}
-        callCount+=evaluated.tool_calls;totalBytes+=evaluated.total_response_bytes;
-        results.push({id:c.id,kind:c.kind,passed:evaluated.passed,top5:false,rank:null,matched_expected:0,selected:first.discovery.includes("Selected leaf;"),selection_correct:evaluated.passed,destinations:[],times_ms:first.discoveryTimes,route_times_ms:first.routeTimes,response_sha256:first.responseHash,response_bytes:Buffer.byteLength(first.discovery),approx_response_tokens:Math.ceil(Buffer.byteLength(first.discovery)/4),leaf_read_bytes:null,requires_model_uat:false,clarification_tree:{passed:evaluated.passed,findings:evaluated.findings,requests:evaluated.responses.map(row=>({request:row.request,response_sha256:row.responseHash,times_ms:row.routeTimes}))}});
-        continue;
-    }
-const uri = `xcsh://terraform-documentation/?search=${encodeURIComponent(c.prompt)}`;
+		const db = await repo.database();
+		const targets: string[] = [];
+		const auditTree = (node: FrozenClarificationTree["root"], parentNode?: string) => {
+			const request = new URL(node.request);
+			const scopeNode = request.searchParams.get("node");
+			if (scopeNode && !db.query("SELECT 1 FROM terraform_documents WHERE id=?").get(scopeNode))
+				throw new Error("Frozen clarification node missing from source");
+			if (
+				parentNode &&
+				scopeNode !== parentNode &&
+				!db
+					.query(
+						"WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE parent_id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT 1 FROM descendants WHERE id=?",
+					)
+					.get(parentNode, scopeNode)
+			)
+				throw new Error("Frozen clarification node is not a strict descendant");
+			if (node.children) {
+				for (const child of node.children) auditTree(child, scopeNode ?? parentNode);
+				return;
+			}
+			const target = new URL(node.expected!);
+			target.search = "";
+			targets.push(target.href);
+			const documentPath = target.pathname.slice(1);
+			const anchor = decodeURIComponent(target.hash.slice(1));
+			const record = db.query("SELECT id FROM terraform_documents WHERE path=?").get(documentPath) as {
+				id: string;
+			} | null;
+			if (
+				!record ||
+				!anchor ||
+				!db.query("SELECT 1 FROM terraform_sections WHERE path=? AND anchor=?").get(documentPath, anchor)
+			)
+				throw new Error("Frozen clarification terminal anchor missing from source");
+			if (
+				scopeNode &&
+				!db
+					.query(
+						"WITH RECURSIVE descendants(id) AS (SELECT id FROM terraform_documents WHERE id=? UNION SELECT d.id FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT 1 FROM descendants WHERE id=?",
+					)
+					.get(scopeNode, record.id)
+			)
+				throw new Error("Frozen terminal escapes reviewed node");
+			for (const key of ["provider_type", "provider_name", "role", "category", "capability", "task"]) {
+				const value = request.searchParams.get(key);
+				if (
+					value &&
+					!db
+						.query("SELECT 1 FROM terraform_facets WHERE path=? AND facet=? AND value=?")
+						.get(documentPath, key, value)
+				)
+					throw new Error("Frozen terminal escapes caller filters");
+			}
+		};
+		auditTree(tree.root);
+		const expected = c.expected.map(uri => normalize(uri));
+		if (targets.length !== expected.length || targets.some(uri => !expected.includes(uri)))
+			throw new Error("Frozen clarification leaves do not partition expected destinations");
+		const evaluated = await evaluateClarificationTree(read, tree, 5);
+		const first = evaluated.responses[0]!;
+		for (const row of evaluated.responses) {
+			latency.push(...row.discoveryTimes);
+			contextLatency.push(...row.contextTimes);
+			routeLatency.push(...row.routeTimes);
+			maxBytes = Math.max(maxBytes, row.maxDiscoveryBytes);
+			maxContextBytes = Math.max(maxContextBytes, row.maxContextBytes);
+		}
+		callCount += evaluated.tool_calls;
+		totalBytes += evaluated.total_response_bytes;
+		results.push({
+			id: c.id,
+			kind: c.kind,
+			passed: evaluated.passed,
+			top5: false,
+			rank: null,
+			matched_expected: 0,
+			selected: first.discovery.includes("Selected leaf;"),
+			selection_correct: evaluated.passed,
+			destinations: [],
+			times_ms: first.discoveryTimes,
+			route_times_ms: first.routeTimes,
+			response_sha256: first.responseHash,
+			response_bytes: Buffer.byteLength(first.discovery),
+			approx_response_tokens: Math.ceil(Buffer.byteLength(first.discovery) / 4),
+			leaf_read_bytes: null,
+			requires_model_uat: false,
+			clarification_tree: {
+				passed: evaluated.passed,
+				findings: evaluated.findings,
+				requests: evaluated.responses.map(row => ({
+					request: row.request,
+					response_sha256: row.responseHash,
+					times_ms: row.routeTimes,
+				})),
+			},
+		});
+		continue;
+	}
+	const uri = `xcsh://terraform-documentation/?search=${encodeURIComponent(c.prompt)}`;
 	const measured = await measureCompleteRetrieval(read, uri, 5);
 	const times = measured.discoveryTimes,
 		content = measured.discovery;
