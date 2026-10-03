@@ -1,3 +1,4 @@
+import type { WebSearchUserLocation } from "../params";
 import type { SearchProviderId, SearchResponse } from "../types";
 
 /** Shared web search parameters passed to providers. */
@@ -13,13 +14,7 @@ export interface SearchParams {
 	allowedDomains?: string[];
 	blockedDomains?: string[];
 	maxUses?: number;
-	userLocation?: {
-		type: "approximate";
-		city?: string;
-		region?: string;
-		country?: string;
-		timezone?: string;
-	};
+	userLocation?: WebSearchUserLocation;
 	googleSearch?: Record<string, unknown>;
 	codeExecution?: Record<string, unknown>;
 	urlContext?: Record<string, unknown>;

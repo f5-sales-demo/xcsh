@@ -22,11 +22,24 @@ import webSearchDescription from "../../prompts/tools/web-search.md" with { type
 import type { ToolSession } from "../../tools";
 import { formatAge } from "../../tools/render-utils";
 import { parseWebSearchError } from "./errors";
-import { normalizeUserLocation, validateWebSearchParams, type WebSearchParams } from "./params";
+import {
+	normalizeUserLocation,
+	validateWebSearchParams,
+	type WebSearchInputParams,
+	type WebSearchUserLocation,
+} from "./params";
 import { getSearchProvider, resolveProviderChain, type SearchProvider } from "./provider";
 import { renderSearchCall, renderSearchResult, type SearchRenderDetails } from "./render";
 import type { SearchProviderId, SearchResponse } from "./types";
 import { SearchProviderError } from "./types";
+
+function optionalLocationString(description: string) {
+	return Type.Optional(
+		Type.Union([Type.String(), Type.Null()], {
+			description: `${description}. Omit or use null when unknown; empty strings are ignored.`,
+		}),
+	);
+}
 
 /** Web search tool parameters schema */
 export const webSearchSchema = Type.Object({
@@ -64,46 +77,26 @@ export const webSearchSchema = Type.Object({
 		Type.Number({ description: "Maximum number of web searches per request. Positive integer." }),
 	),
 	user_location: Type.Optional(
-		Type.Object(
-			{
-				type: Type.Literal("approximate"),
-				city: Type.Optional(Type.String()),
-				region: Type.Optional(Type.String()),
-				country: Type.Optional(
-					Type.String({
-						minLength: 2,
-						maxLength: 2,
-						description: "ISO 3166-1 alpha-2 country code (e.g. US, JP, GB)",
-					}),
-				),
-				timezone: Type.Optional(Type.String()),
-			},
-			{ description: "Approximate user location for localized results" },
-		),
+		Type.Union([
+			Type.Object(
+				{
+					type: Type.Literal("approximate"),
+					city: optionalLocationString("City"),
+					region: optionalLocationString("Region"),
+					country: optionalLocationString("ISO 3166-1 alpha-2 country code (e.g. US, JP, GB)"),
+					timezone: optionalLocationString("IANA timezone"),
+				},
+				{
+					description:
+						"Approximate user location for localized results. Omit unknown fields or use null; empty fields are ignored.",
+				},
+			),
+			Type.Null(),
+		]),
 	),
 });
 
-export type SearchToolParams = {
-	query: string;
-	recency?: "day" | "week" | "month" | "year";
-	limit?: number;
-	/** Maximum output tokens. Defaults to 4096. */
-	max_tokens?: number;
-	/** Sampling temperature (0–1). Lower = more focused/factual. Defaults to 0.2. */
-	temperature?: number;
-	/** Number of search results to retrieve. Defaults to 10. */
-	num_search_results?: number;
-	allowed_domains?: string[];
-	blocked_domains?: string[];
-	max_uses?: number;
-	user_location?: {
-		type: "approximate";
-		city?: string;
-		region?: string;
-		country?: string;
-		timezone?: string;
-	};
-};
+export type SearchToolParams = WebSearchInputParams;
 
 export interface SearchQueryParams extends SearchToolParams {
 	provider?: SearchProviderId | "auto";
@@ -193,7 +186,8 @@ async function executeSearch(
 	_toolCallId: string,
 	params: SearchQueryParams,
 ): Promise<{ content: Array<{ type: "text"; text: string }>; details: SearchRenderDetails }> {
-	const validation = validateWebSearchParams(params as WebSearchParams);
+	params = { ...params, user_location: normalizeUserLocation(params.user_location) };
+	const validation = validateWebSearchParams(params);
 	if (!validation.valid) {
 		const message = `web_search invalid parameter: ${validation.error}`;
 		return {
@@ -201,11 +195,6 @@ async function executeSearch(
 			details: { response: { provider: "none", sources: [] }, error: message },
 		};
 	}
-	const normalizedLocation = normalizeUserLocation(params.user_location);
-	const normalizedParams: SearchQueryParams = normalizedLocation
-		? { ...params, user_location: normalizedLocation }
-		: params;
-	params = normalizedParams;
 	const hasAnthropicOnlyParams =
 		params.allowed_domains?.length || params.blocked_domains?.length || params.max_uses || params.user_location;
 	const effectiveProvider =
@@ -242,7 +231,8 @@ async function executeSearch(
 				allowedDomains: params.allowed_domains,
 				blockedDomains: params.blocked_domains,
 				maxUses: params.max_uses,
-				userLocation: params.user_location,
+				// Validation above guarantees canonical provider fields.
+				userLocation: params.user_location as WebSearchUserLocation | undefined,
 			});
 			response.durationMs = performance.now() - searchStart;
 
