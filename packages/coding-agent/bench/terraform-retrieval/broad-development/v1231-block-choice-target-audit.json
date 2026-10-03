@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_only": true,
+  "review_sha256": "1f0cd61fe9927a98493f7729594443fcf8dc5fd5d798c40bcaefc6fb3e900107",
+  "input_review_sha256": "f9d426abfc33f0dc7347830ec6f6fcf595f4cf7081a683c31f909af144043890",
+  "prompts_preserved": true,
+  "verified_destinations": 13,
+  "missing_destinations": [],
+  "trace_sha256": "caf9c58eb4620071d9f20f3a09b00a71c02427a5a90e850558b8c1b058be8df5",
+  "notes": [
+    "Case 070 expected roles and destinations already match all-role input; reviewer calls it corrected relative to earlier incomplete candidate. No derived label change needed.",
+    "Case 071 root documentation pages may be read completely; route context anchor requires document-level match adjudication before scoring."
+  ],
+  "review_file": "v1231-block-choice-source-review.json.gz",
+  "review_gzip_sha256": "06582f92417a07074d9ebf2c9f020f3273ea5539f3ea686d68a8a99326dfc908",
+  "review_bytes": 10595,
+  "review_gzip_bytes": 1741,
+  "derived_labels_changed": false
+}
