@@ -2,7 +2,7 @@
   "qualification_passed": false,
   "development_only": true,
   "source_commit": "15cc3f973",
-  "combined_tests": 616,
+  "combined_tests": 617,
   "workspace_checks": "passed",
   "development_selected": 43,
   "development_answerable": 43,
@@ -37,5 +37,8 @@
   "development_correct": 43,
   "development_total": 43,
   "complete_development_ambiguity_routes": 24,
-  "development_ambiguous_cases": 29
+  "development_ambiguous_cases": 29,
+  "field_index_offline_parity_verified": true,
+  "field_index_mac_p95_ms": 31.69574999999986,
+  "field_index_linux_p95_ms": 32.160351999999875
 }
