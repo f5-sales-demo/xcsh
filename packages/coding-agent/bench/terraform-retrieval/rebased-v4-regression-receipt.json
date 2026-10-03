@@ -1,0 +1,27 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "actual_production_resolver": true,
+  "regression_only": true,
+  "provider_version": "v12.3.1",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+  "suite_sha256": "fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d",
+  "cold_materialization_ms": 1713.979119,
+  "warm_p95_ms": 101.92222600000059,
+  "answerable": 140,
+  "correct_leaf": 22,
+  "wrong_leaf": 30,
+  "ambiguous_leaf": 5,
+  "control_leaf": 0,
+  "answerable_top5": 60,
+  "limitations": [
+    "Development labels only; no independently frozen qualification.",
+    "Complete resolver discovery and selected context timed; model/network time excluded.",
+    "No compiled installed artifact acceptance.",
+    "Frozen v4 labels have known source defects; unchanged suite remains exposed and regression-only.",
+    "No replacement independent qualification and no tuning against this regression."
+  ],
+  "raw_sha256": "89308b07a25fa4b29b270d541dac1eca6bc1f746c7bc9bdfc20c146ac533f6b4",
+  "gzip_sha256": "6d42857fb9c06cceee04f2ea47691fb0da90178d342c4c2b174a42ebc2e07798"
+}

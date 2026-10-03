@@ -1541,3 +1541,12 @@ Red/green fixture passes. Broader wrong answerable leaves drop to zero, correct
 selected 38/60 preserved, top-five 52/60; original/audited 11/14,47/48 unchanged
 with zero ambiguous/control leaves in those sets. No qualification claim.
 Exact receipts: operator-branch-development-receipt.json.
+
+Development complete resolver harness now validates eligibility sidecars and
+rejects exposed suites without explicit --regression. Seven eligibility/scoring
+tests pass and a missing --regression invocation fails before retrieval.
+Explicit unchanged v4 regression selects 22/140 expected leaves,60/140 top-five,
+30 wrong-label leaf outputs,5 ambiguous selected leaves,0 controls, complete
+warm p95 101.922 ms. Labels have known defects; this remains poor regression
+evidence, never qualification or tuning permission. Exact receipt:
+rebased-v4-regression-receipt.json. Consumer remains draft and unqualified.
