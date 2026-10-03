@@ -291,3 +291,9 @@ test("explicit property type applies before ranking",()=>{
  const scope=preparePropertyScope([{...row("port","Traffic port."),type:"number"},{...row("redirect","Redirect traffic."),type:"bool"}]);
  expect(rankPropertyScope("Which boolean flag enables traffic redirect?",scope).map(row=>row.schema_path)).toEqual(["redirect"]);
 });
+
+test("schema plurals retain the same terms as their query counterparts",()=>{
+ expect(propertyTerms("ipv4_prefixes")).toEqual(propertyQueryTerms("IPv4 prefixes"));
+ expect(propertyTerms("retries")).toEqual(propertyTerms("retry"));
+ expect(propertyTerms("policies")).toEqual(propertyTerms("policy"));
+});

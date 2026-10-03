@@ -7,9 +7,18 @@ description: |
 
 # F5 XC Terraform Provider
 
-For explicit Terraform questions, begin with the bundled `xcsh://terraform-documentation/` search and read the selected complete section before answering. Cite its exact destination and bundled provider version. When retrieval reports narrowing choices, ask one focused question about the missing provider role or schema branch and wait for the answer before drafting HCL. Missing user-specific values such as certificate location also require clarification before populating those values. Explain documented alternatives without supplying parallel HCL drafts while the destination is undecided.
+For explicit Terraform questions, begin with the bundled `xcsh://terraform-documentation/` search and read the
+selected complete section before answering. Cite its exact destination and bundled provider version. When
+retrieval reports narrowing choices, ask one focused question about the missing provider role or schema branch
+and wait for the answer before drafting HCL. Missing user-specific values such as certificate location also
+require clarification before populating those values. Explain documented alternatives without supplying
+parallel HCL drafts while the destination is undecided.
 
-Generate a Terraform code block when the user asks for HCL and the documented destination is resolved. Write a `.tf` file with `xcsh_write_file` when the user asks to create or edit files. Documentation answers and clarification questions do not require code or file writes. Verify every field and nested block against the bundled exact sections; templates below are starting examples and must be checked against that version. Distinguish documented provider validation from observed live-apply evidence.
+Generate a Terraform code block when the user asks for HCL and the documented destination is resolved. Write a
+`.tf` file with `xcsh_write_file` when the user asks to create or edit files. Documentation answers and
+clarification questions do not require code or file writes. Verify every field and nested block against the
+bundled exact sections; templates below are starting examples and must be checked against that version.
+Distinguish documented provider validation from observed live-apply evidence.
 
 REGISTRY-FIRST: before adding any external `required_providers` entry, read
 `xcsh://registry/provider/<namespace>/<type>`. Before invoking a Registry module, read

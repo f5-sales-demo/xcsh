@@ -18,6 +18,9 @@ const stop = new Set(
 );
 const variants: Record<string, string> = {
 	addr: "address",
+	prefixes: "prefix",
+	retries: "retry",
+	policies: "policy",
 	gateway: "gw",
 	gateways: "gw",
 	bodies: "body",
