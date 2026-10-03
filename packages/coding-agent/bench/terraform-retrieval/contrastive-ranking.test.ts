@@ -303,3 +303,8 @@ test("boolean predicate grammar preserves its documented subject and state",()=>
  expect(propertyQueryTerms("whether a response should be blocked")).toEqual(propertyQueryTerms("response blocked"));
  expect(propertyQueryTerms("whether unsupported bandwidth is limited")).toContain("bandwidth");
 });
+
+test("block definition requests preserve the named target without item prose",()=>{
+ expect(propertyRequestedBlockText("Where is the definition of the routes list block containing path rules in xcsh_fixture?")).toBe("routes");
+ expect(propertyRequestedBlockText("Where is the definition of the resource block?")).toBeUndefined();
+});

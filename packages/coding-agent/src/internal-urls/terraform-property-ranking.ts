@@ -125,7 +125,8 @@ export function propertyRequestedBlockText(text: string): string | undefined {
 		/\b(?:declare|configure|specify|set|select|choose|enable|disable)\s+(.+?)\s+block\b/i,
 	)?.[1];
 	const after = text.match(/\b(?:which|what)\s+(?:configuration\s+|schema\s+)?block\s+(.+)/i)?.[1];
-	return (before ?? after)?.split(/\b(?:during|when|to|in|under|within|for)\b/i)[0]?.trim();
+	const definition = text.match(/\bdefinition\s+of\s+(?:the\s+)?(.+?)\s+(?:list\s+|configuration\s+)?block\b/i)?.[1];
+	return (definition ?? before ?? after)?.split(/\b(?:during|when|to|in|under|within|for)\b/i)[0]?.trim();
 }
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;

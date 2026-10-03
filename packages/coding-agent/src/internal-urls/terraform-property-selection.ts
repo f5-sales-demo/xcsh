@@ -4,6 +4,7 @@ import {
 	type PropertyCandidate,
 	propertyNamesCollection,
 	propertyQueryTerms,
+	propertyRequestedBlockText,
 	propertyRequestedText,
 	propertyRequestedType,
 	propertyRequestsBlock,
@@ -142,7 +143,16 @@ export function selectPropertyDestination(
 		);
 	const first = ranked[0];
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
-	if (first.coverage < 0.35 || first.score <= 0)
+	const blockTarget = propertyRequestedBlockText(queryText);
+	const blockTerms = propertyQueryTerms(blockTarget ?? "");
+	const blockLeaf = propertyTerms(first.schema_path.split(".").at(-1) ?? "");
+	const blockNamedExplicit =
+		first.anchor === "section" &&
+		blockTerms.length > 0 &&
+		blockLeaf.length > 0 &&
+		blockLeaf.length === blockTerms.length &&
+		blockLeaf.every(term => blockTerms.includes(term));
+	if ((first.coverage < 0.35 && !blockNamedExplicit) || first.score <= 0)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient query coverage" };
 	let requestedTerms: string[] = [];
 	const intent =
@@ -266,7 +276,9 @@ export function selectPropertyDestination(
 		return terms.length > 0 && terms.every(term => query.has(term));
 	};
 	const fieldNamed = first.anchor.startsWith("schema-") && completeFieldTerms(first);
-	const blockNamed = first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first);
+	const blockNamed =
+		blockNamedExplicit ||
+		(first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first));
 	const second = ranked.slice(1).find(other => {
 		if (
 			propertyNamesCollection(queryText, first) &&

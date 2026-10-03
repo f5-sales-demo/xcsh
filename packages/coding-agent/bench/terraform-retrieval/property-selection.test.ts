@@ -350,3 +350,10 @@ test("generic service wording cannot choose stateless versus stateful architectu
  expect(selectPropertyDestination("Which block selects default security for stateless workload service ports?",[a],[b]).kind).toBe("leaf");
  expect(selectPropertyDestination("Which block selects default security for stateful service ports?",[b],[a]).kind).toBe("leaf");
 });
+
+test("explicit block targets do not require selecting incidental child fields",()=>{
+ const parent={...row("routes",40),anchor:"section",coverage:0.2};const child={...row("routes.path",39),coverage:0.8};
+ expect(selectPropertyDestination("Where is the definition of the routes list block containing path rules?",[parent,child]).kind).toBe("leaf");
+ const peer={...parent,schema_path:"alternate.routes",path:"peer",score:1};
+ expect(selectPropertyDestination("Where is the definition of the routes list block?",[parent],[peer]).kind).toBe("choices");
+});

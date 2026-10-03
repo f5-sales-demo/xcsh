@@ -787,3 +787,9 @@ test("parsed named blocks bypass general declaration examples", () => {
 		anchor: "minimal-configuration",
 	});
 });
+
+test("a named property block definition is not a resource declaration example", () => {
+	expect(
+		terraformTaskDestination("In xcsh_fixture resource, where is the definition of the routes list block?"),
+	).toBeUndefined();
+});

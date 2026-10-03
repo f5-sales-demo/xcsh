@@ -835,6 +835,7 @@ export function terraformProviderSetupDestination(query: string): string | undef
 }
 
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
+	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	if (
 		/\bresource\b.*\b(?:documented|specification)\b/i.test(query) &&
