@@ -1,0 +1,6 @@
+{
+  "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+  "qualification_eligible": false,
+  "reason": "First untouched independently reviewed run failed accuracy; exposed suite now regression-only. No subsequent tuning may claim held-out qualification.",
+  "first_run_preserved": true
+}
