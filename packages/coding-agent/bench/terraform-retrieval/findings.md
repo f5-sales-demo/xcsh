@@ -1285,3 +1285,10 @@ original, versus matched local 47/48 and 9/14; it selects an unsupported control
 leaf in each set. Rejected and not imported by production. Complete response
 hashes/budgets remain checked across five repetitions. Raw matched reports and
 source hashes: global-weight-rejection-receipt.json. No qualification claim.
+
+Fielded identity/context/field BM25 candidate experiment regresses development:
+33/48 first and 39/48 top-five audited, 7/14 first and 11/14 top-five original.
+Two source-bound deterministic role/ranking tests pass. Rejected and not imported
+by production; raw evidence retained in fielded-bm25-rejection-receipt.json.
+The prior task-local semantic service is stopped; separate offline hybrid
+evaluation would require verified runtime restart and exact v12.3.1 vectors.
