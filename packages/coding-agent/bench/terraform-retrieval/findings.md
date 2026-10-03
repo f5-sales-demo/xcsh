@@ -1560,3 +1560,11 @@ was not recognized. Supporting none/all/any-of matching semantics restores
 is scoped to reference.name versus reference_url. Source-independent tests cover
 both intent and omitted intent. Exact receipts: reference-name-development-receipt.json.
 No qualification claim; frozen suites not tuned.
+
+Final rebased selection source 5b1c6f34e passes 538 URL/task/property tests and
+workspace checks. Complete production resolver development measures 12/14
+original and 47/48 audited selected leaves, zero wrong/ambiguous/control leaves
+in both sets; top-five 13/14,48/48; warm p95 69.218/31.721 ms. Exact pinned
+v12.3.1 index remains unchanged. This is not qualification; prior v4 regression
+remains failed and immutable snapshot/model installed gates remain unfulfilled.
+Receipt: rebased-selection-development-receipt.json.
