@@ -1624,3 +1624,51 @@ test("literal block requests use indexed destinations and preserve unsupported i
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("exact provider identities resolve their documented role before inferred configuration verbs", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-indexed-role-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		doc.path = "documentation/actions/fixture/index.md";
+		doc.metadata.path = doc.path;
+		doc.metadata.provider_type = "actions";
+		doc.metadata.role = "properties";
+		const body = '<a id="schema-object_id"></a>\n### object_id\nObject identifier to update.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = [
+			{
+				schema_path: ["object_id"],
+				document_id: doc.metadata.id,
+				anchor: "schema-object_id",
+				description: "Object identifier to update.",
+				aliases: [],
+				relationships: [],
+				flags: ["required"],
+				type: "string",
+			},
+		];
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const query = (text: string, suffix = "") =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?search=${encodeURIComponent(text)}${suffix}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const selected = (await query("Configure object_id in xcsh_fixture.")).content;
+		expect(selected).toContain("Selected leaf;");
+		expect(selected).toContain("#schema-object_id");
+		expect((await query("Configure object_id in xcsh_fixture.", "&provider_type=resources")).content).toContain(
+			"No results.",
+		);
+		expect((await query("Configure object_id in xcsh_fixture resource.")).content).toContain("No results.");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

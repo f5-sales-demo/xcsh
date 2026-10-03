@@ -1504,8 +1504,23 @@ export class TerraformDocumentationRepository {
 				rows.length > limit ? `Continue: ${next.href}` : "",
 			);
 		} else if (search) {
-			const inferredTaskRole =
-				filters.find(f => f.key === "provider_type")?.value ?? terraformQueryIdentity(search).providerType;
+			const queryIdentity = terraformQueryIdentity(search);
+			const explicitProviderNames = [
+				...new Set([...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)].map(match => match[1]!.toLowerCase())),
+			];
+			const explicitRole =
+				/\b(?:resources?|data[ -]sources?|actions?|ephemeral)\b|\b(?:data|resource|ephemeral)\.xcsh_/i.test(search);
+			const indexedRoles =
+				explicitProviderNames.length === 1 && !explicitRole
+					? (db
+							.query(
+								"SELECT DISTINCT provider_type FROM terraform_documents WHERE provider_name=? ORDER BY provider_type",
+							)
+							.all(explicitProviderNames[0]!) as { provider_type: string }[])
+					: [];
+			const resolvedIdentityRole =
+				indexedRoles.length === 1 ? indexedRoles[0]!.provider_type : queryIdentity.providerType;
+			const inferredTaskRole = filters.find(f => f.key === "provider_type")?.value ?? resolvedIdentityRole;
 			const taskNames = (
 				db
 					.query(
@@ -1566,8 +1581,7 @@ export class TerraformDocumentationRepository {
 				!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) &&
 				db.query("SELECT 1 FROM sqlite_master WHERE name=?").get("property_terms")
 			) {
-				const role =
-					filters.find(f => f.key === "provider_type")?.value ?? terraformQueryIdentity(search).providerType;
+				const role = filters.find(f => f.key === "provider_type")?.value ?? resolvedIdentityRole;
 				const provider = taskProvider;
 
 				const lifecycle = interpretTerraformLifecycle(search);
@@ -1767,7 +1781,7 @@ export class TerraformDocumentationRepository {
 				);
 			const setupAnchor = terraformProviderSetupDestination(search);
 			let query = terraformSearchQuery(search);
-			const identity = terraformQueryIdentity(search);
+			const identity = { ...queryIdentity, providerType: resolvedIdentityRole };
 			if (!setupAnchor && !filters.some(f => f.key === "provider_type") && identity.providerType)
 				filters.push({ key: "provider_type", value: identity.providerType });
 			const propertyMention = /where is (.*?) documented/i.exec(search)?.[1];
