@@ -308,3 +308,10 @@ test("block definition requests preserve the named target without item prose",()
  expect(propertyRequestedBlockText("Where is the definition of the routes list block containing path rules in xcsh_fixture?")).toBe("routes");
  expect(propertyRequestedBlockText("Where is the definition of the resource block?")).toBeUndefined();
 });
+
+test("response criteria use condition vocabulary without implying a status code",()=>{
+ expect(propertyQueryTerms("failure criteria")).toEqual(propertyQueryTerms("failure conditions"));
+ const scope=preparePropertyScope([row("login.failure_conditions","Failure Conditions.","section"),row("login.failure_conditions.status","HTTP response status codes.")]);
+ expect(rankPropertyScope("Define login failure criteria in xcsh_fixture",scope)[0]?.schema_path).toBe("login.failure_conditions");
+ expect(rankPropertyScope("Which field sets response status code for login failure criteria?",scope)[0]?.schema_path).toBe("login.failure_conditions.status");
+});
