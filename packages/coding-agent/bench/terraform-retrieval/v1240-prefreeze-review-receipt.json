@@ -4,7 +4,7 @@
   "freeze_approved": false,
   "first_source_review_verdict": "revise",
   "anchor_correction_applied_by_independent_author": true,
-  "tree_identity_review_pending": true,
+  "tree_identity_review_pending": false,
   "original_suite_sha256": "c6242a9d6872565a6f021f85ca8b0e827943f0facc808f8d7653c3e8a4eb170e",
   "corrected_suite_sha256": "235b694bdf3320526d1a4cd5f81291a039f3201c457ac8b7a5796e9a7b080f72",
   "artifacts": {
@@ -23,5 +23,9 @@
       "sha256": "b5c0bb14cef5c3161de231944a288ecb94e5fd1d479f12f5a8f6ea654a34fa66",
       "gzip_sha256": "a7fd755b9439de6fc1553bafd6e5d4390a65c2cc3e16b92db7c3f9e5c15b9fae"
     }
-  }
+  },
+  "tree_review_verdict": "revise",
+  "invalid_trees": 12,
+  "independent_author_replacements_pending": true,
+  "tree_review_sha256": "eb61121a24955f4d5b2d420fdd3388fb4c8f7d28bff1a5cfa5551c39a3268862"
 }
