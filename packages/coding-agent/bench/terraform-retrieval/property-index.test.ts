@@ -226,3 +226,10 @@ test("conflicting documented field flags reject instead of silently replacing ev
  const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);CREATE TABLE terraform_documents(metadata);INSERT INTO terraform_destinations VALUES('resources','fixture','name','name','schema-name','Name.')");for(const flags of [["required"],["optional"]])db.prepare("INSERT INTO terraform_documents VALUES(?)").run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:["name"],type:"string",flags}]}));
  expect(()=>populatePropertyIndex(db)).toThrow("Conflicting property flag");db.close();
 });
+
+test("canonical field prose supplements support evidence without replacing metadata",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);CREATE TABLE terraform_sections(path,anchor,context_markdown);INSERT INTO terraform_destinations VALUES('ephemeral-resources','fixture','data','page','schema-data','HTTP binary body.')");
+ db.prepare("INSERT INTO terraform_sections VALUES(?,?,?)").run("page","schema-data","<a id=\"schema-data\"></a>\n\n### data property\n\nType: `string`. Computed.\n\nRendered manifest payload data.\n\nUpstream description:\n\nHTTP binary body.\n\nValidation:\n\nDo not index validator details.");populatePropertyIndex(db);
+ const rows=searchPropertyIndex(db,"Which attribute returns rendered manifest payload data?",{providerName:"fixture"});
+ expect(rows[0]?.description).toBe("HTTP binary body.");expect(rows[0]?.documentation_terms).toContain("manifest");expect(rows[0]?.documentation_terms).not.toContain("validator");expect(selectPropertyDestination("Which attribute returns rendered manifest payload data?",rows).kind).toBe("leaf");db.close();
+});

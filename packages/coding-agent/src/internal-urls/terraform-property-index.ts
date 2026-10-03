@@ -9,6 +9,7 @@ import {
 	propertyRequestsBlock,
 	propertyRequestsRootField,
 	propertySchemaIdentifiers,
+	propertyTerms,
 	rankPropertyScope,
 } from "./terraform-property-ranking";
 export interface PropertyIndexSource {
@@ -19,7 +20,7 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 	const row = db
 		.query("SELECT schema_version,source_commit,source_index_sha256 FROM property_index_provenance")
 		.get() as { schema_version: number; source_commit: string; source_index_sha256: string } | null;
-	if (row?.schema_version !== 6) throw new Error("Unsupported property index version");
+	if (row?.schema_version !== 7) throw new Error("Unsupported property index version");
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
 }
@@ -34,11 +35,11 @@ export function populatePropertyIndex(
 	db.exec(`CREATE TABLE property_index_provenance(schema_version INTEGER,source_commit TEXT,source_index_sha256 TEXT);
  CREATE TABLE property_scopes(provider_type TEXT,provider_name TEXT,destination_count INTEGER,PRIMARY KEY(provider_type,provider_name));
  CREATE TABLE property_scope_terms(provider_type TEXT,provider_name TEXT,term TEXT,weight REAL,PRIMARY KEY(provider_type,provider_name,term));
- CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,type TEXT,nesting TEXT,flags TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
+ CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,type TEXT,nesting TEXT,flags TEXT,documentation_terms TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
  CREATE INDEX property_leaf_lookup ON property_terms(leaf,provider_name,provider_type);
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
-		6,
+		7,
 		source?.sourceCommit ?? "",
 		source?.sourceIndexSha256 ?? "",
 	);
@@ -100,6 +101,23 @@ export function populatePropertyIndex(
 			}
 		}
 	}
+	if (db.prepare("SELECT 1 FROM sqlite_master WHERE name=?").all("terraform_sections").length) {
+		const sections = db
+			.prepare("SELECT path,anchor,context_markdown FROM terraform_sections ORDER BY path,anchor")
+			.all() as { path: string; anchor: string; context_markdown: string }[];
+		const prose = new Map(
+			sections.map(section => [
+				`${section.path}#${section.anchor}`,
+				section.context_markdown.match(
+					/Type:[^\n]*\n\s*\n([\s\S]*?)(?=\n\s*(?:Upstream description:|Receipt-pinned upstream constraints:|Validation|```)|$)/,
+				)?.[1] ?? "",
+			]),
+		);
+		for (const row of rows) {
+			const text = prose.get(`${row.path}#${row.anchor}`);
+			if (text && row.anchor.startsWith("schema-")) row.documentation_terms = propertyTerms(text);
+		}
+	}
 	const groups = new Map<string, PropertyCandidate[]>();
 	for (const row of rows) {
 		const key = `${row.provider_type}|${row.provider_name}`;
@@ -109,7 +127,7 @@ export function populatePropertyIndex(
 	}
 	const insertScope = db.prepare("INSERT INTO property_scopes VALUES(?,?,?)"),
 		insertWeight = db.prepare("INSERT INTO property_scope_terms VALUES(?,?,?,?)"),
-		insertTerm = db.prepare("INSERT INTO property_terms VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"),
+		insertTerm = db.prepare("INSERT INTO property_terms VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)"),
 		insertSearch = db.prepare("INSERT INTO property_search VALUES(?,?,?,?)");
 	db.transaction(() => {
 		for (const group of groups.values()) {
@@ -133,9 +151,16 @@ export function populatePropertyIndex(
 					row.type ?? null,
 					row.nesting ?? null,
 					row.flags === undefined ? null : JSON.stringify(row.flags),
+					row.documentation_terms === undefined ? null : JSON.stringify(row.documentation_terms),
 				);
 				insertSearch.run(
-					[...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms].join(" "),
+					[
+						...row.leaf,
+						...row.context,
+						...row.descriptionTerms,
+						...row.aliasTerms,
+						...(row.documentation_terms ?? []),
+					].join(" "),
 					row.provider_type,
 					row.provider_name,
 					row.schema_path,
@@ -252,16 +277,21 @@ export function searchPropertyIndex(
 				`SELECT term,weight FROM property_scope_terms WHERE provider_type=? AND provider_name=? AND term IN (${terms.map(() => "?").join(",")}) ORDER BY term`,
 			)
 			.all(type!, name!, ...terms) as { term: string; weight: number }[];
-		const rows = prepared.map(({ leaf, context, description_terms, alias_terms, flags, ...row }) => ({
-			...(flags == null ? {} : { flags: JSON.parse(flags as unknown as string) as string[] }),
-			...row,
-			...(row.type === null ? { type: undefined } : {}),
-			...(row.nesting === null && row.type === null ? { nesting: undefined } : {}),
-			leaf: JSON.parse(leaf) as string[],
-			context: JSON.parse(context) as string[],
-			descriptionTerms: JSON.parse(description_terms) as string[],
-			aliasTerms: JSON.parse(alias_terms) as string[],
-		}));
+		const rows = prepared.map(
+			({ leaf, context, description_terms, alias_terms, flags, documentation_terms, ...row }) => ({
+				...(documentation_terms == null
+					? {}
+					: { documentation_terms: JSON.parse(documentation_terms as unknown as string) as string[] }),
+				...(flags == null ? {} : { flags: JSON.parse(flags as unknown as string) as string[] }),
+				...row,
+				...(row.type === null ? { type: undefined } : {}),
+				...(row.nesting === null && row.type === null ? { nesting: undefined } : {}),
+				leaf: JSON.parse(leaf) as string[],
+				context: JSON.parse(context) as string[],
+				descriptionTerms: JSON.parse(description_terms) as string[],
+				aliasTerms: JSON.parse(alias_terms) as string[],
+			}),
+		);
 		ranked.push(...rankPropertyScope(query, { rows, weights: new Map(weights.map(row => [row.term, row.weight])) }));
 	}
 	return ranked.sort(

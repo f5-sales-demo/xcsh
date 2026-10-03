@@ -183,6 +183,7 @@ export function selectPropertyDestination(
 		const local = new Set([
 			...propertyTerms(`${first.schema_path} ${first.description}`),
 			...(first.evidence_terms ?? []),
+			...(first.documentation_terms ?? []),
 		]);
 		const matches = requestedTerms.filter(term => local.has(term)).length;
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)
@@ -348,6 +349,7 @@ export function selectPropertyDestination(
 				const terms = new Set([
 					...propertyTerms(`${row.schema_path.split(".").at(-1)} ${row.description}`),
 					...(row.evidence_terms ?? []),
+					...(row.documentation_terms ?? []),
 				]);
 				return new Set(requestedTerms.filter(term => terms.has(term)));
 			};

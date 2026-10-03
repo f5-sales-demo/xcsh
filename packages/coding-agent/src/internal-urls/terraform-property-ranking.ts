@@ -11,6 +11,7 @@ export interface PropertyCandidate {
 	nesting?: string | null;
 	flags?: string[];
 	evidence_terms?: string[];
+	documentation_terms?: string[];
 }
 const stop = new Set(
 	"a an the and to of for in on with by as from at we our my your i how which what where can do does is are be been have has it this that its resource managed provider terraform field attribute property parameter configure configures configuration configuring defining define declares declare declaring specified specifies specify sets set setting outputs output generated existing list string boolean block schema using use when need".split(
