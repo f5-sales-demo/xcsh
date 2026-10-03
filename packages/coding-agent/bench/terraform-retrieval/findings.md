@@ -1646,3 +1646,11 @@ index terms. Red/green term-equivalence fixture passes. Complete development
 broader selection improves40/45to41/45,top-five45/45,zero false leaves; original
 12/14 and audited47/48 remain unchanged. No confidence threshold loosened and
 no held-out qualification claim. Receipt: compound-query-development-receipt.json.
+
+Unequal-depth branch comparison uses corresponding schema segments, preserving
+exclusive qualifiers such as custom without letting incidental API words choose
+an omitted discovery architecture. Red/green fixture and existing ambiguity
+guard pass. Final broader development selects43/45,top-five45/45,zero false
+leaves; original12/14,audited47/48 unchanged. Whole-path vocabulary alternative
+was rejected after unit regression; never promoted. Exact final receipts:
+segment-comparison-development-receipt.json. Independent qualification unmet.

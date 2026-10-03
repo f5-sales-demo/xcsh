@@ -281,3 +281,10 @@ test("qualified natural language names a boolean operator", () => {
 		"leaf",
 	);
 });
+
+test("exclusive qualifier in unequal-depth sibling segments resolves branch context", () => {
+	const first = row("stateful_service.advertise_custom.routes", 60);
+	const other = row("stateful_service.advertise_on_public.multi_ports.routes", 1);
+	expect(selectPropertyDestination("stateful service custom routes", [first], [other]).kind).toBe("leaf");
+	expect(selectPropertyDestination("stateful service routes", [first], [other]).kind).toBe("choices");
+});

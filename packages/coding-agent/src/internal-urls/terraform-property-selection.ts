@@ -159,7 +159,7 @@ export function selectPropertyDestination(
 			!differing.some(part => {
 				const full = propertyTerms(part);
 				const index = parts.indexOf(part);
-				const peer = parts.length === otherParts.length ? propertyTerms(otherParts[index] ?? "") : [];
+				const peer = propertyTerms(otherParts[index] ?? "");
 				const common = full.filter(term => peer.includes(term));
 				const difference = full.filter(term => !peer.includes(term));
 				// Parallel equally deep segments can share descriptive boilerplate.
