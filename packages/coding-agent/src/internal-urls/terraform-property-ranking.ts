@@ -70,6 +70,9 @@ export function propertyQueryTerms(text: string): string[] {
 		text
 			.toLowerCase()
 			.replace(/operating[ -]+system/g, "os")
+			.replace(/mutual[ -]+tls/g, "mtls")
+			.replace(/\badvertised\b/g, "advertise")
+			.replace(/http\/1\.1/g, "http v1")
 			.replace(/\b(?:listening|listener)\b/g, "listen")
 			.replace(/\bprefixes\b/g, "prefix")
 			.replace(/active operational state/g, "active")

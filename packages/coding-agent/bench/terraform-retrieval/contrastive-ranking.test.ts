@@ -189,3 +189,9 @@ test("trailing purpose and lookup context do not become requested field evidence
  expect(propertyRequestedText("Read the name attribute of an existing load balancer via xcsh_fixture data source")).toBe("the name attribute");
  expect(propertyRequestedText("Specify the namespace parameter when declaring xcsh_fixture")).toBe("the namespace parameter");
 });
+
+test("protocol and advertisement phrasing retain schema vocabulary",()=>{
+ expect(propertyQueryTerms("mutual TLS")).toEqual(propertyTerms("mtls"));
+ expect(propertyQueryTerms("custom advertised ports")).toEqual(propertyTerms("custom advertise ports"));
+ expect(propertyQueryTerms("HTTP/1.1 protocol").sort()).toEqual(propertyTerms("http protocol v1").sort());
+});
