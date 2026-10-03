@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	parseTerraformPin,
 	rewriteTerraformLinks,
+	scoreTerraformAliasContext,
 	terraformPassages,
 	terraformProviderMention,
 	terraformProviderSetupDestination,
@@ -86,4 +87,13 @@ test("generic descriptive nouns do not assert a provider owner", () => {
 		"http_loadbalancer",
 	);
 	expect(terraformProviderMention("xcsh_endpoint namespace", names)).toBe("endpoint");
+});
+
+test("alias branch scoring recognizes Kubernetes schema terminology", () => {
+	const query = "Specify the Kubernetes service name for endpoint discovery";
+	expect(
+		scoreTerraformAliasContext(query, "origin_servers.k8s_service.service_name", ["origin", "pool"]),
+	).toBeGreaterThan(
+		scoreTerraformAliasContext(query, "origin_servers.consul_service.service_name", ["origin", "pool"]),
+	);
 });

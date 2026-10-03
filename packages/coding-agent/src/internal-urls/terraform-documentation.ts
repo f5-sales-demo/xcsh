@@ -776,6 +776,7 @@ export function scoreTerraformAliasContext(
 		succeeds: "success",
 		failed: "failure",
 		stateful: "stateful",
+		kubernetes: "k8s",
 	};
 	const terms = [
 		...new Set(words.filter(term => !provider.has(term) && !ignored.has(term)).map(term => variants[term] ?? term)),

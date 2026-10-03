@@ -1509,3 +1509,10 @@ check:ts pass. Explicit lease push verifies PR #4687 new head, still draft and
 auto-merge absent. Latest provider source 35f9297c4764a7b016ac120d37f5d11e33cd9541
 normal On Merge run 37097445026 active; resume from it. Qualification remains
 failed/unfulfilled, consumer pin still v12.3.1. Receipt: iteration-rebase-receipt.json.
+
+Rebased consumer alias scoring now normalizes Kubernetes to k8s, matching
+existing property vocabulary. Red/green test proves branch scoring separates
+Kubernetes from Consul. Complete development route selects exact k8s service
+name, improving original selections to 11/14, zero wrong answerable leaves;
+audited remains 47/48. Original ambiguous selections remain 2. This is development
+evidence only; independent gate unmet. Exact receipts: k8s-alias-development-receipt.json.
