@@ -201,3 +201,8 @@ test("named configuration choices outrank incidental scalar descriptions",()=>{
  expect(rankPropertyScope("Configure round robin balancing in xcsh_fixture",scope)[0]?.schema_path).toBe("round_robin");
  expect(rankPropertyScope("Which field specifies loadbalancer algorithm in xcsh_fixture",scope)[0]?.schema_path).toBe("pool.loadbalancer_algorithm");
 });
+
+test("enabling configuration choices remains distinct from explicit boolean fields",()=>{
+ expect(propertyRequestsBlock("Disable CRL validation in xcsh_fixture")).toBe(true);
+ expect(propertyRequestsBlock("Which boolean field disables xcsh_fixture?")).toBe(false);
+});

@@ -565,6 +565,9 @@ test("selected property blocks refine to direct fields without changing explicit
 		);
 		expect((await read("configure public IP origin server block")).content).toContain("#section");
 		const selected = (await read("Select public IP origin server configuration")).content;
+		const enabled = (await read("Enable public IP origin server configuration")).content;
+		expect(enabled).toContain("Reason:");
+		expect(enabled).toContain("#section");
 		expect(selected).toContain("Reason:");
 		expect(selected).toContain("#section");
 		const block = (await read("Which schema documentation page covers the public IP origin server block?")).content;

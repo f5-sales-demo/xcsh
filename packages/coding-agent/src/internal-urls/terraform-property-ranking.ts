@@ -87,7 +87,7 @@ export function propertyQueryTerms(text: string): string[] {
 }
 export function propertyRequestsBlock(text: string): boolean {
 	if (/\b(?:field|attribute|property|parameter)\b/i.test(text)) return false;
-	if (/\b(?:select|choose)\b/i.test(text)) return true;
+	if (/\b(?:select|choose|enable|disable)\b/i.test(text)) return true;
 	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
 }
 export function propertyRequestedText(text: string): string | undefined {
