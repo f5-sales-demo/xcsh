@@ -225,10 +225,19 @@ export function selectPropertyDestination(
 		}
 
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
+		if (requestedTerms.length && other.schema_path.split(".").at(-1) === parts.at(-1)) {
+			const ownContext = new Set(propertyTerms(parts.slice(0, -1).join(" ")));
+			const peerContext = new Set(propertyTerms(other.schema_path.split(".").slice(0, -1).join(" ")));
+			if (
+				requestedTerms.some(term => ownContext.has(term) && !peerContext.has(term)) &&
+				!requestedTerms.some(term => peerContext.has(term) && !ownContext.has(term))
+			)
+				return false;
+		}
 		if (requestedTerms.length) {
 			const matched = (row: PropertyCandidate) => {
 				const terms = new Set([
-					...propertyTerms(`${row.schema_path} ${row.description}`),
+					...propertyTerms(`${row.schema_path.split(".").at(-1)} ${row.description}`),
 					...(row.evidence_terms ?? []),
 				]);
 				return new Set(requestedTerms.filter(term => terms.has(term)));

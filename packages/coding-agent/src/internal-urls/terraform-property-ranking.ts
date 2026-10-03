@@ -227,7 +227,16 @@ export function rankPropertyScope(
 			} = row;
 			return {
 				...candidate,
-				...(row.aliasTerms.length ? { evidence_terms: row.aliasTerms } : {}),
+				...(row.aliasTerms.length
+					? {
+							evidence_terms: row.aliasTerms.filter(
+								term =>
+									!row.context.includes(term) ||
+									row.leaf.includes(term) ||
+									row.descriptionTerms.includes(term),
+							),
+						}
+					: {}),
 				score: Number(score.toFixed(12)),
 				coverage: total ? coverage / total : 0,
 			};

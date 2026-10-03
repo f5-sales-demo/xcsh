@@ -312,3 +312,10 @@ test("an explicitly requested block can be read before choosing its direct prope
  const block={...row("primary",50),anchor:"section",description:"Primary DNS configuration."};const child={...row("primary.default_soa",49),anchor:"section",description:"Default SOA configuration."};
  expect(selectPropertyDestination("Read the primary schema block",[block,child]).destinations).toEqual([block]);
 });
+
+test("direct requested-field evidence separates incidental ancestor vocabulary",()=>{
+ const rows=[{...row("listen_port",50),description:"Port accepting inbound connections."},{...row("advertise.listen_port.reference",49),description:"Reference to an object."}];
+ expect(selectPropertyDestination("Which field specifies listening port?",rows).kind).toBe("leaf");
+ const repeated=[{...rows[0]!,schema_path:"architecture_a.listen_port"},{...rows[0]!,schema_path:"architecture_b.listen_port",path:"peer"}];
+ expect(selectPropertyDestination("Which field specifies listening port?",repeated).kind).toBe("choices");
+});
