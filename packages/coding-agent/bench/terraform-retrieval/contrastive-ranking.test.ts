@@ -251,3 +251,12 @@ test("one matching collection word does not outweigh the requested branch contex
  const rows=rankPropertyScope("In xcsh_fixture, specify the list of regular expression patterns for matching login transaction results",scope);
  expect(rows.findIndex(row=>row.schema_path==="login.results.regex_values")).toBeLessThan(rows.findIndex(row=>row.schema_path==="cluster.expressions"));
 });
+
+test("selector expressions do not imply regular expression matching", () => {
+ expect(propertyTerms("Kubernetes selector expressions")).not.toContain("regex");
+ expect(propertyTerms("regular expressions")).toContain("regex");
+ expect(propertyQueryTerms("regular expression patterns")).toEqual(propertyTerms("regex_values"));
+ const scope=preparePropertyScope([row("selector.expressions","Kubernetes style label expressions."),row("matching.regex_values","A list of regular expressions to match input.")]);
+ expect(rankPropertyScope("regular expression patterns",scope)[0]?.schema_path).toBe("matching.regex_values");
+ expect(rankPropertyScope("Kubernetes selector expressions",scope)[0]?.schema_path).toBe("selector.expressions");
+});

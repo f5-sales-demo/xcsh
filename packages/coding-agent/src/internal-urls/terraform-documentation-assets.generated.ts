@@ -52,10 +52,10 @@ export const EMBEDDED_TERRAFORM_DOCUMENTATION = {
 			},
 		},
 		index: {
-			sha256: "eaf48844cfb56a494295e6245f4605f1afb00da5486f8709051c041f45e6d2a8",
-			size_bytes: 795410432,
-			gzip_sha256: "b3452c584a0b99a7ba6dc600d41875918318c9ff1d19bd487ee26623020ba2fc",
-			gzip_size_bytes: 72045271,
+			sha256: "54ed4ffae96b185df4e9dc8d3b4b4bbf7aa654a55402331477396e10df4ff4ea",
+			size_bytes: 795435008,
+			gzip_sha256: "35c67408c4c3db731c28c606e72a7c9458fab7995753543aa3a2b82d384dd2d9",
+			gzip_size_bytes: 72045150,
 		},
 	},
 } satisfies TerraformEmbeddedAssets;

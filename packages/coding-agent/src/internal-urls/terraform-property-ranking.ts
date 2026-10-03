@@ -25,8 +25,6 @@ const variants: Record<string, string> = {
 	identifiers: "ids",
 	timestamp: "time",
 	hostname: "dns",
-	expression: "regex",
-	expressions: "regex",
 	patterns: "value",
 	values: "value",
 	v6: "ipv6",
@@ -51,7 +49,7 @@ export function propertyTerms(text: string): string[] {
 			.replace(/flasharray/g, "flash array")
 			.replace(/flashblade/g, "flash blade")
 			.replace(/assisted routing/g, "ar")
-			.replace(/regular expression/g, "regex")
+			.replace(/regular expressions?/g, "regex")
 			.match(/[a-z0-9]+/g) ?? [];
 	return [
 		...new Set(
