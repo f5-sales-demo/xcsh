@@ -1,0 +1,27 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "reviewer_conversation": "0f76f630-816a-4281-ae3f-4f89f9e134bc",
+  "files": [
+    {
+      "path": "fresh-repaired-review.json.gz",
+      "sha256": "b7b6a5ac5634e2d13a5e665c7b9955b460465cda131fd7fd5ae6d15f12f59ad8",
+      "gzip_sha256": "2bdbc60b104f5f35e435ff3df1e3633f52bd1761c57ba81ed6f5ce6a29ceac5c"
+    },
+    {
+      "path": "fresh-repaired-quote-validation.json.gz",
+      "sha256": "8718cd78ac61a03d256fda6d94294a5ae1ab09b697f1dc93e644edccbb7022b9",
+      "gzip_sha256": "6627b69587410f59972b45488a9118e9cb29af837db1d9b1b7162b415e29684e"
+    },
+    {
+      "path": "fresh-final-quote-validation.json.gz",
+      "sha256": "39690de4496df571c00cc5c174fc9d04251b7620b1e0b6ce00b5361dcdf25745",
+      "gzip_sha256": "417a5ab0ab8c8fda9754057cfd0871823e8e7735e291850ce96b0a559375f0f8"
+    }
+  ],
+  "limitations": [
+    "Only 16 supplied canonical files audited; not exhaustive corpus uniqueness.",
+    "Reviewers disagree about KSK/ZSK action evidence; no benchmark relabeling or qualification.",
+    "Original failed quotes preserved; repaired quotes validated independently against complete canonical index."
+  ]
+}
