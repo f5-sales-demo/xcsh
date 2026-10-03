@@ -1613,3 +1613,10 @@ raises selected40/45 without false leaves; original12/14 and audited47/48
 preserved. Red/green outside-static-route fixture retains omitted-side choices.
 Corrected corpus remains development-only, not a new held-out freeze.
 Exact source/review/raw receipts: broad-adjudicated-development-receipt.json.
+
+Explicit configuration/schema/which-block intent routes through prepared indexed
+property candidates, preserving complete block destinations rather than incidental
+child port passages. Development broader expected top-five improves43/45to45/45
+with40/45selected and zero false leaves preserved. Original12/14,audited47/48
+unchanged,zero ambiguous/control leaves. Full541regressiontests pass. Exact
+receipts: indexed-block-development-receipt.json. Independent qualification unmet.
