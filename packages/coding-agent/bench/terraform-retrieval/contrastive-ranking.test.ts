@@ -354,3 +354,12 @@ test("classification questions retain type intent and their requested values",()
  const scope=preparePropertyScope([row("key_type","Type or category classification."),row("key_name","Name of the key.")]);
  expect(rankPropertyScope("Which argument specifies whether it is a signing key or encryption key?",scope)[0]?.schema_path).toBe("key_type");
 });
+
+
+test("proxy-served hostnames use documented host-authority matching without changing backend DNS",()=>{
+ const scope=preparePropertyScope([row("domains","Domains matched by host/authority header to the load balancer."),row("csrf_policy.domains","Domain names used for CSRF header matching.")]);
+ expect(rankPropertyScope("Which attribute returns hostnames served by the proxy?",scope)[0]?.schema_path).toBe("domains");
+ expect(propertyQueryTerms("hostnames served by the proxy")).toContain("authority");
+ expect(propertyQueryTerms("backend hostname DNS lookup")).not.toContain("authority");
+ expect(propertyQueryTerms("CSRF Host header domains")).not.toContain("authority");
+});
