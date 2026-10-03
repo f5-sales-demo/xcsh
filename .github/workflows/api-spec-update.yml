@@ -272,14 +272,14 @@ jobs:
                   type == "object" and
                   (keys | sort) == ["assets", "release_tag", "target_commit", "version"] and
                   .release_tag == $tag and .target_commit == $commit and .version == $version and
-                  (.assets | keys | sort) == [
+                  (.assets | keys | sort) == ([
                     "api-catalog.json", "concurrency_contracts.json",
                     ("f5xc-api-specs-" + $tag + ".zip"), "index.json",
                     "minimal-export-defaults.json", "openapi.json",
                     "smsv2-contract-manifest.json", "smsv2-contract.json",
                     "smsv2-evidence-receipt.json", "smsv2_parity_manifest.json",
                     "upstream-contract-removals.json"
-                  ] and ([.assets[] | test("^sha256:[0-9a-f]{64}$")] | all)
+                  ] + (if ($version | split(".")[0] | tonumber) >= 9 then ["upstream-contract-changes.json"] else [] end) + (if ($version | split(".")[0] | tonumber) >= 10 then ["enrichment-coverage.json"] else [] end) | sort) and ([.assets[] | test("^sha256:[0-9a-f]{64}$")] | all)
                 ' "$RUNNER_TEMP/provider-spec-release.json" >/dev/null || {
                   echo "::error::Provider release carries a malformed or mismatched spec pin"
                   exit 1
