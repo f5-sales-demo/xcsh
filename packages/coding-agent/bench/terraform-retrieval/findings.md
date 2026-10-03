@@ -1466,3 +1466,8 @@ Expected top-five 13/14 and 48/48. Complete warm route p95 74.361/30.941 ms.
 Cold value excludes preparation and is discarded. This is proposed-metadata
 development evidence, not immutable snapshot or installed qualification.
 Raw bound receipts: reviewed-complete-development-receipt.json.
+
+Provider #2382 merges as d5b8be9545984e92e2f81bcd3c4878d38d65f07b.
+Normal On Merge run 37091576861 waits behind the earlier release build; timeout
+merge run was superseded. Both fixes are now in main. Consumer remains pinned
+to v12.3.1 and draft; no qualification or release claim.
