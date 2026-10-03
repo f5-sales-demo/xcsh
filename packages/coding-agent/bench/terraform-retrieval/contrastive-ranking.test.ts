@@ -430,3 +430,19 @@ test("object inspections with articles do not replace explicit read or query", (
  expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect the certificate")).toBe("the name");
  expect(propertyRequestedText("Inspect served domains using data source xcsh_fixture")).toBe("served domains");
 });
+
+test("explicit workload architecture excludes its parallel schema branch", () => {
+ const candidates=["service", "stateful_service"].map(architecture => ({...row(`${architecture}.port`, "Listener port."),provider_name:"workload"}));
+ expect(rankPropertyScope("stateless workload listener port",preparePropertyScope(candidates)).map(r=>r.schema_path)).toEqual(["service.port"]);
+ expect(rankPropertyScope("stateful workload listener port",preparePropertyScope(candidates)).map(r=>r.schema_path)).toEqual(["stateful_service.port"]);
+ expect(rankPropertyScope("workload listener port",preparePropertyScope(candidates))).toHaveLength(2);
+ expect(rankPropertyScope("stateful or stateless workload listener port",preparePropertyScope(candidates))).toHaveLength(2);
+});
+
+test("qualified negation and examples do not become positive workload architecture", () => {
+ const candidates=["service","stateful_service"].map(architecture=>({...row(`${architecture}.port`,"Listener port."),provider_name:"workload"}));
+ expect(rankPropertyScope("workload port, not a stateful service",preparePropertyScope(candidates)).map(r=>r.schema_path)).toEqual(["service.port"]);
+ expect(rankPropertyScope("workload port, not necessarily stateful",preparePropertyScope(candidates))).toHaveLength(2);
+ expect(rankPropertyScope("workload port (for example service.public)",preparePropertyScope(candidates))).toHaveLength(2);
+ expect(rankPropertyScope("workload port, not under service.public",preparePropertyScope(candidates))).toHaveLength(2);
+});

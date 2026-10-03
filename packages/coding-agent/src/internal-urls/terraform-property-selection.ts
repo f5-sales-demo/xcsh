@@ -2,6 +2,7 @@ import { interpretTerraformLifecycle, lifecycleEvidence, type TerraformLifecycle
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
 	type PropertyCandidate,
+	propertyMatchesWorkloadArchitecture,
 	propertyNamesCollection,
 	propertyQueryTerms,
 	propertyRequestedBlockText,
@@ -12,6 +13,7 @@ import {
 	propertyRequestsRootField,
 	propertySchemaIdentifiers,
 	propertyTerms,
+	propertyWorkloadArchitecture,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
@@ -45,6 +47,8 @@ export function selectPropertyDestination(
 	alternatives: readonly RankedProperty[] = [],
 	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
+	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	const requestedType = propertyRequestedType(queryText);
 	if (requestedType) {
 		input = input.filter(row => row.type == null || row.type === requestedType);
@@ -58,9 +62,16 @@ export function selectPropertyDestination(
 	const identifiers = propertySchemaIdentifiers(queryText).filter(
 		term => ![...input, ...alternatives].some(row => row.provider_name === term),
 	);
+	const identifiersFor = (row: PropertyCandidate) =>
+		identifiers.filter(id => propertySchemaIdentifiers(queryText, row.provider_name).includes(id));
+	const identifiersMatch = (row: PropertyCandidate) =>
+		identifiersFor(row).every(id => row.schema_path.split(".").includes(id));
 	if (
 		identifiers.some(
-			identifier => ![...input, ...alternatives].some(row => row.schema_path.split(".").includes(identifier)),
+			identifier =>
+				![...input, ...alternatives].some(
+					row => !identifiersFor(row).includes(identifier) || row.schema_path.split(".").includes(identifier),
+				),
 		)
 	)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
@@ -71,11 +82,7 @@ export function selectPropertyDestination(
 		const rows = [
 			...new Map(
 				[...alternatives, ...input]
-					.filter(
-						row =>
-							operations.some(op => row.schema_path === `timeouts.${op}`) &&
-							identifiers.every(id => row.schema_path.split(".").includes(id)),
-					)
+					.filter(row => operations.some(op => row.schema_path === `timeouts.${op}`) && identifiersMatch(row))
 					.map(row => [`${row.path}#${row.anchor}`, row]),
 			).values(),
 		];
@@ -105,9 +112,7 @@ export function selectPropertyDestination(
 	}
 
 	const unique = new Map<string, RankedProperty>();
-	for (const row of input.filter(row =>
-		identifiers.every(identifier => row.schema_path.split(".").includes(identifier)),
-	)) {
+	for (const row of input.filter(row => identifiersMatch(row))) {
 		const key = `${row.path}#${row.anchor}`;
 		if (!unique.has(key) || unique.get(key)!.score < row.score) unique.set(key, row);
 	}
@@ -210,7 +215,7 @@ export function selectPropertyDestination(
 		...ranked.slice(1),
 		...alternatives.filter(
 			row =>
-				identifiers.every(identifier => row.schema_path.split(".").includes(identifier)) &&
+				identifiersMatch(row) &&
 				!contradicts(query, row) &&
 				!ranked.some(r => r.path === row.path && r.anchor === row.anchor),
 		),
@@ -239,8 +244,10 @@ export function selectPropertyDestination(
 			(parts.includes("stateful_service") && otherParts.includes("service"));
 		if (
 			servicePair &&
-			!/\b(?:stateless|stateful|stateful_service)\b/i.test(queryText) &&
-			!/\bservice[./]|\b(?:under|branch|path)\s+`?service`?\b/i.test(queryText)
+			(first.provider_name === "workload"
+				? !propertyWorkloadArchitecture(queryText)
+				: !/\b(?:stateless|stateful|stateful_service)\b/i.test(queryText) &&
+					!/\bservice[./]|\b(?:under|branch|path)\s+`?service`?\b/i.test(queryText))
 		)
 			return {
 				kind: "choices",

@@ -70,6 +70,51 @@ export function propertyTerms(text: string): string[] {
 		),
 	];
 }
+// Canonical workload service is stateless; stateful_service is its parallel architecture.
+// Apply this distinction only within the workload provider, preserving missing/conflicting intent.
+export function propertyWorkloadArchitecture(text: string): "stateless" | "stateful" | undefined {
+	text = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "").replaceAll("`", "");
+	const assertions = new Set<"stateless" | "stateful">();
+	const negative =
+		/\b(not|no|without)\s+([^,.!?;\n]*?)`?(stateless|stateful|stateful_service|service(?=[./]|\s+branch\b)|service(?=\s*$))\b/gi;
+	for (const match of text.matchAll(negative)) {
+		const between = match[2]!.replaceAll("`", "").trim().toLowerCase();
+		const tail = text.slice(match.index! + match[0].length);
+		if (
+			match[3]!.toLowerCase() === "service" &&
+			!/^[./]/.test(tail) &&
+			!/\b(?:under|in|within|branch|path)(?:\s+(?:a|an|the))?$/i.test(between)
+		)
+			continue;
+		const simpleOpposite =
+			match[1]!.toLowerCase() !== "without" &&
+			["", "a", "an", "the"].includes(between) &&
+			match[3]!.toLowerCase() !== "service" &&
+			!/^[./]/.test(tail);
+		if (!simpleOpposite) return undefined;
+		assertions.add(match[3]!.toLowerCase() === "stateless" ? "stateful" : "stateless");
+	}
+	const positiveText = text.replace(
+		/\b(?:not|no)\s+(?:(?:a|an|the)\s+)?(?:stateless|stateful|stateful_service)\b/gi,
+		"",
+	);
+	if (
+		/\bstateless\b|\bservice\s+branch\b|\bservice[./]|\b(?:under|in|within|branch|path)\s+(?:(?:a|an|the)\s+)?service\b/i.test(
+			positiveText,
+		)
+	)
+		assertions.add("stateless");
+	if (/\b(?:stateful|stateful_service)\b/i.test(positiveText)) assertions.add("stateful");
+	return assertions.size === 1 ? [...assertions][0] : undefined;
+}
+export function propertyMatchesWorkloadArchitecture(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const architecture = propertyWorkloadArchitecture(text);
+	if (!architecture) return true;
+	const stateless = architecture === "stateless";
+	const parts = candidate.schema_path.split(".");
+	return stateless ? !parts.includes("stateful_service") : !parts.includes("service");
+}
 export function propertyQueryTerms(text: string): string[] {
 	return propertyTerms(
 		text
@@ -84,7 +129,7 @@ export function propertyQueryTerms(text: string): string[] {
 				"domains matched host authority",
 			)
 			.replace(/\b(?:active\s+)?hostnames?\s+(?:routed|served)\s+by\b/g, "domains matched by")
-			.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "")
+			.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
 			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
 			.replace(/mutual[ -]+tls/g, "mtls")
@@ -115,12 +160,18 @@ export function propertyRequestsRootField(text: string): boolean {
 		text,
 	);
 }
-export function propertySchemaIdentifiers(text: string): string[] {
-	const request = text.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "");
+export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
+	const request = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	return [
 		...new Set(
 			(request.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
-				term => !term.startsWith("xcsh_"),
+				term =>
+					!term.startsWith("xcsh_") &&
+					!(
+						providerName === "workload" &&
+						term === "stateful_service" &&
+						propertyWorkloadArchitecture(text) !== "stateful"
+					),
 			),
 		),
 	];
@@ -273,6 +324,7 @@ export function rankPropertyScope(
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	const requestedType = propertyRequestedType(queryText);
 	return scope.rows
+		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {

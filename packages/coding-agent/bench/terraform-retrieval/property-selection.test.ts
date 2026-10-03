@@ -383,3 +383,94 @@ test("an explicit root scope uses requested value evidence without resource-purp
  expect(selectPropertyDestination("Which top-level attribute accepts a Helm repository URL?",[domains]).kind).toBe("choices");
  expect(selectPropertyDestination("Which attribute accepts the list of domain names that the proxy will service?",[domains]).kind).toBe("choices");
 });
+
+test("workload architecture filters both ranked and indexed collision peers", () => {
+ const a={...row("service.port",50), provider_name:"workload"};
+ const b={...row("stateful_service.port",100), provider_name:"workload"};
+ expect(selectPropertyDestination("stateless workload port",[b,a],[b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("stateful workload port",[a,b],[a]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("workload port",[b,a]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateful or stateless workload port",[b,a]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port",[b],[]).kind).toBe("none");
+});
+
+test("workload architecture negation and identifier alternatives preserve intent", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("workload port, not stateful",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("workload port, not stateless",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("stateless or stateful_service workload port",[a,b]).kind).toBe("choices");
+ const other=[{...a,provider_name:"fixture"},{...b,provider_name:"fixture"}];
+ expect(selectPropertyDestination("stateless or stateful service.port",other).kind).toBe("leaf");
+});
+
+test("mixed-provider architecture identifier policy is order-independent", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ const other={...row("stateful_service.port",10),provider_name:"fixture"};
+ const query="stateless or stateful_service workload port";
+ expect(selectPropertyDestination(query,[other,a,b])).toEqual(selectPropertyDestination(query,[b,a,other]));
+ expect(selectPropertyDestination(query,[other,a,b]).kind).toBe("choices");
+});
+
+test("unresolved negative paths and examples remain architecture choices downstream", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not necessarily stateful", "workload port, not under stateful_service.public", "workload port, not stateful_service.public", "workload port without stateful", "workload port (e.g. stateful_service.public)", "workload port, not under service.public"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("explicit architecture alternatives and article-qualified uncertainty stay undecided", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port under service.public or stateful_service.public", "workload port, not necessarily a stateful service", "workload port without a stateful service", "workload port, not a stateful_service.public"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("negative and uncertain canonical paths preserve architecture alternatives", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not under a service.public path", "workload port, not under the stateful_service.public path", "workload port, not necessarily service.public", "workload port, not necessarily under service.public"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("architecture guards apply to architecture clauses rather than unrelated constraints", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not under service", "workload port, not under stateful_service", "workload port, not under `service`"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port without host rewriting",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("stateful workload port, not necessarily public",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+});
+
+test("negative architecture clauses accept varied prepositions without guessing", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not in service.public", "workload port, not in stateful_service.public", "workload port, not necessarily in stateful_service.public", "workload port, not within the service branch"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("negative architecture clauses preserve punctuation case and long scope", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not necessarily stateful, please", "workload port, not in the selected public listener configuration for stateful_service.public", "workload port WITHOUT stateful"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port without host rewriting for the service",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+});
+
+test("architecture token quoting and clause boundaries preserve actual intent", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("workload port, not `stateful`",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("workload port, not `stateless`",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("workload port without host rewriting, stateful",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("workload port under the service branch or stateful_service branch",[a,b]).kind).toBe("choices");
+});
+
+test("conflicting positive and negative architecture assertions stay undecided", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("stateful workload port; not stateful",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port; not stateless",[a,b]).kind).toBe("choices");
+});
+
+test("canonical architecture alternatives support in and within branch wording", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port in the service branch or stateful_service branch","workload port within the service branch or stateful_service branch"]) expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("canonical branch nouns and descriptive negative architecture clauses remain ambiguous", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("workload port: service branch or stateful_service branch",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("workload port, not a service that is stateful",[a,b]).kind).toBe("choices");
+});

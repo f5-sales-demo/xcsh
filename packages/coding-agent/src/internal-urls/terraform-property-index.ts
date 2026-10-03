@@ -211,7 +211,9 @@ export function searchPropertyIndex(
 		term => !db.query("SELECT 1 FROM property_scopes WHERE provider_name=?").get(term),
 	);
 	for (const identifier of identifiers) {
-		clauses.push("instr('.' || schema_path || '.',?)>0");
+		if (!propertySchemaIdentifiers(query, "workload").includes(identifier)) {
+			clauses.push("(provider_name='workload' OR instr('.' || schema_path || '.',?)>0)");
+		} else clauses.push("instr('.' || schema_path || '.',?)>0");
 		args.push(`.${identifier}.`);
 	}
 	for (const filter of scope.filters ?? []) {

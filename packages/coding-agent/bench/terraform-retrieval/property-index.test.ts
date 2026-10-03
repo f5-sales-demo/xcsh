@@ -233,3 +233,18 @@ test("canonical field prose supplements support evidence without replacing metad
  const rows=searchPropertyIndex(db,"Which attribute returns rendered manifest payload data?",{providerName:"fixture"});
  expect(rows[0]?.description).toBe("HTTP binary body.");expect(rows[0]?.documentation_terms).toContain("manifest");expect(rows[0]?.documentation_terms).not.toContain("validator");expect(selectPropertyDestination("Which attribute returns rendered manifest payload data?",rows).kind).toBe("leaf");db.close();
 });
+
+test("unscoped architecture alternatives retain workload paths without relaxing other providers", () => {
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");
+ const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for (const provider of ["workload","fixture"]) for(const architecture of ["service","stateful_service"])
+ put.run("resources",provider,`${architecture}.port`,`${provider}/${architecture}`,"schema-port","Listener port.");
+ populatePropertyIndex(db);
+ const query="stateless or stateful_service workload port";
+ const rows=searchPropertyIndex(db,query,{});
+ expect(rows.filter(row=>row.provider_name==="workload").map(row=>row.schema_path).sort()).toEqual(["service.port","stateful_service.port"]);
+ expect(rows.filter(row=>row.provider_name==="fixture").map(row=>row.schema_path)).toEqual(["stateful_service.port"]);
+ expect(searchPropertyIndex(db,query,{providerType:"data-sources"})).toEqual([]);
+ db.close();
+});
