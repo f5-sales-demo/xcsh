@@ -1257,3 +1257,11 @@ Provider top-five is 47/48 audited development and 14/14 original; top-one is
 30/48 and 11/14. Query p95 is under 1 ms; this excludes leaf retrieval/rendering.
 Prototype remains outside production and cannot qualify release. Raw reports
 and digests: provider-discovery-receipt.json.
+
+The separate adaptive provider/property experiment routes maintained tasks first
+then fuses provider BM25 and property ranks. Audited development ranks 46/48 first
+and 48/48 top-five; original ranks 10/14 first and only 11/14 top-five, regressing
+coverage. Exposed v4 explicit regression ranks 33/140 first and 61/140 top-five.
+No selection or response rendering is measured, and prototype is not promoted.
+A guard rejects exposed frozen suites without explicit --regression. Exact raw
+reports and source digest are retained in provider-property-receipt.json.

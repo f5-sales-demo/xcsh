@@ -1,0 +1,70 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "selection_policy": false,
+  "reports": {
+    "audited": {
+      "file": "provider-property-audited.json.gz",
+      "raw_sha256": "3855bd67d424e3a080948c4f70d858da87824528d7100a32654c2ade133826d7",
+      "gzip_sha256": "94a10170a6ff43d32e5839b8a7a30a77d165ca6ac1c9cefeba699410da9126aa",
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "selection_policy": false,
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 48,
+      "top1": 46,
+      "top5": 48,
+      "candidate_route_p95_ms": 42.393723000001046,
+      "limitations": [
+        "Provider BM25 plus reciprocal rank fusion experiment only.",
+        "Candidate retrieval excludes confidence selection, response rendering and model time."
+      ]
+    },
+    "original": {
+      "file": "provider-property-original.json.gz",
+      "raw_sha256": "b6d4569f220d6a5c8849fbe04ccb414c3b4a2a658f27982ea436df97c22e5cec",
+      "gzip_sha256": "c613878a2cbd8dee83f029e5fa3fddc7ec41203cd4e7adc7cf85899431a44442",
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "selection_policy": false,
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 14,
+      "top1": 10,
+      "top5": 11,
+      "candidate_route_p95_ms": 71.87244499999997,
+      "limitations": [
+        "Provider BM25 plus reciprocal rank fusion experiment only.",
+        "Candidate retrieval excludes confidence selection, response rendering and model time."
+      ]
+    },
+    "v4_regression": {
+      "file": "provider-property-v4_regression.json.gz",
+      "raw_sha256": "0286f901108d6f9eaacd1d5dc86ea957b5f9522e1c05ba9950857cfe83be0632",
+      "gzip_sha256": "cd4e2b195f89879c0b9ddf60be2ef433787b76661b0552924b663586ea9d3a8a",
+      "development_only": true,
+      "post_analysis_regression": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "selection_policy": false,
+      "suite_sha256": "fe06795913ced09a09fe80b86aaef0ad4db80d12c7ebad871296993623ad346d",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 140,
+      "top1": 33,
+      "top5": 61,
+      "candidate_route_p95_ms": 90.68442199999845,
+      "limitations": [
+        "Provider BM25 plus reciprocal rank fusion experiment only.",
+        "Candidate retrieval excludes confidence selection, response rendering and model time."
+      ]
+    }
+  },
+  "experiment_source_sha256": "99c859691b62b207d5d752cf1e2b1aa75266ef6fde85c1bb75d52cb962c251a8"
+}
