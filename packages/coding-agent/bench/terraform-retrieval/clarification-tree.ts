@@ -26,6 +26,8 @@ export function validateClarificationTree(tree: FrozenClarificationTree): void {
 	const visit = (node: FrozenClarificationNode, parent: FrozenClarificationNode | undefined, depth: number) => {
 		if (depth > tree.max_depth) throw new Error("Frozen clarification exceeds reviewed depth");
 		const uri = new URL(node.request);
+        const allowed = new Set(["search","node","provider_type","provider_name","role","category","capability","task","limit"]);
+        for (const key of uri.searchParams.keys()) if(!allowed.has(key)) throw new Error("Unsupported frozen clarification parameter");
         for (const key of uri.searchParams.keys()) if(uri.searchParams.getAll(key).length!==1) throw new Error("Duplicate frozen clarification parameter");
 		if (uri.protocol !== "xcsh:" || uri.host !== "terraform-documentation" || uri.pathname !== "/" || uri.hash)
 			throw new Error("Invalid frozen clarification request");

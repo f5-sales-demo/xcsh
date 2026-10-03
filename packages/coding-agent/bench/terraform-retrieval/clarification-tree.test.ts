@@ -43,3 +43,9 @@ test("wrong terminal anchors and unstable responses fail evaluation", async () =
 	let counter = 0;
 	await expect(evaluateClarificationTree(async () => ({ content: `No results ${counter++}` }), tree, 2)).rejects.toThrow("Non-deterministic");
 });
+
+test("frozen requests reject duplicate parameters and non-discovery destinations",()=>{
+    expect(()=>validateClarificationTree({...tree,root:{...tree.root,request:root+"&search=fixture"}})).toThrow("Duplicate");
+    expect(()=>validateClarificationTree({...tree,root:{...tree.root,request:root+"&cursor=page"}})).toThrow("Unsupported");
+    expect(()=>validateClarificationTree({...tree,root:{...tree.root,request:leafA}})).toThrow("request");
+});
