@@ -56,6 +56,7 @@ const BINARY_EXTENSIONS = new Set([
 // Lexical placeholder strings inside it are not readable catalog content, so scan only
 // human-readable generated artifacts for placeholder hygiene.
 const OPAQUE_GENERATED_ARTIFACTS = new Set([
+	"packages/coding-agent/src/internal-urls/terraform-index.generated.ts",
 	"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
 ]);
 // This guard invokes `git grep` over the full tracked index. Under the 10-worker CI suite it can
