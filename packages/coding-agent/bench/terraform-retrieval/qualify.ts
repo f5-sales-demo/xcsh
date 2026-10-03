@@ -64,12 +64,14 @@ const suite = JSON.parse(suiteBytes.toString()) as Case[];
 const treeFile = path.join(path.dirname(suiteFile), "clarification-trees.json");
 let trees: Record<string, FrozenClarificationTree> = {};
 if (await Bun.file(treeFile).exists()) {
+    if (freeze.schema_version!==2) throw new Error("Clarification trees require an independently reviewed freeze");
     const treeBytes = await readFile(treeFile);
     if (terraformHash(treeBytes) !== freeze.files?.["clarification-trees.json"]) throw new Error("Frozen clarification tree digest mismatch");
     const protocolFile=path.join(root,"clarification-qualification-protocol.md");
     if (terraformHash(await readFile(protocolFile)) !== freeze.clarification_protocol_sha256) throw new Error("Frozen clarification scoring protocol mismatch");
     trees=JSON.parse(treeBytes.toString());
-    if (Object.keys(trees).some(id=>!suite.some(c=>c.id===id && c.kind==="ambiguous"))) throw new Error("Frozen tree requires an ambiguous suite case");
+    const heldout=JSON.parse(await readFile(path.join(path.dirname(suiteFile),"heldout.json"),"utf8")) as Case[];
+    if (Object.keys(trees).some(id=>!heldout.some(c=>c.id===id && c.kind==="ambiguous"))) throw new Error("Frozen tree requires an ambiguous suite case");
 }
 
 if (freeze.schema_version === 2) {
