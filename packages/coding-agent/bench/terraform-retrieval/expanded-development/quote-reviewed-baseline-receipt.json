@@ -1,0 +1,34 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "file": "quote-reviewed-baseline.json.gz",
+  "sha256": "fe5756b2a31d35792b0f40a224149fab2a52d5e5db1e72aa16c783df1f382cba",
+  "gzip_sha256": "577be776a4747ade6ba3b321ae0839dbdcac977890c3e7d0be72a0993128ae70",
+  "summary": {
+    "development_only": true,
+    "qualification_passed": false,
+    "actual_production_resolver": true,
+    "regression_only": false,
+    "provider_version": "v12.4.0",
+    "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+    "index_sha256": "a19c8e92ab448d10c812ab7f781aba2fb59ab671e5bdf10dee60e51d2f1f0a33",
+    "suite_sha256": "14dd5c09a31a082db7f78762200a0355af8c785897f9d472a9d69fdbd00d224d",
+    "cold_materialization_ms": 1726.514083,
+    "warm_p95_ms": 33.44321799999989,
+    "answerable": 40,
+    "correct_leaf": 29,
+    "wrong_leaf": 2,
+    "ambiguous_leaf": 2,
+    "control_leaf": 0,
+    "answerable_top5": 37,
+    "limitations": [
+      "Development labels only; no independently frozen qualification.",
+      "Complete resolver discovery and selected context timed; model/network time excluded.",
+      "No compiled installed artifact acceptance."
+    ]
+  },
+  "limitations": [
+    "40answerable/3ambiguousdevelopmentcases only; no qualified benchmark.",
+    "Two premature ambiguous guesses and two wrong answerable selections remain."
+  ]
+}
