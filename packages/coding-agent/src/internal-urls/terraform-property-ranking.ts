@@ -104,6 +104,14 @@ export function propertyRequestsBlock(text: string): boolean {
 	if (/\b(?:select|choose|enable|disable)\b/i.test(text)) return true;
 	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
 }
+export function propertyRequestedBlockText(text: string): string | undefined {
+	if (!propertyRequestsBlock(text)) return undefined;
+	const before = text.match(
+		/\b(?:declare|configure|specify|set|select|choose|enable|disable)\s+(.+?)\s+block\b/i,
+	)?.[1];
+	const after = text.match(/\b(?:which|what)\s+(?:configuration\s+|schema\s+)?block\s+(.+)/i)?.[1];
+	return (before ?? after)?.split(/\b(?:during|when|to|in|under|within|for)\b/i)[0]?.trim();
+}
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
 	const fieldText = text.replace(
@@ -187,7 +195,7 @@ export function rankPropertyScope(
 ) {
 	const providerTerms = new Set(propertyTerms(scope.rows[0]?.provider_name ?? ""));
 	const request = propertyRequestedText(queryText);
-	const ask = request ?? queryText;
+	const ask = request ?? propertyRequestedBlockText(queryText) ?? queryText;
 	const asksField =
 		Boolean(request) ||
 		/\b(field|attribute|property|parameter|argument|flag)\b/i.test(queryText) ||

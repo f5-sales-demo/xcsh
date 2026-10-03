@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	propertyRequestedText,
+	propertyRequestedBlockText,
  propertyRequestsBlock,
 	propertyQueryTerms,
 	preparePropertyScope,
@@ -278,3 +279,10 @@ test("field function verbs identify the returned or described value",()=>{
  expect(propertyRequestedText("Which argument filters the region list?")).toBe("the region list?");
  expect(propertyRequestedText("Which attribute describes the hardware category?")).toBe("the hardware category?");
 });
+
+test("named block requests rank their target before surrounding resource context",()=>{
+ const scope=preparePropertyScope([row("service","Service settings.","section"),row("service.routes.direct_response_route","Static reply settings.","section")]);
+ expect(rankPropertyScope("In xcsh_fixture service, where do I declare a direct response route block to return status and body?",scope)[0]?.schema_path).toBe("service.routes.direct_response_route");
+});
+
+test("block target parsing separates purpose and identity",()=>{expect(propertyRequestedBlockText("In xcsh_fixture service, where do I declare a direct response route block to return status and body?")).toBe("a direct response route");expect(propertyRequestedBlockText("Which block retains all query parameters during URL redirection?")).toBe("retains all query parameters");});
