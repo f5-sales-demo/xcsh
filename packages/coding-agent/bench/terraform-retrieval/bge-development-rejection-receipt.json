@@ -1,0 +1,80 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "rejected": true,
+  "vectors": {
+    "development_only": true,
+    "qualification_passed": false,
+    "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+    "provider_version": "v12.3.1",
+    "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+    "vector_sha256": "6ce32ff31055aaf02ed73807b4f892bb3c5d7dc23d222e9121b2500b04514332",
+    "rows": 39565,
+    "dimensions": 384,
+    "vector_bytes": 60771968,
+    "materialization_ms": 373795.19743903074,
+    "model_revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+    "preparation_sha256": "012be940af486c9118e600fb7ea6856ddb8ca945f0ee87c3a4854779c3c238ea",
+    "builder_sha256": "ea1638504fe1382b168a12487686a5fd0d171385c091141c0a23000146612c70",
+    "input_format": "description role provider-name schema-path; underscores and dots become spaces",
+    "max_tokens": 179,
+    "model_limit": 512,
+    "over_model_limit": 0
+  },
+  "runs": [
+    {
+      "development_only": true,
+      "property_only": false,
+      "query_prefix": "Represent this sentence for searching relevant passages: ",
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "6ce32ff31055aaf02ed73807b4f892bb3c5d7dc23d222e9121b2500b04514332",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "evaluator_sha256": "d757fbcf5577cf00d4f81946d3c5ac74399d16d4631fb4129ba49bd6e16d8b5d",
+      "lexical_sha256": "66f92a03a551b2e9c249cae55d2efeb078b82d6535c4ed373cb0cbcf2984edff",
+      "expected_outside_property_corpus": [],
+      "answerable": 14,
+      "top1": 9,
+      "top5": 13,
+      "semantic_route_p95_ms": 58.98516299203038,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "c91b52d11bf7d23060b78c3a6566edb8ac9a8bee5900c7c5eb28fe1bdddf8a95",
+      "gzip_sha256": "834b23919726699b7ea40d1390490590badcb838c1505c3ebf08f8321409e82a"
+    },
+    {
+      "development_only": true,
+      "property_only": false,
+      "query_prefix": "Represent this sentence for searching relevant passages: ",
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "6ce32ff31055aaf02ed73807b4f892bb3c5d7dc23d222e9121b2500b04514332",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "evaluator_sha256": "d757fbcf5577cf00d4f81946d3c5ac74399d16d4631fb4129ba49bd6e16d8b5d",
+      "lexical_sha256": "9e288af5bf9eacb7b914d60980355a8d1a5f7a9132dcecb2076cabb055e01ca4",
+      "expected_outside_property_corpus": [
+        "dev-revised-030",
+        "dev-revised-031"
+      ],
+      "answerable": 48,
+      "top1": 33,
+      "top5": 44,
+      "semantic_route_p95_ms": 80.99350403062999,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "6a6ffde5924f331548e6c861a5541e915cf54bed6dd246091cd604eb72dd33bd",
+      "gzip_sha256": "10534a947f64622ef8b950f0836efb11872cb908a5bf06ba936e96fff22c4d86"
+    }
+  ]
+}

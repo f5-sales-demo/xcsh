@@ -1368,3 +1368,11 @@ reproduces all 39,565 source rows and exact experiment corpus bytes, SHA-256
 fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b.
 Receipt: semantic-corpus-export-receipt.json. No source descriptions or anchors
 are synthesized. Exporter rejects drift and existing output paths.
+
+Pinned BGE-small-en-v1.5 materializes 39,565 by 384 dimensions in 373.795
+seconds, without truncation (maximum 179 of 512 tokens). Offline development
+with the documented query prefix ranks 9/14 original and 33/48 audited first,
+13/14 and 44/48 top-five. Rejected: below prior MiniLM and lexical development
+accuracy. Candidate embedding/fusion p95 is 58.985/80.994 ms; complete route
+latency remains unmeasured. Exact source/model/vector/raw digests preserved in
+bge-development-rejection-receipt.json. No production semantic dependency.
