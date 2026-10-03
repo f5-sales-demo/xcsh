@@ -49,7 +49,9 @@ export function selectPropertyDestination(
 		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
 
 	const unique = new Map<string, RankedProperty>();
-	for (const row of input) {
+	for (const row of input.filter(row =>
+		identifiers.every(identifier => row.schema_path.split(".").includes(identifier)),
+	)) {
 		const key = `${row.path}#${row.anchor}`;
 		if (!unique.has(key) || unique.get(key)!.score < row.score) unique.set(key, row);
 	}
@@ -118,7 +120,10 @@ export function selectPropertyDestination(
 		first,
 		...ranked.slice(1),
 		...alternatives.filter(
-			row => !contradicts(query, row) && !ranked.some(r => r.path === row.path && r.anchor === row.anchor),
+			row =>
+				identifiers.every(identifier => row.schema_path.split(".").includes(identifier)) &&
+				!contradicts(query, row) &&
+				!ranked.some(r => r.path === row.path && r.anchor === row.anchor),
 		),
 	].filter(
 		row =>

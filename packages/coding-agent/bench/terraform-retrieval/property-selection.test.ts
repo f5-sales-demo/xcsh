@@ -300,3 +300,10 @@ test("field function verbs cannot select an unrelated supported algorithm",()=>{
   expect(selectPropertyDestination(`Which property ${verb} HTTP/3 BBR congestion control parameters?`,[candidate]).kind).toBe("choices");
  }
 });
+
+test("explicit schema segments constrain competing property candidates literally",()=>{
+ const rows=[{...row("peers.external.asn",50),description:"Autonomous system number."},{...row("bgp_parameters.asn",49),description:"Autonomous system number."}];
+ expect(selectPropertyDestination("Read ASN under bgp_parameters",rows).destinations[0]?.schema_path).toBe("bgp_parameters.asn");
+ const repeated=[row("architecture_a.listen_port",50),row("architecture_b.listen_port",49)];
+ expect(selectPropertyDestination("Read listen_port",repeated).kind).toBe("choices");
+});
