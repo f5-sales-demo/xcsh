@@ -1,0 +1,23 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "source_commit": "185a9cce51be2821b4096d95a00759e39b8e353e",
+  "combined_tests": 588,
+  "workspace_checks": "passed",
+  "development_selected": 43,
+  "development_answerable": 43,
+  "development_ambiguous_leaf": 0,
+  "development_control_leaf": 0,
+  "report_sha256": "e564957dcca2e1b65ab2164ad1d8c97345c81ea198f998d158150d040947f15e",
+  "report_gzip_sha256": "3d2d4888e63ddd93146e04b77495f3483b1c921ed7128055e070d373c233949f",
+  "first_untouched_answerable_correct": 59,
+  "first_untouched_answerable_total": 140,
+  "latest_exposed_regression_correct": 76,
+  "latest_exposed_regression_total": 140,
+  "installed_model_trace_passes": 24,
+  "installed_model_total": 40,
+  "provider_release": "v12.4.0",
+  "documentation_release": "documentation-v12.4.0",
+  "consumer_draft": true,
+  "auto_merge": false
+}
