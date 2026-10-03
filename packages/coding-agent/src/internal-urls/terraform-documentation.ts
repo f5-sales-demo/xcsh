@@ -1614,14 +1614,17 @@ export class TerraformDocumentationRepository {
 							row => row.provider_name === first.provider_name && row.description === first.description,
 						)
 					) {
-						const roleContent = boundedTerraformResponse(
+						const roleContent = terraformChoiceResponse(
 							`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing provider role.\nReason: Equivalent property destinations span provider roles.`,
 							roles.map(role => {
 								const next = new URL(url.href);
+								next.searchParams.delete("choice_after");
 								next.searchParams.set("provider_type", role);
 								next.searchParams.set("provider_name", first.provider_name);
 								return `## ${role}: xcsh_${first.provider_name}\nRefine: ${next.href}`;
 							}),
+							url,
+							choiceAfter,
 							4096,
 						);
 						return {
