@@ -205,3 +205,8 @@ test("explicit top-level scope constrains indexed candidates before limiting",()
  const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);INSERT INTO terraform_destinations VALUES('resources','fixture','name','root','schema-name','Name.'),('resources','fixture','nested.name','nested','schema-nested-name','Name name name.')");populatePropertyIndex(db);
  expect(searchPropertyIndex(db,"Which top-level attribute specifies name?",{providerName:"fixture"},1).map(row=>row.schema_path)).toEqual(["name"]);db.close();
 });
+
+test("explicit type filters apply before the indexed candidate limit",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);CREATE TABLE terraform_documents(metadata)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");for(const [field,type,description] of [["port","number","Traffic port traffic"],["redirect","bool","Redirect traffic"]]){put.run("resources","fixture",field,field,"schema-"+field,description);db.prepare("INSERT INTO terraform_documents VALUES(?)").run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:[field],type}]}));}populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Which boolean flag enables traffic redirect?",{providerName:"fixture"},1).map(row=>row.type)).toEqual(["bool"]);db.close();
+});

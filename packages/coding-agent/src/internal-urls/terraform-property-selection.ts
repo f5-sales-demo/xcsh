@@ -4,6 +4,7 @@ import {
 	propertyNamesCollection,
 	propertyQueryTerms,
 	propertyRequestedText,
+	propertyRequestedType,
 	propertyRequestsBlock,
 	propertyRequestsDirectObjectField,
 	propertyRequestsRootField,
@@ -41,6 +42,11 @@ export function selectPropertyDestination(
 	input: readonly RankedProperty[],
 	alternatives: readonly RankedProperty[] = [],
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
+	const requestedType = propertyRequestedType(queryText);
+	if (requestedType) {
+		input = input.filter(row => row.type == null || row.type === requestedType);
+		alternatives = alternatives.filter(row => row.type == null || row.type === requestedType);
+	}
 	if (propertyRequestsRootField(queryText)) {
 		input = input.filter(row => !row.schema_path.includes("."));
 		alternatives = alternatives.filter(row => !row.schema_path.includes("."));

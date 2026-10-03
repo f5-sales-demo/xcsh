@@ -89,6 +89,13 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
+export function propertyRequestedType(text: string): string | undefined {
+	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return undefined;
+	if (/\b(?:boolean|bool)\s+(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return "bool";
+	if (/\bscalar\s+list\b/i.test(text)) return "list";
+	if (/\b(?:numeric|number)\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)) return "number";
+	return undefined;
+}
 export function propertyRequestsRootField(text: string): boolean {
 	return /\b(?:top[ -]level|root[ -]level|root)\s+(?:attribute|field|property|parameter|argument|flag)\b/i.test(text);
 }
@@ -206,7 +213,9 @@ export function rankPropertyScope(
 	const requested = asksField ? new Set(propertyQueryTerms(ask)) : new Set<string>();
 	const query = propertyQueryTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
+	const requestedType = propertyRequestedType(queryText);
 	return scope.rows
+		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
 			const weight = (term: string) => scope.weights.get(term) ?? 0;

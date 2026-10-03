@@ -286,3 +286,8 @@ test("named block requests rank their target before surrounding resource context
 });
 
 test("block target parsing separates purpose and identity",()=>{expect(propertyRequestedBlockText("In xcsh_fixture service, where do I declare a direct response route block to return status and body?")).toBe("a direct response route");expect(propertyRequestedBlockText("Which block retains all query parameters during URL redirection?")).toBe("retains all query parameters");});
+
+test("explicit property type applies before ranking",()=>{
+ const scope=preparePropertyScope([{...row("port","Traffic port."),type:"number"},{...row("redirect","Redirect traffic."),type:"bool"}]);
+ expect(rankPropertyScope("Which boolean flag enables traffic redirect?",scope).map(row=>row.schema_path)).toEqual(["redirect"]);
+});

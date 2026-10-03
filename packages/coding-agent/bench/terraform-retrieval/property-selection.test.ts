@@ -338,3 +338,8 @@ test("explicit top-level field scope excludes nested reference fields",()=>{
  expect(selectPropertyDestination("Which top-level attribute specifies name?",[nested,root]).destinations[0]?.schema_path).toBe("name");
  expect(selectPropertyDestination("Which attribute specifies name?",[nested,root]).kind).toBe("choices");
 });
+
+test("explicit boolean flag type excludes numeric field evidence",()=>{
+ const flag={...row("redirect",35),type:"bool",description:"Redirect traffic."};const port={...row("port",50),type:"number",description:"Incoming traffic port."};
+ expect(selectPropertyDestination("Which boolean flag enables traffic redirect?",[port,flag]).destinations[0]?.schema_path).toBe("redirect");
+});

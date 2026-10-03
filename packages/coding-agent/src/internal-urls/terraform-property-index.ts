@@ -5,6 +5,7 @@ import {
 	preparePropertyScope,
 	propertyQueryTerms,
 	propertyRequestedText,
+	propertyRequestedType,
 	propertyRequestsBlock,
 	propertyRequestsRootField,
 	propertySchemaIdentifiers,
@@ -162,6 +163,13 @@ export function searchPropertyIndex(
 	}
 
 	if (propertyRequestsRootField(query)) clauses.push("instr(schema_path, char(46))=0");
+	const requestedType = propertyRequestedType(query);
+	if (requestedType) {
+		clauses.push(
+			"EXISTS(SELECT 1 FROM property_terms typed WHERE typed.provider_type=property_search.provider_type AND typed.provider_name=property_search.provider_name AND typed.schema_path=property_search.schema_path AND (typed.type IS NULL OR typed.type=?))",
+		);
+		args.push(requestedType);
+	}
 	const identifiers = propertySchemaIdentifiers(query).filter(
 		term => !db.query("SELECT 1 FROM property_scopes WHERE provider_name=?").get(term),
 	);
