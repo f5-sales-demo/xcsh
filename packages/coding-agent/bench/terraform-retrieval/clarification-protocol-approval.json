@@ -1,0 +1,8 @@
+{
+  "protocol_sha256": "a349f21b21140f59a3050f2162d675e5d19de3a1ca632366301770d94c2342a6",
+  "verification_sha256": "0776f623df6cd24bc5b4243982e28a5bd88576098eadb3bfd3aa8b8441129a0a",
+  "verification_gzip_sha256": "9cba0d231893f95145a08c47604d945a36ccae97e344a99602dd8e2a68763575",
+  "verdict": "approve",
+  "scope": "scoring design only; proposal pending independent benchmark freeze",
+  "qualification_passed": false
+}
