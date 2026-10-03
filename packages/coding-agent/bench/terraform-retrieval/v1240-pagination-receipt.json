@@ -1,0 +1,107 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "complete_choice_routes": 24,
+  "ambiguous_cases": 29,
+  "response_budget": 4096,
+  "reports": {
+    "pagination-development": {
+      "file": "v1240-pagination-development.json.gz",
+      "sha256": "beb862a0408fb692015a53b8c0f2c5262ecfbd28e946c212b224e64febde4272",
+      "gzip_sha256": "4100aba15011e67b4573670352b06b7fa5a186779713bf60daf9756815a1d361",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1889.395922,
+        "warm_p95_ms": 35.92921500000011,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "pagination-hierarchy": {
+      "file": "v1240-pagination-hierarchy.json.gz",
+      "sha256": "35fb38c981dd3ad83af50f78199628ff3ca3e2593d33d36efbfc12a7abefe897",
+      "gzip_sha256": "1f4183864553a5a0cc7672025663673cd05308d624f865d00685a44500d2972c",
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "provider_version": "v12.4.0",
+        "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+        "ambiguous": 29,
+        "complete_choice_routes": 24,
+        "warm_p95_ms": 35.19661899999937,
+        "max_response_bytes": 4060,
+        "limitations": [
+          "Development labels only. Hierarchy continuation coverage is separate from top-five leaf retrieval.",
+          "No installed model or cross-platform acceptance."
+        ]
+      }
+    },
+    "enable-choice-regression": {
+      "file": "v1240-enable-choice-regression.json.gz",
+      "sha256": "c9631ca8470ab3132d3afb02470753c6ed5bd5365424f86b2361dce70abfcb50",
+      "gzip_sha256": "75a8c16c90049628f32ea467619cd02fbb865a16e9703116e46529134c14336c",
+      "summary": {
+        "schema_version": 2,
+        "complete_response_hashes_verified": true,
+        "unpublished_preview": false,
+        "preview_source_commit": null,
+        "source_provenance": "immutable pinned release",
+        "post_analysis_regression": true,
+        "source_provider_version": "v12.4.0",
+        "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+        "index": {
+          "sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+          "size_bytes": 792915968,
+          "gzip_sha256": "4de2e1fcf2a6858ee639835728cbabedac2a82b28498843e408ce1b945ade691",
+          "gzip_size_bytes": 71617233
+        },
+        "suite_sha256": "83909be2cee6a95f5e0dbad6a65d46f3e9ad15eda2e381b1c9b4ac8539487960",
+        "frozen_source_provider_version": "v12.4.0",
+        "platform": "linux",
+        "arch": "x64",
+        "materialization_ms": 1725.8577520000001,
+        "warm_p95_ms": 30.607578999999532,
+        "discovery_p95_ms": 56.5601800000004,
+        "context_p95_ms": 0.20753700000022945,
+        "route_p95_ms": 56.58146100000158,
+        "warm_measurement_count": 2245,
+        "discovery_measurement_count": 1545,
+        "context_measurement_count": 700,
+        "repetitions": 5,
+        "model_network_ms": null,
+        "model_uat_required": true,
+        "max_discovery_bytes": 4024,
+        "max_context_bytes": 7852,
+        "total_response_bytes": 4016975,
+        "tool_calls": 2245,
+        "index_file_bytes": 71617233,
+        "answerable_accuracy": 0.6357142857142857,
+        "answerable_top5": 0.8428571428571429,
+        "scored_accuracy": 0.6,
+        "overall_accuracy": null,
+        "qualification_passed": false
+      }
+    }
+  },
+  "limitations": [
+    "Five development ambiguity cases still lack complete expected choices.",
+    "Exposed qualification remains failed and regression-only."
+  ]
+}
