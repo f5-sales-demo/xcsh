@@ -151,3 +151,9 @@ test("field function verbs keep requested values separate from enclosing configu
     const scope=preparePropertyScope([row("service.port.target_port","Port the workload is listening on."),row("service.redirect_route.host_redirect","Host to redirect requests to.")]);
     expect(rankPropertyScope("In a workload resource defining a redirect route on a service port, which parameter configures the target host for redirection?",scope)[0]?.schema_path).toBe("service.redirect_route.host_redirect");
 });
+
+test("explicit provider imperative retains value intent over enclosing block evidence",()=>{
+ const scope=preparePropertyScope([row("routing.dual_stack","Dual stack includes IPv4 and IPv6.","section"),row("routing.dual_stack.ipv4.addr","IPv4 Address.")]);
+ const q="In xcsh_fixture, specify the dual-stack IPv4 address.";
+ expect(propertyRequestedText(q)).toBeDefined();expect(rankPropertyScope(q,scope)[0]?.schema_path).toBe("routing.dual_stack.ipv4.addr");
+});

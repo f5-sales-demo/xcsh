@@ -81,7 +81,11 @@ export function propertyRequestedText(text: string): string | undefined {
 	const field = text.match(
 		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?)\s+)?(.+)/i,
 	)?.[1];
-	const operation = text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1];
+	const operation =
+		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
+		(/\bxcsh_[a-z0-9_]+\b/i.test(text)
+			? text.match(/\b(?:declare|configure|specify|set)\b\s+(.+)/i)?.[1]
+			: undefined);
 	return (field ?? operation)?.split(/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b/i)[0]?.trim();
 }
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
@@ -140,6 +144,7 @@ export function rankPropertyScope(
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
 			if (asksField && row.anchor === "section") score -= 12;
+			if (asksField && row.anchor !== "section" && leafComplete) score += 12;
 			if (
 				!asksField &&
 				/\bblock\b/i.test(queryText) &&
