@@ -837,3 +837,16 @@ test("object query and nested value query have distinct routes", () => {
 		anchor: "root-configuration",
 	});
 });
+
+test("query property phrases bypass root configuration without changing role", () => {
+	expect(
+		terraformTaskDestination("Query the name of an existing gateway using data source xcsh_fixture"),
+	).toBeUndefined();
+	expect(
+		terraformQueryIdentity("Query the name of an existing gateway using data source xcsh_fixture").providerType,
+	).toBe("data-sources");
+	expect(terraformTaskDestination("Query an existing certificate using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});

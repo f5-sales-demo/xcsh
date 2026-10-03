@@ -168,16 +168,25 @@ export function propertyRequestedText(text: string): string | undefined {
 		text.match(
 			/\b(?:specify|set|provide|supply)\b\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|resource\b|data[ -]source\b|provider\b))(.+)/i,
 		)?.[1];
-	const lookup = /\bxcsh_[a-z0-9_]+\b/i.test(text)
+	const queryProperty = text.match(
+		/\bquery\s+((?:(?:the|an?)\s+)?(?:[a-z][a-z0-9_-]*\s+){0,2}(?:name|id|status|address|port|token|value))\s+of\s+[^.!?]+/i,
+	)?.[1];
+	const lookup = /\bxcsh_[a-z0-9_]+\b|\bto\s+(?:read|fetch|retrieve|inspect|look up|lookup)\b/i.test(text)
 		? [
 				...text.matchAll(
-					/\b(?:read|fetch|retrieve|inspect|look up|lookup|query(?=\s+(?:(?:the|an?)\s+)?(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b))\b\s+(.+)/gi,
+					/\b(?:read|fetch|retrieve|inspect|look up|lookup|query(?=\s+(?:(?:the|an?)\s+)?(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b))\b\s+(.+?)(?=\bto\s+(?:read|fetch|retrieve|inspect|look up|lookup)\b|\r?\n|$)/gi,
 				),
 			]
+				.filter(
+					(match, _index, matches) =>
+						!/^inspect\b/i.test(match[0]) ||
+						(!queryProperty && !matches.some(other => !/^inspect\b/i.test(other[0]))),
+				)
 				.map(match => match[1]!.split(/\b(?:from|using|via|for)\b/i)[0]!.trim())
+				.reverse()
 				.find(
 					value =>
-						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource|existing object)\b/i.test(value) &&
+						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource|existing)\b/i.test(value) &&
 						propertyTerms(value.replace(/\bxcsh_[a-z0-9_]+\b/gi, "").replace(/data[ -]source/gi, "")).length > 0,
 				)
 		: undefined;
@@ -185,7 +194,16 @@ export function propertyRequestedText(text: string): string | undefined {
 		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
 			text,
 		)?.[1];
-	return (filterCriterion ?? identifierField ?? classificationField ?? field ?? operation ?? lookup ?? passive)
+	return (
+		filterCriterion ??
+		identifierField ??
+		classificationField ??
+		field ??
+		operation ??
+		lookup ??
+		queryProperty ??
+		passive
+	)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
 		.split(/\bused\s+to\b|\bat\s+which\b|\bwhen\s+(?:handling|processing|matching|calling|invoking|executing)\b/i)[0]
 		?.split(
@@ -211,7 +229,11 @@ export function propertyNamesCollection(text: string, candidate: PropertyCandida
 }
 export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
 	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
-	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText)) return false;
+	if (
+		!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) &&
+		!/\bquery\s+(?:(?:the|an?)\s+)?(?:name|id|status|address|port|token|value)\s+of\b/i.test(queryText)
+	)
+		return false;
 	const request = propertyRequestedText(queryText);
 	if (!request) return false;
 	const generic = new Set(["object", "configured", "assigned", "computed", "value"]);

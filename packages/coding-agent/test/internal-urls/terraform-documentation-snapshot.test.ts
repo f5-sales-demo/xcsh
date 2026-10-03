@@ -1682,3 +1682,92 @@ test("exact provider identities resolve their documented role before inferred co
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("querying an object name selects the root property rather than nested names", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-query-phrase-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		doc.path = "documentation/data-sources/fixture/properties/index.md";
+		doc.metadata.path = doc.path;
+		doc.metadata.provider_type = "data-sources";
+		doc.metadata.role = "properties";
+		const body =
+			'<a id="schema-name"></a>\n### name\nType: "string". Required.\n\nName of the object.\n\n<a id="schema-services--name"></a>\n### service name\nType: "string". Computed.\n\nName of a referred service.\n\n<a id="schema-domains"></a>\n### domains\nType: "list". Computed.\n\nServed domains.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = [
+			{
+				schema_path: ["name"],
+				document_id: doc.metadata.id,
+				anchor: "schema-name",
+				description: "Name of the object.",
+				aliases: [],
+				relationships: [],
+				flags: ["required"],
+				type: "string",
+			},
+			{
+				schema_path: ["services", "name"],
+				document_id: doc.metadata.id,
+				anchor: "schema-services--name",
+				description: "Name of a referred service.",
+				aliases: [],
+				relationships: [],
+				flags: ["computed"],
+				type: "string",
+			},
+		];
+		doc.metadata.sections.push({
+			schema_path: ["domains"],
+			document_id: doc.metadata.id,
+			anchor: "schema-domains",
+			description: "Served domains.",
+			aliases: [],
+			relationships: [],
+			flags: ["computed"],
+			type: "list",
+		});
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const query = (text: string, suffix = "") =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?search=${encodeURIComponent(text)}${suffix}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const result = await query("Query the name of an existing fixture using data source xcsh_fixture");
+		expect(result.content).toContain("Selected leaf;");
+		expect(result.content).toContain("#schema-name");
+		const articleVariant = await query("Query a name of an existing fixture using data source xcsh_fixture");
+		expect(articleVariant.content).toContain("Selected leaf;");
+		expect(articleVariant.content).toContain("#schema-name");
+		const nested = await query("Query the service name of an existing fixture using data source xcsh_fixture");
+		expect(nested.content).toContain("#schema-services--name");
+		expect(
+			(
+				await query(
+					"Query the name of an existing fixture using data source xcsh_fixture",
+					"&provider_type=resources",
+				)
+			).content,
+		).toContain("No results.");
+		for (const text of [
+			"Query the name of an existing object using data source xcsh_fixture to read served domains",
+			"Query the name of an existing object using data source xcsh_fixture to inspect existing object to read served domains",
+			"Query the name of an existing object to read served domains",
+			"Query the name of an existing certificate using data source xcsh_fixture to inspect existing certificate to read served domains",
+			"Read served domains from data source xcsh_fixture.\nExplain the result.",
+		]) {
+			const response = await query(text, "&provider_name=fixture&provider_type=data-sources");
+			expect(response.content).toContain("Selected leaf;");
+			expect(response.content).toContain("#schema-domains");
+		}
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

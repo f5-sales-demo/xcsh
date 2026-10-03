@@ -396,3 +396,37 @@ test("leading object queries preserve nested reads and remain object-level witho
  expect(propertyRequestedText("Query the existing object using data source xcsh_fixture to read served domains")).toContain("served domains");
  expect(propertyRequestedText("Query an existing certificate using data source xcsh_fixture")).toBeUndefined();
 });
+
+
+test("query property phrases preserve modifiers and exclude object lookup",()=>{
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture")).toBe("the name");
+ expect(propertyRequestedText("Query the status of an existing gateway using data source xcsh_fixture")).toBe("the status");
+ expect(propertyRequestedText("Query the service name of an existing gateway using data source xcsh_fixture")).toBe("the service name");
+ expect(propertyRequestedText("Query an existing certificate using data source xcsh_fixture")).toBeUndefined();
+ expect(propertyRequestedText("Query the existing object using data source xcsh_fixture to read served domains")).toContain("served domains");
+});
+
+
+test("nested explicit read wins over leading property lookup",()=>{expect(propertyRequestedText("Query the name of an existing object using data source xcsh_fixture to read served domains")).toContain("served domains");});
+
+
+test("nested reads survive intervening object inspections and caller-only scope", () => {
+ expect(propertyRequestedText("Query the name of an existing object using data source xcsh_fixture to inspect existing object to read served domains")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing object to read served domains")).toBe("served domains");
+});
+
+test("nested reads preserve line boundaries and typed-object inspections", () => {
+ expect(propertyRequestedText("Read served domains from data source xcsh_fixture.\nExplain the result.")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect existing certificate to read served domains")).toBe("served domains");
+});
+
+test("trailing object inspections preserve the property-bearing request", () => {
+ expect(propertyRequestedText("Read served domains from data source xcsh_fixture to inspect existing certificate")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect existing certificate")).toBe("the name");
+});
+
+test("object inspections with articles do not replace explicit read or query", () => {
+ expect(propertyRequestedText("Read served domains from data source xcsh_fixture to inspect the certificate")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect the certificate")).toBe("the name");
+ expect(propertyRequestedText("Inspect served domains using data source xcsh_fixture")).toBe("served domains");
+});
