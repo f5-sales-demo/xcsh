@@ -1,0 +1,53 @@
+{
+  "source_only": true,
+  "development_only": true,
+  "qualification_passed": false,
+  "original_labels_unchanged": true,
+  "provider_version": "v12.4.0",
+  "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+  "cases": 16,
+  "execution_route": "Ubuntu Codex ChatGPT sign-in",
+  "files": {
+    "input.json.gz": {
+      "uncompressed_sha256": "0fe79424d3148a13705ec833940bb2b455ebaae777c992df72f2ba0ff96bd0ec",
+      "compressed_sha256": "4e7d2f281978b31df5170c764473484f451ad49efcef9155a69401cd807256f7"
+    },
+    "source-review.json.gz": {
+      "uncompressed_sha256": "399349c8c4cec00fe51944f1babe5fdee6bb9712ebb4dddb4316544e609ee48f",
+      "compressed_sha256": "2cdb5f06ba5cd29e88023c396cd3780be311890a9098834bfd11ecc56f6d5613"
+    },
+    "validation.json.gz": {
+      "uncompressed_sha256": "2830f017a4f6c2c987727edd3299d3f0b968bdc3a156366c619db2da6cd7faec",
+      "compressed_sha256": "cd5186b86f4865cb40865b22a319a1855bb275d46ac72194a665cbe574db0587"
+    },
+    "supplemented-input.json.gz": {
+      "uncompressed_sha256": "40a143dae33c1b398f96aba4d4a57db3e1d45e472602d80b4504d6ac93c1618d",
+      "compressed_sha256": "e5d35cdca2b11b99cb6ec1d934f1d4fd0dae320f9ae0ed4ac8d8f063bbd6e936"
+    },
+    "corrected-source-review.json.gz": {
+      "uncompressed_sha256": "91c5ba799047c32c2f9da32bbb912f23851972fa58460a87289abfa0b1471f7e",
+      "compressed_sha256": "414c8a14abf6a4f31fdb2071fd4e73de105f44a500bb81ee452bbcae1f497f34"
+    },
+    "corrected-validation.json.gz": {
+      "uncompressed_sha256": "d33585645d9dac3711f052642c8e99317174f2639b21c9e9b41e228ad6ccc9d2",
+      "compressed_sha256": "76086487ab964919ed9621ace1be982e989ef234a02cf110e63b7393626aa9f6"
+    }
+  },
+  "corrected_validation": {
+    "source_only": true,
+    "development_only": true,
+    "qualification_passed": false,
+    "cases": 16,
+    "quote_errors": [],
+    "unsupplied_peer_sections": [],
+    "input_sha256": "40a143dae33c1b398f96aba4d4a57db3e1d45e472602d80b4504d6ac93c1618d",
+    "review_sha256": "91c5ba799047c32c2f9da32bbb912f23851972fa58460a87289abfa0b1471f7e",
+    "limitation": "Expected block section is not complete page or all child sections; claims of absent child fields need further source evidence."
+  },
+  "limitations": [
+    "Exact quotes verified; semantic review remains bounded by supplied source.",
+    "Whole pages and referenced descendants may be needed in addition to expected block section.",
+    "Role/topic ambiguity is not benchmark qualification.",
+    "Original suite labels and scores remain untouched."
+  ]
+}
