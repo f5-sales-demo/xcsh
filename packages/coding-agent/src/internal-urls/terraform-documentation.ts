@@ -11,7 +11,7 @@ import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
 import { terraformChoiceResponse } from "./terraform-choice-response";
 import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
-import { propertyRequestedText, propertyRequestsBlock } from "./terraform-property-ranking";
+import { propertyRequestedText, propertyRequestsBlock, propertyRequestsCollection } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -45,6 +45,7 @@ export interface TerraformSection {
 	aliases: string[];
 	relationships: TerraformRelationship[];
 	flags: string[];
+	type?: string;
 	nesting?: string | null;
 	min_items?: number | null;
 	max_items?: number | null;
@@ -97,6 +98,8 @@ export function validateTerraformRetrievalMetadata(m: TerraformMetadata): void {
 			!section.flags.every(flag =>
 				["required", "optional", "computed", "sensitive", "deprecated", "write_only"].includes(flag),
 			) ||
+			(section.type != null &&
+				!["bool", "string", "number", "object", "list", "set", "map"].includes(section.type)) ||
 			(section.nesting != null && !["single", "list", "set", "map"].includes(section.nesting)) ||
 			[section.min_items, section.max_items].some(
 				value => value != null && (!Number.isSafeInteger(value) || value < 0),
@@ -714,6 +717,7 @@ export function rankTerraformDirectProperties(
 	sections: readonly TerraformSection[],
 ): TerraformSection[] {
 	if (/\b(?:block|object|schema path)\b/i.test(query) && !/\b(?:field|attribute|property)\b/i.test(query)) return [];
+	if (propertyRequestsCollection(query)) return [];
 	const terms = (value: string) => [
 		...new Set(
 			(

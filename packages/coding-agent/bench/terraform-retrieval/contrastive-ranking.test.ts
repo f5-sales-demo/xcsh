@@ -238,3 +238,10 @@ test("a literal unqualified requested field preserves direct object scope", () =
  expect(rankPropertyScope("Read the name attribute of an existing object via xcsh_fixture data source",scope)[0]?.schema_path).toBe("name");
  expect(rankPropertyScope("Read the receiver name attribute via xcsh_fixture data source",scope)[0]?.schema_path).toBe("receivers.name");
 });
+
+test("documented object lists and scalar lists retain their requested property level", () => {
+ const scope=preparePropertyScope([{...row("rules","This can be used for messages where no values are needed.","section"),type:"object",nesting:"list"},{...row("rules.rule","Evaluation rule."),type:"string"},{...row("conditions.regex_values","Regular expression patterns."),type:"list",nesting:null},{...row("conditions","Matching conditions.","section"),type:"object",nesting:"single"}]);
+ expect(rankPropertyScope("In xcsh_fixture, configure the list of rules",scope)[0]?.schema_path).toBe("rules");
+ expect(rankPropertyScope("Which field sets a rule item in xcsh_fixture?",scope)[0]?.schema_path).toBe("rules.rule");
+ expect(rankPropertyScope("In xcsh_fixture, specify the list of regular expression patterns",scope)[0]?.schema_path).toBe("conditions.regex_values");
+});

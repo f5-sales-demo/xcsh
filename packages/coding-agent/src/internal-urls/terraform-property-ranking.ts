@@ -7,6 +7,8 @@ export interface PropertyCandidate {
 	anchor: string;
 	description: string;
 	aliases?: string[];
+	type?: string | null;
+	nesting?: string | null;
 	evidence_terms?: string[];
 }
 const stop = new Set(
@@ -122,6 +124,22 @@ export function propertyRequestedText(text: string): string | undefined {
 		)[0]
 		?.trim();
 }
+export function propertyRequestsCollection(text: string): boolean {
+	return (
+		/\b(?:list|collection|set|array)\s+of\b/i.test(propertyRequestedText(text) ?? text) &&
+		!/\b(?:item|element|entry|field|attribute|property|parameter)\b/i.test(text)
+	);
+}
+export function propertyNamesCollection(text: string, candidate: PropertyCandidate): boolean {
+	if (!propertyRequestsCollection(text) || !["list", "set", "map"].includes(candidate.nesting ?? candidate.type ?? ""))
+		return false;
+	const noun = (propertyRequestedText(text) ?? text)
+		.match(/\b(?:list|collection|set|array)\s+of\s+(.+)/i)?.[1]
+		?.split(/\b(?:for|in|under|within|on)\b/i)[0];
+	const target = propertyQueryTerms(noun ?? "");
+	const leaf = propertyQueryTerms((candidate.schema_path.split(".").at(-1) ?? "").replaceAll("_", " "));
+	return leaf.length > 0 && leaf.every(term => target.includes(term));
+}
 export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
 	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
 	if (!/\b(?:field|attribute|property|parameter)\b/i.test(queryText)) return false;
@@ -202,7 +220,8 @@ export function rankPropertyScope(
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
 			if (propertyRequestsDirectObjectField(queryText, row)) score += 12;
-			if (asksField && row.anchor === "section") score -= 12;
+			if (propertyNamesCollection(queryText, row)) score += 36;
+			else if (asksField && row.anchor === "section") score -= 12;
 			if (
 				row.anchor === "section" &&
 				row.leaf.length >= 2 &&

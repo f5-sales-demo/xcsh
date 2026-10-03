@@ -179,3 +179,19 @@ test("literal leaf names supplement broad passage candidates without escaping sc
  expect(searchPropertyIndex(db,"which field specifies name",{providerName:"fixture"},1).some(row=>row.path==="target")).toBe(true);
  expect(searchPropertyIndex(db,"which field specifies name",{providerName:"absent"},1)).toEqual([]);db.close();
 });
+
+test("documented property shape distinguishes object collections from item attributes", () => {
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); CREATE TABLE terraform_documents(metadata)");
+ db.exec("INSERT INTO terraform_destinations VALUES('resources','fixture','prefixes','parent','section','Prefix entries.'),('resources','fixture','prefixes.prefix','parent','schema-prefix','An address prefix.')");
+ db.prepare("INSERT INTO terraform_documents VALUES(?)").run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:["prefixes"],type:"object",nesting:"list"},{schema_path:["prefixes","prefix"],type:"string",nesting:null}]}));
+ populatePropertyIndex(db);
+ const rows=searchPropertyIndex(db,"configure the list of prefixes in xcsh_fixture",{providerName:"fixture"});
+ expect(rows.find(row=>row.schema_path==="prefixes")).toMatchObject({type:"object",nesting:"list"});
+ expect(rows.find(row=>row.schema_path==="prefixes.prefix")).toMatchObject({type:"string",nesting:null});db.close();
+});
+
+test("conflicting property shape metadata cannot silently overwrite indexed evidence", () => {
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);CREATE TABLE terraform_documents(metadata);INSERT INTO terraform_destinations VALUES('resources','fixture','rules','rules','section','Rules.')");
+ const put=db.prepare("INSERT INTO terraform_documents VALUES(?)");for(const nesting of ["list","single"])put.run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:["rules"],type:"object",nesting}]}));
+ expect(()=>populatePropertyIndex(db)).toThrow("Conflicting property shape");db.close();
+});

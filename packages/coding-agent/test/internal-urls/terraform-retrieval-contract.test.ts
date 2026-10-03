@@ -705,3 +705,29 @@ test("named data source values are not usage examples", () => {
 		anchor: "root-configuration",
 	});
 });
+
+test("collection requests preserve the complete property instead of selecting an item field", () => {
+	const section = {
+		schema_path: ["address_prefixes", "address_prefix"],
+		document_id: "prefixes",
+		anchor: "schema-prefix",
+		description: "An address prefix in the collection.",
+		aliases: [],
+		relationships: [],
+		flags: [],
+	};
+	expect(
+		rankTerraformDirectProperties(
+			"In xcsh_fixture, configure the list of address prefixes for policy matching",
+			["address_prefixes"],
+			[section],
+		),
+	).toEqual([]);
+	expect(
+		rankTerraformDirectProperties(
+			"Which field specifies an address prefix item in xcsh_fixture?",
+			["address_prefixes"],
+			[section],
+		)[0]?.anchor,
+	).toBe("schema-prefix");
+});

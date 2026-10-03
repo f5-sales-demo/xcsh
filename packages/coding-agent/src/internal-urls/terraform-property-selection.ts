@@ -1,6 +1,7 @@
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
 	type PropertyCandidate,
+	propertyNamesCollection,
 	propertyQueryTerms,
 	propertyRequestedText,
 	propertyRequestsBlock,
@@ -62,6 +63,7 @@ export function selectPropertyDestination(
 			row =>
 				!(
 					row.anchor === "section" &&
+					!propertyNamesCollection(queryText, row) &&
 					(/\b(?:field|attribute|property|parameter)\b/i.test(queryText) ||
 						Boolean(propertyRequestedText(queryText))) &&
 					!propertyRequestsBlock(queryText) &&
@@ -200,6 +202,13 @@ export function selectPropertyDestination(
 	const fieldNamed = first.anchor.startsWith("schema-") && completeFieldTerms(first);
 	const blockNamed = first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first);
 	const second = ranked.slice(1).find(other => {
+		if (
+			propertyNamesCollection(queryText, first) &&
+			other.provider_type === first.provider_type &&
+			other.provider_name === first.provider_name &&
+			other.schema_path.startsWith(`${first.schema_path}.`)
+		)
+			return false;
 		if (
 			propertyRequestsDirectObjectField(queryText, first) &&
 			other.provider_type === first.provider_type &&
