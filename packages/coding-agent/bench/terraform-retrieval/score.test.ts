@@ -3,6 +3,7 @@ import {
 	scoreDestinations,
 	validateIndependentFreeze,
 	validateModelActivation,
+ validateModelSubsetPreflight,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -94,4 +95,14 @@ test("model acceptance requires explicit Terraform activation while ordinary con
 			{ id: "c", kind: "control", behavior: "ordinary-discovery", prompt: "Find API guidance" },
 		]),
 	).not.toThrow();
+});
+
+
+test("fresh retrieval qualification requires a complete activated model subset",()=>{
+ const rows=[...Array.from({length:28},(_,i)=>({id:`a${i}`,kind:"answerable",prompt:"Terraform fixture"})),...Array.from({length:8},(_,i)=>({id:`b${i}`,kind:"ambiguous",prompt:"Terraform fixture"})),...Array.from({length:4},(_,i)=>({id:`c${i}`,kind:"control",prompt:"Ordinary API docs"}))];
+ expect(()=>validateModelSubsetPreflight(rows,rows.map(c=>c.id),false)).not.toThrow();
+ expect(()=>validateModelSubsetPreflight(rows.slice(1),rows.map(c=>c.id),false)).toThrow("28/8/4");
+ expect(()=>validateModelSubsetPreflight([{...rows[0]!,prompt:"Which field?"},...rows.slice(1)],rows.map(c=>c.id),false)).toThrow("activation");
+ expect(()=>validateModelSubsetPreflight(rows,[],false)).toThrow("IDs");
+ expect(()=>validateModelSubsetPreflight([],[],true)).not.toThrow();
 });

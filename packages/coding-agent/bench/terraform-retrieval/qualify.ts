@@ -18,6 +18,7 @@ import {
 	scoreDestinations,
 	type TerraformPreviewEvidence,
 	validateIndependentFreeze,
+ validateModelSubsetPreflight,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -65,6 +66,13 @@ const eligibility = (await Bun.file(eligibilityPath).exists())
 validateQualificationEligibility(eligibility, terraformHash(suiteBytes), regression);
 
 const suite = JSON.parse(suiteBytes.toString()) as Case[];
+if(!regression){
+ const modelFile=path.join(path.dirname(suiteFile),"model-subset.json");
+ const modelBytes=await readFile(modelFile);
+ if(terraformHash(modelBytes)!==freeze.files?.["model-subset.json"])throw new Error("Frozen model subset hash mismatch");
+ validateModelSubsetPreflight(JSON.parse(modelBytes.toString()),suite.map(c=>c.id),false);
+}
+
 const treeFile = path.join(path.dirname(suiteFile), "clarification-trees.json");
 let trees: Record<string, FrozenClarificationTree> = {};
 if (await Bun.file(treeFile).exists()) {

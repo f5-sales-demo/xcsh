@@ -112,3 +112,12 @@ export function validateModelActivation(
 		if ((item.kind === "answerable" || item.kind === "ambiguous") && !/\bterraform\b|\bhcl\b/i.test(item.prompt))
 			throw new Error(`Model case ${item.id} lacks explicit Terraform activation`);
 }
+
+
+export function validateModelSubsetPreflight(cases:Array<{id:string;kind:string;prompt:string;behavior?:string}>,suiteIds:readonly string[],regression:boolean):void{
+ if(regression)return;
+ const counts=["answerable","ambiguous","control"].map(kind=>cases.filter(c=>c.kind===kind).length);
+ if(cases.length!==40||JSON.stringify(counts)!==JSON.stringify([28,8,4]))throw new Error("Frozen model subset must be28/8/4");
+ if(new Set(cases.map(c=>c.id)).size!==40||cases.some(c=>!suiteIds.includes(c.id)))throw new Error("Frozen model subset IDs do not match suite");
+ validateModelActivation(cases);
+}
