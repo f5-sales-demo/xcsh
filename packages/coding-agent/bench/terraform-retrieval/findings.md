@@ -1300,3 +1300,17 @@ loopback runtime and digest-bound corpus are separate from production. Vector
 materialization is active; evaluator waits for its exact completion receipt.
 Semantic input generation rejects exposed suites without explicit regression.
 Preparation receipt: semantic-v1231-preparation.json. No qualification claim.
+
+The exact v12.3.1 property vectors materialize in 393.808 seconds, 39,565 rows
+by 768 dimensions (121,543,808 bytes). Corpus/model/vector digests verify.
+Offline hybrid candidate development reaches 41/48 first and 46/48 top-five,
+but embedding plus ranking/fusion p95 is 267.424 ms, excluding precomputed
+lexical retrieval and response rendering. Accuracy/latency do not justify
+promotion. Source-bound raw receipt: semantic-v1231-development-receipt.json.
+A separate warm embedding runtime comparison is pending; no frozen-suite tuning
+or production semantic dependency introduced.
+
+Warm embedding-only runtime comparison across eight development queries, five
+measured repetitions after warmup, exceeds 150 ms in default and CPU modes.
+The exact semantic experiment remains unpromoted; runtime receipts are retained
+with semantic-v1231-development-receipt.json.
