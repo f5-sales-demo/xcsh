@@ -288,3 +288,8 @@ test("exclusive qualifier in unequal-depth sibling segments resolves branch cont
 	expect(selectPropertyDestination("stateful service custom routes", [first], [other]).kind).toBe("leaf");
 	expect(selectPropertyDestination("stateful service routes", [first], [other]).kind).toBe("choices");
 });
+
+test("imperative scalar requests exclude matching ancestor blocks",()=>{
+ const rows=[{provider_type:"resources",provider_name:"fixture",schema_path:"routing.dual_stack",path:"block",anchor:"section",description:"Dual-stack IPv4 or IPv6 address.",score:60,coverage:1},{provider_type:"resources",provider_name:"fixture",schema_path:"routing.dual_stack.ipv4.addr",path:"field",anchor:"schema-field",description:"IPv4 address.",score:55,coverage:1}];
+ expect(selectPropertyDestination("In xcsh_fixture, specify the dual-stack IPv4 address.",rows).destinations[0]?.path).toBe("field");
+});

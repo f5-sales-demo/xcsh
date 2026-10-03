@@ -1,5 +1,10 @@
 // Conservative indexed property selection policy. Scores express rank, never probability.
-import { type PropertyCandidate, propertyQueryTerms, propertyTerms } from "./terraform-property-ranking";
+import {
+	type PropertyCandidate,
+	propertyQueryTerms,
+	propertyRequestedText,
+	propertyTerms,
+} from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
 	coverage: number;
@@ -53,7 +58,8 @@ export function selectPropertyDestination(
 			row =>
 				!(
 					row.anchor === "section" &&
-					/\b(?:field|attribute|property|parameter)\b/i.test(queryText) &&
+					(/\b(?:field|attribute|property|parameter)\b/i.test(queryText) ||
+						Boolean(propertyRequestedText(queryText))) &&
 					!/\bblock\b/i.test(queryText) &&
 					[...unique.values()].some(other => {
 						const terms = propertyTerms(other.schema_path.split(".").at(-1) ?? "");
