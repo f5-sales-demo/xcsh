@@ -9,6 +9,7 @@ import type {
 	OpenAPIPathOperation,
 	OpenAPISpec,
 } from "./api-spec-types";
+import { formatMapConstraints, type MapConstraints } from "./map-constraints";
 import type { InternalResource, InternalUrl } from "./types";
 
 const SCHEMA_RENDER_MAX_DEPTH = 3;
@@ -764,6 +765,7 @@ interface ProjectedField {
 
 function exactFieldConstraints(prop: Record<string, unknown>): string {
 	const extension = (prop["x-f5xc-constraints"] as Record<string, unknown> | undefined) ?? {};
+	if (extension.constraintType === "map") return formatMapConstraints(extension as unknown as MapConstraints);
 	return formatFieldConstraints({
 		"x-f5xc-constraints": {
 			pattern: prop.pattern ?? extension.pattern,
@@ -977,6 +979,7 @@ function extractSchemaName(schema: Record<string, unknown>): string | null {
 function formatFieldConstraints(prop: Record<string, unknown>): string {
 	const c = prop["x-f5xc-constraints"] as Record<string, unknown> | undefined;
 	if (!c) return "";
+	if (c.constraintType === "map") return formatMapConstraints(c as unknown as MapConstraints);
 	const parts: string[] = [];
 	if (c.pattern) {
 		const p = String(c.pattern);
