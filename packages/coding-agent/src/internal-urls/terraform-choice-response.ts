@@ -6,6 +6,7 @@ export function terraformChoiceResponse(
 	after: string | null,
 	budget = 4096,
 ): string {
+	if (Buffer.byteLength(prefix) > budget) throw new Error("Terraform choice envelope exceeds response budget");
 	const offset = after === null ? 0 : Number(after);
 	if (
 		after !== null &&

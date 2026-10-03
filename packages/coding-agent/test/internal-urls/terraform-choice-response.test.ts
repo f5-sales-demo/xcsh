@@ -27,4 +27,5 @@ test("invalid cursors and indivisible oversized choices fail explicitly", () => 
 	for (const cursor of ["-1", "1.5", "01", "2", "NaN"])
 		expect(() => terraformChoiceResponse("Prefix", ["a", "b"], url, cursor)).toThrow("continuation");
 	expect(() => terraformChoiceResponse("Prefix", ["x".repeat(5000)], url, null)).toThrow("budget");
+	expect(() => terraformChoiceResponse("x".repeat(5000), [], url, null)).toThrow("budget");
 });
