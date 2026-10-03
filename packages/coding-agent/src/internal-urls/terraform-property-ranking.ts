@@ -106,7 +106,11 @@ export function propertyRequestsBlock(text: string): boolean {
 }
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
-	const field = text.match(
+	const fieldText = text.replace(
+		/\b(field|attribute|property|parameter|argument|flag)\b\s+(?:in|under|inside|within)\s+.+?\s+((?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?)\b)/i,
+		"$1 $2",
+	);
+	const field = fieldText.match(
 		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?)\s+)?(.+)/i,
 	)?.[1];
 	const operation =
@@ -129,7 +133,8 @@ export function propertyRequestedText(text: string): string | undefined {
 		)?.[1];
 	return (field ?? operation ?? lookup ?? passive)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
-		.split(
+		.split(/\bused\s+to\b|\bat\s+which\b|\bwhen\s+(?:handling|processing|matching)\b/i)[0]
+		?.split(
 			/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b|\bto\s+(?:handle|match|configure|enable|provide)\b|\bwhen\s+(?:declaring|configuring|reading)\b|\bof\s+(?:an? |the )?(?:existing |managed )?(?:resource|load balancer|site|object)\b/i,
 		)[0]
 		?.trim();

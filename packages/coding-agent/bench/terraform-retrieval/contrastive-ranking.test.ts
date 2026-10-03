@@ -265,3 +265,9 @@ test("argument and flag phrasing preserve requested values", () => {
  expect(propertyRequestedText("Which argument specifies the software version in xcsh_fixture action?")).toContain("software version");
  expect(propertyRequestedText("Which boolean flag enables automatic redirection in xcsh_fixture?")).toContain("automatic redirection");
 });
+
+test("field scope and trailing usage clauses remain separate from requested values",()=>{
+ expect(propertyRequestedText("Which property in tls_settings specifies the certificate name used to authenticate backend connections?")).toBe("the certificate name");
+ expect(propertyRequestedText("Which property under retry_settings sets the retry count when handling connection failures?")).toBe("the retry count");
+ expect(propertyRequestedText("Which attribute provides the expiration timestamp at which the token will expire?")).toBe("the expiration timestamp");
+});
