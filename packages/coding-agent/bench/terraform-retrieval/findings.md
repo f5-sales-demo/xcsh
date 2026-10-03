@@ -1321,3 +1321,11 @@ Warm embedding smoke is 6.259 ms p95 on four development queries, with 384
 dimensions and 256-token model limit. This is not qualification. Exact v12.3.1
 destination vectors are materializing; no production dependency introduced.
 Runtime/package/model hashes and limitations: minilm-development-preparation.json.
+
+MiniLM exact v12.3.1 vectors complete: 39,565 by 384 dimensions, 60,771,968
+bytes, materialization 206.174 seconds. No indexed destination exceeds the
+256-token limit (maximum 179). Development hybrid candidate ranking reaches
+38/48 first and 45/48 top-five; embedding plus fusion p95 is 13.808 ms.
+Latency fits but accuracy does not justify production integration. Complete
+selection/rendering, cross-host and fresh qualification remain unverified.
+Exact receipts/raw output: minilm-hybrid-development-receipt.json.
