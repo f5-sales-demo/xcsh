@@ -1512,7 +1512,6 @@ export class TerraformDocumentationRepository {
 					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
 						search,
 					)) &&
-				!/\b(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b/i.test(search) &&
 				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
 				(!/\bblock\b/i.test(search) ||
 					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(
