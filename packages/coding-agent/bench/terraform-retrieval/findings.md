@@ -1654,3 +1654,11 @@ guard pass. Final broader development selects43/45,top-five45/45,zero false
 leaves; original12/14,audited47/48 unchanged. Whole-path vocabulary alternative
 was rejected after unit regression; never promoted. Exact final receipts:
 segment-comparison-development-receipt.json. Independent qualification unmet.
+
+Role source audit reveals initial copied family subset included only expected
+roles, allowing reviewer false claims that protected_application and voltstack_site
+data sources were absent. Rejected role review preserved unchanged. Copied
+source now includes all roles for every audited family,10940pages with hashes.
+Full all-role re-adjudication active; previous corrected-development labels/counts
+are provisional and cannot certify uniqueness. No held-out corpus changed.
+Status: broad-development/all-role-review-status.json.

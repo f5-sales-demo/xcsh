@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_review_complete": false,
+  "reason": "Initial copied source subset omitted corresponding provider roles; reviewer falsely asserted data-source absence. All-role source correction pending. Earlier development counts are provisional.",
+  "initial_source_pages": 6475,
+  "corrected_source_pages": 10940,
+  "rejected_role_review_sha256": "e3bdb82ad60530e4a3f15b6e21e8b22288868c6bf02a60d72e36359d58e22511",
+  "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "all_role_adjudication_pending": true
+}
