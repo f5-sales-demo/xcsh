@@ -1,0 +1,67 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source_commit": "506c2a5a5",
+  "checks": {
+    "combined_tests": 567,
+    "workspace_check_ts": "passed"
+  },
+  "reports": {
+    "role-branch-all-role-development": {
+      "file": "role-branch-all-role-development.json.gz",
+      "sha256": "618f06fd7939d13b2f2157353ec03139e4c230fd3d805c749fa2ad01f4791a99",
+      "gzip_sha256": "31006aee087da80867f77016828d8966c3e0fe30505dbbbcd3ff17021b3de0e1",
+      "bytes": 73563,
+      "gzip_bytes": 11978,
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "actual_production_resolver": true,
+        "regression_only": false,
+        "provider_version": "v12.3.1",
+        "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+        "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "cold_materialization_ms": 1664.994097,
+        "warm_p95_ms": 31.409961000000294,
+        "answerable": 43,
+        "correct_leaf": 43,
+        "wrong_leaf": 0,
+        "ambiguous_leaf": 0,
+        "control_leaf": 0,
+        "answerable_top5": 43,
+        "limitations": [
+          "Development labels only; no independently frozen qualification.",
+          "Complete resolver discovery and selected context timed; model/network time excluded.",
+          "No compiled installed artifact acceptance."
+        ]
+      }
+    },
+    "role-branch-choice-development": {
+      "file": "role-branch-choice-development.json.gz",
+      "sha256": "ce61fd7b12094e9618bd4389d4dc11bdeceddb16e765ef4130f412634685df78",
+      "gzip_sha256": "7e047e942c7c6c16e01ee6f0e284a5ad27262f7a471ce8e3626a5b23efaaf5f3",
+      "bytes": 22318,
+      "gzip_bytes": 6122,
+      "summary": {
+        "development_only": true,
+        "qualification_passed": false,
+        "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+        "provider_version": "v12.3.1",
+        "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+        "ambiguous": 29,
+        "complete_choice_routes": 24,
+        "warm_p95_ms": 37.21765800000048,
+        "max_response_bytes": 4069,
+        "limitations": [
+          "Development labels only. Hierarchy continuation coverage is separate from top-five leaf retrieval.",
+          "No installed model or cross-platform acceptance."
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "Five ambiguous development cases still lack complete expected destinations.",
+    "No held-out qualification, installed model, release or cross-platform acceptance."
+  ]
+}
