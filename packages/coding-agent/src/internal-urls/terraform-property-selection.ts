@@ -3,6 +3,7 @@ import {
 	type PropertyCandidate,
 	propertyQueryTerms,
 	propertyRequestedText,
+	propertyRequestsBlock,
 	propertyTerms,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
@@ -60,7 +61,7 @@ export function selectPropertyDestination(
 					row.anchor === "section" &&
 					(/\b(?:field|attribute|property|parameter)\b/i.test(queryText) ||
 						Boolean(propertyRequestedText(queryText))) &&
-					!/\bblock\b/i.test(queryText) &&
+					!propertyRequestsBlock(queryText) &&
 					[...unique.values()].some(other => {
 						const terms = propertyTerms(other.schema_path.split(".").at(-1) ?? "");
 						return (

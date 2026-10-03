@@ -76,8 +76,12 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
+export function propertyRequestsBlock(text: string): boolean {
+	if (/\b(?:field|attribute|property|parameter)\b/i.test(text)) return false;
+	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
+}
 export function propertyRequestedText(text: string): string | undefined {
-	if (/\bblock\b/i.test(text)) return undefined;
+	if (propertyRequestsBlock(text)) return undefined;
 	const field = text.match(
 		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?)\s+)?(.+)/i,
 	)?.[1];
@@ -113,7 +117,7 @@ export function rankPropertyScope(
 	const asksField =
 		Boolean(request) ||
 		/\b(field|attribute|property|parameter)\b/i.test(queryText) ||
-		(!/\bblock\b/i.test(queryText) && /\bwhere\b.*\b(?:specify|set)\b/i.test(queryText));
+		(!propertyRequestsBlock(queryText) && /\bwhere\b.*\b(?:specify|set)\b/i.test(queryText));
 	const requested = asksField ? new Set(propertyQueryTerms(ask)) : new Set<string>();
 	const query = propertyQueryTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
@@ -146,7 +150,7 @@ export function rankPropertyScope(
 			if (asksField && row.anchor === "section") score -= 12;
 			if (
 				!asksField &&
-				/\bblock\b/i.test(queryText) &&
+				propertyRequestsBlock(queryText) &&
 				row.anchor === "section" &&
 				` ${queryText.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `.includes(
 					` ${row.schema_path.split(".").at(-1)!.replaceAll("_", " ")} `,

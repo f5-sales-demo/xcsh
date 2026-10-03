@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	propertyRequestedText,
+ propertyRequestsBlock,
 	propertyQueryTerms,
 	preparePropertyScope,
 	propertyTerms,
@@ -156,4 +157,10 @@ test("explicit provider imperative retains value intent over enclosing block evi
  const scope=preparePropertyScope([row("routing.dual_stack","Dual stack includes IPv4 and IPv6.","section"),row("routing.dual_stack.ipv4.addr","IPv4 Address.")]);
  const q="In xcsh_fixture, specify the dual-stack IPv4 address.";
  expect(propertyRequestedText(q)).toBeDefined();expect(rankPropertyScope(q,scope)[0]?.schema_path).toBe("routing.dual_stack.ipv4.addr");
+});
+
+test("resource container wording does not turn scalar values into block requests",()=>{
+ expect(propertyRequestsBlock("Configure an IPv4 address in xcsh_fixture resource block")).toBe(false);
+ expect(propertyRequestsBlock("Which schema block covers private key storage?")).toBe(true);
+ expect(propertyRequestedText("Configure an IPv4 address in xcsh_fixture resource block")).toBeDefined();
 });

@@ -10,7 +10,7 @@ import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
 import { populatePropertyIndex, searchPropertyIndex } from "./terraform-property-index";
-import { propertyRequestedText } from "./terraform-property-ranking";
+import { propertyRequestedText, propertyRequestsBlock } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -1535,8 +1535,8 @@ export class TerraformDocumentationRepository {
 					providerName: provider,
 					filters,
 					node: node ?? undefined,
-				}).filter(row => !/\bblock\b/i.test(search) || row.anchor === "section");
-				if (ranked[0]?.anchor === "section" && !/\bblock\b/i.test(search)) {
+				}).filter(row => !propertyRequestsBlock(search) || row.anchor === "section");
+				if (ranked[0]?.anchor === "section" && !propertyRequestsBlock(search)) {
 					const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(ranked[0].path) as {
 						metadata: string;
 					};
