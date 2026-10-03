@@ -177,6 +177,14 @@ export function rankPropertyScope(
 				(leafComplete ? 12 : requestedLeaf * 3);
 			if (asksField && row.anchor === "section") score -= 12;
 			if (
+				row.anchor === "section" &&
+				row.leaf.length >= 2 &&
+				leafComplete &&
+				/\b(?:configure|select|enable|choose)\b/i.test(queryText) &&
+				!/\b(?:field|attribute|property|parameter)\b/i.test(queryText)
+			)
+				score += 24;
+			if (
 				!asksField &&
 				propertyRequestsBlock(queryText) &&
 				row.anchor === "section" &&

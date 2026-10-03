@@ -195,3 +195,9 @@ test("protocol and advertisement phrasing retain schema vocabulary",()=>{
  expect(propertyQueryTerms("custom advertised ports")).toEqual(propertyTerms("custom advertise ports"));
  expect(propertyQueryTerms("HTTP/1.1 protocol").sort()).toEqual(propertyTerms("http protocol v1").sort());
 });
+
+test("named configuration choices outrank incidental scalar descriptions",()=>{
+ const scope=preparePropertyScope([row("round_robin","Enable this option.","section"),row("pool.loadbalancer_algorithm","Round robin load balancing algorithm.")]);
+ expect(rankPropertyScope("Configure round robin balancing in xcsh_fixture",scope)[0]?.schema_path).toBe("round_robin");
+ expect(rankPropertyScope("Which field specifies loadbalancer algorithm in xcsh_fixture",scope)[0]?.schema_path).toBe("pool.loadbalancer_algorithm");
+});
