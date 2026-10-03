@@ -103,6 +103,70 @@
 				"tag": "v21.0.0",
 				"version": "21.0.0"
 			}
+		},
+		"d4425d80327385314d86eacbb97ff2ee4b638ca3d7b7ae00c8f1a8e3c306d222": {
+			"delivery": {
+				"release_tag": "v10.0.0",
+				"target_commit": "ac024ccbfb8b9f84412813f3e2ab9f5821937ef2",
+				"version": "10.0.0"
+			},
+			"publication": {
+				"assets": {
+					"pi_natives.darwin-arm64.node": "236466aec38f8bb399cffd99c68267fa7aabe687417f31ba990e17f98ffcd454",
+					"pi_natives.darwin-x64-baseline.node": "21725ca2942e4570117b3bc1c7b00566d5873ad9b81f7d402ab207992f22bbae",
+					"pi_natives.darwin-x64-modern.node": "9553526fae512b2d31f26834ea052e39b35fa9a708dabc87d891eaef7c79781b",
+					"pi_natives.linux-arm64.node": "6c8d3a0b1185dd9f5b62d837586e24b4fef950f96cfa12d4b37d18b554105557",
+					"pi_natives.linux-arm64.node.sha256": "a19747b835615e486d059170a4be56924e65adc0091f23c16117d57a97b9e843",
+					"pi_natives.linux-x64-baseline.node": "e1b91ca2708354f7cf85cfe47d445f969a0bdfe3136014ae37d7a9c65d68067d",
+					"pi_natives.linux-x64-baseline.node.sha256": "0bcb0ca369e3873df2bb3d7146ae643dcbf8d1aa2fb3719d77f19c3c758a6a8f",
+					"pi_natives.linux-x64-modern.node": "135a67bb98af762e81166cfd72eac6958fe1590f7ba32be2e51897022cda1c12",
+					"pi_natives.linux-x64-modern.node.sha256": "b56d1ab2c3189c55cc7cfc68beac18ed58a72a505e15960872e79e92f7f4914c",
+					"pi_natives.win32-x64-baseline.node": "5237cba4a23b161bdf75cd858b5daac457abdb1f5d7e690fc3db870364f56374",
+					"pi_natives.win32-x64-modern.node": "908573871b84be140f20cde100453b9fc446268d1b8abc05e3746417a1d09786",
+					"xcsh-darwin-arm64": "1d0f7cc5f3658e7a9f05a281eb5bfe090bac218b93d974f52620659280b56290",
+					"xcsh-darwin-arm64.pkg": "af665705370aeca6c08020c5f9bf0315a702a3a9f2459253a8f6b6b529e7aff4",
+					"xcsh-darwin-arm64.provenance.json": "4eb88e73a540f7db91f2209366982d198de1a5b63fabb1ea371f1a5275b2c31f",
+					"xcsh-darwin-arm64.zip": "69260147d0452841101f0d177e69ec381994b458186e9e888e74b18487ae3a10",
+					"xcsh-darwin-x64": "c7caf69d646cb7c4054f0fddd71acbffe6f55d58b96803dd3ff46043e63f423b",
+					"xcsh-darwin-x64.pkg": "94d8d21ff948978673de34c57ea58b6d33b1c68794389d14c575cac7381ae25e",
+					"xcsh-darwin-x64.provenance.json": "2b0276f7ed496b03cc826c35f13c75dcd5e0050e79e4d8b1cfd97875186c0abb",
+					"xcsh-darwin-x64.zip": "47281608b426666c15d7f776fb3aa7942ce1a5d66c8ee67a82f7b24923b18e13",
+					"xcsh-linux-arm64": "b0cfdf84c96f7fb507ea19de0d6c6d0c001e45c8256336b94c95318173881f58",
+					"xcsh-linux-arm64.provenance.json": "ecbf30b99a5fdadb5a913e6a7e116ddb26c415ab6f3bfe237e514d88c0d13796",
+					"xcsh-linux-arm64.provenance.json.sha256": "3b314380e6a118e36109526e173f2ac28c2701dfba92ad608c384affd7efbc4f",
+					"xcsh-linux-arm64.sha256": "48050876f310bb31629ec6186c6d01ee91b07bf067b47b7948c94d649b06beb0",
+					"xcsh-linux-x64": "b87c70ada97f3ab99bd4ddb600336773fc28d87ad937057127c748b637999ee2",
+					"xcsh-linux-x64.provenance.json": "014ae23c3095580817aeed6056ad9ce422697dd94e4f859f0ad4eb9c54d703e7",
+					"xcsh-linux-x64.provenance.json.sha256": "b156222a1e06b3beb81a64f0daab5834fb34266eab0853a7d8cc20c1a9dcd06c",
+					"xcsh-linux-x64.sha256": "52df384474e203096d651631cc32be9d224121d7165f55ee9ae0f923ef38fb3e",
+					"xcsh-windows-x64.exe": "1bbce2a1d25b9e16f1fabc816e793b7f518a2f6e7df5457be15b7ac4faf680d7"
+				},
+				"commit": "5ecf98705c48d2de46a9673adadc8957bc32343b",
+				"generated": {
+					"packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts": "b6bc5cd765f158654931b3601cb10a577d529fe00dcfa1681e2d8d1ccaec42b4",
+					"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts": "5a87823dc4b4d9b70f5730181983a9d17aa4f76f82babccd527c8f9c7d1d5f79",
+					"packages/coding-agent/src/internal-urls/api-spec-index.generated.ts": "144fca0d038607db4e2a2ab3bc715cb1b279ca9f4fc51d9c925e1425773b2fe2",
+					"packages/coding-agent/src/internal-urls/terraform-index.generated.ts": "5dd5d36bf41fb9a2442659768c8c24c5cee66231efcd1582d05ca8f704bd4f0f",
+					"packages/resource-management/src/defaults-metadata.generated.ts": "7c7110a5471e4ecd567397026ce373a1f11085e3d1ca51b91091b420cb9f8bf6"
+				},
+				"npm": {
+					"@f5-sales-demo/pi-resource-management": {
+						"git_head": "5ecf98705c48d2de46a9673adadc8957bc32343b",
+						"integrity": "sha512-S3mt74C7rhm7vPHz0TD8Av8JeS0DZJvzUBY3vc6aW2GQkWlRibbGE9Qood9+teR+pMp25H//mAliGCOpUDAW/A=="
+					},
+					"@f5-sales-demo/xcsh": {
+						"git_head": "5ecf98705c48d2de46a9673adadc8957bc32343b",
+						"integrity": "sha512-k8F9sY8T06osSFL2IYUqpd9gjLfw7WczPAysRnBLPmZpVs3Axbti0IRecmbOsr/KU/P9p7Rdz7oy/4F325Uwtg=="
+					}
+				},
+				"provider": {
+					"commit": "17e31c1e5256dbcacf2af1be4aae40348f883b0e",
+					"tag": "v13.0.0"
+				},
+				"spec_release_sha256": "894dd0af6b1bad6de15c4ebf33b016e7eae6b39ad691b47c96da67df6c3854ba",
+				"tag": "v22.8.3",
+				"version": "22.8.3"
+			}
 		}
 	},
 	"version": 1
