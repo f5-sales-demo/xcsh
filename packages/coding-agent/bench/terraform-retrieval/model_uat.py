@@ -34,8 +34,8 @@ if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json
     HASH_MISMATCH = "Frozen model subset hash mismatch"
     raise ValueError(HASH_MISMATCH)
 if freeze.get("post_analysis_regression") and not args.regression:
-    regression_error = "Exposed or derived model suite requires --regression"
-    raise ValueError(regression_error)
+    REGRESSION_ERROR = "Exposed or derived model suite requires --regression"
+    raise ValueError(REGRESSION_ERROR)
 all_cases = json.loads(suite_bytes)
 INDEPENDENT_FREEZE_VERSION = 2
 if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
