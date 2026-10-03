@@ -1,0 +1,78 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "rejected": true,
+  "vectors": {
+    "development_only": true,
+    "qualification_passed": false,
+    "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+    "provider_version": "v12.3.1",
+    "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+    "vector_sha256": "0b7f8177cdfb8ab7ca82ace25529b3c244aaa7abd9e25e80ab05477e7a948b92",
+    "rows": 39565,
+    "dimensions": 384,
+    "vector_bytes": 60771968,
+    "materialization_ms": 187283.92291394994,
+    "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "preparation_sha256": "c6b5ee01ecbad6e4b85309ad37937dfd7282cd208e5cdb1365a22af53c11a9a0",
+    "builder_sha256": "77d6587650cc2d821d2fb102e0974ea5c1c0b1e5dfd186615b1b284ea96dd9a3",
+    "input_format": "description role provider-name schema-path; underscores and dots become spaces",
+    "max_tokens": 179,
+    "model_limit": 256,
+    "over_model_limit": 0
+  },
+  "runs": [
+    {
+      "development_only": true,
+      "property_only": false,
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "0b7f8177cdfb8ab7ca82ace25529b3c244aaa7abd9e25e80ab05477e7a948b92",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "evaluator_sha256": "9edfe4da14c217b08a67fd1d3e8c66c13b0f1efe7e23588a277973ff173e3c7b",
+      "lexical_sha256": "66f92a03a551b2e9c249cae55d2efeb078b82d6535c4ed373cb0cbcf2984edff",
+      "expected_outside_property_corpus": [],
+      "answerable": 14,
+      "top1": 8,
+      "top5": 13,
+      "semantic_route_p95_ms": 78.05728795938194,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "a04cb0e42591bbf66cb987d46470cd786b1925499802223f31524390026a3f0f",
+      "gzip_sha256": "99232a431fed7d158cd45644480e78fcfe615cb9daa070cb5ac71795abf4db81"
+    },
+    {
+      "development_only": true,
+      "property_only": false,
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "0b7f8177cdfb8ab7ca82ace25529b3c244aaa7abd9e25e80ab05477e7a948b92",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "evaluator_sha256": "9edfe4da14c217b08a67fd1d3e8c66c13b0f1efe7e23588a277973ff173e3c7b",
+      "lexical_sha256": "9e288af5bf9eacb7b914d60980355a8d1a5f7a9132dcecb2076cabb055e01ca4",
+      "expected_outside_property_corpus": [
+        "dev-revised-030",
+        "dev-revised-031"
+      ],
+      "answerable": 48,
+      "top1": 34,
+      "top5": 46,
+      "semantic_route_p95_ms": 55.28846802189946,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "8639d08b28bb0e71355c50d74ec2dcf660f93886c600ee977518e580eb5f1766",
+      "gzip_sha256": "624e3c3f244d7deaa8be3a0067a91685db2a7b0eaefd71e0188477e3342c8bed"
+    }
+  ]
+}

@@ -1346,3 +1346,10 @@ CI run 37086656349 flags tokenizer filename/hash pairs as generic API keys.
 The public immutable model manifest now uses explicit path and sha256 fields;
 all 11 original file hashes are preserved and verified. Focused Gitleaks scans
 3.22 MB of experiment evidence with no findings. No ignore rule or gate bypass.
+
+Description-first plain MiniLM inputs regress first destination accuracy to
+8/14 original and 34/48 audited (top-five 13/14 and 46/48). All 39,565 inputs
+fit the 256-token model limit, maximum 179; build takes 187.284 seconds.
+Not promoted. Runs overlapped on one host, so latency is diagnostic only and
+not complete-response or cross-host qualification. Exact vector/model/source
+receipts and raw reports: minilm-plain-input-rejection-receipt.json.
