@@ -307,3 +307,8 @@ test("explicit schema segments constrain competing property candidates literally
  const repeated=[row("architecture_a.listen_port",50),row("architecture_b.listen_port",49)];
  expect(selectPropertyDestination("Read listen_port",repeated).kind).toBe("choices");
 });
+
+test("an explicitly requested block can be read before choosing its direct properties",()=>{
+ const block={...row("primary",50),anchor:"section",description:"Primary DNS configuration."};const child={...row("primary.default_soa",49),anchor:"section",description:"Default SOA configuration."};
+ expect(selectPropertyDestination("Read the primary schema block",[block,child]).destinations).toEqual([block]);
+});

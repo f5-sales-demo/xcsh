@@ -196,7 +196,15 @@ export function selectPropertyDestination(
 		return terms.length > 0 && terms.every(term => query.has(term));
 	};
 	const fieldNamed = first.anchor.startsWith("schema-") && completeFieldTerms(first);
+	const blockNamed = first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first);
 	const second = ranked.slice(1).find(other => {
+		if (
+			blockNamed &&
+			other.provider_type === first.provider_type &&
+			other.provider_name === first.provider_name &&
+			other.schema_path.startsWith(`${first.schema_path}.`)
+		)
+			return false;
 		if (other.provider_type === first.provider_type && other.provider_name === first.provider_name && fieldNamed) {
 			if (other.anchor === "section" && parts.slice(0, -1).join(".") === other.schema_path) return false;
 			if (
