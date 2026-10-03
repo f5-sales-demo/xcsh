@@ -345,3 +345,12 @@ test("direct destination-port requests retain root scope and endpoint meaning",(
  expect(propertyQueryTerms("default destination port")).toEqual(propertyQueryTerms("default endpoint port"));
  expect(propertyQueryTerms("destination repository URL")).toContain("destination");
 });
+
+
+test("classification questions retain type intent and their requested values",()=>{
+ expect(propertyRequestedText("Which argument specifies whether it is a signing key or encryption key?")).toBe("type whether it is a signing key or encryption key?");
+ expect(propertyRequestedText("Which field specifies whether retry is enabled?")).toBe("whether retry is enabled?");
+ expect(propertyRequestedText("Which field specifies whether it is a fabricated widget or imaginary gadget?")).toContain("fabricated widget");
+ const scope=preparePropertyScope([row("key_type","Type or category classification."),row("key_name","Name of the key.")]);
+ expect(rankPropertyScope("Which argument specifies whether it is a signing key or encryption key?",scope)[0]?.schema_path).toBe("key_type");
+});

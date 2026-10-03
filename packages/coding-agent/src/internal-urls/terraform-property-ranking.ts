@@ -151,6 +151,10 @@ export function propertyRequestedText(text: string): string | undefined {
 		field && /\bidentifier\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)
 			? `identifier ${field}`
 			: undefined;
+	const classificationField =
+		field && /^whether\s+(?:it|this|that)\s+is\s+(?:an?\s+)?[^?!.]+\bor\b\s+/i.test(field)
+			? `type ${field}`
+			: undefined;
 	const operation =
 		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
 		(/\bxcsh_[a-z0-9_]+\b/i.test(text)
@@ -169,7 +173,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
 			text,
 		)?.[1];
-	return (filterCriterion ?? identifierField ?? field ?? operation ?? lookup ?? passive)
+	return (filterCriterion ?? identifierField ?? classificationField ?? field ?? operation ?? lookup ?? passive)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
 		.split(/\bused\s+to\b|\bat\s+which\b|\bwhen\s+(?:handling|processing|matching|calling|invoking|executing)\b/i)[0]
 		?.split(
