@@ -26,6 +26,15 @@ const rows = db
 		"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations ORDER BY provider_type,provider_name,schema_path",
 	)
 	.all() as PropertyCandidate[];
+const reviewed = args.includes("--reviewed-rules")
+	? (JSON.parse(await readFile(arg("--reviewed-rules"), "utf8")).summaries as Array<{
+			provider_type: string;
+			collection: string;
+			schema_path: string[];
+			summary: string;
+			aliases?: string[];
+		}>)
+	: [];
 const aliases = db
 	.query(
 		"SELECT provider_type,provider_name,path,anchor,alias FROM terraform_aliases ORDER BY provider_type,provider_name,path,anchor,alias",
@@ -39,8 +48,18 @@ for (const row of aliases) {
 const groups = new Map<string, PropertyCandidate[]>();
 for (const row of rows) {
 	const key = `${row.provider_type}|${row.provider_name}`;
+	const matching = reviewed.filter(
+		rule =>
+			rule.provider_type === row.provider_type &&
+			["*", row.provider_name].includes(rule.collection) &&
+			rule.schema_path.join(".") === row.schema_path,
+	);
+	const rule = matching.find(rule => rule.collection === row.provider_name) ?? matching[0];
 	const hints = aliasMap.get(`${key}|${row.path}#${row.anchor}`) ?? [];
-	groups.set(key, [...(groups.get(key) ?? []), { ...row, description: [row.description, ...hints].join(" ") }]);
+	groups.set(key, [
+		...(groups.get(key) ?? []),
+		{ ...row, description: [rule?.summary ?? row.description, ...hints, ...(rule?.aliases ?? [])].join(" ") },
+	]);
 }
 const scopes = new Map([...groups].map(([key, value]) => [key, preparePropertyScope(value)]));
 const names = [...new Set(rows.map(row => row.provider_name))].sort();
@@ -87,6 +106,9 @@ await writeFile(
 			development_only: true,
 			qualification_passed: false,
 			production_imported: false,
+			reviewed_rules_sha256: args.includes("--reviewed-rules")
+				? terraformHash(await readFile(arg("--reviewed-rules")))
+				: null,
 			suite_sha256: terraformHash(raw),
 			source_index_sha256: terraformHash(await readFile(arg("--source"))),
 			answerable: answerable.length,

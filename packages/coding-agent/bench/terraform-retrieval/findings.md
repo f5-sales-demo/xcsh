@@ -1424,3 +1424,9 @@ reviewed aliases require exact schema paths and provider roles. Fixture verifies
 metadata enrichment while Markdown retains original prose and anchors. All 28
 metadata/documentation tests and focused Ruff/Pylint/mypy/secret scans pass.
 Rules affect 528 additional pinned destinations; no benchmark qualification.
+
+Verified property summaries/aliases candidate comparison ranks 10/14 original
+and 39/48 audited first; top-five 13/14 and 41/48. Original top-five gains one,
+first choices unchanged. Metadata correctness does not qualify retrieval; candidate
+ranker remains unpromoted. Source/rule hashes and raw receipts retained in
+reviewed-property-candidate-receipt.json. Provider PR #2382 carries reviewed rules.
