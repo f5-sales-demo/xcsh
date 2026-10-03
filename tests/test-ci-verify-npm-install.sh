@@ -116,7 +116,12 @@ SH
   cat >"$fake_bin/bun" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ "$*" = "--cwd=packages/coding-agent run generate-terraform-documentation-index --reset" ]; then
+  printf '%s\n' reset >"$BUN_RESET"
+  exit 0
+fi
 [ "$*" = "test packages/coding-agent/test/sandbox-check.test.ts" ] || exit 94
+[ -f "$BUN_RESET" ] || exit 99
 [ -x "${XCSH_TEST_SANDBOX_CHECK_BINARY:?}" ] || exit 95
 case "$XCSH_TEST_SANDBOX_CHECK_BINARY" in
   "$RUNNER_TEMP"/xcsh-npm-verify.*/bin/xcsh) ;;
@@ -139,6 +144,7 @@ SH
   export NPM_ATTEMPTS="$case_dir/npm-attempts"
   export SLEEP_CALLS="$case_dir/sleep-calls"
   export BUN_BINARY="$case_dir/bun-binary"
+  export BUN_RESET="$case_dir/bun-reset"
   export RELEASE_BINARY_MODE=compiled
   export LAUNCHER_MODE=success
 }
