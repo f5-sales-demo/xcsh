@@ -9,7 +9,7 @@ import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
-import { populatePropertyIndex, searchPropertyIndex } from "./terraform-property-index";
+import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
 import { propertyRequestedText, propertyRequestsBlock } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
 import { resolveIndexedTask } from "./terraform-task-route";
@@ -1241,6 +1241,12 @@ export class TerraformDocumentationRepository {
 		if (indexed.source_commit !== pin.source_commit || indexed.receipt_sha256 !== pin.receipt_sha256) {
 			db.close();
 			throw new Error("Terraform index provenance mismatch");
+		}
+		try {
+			validatePropertyIndex(db, { sourceCommit: pin.source_commit, sourceIndexSha256: "" });
+		} catch (error) {
+			db.close();
+			throw error;
 		}
 		return db;
 	}

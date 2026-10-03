@@ -1409,3 +1409,20 @@ test("equivalent leaf discovery refines through indexed branches within response
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("materialization rejects a digest-valid incompatible prepared property index", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-index-version-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const db = new Database(file);
+		db.exec("UPDATE property_index_provenance SET schema_version=99");
+		db.close();
+		const repo = await fixtureRepository(root, pin, file);
+		await expect(repo.database()).rejects.toThrow("property index version");
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
