@@ -1,0 +1,30 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "frozen_model_suite_modified": false,
+  "activation_derived_suite": true,
+  "raw_traces_task_local": true,
+  "reports": {
+    "original": {
+      "file": "model-activation-development-original.json.gz",
+      "raw_sha256": "aea7c4f5867dbe78b90576a1485b6ba4a5ea664e3d9233e1afd424c566c0fdcd",
+      "gzip_sha256": "4a7921f61999f44de3cf711da5127f5f3207169c8df40a351161c6043bcfb2b1"
+    },
+    "regraded": {
+      "file": "model-activation-development-regraded.json.gz",
+      "raw_sha256": "734a39cec050ea0b5347ae9a2e0c7cfef9b19f18a6eeca672743d9acc766aa5b",
+      "gzip_sha256": "dcb7e0f73024e5540e7b86d2db8a6cfe1169a9da5ffbb6b8d3b80225a697b45a"
+    },
+    "hcl_source_review": {
+      "file": "model-activation-development-hcl_source_review.json.gz",
+      "raw_sha256": "f4599a47e393ce90eb587c92b9e20f04cd080392caf5ab8587026963c1c6623f",
+      "gzip_sha256": "38fa667a7075003231e132bac71d9737657807825089e863bb4f8c79c35d1880"
+    }
+  },
+  "cases": 40,
+  "automated_regraded_pass": 20,
+  "false_live_patterns": 0,
+  "hcl_cases": 5,
+  "derived_suite_sha256": "23189079c1e600ea60ebc574bfeec6d4fb1d98d539999548c9b49e2f5fae2157",
+  "original_frozen_suite_sha256": "cb45a50029e7fc2bc6f06c7ed2667839ed168ec9617691a0a51508bce42cead1"
+}

@@ -1272,3 +1272,12 @@ bare URLs before looking for a user-facing question. Previously ?view=context
 inside citations incorrectly passed ambiguity checks. Red/green test reproduces
 this; four Python trace tests, Ruff and compilation pass. Original model report
 will be retained; stricter regrading is separate development evidence.
+
+Complete 40-case activation-modified development installed model UAT finishes
+23/40 provisional automated passes. Regrading final clarification prose after
+removing citation URL queries yields 20/40; original report is preserved. No
+false-live pattern detected, but semantic/manual claim review is not complete.
+Five cases emitted HCL; reviewed fields are documented for setup/tunnel examples,
+but ambiguity drafts and exact citation failures prevent acceptance. Reports and
+digests are retained in model-activation-development-receipt.json; raw synthetic
+traces remain task-local. These modified exposed prompts cannot qualify release.
