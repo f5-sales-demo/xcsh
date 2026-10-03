@@ -85,9 +85,16 @@ export interface ResolvedKind {
 		delete: string;
 	};
 	validation?: ApiSpecValidationResourceEntry;
+	validateFields?: (object: Record<string, unknown>, operation: "create" | "update") => ValidationError[];
 }
 
-export type ValidationErrorCode = "MISSING_FIELD" | "UNKNOWN_KIND" | "INVALID_TYPE" | "PARSE_ERROR" | "DUPLICATE_NAME";
+export type ValidationErrorCode =
+	| "MISSING_FIELD"
+	| "UNKNOWN_KIND"
+	| "INVALID_TYPE"
+	| "PARSE_ERROR"
+	| "DUPLICATE_NAME"
+	| "INVALID_MAP";
 
 export type ValidationWarningCode = "EXTRA_FIELD" | "DEPRECATED_FIELD";
 
