@@ -247,3 +247,14 @@ test("generic body terms do not specify a boolean operator branch", () => {
 		"leaf",
 	);
 });
+
+test("ordinary conjunctions cannot select logical schema operators", () => {
+	const first = row("request_body.request_body_and.match.case_insensitive", 60);
+	const other = row("request_body.request_body_none.match.case_insensitive", 1);
+	expect(selectPropertyDestination("case insensitive request body and headers", [first], [other]).kind).toBe(
+		"choices",
+	);
+	expect(selectPropertyDestination("case insensitive request body with AND operator", [first], [other]).kind).toBe(
+		"leaf",
+	);
+});

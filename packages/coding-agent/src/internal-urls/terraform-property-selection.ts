@@ -127,7 +127,15 @@ export function selectPropertyDestination(
 
 		const operators = new Set(["and", "or", "none"]);
 		const rawIdentifiers = new Set(queryText.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []);
-		const rawWords = new Set(queryText.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+		const logicalWords = new Set(
+			[
+				...queryText
+					.toLowerCase()
+					.matchAll(
+						/\b(and|or|none)\s+(?:operator|branch|combinator|match)\b|\b(?:operator|branch|combinator)\s+(and|or|none)\b/g,
+					),
+			].map(match => match[1] ?? match[2]),
+		);
 		const operatorBranch = parts.some((part, index) => {
 			const peer = otherParts[index];
 			if (!peer || part === peer) return false;
@@ -138,7 +146,7 @@ export function selectPropertyDestination(
 				operators.has(other.at(-1) ?? "") &&
 				own.slice(0, -1).join("_") === other.slice(0, -1).join("_") &&
 				!rawIdentifiers.has(part) &&
-				!(rawWords.has(own.at(-1)!) && !rawWords.has(other.at(-1)!))
+				!(logicalWords.has(own.at(-1)!) && !logicalWords.has(other.at(-1)!))
 			);
 		});
 		if (operatorBranch)
