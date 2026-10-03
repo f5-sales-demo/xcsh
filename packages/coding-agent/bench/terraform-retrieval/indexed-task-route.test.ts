@@ -131,12 +131,91 @@ test("inferred action plurality requires explicit cardinality or provider identi
 	const db = fixture();
 	for (const name of ["access_active_session_terminate", "access_active_sessions_terminate"]) {
 		const path = `documentation/actions/${name}/index.md`;
-		db.prepare("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?,?)").run(name, null, path, "actions", name, "fundamentals", "Terminate access sessions");
-		db.prepare("INSERT INTO terraform_sections VALUES(?,?,?,?,?)").run(path, "minimal-configuration", 0, "Minimal configuration", "Complete documented action.");
+		db.prepare("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?,?)").run(
+			name,
+			null,
+			path,
+			"actions",
+			name,
+			"fundamentals",
+			"Terminate access sessions",
+		);
+		db.prepare("INSERT INTO terraform_sections VALUES(?,?,?,?,?)").run(
+			path,
+			"minimal-configuration",
+			0,
+			"Minimal configuration",
+			"Complete documented action.",
+		);
 	}
 	const scope = { providerName: "access_active_sessions_terminate", providerType: "actions", inferredIdentity: true };
 	expect(resolveIndexedTask(db, "Which action revokes active user access sessions?", scope)?.kind).toBe("choices");
-	expect(resolveIndexedTask(db, "Which action revokes multiple active user access sessions?", scope)?.kind).toBe("leaf");
-	expect(resolveIndexedTask(db, "How do I invoke xcsh_access_active_sessions_terminate action?", scope)?.kind).toBe("leaf");
+	expect(resolveIndexedTask(db, "Which action revokes multiple active user access sessions?", scope)?.kind).toBe(
+		"leaf",
+	);
+	expect(resolveIndexedTask(db, "How do I invoke xcsh_access_active_sessions_terminate action?", scope)?.kind).toBe(
+		"leaf",
+	);
+	db.close();
+});
+
+test("adjusting a lifecycle timeout requires an operation while guidance stays complete", () => {
+	const db = fixture();
+	db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");
+	db.prepare("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?,?)").run(
+		"timeout-guide",
+		null,
+		"documentation/fixture/lifecycle/timeouts/index.md",
+		"resources",
+		"fixture",
+		"timeouts",
+		"Timeout guidance",
+	);
+	db.prepare("INSERT INTO terraform_sections VALUES(?,?,?,?,?)").run(
+		"documentation/fixture/lifecycle/timeouts/index.md",
+		"timeouts",
+		0,
+		"timeouts",
+		"Complete timeout guidance",
+	);
+	for (const op of ["create", "read", "update", "delete"])
+		db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)").run(
+			"resources",
+			"fixture",
+			`timeouts.${op}`,
+			"documentation/fixture/properties/timeouts/index.md",
+			`schema-timeouts--${op}`,
+			`${op} timeout`,
+		);
+	const result = resolveIndexedTask(db, "Adjust lifecycle operation timeout for the fixture resource", {
+		providerType: "resources",
+		providerName: "fixture",
+	});
+	expect(result?.kind).toBe("choices");
+	expect(result?.destinations.map(row => row.anchor).sort()).toEqual([
+		"schema-timeouts--create",
+		"schema-timeouts--delete",
+		"schema-timeouts--read",
+		"schema-timeouts--update",
+	]);
+	expect(
+		resolveIndexedTask(db, "Explain lifecycle timeouts for the fixture resource", {
+			providerType: "resources",
+			providerName: "fixture",
+		})?.kind,
+	).toBe("leaf");
+	expect(
+		resolveIndexedTask(db, "Adjust lifecycle operation timeout invented_field for fixture resource", {
+			providerType: "resources",
+			providerName: "fixture",
+		})?.kind,
+	).toBe("none");
+	expect(
+		resolveIndexedTask(db, "Adjust lifecycle operation timeout for fixture resource", {
+			providerType: "resources",
+			providerName: "fixture",
+			filters: [{ key: "category", value: "absent" }],
+		})?.destinations,
+	).toEqual([]);
 	db.close();
 });

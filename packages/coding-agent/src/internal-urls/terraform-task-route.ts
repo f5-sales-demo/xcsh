@@ -1,6 +1,10 @@
 // Indexed adaptive task route; all reads use the pinned canonical index.
 import type { Database } from "bun:sqlite";
-import { terraformProviderSetupDestination, terraformTaskDestination } from "./terraform-documentation";
+import {
+	terraformProviderSetupDestination,
+	terraformTaskDestination,
+	terraformTimeoutOperations,
+} from "./terraform-documentation";
 import type { RankedProperty } from "./terraform-property-selection";
 export interface TaskScope {
 	providerType?: string;
@@ -22,6 +26,50 @@ export function resolveIndexedTask(
 	const setup = argumentReference ? "argument-reference" : terraformProviderSetupDestination(query);
 	const task = setup ? undefined : terraformTaskDestination(query);
 	if (!setup && !task) return undefined;
+	if (
+		task?.role === "timeouts" &&
+		scope.providerName &&
+		/\b(?:adjust|change|set|configure|increase|decrease)\b/i.test(query) &&
+		!terraformTimeoutOperations(query).length &&
+		!(query.match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/gi) ?? []).some(
+			term => !term.startsWith("xcsh_") && term !== scope.providerName,
+		) &&
+		!/\b(?:explain|guidance|overview|example)\b/i.test(query) &&
+		db.query("SELECT 1 FROM sqlite_master WHERE name=?").get("terraform_destinations")
+	) {
+		const conditions = ["dest.provider_name=?", "dest.schema_path IN (?,?,?,?)"];
+		const parameters: Array<string | number> = [
+			scope.providerName,
+			"timeouts.create",
+			"timeouts.read",
+			"timeouts.update",
+			"timeouts.delete",
+		];
+		if (scope.providerType) {
+			conditions.push("dest.provider_type=?");
+			parameters.push(scope.providerType);
+		}
+		for (const filter of scope.filters ?? []) {
+			conditions.push("EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)");
+			parameters.push(filter.key, filter.value);
+		}
+		if (scope.node) {
+			if (!db.query("SELECT 1 FROM terraform_documents WHERE id=?").get(scope.node))
+				throw new Error("Task node not found");
+			conditions.push(
+				"dest.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT child.id,child.path FROM terraform_documents child JOIN descendants parent ON child.parent_id=parent.id) SELECT path FROM descendants)",
+			);
+			parameters.push(scope.node);
+		}
+		const destinations = (
+			db
+				.query(
+					`SELECT dest.provider_type,dest.provider_name,dest.schema_path,dest.path,dest.anchor,dest.description FROM terraform_destinations dest WHERE ${conditions.join(" AND ")} ORDER BY dest.provider_type,dest.schema_path LIMIT 10`,
+				)
+				.all(...parameters) as RankedProperty[]
+		).map(row => ({ ...row, score: 100, coverage: 1 }));
+		if (destinations.length) return { kind: "choices", destinations, reason: "Missing lifecycle operation" };
+	}
 	const clauses: string[] = [],
 		values: Array<string | number | null> = [];
 	if (setup) {

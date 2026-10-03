@@ -1524,3 +1524,11 @@ supported. Fixture verifies type choices with two unrelated child conflict group
 Complete development answerable selections remain 11/14,47/48, zero wrong
 answerable leaves; original ambiguous selected leaves drop from 2 to 1.
 Exact receipts: provider-choice-development-receipt.json. Not qualification.
+
+Lifecycle adjustment without a specified operation returns indexed exact
+create/read/update/delete destinations for clarification; explanation requests
+still read maintained guidance. Exact identifiers, facets and descendant scope
+remain enforced. Nine task tests pass. Complete development answerable selected
+leaves remain 11/14,47/48; ambiguous/control selected leaves are zero in both
+sets. Warm complete response p95 71.093/35.479 ms. No qualification claim.
+Exact source-bound receipts: lifecycle-choice-development-receipt.json.
