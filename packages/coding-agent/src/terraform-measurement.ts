@@ -6,7 +6,7 @@ import { TerraformDocumentationRepository, terraformHash } from "./internal-urls
 import { EMBEDDED_TERRAFORM_DOCUMENTATION } from "./internal-urls/terraform-documentation-assets.generated";
 import type { InternalUrl } from "./internal-urls/types";
 
-export async function measureTerraformRequests(input: unknown, read: (uri: string) => Promise<{ content: string }>) {
+export function validateTerraformMeasurementRequests(input: unknown): string[] {
 	if (!Array.isArray(input) || input.length < 1 || input.length > 10000 || input.some(uri => typeof uri !== "string"))
 		throw new Error("Measurement requires one to 10000 request URIs");
 	const requests = input as string[];
@@ -15,6 +15,11 @@ export async function measureTerraformRequests(input: unknown, read: (uri: strin
 		if (u.protocol !== "xcsh:" || u.host !== "terraform-documentation" || u.username || u.password)
 			throw new Error("Measurement requires Terraform documentation URIs");
 	}
+	return requests;
+}
+
+export async function measureTerraformRequests(input: unknown, read: (uri: string) => Promise<{ content: string }>) {
+	const requests = validateTerraformMeasurementRequests(input);
 	const results = [];
 	for (const request of requests) {
 		let discovery = "",
@@ -77,7 +82,7 @@ export async function runTerraformMeasurement(requestFile: string): Promise<stri
 	if (!EMBEDDED_TERRAFORM_DOCUMENTATION) throw new Error("Measurement requires embedded Terraform documentation");
 	const bytes = await readFile(requestFile);
 	if (bytes.length > 4 * 1024 * 1024) throw new Error("Measurement request file exceeds 4 MiB");
-	const requests: unknown = JSON.parse(bytes.toString());
+	const requests = validateTerraformMeasurementRequests(JSON.parse(bytes.toString()));
 	const repository = new TerraformDocumentationRepository(
 		EMBEDDED_TERRAFORM_DOCUMENTATION,
 		path.join(os.homedir(), ".xcsh/cache/terraform-documentation"),

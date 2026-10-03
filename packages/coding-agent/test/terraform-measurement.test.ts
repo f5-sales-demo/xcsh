@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { measureTerraformRequests } from "../src/terraform-measurement";
+import { measureTerraformRequests, validateTerraformMeasurementRequests } from "../src/terraform-measurement";
 
 const search = "xcsh://terraform-documentation/?search=fixture";
 const target = "xcsh://terraform-documentation/documentation/resources/fixture/properties/index.md#schema-port";
@@ -38,4 +38,10 @@ test("measurement never accepts oversized or non-deterministic complete response
 			content: uri === search ? `Selected leaf;\nRead: ${target}` : "x".repeat(16385),
 		})),
 	).rejects.toThrow("budget");
+});
+
+test("request preflight rejects malformed input before index materialization", () => {
+	expect(() => validateTerraformMeasurementRequests(["file:///tmp/fixture"])).toThrow("Terraform documentation");
+	expect(() => validateTerraformMeasurementRequests([search, "https://example.invalid"])).toThrow();
+	expect(validateTerraformMeasurementRequests([search])).toEqual([search]);
 });
