@@ -3,6 +3,7 @@ import {
 	propertyRequestedText,
 	propertyRequestedBlockText,
  propertyRequestsBlock,
+ propertyRequestsRootField,
 	propertyQueryTerms,
 	preparePropertyScope,
 	propertyTerms,
@@ -335,4 +336,12 @@ test("identifier arguments retain their value type and exclude invocation contex
  expect(propertyRequestedText("Which field specifies retry count when invoking xcsh_fixture?")).toBe("retry count");
  const scope=preparePropertyScope([row("key_id","Unique identifier for this key."),row("zone_name","Name of the zone.")]);
  expect(rankPropertyScope("Which identifier argument specifies which key to remove when calling xcsh_fixture action?",scope)[0]?.schema_path).toBe("key_id");
+});
+
+
+test("direct destination-port requests retain root scope and endpoint meaning",()=>{
+ expect(propertyRequestsRootField("Which direct attribute sets the destination port?")).toBe(true);
+ expect(propertyRequestsRootField("Which attribute configures a direct response route?")).toBe(false);
+ expect(propertyQueryTerms("default destination port")).toEqual(propertyQueryTerms("default endpoint port"));
+ expect(propertyQueryTerms("destination repository URL")).toContain("destination");
 });

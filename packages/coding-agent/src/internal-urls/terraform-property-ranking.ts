@@ -86,6 +86,7 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\badvertised\b/g, "advertise")
 			.replace(/http\/1\.1/g, "http v1")
 			.replace(/\b(?:listening|listener)\b/g, "listen")
+			.replace(/\bdestination\s+port\b/g, "endpoint port")
 			.replace(/\bprefixes\b/g, "prefix")
 			.replace(/active operational state/g, "active")
 			.replace(/load[ -]+balancer/g, "loadbalancer")
@@ -105,7 +106,9 @@ export function propertyRequestedType(text: string): string | undefined {
 	return undefined;
 }
 export function propertyRequestsRootField(text: string): boolean {
-	return /\b(?:top[ -]level|root[ -]level|root)\s+(?:attribute|field|property|parameter|argument|flag)\b/i.test(text);
+	return /\b(?:top[ -]level|root[ -]level|root|direct)\s+(?:attribute|field|property|parameter|argument|flag)\b/i.test(
+		text,
+	);
 }
 export function propertySchemaIdentifiers(text: string): string[] {
 	const request = text.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "");
