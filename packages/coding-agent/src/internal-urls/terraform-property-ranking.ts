@@ -67,6 +67,8 @@ export function propertyQueryTerms(text: string): string[] {
 	return propertyTerms(
 		text
 			.toLowerCase()
+			.replace(/load[ -]+balancer/g, "loadbalancer")
+			.replace(/application[ -]+firewall/g, "app firewall")
 			.replace(/\bsource network address translation\b/g, "snat")
 			.replace(/\bip address prefixes\b/g, "prefixes")
 			.replace(/\bstrip(?:ping|ped)?\b/g, "remove")

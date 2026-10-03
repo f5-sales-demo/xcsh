@@ -1639,3 +1639,10 @@ passes. Development selected counts12/14,47/48,40/45 unchanged; queried owner
 now correctly scoped, sparse-description confidence remains unresolved. No
 threshold loosening or qualification claim. Exact raw receipts:
 application-firewall-development-receipt.json.
+
+Query-only compound normalization maps load balancer/loadbalancer and application
+firewall/app_firewall to indexed schema vocabulary without changing immutable
+index terms. Red/green term-equivalence fixture passes. Complete development
+broader selection improves40/45to41/45,top-five45/45,zero false leaves; original
+12/14 and audited47/48 remain unchanged. No confidence threshold loosened and
+no held-out qualification claim. Receipt: compound-query-development-receipt.json.

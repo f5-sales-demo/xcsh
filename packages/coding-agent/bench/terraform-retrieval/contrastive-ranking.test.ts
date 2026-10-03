@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { propertyRequestedText, propertyQueryTerms, preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
+import {
+	propertyRequestedText,
+	propertyQueryTerms,
+	preparePropertyScope,
+	propertyTerms,
+	rankPropertyScope,
+} from "./contrastive-ranking";
 
 const row = (schema_path: string, description: string, anchor = "schema-" + schema_path.replaceAll(".", "--")) => ({
 	provider_type: "resources",
@@ -104,7 +110,9 @@ test("where-to-specify field requests prefer scalar destinations over enclosing 
 		row("dual_stack", "Dual-stack address represents IPv4 and IPv6 together.", "section"),
 		row("dual_stack.ipv4.addr", "IPv4 Address in string form with dot-decimal notation."),
 	]);
-	expect(rankPropertyScope("Where do I specify the IPv4 address for dual-stack routing?", scope)[0]?.schema_path).toBe("dual_stack.ipv4.addr");
+	expect(rankPropertyScope("Where do I specify the IPv4 address for dual-stack routing?", scope)[0]?.schema_path).toBe(
+		"dual_stack.ipv4.addr",
+	);
 	expect(rankPropertyScope("Which configuration block selects dual stack?", scope)[0]?.schema_path).toBe("dual_stack");
 });
 
@@ -118,9 +126,20 @@ test("address prefixes name a prefix field rather than an individual address", (
 	expect(propertyQueryTerms("IP address prefixes")).toEqual(propertyQueryTerms("prefixes"));
 });
 
-test("field intent separates requested values from trailing configuration context",()=>{
- expect(propertyRequestedText("How do I configure the listening port for a TLS frontend?")).toBe("the listening port");
- expect(propertyRequestedText("In a gateway, which numeric attribute specifies the retry count for a backend?")).toBe("the retry count");
- expect(propertyRequestedText("Which block configures TLS?")).toBeUndefined();
- expect(propertyRequestedText("Where do I set a maximum download bandwidth rate?")).toBe("a maximum download bandwidth rate?");
+test("field intent separates requested values from trailing configuration context", () => {
+	expect(propertyRequestedText("How do I configure the listening port for a TLS frontend?")).toBe(
+		"the listening port",
+	);
+	expect(propertyRequestedText("In a gateway, which numeric attribute specifies the retry count for a backend?")).toBe(
+		"the retry count",
+	);
+	expect(propertyRequestedText("Which block configures TLS?")).toBeUndefined();
+	expect(propertyRequestedText("Where do I set a maximum download bandwidth rate?")).toBe(
+		"a maximum download bandwidth rate?",
+	);
+});
+
+test("compound provider prose uses the indexed schema vocabulary", () => {
+	expect(propertyQueryTerms("HTTP load balancer routes")).toEqual(propertyQueryTerms("http_loadbalancer routes"));
+	expect(propertyQueryTerms("Application firewall blocking")).toEqual(propertyQueryTerms("app_firewall blocking"));
 });
