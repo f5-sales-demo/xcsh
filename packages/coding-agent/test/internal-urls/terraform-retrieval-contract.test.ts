@@ -818,3 +818,22 @@ test("documentation lookup does not imply the data-source role", () => {
 	expect(terraformQueryIdentity("Inspect data source xcsh_fixture schema").providerType).toBe("data-sources");
 	expect(terraformQueryIdentity("Read xcsh_fixture resource documentation").providerType).toBe("resources");
 });
+
+test("querying a schema identifier bypasses data-source root configuration", () => {
+	expect(terraformTaskDestination("Query auto_host_rewrite on a route in data source xcsh_fixture")).toBeUndefined();
+	expect(terraformTaskDestination("Query existing object using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("object query and nested value query have distinct routes", () => {
+	expect(terraformTaskDestination("Query data source xcsh_fixture to read served domains")).toBeUndefined();
+	expect(
+		terraformTaskDestination("Query the existing object using data source xcsh_fixture to read served domains"),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Query an existing certificate using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});

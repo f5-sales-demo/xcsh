@@ -1,0 +1,9 @@
+Verdict: both prior findings are fixed by source inspection.
+
+- The new `query` branch requires an explicit snake-case identifier and excludes `xcsh_` provider names.
+- Leading object queries leave nested `read` clauses available for field-intent extraction.
+- Ordinary existing-certificate queries remain object-level and route to `root-configuration`.
+
+The added tests cover extraction and destination routing for these cases. No remaining concrete bugs found in the reviewed diff.
+
+Development review only; no tests or qualification performed.

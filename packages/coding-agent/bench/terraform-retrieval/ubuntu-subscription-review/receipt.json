@@ -1,0 +1,25 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "execution_host": "Ubuntu workstation",
+  "effective_user": "robin",
+  "authentication": "codex login status: Logged in using ChatGPT",
+  "model_provider": "openai",
+  "custom_base_url": false,
+  "api_key_override_present": false,
+  "subscription_tier": "Pro per user confirmation; CLI login status does not identify tier",
+  "files": [
+    {
+      "path": "initial-review.txt",
+      "sha256": "4b747affd7a74ec26bc0f5cf4d5c40923159ca3e3abdb13452537bb7c5f9382e"
+    },
+    {
+      "path": "followup-review.txt",
+      "sha256": "0fad88707c4a620350f99ef5ceb59e82156d13c68bb9d44f9ef5e2d6f3bb55aa"
+    }
+  ],
+  "limitations": [
+    "Read-only development review,no qualification.",
+    "Iterative model tests routed to Ubuntu subscription; Mac internal LiteLLM endpoint not used for these reviews."
+  ]
+}

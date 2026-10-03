@@ -381,3 +381,18 @@ test("plural regular-expression values identify the scalar regex list",()=>{
  const scope=preparePropertyScope([row("login.failure_conditions.regex_values","List of regular expressions matching the input."),row("login.failure_conditions","Failure Conditions.","section")]);
  expect(rankPropertyScope("Specify regular expressions matching failed login responses",scope)[0]?.schema_path).toBe("login.failure_conditions.regex_values");
 });
+
+
+test("querying a named schema value retains field lookup intent",()=>{
+ expect(propertyRequestedText("Query auto_host_rewrite on a public route in data source xcsh_fixture")).toContain("auto_host_rewrite");
+ expect(propertyRequestedText("Query the existing object using data source xcsh_fixture")).toBeUndefined();
+ const scope=preparePropertyScope([row("routes.auto_host_rewrite","Automatic host rewriting."),row("routes","Default route.","section")]);
+ expect(rankPropertyScope("Query auto_host_rewrite on a public route in data source xcsh_fixture",scope)[0]?.schema_path).toBe("routes.auto_host_rewrite");
+});
+
+
+test("leading object queries preserve nested reads and remain object-level without a field",()=>{
+ expect(propertyRequestedText("Query data source xcsh_fixture to read served domains")).toContain("served domains");
+ expect(propertyRequestedText("Query the existing object using data source xcsh_fixture to read served domains")).toContain("served domains");
+ expect(propertyRequestedText("Query an existing certificate using data source xcsh_fixture")).toBeUndefined();
+});

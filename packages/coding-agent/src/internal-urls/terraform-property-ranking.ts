@@ -169,11 +169,15 @@ export function propertyRequestedText(text: string): string | undefined {
 			/\b(?:specify|set|provide|supply)\b\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|resource\b|data[ -]source\b|provider\b))(.+)/i,
 		)?.[1];
 	const lookup = /\bxcsh_[a-z0-9_]+\b/i.test(text)
-		? [...text.matchAll(/\b(?:read|fetch|retrieve|inspect|look up|lookup)\b\s+(.+)/gi)]
+		? [
+				...text.matchAll(
+					/\b(?:read|fetch|retrieve|inspect|look up|lookup|query(?=\s+(?:(?:the|an?)\s+)?(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b))\b\s+(.+)/gi,
+				),
+			]
 				.map(match => match[1]!.split(/\b(?:from|using|via|for)\b/i)[0]!.trim())
 				.find(
 					value =>
-						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource)\b/i.test(value) &&
+						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource|existing object)\b/i.test(value) &&
 						propertyTerms(value.replace(/\bxcsh_[a-z0-9_]+\b/gi, "").replace(/data[ -]source/gi, "")).length > 0,
 				)
 		: undefined;
