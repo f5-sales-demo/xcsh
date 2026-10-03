@@ -1223,3 +1223,11 @@ red/green validators reject missing activation. Model harness checks schema-v2
 freezes before execution. Three Python tests, seven guard tests, Ruff and workspace
 checks pass. Original frozen v4 remains unchanged and failed; activation-modified
 model runs are strictly development evidence.
+
+Shared propertyRequestedText separates requested field wording from trailing
+configuration context for which/what and how/where configuration questions,
+while explicit block requests preserve block intent. Red/green extraction tests
+pass; audited/original development remains 47/48 and 9/14 with zero answerable
+wrong leaves. 497 internal URL tests and workspace checks pass. Raw evidence
+is retained in field-intent-development-receipt.json. Frozen v4 is regression
+only; post-run source audit and activation development model UAT remain active.

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { propertyQueryTerms, preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
+import { propertyRequestedText, propertyQueryTerms, preparePropertyScope, propertyTerms, rankPropertyScope } from "./contrastive-ranking";
 
 const row = (schema_path: string, description: string, anchor = "schema-" + schema_path.replaceAll(".", "--")) => ({
 	provider_type: "resources",
@@ -116,4 +116,11 @@ test("query phrasing maps header removal and source NAT to indexed terminology",
 
 test("address prefixes name a prefix field rather than an individual address", () => {
 	expect(propertyQueryTerms("IP address prefixes")).toEqual(propertyQueryTerms("prefixes"));
+});
+
+test("field intent separates requested values from trailing configuration context",()=>{
+ expect(propertyRequestedText("How do I configure the listening port for a TLS frontend?")).toBe("the listening port");
+ expect(propertyRequestedText("In a gateway, which numeric attribute specifies the retry count for a backend?")).toBe("the retry count");
+ expect(propertyRequestedText("Which block configures TLS?")).toBeUndefined();
+ expect(propertyRequestedText("Where do I set a maximum download bandwidth rate?")).toBe("a maximum download bandwidth rate?");
 });

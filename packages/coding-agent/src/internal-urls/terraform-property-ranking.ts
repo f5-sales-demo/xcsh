@@ -74,6 +74,14 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
+export function propertyRequestedText(text: string): string | undefined {
+	if (/\bblock\b/i.test(text)) return undefined;
+	const field = text.match(
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?)\s+)?(.+)/i,
+	)?.[1];
+	const operation = text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1];
+	return (field ?? operation)?.split(/\bfor\b|\breferenced in\b/i)[0]?.trim();
+}
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 	const prepared = rows.map(row => ({
 		...row,
@@ -94,8 +102,10 @@ export function rankPropertyScope(
 	candidates?: ReadonlySet<string>,
 ) {
 	const providerTerms = new Set(propertyTerms(scope.rows[0]?.provider_name ?? ""));
-	const ask = queryText.split(/\b(?:which|what)\s+(?:\w+\s+)?(?:field|attribute|property|parameter)\b/i).at(-1)!;
+	const request = propertyRequestedText(queryText);
+	const ask = request ?? queryText;
 	const asksField =
+		Boolean(request) ||
 		/\b(field|attribute|property|parameter)\b/i.test(queryText) ||
 		(!/\bblock\b/i.test(queryText) && /\bwhere\b.*\b(?:specify|set)\b/i.test(queryText));
 	const requested = asksField ? new Set(propertyQueryTerms(ask)) : new Set<string>();
