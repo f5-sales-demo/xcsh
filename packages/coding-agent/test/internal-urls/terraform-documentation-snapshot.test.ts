@@ -1418,6 +1418,18 @@ test("equivalent leaf discovery refines through indexed branches within response
 		expect(roleResponse).not.toContain("Selected leaf;");
 		const roleRefs = [...roleResponse.matchAll(/^Refine: (.+)$/gm)].map(match => match[1]!);
 		expect(roleRefs).toHaveLength(2);
+		const rolePageUrl = new URL(roleUrl.href);
+		rolePageUrl.searchParams.set("choice_after", "1");
+		const rolePage = (
+			await roleRepo.resolve(Object.assign(rolePageUrl, { rawHost: "terraform-documentation" }) as InternalUrl)
+		).content;
+		expect([...rolePage.matchAll(/^Refine: /gm)]).toHaveLength(1);
+		expect(rolePage).not.toContain("choice_after=1");
+		rolePageUrl.searchParams.set("choice_after", "99");
+		await expect(
+			roleRepo.resolve(Object.assign(rolePageUrl, { rawHost: "terraform-documentation" }) as InternalUrl),
+		).rejects.toThrow("continuation");
+
 		for (const ref of roleRefs) {
 			const roleNext = new URL(ref);
 			expect(roleNext.searchParams.get("search")).toBe(query);
