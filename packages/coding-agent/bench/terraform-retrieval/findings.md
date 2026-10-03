@@ -1238,3 +1238,10 @@ frozen results changed. Same reviewer is correcting the file against verified
 39,565 source destinations and Markdown, with file-based digest validation.
 Receipt: v4-postrun-audit-status.json. Signed Mac arm64 candidate artifact is
 available from run 37079682221; download and installed verification underway.
+
+Signed Mac arm64 candidate binary from run 37079682221 matches provenance digest
+and strict codesign. Network-disabled compiled Terraform smoke passes in isolated
+HOME. Raw CLI Gatekeeper execute assessment rejects as not an app; this check is
+not counted as passed. Receipt: installed-candidate-mac-receipt.json. Package
+assessment and published Homebrew acceptance remain unverified; frozen accuracy
+gate remains failed. Development activation model run remains unfinished.

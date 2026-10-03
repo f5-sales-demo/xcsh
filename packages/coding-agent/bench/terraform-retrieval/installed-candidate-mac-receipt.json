@@ -1,0 +1,22 @@
+{
+  "candidate_only": true,
+  "qualification_passed": false,
+  "build_run": "37079682221",
+  "binary_source_commit": "68140bd547246bbf62bac81d70bb9553fdd6ca58",
+  "binary_version": "22.8.1",
+  "binary_sha256": "88db25bf1ad178a5ca51f9f615374e8d257f1c42f57b10d0cf87a875ec011334",
+  "binary_bytes": 575620576,
+  "strict_codesign_verified": true,
+  "team_identifier": "97ZYL78T5F",
+  "gatekeeper_execute_assessment": "rejected: code valid but does not seem to be an app",
+  "network_disabled": "Mac sandbox-exec deny network",
+  "isolated_home": true,
+  "provider_version": "v12.3.1",
+  "provider_source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+  "offline_smoke_marker": "XCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK",
+  "limitations": [
+    "Raw CLI candidate, not a published Homebrew route.",
+    "Package Gatekeeper assessment still unverified locally.",
+    "Frozen retrieval accuracy gate remains failed."
+  ]
+}
