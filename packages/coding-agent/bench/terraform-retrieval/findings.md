@@ -1532,3 +1532,12 @@ remain enforced. Nine task tests pass. Complete development answerable selected
 leaves remain 11/14,47/48; ambiguous/control selected leaves are zero in both
 sets. Warm complete response p95 71.093/35.479 ms. No qualification claim.
 Exact source-bound receipts: lifecycle-choice-development-receipt.json.
+
+Broader development candidate shows 38/60 selected, two wrong answerable leaves
+among boolean operator branches, 51/60 top-five. Known label defects remain.
+Selection now requires explicit boolean branch operator evidence when identical
+fields differ by AND/OR/NONE, rather than dropping operator words as stopwords.
+Red/green fixture passes. Broader wrong answerable leaves drop to zero, correct
+selected 38/60 preserved, top-five 52/60; original/audited 11/14,47/48 unchanged
+with zero ambiguous/control leaves in those sets. No qualification claim.
+Exact receipts: operator-branch-development-receipt.json.

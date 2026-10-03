@@ -124,6 +124,25 @@ export function selectPropertyDestination(
 			b--;
 		}
 		if (a < 0 && b < 0) continue;
+
+		const operators = new Set(["and", "or", "none"]);
+		const rawIdentifiers = new Set(queryText.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []);
+		const rawWords = new Set(queryText.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+		const operatorBranch = parts.some((part, index) => {
+			const peer = otherParts[index];
+			if (!peer || part === peer) return false;
+			const own = part.split("_"),
+				other = peer.split("_");
+			return (
+				operators.has(own.at(-1) ?? "") &&
+				operators.has(other.at(-1) ?? "") &&
+				own.slice(0, -1).join("_") === other.slice(0, -1).join("_") &&
+				!rawIdentifiers.has(part) &&
+				!(rawWords.has(own.at(-1)!) && !rawWords.has(other.at(-1)!))
+			);
+		});
+		if (operatorBranch)
+			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing boolean operator branch" };
 		const differing = parts.slice(0, a + 1).filter(part => !otherParts.includes(part));
 		if (
 			!differing.some(part => {
