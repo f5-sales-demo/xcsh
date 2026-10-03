@@ -163,7 +163,10 @@ export function propertyRequestedText(text: string): string | undefined {
 		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
 		(/\bxcsh_[a-z0-9_]+\b/i.test(text)
 			? text.match(/\b(?:declare|configure|specify|set)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+)/i)?.[1]
-			: undefined);
+			: undefined) ??
+		text.match(
+			/\b(?:specify|set|provide|supply)\b\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|resource\b|data[ -]source\b|provider\b))(.+)/i,
+		)?.[1];
 	const lookup = /\bxcsh_[a-z0-9_]+\b/i.test(text)
 		? [...text.matchAll(/\b(?:read|fetch|retrieve|inspect|look up|lookup)\b\s+(.+)/gi)]
 				.map(match => match[1]!.split(/\b(?:from|using|via|for)\b/i)[0]!.trim())

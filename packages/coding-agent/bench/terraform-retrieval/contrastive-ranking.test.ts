@@ -363,3 +363,13 @@ test("proxy-served hostnames use documented host-authority matching without chan
  expect(propertyQueryTerms("backend hostname DNS lookup")).not.toContain("authority");
  expect(propertyQueryTerms("CSRF Host header domains")).not.toContain("authority");
 });
+
+
+test("imperative property intent does not require a literal provider name",()=>{
+ expect(propertyRequestedText("On a fixture proxy, specify regular expressions matching failed login responses")).toBe("regular expressions matching failed login responses");
+ expect(propertyRequestedText("Specify the HTTP header name used to evaluate login failures")).toBe("the HTTP header name");
+ expect(propertyRequestedText("Provide a fictional quantum widget in a load balancer")).toContain("fictional quantum widget");
+ expect(propertyRequestedText("Declare an xcsh_fixture resource")).toBeUndefined();
+ const scope=preparePropertyScope([row("login.failure_conditions.regex_values","Regular expressions to match the input."),row("login.failure_conditions","Failure conditions.","section")]);
+ expect(rankPropertyScope("On a fixture proxy, specify regular expressions matching failed login responses",scope)[0]?.schema_path).toBe("login.failure_conditions.regex_values");
+});
