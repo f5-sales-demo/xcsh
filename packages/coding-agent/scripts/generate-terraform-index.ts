@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { gzipSync } from "node:zlib";
 
 const OUTPUT_FILE = path.join(import.meta.dir, "..", "src", "internal-urls", "terraform-index.generated.ts");
 
@@ -100,11 +101,40 @@ export async function loadTerraformIndex(
 	return { data: await response.json() };
 }
 
-function generateTypeScript(
+export function generateTypeScript(
 	data: unknown,
 	providerTag: string | undefined,
 	providerCommit: string | undefined,
 ): string {
+	if (data && typeof data === "object" && "schema_version" in data && "pages" in data) {
+		const canonical = data as { schema_version: number; provider: string; pages: Array<Record<string, unknown>> };
+		if (canonical.schema_version !== 1 || !Array.isArray(canonical.pages))
+			throw new Error("Unsupported canonical Terraform index");
+		// Embed deterministic navigation hints; full source documents remain at exact indexed URLs.
+		const hints = {
+			schema_version: 1,
+			provider: canonical.provider,
+			providerTag,
+			providerCommit,
+			pages: canonical.pages.map(page =>
+				Object.fromEntries(
+					[
+						"id",
+						"title",
+						"summary",
+						"category",
+						"provider_name",
+						"provider_type",
+						"role",
+						"source_url",
+						"body_sha256",
+					].map(key => [key, page[key]]),
+				),
+			),
+		};
+		const encoded = gzipSync(JSON.stringify(hints), { level: 9 }).toString("base64");
+		return `// AUTO-GENERATED canonical Terraform navigation hints.\nimport { gunzipSync } from "node:zlib";\nimport type { CanonicalTerraformIndex } from "./terraform-types";\n// biome-ignore format: generated compressed navigation metadata\nconst payload = "${encoded}";\nexport const TERRAFORM_INDEX: CanonicalTerraformIndex = JSON.parse(gunzipSync(Buffer.from(payload, "base64")).toString("utf8"));\n`;
+	}
 	const lines = [
 		"// AUTO-GENERATED — do not edit. Run `bun generate-terraform-index` to regenerate.",
 		providerTag && providerCommit ? `// Source: ${PROVIDER_REPOSITORY} ${providerTag} ${providerCommit}` : undefined,
@@ -121,7 +151,7 @@ async function main(): Promise<void> {
 	const loaded = await loadTerraformIndex();
 	const output = generateTypeScript(loaded.data, loaded.providerTag, loaded.providerCommit);
 	await fs.writeFile(OUTPUT_FILE, output, "utf-8");
-	await Bun.$`bunx biome format --write ${OUTPUT_FILE}`.quiet();
+	await Bun.$`bunx biome format --write --files-max-size=10000000 ${OUTPUT_FILE}`.quiet();
 	console.log(`Generated ${OUTPUT_FILE}`);
 }
 

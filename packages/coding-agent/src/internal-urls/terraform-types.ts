@@ -49,3 +49,22 @@ export interface TerraformIndex {
 	readonly categories: readonly TerraformCategory[];
 	readonly resources: readonly TerraformResource[];
 }
+
+/** Navigation hints projected from the canonical documentation corpus. */
+export interface CanonicalTerraformIndex {
+	readonly schema_version: 1;
+	readonly provider: string;
+	readonly providerTag?: string;
+	readonly providerCommit?: string;
+	readonly pages: ReadonlyArray<{
+		id: string;
+		title: string;
+		summary: string;
+		category: string;
+		provider_name: string;
+		provider_type: string;
+		role: string;
+		source_url: string;
+		body_sha256: string;
+	}>;
+}
