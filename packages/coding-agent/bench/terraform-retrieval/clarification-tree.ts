@@ -42,6 +42,11 @@ export function normalizeClarificationTree(tree: FrozenClarificationTree | Autho
 	};
 }
 
+const requestIdentity = (value: string) => {
+	const uri = new URL(value);
+	uri.searchParams.sort();
+	return uri.href;
+};
 const exactDestination = (value: string) => {
 	const uri = new URL(value);
 	if (uri.protocol !== "xcsh:" || uri.host !== "terraform-documentation")
@@ -119,8 +124,8 @@ export async function evaluateClarificationTree(
 		if (node.children) {
 			if (selected) findings.push(`Premature leaf: ${node.request}`);
 			if (reads.length) findings.push(`Off-tree leaf candidates: ${node.request}`);
-			const actual = [...measured.discovery.matchAll(/^Refine: (\S+)/gm)].map(match => new URL(match[1]!).href);
-			const expected = node.children.map(child => new URL(child.request).href);
+			const actual = [...measured.discovery.matchAll(/^Refine: (\S+)/gm)].map(match => requestIdentity(match[1]!));
+			const expected = node.children.map(child => requestIdentity(child.request));
 			if (
 				actual.length !== expected.length ||
 				new Set(actual).size !== actual.length ||

@@ -122,3 +122,28 @@ test("authored descriptive requests adapt without changing decisions or targets"
 	expect(adapted).toEqual(tree);
 	validateClarificationTree(adapted);
 });
+
+test("equivalent refinement parameter order does not change the frozen branch", async () => {
+	const scopedRoot = root + "&category=security";
+	const scopedTree = {
+		max_depth: 1,
+		root: {
+			request: scopedRoot,
+			children: [
+				{ request: scopedRoot + "&provider_type=resources", expected: leafA },
+				{ request: scopedRoot + "&provider_type=data-sources", expected: leafB },
+			],
+		},
+	};
+	const read = async (uri: string) => ({
+		content:
+			uri === scopedRoot
+				? `Narrowing choices;\nRefine: xcsh://terraform-documentation/?provider_type=resources&category=security&search=fixture\nRefine: xcsh://terraform-documentation/?category=security&search=fixture&provider_type=data-sources`
+				: uri === scopedTree.root.children[0]!.request
+					? `Selected leaf;\nRead: ${leafA}`
+					: uri === scopedTree.root.children[1]!.request
+						? `Selected leaf;\nRead: ${leafB}`
+						: "Source section.",
+	});
+	expect((await evaluateClarificationTree(read, scopedTree, 1)).passed).toBe(true);
+});
