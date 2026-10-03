@@ -163,7 +163,8 @@ export function rankPropertyScope(
 				const w = weight(term);
 				total += w;
 				if (union.has(term)) coverage += w;
-				if (row.context.includes(term)) context += w;
+				// A repeated leaf word is not additional evidence for an ancestor branch.
+				if (row.context.includes(term) && !row.leaf.includes(term)) context += w;
 				const localWeight =
 					asksField &&
 					/\bto\s+(?:handle|match|configure|enable|provide)\b|\bwhen\s+(?:declaring|configuring|reading)\b|\bof\s+(?:an? |the )?(?:existing |managed )?(?:resource|load balancer|site|object)\b/i.test(

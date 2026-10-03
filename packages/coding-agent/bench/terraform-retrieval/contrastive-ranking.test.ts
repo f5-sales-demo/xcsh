@@ -215,3 +215,13 @@ test("trailing purpose cannot rank an unrelated field over the requested domains
  const scope=preparePropertyScope([row("domains","Host domains accepting traffic."),row("http_redirect","HTTP traffic redirection."),row("testing.domain","Testing domain.")]);
  expect(rankPropertyScope("Specify domains to handle HTTP traffic in xcsh_fixture",scope)[0]?.schema_path).toBe("domains");
 });
+
+test("matching a field name does not invent an unmentioned nested scope", () => {
+ const scope = preparePropertyScope([
+  row("labels", "Labels assigned to this object."),
+  row("scan.labels.labels", "Labels matched when scanning."),
+  row("policy.labels", "Labels matched by policy."),
+ ]);
+ expect(rankPropertyScope("In xcsh_fixture, specify labels", scope)[0]?.schema_path).toBe("labels");
+ expect(rankPropertyScope("In xcsh_fixture, specify scan labels", scope)[0]?.schema_path).toBe("scan.labels.labels");
+});
