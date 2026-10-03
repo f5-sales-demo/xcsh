@@ -630,6 +630,10 @@ describe("release artifacts run the sandbox matrix before and after publication"
 		expect(script).toContain('binary="$install_prefix/bin/xcsh"');
 		expect(script).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
 		expect(script).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+		expect(script).toContain("generate-terraform-documentation-index --reset");
+		expect(script.indexOf("generate-terraform-documentation-index --reset")).toBeLessThan(
+			script.indexOf("bun test packages/coding-agent/test/sandbox-check.test.ts"),
+		);
 	});
 });
 
