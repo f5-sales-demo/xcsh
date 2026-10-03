@@ -1574,3 +1574,53 @@ test("lifecycle fields share interpretation through the complete resolver and bi
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("literal block requests use indexed destinations and preserve unsupported identifiers", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-literal-block-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		const body = '<a id="section"></a>\n# clear_secret_info\nClear secret credentials.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.role = "properties";
+		doc.metadata.schema_path = ["clear_secret_info"];
+		doc.metadata.aliases = [];
+		doc.metadata.sections = [
+			{
+				schema_path: ["clear_secret_info"],
+				document_id: doc.metadata.id,
+				anchor: "section",
+				description: "Clear secret credentials.",
+				aliases: [],
+				relationships: [],
+				flags: ["optional"],
+				type: "object",
+			},
+		];
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const query = (text: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/?search=${encodeURIComponent(text)}&provider_name=fixture&provider_type=resources`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		const result = await query("Configure the clear_secret_info block under xcsh_fixture.");
+		expect(result.content).toContain("Selected leaf;");
+		expect(result.content).toContain("#section");
+		expect(result.content).toContain("Separated candidate with supported branch context");
+		expect((await query("Configure the unsupported_secret_info block under xcsh_fixture.")).content).toContain(
+			"No results.",
+		);
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

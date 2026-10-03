@@ -1548,8 +1548,7 @@ export class TerraformDocumentationRepository {
 			}
 			if (
 				(Boolean(propertyRequestedText(search)) ||
-					(Boolean(propertyRequestedBlockText(search)) &&
-						!/\b(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b/i.test(search)) ||
+					Boolean(propertyRequestedBlockText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
 					/\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(search) ||
 					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?|arguments?|flags?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
@@ -1557,8 +1556,7 @@ export class TerraformDocumentationRepository {
 					)) &&
 				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
 				(!propertyRequestsBlock(search) ||
-					(Boolean(propertyRequestedBlockText(search)) &&
-						!/\b(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b/i.test(search)) ||
+					Boolean(propertyRequestedBlockText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
 					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(
 						search,
