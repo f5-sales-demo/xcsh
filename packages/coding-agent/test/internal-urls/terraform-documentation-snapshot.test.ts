@@ -1220,6 +1220,13 @@ Idle connection timeout.
 		expect(configured).toContain("Reason: Separated candidate");
 		expect(configured).toContain("Selected leaf;");
 		expect(configured).toContain("#schema-idle_timeout");
+		expect(
+			(
+				await read(
+					"?search=" + encodeURIComponent("Specify the HTTPS listening port in an xcsh_fixture resource block"),
+				)
+			).content,
+		).toContain("#schema-listen_port");
 		expect(response).toContain("#schema-listen_port");
 		const continuation = new URL([...response.matchAll(/^Refine: (.+)$/gm)][0]![1]!);
 		expect(continuation.searchParams.get("category")).toBe("networking");

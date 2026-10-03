@@ -1524,7 +1524,7 @@ export class TerraformDocumentationRepository {
 						search,
 					)) &&
 				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
-				(!/\bblock\b/i.test(search) ||
+				(!propertyRequestsBlock(search) ||
 					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(
 						search,
 					)) &&
