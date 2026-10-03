@@ -1584,3 +1584,9 @@ Prior artifact remains preserved; metadata source fixes remain merged. New
 source d9c5894a963f6a744161db79ac5a54da968f234e On Merge run 37101784378
 is actively building/testing current spec pin. No stale output released.
 Consumer #4687 remains draft, qualification unmet, pin still v12.3.1.
+
+General passage selection checks role collisions across all candidate positions,
+not only second-ranked row. Red/green third-candidate fixture verifies rank gaps
+do not choose an omitted resource/data-source role. Complete development selected
+leaves remain 12/14 original,47/48 audited, zero wrong/ambiguous/control selections.
+Exact receipts: all-candidate-role-development-receipt.json. No qualification claim.

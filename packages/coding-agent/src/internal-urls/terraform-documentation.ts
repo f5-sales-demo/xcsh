@@ -1141,9 +1141,13 @@ export function selectTerraformCandidate(
 	const second = candidates[1];
 	// A missing provider role or competing TLS/choice branch needs real clarification.
 	if (
-		second &&
-		first.metadata.provider_name === second.metadata.provider_name &&
-		first.metadata.provider_type !== second.metadata.provider_type
+		candidates
+			.slice(1)
+			.some(
+				candidate =>
+					first.metadata.provider_name === candidate.metadata.provider_name &&
+					first.metadata.provider_type !== candidate.metadata.provider_type,
+			)
 	)
 		return "choices";
 	if (second && first.ranking < second.ranking * 1.3 && !(first.path === second.path && first.anchor === "section"))

@@ -544,3 +544,16 @@ test("autonomous system number wording identifies the asn field over routing pro
 		)[0]?.anchor,
 	).toBe("schema-asn");
 });
+
+test("a third candidate with an omitted provider role cannot be hidden by rank separation", () => {
+	const m = metadata();
+	const first = { path: m.path, anchor: "schema-tls--port", metadata: m, ranking: 100 };
+	const second = { ...first, anchor: "schema-tls--timeout", ranking: 1 };
+	const otherRole = {
+		...first,
+		path: "documentation/data-sources/fixture/index.md",
+		metadata: { ...m, provider_type: "data-sources" },
+		ranking: 0.5,
+	};
+	expect(selectTerraformCandidate([first, second, otherRole], false, "TLS port")).toBe("choices");
+});
