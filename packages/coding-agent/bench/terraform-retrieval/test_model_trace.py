@@ -1,9 +1,9 @@
-# ruff: noqa: INP001, PT009
+# ruff: noqa: INP001, PT009, PT027
 """Regression tests for successful installed-model tool evidence."""
 
 import unittest
 
-from model_trace import successful_read_paths
+from model_trace import successful_read_paths, validate_model_activation
 
 
 class ModelTraceTests(unittest.TestCase):
@@ -53,4 +53,17 @@ class ModelTraceTests(unittest.TestCase):
                 ]
             ),
             [],
+        )
+
+    def test_model_prompts_require_explicit_activation(self) -> None:
+        """Ordinary controls remain outside Terraform activation."""
+        with self.assertRaisesRegex(ValueError, "activation"):
+            validate_model_activation(
+                [{"id": "a", "kind": "answerable", "prompt": "Which port?"}]
+            )
+        validate_model_activation(
+            [
+                {"id": "a", "kind": "answerable", "prompt": "Which Terraform port?"},
+                {"id": "c", "kind": "control", "prompt": "API docs"},
+            ]
         )

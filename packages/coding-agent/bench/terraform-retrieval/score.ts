@@ -104,3 +104,11 @@ export function validateIndependentFreeze(
 	)
 		throw new Error("Independent review coverage mismatch");
 }
+
+export function validateModelActivation(
+	cases: Array<{ id: string; kind: string; prompt: string; behavior?: string }>,
+): void {
+	for (const item of cases)
+		if ((item.kind === "answerable" || item.kind === "ambiguous") && !/\bterraform\b|\bhcl\b/i.test(item.prompt))
+			throw new Error(`Model case ${item.id} lacks explicit Terraform activation`);
+}

@@ -1216,3 +1216,10 @@ cases; initial installed run followed intended ordinary API discovery. Partial
 traces are preserved and the mismatched run stopped. A separate development-only
 activation-prefixed suite is prepared; frozen prompts stay unchanged. It cannot
 qualify the 40-prompt installed gate.
+
+Future model acceptance requires explicit Terraform/HCL activation for answerable
+and ambiguous prompts; ordinary controls remain unchanged. TypeScript and Python
+red/green validators reject missing activation. Model harness checks schema-v2
+freezes before execution. Three Python tests, seven guard tests, Ruff and workspace
+checks pass. Original frozen v4 remains unchanged and failed; activation-modified
+model runs are strictly development evidence.

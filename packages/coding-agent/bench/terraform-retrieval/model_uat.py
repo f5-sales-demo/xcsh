@@ -9,7 +9,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from model_trace import successful_read_paths
+from model_trace import successful_read_paths, validate_model_activation
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
@@ -27,6 +27,9 @@ if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json
     HASH_MISMATCH = "Frozen model subset hash mismatch"
     raise ValueError(HASH_MISMATCH)
 all_cases = json.loads(suite_bytes)
+INDEPENDENT_FREEZE_VERSION = 2
+if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
+    validate_model_activation(all_cases)
 cases = all_cases[args.partition_index :: args.partition_count]
 args.output.mkdir(parents=True, exist_ok=True)
 results = []

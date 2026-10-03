@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	scoreDestinations,
 	validateIndependentFreeze,
+	validateModelActivation,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -81,4 +82,16 @@ test("new independent freezes require approved complete digest-bound review", ()
 	expect(() =>
 		validateIndependentFreeze(freeze, { ...review, verdict: "needs-attention" }, "review-hash", ["a", "b"]),
 	).toThrow("approve");
+});
+
+test("model acceptance requires explicit Terraform activation while ordinary controls remain ordinary", () => {
+	expect(() =>
+		validateModelActivation([{ id: "a", kind: "answerable", prompt: "Which field sets a certificate URL?" }]),
+	).toThrow("activation");
+	expect(() =>
+		validateModelActivation([
+			{ id: "a", kind: "answerable", prompt: "Which Terraform field sets a certificate URL?" },
+			{ id: "c", kind: "control", behavior: "ordinary-discovery", prompt: "Find API guidance" },
+		]),
+	).not.toThrow();
 });
