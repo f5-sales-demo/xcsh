@@ -1496,3 +1496,8 @@ excluded achieves original top-five 14/14 but only 9/14 selected, ambiguous
 leaf selections 1; audited 47/48 selected and 48/48 top-five. Complete warm
 p95 79.280/31.673 ms. Rejected for promotion; production source restored.
 Exact patch/raw receipts: configuration-route-rejection-receipt.json.
+
+Second current-main recovery 37094893902 also completes generation but rejects
+PR creation with Protected main changed after generation; dispatch from the new
+source. No stale patch applied. User directs finishing current iteration evidence,
+fetching latest, rebasing consumer, then resuming. Qualification gate retained.
