@@ -1,0 +1,63 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "runs": [
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "development_index_modified": true,
+      "reviewed_rules_sha256": "1ea317be9ff7b509e768e2fab9d6772e39f3debcb041097080c89a96d810786e",
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "cold_materialization_ms": null,
+      "warm_p95_ms": 74.36125199999992,
+      "answerable": 14,
+      "correct_leaf": 10,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 2,
+      "control_leaf": 0,
+      "answerable_top5": 13,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance.",
+        "Development index copy contains proposed reviewed summaries; this is not the bundled immutable index.",
+        "Cold materialization value excludes copied-index preparation and is not a materialization measurement."
+      ],
+      "raw_sha256": "694d6e3141cc9dfcee7d0aaba2e8b16cbabc87fdae6516508810a8d3e5029554",
+      "gzip_sha256": "d915d33c2aa232bf4970fc5b4b5b1ef9bdf5be65f592b0d5ab1c921d8e39b6b9"
+    },
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "actual_production_resolver": true,
+      "development_index_modified": true,
+      "reviewed_rules_sha256": "1ea317be9ff7b509e768e2fab9d6772e39f3debcb041097080c89a96d810786e",
+      "provider_version": "v12.3.1",
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "cold_materialization_ms": null,
+      "warm_p95_ms": 30.94136199999957,
+      "answerable": 48,
+      "correct_leaf": 47,
+      "wrong_leaf": 0,
+      "ambiguous_leaf": 0,
+      "control_leaf": 0,
+      "answerable_top5": 48,
+      "limitations": [
+        "Development labels only; no independently frozen qualification.",
+        "Complete resolver discovery and selected context timed; model/network time excluded.",
+        "No compiled installed artifact acceptance.",
+        "Development index copy contains proposed reviewed summaries; this is not the bundled immutable index.",
+        "Cold materialization value excludes copied-index preparation and is not a materialization measurement."
+      ],
+      "raw_sha256": "5758d53570059dac663ff0e28f73a1a710d13ec5b7baf7edcc02169f944b57e1",
+      "gzip_sha256": "b1d6a69077db612d820befb1475d967bf5f963ded722285d7e87934f11afed7c"
+    }
+  ]
+}

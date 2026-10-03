@@ -1458,3 +1458,11 @@ property candidates. Development ranks 6/14 original and 28/48 audited first,
 lexical retrieval, selection or rendering. Rejected on accuracy and latency.
 Exact source/model/raw/evaluator hashes retained: cross-encoder-rejection-receipt.json.
 No production dependency, no frozen suite evaluation.
+
+Complete resolver with a copied development index enriched by reviewed summaries
+selects 10/14 original and 47/48 audited answerable leaves, zero wrong answerable
+leaves; original ambiguous leaf selections remain 2, audited 0, controls 0.
+Expected top-five 13/14 and 48/48. Complete warm route p95 74.361/30.941 ms.
+Cold value excludes preparation and is discarded. This is proposed-metadata
+development evidence, not immutable snapshot or installed qualification.
+Raw bound receipts: reviewed-complete-development-receipt.json.
