@@ -1445,3 +1445,8 @@ main into branch, resolves overlapping generator/tests retaining both fixes,
 and passes all 30 combined metadata/documentation tests plus Ruff/Pylint.
 Combined branch source 3870927535. Normal serialized On Merge regeneration
 is pending; no new immutable snapshot or consumer qualification yet.
+
+Combined provider #2382 source passes full Python discovery: 67 tests in
+38.543 seconds. Current CI is queued/running; immutable snapshot publication
+remains serialized behind earlier On Merge release build. Consumer pin remains
+v12.3.1 and PR draft, auto-merge absent; no fresh qualification performed.
