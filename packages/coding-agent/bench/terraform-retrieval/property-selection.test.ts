@@ -319,3 +319,10 @@ test("direct requested-field evidence separates incidental ancestor vocabulary",
  const repeated=[{...rows[0]!,schema_path:"architecture_a.listen_port"},{...rows[0]!,schema_path:"architecture_b.listen_port",path:"peer"}];
  expect(selectPropertyDestination("Which field specifies listening port?",repeated).kind).toBe("choices");
 });
+
+test("a literal direct field request does not require choosing nested references", () => {
+ const direct={...row("name",40),description:"Configuration object name."};
+ const nested={...row("receivers.name",39),description:"Name of a referred configuration object."};
+ expect(selectPropertyDestination("Read the name attribute of an existing object via xcsh_fixture data source",[direct,nested]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Read receiver name attribute via xcsh_fixture data source",[{...nested,score:50},direct]).destinations[0]?.schema_path).toBe("receivers.name");
+});

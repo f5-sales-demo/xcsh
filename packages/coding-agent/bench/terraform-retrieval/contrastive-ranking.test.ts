@@ -232,3 +232,9 @@ test("resolved provider identifiers and role wording do not become property evid
  const scope=preparePropertyScope([row("labels","Object labels."),row("data_source.labels","Labels used for a data source.")]);
  expect(rankPropertyScope("Read labels via xcsh_fixture data source",scope)).toEqual(rankPropertyScope("Read labels via",scope));
 });
+
+test("a literal unqualified requested field preserves direct object scope", () => {
+ const scope=preparePropertyScope([row("name","Configuration object name."),row("receivers.name","Name of the object referenced by this configuration."),row("rules.metadata.name","Name of the object in metadata.")]);
+ expect(rankPropertyScope("Read the name attribute of an existing object via xcsh_fixture data source",scope)[0]?.schema_path).toBe("name");
+ expect(rankPropertyScope("Read the receiver name attribute via xcsh_fixture data source",scope)[0]?.schema_path).toBe("receivers.name");
+});

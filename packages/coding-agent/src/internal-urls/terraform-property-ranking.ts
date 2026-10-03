@@ -122,6 +122,16 @@ export function propertyRequestedText(text: string): string | undefined {
 		)[0]
 		?.trim();
 }
+export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
+	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
+	if (!/\b(?:field|attribute|property|parameter)\b/i.test(queryText)) return false;
+	const request = propertyRequestedText(queryText);
+	if (!request) return false;
+	const generic = new Set(["object", "configured", "assigned", "computed", "value"]);
+	const target = propertyQueryTerms(request).filter(term => !generic.has(term));
+	const leaf = propertyTerms(candidate.schema_path);
+	return leaf.length > 0 && target.length === leaf.length && leaf.every(term => target.includes(term));
+}
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 	const prepared = rows.map(row => ({
 		...row,
@@ -191,6 +201,7 @@ export function rankPropertyScope(
 				(local + context * 0.6) * (total ? (coverage / total) ** 2 : 0) +
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
+			if (propertyRequestsDirectObjectField(queryText, row)) score += 12;
 			if (asksField && row.anchor === "section") score -= 12;
 			if (
 				row.anchor === "section" &&

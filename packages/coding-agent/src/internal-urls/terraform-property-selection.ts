@@ -4,6 +4,7 @@ import {
 	propertyQueryTerms,
 	propertyRequestedText,
 	propertyRequestsBlock,
+	propertyRequestsDirectObjectField,
 	propertyTerms,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
@@ -145,6 +146,7 @@ export function selectPropertyDestination(
 			b--;
 		}
 		if (a < 0 && b < 0) continue;
+		if (propertyRequestsDirectObjectField(queryText, first) && otherParts.length > parts.length) continue;
 
 		const operators = new Set(["and", "or", "none"]);
 		const rawIdentifiers = new Set(queryText.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []);
@@ -198,6 +200,13 @@ export function selectPropertyDestination(
 	const fieldNamed = first.anchor.startsWith("schema-") && completeFieldTerms(first);
 	const blockNamed = first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first);
 	const second = ranked.slice(1).find(other => {
+		if (
+			propertyRequestsDirectObjectField(queryText, first) &&
+			other.provider_type === first.provider_type &&
+			other.provider_name === first.provider_name &&
+			other.schema_path.endsWith(`.${first.schema_path}`)
+		)
+			return false;
 		if (
 			blockNamed &&
 			other.provider_type === first.provider_type &&
