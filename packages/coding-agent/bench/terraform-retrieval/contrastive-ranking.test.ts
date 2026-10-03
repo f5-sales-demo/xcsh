@@ -225,3 +225,10 @@ test("matching a field name does not invent an unmentioned nested scope", () => 
  expect(rankPropertyScope("In xcsh_fixture, specify labels", scope)[0]?.schema_path).toBe("labels");
  expect(rankPropertyScope("In xcsh_fixture, specify scan labels", scope)[0]?.schema_path).toBe("scan.labels.labels");
 });
+
+test("resolved provider identifiers and role wording do not become property evidence", () => {
+ expect(propertyQueryTerms("Read labels via xcsh_fixture data source")).toEqual(propertyQueryTerms("Read labels via"));
+ expect(propertyQueryTerms("Configure labels in xcsh_fixture managed resource declaration")).toEqual(propertyQueryTerms("Configure labels in"));
+ const scope=preparePropertyScope([row("labels","Object labels."),row("data_source.labels","Labels used for a data source.")]);
+ expect(rankPropertyScope("Read labels via xcsh_fixture data source",scope)).toEqual(rankPropertyScope("Read labels via",scope));
+});

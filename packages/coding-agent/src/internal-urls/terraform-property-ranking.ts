@@ -69,6 +69,8 @@ export function propertyQueryTerms(text: string): string[] {
 	return propertyTerms(
 		text
 			.toLowerCase()
+			.replace(/\bxcsh_[a-z0-9_]+\b/g, "")
+			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
 			.replace(/mutual[ -]+tls/g, "mtls")
 			.replace(/\badvertised\b/g, "advertise")
