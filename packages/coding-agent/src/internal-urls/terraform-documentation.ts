@@ -1029,6 +1029,17 @@ export function terraformProviderMention(search: string, names: readonly string[
 export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
+	const explicitRoles = new Set<string>();
+	if (/\b(?:data[ -]source|data\.xcsh_[a-z0-9_]+)\b/i.test(search)) explicitRoles.add("data-sources");
+	if (/\bephemeral(?: resource)?\b|\bephemeral\.xcsh_[a-z0-9_]+\b/i.test(search))
+		explicitRoles.add("ephemeral-resources");
+	if (
+		/\bresource\b|\bresource\.xcsh_[a-z0-9_]+\b|\b(?:managed|existing)\s+(?:xcsh_[a-z0-9_]+\s+)?resource\b|\bxcsh_[a-z0-9_]+\s+resource\b|\bmanaged\s+xcsh_[a-z0-9_]+\b/i.test(
+			search,
+		)
+	)
+		explicitRoles.add("resources");
+	if (/\b(?:action\s+xcsh_[a-z0-9_]+|xcsh_[a-z0-9_]+\s+action)\b/i.test(search)) explicitRoles.add("actions");
 	const competingRoles =
 		/\b(?:read|retrieve|inspect|lookup|query|check)\b[^.!?]*\bor\b[^.!?]*\b(?:declare|define|configure|specify|set|create)\b|\b(?:declare|define|configure|specify|set|create)\b[^.!?]*\bor\b[^.!?]*\b(?:read|retrieve|inspect|lookup|query|check)\b/i.test(
 			search,
@@ -1036,23 +1047,28 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 		/\b(?:configure|set|specify)\b.*\bor\b.*\b(?:reference|inspect|read)\b|\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(
 			search,
 		);
-	const providerType = competingRoles
-		? undefined
-		: /\bephemeral(?: resource)?\b/i.test(search)
-			? "ephemeral-resources"
-			: /\bdata[ -]source\b/i.test(search)
-				? "data-sources"
-				: /\baction\b/i.test(search)
-					? "actions"
-					: /\bresource\b/i.test(search) ||
-							/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-							/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|(?:specify|specifying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
-								search,
-							)
-						? "resources"
-						: /\b(?:inspect|query|look up|lookup|read existing|retrieve existing)\b/i.test(search)
+	const providerType =
+		explicitRoles.size > 1
+			? undefined
+			: explicitRoles.size === 1
+				? [...explicitRoles][0]
+				: competingRoles
+					? undefined
+					: /\bephemeral(?: resource)?\b/i.test(search)
+						? "ephemeral-resources"
+						: /\bdata[ -]source\b/i.test(search)
 							? "data-sources"
-							: undefined;
+							: /\baction\b/i.test(search)
+								? "actions"
+								: /\bresource\b/i.test(search) ||
+										/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
+										/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|(?:specify|specifying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+											search,
+										)
+									? "resources"
+									: /\b(?:inspect|query|look up|lookup|read existing|retrieve existing)\b/i.test(search)
+										? "data-sources"
+										: undefined;
 	return {
 		...(names.length === 1 ? { providerPhrase: names[0]!.replaceAll("_", " ") } : {}),
 		...(providerType ? { providerType } : {}),

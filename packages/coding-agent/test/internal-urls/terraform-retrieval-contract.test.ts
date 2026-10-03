@@ -742,3 +742,20 @@ test("explicit action arguments and boolean flags remain property requests", () 
 		),
 	).toBeUndefined();
 });
+
+test("explicit provider role wins over incidental query and action nouns", () => {
+	expect(
+		terraformQueryIdentity("In a managed xcsh_workload stateful service, which block retains query parameters?")
+			.providerType,
+	).toBe("resources");
+	expect(terraformQueryIdentity("Read data.xcsh_fixture computed fields including an action value").providerType).toBe(
+		"data-sources",
+	);
+	expect(
+		terraformQueryIdentity("In a managed xcsh_fixture resource, which property specifies the action on detection?")
+			.providerType,
+	).toBe("resources");
+	expect(
+		terraformQueryIdentity("Read data.xcsh_fixture or configure resource.xcsh_fixture").providerType,
+	).toBeUndefined();
+});
