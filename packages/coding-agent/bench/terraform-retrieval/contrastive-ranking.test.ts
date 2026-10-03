@@ -472,3 +472,27 @@ test("explicit field labels carry action value intent without operation narratio
 test("type descriptions are not mistaken for explicit field labels",()=>{
  expect(propertyRequestedText("Specify the target port using numeric field in xcsh_fixture resource")).not.toBe("numeric");
 });
+
+test("cookie persistence configuration is a capability request, while explicit cookie fields stay scalar",()=>{
+ expect(propertyRequestsBlock("Set up passive session persistence using an incoming HTTP cookie name")).toBe(true);
+ expect(propertyRequestsBlock("Which field sets the cookie name for session persistence?")).toBe(false);
+ expect(propertyQueryTerms("Configure cookie session persistence")).toContain("affinity");
+});
+
+test("cookie-persistence purpose cannot turn requested scalar port into a block",()=>{
+ expect(propertyRequestsBlock("Specify the listening port to configure cookie persistence")).toBe(false);
+});
+
+test("cookie persistence does not swallow an explicit scalar or unrelated persistence terminology",()=>{
+ expect(propertyRequestsBlock("Specify the listening port for cookie persistence")).toBe(false);
+ expect(propertyQueryTerms("Configure database persistence")).toContain("persistence");
+});
+
+test("cookie terminology is local and purpose clauses cannot force block fallback",()=>{
+ expect(propertyQueryTerms("Configure database persistence, plus cookie affinity")).toContain("persistence");
+ expect(propertyRequestsBlock("Set the idle timeout to enable cookie persistence")).toBe(false);
+});
+
+test("idle timeout for cookie persistence stays scalar",()=>{expect(propertyRequestsBlock("Configure the idle timeout for cookie persistence")).toBe(false);});
+
+test("plural cookie field requests remain scalar intent",()=>{expect(propertyRequestsBlock("Which fields configure cookie persistence?")).toBe(false);});

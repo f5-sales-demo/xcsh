@@ -861,3 +861,65 @@ test("provider environment variable names are setup vocabulary rather than resou
 		terraformProviderSetupDestination("Configure xcsh_cloud_credentials provider authentication"),
 	).toBeUndefined();
 });
+
+test("HTTP application-balancer phrasing identifies documented HTTP provider without replacing explicit identities", () => {
+	expect(
+		terraformProviderMention("Set up HTTP cookie persistence in our application balancer", [
+			"http_loadbalancer",
+			"cdn_loadbalancer",
+		]),
+	).toBe("http_loadbalancer");
+	expect(
+		terraformProviderMention("Set up HTTP cookie persistence in xcsh_cdn_loadbalancer application balancer", [
+			"http_loadbalancer",
+			"cdn_loadbalancer",
+		]),
+	).toBe("cdn_loadbalancer");
+	expect(
+		terraformProviderMention("application balancer cookie persistence", ["http_loadbalancer", "cdn_loadbalancer"]),
+	).toBeUndefined();
+});
+
+test("negated HTTP qualification cannot identify an application balancer provider", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for TCP, not HTTP", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("literal provider names and HTTP purpose qualifiers remain authoritative", () => {
+	const names = ["http_loadbalancer", "cdn_loadbalancer"];
+	expect(
+		terraformProviderMention("Configure HTTP cookie persistence in cdn_loadbalancer application balancer", names),
+	).toBe("cdn_loadbalancer");
+	expect(terraformProviderMention("Configure application balancer to provide HTTP support", names)).toBeUndefined();
+	expect(terraformProviderMention("Configure application balancer without using HTTP", names)).toBeUndefined();
+});
+
+test("HTTP provider evidence excludes purpose-only HTTP but retains unrelated negation", () => {
+	const names = ["http_loadbalancer", "cdn_loadbalancer"];
+	expect(terraformProviderMention("Configure application balancer to enable HTTP support", names)).toBeUndefined();
+	expect(terraformProviderMention("Configure application balancer without cookies using HTTP", names)).toBe(
+		"http_loadbalancer",
+	);
+});
+
+test("HTTP in a separate health-check clause is not provider identity", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for TCP, and configure HTTP health checks", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("HTTP health-check purpose does not identify application balancer type", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for HTTP health checks", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});

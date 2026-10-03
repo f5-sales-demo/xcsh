@@ -695,7 +695,6 @@ export function terraformNamedChoice(
 	const exact = mentioned.filter(index => !["https", "http"].includes(choices[index]!.schema_path.at(-1) ?? ""));
 	if (exact.length === 1) return exact[0];
 	if (exact.length > 1) return undefined;
-
 	const phrases = choices.map(
 		choice =>
 			new Set(
@@ -1016,6 +1015,10 @@ export function terraformProviderMention(search: string, names: readonly string[
 	];
 	if (exact.length === 1 && names.includes(exact[0]!)) return exact[0];
 	if (exact.length > 1) return undefined;
+	const literalNames = names.filter(name => name.includes("_") && new RegExp(`\\b${name}\\b`, "i").test(search));
+	if (literalNames.length === 1) return literalNames[0];
+	if (literalNames.length > 1) return undefined;
+
 	const normalize = (value: string) =>
 		value
 			.toLowerCase()
@@ -1028,7 +1031,18 @@ export function terraformProviderMention(search: string, names: readonly string[
 			.replace(/secure[ _-]+mesh/g, "securemesh")
 			.replace(/[^a-z0-9]+/g, " ")
 			.trim();
-	const query = ` ${normalize(search)} `;
+	const providerSearch = search
+		.split(/[,;!?]|\.(?=\s)/)
+		.map(clause => {
+			const intent = clause.split(
+				/\b(?:to|for)\s+(?:support|handle|serve|provide|configure|enable)\b|\bfor\s+http\s+health\s+checks?\b/i,
+			)[0]!;
+			return /\bhttp\b/i.test(intent) && !/\b(?:not|no|without)\s+(?:using\s+)?http\b/i.test(intent)
+				? clause.replace(/\bapplication[ -]+balancer\b/gi, "HTTP load balancer")
+				: clause;
+		})
+		.join(" ");
+	const query = ` ${normalize(providerSearch)} `;
 	const found = names
 		.filter(name => query.includes(` ${normalize(name)} `))
 		.filter(name => {
@@ -1607,6 +1621,7 @@ export class TerraformDocumentationRepository {
 					/\bconfigure\b/i.test(search) ||
 					Boolean(propertyRequestedBlockText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
+					(/\bcookie\b/i.test(search) && /\b(?:persistence|affinity|stickiness)\b/i.test(search)) ||
 					/\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(search) ||
 					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?|arguments?|flags?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
 						search,
@@ -1615,6 +1630,7 @@ export class TerraformDocumentationRepository {
 				(!propertyRequestsBlock(search) ||
 					Boolean(propertyRequestedBlockText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
+					(/\bcookie\b/i.test(search) && /\b(?:persistence|affinity|stickiness)\b/i.test(search)) ||
 					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(
 						search,
 					)) &&

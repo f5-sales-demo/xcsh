@@ -116,6 +116,9 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 	return stateless ? !parts.includes("stateful_service") : !parts.includes("service");
 }
 export function propertyQueryTerms(text: string): string[] {
+	text = text
+		.replace(/\bcookie\s+(?:session\s+)?(?:persistence|stickiness)\b/gi, "cookie affinity")
+		.replace(/\b(?:session\s+)?persistence(?=[^,.!?;]*\bcookie\b)/gi, "affinity");
 	return propertyTerms(
 		text
 			.toLowerCase()
@@ -216,7 +219,25 @@ export function propertySchemaIdentifiers(text: string, providerName?: string): 
 	];
 }
 export function propertyRequestsBlock(text: string): boolean {
-	if (/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return false;
+	text = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
+	if (
+		/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text) ||
+		/\b(?:which|what)\s+(?:fields|attributes|properties|parameters|arguments|flags)\b/i.test(text)
+	)
+		return false;
+	if (
+		/^\s*(?:specify|set|provide|supply|configure)\s+(?:(?:the|a|an)\s+)?(?:(?:listening|listener|target|cookie|session|idle)\s+)?(?:port|name|timeout|duration|value)\b/i.test(
+			text,
+		)
+	)
+		return false;
+	const intentText = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
+	if (
+		/\bcookie\b/i.test(intentText) &&
+		/\b(?:persistence|affinity|stickiness)\b/i.test(intentText) &&
+		/\b(?:configure|set up|enable|specify)\b/i.test(intentText)
+	)
+		return true;
 	if (/\b(?:select|choose|enable|disable)\b/i.test(text)) return true;
 	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
 }
