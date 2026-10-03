@@ -1108,6 +1108,16 @@ Idle connection timeout.
 		).content;
 		expect(response).toContain("Reason: Separated candidate");
 		expect(response).toContain("Selected leaf;");
+		const configured = (
+			await read(
+				"?search=" +
+					encodeURIComponent("How do I configure the idle connection timeout for the fixture resource?") +
+					"&category=networking",
+			)
+		).content;
+		expect(configured).toContain("Reason: Separated candidate");
+		expect(configured).toContain("Selected leaf;");
+		expect(configured).toContain("#schema-idle_timeout");
 		expect(response).toContain("#schema-listen_port");
 		expect(Buffer.byteLength(response)).toBeLessThanOrEqual(4096);
 		expect((await read("?search=fixture%20resource%20property%20listen_port&limit=1")).content).toContain(

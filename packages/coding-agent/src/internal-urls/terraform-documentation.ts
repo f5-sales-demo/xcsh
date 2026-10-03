@@ -9,6 +9,7 @@ import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { populatePropertyIndex, searchPropertyIndex } from "./terraform-property-index";
+import { propertyRequestedText } from "./terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -1462,9 +1463,10 @@ export class TerraformDocumentationRepository {
 				};
 			}
 			if (
-				/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
-					search,
-				) &&
+				(Boolean(propertyRequestedText(search)) ||
+					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
+						search,
+					)) &&
 				!/\b(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b/i.test(search) &&
 				(!filters.some(f => f.key === "role") || filters.some(f => f.key === "role" && f.value === "properties")) &&
 				(!/\bblock\b/i.test(search) || /\b(?:secret|credentials?)\b|\bschema block\b/i.test(search)) &&

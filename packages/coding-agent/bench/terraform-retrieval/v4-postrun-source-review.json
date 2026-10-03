@@ -1,0 +1,2268 @@
+{
+  "verdict": "label-defects",
+  "cases": [
+    {
+      "id": "case-ans-001",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name",
+        "A case-insensitive HTTP header name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-002",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--regex_values",
+        "A list of regular expressions to match the input against"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-003",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--status",
+        "HTTP response status codes EmptyStatusCode response codes means it is not specified Continue status code OK status code Created status code Accepted status code Non Authoritative Information status code No Content status code Reset Content status code Partial Content status code Multi Status status code Already"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-004",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--name",
+        "A case-insensitive HTTP header name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-005",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--regex_values",
+        "A list of regular expressions to match the input against"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-006",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--success_conditions--status",
+        "HTTP response status codes EmptyStatusCode response codes means it is not specified Continue status code OK status code Created status code Accepted status code Non Authoritative Information status code No Content status code Reset Content status code Partial Content status code Multi Status status code Already"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-007",
+      "valid": false,
+      "reason": "Omitted HTTP/CDN/API crawler architecture in prompt; identical blindfold secret decryption_provider exists under http_loadbalancer, cdn_loadbalancer, and api_crawler. Existence does not imply uniqueness.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider",
+        "Name of the Secret Management Access object that contains information about the backend Secret Management service"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider",
+        "documentation/resources/api_crawler/properties/domains/simple_login/password/blindfold_secret_info/index.md#schema-domains--simple_login--password--blindfold_secret_info--decryption_provider",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--decryption_provider"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-008",
+      "valid": false,
+      "reason": "Omitted HTTP/CDN/API crawler architecture in prompt; blindfold crawler location attribute exists in http_loadbalancer and cdn_loadbalancer as well.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location",
+        "Location is the uri_ref"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location",
+        "documentation/resources/api_crawler/properties/domains/simple_login/password/blindfold_secret_info/index.md#schema-domains--simple_login--password--blindfold_secret_info--location",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--location"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-009",
+      "valid": false,
+      "reason": "Omitted HTTP/CDN/API crawler architecture in prompt; blindfold crawler store_provider attribute exists under http_loadbalancer, cdn_loadbalancer, and api_crawler.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--store_provider",
+        "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--store_provider",
+        "documentation/resources/api_crawler/properties/domains/simple_login/password/blindfold_secret_info/index.md#schema-domains--simple_login--password--blindfold_secret_info--store_provider",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/blindfold_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--blindfold_secret_info--store_provider"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-010",
+      "valid": false,
+      "reason": "Omitted HTTP/CDN/API crawler architecture in prompt; cleartext crawler provider_ref attribute exists under http_loadbalancer, cdn_loadbalancer, and api_crawler.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--provider_ref",
+        "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--provider_ref",
+        "documentation/resources/api_crawler/properties/domains/simple_login/password/clear_secret_info/index.md#schema-domains--simple_login--password--clear_secret_info--provider_ref",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--provider_ref"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-011",
+      "valid": false,
+      "reason": "Omitted HTTP/CDN/API crawler architecture in prompt; cleartext crawler url attribute exists under http_loadbalancer, cdn_loadbalancer, and api_crawler.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--url",
+        "URL of the secret"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--url",
+        "documentation/resources/api_crawler/properties/domains/simple_login/password/clear_secret_info/index.md#schema-domains--simple_login--password--clear_secret_info--url",
+        "documentation/resources/http_loadbalancer/properties/single_lb_app/enable_discovery/api_crawler/api_crawler_config/domains/simple_login/password/clear_secret_info/index.md#schema-single_lb_app--enable_discovery--api_crawler--api_crawler_config--domains--simple_login--password--clear_secret_info--url"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-012",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-013",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "IPv6 Address in form of string."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-014",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-015",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv6/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv6--addr",
+        "IPv6 Address in form of string."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-016",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-017",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "IPv6 Address in form of string."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-018",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--blindfold_secret_info--location",
+        "Location is the uri_ref. It could be in URL format for string:/// Or it could be a path if the store provider is an HTTP/HTTPS location."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-019",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--blindfold_secret_info--store_provider",
+        "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-020",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/clear_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--clear_secret_info--provider_ref",
+        "Name of the Secret Management Access object that contains information about the store to GET encrypted bytes This field needs to be provided only if the URL scheme is not string:///."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-021",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_blade/flash_blades/api_token/clear_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_blade--flash_blades--api_token--clear_secret_info--url",
+        "URL of the secret. Currently supported URL schemes is string:///. For string:/// scheme, Secret needs to be encoded Base64 format. When asked for this secret, caller will GET Secret bytes after Base64 decoding."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-022",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--start_ip",
+        "Starting IP of the pool range. In case of address allocator,"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-023",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; ending IP address exists in parallel under both IPv4 dhcp_server and IPv6 ipv6_auto_config pools.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--end_ip",
+        "Ending IP of the pool range. In case of address allocator, o"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-024",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; IP exclusion exists under both IPv4 dhcp_server pools and IPv6 ipv6_auto_config pool_settings.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--exclude",
+        "Exclude this address range from DHCP allocation"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-025",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/dns_config/configured_list/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--dns_config--configured_list--dns_list",
+        "List of IPv6 Addresses acting as DNS servers"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-026",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--fixed_ip_map",
+        "Fixed MAC address to IPv6 assignments, Key: MAC address, Val"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-027",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 10 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip",
+        "Starting IPv6 address of the pool range. In case of address "
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 10
+    },
+    {
+      "id": "case-ans-028",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 10 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip",
+        "Ending IPv6 address of the pool range. In case of address al"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 10
+    },
+    {
+      "id": "case-ans-029",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-azure--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--start_ip",
+        "Starting IP of the pool range. In case of address allocator,"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-030",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; Azure node ending IP address exists in parallel under IPv4 dhcp_server and IPv6 ipv6_auto_config pools.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-azure--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--end_ip",
+        "Ending IP of the pool range. In case of address allocator, o"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-azure--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-031",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; Azure node excluded IP address configuration exists under IPv4 dhcp_server and IPv6 ipv6_auto_config.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-azure--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--exclude",
+        "Exclude this address range from DHCP allocation"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/securemesh_site_v2/properties/azure/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-azure--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-032",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "Starting IP of the pool range. In case of address allocator,"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-033",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; Voltstack Ethernet interface ending IP exists in parallel under IPv4 dhcp_server and IPv6 ipv6_auto_config pools.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--end_ip",
+        "Ending IP of the pool range. In case of address allocator, o"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-034",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; Voltstack Ethernet interface excluded address exists under both IPv4 dhcp_server and IPv6 ipv6_auto_config.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--exclude",
+        "Exclude this address range from DHCP allocation"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-035",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/dns_config/configured_list/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--dns_config--configured_list--dns_list",
+        "List of IPv6 Addresses acting as DNS servers"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-036",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--fixed_ip_map",
+        "Fixed MAC address to IPv6 assignments, Key: MAC address, Val"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-037",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 10 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip",
+        "Starting IPv6 address of the pool range. In case of address "
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 10
+    },
+    {
+      "id": "case-ans-038",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 10 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--end_ip",
+        "Ending IPv6 address of the pool range. In case of address al"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 10
+    },
+    {
+      "id": "case-ans-039",
+      "valid": false,
+      "reason": "Omitted IP family in prompt; Voltstack storage interface DHCP pool starting address exists in parallel under IPv4 and IPv6 storage interface configurations.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/properties/custom_storage_config/storage_interface_list/storage_interfaces/storage_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_storage_config--storage_interface_list--storage_interfaces--storage_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "Starting IP of the pool range. In case of address allocator,"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/voltstack_site/properties/custom_storage_config/storage_interface_list/storage_interfaces/storage_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_storage_config--storage_interface_list--storage_interfaces--storage_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip"
+      ],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-040",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-041",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-042",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-043",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv6/index.md#schema-vn_config--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv6--addr",
+        "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-044",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-045",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-046",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-047",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-048",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-049",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv6--addr",
+        "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-050",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-ingress_egress_gw_ar--inside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+        "IPv4 Address in string form with dot-decimal notation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-051",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 9 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+        "IPv6 Address in form of string. IPv6 address must be specified as hexadecimal nu"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 9
+    },
+    {
+      "id": "case-ans-052",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/contain_value/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--header--header_and--header_match--contain_value--case_insensitive",
+        "Case-Insensitive. Case insensitive checker"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-053",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/exact_value/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--header--header_and--header_match--exact_value--value",
+        "Value. Query Matcher Value"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-054",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/end_with_value/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--header--header_and--header_match--end_with_value--value",
+        "Value. Query Matcher Value"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-055",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 8 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/start_with_value/index.md#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--header--header_and--header_match--start_with_value--case_insensitive",
+        "Case-Insensitive. Case insensitive checker"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 8
+    },
+    {
+      "id": "case-ans-056",
+      "valid": false,
+      "reason": "Wrong section target; #authenticating-to-f5-distributed-cloud contains high-level prose overview without HCL provider attributes, which reside under #argument-reference and #authentication-options.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md#authenticating-to-f5-distributed-cloud",
+        "The XCSH Terraform provider enables infrastructure as code management for F5 Distributed Cloud resources"
+      ],
+      "alternative_destinations": [
+        "documentation/provider/setup/index.md#argument-reference",
+        "documentation/provider/setup/index.md#authentication-options"
+      ],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-057",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/index.md#root-configuration",
+        "Authentication credential for access control"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-058",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/kubernetes_manifests/index.md#root-configuration",
+        "Kubernetes manifests for access control"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-059",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/index.md#root-configuration",
+        "Upgrade OS on a site"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-060",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_sw/index.md#root-configuration",
+        "Upgrade SW on a site"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-061",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/index.md#root-configuration",
+        "Terminate an active access session"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-062",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/access_active_sessions_terminate/index.md#root-configuration",
+        "Terminate active access sessions matching criteria"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-063",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/index.md#root-configuration",
+        "Add a cryptokey to a DNS zone"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-064",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_edit_cryptokey/index.md#root-configuration",
+        "Edit a cryptokey in a DNS zone"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-065",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_delete_cryptokey/index.md#root-configuration",
+        "Delete a cryptokey from a DNS zone"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-066",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/actions/infraprotect_synchronize_configuration/index.md#root-configuration",
+        "Synchronize InfraProtect configuration"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-067",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/lifecycle/import/index.md#import",
+        "Importing an existing resource requires its name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-068",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/lifecycle/import/index.md#import",
+        "Importing an existing resource requires its name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-069",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/lifecycle/import/index.md#import",
+        "Importing an existing resource requires its name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-070",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/certificate/lifecycle/import/index.md#import",
+        "Importing an existing resource requires its name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-071",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/service_policy/lifecycle/import/index.md#import",
+        "Importing an existing resource requires its name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-072",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/lifecycle/import/index.md#import",
+        "Importing an existing resource requires its name"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-073",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/lifecycle/timeouts/index.md#timeouts",
+        "Timeouts represent the maximum time an operation can take before timing out"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-074",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/lifecycle/timeouts/index.md#timeouts",
+        "Timeouts represent the maximum time an operation can take before timing out"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-075",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/lifecycle/timeouts/index.md#timeouts",
+        "Timeouts represent the maximum time an operation can take before timing out"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-076",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md#section",
+        "Configuration for tls certificates"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-077",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 4 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md#schema-https--tls_parameters--tls_certificates--certificate_url",
+        "Certificate or certificate chain URL"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 4
+    },
+    {
+      "id": "case-ans-078",
+      "valid": false,
+      "reason": "Scalar wording targets containing block rather than exact scalar property hash_algorithms; depth mismatch (target depth 4 vs scalar depth 5).",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/custom_hash_algorithms/index.md#section",
+        "Configuration for custom hash algorithms"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/custom_hash_algorithms/index.md#schema-https--tls_parameters--tls_certificates--custom_hash_algorithms--hash_algorithms"
+      ],
+      "verified_depth": 5
+    },
+    {
+      "id": "case-ans-079",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/k8s_service/inside_network/index.md#section",
+        "Configuration for inside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-080",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/k8s_service/outside_network/index.md#section",
+        "Configuration for outside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-081",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/consul_service/inside_network/index.md#section",
+        "Configuration for inside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-082",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/consul_service/outside_network/index.md#section",
+        "Configuration for outside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-083",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/private_ip/inside_network/index.md#section",
+        "Configuration for inside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-084",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/private_ip/outside_network/index.md#section",
+        "Configuration for outside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-085",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/private_name/inside_network/index.md#section",
+        "Configuration for inside network"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-086",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 3 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#schema-origin_servers--public_ip--ip",
+        "Public IP address of the origin server"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 3
+    },
+    {
+      "id": "case-ans-087",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/http_loadbalancer/index.md#root-configuration",
+        "xcsh_http_loadbalancer data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-088",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/origin_pool/index.md#root-configuration",
+        "xcsh_origin_pool data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-089",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/app_firewall/index.md#root-configuration",
+        "xcsh_app_firewall data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-090",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/certificate/index.md#root-configuration",
+        "xcsh_certificate data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-091",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/service_policy/index.md#root-configuration",
+        "xcsh_service_policy data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-092",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/rate_limiter/index.md#root-configuration",
+        "xcsh_rate_limiter data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-093",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/dns_zone/index.md#root-configuration",
+        "xcsh_dns_zone data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-094",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/dns_lb_health_check/index.md#root-configuration",
+        "xcsh_dns_lb_health_check data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-095",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/bgp/index.md#root-configuration",
+        "xcsh_bgp data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-096",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/tunnel/index.md#root-configuration",
+        "xcsh_tunnel data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-097",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/network_interface/index.md#root-configuration",
+        "xcsh_network_interface data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-098",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/namespace/index.md#root-configuration",
+        "xcsh_namespace data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-099",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/voltstack_site/index.md#root-configuration",
+        "xcsh_voltstack_site data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-100",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/alert_policy/index.md#root-configuration",
+        "xcsh_alert_policy data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-101",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 0 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/user_identification/index.md#root-configuration",
+        "xcsh_user_identification data source documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ans-102",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/advertise_custom/advertise_where/index.md#section",
+        "Configuration for advertise where"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-103",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/more_option/request_headers_to_add/index.md#section",
+        "Configuration for request headers to add"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-104",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/more_option/response_headers_to_add/index.md#section",
+        "Configuration for response headers to add"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-105",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/more_option/index.md#schema-more_option--max_request_header_size",
+        "The max request header size for this HTTP load balancer in KB"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-106",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/more_option/index.md#schema-more_option--idle_timeout",
+        "The amount of time that an HTTP connection is kept idle in milliseconds"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-107",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/app_firewall/index.md#section",
+        "Configuration for app firewall"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-108",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/api_rate_limit/bypass_rate_limiting_rules/index.md#section",
+        "Configuration for bypass rate limiting rules"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-109",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/api_protection_rules/index.md#section",
+        "Configuration for api protection rules"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-110",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/api_rate_limit/ip_allowed_list/index.md#section",
+        "Configuration for ip allowed list"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-111",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/source_ip_stickiness/index.md#section",
+        "Configuration for source ip stickiness"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-112",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/advanced_options/index.md#section",
+        "Configuration for advanced options"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-113",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/healthcheck/index.md#section",
+        "Configuration for healthcheck"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-114",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/blocking/index.md#section",
+        "Configuration for blocking"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-115",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/bot_protection_setting/index.md#section",
+        "Configuration for bot protection setting"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-116",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/allow_all_response_codes/index.md#section",
+        "Configuration for allow all response codes"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-117",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/properties/custom_anonymization/index.md#section",
+        "Configuration for custom anonymization"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-118",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/service_policy/properties/allow_list/index.md#section",
+        "Configuration for allow list"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-119",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/properties/limits/index.md#section",
+        "Configuration for limits"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-120",
+      "valid": false,
+      "reason": "Scalar wording targets containing block rather than exact scalar property allow_http_lb_managed_records; depth mismatch (target depth 1 vs scalar depth 2).",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md#section",
+        "Configuration for primary"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/dns_zone/properties/primary/index.md#schema-primary--allow_http_lb_managed_records"
+      ],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-121",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_lb_health_check/properties/http_health_check/index.md#section",
+        "Configuration for http health check"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-122",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/bgp/properties/bgp_parameters/index.md#section",
+        "Configuration for bgp parameters"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-123",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/tunnel/properties/params/index.md#section",
+        "Configuration for params"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-124",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/properties/routes/index.md#section",
+        "Configuration for routes"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-125",
+      "valid": false,
+      "reason": "Scalar wording targets containing block rather than exact scalar property email; depth mismatch (target depth 1 vs scalar depth 2).",
+      "source_evidence": [
+        "documentation/resources/alert_receiver/properties/email/index.md#section",
+        "Configuration for email"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/alert_receiver/properties/email/index.md#schema-email--email"
+      ],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-126",
+      "valid": false,
+      "reason": "Scalar wording targets containing block rather than exact scalar property url; depth mismatch (target depth 1 vs scalar depth 2).",
+      "source_evidence": [
+        "documentation/resources/alert_receiver/properties/pagerduty/index.md#section",
+        "Configuration for pagerduty"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/alert_receiver/properties/pagerduty/index.md#schema-pagerduty--url"
+      ],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-127",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/user_identification/properties/rules/index.md#section",
+        "Configuration for rules"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-128",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/forward_proxy_policy/properties/network_connector/index.md#section",
+        "Configuration for network connector"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-129",
+      "valid": false,
+      "reason": "Scalar wording targets containing block rather than exact property records; depth mismatch (target depth 1 vs property depth 2).",
+      "source_evidence": [
+        "documentation/resources/data_group/properties/address_records/index.md#section",
+        "Configuration for address records"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/data_group/properties/address_records/index.md#schema-address_records--records"
+      ],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-130",
+      "valid": false,
+      "reason": "Omitted HTTP/CDN/API crawler architecture in prompt and scalar wording targets block rather than scalar domain property; depth mismatch (target depth 1 vs scalar depth 2).",
+      "source_evidence": [
+        "documentation/resources/api_crawler/properties/domains/index.md#section",
+        "Configuration for domains"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/api_crawler/properties/domains/index.md#schema-domains--domain",
+        "documentation/resources/http_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--domain",
+        "documentation/resources/cdn_loadbalancer/properties/enable_api_discovery/api_crawler/api_crawler_config/domains/index.md#schema-enable_api_discovery--api_crawler--api_crawler_config--domains--domain"
+      ],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-131",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section",
+        "Configuration for tcp"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-132",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/tls_tcp/index.md#section",
+        "Configuration for tls tcp"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-133",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/cloud_link/properties/aws/index.md#section",
+        "Configuration for aws"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-134",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/cloud_elastic_ip/properties/site_ref/index.md#section",
+        "Configuration for site ref"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-135",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/sensitive_data_policy/properties/custom_data_types/index.md#section",
+        "Configuration for custom data types"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-136",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 2 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/advertise_policy/properties/where/site/index.md#section",
+        "Configuration for site"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-ans-137",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_setting/properties/app_type_settings/index.md#section",
+        "Configuration for app type settings"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-138",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/mitigated_domain/properties/timeouts/index.md#section",
+        "Configuration for timeouts"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-139",
+      "valid": true,
+      "reason": "Valid benchmark label; verified depth 1 and unique semantic destination in documentation.",
+      "source_evidence": [
+        "documentation/resources/proxy/properties/http_proxy/index.md#section",
+        "Configuration for http proxy"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 1
+    },
+    {
+      "id": "case-ans-140",
+      "valid": false,
+      "reason": "Scalar wording targets containing block rather than exact scalar property duration; depth mismatch (target depth 1 vs scalar depth 2).",
+      "source_evidence": [
+        "documentation/resources/ike1/properties/reauth_timeout_hours/index.md#section",
+        "Configuration for reauth timeout hours"
+      ],
+      "alternative_destinations": [
+        "documentation/resources/ike1/properties/reauth_timeout_hours/index.md#schema-reauth_timeout_hours--duration"
+      ],
+      "verified_depth": 2
+    },
+    {
+      "id": "case-amb-001",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models load-balancing mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/index.md#root-configuration",
+        "xcsh_http_loadbalancer resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-002",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models load-balancing mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/index.md#root-configuration",
+        "xcsh_origin_pool resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-003",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/index.md#root-configuration",
+        "xcsh_app_firewall resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-004",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models identity mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/certificate/index.md#root-configuration",
+        "xcsh_certificate resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-005",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/service_policy/index.md#root-configuration",
+        "xcsh_service_policy resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-006",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/rate_limiter/index.md#root-configuration",
+        "xcsh_rate_limiter resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-007",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models dns mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/index.md#root-configuration",
+        "xcsh_dns_zone resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-008",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models dns mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_lb_health_check/index.md#root-configuration",
+        "xcsh_dns_lb_health_check resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-009",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models networking mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/bgp/index.md#root-configuration",
+        "xcsh_bgp resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-010",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models networking mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/tunnel/index.md#root-configuration",
+        "xcsh_tunnel resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-011",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models networking mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/advertise_on_public_default_vip/index.md#section",
+        "Configuration for advertise on public default vip"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-012",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models networking mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/advertise_on_public_default_vip/index.md#section",
+        "Configuration for advertise on public default vip"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-013",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models networking mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/advertise_policy/properties/where/site/index.md#section",
+        "Configuration for site"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-014",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models dns mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_lb_health_check/properties/http_health_check/index.md#section",
+        "Configuration for http health check"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-015",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models load-balancing mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/http/index.md#section",
+        "Configuration for http"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-016",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models load-balancing mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/tcp_loadbalancer/properties/tcp/index.md#section",
+        "Configuration for tcp"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-017",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/actions/access_active_session_terminate/index.md#root-configuration",
+        "Terminate an active access session"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-018",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models dns mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/actions/dns_zone_add_cryptokey/index.md#root-configuration",
+        "Add a cryptokey to a DNS zone"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-019",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models infrastructure mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/actions/site_upgrade_os/index.md#root-configuration",
+        "Upgrade OS on a site"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-020",
+      "valid": false,
+      "reason": "Invalid alternative destination; kubernetes_manifests generates temporary manifest payloads rather than providing registry credentials; only artifact_registry_token satisfies the credentials prompt.",
+      "source_evidence": [
+        "documentation/ephemeral-resources/artifact_registry_token/index.md#root-configuration",
+        "Authentication credential for access control"
+      ],
+      "alternative_destinations": [
+        "documentation/ephemeral-resources/artifact_registry_token/index.md#root-configuration"
+      ],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-021",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models load-balancing mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/properties/origin_servers/public_ip/index.md#section",
+        "Configuration for public ip"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-022",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md#section",
+        "Configuration for tls certificates"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-023",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models load-balancing mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/healthcheck/properties/http_health_check/index.md#section",
+        "Configuration for http health check"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-024",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models infrastructure mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/properties/aws/index.md#section",
+        "Configuration for aws"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-025",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models monitoring mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/alert_receiver/properties/email/index.md#section",
+        "Configuration for email"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-026",
+      "valid": false,
+      "reason": "Incomplete alternative choices; header_match defines four choices (contain_value, exact_value, end_with_value, start_with_value), but label only included two.",
+      "source_evidence": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/contain_value/index.md#section",
+        "Configuration for contain value"
+      ],
+      "alternative_destinations": [
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/end_with_value/index.md#section",
+        "documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/header/header_and/header_match/start_with_value/index.md#section"
+      ],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-027",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models container mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/workload/properties/service/index.md#section",
+        "Configuration for service"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-028",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models container mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/workload/properties/service/index.md#section",
+        "Configuration for service"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-029",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models dns mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/dns_zone/properties/primary/index.md#section",
+        "Configuration for primary"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-030",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models dns mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/data-sources/dns_zone/properties/primary/index.md#section",
+        "Configuration for primary"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-031",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models administration mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/namespace/index.md#root-configuration",
+        "xcsh_namespace resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-032",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models monitoring mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/alert_policy/index.md#root-configuration",
+        "xcsh_alert_policy resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-033",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/user_identification/index.md#root-configuration",
+        "xcsh_user_identification resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-034",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models networking mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/forward_proxy_policy/index.md#root-configuration",
+        "xcsh_forward_proxy_policy resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-035",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/data_group/index.md#root-configuration",
+        "xcsh_data_group resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-036",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models api-management mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/api_crawler/index.md#root-configuration",
+        "xcsh_api_crawler resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-037",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models security mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/sensitive_data_policy/index.md#root-configuration",
+        "xcsh_sensitive_data_policy resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-038",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models administration mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/app_setting/index.md#root-configuration",
+        "xcsh_app_setting resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-039",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models infrastructure mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/voltstack_site/index.md#root-configuration",
+        "xcsh_voltstack_site resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-amb-040",
+      "valid": true,
+      "reason": "Valid ambiguous label; correctly models infrastructure mutually exclusive alternatives in documentation.",
+      "source_evidence": [
+        "documentation/resources/securemesh_site_v2/index.md#root-configuration",
+        "xcsh_securemesh_site_v2 resource documentation"
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-001",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/index.md",
+        "This query asks about SaaS account billing in the management web console, which is handled via general platform discovery and must not activate Terraform configuration."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-002",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/index.md",
+        "User management and invitations inside the web console are standard platform administration workflows, not Terraform provider resources."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-003",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md",
+        "Direct REST API curl requests represent ordinary API discovery and documentation lookups rather than Terraform provider schema execution."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-004",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/index.md",
+        "Platform release notes discovery is general documentation reading that does not target any Terraform resource or schema path."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-005",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/guides/network-allowlists/index.md",
+        "Querying public network allowlists is informative networking documentation discovery and does not generate Terraform infrastructure changes."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-006",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/index.md",
+        "Local workstation SSH client configuration is host-level system administration outside Terraform provider management."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-007",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/provider/setup/index.md",
+        "Cloud provider credential generation in AWS IAM is an out-of-band prerequisite and not part of xcsh Terraform provider schema."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-008",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/index.md",
+        "Downloading and installing the vesctl utility binary is CLI workstation setup, not Terraform HCL resource authoring."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-009",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:quantum_safe_key_exchange",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; quantum_safe_key_exchange is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-010",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:ebpf_xdp_packet_filter",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; ebpf_xdp_packet_filter is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-011",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:bgp_confederation_identifier",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; bgp_confederation_identifier is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-012",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:wireguard_peer_tunnel_endpoint",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; wireguard_peer_tunnel_endpoint is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-013",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:satellite_uplink_backup_gateway",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; satellite_uplink_backup_gateway is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-014",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:canary_traffic_split_percentage",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; canary_traffic_split_percentage is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-015",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:wasm_plugin_oci_reference",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; wasm_plugin_oci_reference is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-016",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "corpus-search:zero_trust_device_posture_validation",
+        "Verified across all 18,958 files in documentation/: 0 occurrences found across all resource and data-source schemas; zero_trust_device_posture_validation is completely unsupported in xcsh v12.3.1."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-017",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/resources/http_loadbalancer/index.md#root-configuration",
+        "Live runtime telemetry and active TCP connection counts are operational metrics available only at runtime and cannot be substantiated by static Terraform documentation."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-018",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/resources/origin_pool/index.md#root-configuration",
+        "Real-time probe health states and current live availability cannot be verified via static IaC documentation."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-019",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/resources/app_firewall/index.md#root-configuration",
+        "Recent security event logs and live attack block counts require querying operational telemetry and cannot be claimed from static configuration schema docs."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    },
+    {
+      "id": "case-ctl-020",
+      "valid": true,
+      "reason": "Valid control case (no-live-claim); prompt correctly resolved to no Terraform documentation targets.",
+      "source_evidence": [
+        "documentation/resources/bgp/index.md#root-configuration",
+        "Live routing table state and active RIB/FIB contents are transient operational router states that cannot be obtained from static IaC documentation."
+      ],
+      "alternative_destinations": [],
+      "verified_depth": 0
+    }
+  ],
+  "limitations": [
+    "Audit is strictly confined to static documentation, cases.json, and source.json without operational runtime execution.",
+    "Frozen benchmark labels are audited post-run for research and defect-tracking without modifying source cases.json in-place.",
+    "Controls and live telemetry assertions are verified against documentation schema absence rather than live tenant probing."
+  ]
+}

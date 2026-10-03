@@ -1252,3 +1252,17 @@ on Mac. Digest/size and outcomes are recorded in installed-candidate-mac-receipt
 Candidate CI run 37079682221 is SUCCESS with all compiled/signing jobs; release
 publication jobs remain skipped. Published Homebrew/Ubuntu release acceptance
 and accuracy qualification remain incomplete.
+
+Corrected file-based post-run source audit checks all 200 labels and identifies
+22 defects. All 36 exact alternative destinations mechanically verify against
+the pinned source index; prior fabricated review remains rejected. Corrected
+review/digest are retained in v4-postrun-source-review*. This does not change
+frozen labels, scores or eligibility, and cannot establish qualification.
+
+Configuration request routing now uses the shared field intent extractor as
+well as explicit property phrasing, while existing task, block, role and exact
+identifier paths remain covered. Red/green resolver fixture verifies the indexed
+idle-timeout route without requiring the word property. Audited development
+remains 47/48; original improves 9/14 to 10/14 with zero wrong answerable leaves.
+497 internal URL tests and workspace checks pass. No held-out claim; exposed
+v4 remains regression-only and frozen failure unchanged.
