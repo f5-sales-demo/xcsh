@@ -8,7 +8,7 @@
   "proposed": 30,
   "unresolved": 10,
   "target_documents_and_anchors_verified": 40,
-  "semantic_verification_pending": true,
+  "semantic_verification_pending": false,
   "production_imported": false,
   "first_verifier_rejected": {
     "conversation": "cf27cec3-bb78-43c7-a330-2f5f8e23ceda",
@@ -19,6 +19,11 @@
     "copied_source_pages": 467,
     "symlinks": false,
     "source_digest_manifest": true,
-    "pending": true
+    "pending": false,
+    "verification_sha256": "d1a09b98986d0e34b4ad7d3ebea6aae02f53482b4b15798e8894165b5944b1c9",
+    "approved": 6,
+    "narrowed": 24,
+    "unresolved": 10,
+    "all_source_digests_preserved": true
   }
 }

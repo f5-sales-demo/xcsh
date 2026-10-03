@@ -1409,3 +1409,18 @@ into prior source review workspace and reading author traces. No verdict used.
 Replacement session receives 467 copied pinned source pages, per-file digest
 manifest, candidate bytes, and explicit workspace-only read boundary. No
 symlinks or previous traces. Verification remains pending and proposals unapplied.
+
+Replacement independent source verifier completes with 6 approved and 24
+narrowed entries, 10 unresolved cases retained. All 467 copied source digests
+remain unchanged. Verification file SHA-256
+d1a09b98986d0e34b4ad7d3ebea6aae02f53482b4b15798e8894165b5944b1c9.
+No benchmark freeze/qualification follows. Conservative resource-property rules
+will be delivered separately; guidance-page claims require their own routing.
+
+Provider follow-up #2381 implements 20 conservative property rules from the
+independent source review: 4 reusable resource lifecycle operations and 16
+exact resource properties. Specific collection rules override reusable ones;
+reviewed aliases require exact schema paths and provider roles. Fixture verifies
+metadata enrichment while Markdown retains original prose and anchors. All 28
+metadata/documentation tests and focused Ruff/Pylint/mypy/secret scans pass.
+Rules affect 528 additional pinned destinations; no benchmark qualification.
