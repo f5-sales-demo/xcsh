@@ -1,0 +1,47 @@
+name: Verify published npm release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published immutable version tag
+        required: true
+        type: string
+      source_run_id:
+        description: Original successful publication run with native artifacts
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: xcsh-socketless
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate published release and source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" > "$RUNNER_TEMP/release.json"
+          jq -e '.immutable == true and .draft == false' "$RUNNER_TEMP/release.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          jq -e --arg tag "$TAG" '.event == "push" and .head_branch == $tag' "$RUNNER_TEMP/source-run.json"
+      - run: bash scripts/ci-bun-install.sh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          name: release-binaries-linux-win
+          path: packages/natives/native
+      - name: Verify published npm installation
+        env:
+          EXPECTED_VERSION: ${{ inputs.tag }}
+        run: bash scripts/ci-verify-npm-install.sh

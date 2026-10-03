@@ -73,6 +73,9 @@ for attempt in $(seq 1 "$max_attempts"); do
       echo "Fresh Corporate Vertex authentication bootstrap confirmed."
       echo "Checking xcsh --help..."
       "$binary" --help >/dev/null
+      # The source test harness imports the optional loader; the installed binary
+      # carries its own verified index and must not depend on source build assets.
+      bun --cwd=packages/coding-agent run generate-terraform-documentation-index --reset
       XCSH_TEST_SANDBOX_CHECK_BINARY="$binary" \
         bun test packages/coding-agent/test/sandbox-check.test.ts
       echo "npm install verification passed"
