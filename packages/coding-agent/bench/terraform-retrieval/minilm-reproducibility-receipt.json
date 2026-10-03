@@ -1,0 +1,79 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "runs": [
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "5bf241306f0c35c4c05b27c056533ee0e41913893dba1a67e967b9f0b02f4089",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "evaluator_sha256": "1c7da13725d1bcab87d51782dd2348acf2adb360ed478a831b5243015f4540b8",
+      "lexical_sha256": "66f92a03a551b2e9c249cae55d2efeb078b82d6535c4ed373cb0cbcf2984edff",
+      "answerable": 14,
+      "top1": 11,
+      "top5": 13,
+      "semantic_route_p95_ms": 26.084610959514976,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "fce5382f4e02869ad7249b240ef46b5dc252c4323e204acf34e7e2a15660d3cc",
+      "gzip_sha256": "d98bde1639882aff7d2879d55836baf86816f07dd88d380aca1fb964baceb49f"
+    },
+    {
+      "development_only": true,
+      "property_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "5bf241306f0c35c4c05b27c056533ee0e41913893dba1a67e967b9f0b02f4089",
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "evaluator_sha256": "ccf2999b86fccb7d21fdb321af8c53d9471496e7244ec8b30db5eb3ab5712b92",
+      "lexical_sha256": "66f92a03a551b2e9c249cae55d2efeb078b82d6535c4ed373cb0cbcf2984edff",
+      "answerable": 14,
+      "top1": 11,
+      "top5": 13,
+      "semantic_route_p95_ms": 29.87181895878166,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "28fc943d544e4cdb8f6d12755b6d297cfc848c5b46ff022b6d531c030cba52b9",
+      "gzip_sha256": "7d23a279bf28121d4893e9570d39a0ac4ef58554381683ddbfd38aaaea1c41b8"
+    },
+    {
+      "development_only": true,
+      "property_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "source_commit": "2f59e49f839f5da493bc716669c427aa0f16445a",
+      "corpus_sha256": "fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b",
+      "vector_sha256": "5bf241306f0c35c4c05b27c056533ee0e41913893dba1a67e967b9f0b02f4089",
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "evaluator_sha256": "ba1d479baa85fe9803f8333bae0e5d13ba21880334608182ad3a848d9e658377",
+      "lexical_sha256": "9e288af5bf9eacb7b914d60980355a8d1a5f7a9132dcecb2076cabb055e01ca4",
+      "expected_outside_property_corpus": [
+        "dev-revised-030",
+        "dev-revised-031"
+      ],
+      "answerable": 48,
+      "top1": 38,
+      "top5": 45,
+      "semantic_route_p95_ms": 62.99601506907493,
+      "limitations": [
+        "Lexical precomputed separately; no complete response latency qualification.",
+        "Candidate ranking only; no confidence selection or prerequisite rendering.",
+        "Local offline embedding runtime, not bundled production dependency."
+      ],
+      "raw_sha256": "1ad9def220e0308ecb477126cd623475e6f8cc1c8f227ad2aead7b50d124552a",
+      "gzip_sha256": "3c45e2432ff20f2ca25637351b700eeae7a23858606f885cd4e688a95b15c2b6"
+    }
+  ]
+}

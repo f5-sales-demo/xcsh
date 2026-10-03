@@ -1329,3 +1329,20 @@ bytes, materialization 206.174 seconds. No indexed destination exceeds the
 Latency fits but accuracy does not justify production integration. Complete
 selection/rendering, cross-host and fresh qualification remain unverified.
 Exact receipts/raw output: minilm-hybrid-development-receipt.json.
+
+MiniLM original development ranks 11/14 first and 13/14 top-five. A committed
+file-based evaluator verifies model, vector, corpus and suite digests before
+loading offline model weights, and rejects qualification-suite inputs. Five
+provenance/fusion tests and focused Python lint pass. Exact original destinations
+reproduce; measured embedding/fusion p95 varies with host load, so no complete
+response latency claim is made. Removing navigation destinations from lexical
+fusion leaves original and audited accuracy unchanged (11/14 and 38/48 first).
+Two audited provider setup destinations are outside the property vector corpus
+and remain reported in the denominator. Raw receipts: minilm-reproducibility-receipt.json.
+A description-first plain-text vector build is isolated and in progress; no
+production semantic dependency or qualification claim.
+
+CI run 37086656349 flags tokenizer filename/hash pairs as generic API keys.
+The public immutable model manifest now uses explicit path and sha256 fields;
+all 11 original file hashes are preserved and verified. Focused Gitleaks scans
+3.22 MB of experiment evidence with no findings. No ignore rule or gate bypass.
