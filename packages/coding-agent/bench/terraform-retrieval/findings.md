@@ -1376,3 +1376,12 @@ with the documented query prefix ranks 9/14 original and 33/48 audited first,
 accuracy. Candidate embedding/fusion p95 is 58.985/80.994 ms; complete route
 latency remains unmeasured. Exact source/model/vector/raw digests preserved in
 bge-development-rejection-receipt.json. No production semantic dependency.
+
+Adding published reviewed aliases to development property scoring text ranks
+10/14 original and 39/48 audited first, 12/14 and 41/48 top-five. Not promoted.
+This full-scope candidate experiment excludes indexed query performance,
+selection and response rendering. Authoritative descriptions stay untouched;
+exact reports/source digests: alias-property-rejection-receipt.json.
+The existing independent reviewer is auditing sparse descriptions and terminology
+in a source-only workspace, with no retrieval or benchmark inputs. This is
+development review, not a new freeze or qualification.

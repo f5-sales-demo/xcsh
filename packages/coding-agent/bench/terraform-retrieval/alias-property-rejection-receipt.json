@@ -1,0 +1,40 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "rejected": true,
+  "runs": [
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "suite_sha256": "d239572de17724ca28e0cdbb5ace2503258380604457d114b92b7d88dc5ebc4d",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 14,
+      "top1": 10,
+      "top5": 12,
+      "limitations": [
+        "Complete in-memory scope candidate experiment; indexed performance, selection, and rendering are not measured.",
+        "Reviewed aliases appended only to development scoring text; authoritative source unchanged."
+      ],
+      "raw_sha256": "3770f8817b6c76d4cccae4356939b0d3fb7ba1a29ecfc726c07b3fbb3d655e83",
+      "gzip_sha256": "7e7f6a1bb17c036bb618562e74183c65df0fe1e3e2e964b1e5ce99318d60ff1c"
+    },
+    {
+      "development_only": true,
+      "qualification_passed": false,
+      "production_imported": false,
+      "suite_sha256": "c2072150475c64fd859b04b57b66451ea732eddee95e1b6ec8536c794dbe79a9",
+      "source_index_sha256": "a4c05b0d77e8f2cf7c4c2cd8fb22dcb904efa48f1e0a23c218be845ba5aede7d",
+      "answerable": 48,
+      "top1": 39,
+      "top5": 41,
+      "limitations": [
+        "Complete in-memory scope candidate experiment; indexed performance, selection, and rendering are not measured.",
+        "Reviewed aliases appended only to development scoring text; authoritative source unchanged."
+      ],
+      "raw_sha256": "61077b68bfbd22e588e398da5be0a123debef222dfb112f0f1fbbe67cf7baea7",
+      "gzip_sha256": "3ba15d9e41f925f7e4e26531dd27a54e4d37192e4e81a77d319539c1754c1df8"
+    }
+  ]
+}
