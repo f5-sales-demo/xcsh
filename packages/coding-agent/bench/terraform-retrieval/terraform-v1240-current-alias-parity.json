@@ -1,0 +1,33 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+  "suite_sha256": "6124dfc139ba4d4ed2dfdbf2918a53d9c5529966d1b3f3eb7f62c9b6c4537cc8",
+  "cases": 80,
+  "response_differences": [],
+  "reports": {
+    "terraform-v1240-current-alias-mac": {
+      "sha256": "5c9b72cf38116d0f112771f0ec8990bee375403811b1eaf350a73f162afde2d3",
+      "gzip_sha256": "e358901d12418c410ffacc3b08b3c9ef72c7340b75b1df80896b3fa5c0068a52",
+      "warm_p95_ms": 39.68604200000027
+    },
+    "terraform-v1240-current-alias-linux": {
+      "sha256": "7ae10f3e544009dfc88ee157b5431b5f1688932099b91501b80ecf2da90db3cf",
+      "gzip_sha256": "8397eaf05190a93ea40815d886748538d887ac76329b53bba168dfeec71c4dd9",
+      "warm_p95_ms": 37.82539999999972
+    },
+    "terraform-v1240-current-alias-mac-offline": {
+      "sha256": "c7aac401d387402a2c60c190b2db8fb25b4cb390534d6ff1cd07842e2f52791d",
+      "gzip_sha256": "5d988856314134446f15ad9ad553695667c45276bf93eb4d343c109cd506bed9",
+      "warm_p95_ms": 34.8957919999998
+    },
+    "terraform-v1240-current-alias-linux-offline": {
+      "sha256": "00670263a888c72394056fc338b380cb7d3f27c00b85dbab7be522dc9169c3b7",
+      "gzip_sha256": "daee8de5bf621fa3bc618cc6e6dc5be14370e70a5ded33dd3ffb4f2a3c4fc5e9",
+      "warm_p95_ms": 32.65395600000011
+    }
+  },
+  "limitations": [
+    "Current source resolver development only; not heldout or compiled artifact acceptance."
+  ]
+}
