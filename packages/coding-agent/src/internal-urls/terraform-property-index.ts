@@ -14,7 +14,7 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 	const row = db
 		.query("SELECT schema_version,source_commit,source_index_sha256 FROM property_index_provenance")
 		.get() as { schema_version: number; source_commit: string; source_index_sha256: string } | null;
-	if (row?.schema_version !== 2) throw new Error("Unsupported property index version");
+	if (row?.schema_version !== 3) throw new Error("Unsupported property index version");
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
 }
@@ -29,10 +29,10 @@ export function populatePropertyIndex(
 	db.exec(`CREATE TABLE property_index_provenance(schema_version INTEGER,source_commit TEXT,source_index_sha256 TEXT);
  CREATE TABLE property_scopes(provider_type TEXT,provider_name TEXT,destination_count INTEGER,PRIMARY KEY(provider_type,provider_name));
  CREATE TABLE property_scope_terms(provider_type TEXT,provider_name TEXT,term TEXT,weight REAL,PRIMARY KEY(provider_type,provider_name,term));
- CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
+ CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
-		2,
+		3,
 		source?.sourceCommit ?? "",
 		source?.sourceIndexSha256 ?? "",
 	);
@@ -41,6 +41,24 @@ export function populatePropertyIndex(
 			"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations ORDER BY provider_type,provider_name,schema_path",
 		)
 		.all() as PropertyCandidate[];
+
+	if (db.prepare("SELECT 1 FROM sqlite_master WHERE name=?").all("terraform_aliases").length) {
+		const aliases = db
+			.prepare(
+				"SELECT provider_type,provider_name,path,anchor,alias FROM terraform_aliases ORDER BY provider_type,provider_name,path,anchor,alias",
+			)
+			.all() as Array<{ provider_type: string; provider_name: string; path: string; anchor: string; alias: string }>;
+		const destinations = new Map(
+			rows.map(row => [`${row.provider_type}:${row.provider_name}:${row.path}#${row.anchor}`, row]),
+		);
+		for (const alias of aliases) {
+			const target = destinations.get(`${alias.provider_type}:${alias.provider_name}:${alias.path}#${alias.anchor}`);
+			if (target) {
+				target.aliases ??= [];
+				target.aliases.push(alias.alias);
+			}
+		}
+	}
 	const groups = new Map<string, PropertyCandidate[]>();
 	for (const row of rows) {
 		const key = `${row.provider_type}|${row.provider_name}`;
@@ -50,7 +68,7 @@ export function populatePropertyIndex(
 	}
 	const insertScope = db.prepare("INSERT INTO property_scopes VALUES(?,?,?)"),
 		insertWeight = db.prepare("INSERT INTO property_scope_terms VALUES(?,?,?,?)"),
-		insertTerm = db.prepare("INSERT INTO property_terms VALUES(?,?,?,?,?,?,?,?,?)"),
+		insertTerm = db.prepare("INSERT INTO property_terms VALUES(?,?,?,?,?,?,?,?,?,?)"),
 		insertSearch = db.prepare("INSERT INTO property_search VALUES(?,?,?,?)");
 	db.transaction(() => {
 		for (const group of groups.values()) {
@@ -70,9 +88,10 @@ export function populatePropertyIndex(
 					JSON.stringify(row.leaf),
 					JSON.stringify(row.context),
 					JSON.stringify(row.descriptionTerms),
+					JSON.stringify(row.aliasTerms),
 				);
 				insertSearch.run(
-					[...row.leaf, ...row.context, ...row.descriptionTerms].join(" "),
+					[...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms].join(" "),
 					row.provider_type,
 					row.provider_name,
 					row.schema_path,
@@ -140,18 +159,19 @@ export function searchPropertyIndex(
 				`SELECT * FROM property_terms WHERE provider_type=? AND provider_name=? AND schema_path IN (${paths.map(() => "?").join(",")}) ORDER BY schema_path`,
 			)
 			.all(type!, name!, ...paths) as Array<
-			PropertyCandidate & { leaf: string; context: string; description_terms: string }
+			PropertyCandidate & { leaf: string; context: string; description_terms: string; alias_terms: string }
 		>;
 		const weights = db
 			.query(
 				`SELECT term,weight FROM property_scope_terms WHERE provider_type=? AND provider_name=? AND term IN (${terms.map(() => "?").join(",")}) ORDER BY term`,
 			)
 			.all(type!, name!, ...terms) as { term: string; weight: number }[];
-		const rows = prepared.map(({ leaf, context, description_terms, ...row }) => ({
+		const rows = prepared.map(({ leaf, context, description_terms, alias_terms, ...row }) => ({
 			...row,
 			leaf: JSON.parse(leaf) as string[],
 			context: JSON.parse(context) as string[],
 			descriptionTerms: JSON.parse(description_terms) as string[],
+			aliasTerms: JSON.parse(alias_terms) as string[],
 		}));
 		ranked.push(...rankPropertyScope(query, { rows, weights: new Map(weights.map(row => [row.term, row.weight])) }));
 	}

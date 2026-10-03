@@ -65,14 +65,15 @@ export function searchGloballyWeightedProperties(
 				`SELECT * FROM property_terms WHERE provider_type=? AND provider_name=? AND schema_path IN (${paths.map(() => "?").join(",")}) ORDER BY schema_path`,
 			)
 			.all(type!, name!, ...paths) as Array<
-			PropertyCandidate & { leaf: string; context: string; description_terms: string }
+			PropertyCandidate & { leaf: string; context: string; description_terms: string; alias_terms?: string }
 		>;
 		const weights = readGlobalWeights(global, terms, sourceHash);
-		const rows = prepared.map(({ leaf, context, description_terms, ...row }) => ({
+		const rows = prepared.map(({ leaf, context, description_terms, alias_terms, ...row }) => ({
 			...row,
 			leaf: JSON.parse(leaf) as string[],
 			context: JSON.parse(context) as string[],
 			descriptionTerms: JSON.parse(description_terms) as string[],
+            aliasTerms: JSON.parse(alias_terms??"[]") as string[],
 		}));
 		ranked.push(...rankPropertyScope(query, { rows, weights }));
 	}

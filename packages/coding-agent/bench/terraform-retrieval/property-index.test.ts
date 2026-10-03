@@ -113,3 +113,11 @@ test("prepared index rejects mismatched source provenance and format", () => {
 	);
 	db.close();
 });
+
+test("reviewed destination aliases participate in scoped property retrieval",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); CREATE TABLE terraform_aliases(provider_type,provider_name,alias,path,anchor)");
+ db.exec("INSERT INTO terraform_destinations VALUES('resources','fixture','tls.location','tls','schema-location','Encrypted secret location.'); INSERT INTO terraform_aliases VALUES('resources','fixture','existing certificate reference','tls','schema-location')");
+ populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"existing certificate reference",{providerName:"fixture"})[0]?.schema_path).toBe("tls.location");
+ expect(searchPropertyIndex(db,"existing certificate reference",{providerType:"data-sources"})).toEqual([]);db.close();
+});

@@ -6,6 +6,7 @@ export interface PropertyCandidate {
 	path: string;
 	anchor: string;
 	description: string;
+	aliases?: string[];
 }
 const stop = new Set(
 	"a an the and to of for in on with by as from at we our my your i how which what where can do does is are be been have has it this that its resource managed provider terraform field attribute property parameter configure configures configuration configuring defining define declares declare declaring specified specifies specify sets set setting outputs output generated existing list string boolean block schema using use when need".split(
@@ -103,10 +104,11 @@ export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 		leaf: propertyTerms(row.schema_path.split(".").at(-1)!),
 		context: propertyTerms(row.schema_path.split(".").slice(0, -1).join(" ")),
 		descriptionTerms: propertyTerms(row.description),
+		aliasTerms: propertyTerms((row.aliases ?? []).join(" ")),
 	}));
 	const frequencies = new Map<string, number>();
 	for (const row of prepared)
-		for (const term of new Set([...row.leaf, ...row.context, ...row.descriptionTerms]))
+		for (const term of new Set([...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms]))
 			frequencies.set(term, (frequencies.get(term) ?? 0) + 1);
 	const weights = new Map([...frequencies].map(([term, count]) => [term, Math.log(2 + rows.length / (1 + count))]));
 	return { rows: prepared, weights };
@@ -130,7 +132,7 @@ export function rankPropertyScope(
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
 			const weight = (term: string) => scope.weights.get(term) ?? 0;
-			const union = new Set([...row.leaf, ...row.context, ...row.descriptionTerms]);
+			const union = new Set([...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms]);
 			let coverage = 0,
 				total = 0,
 				local = 0,
@@ -142,10 +144,14 @@ export function rankPropertyScope(
 				if (row.context.includes(term)) context += w;
 				if (row.leaf.includes(term)) local += w * 3;
 				else if (row.descriptionTerms.includes(term)) local += w;
+				else if (row.aliasTerms.includes(term)) local += w * 0.25;
 			}
 			const localTerms = new Set([...row.leaf, ...row.descriptionTerms]);
 			let precision = 0;
-			for (const term of target) if (localTerms.has(term)) precision += weight(term);
+			for (const term of target) {
+				if (localTerms.has(term)) precision += weight(term);
+				else if (row.aliasTerms.includes(term)) precision += weight(term) * 0.25;
+			}
 			const requestedLeaf = row.leaf.filter(term => target.includes(term)).length;
 			const leafComplete = row.leaf.length > 0 && row.leaf.every(term => target.includes(term));
 			let score =
@@ -182,7 +188,13 @@ export function rankPropertyScope(
 					!union.has(positive!)
 				)
 					score -= 30;
-			const { leaf: _leaf, context: _context, descriptionTerms: _descriptionTerms, ...candidate } = row;
+			const {
+				leaf: _leaf,
+				context: _context,
+				descriptionTerms: _descriptionTerms,
+				aliasTerms: _aliasTerms,
+				...candidate
+			} = row;
 			return { ...candidate, score: Number(score.toFixed(12)), coverage: total ? coverage / total : 0 };
 		})
 		.sort(
