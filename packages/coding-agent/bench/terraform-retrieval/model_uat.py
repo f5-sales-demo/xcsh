@@ -11,6 +11,8 @@ from pathlib import Path
 
 from model_trace import (
     has_clarification_question,
+    missing_value_response_supported,
+    required_read_coverage,
     successful_read_paths,
     validate_model_activation,
 )
@@ -96,6 +98,10 @@ for case in cases:
 
         successful_reads = successful_read_paths(messages)
         expected = case["expected"]
+        required_reads = case.get("model_expectations", {}).get("must_read", [])
+        required_reads_verified = required_read_coverage(
+            successful_reads, required_reads
+        )
         exact_read = any(
             any(
                 normalized(read) == normalized(want)
@@ -141,6 +147,7 @@ for case in cases:
             passed = (
                 result.returncode == 0
                 and exact_read
+                and required_reads_verified
                 and cited
                 and args.provider_version in text
                 and not false_live
@@ -160,6 +167,16 @@ for case in cases:
                     )
                 )
                 and not code_fences
+                and not false_live
+            )
+        elif case.get("behavior") in ("missing-value", "missing_value"):
+            passed = (
+                result.returncode == 0
+                and required_reads_verified
+                and missing_value_response_supported(
+                    text,
+                    case.get("model_expectations", {}).get("value_clarification") or "",
+                )
                 and not false_live
             )
         else:
@@ -185,6 +202,9 @@ for case in cases:
                 "successful_read_uris": successful_reads,
                 "citation_uris": citations,
                 "exact_leaf_read": exact_read,
+                "required_read_coverage": required_reads_verified,
+                "missing_value_review_required": case.get("behavior")
+                in ("missing-value", "missing_value"),
                 "clarification_review_required": case["kind"] == "ambiguous",
                 "expected_citation": cited,
                 "provider_version_cited": args.provider_version in text,

@@ -3,6 +3,7 @@
 
 import re
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 
 def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
@@ -47,6 +48,35 @@ def has_clarification_question(text: str) -> bool:
     return bool(
         re.search(
             r"\?|\b(?:please clarify|could you clarify|need to know|which (?:method|type|mode|location|role) do you)\b",
+            prose,
+            re.IGNORECASE,
+        )
+    )
+
+
+def required_read_coverage(successful_reads: list[str], required: list[str]) -> bool:
+    """Every required anchored section needs a completed successful read."""
+
+    def normalize(uri: str) -> str:
+        parsed = urlsplit(uri)
+        return urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, "", parsed.fragment)
+        )
+
+    actual = {normalize(uri) for uri in successful_reads}
+    return all(normalize(uri) in actual for uri in required)
+
+
+def missing_value_response_supported(text: str, expectation: str) -> bool:
+    """Require evidence about the named missing schema value, not an apply disclaimer."""
+    prose = re.sub(r"```[\s\S]*?```", "", text)
+    fields = re.findall(r"\b[a-z][a-z0-9]*_[a-z0-9_]+\b", expectation)
+    grounded = (
+        any(field.lower() in prose.lower() for field in fields) if fields else False
+    )
+    return grounded and bool(
+        re.search(
+            r"\brequired\b|\bmissing\b|\b(?:supply|provide|specify|choose)\b|\b(?:cannot|can't)\b",
             prose,
             re.IGNORECASE,
         )

@@ -6,6 +6,8 @@ from typing import Any
 
 from model_trace import (
     has_clarification_question,
+    missing_value_response_supported,
+    required_read_coverage,
     successful_read_paths,
     validate_model_activation,
 )
@@ -84,3 +86,40 @@ class ModelTraceTests(unittest.TestCase):
             has_clarification_question("Do you use a P12 bundle or separate PEM files?")
         )
         self.assertFalse(has_clarification_question("```hcl\n# which value?\n```"))
+
+    def test_missing_configuration_control_needs_the_actual_missing_field(self) -> None:
+        """An unrelated disclaimer cannot prove missing-value handling."""
+        self.assertTrue(
+            missing_value_response_supported(
+                "private_key is required. Supply its secret reference before drafting.",
+                "Missing private_key configuration block",
+            )
+        )
+        self.assertFalse(
+            missing_value_response_supported(
+                "No live apply evidence is available.",
+                "Missing private_key configuration block",
+            )
+        )
+        self.assertFalse(
+            missing_value_response_supported(
+                "Which region should I use?", "Missing private_key configuration block"
+            )
+        )
+
+    def test_every_expected_read_requires_a_successful_exact_destination(self) -> None:
+        """Every listed section requires successful anchored evidence."""
+        required = [
+            "xcsh://terraform-documentation/a.md#one",
+            "xcsh://terraform-documentation/a.md#two",
+        ]
+        self.assertFalse(required_read_coverage([required[0]], required))
+        self.assertTrue(
+            required_read_coverage(
+                ["xcsh://terraform-documentation/a.md?view=context#one", required[1]],
+                required,
+            )
+        )
+        self.assertFalse(
+            required_read_coverage(["xcsh://terraform-documentation/a.md"], required)
+        )
