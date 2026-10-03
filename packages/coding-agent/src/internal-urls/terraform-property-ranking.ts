@@ -92,7 +92,10 @@ export function propertyRequestedText(text: string): string | undefined {
 		(/\bxcsh_[a-z0-9_]+\b/i.test(text)
 			? text.match(/\b(?:declare|configure|specify|set)\b\s+(.+)/i)?.[1]
 			: undefined);
-	return (field ?? operation)?.split(/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b/i)[0]?.trim();
+	return (field ?? operation)
+		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
+		.split(/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b/i)[0]
+		?.trim();
 }
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 	const prepared = rows.map(row => ({

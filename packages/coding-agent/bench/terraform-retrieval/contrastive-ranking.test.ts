@@ -164,3 +164,9 @@ test("resource container wording does not turn scalar values into block requests
  expect(propertyRequestsBlock("Which schema block covers private key storage?")).toBe(true);
  expect(propertyRequestedText("Configure an IPv4 address in xcsh_fixture resource block")).toBeDefined();
 });
+
+test("explicit provider identity in trailing context cannot replace requested namespace",()=>{
+ const scope=preparePropertyScope([row("namespace","Namespace where the resource is configured."),row("token","Computed access token.")]);
+ expect(propertyRequestedText("Specify the namespace parameter when declaring xcsh_artifact_registry_token.")).not.toContain("artifact_registry_token");
+ expect(rankPropertyScope("Specify the namespace parameter when declaring xcsh_artifact_registry_token.",scope)[0]?.schema_path).toBe("namespace");
+});
