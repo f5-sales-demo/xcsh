@@ -1275,7 +1275,6 @@ coverage. Exposed v4 regression reaches 37/140 first and 75/140 top-five at
 reports/source digests: candidate-union-receipt.json. A fresh untouched suite
 would still be required for any future qualification after redesign.
 
-
 ## Global property weight experiment rejected
 
 A source-bound global term-weight table was evaluated with the same bounded
