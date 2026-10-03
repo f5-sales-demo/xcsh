@@ -1,0 +1,22 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "source_commit": "2099fdce5",
+  "combined_tests": 581,
+  "test_files": 50,
+  "workspace_check_ts": "passed",
+  "provider_generation_pr": 2397,
+  "provider_generation_merge": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "provider_tag": "v12.4.0",
+  "provider_release_run": 37107801825,
+  "provider_release_status": "publication pending",
+  "consumer_draft": true,
+  "auto_merge": false,
+  "remaining": [
+    "immutable provider release and documentation snapshot",
+    "reviewed consumer pin and deterministic index",
+    "independent 200/40 freeze and qualification",
+    "installed model and final Mac/Ubuntu offline/latency acceptance",
+    "consumer release/install verification"
+  ]
+}
