@@ -1,0 +1,14 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "generation_source": "6945dad9fc2025f84240d8b0eb2efa891872b6a6",
+  "generated_commit": "cdf0be846daba6bd0560e697a1707020fc63ba48",
+  "canonical_markdown_pages": 18958,
+  "counts": {
+    "metadata": 18958,
+    "metadata_v1": 18958,
+    "lifecycle_fields": 512,
+    "lifecycle_specific_alias": 512
+  },
+  "missing_metadata": []
+}

@@ -1568,3 +1568,11 @@ in both sets; top-five 13/14,48/48; warm p95 69.218/31.721 ms. Exact pinned
 v12.3.1 index remains unchanged. This is not qualification; prior v4 regression
 remains failed and immutable snapshot/model installed gates remain unfulfilled.
 Receipt: rebased-selection-development-receipt.json.
+
+Current-main provider generation run 37098525834 succeeds and creates PR #2395
+from source 6945dad9fc2025f84240d8b0eb2efa891872b6a6, generated commit
+cdf0be846daba6bd0560e697a1707020fc63ba48. Combined patch SHA-256
+264974a40edbb1f13c20f1ffb9e3642919a8f822f2b3235106e0759889fd2a01
+verifies. Full canonical Markdown metadata/timeout-alias audit retained in
+provider-current-generation-coverage.json. PR CI pending; not a published snapshot.
+Consumer remains draft and independent qualification unmet.
