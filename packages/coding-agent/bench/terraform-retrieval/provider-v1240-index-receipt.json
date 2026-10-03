@@ -1,0 +1,23 @@
+{
+  "provider_version": "v12.4.0",
+  "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "snapshot": "documentation-v12.4.0",
+  "receipt_sha256": "6bc68f06bae5540692a00b97ae008b1ebe2493eeb45d99577aac6b03bed6323f",
+  "index": {
+    "sha256": "cfe5abc1032ddd1eb874f1cab0f3e25e42c555f40db3f2ce2d209db563d98326",
+    "size_bytes": 787660800,
+    "gzip_sha256": "5b25d5c96e1885829c13e7c3cf3b7ba09f3d36bbbe81945c72d7d9f7b77e00e1",
+    "gzip_size_bytes": 71093033
+  },
+  "document_count": 18958,
+  "retrieval_metadata_version": 1,
+  "deterministic_builds": 2,
+  "all_release_asset_digests_verified": true,
+  "snapshot_workflow": 37110720898,
+  "snapshot_workflow_conclusion": "success",
+  "qualification_passed": false,
+  "checks": {
+    "snapshot_contract_tests": 52,
+    "new_heldout": "independent verifier pending; not evaluated"
+  }
+}
