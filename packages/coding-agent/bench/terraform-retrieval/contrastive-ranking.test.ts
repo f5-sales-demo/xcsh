@@ -183,3 +183,9 @@ test("listener wording and plural prefixes share literal field vocabulary",()=>{
  const scope=preparePropertyScope([row("listen_port","Listening port."),row("tcp","TCP listener configuration.","section")]);
  expect(rankPropertyScope("Specify the listening port number in xcsh_fixture resource block",scope)[0]?.schema_path).toBe("listen_port");
 });
+
+test("trailing purpose and lookup context do not become requested field evidence",()=>{
+ expect(propertyRequestedText("Specify the list of domains to handle HTTP traffic in xcsh_fixture resource")).toBe("the list of domains");
+ expect(propertyRequestedText("Read the name attribute of an existing load balancer via xcsh_fixture data source")).toBe("the name attribute");
+ expect(propertyRequestedText("Specify the namespace parameter when declaring xcsh_fixture")).toBe("the namespace parameter");
+});

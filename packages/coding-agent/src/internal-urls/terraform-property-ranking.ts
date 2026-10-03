@@ -107,7 +107,9 @@ export function propertyRequestedText(text: string): string | undefined {
 		: undefined;
 	return (field ?? operation ?? lookup)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
-		.split(/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b/i)[0]
+		.split(
+			/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b|\bto\s+(?:handle|match|configure|enable|provide)\b|\bwhen\s+(?:declaring|configuring|reading)\b|\bof\s+(?:an? |the )?(?:existing |managed )?(?:resource|load balancer|site|object)\b/i,
+		)[0]
 		?.trim();
 }
 export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
