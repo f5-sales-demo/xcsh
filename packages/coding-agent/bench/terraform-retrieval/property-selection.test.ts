@@ -258,3 +258,26 @@ test("ordinary conjunctions cannot select logical schema operators", () => {
 		"leaf",
 	);
 });
+
+test("requested reference name separates an upload URL while omitted intent remains undecided", () => {
+	const first = { ...row("tls.verification.trusted_ca.name", 30), description: "Name of the referred object." };
+	const upload = {
+		...row("tls.verification.trusted_ca_url", 29),
+		description: "Upload a CA certificate for verification.",
+	};
+	expect(
+		selectPropertyDestination("Which attribute defines the name of the trusted CA object for verification?", [
+			first,
+			upload,
+		]).kind,
+	).toBe("leaf");
+	expect(selectPropertyDestination("Configure trusted CA verification", [first, upload]).kind).toBe("choices");
+});
+
+test("qualified natural language names a boolean operator", () => {
+	const none = row("request_body.request_body_none.match.case_insensitive", 60);
+	const and = row("request_body.request_body_and.match.case_insensitive", 1);
+	expect(selectPropertyDestination("none of the request bodies match case insensitive", [none], [and]).kind).toBe(
+		"leaf",
+	);
+});

@@ -1550,3 +1550,13 @@ Explicit unchanged v4 regression selects 22/140 expected leaves,60/140 top-five,
 warm p95 101.922 ms. Labels have known defects; this remains poor regression
 evidence, never qualification or tuning permission. Exact receipt:
 rebased-v4-regression-receipt.json. Consumer remains draft and unqualified.
+
+Explicit reference-name intent distinguishes the corresponding upload URL
+without suppressing same-name branch collisions. Original development reaches
+12/14 selected with zero wrong/ambiguous/control leaves. Audited measured 46/48
+uncovered a prior conjunction guard regression: qualified none-of match prose
+was not recognized. Supporting none/all/any-of matching semantics restores
+47/48 audited; broad 38/60, zero wrong-label selections remains. Final exception
+is scoped to reference.name versus reference_url. Source-independent tests cover
+both intent and omitted intent. Exact receipts: reference-name-development-receipt.json.
+No qualification claim; frozen suites not tuned.

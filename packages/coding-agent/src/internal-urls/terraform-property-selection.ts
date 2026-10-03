@@ -136,6 +136,9 @@ export function selectPropertyDestination(
 					),
 			].map(match => match[1] ?? match[2]),
 		);
+		if (/\bnone of\b[^.!?]*\bmatch\b/i.test(queryText)) logicalWords.add("none");
+		if (/\ball of\b[^.!?]*\bmatch\b/i.test(queryText)) logicalWords.add("and");
+		if (/\bany of\b[^.!?]*\bmatch\b/i.test(queryText)) logicalWords.add("or");
 		const operatorBranch = parts.some((part, index) => {
 			const peer = otherParts[index];
 			if (!peer || part === peer) return false;
@@ -175,6 +178,14 @@ export function selectPropertyDestination(
 	const second = ranked.slice(1).find(other => {
 		if (other.provider_type === first.provider_type && other.provider_name === first.provider_name && fieldNamed) {
 			if (other.anchor === "section" && parts.slice(0, -1).join(".") === other.schema_path) return false;
+			if (
+				parts.at(-1) === "name" &&
+				/\b(?:name of|object name|reference name)\b/i.test(queryText) &&
+				!/\b(?:url|upload|inline)\b/i.test(queryText) &&
+				other.schema_path === `${parts.slice(0, -1).join(".")}_url`
+			)
+				return false;
+
 			const fieldTerms = propertyTerms(parts.at(-1) ?? "");
 			if (
 				fieldTerms.length >= 2 &&
