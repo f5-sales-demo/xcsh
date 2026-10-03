@@ -812,7 +812,7 @@ integrated complete-response latency. Original mislabeled timing report digests
 are preserved. Twelve ranker/selection tests and workspace checks pass. No
 production imports or held-out qualification; source-label defects remain.
 
- 
+
 ## Explicit branch exclusion and documented-vocabulary coverage
 
 A red selection fixture reproduced unnecessary clarification between dual-stack
@@ -848,7 +848,7 @@ cross-platform performance qualification.
 Dedicated property_scopes,property_scope_terms,property_terms and property_search
 tables store prepared vocabulary and provider-scope statistics. Targeted SQL
 fetches bounded candidates and their terms rather than loading whole-corpus
-metadata at runtime. Two independent56,627,200-byteprototype indexes match
+metadata at runtime. Two independent56,627,200-byteprototype indices match
 SHA2561796d6d165e9bd57e5c1f18b683a0f906248a9e651be1542daec3cb8ac5f93c2.
 Ranking reaches49/58first and56/58topfive on revised development at30.809ms
 p95;original8/14first and12/14topfive before refinement/lifecycle routing.
@@ -856,7 +856,7 @@ Ambiguous-query candidate differences are retained and prevent broad parity
 claims. Prototype remains outside production;complete targeted route,filters,
 continuations,installed artifact and valid held-out qualification remain required.
 
- 
+
 ## Targeted complete route and prepared-index provenance
 
 The complete property experiment now queries prepared terms and only requested
@@ -1022,7 +1022,7 @@ The production index builder now generates prepared property tables with exact
 canonical destinations; ranking/index modules are moved to src and bench imports
 re-export them. Search routing is still unchanged and qualification is incomplete.
 A red/green snapshot test requires table version 2, one row per canonical
-destination and deterministic generated indexes. Runtime SQLite integrity is ok;
+destination and deterministic generated indices. Runtime SQLite integrity is OK;
 all 39,565 destinations are prepared. The reviewed v12.3.1 index is rebuilt from
 verified immutable snapshot assets: 781,434,880 bytes, gzip 70,980,995 bytes.
 Exact digests and source hashes: bundled-property-index-integration.json.
@@ -1101,7 +1101,7 @@ Fresh candidate author and separate verifier handoff remain active source-only
 processes; no candidate is inspected by implementation, frozen or retrieved.
 
 Installed model UAT no longer accepts a document-only citation for an expected
-#section anchor. Every expected destination retains its exact anchor unless
+`#section` anchor. Every expected destination retains its exact anchor unless
 explicit match_document semantics were source-reviewed. Python compilation
 passes; final held-out model UAT remains unstarted pending independent freeze.
 
@@ -1113,7 +1113,7 @@ API files were preserved outside worktree then restored to HEAD. CI has the
 licensed inputs configured and is the next available compiled artifact route.
 
 Existing full_native_matrix workflow dispatch now also prepares pinned canonical
-indexes and runs licensed Linux/Windows and signed Mac candidate builds. All
+indices and runs licensed Linux/Windows and signed Mac candidate builds. All
 publication jobs retain tag-only gates. This supplies the compiled candidate
 route when local licensed Vertex inputs are absent. Red/green workflow tests
 verify build qualification activation and publication exclusion; four focused
@@ -1129,7 +1129,7 @@ Candidate dispatch run 37073360550 failed Linux baseline sandbox tests after
 successfully building the addon: source CLI imported committed Terraform loader
 without ignored gzip bytes. Native-only sandbox jobs now reset the optional
 loader before source tests; later candidate binary jobs regenerate and verify
-pinned indexes. Red/green workflow test and actionlint pass. This corrects a
+pinned indices. Red/green workflow test and actionlint pass. This corrects a
 fresh-checkout test prerequisite without masking retrieval acceptance.
 
 Installed model exact_leaf_read now requires a matching completed successful
@@ -1271,10 +1271,10 @@ Clarification trace detection now strips fenced code, Markdown link targets and
 bare URLs before looking for a user-facing question. Previously ?view=context
 inside citations incorrectly passed ambiguity checks. Red/green test reproduces
 this; four Python trace tests, Ruff and compilation pass. Original model report
-will be retained; stricter regrading is separate development evidence.
+will be retained; stricter rescoring is separate development evidence.
 
 Complete 40-case activation-modified development installed model UAT finishes
-23/40 provisional automated passes. Regrading final clarification prose after
+23/40 provisional automated passes. Rescoring final clarification prose after
 removing citation URL queries yields 20/40; original report is preserved. No
 false-live pattern detected, but semantic/manual claim review is not complete.
 Five cases emitted HCL; reviewed fields are documented for setup/tunnel examples,

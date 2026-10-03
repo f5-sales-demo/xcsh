@@ -2,6 +2,7 @@
 """Regression tests for successful installed-model tool evidence."""
 
 import unittest
+from typing import Any
 
 from model_trace import (
     has_clarification_question,
@@ -15,7 +16,7 @@ class ModelTraceTests(unittest.TestCase):
 
     def test_failed_read_does_not_count_as_leaf_evidence(self) -> None:
         """A failed exact read is not evidence of reading its leaf."""
-        messages = [
+        messages: list[dict[str, Any]] = [
             {
                 "role": "assistant",
                 "content": [
