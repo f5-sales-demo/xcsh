@@ -288,8 +288,23 @@ export function selectPropertyDestination(
 		return terms.length > 0 && terms.every(term => query.has(term));
 	};
 	const fieldNamed = first.anchor.startsWith("schema-") && completeFieldTerms(first);
+	const groupNamed =
+		first.anchor === "section" &&
+		completeFieldTerms(first) &&
+		/\b(?:define|configure|declare|specify)\b/i.test(queryText) &&
+		!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) &&
+		!ranked
+			.slice(1)
+			.some(
+				other =>
+					other.provider_type === first.provider_type &&
+					other.provider_name === first.provider_name &&
+					other.schema_path.startsWith(`${first.schema_path}.`) &&
+					completeFieldTerms(other),
+			);
 	const blockNamed =
 		blockNamedExplicit ||
+		groupNamed ||
 		(first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first));
 	const second = ranked.slice(1).find(other => {
 		if (

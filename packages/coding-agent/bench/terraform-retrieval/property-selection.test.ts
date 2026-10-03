@@ -363,3 +363,15 @@ test("a filter criterion selects a documented input rather than computed output"
  expect(selectPropertyDestination("Which argument filters CIDR blocks by geographic region?",[field,output]).kind).toBe("leaf");
  expect(selectPropertyDestination("Which argument filters CIDR blocks by unsupported vendor account?",[field,output]).kind).toBe("choices");
 });
+
+
+test("whole response criteria keep their section rather than forcing a child field", () => {
+ const group={...row("login.failure_conditions",48),anchor:"section",description:"Failure Conditions.",type:"object",nesting:"list"};
+ const status={...row("login.failure_conditions.status",42),description:"HTTP response status codes."};
+ expect(selectPropertyDestination("Where do I define HTTP response criteria indicating login failure?",[group,status]).destinations[0]?.schema_path).toBe("login.failure_conditions");
+ expect(selectPropertyDestination("Where do I define HTTP response criteria indicating login failure?",[group,status]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Which field sets HTTP response status in login failure criteria?",[status,group]).destinations[0]?.schema_path).toBe("login.failure_conditions.status");
+ expect(selectPropertyDestination("Which field sets HTTP response status in login failure criteria?",[status,group]).kind).toBe("leaf");
+ const unsupported={...row("login.credentials",48),anchor:"section",description:"Credentials.",type:"object",nesting:"list"};
+ expect(selectPropertyDestination("Where do I define HTTP response criteria indicating login failure?",[unsupported,status]).kind).toBe("choices");
+});
