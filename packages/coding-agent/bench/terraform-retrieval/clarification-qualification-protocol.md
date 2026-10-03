@@ -12,7 +12,7 @@ This protocol specifies the qualification scoring design for a frozen, held-out 
 
 ### 1.1. Benchmark Suite Composition
 The benchmark suite consists of **200 cases** partitioned into three distinct operational categories:
-- **140 Answerable Cases ($\mathcal{D}_{\text{ans}}$):** Cases where the user query is uniquely answerable from documented evidence in `documentation/`, mapping to a unique destination leaf.
+- **140 Answerable Cases ($\mathcal{D}_{\text{answerable}}$):** Cases where the user query is uniquely answerable from documented evidence in `documentation/`, mapping to a unique destination leaf.
 - **40 Ambiguous Cases ($\mathcal{D}_{\text{ambig}}$):** Legitimate ambiguity cases with multiple valid destinations, partitioned into flat ambiguity ($\le 5$ destinations) and hierarchical decision-tree ambiguity ($> 5$ destinations).
 - **20 Control Cases ($\mathcal{D}_{\text{ctrl}}$):** Boundary verification cases, including negative controls (unsupported features, non-existent arguments, invalid cross-provider attributes) and ordinary documentation discovery cases.
 
@@ -21,9 +21,11 @@ A representative held-out **Model Subset of 40 cases** is defined with proportio
 ### 1.2. Preserved Mandatory User Gate
 A model qualifies if and only if **all five** gate criteria are satisfied simultaneously:
 
-1. **Overall Retrieval Accuracy:** $\ge 95.0\%$ overall accuracy across all 200 cases in the suite ($A_{\text{overall}} \ge 0.95$), where answerable cases achieve exact leaf selection, ambiguous cases achieve justified clarification and exact terminal leaf selection, and control cases demonstrate correct unsupported-rejection or ordinary-discovery behavior. The denominator is strictly 200.
-2. **Answerable Exact Leaf Accuracy:** $\ge 95.0\%$ correct exact leaf selection on uniquely answerable cases ($A_{\text{ans}} \ge 0.95$ across the 140 answerable cases).
-3. **Answerable Candidate Coverage:** $100.0\%$ of answerable expected destinations must appear within the top 5 retrieval candidates ($R_{\text{ans, top5}} = 1.00$). Every answerable target destination must be within the top five.
+1. **Overall Retrieval Accuracy:** $\ge 95.0\%$ overall accuracy across all 200 cases in the suite ($A_{\text{overall}} \ge 0.95$), where answerable cases achieve exact leaf
+selection, ambiguous cases achieve justified clarification and exact terminal leaf selection, and control cases demonstrate correct unsupported-rejection or ordinary-discovery
+behavior. The denominator is strictly 200.
+2. **Answerable Exact Leaf Accuracy:** $\ge 95.0\%$ correct exact leaf selection on uniquely answerable cases ($A_{\text{answerable}} \ge 0.95$ across the 140 answerable cases).
+3. **Answerable Candidate Coverage:** $100.0\%$ of answerable expected destinations must appear within the top 5 retrieval candidates ($R_{\text{answerable, top5}} = 1.00$). Every answerable target destination must be within the top five.
 4. **Zero Unsupported Field Claims:** Exactly zero invented, hallucinated, deprecated, or ungrounded fields, attributes, blocks, or documentation anchors across all interaction turns and all cases ($U_{\text{total}} = 0$).
 5. **Zero False Live Apply Claims:** Exactly zero unverified or false assertions claiming configuration application, execution against live infrastructure, or validation against runtime state ($F_{\text{total}} = 0$).
 
@@ -49,7 +51,9 @@ No relaxed gates, score rounding, or retrospective qualification claims on expos
   - The first selected candidate (Top-1) must be the exact expected destination leaf.
   - The expected destination leaf must appear within the top 5 retrieval candidates.
   - **Answerable Clarification is Failure:** Hierarchy cannot substitute for a uniquely answerable leaf. If the model emits an undecided status, asks a clarification question to identify the destination, or initiates a decision tree on an answerable case, the case scores $0$ (Answerable Failure).
-  - **Post-Retrieval HCL Parameter Prompting:** Once the correct destination leaf has been successfully identified and selected in Top-1 with Top-5 candidate inclusion, the model may prompt the user for user-specific HCL configuration values (such as resource names, IP ranges, or account-specific identifiers) to complete code generation. Prompting for user-specific values after correct destination selection must **not** be penalized as destination clarification.
+  - **Post-Retrieval HCL Parameter Prompting:** Once the correct destination leaf has been successfully identified and selected in Top-1 with Top-5 candidate inclusion, the model
+  may prompt the user for user-specific HCL configuration values (such as resource names, IP ranges, or account-specific identifiers) to complete code generation. Prompting for
+  user-specific values after correct destination selection must **not** be penalized as destination clarification.
   - Zero unsupported field claims and zero false live apply claims.
 
 ### 3.2. Flat Ambiguity Cases ($\le 5$ destinations)
@@ -110,7 +114,7 @@ Payload budgets apply strictly to retrieval operations and context injection, **
 
 ## 6. Multi-Turn Traversal and Scoring State Machine
 
-```
+```text
 Answerable Case (i ∈ D_ans):
   Prompt q_i ──► Initial Response R_i
                    ├─► IsClarification == true (Destination)? ──► FAIL (Score = 0)
@@ -148,12 +152,12 @@ Control Case (c ∈ D_ctrl):
 
 ## 7. Exact Mathematical Scoring Rules
 
-Let $N_{\text{total}} = 200$, with $N_{\text{ans}} = 140$, $N_{\text{ambig}} = 40$, and $N_{\text{ctrl}} = 20$.
+Let $N_{\text{total}} = 200$, with $N_{\text{answerable}} = 140$, $N_{\text{ambig}} = 40$, and $N_{\text{ctrl}} = 20$.
 
 ### 7.1. Case-Level Score Functions
 
-For answerable case $i \in \mathcal{D}_{\text{ans}}$:
-$$\text{Score}_{\text{ans}, i} = \mathbb{I}(\neg \text{IsDestinationClarification}(R_i) \land \text{Top1}(R_i) = t_i \land t_i \in \text{Top5}(R_i) \land \text{Clean}(R_i)) \in \{0, 1\}$$
+For answerable case $i \in \mathcal{D}_{\text{answerable}}$:
+$$\text{Score}_{\text{answerable}, i} = \mathbb{I}(\neg \text{IsDestinationClarification}(R_i) \land \text{Top1}(R_i) = t_i \land t_i \in \text{Top5}(R_i) \land \text{Clean}(R_i)) \in \{0, 1\}$$
 
 For flat ambiguous case $k \in \mathcal{D}_{\text{flat}}$ with candidate set $T_k$ ($2 \le |T_k| \le 5$):
 $$\text{Score}_{\text{flat}, k} = \mathbb{I}(\text{IsClarification}(R_{k,0}) \land T_k \subseteq \text{Top5}(R_{k,0}) \land \text{FilterPreserved}(R_{k,0}) \land \text{Clean}(R_k)) \in \{0, 1\}$$
@@ -170,15 +174,15 @@ where $\text{Clean}(R) \iff (\text{UnsupportedFields}(R) = 0 \land \text{FalseLi
 
 ### 7.2. Suite-Level Metrics and Gate Enforcement
 
-1. **Answerable Exact Leaf Accuracy ($A_{\text{ans}}$):**
-   $$A_{\text{ans}} = \frac{1}{140} \sum_{i=1}^{140} \text{Score}_{\text{ans}, i} \ge 0.95 \quad (\ge 95.0\%)$$
+1. **Answerable Exact Leaf Accuracy ($A_{\text{answerable}}$):**
+   $$A_{\text{answerable}} = \frac{1}{140} \sum_{i=1}^{140} \text{Score}_{\text{answerable}, i} \ge 0.95 \quad (\ge 95.0\%)$$
 
-2. **Answerable Candidate Top-5 Recall ($R_{\text{ans, top5}}$):**
-   $$R_{\text{ans, top5}} = \frac{1}{140} \sum_{i=1}^{140} \mathbb{I}(t_i \in \text{Top5}(R_i) \land \neg \text{IsDestinationClarification}(R_i)) = 1.00 \quad (100.0\%)$$
+2. **Answerable Candidate Top-5 Recall ($R_{\text{answerable, top5}}$):**
+   $$R_{\text{answerable, top5}} = \frac{1}{140} \sum_{i=1}^{140} \mathbb{I}(t_i \in \text{Top5}(R_i) \land \neg \text{IsDestinationClarification}(R_i)) = 1.00 \quad (100.0\%)$$
    *(Every answerable target must be in the top five).*
 
 3. **Overall Benchmark Accuracy ($A_{\text{overall}}$):**
-   $$A_{\text{overall}} = \frac{\sum_{i=1}^{140} \text{Score}_{\text{ans}, i} + \sum_{j=1}^{40} \text{Score}_{\text{ambig}, j} + \sum_{c=1}^{20} \text{Score}_{\text{ctrl}, c}}{200} \ge 0.95 \quad (\ge 95.0\%)$$
+   $$A_{\text{overall}} = \frac{\sum_{i=1}^{140} \text{Score}_{\text{answerable}, i} + \sum_{j=1}^{40} \text{Score}_{\text{ambig}, j} + \sum_{c=1}^{20} \text{Score}_{\text{ctrl}, c}}{200} \ge 0.95 \quad (\ge 95.0\%)$$
    *(Control denominator is strictly 200).*
 
 4. **Zero Unsupported Field Claims ($U_{\text{total}}$):**
