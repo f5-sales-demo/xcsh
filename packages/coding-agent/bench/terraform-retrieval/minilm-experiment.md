@@ -10,7 +10,9 @@ Use an isolated Python environment with the versions recorded in
 revision separately. Both commands load only local model files and verify every
 file hash; they do not download weights.
 
-Generate canonical destination JSON from the pinned `documentation/` source.
+Generate canonical destination JSON with `export_terraform_destinations.py`,
+providing `--index`, `--pin`, and a fresh `--output` path. The command verifies
+the reviewed index SHA-256 before reading its exact property destinations.
 Generate lexical inputs with `semantic-candidate-input.ts`, supplying the same
 development suite and reviewed SQLite index. Keep all input bytes and receipts.
 

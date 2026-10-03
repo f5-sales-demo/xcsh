@@ -1361,3 +1361,10 @@ no production dependency. Its documented query instruction is recorded via
 an explicit evaluator option. Vector generation is active; no accuracy claim.
 Preparation receipt: bge-development-preparation.json. Python lint and mypy
 pass for the file-based harness; optional model imports follow digest checks.
+
+Committed corpus exporter verifies the reviewed SQLite SHA-256 and reads only
+canonical terraform_destinations with deterministic identity/path ordering. It
+reproduces all 39,565 source rows and exact experiment corpus bytes, SHA-256
+fede0cccc094a8cd51935e84a2ad13003796074d812df0e1cc7d9743575ff58b.
+Receipt: semantic-corpus-export-receipt.json. No source descriptions or anchors
+are synthesized. Exporter rejects drift and existing output paths.
