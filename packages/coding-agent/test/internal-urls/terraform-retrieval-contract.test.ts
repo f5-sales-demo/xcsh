@@ -680,3 +680,14 @@ test("concrete value requests do not route to declaration examples", () => {
 		anchor: "minimal-configuration",
 	});
 });
+
+test("lookup and ephemeral computed values remain property questions", () => {
+	expect(terraformTaskDestination("Query xcsh_fixture data source to read a cookie name.")).toBeUndefined();
+	expect(
+		terraformTaskDestination("Declare xcsh_fixture ephemeral resource to retrieve a computed token."),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Query xcsh_fixture data source")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});

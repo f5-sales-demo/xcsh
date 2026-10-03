@@ -831,6 +831,10 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
 	const fieldRequest =
+		(/\bxcsh_[a-z0-9_]+\b/i.test(query) &&
+			/\b(?:read|fetch|retrieve|lookup|specify|configure|computed)\b.*\b(?:name|id|number|process|token|address|port|status|value|parameter)\b/i.test(
+				query,
+			)) ||
 		/\b(?:fields?|attributes?|property|properties|parameters?|schema path|match rules|inside|under)\b|\b(?:declare|configure|specify|set)\b.*\b(?:address|port|name|value|prefix|status|header|timeout|number)\b/i.test(
 			query,
 		);
