@@ -163,3 +163,11 @@ test("shared reviewed aliases cannot choose an omitted provider role", () => {
 	expect(selectPropertyDestination("which property specifies certificate location", ranked).kind).toBe("choices");
 	db.close();
 });
+
+test("literal schema segments constrain retrieval before the candidate budget",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const insert=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(let i=0;i<30;i++)insert.run("resources","fixture",`decoy${i}.name`,`decoy${i}`,"schema-name","Requested name token ".repeat(30));
+ insert.run("resources","fixture","oidc_auth.name","target","schema-target","Object name.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"which field holds name under oidc_auth",{providerName:"fixture"},2).map(row=>row.path)).toEqual(["target"]);
+ expect(searchPropertyIndex(db,"which field holds name under missing_schema",{providerName:"fixture"},2)).toEqual([]);db.close();
+});

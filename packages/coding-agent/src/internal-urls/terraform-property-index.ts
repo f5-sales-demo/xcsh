@@ -125,6 +125,18 @@ export function searchPropertyIndex(
 		args.push(scope.providerName);
 	}
 
+	const identifiers = [
+		...new Set(
+			(query.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
+				term =>
+					!term.startsWith("xcsh_") && !db.query("SELECT 1 FROM property_scopes WHERE provider_name=?").get(term),
+			),
+		),
+	];
+	for (const identifier of identifiers) {
+		clauses.push("instr('.' || schema_path || '.',?)>0");
+		args.push(`.${identifier}.`);
+	}
 	for (const filter of scope.filters ?? []) {
 		clauses.push(
 			"EXISTS(SELECT 1 FROM property_terms pt JOIN terraform_facets f ON f.path=pt.path WHERE pt.provider_type=property_search.provider_type AND pt.provider_name=property_search.provider_name AND pt.schema_path=property_search.schema_path AND f.facet=? AND f.value=?)",
