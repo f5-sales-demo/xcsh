@@ -9,6 +9,11 @@
 			"release_tag": "v4.0.0",
 			"target_commit": "4c49e17f42d6600d21ebd2ed4de8336ab4a4524b",
 			"version": "4.0.0"
+		},
+		"d4425d80327385314d86eacbb97ff2ee4b638ca3d7b7ae00c8f1a8e3c306d222": {
+			"release_tag": "v10.0.0",
+			"target_commit": "ac024ccbfb8b9f84412813f3e2ab9f5821937ef2",
+			"version": "10.0.0"
 		}
 	},
 	"version": 1
