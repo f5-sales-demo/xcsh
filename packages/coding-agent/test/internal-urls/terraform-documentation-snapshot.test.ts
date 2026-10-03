@@ -159,7 +159,7 @@ describe("Terraform snapshot ingestion", () => {
 			);
 			const prepared = new Database(path.join(root, "first.sqlite"), { readonly: true });
 			expect(prepared.query("SELECT schema_version FROM property_index_provenance").get()).toEqual({
-				schema_version: 5,
+				schema_version: 6,
 			});
 			expect(prepared.query("SELECT COUNT(*) count FROM property_terms").get()).toEqual(
 				prepared.query("SELECT COUNT(*) count FROM terraform_destinations").get(),

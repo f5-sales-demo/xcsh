@@ -215,3 +215,14 @@ test("verified lifecycle operation scope limits candidate retrieval",()=>{
  const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");for(const operation of ["create","delete","read"])put.run("resources","fixture","timeouts."+operation,operation,"schema-"+operation,"Duration string for operation.");populatePropertyIndex(db);
  expect(searchPropertyIndex(db,"maximum duration for destruction",{providerName:"fixture",schemaPaths:["timeouts.delete"]},1).map(row=>row.schema_path)).toEqual(["timeouts.delete"]);db.close();
 });
+
+test("documented flags survive retrieval without accepting a user requiredness assumption",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);CREATE TABLE terraform_documents(metadata)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");for(const [field,flags] of ([["listen_port",["required"]],["nested.port",["optional"]]] as Array<[string,string[]]>)){put.run("resources","fixture",field,field,"schema-"+field,"Listening port.");db.prepare("INSERT INTO terraform_documents VALUES(?)").run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:field.split("."),type:"number",flags}]}));}populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Which required attribute specifies listening port?",{providerName:"fixture"}).find(row=>row.schema_path==="nested.port")?.flags).toEqual(["optional"]);
+ expect(searchPropertyIndex(db,"Which required attribute specifies listening port?",{providerName:"fixture"})[0]?.flags).toEqual(["required"]);db.close();
+});
+
+test("conflicting documented field flags reject instead of silently replacing evidence",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description);CREATE TABLE terraform_documents(metadata);INSERT INTO terraform_destinations VALUES('resources','fixture','name','name','schema-name','Name.')");for(const flags of [["required"],["optional"]])db.prepare("INSERT INTO terraform_documents VALUES(?)").run(JSON.stringify({provider_type:"resources",provider_name:"fixture",sections:[{schema_path:["name"],type:"string",flags}]}));
+ expect(()=>populatePropertyIndex(db)).toThrow("Conflicting property flag");db.close();
+});

@@ -1731,7 +1731,7 @@ export class TerraformDocumentationRepository {
 					`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\nReason: ${decision.reason}\nScores are ranking values, not probabilities.`,
 					shown.map(
 						row =>
-							`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
+							`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}${row.flags?.length ? `\nDocumented flags: ${row.flags.join(", ")}` : ""}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
 					),
 					4096,
 					`Refine: ${continuation.href}`,

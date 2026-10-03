@@ -9,6 +9,7 @@ export interface PropertyCandidate {
 	aliases?: string[];
 	type?: string | null;
 	nesting?: string | null;
+	flags?: string[];
 	evidence_terms?: string[];
 }
 const stop = new Set(

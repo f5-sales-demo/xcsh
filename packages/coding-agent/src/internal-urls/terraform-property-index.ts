@@ -19,7 +19,7 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 	const row = db
 		.query("SELECT schema_version,source_commit,source_index_sha256 FROM property_index_provenance")
 		.get() as { schema_version: number; source_commit: string; source_index_sha256: string } | null;
-	if (row?.schema_version !== 5) throw new Error("Unsupported property index version");
+	if (row?.schema_version !== 6) throw new Error("Unsupported property index version");
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
 }
@@ -34,11 +34,11 @@ export function populatePropertyIndex(
 	db.exec(`CREATE TABLE property_index_provenance(schema_version INTEGER,source_commit TEXT,source_index_sha256 TEXT);
  CREATE TABLE property_scopes(provider_type TEXT,provider_name TEXT,destination_count INTEGER,PRIMARY KEY(provider_type,provider_name));
  CREATE TABLE property_scope_terms(provider_type TEXT,provider_name TEXT,term TEXT,weight REAL,PRIMARY KEY(provider_type,provider_name,term));
- CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,type TEXT,nesting TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
+ CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,type TEXT,nesting TEXT,flags TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
  CREATE INDEX property_leaf_lookup ON property_terms(leaf,provider_name,provider_type);
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
-		5,
+		6,
 		source?.sourceCommit ?? "",
 		source?.sourceIndexSha256 ?? "",
 	);
@@ -76,7 +76,7 @@ export function populatePropertyIndex(
 			const metadata = JSON.parse(document.metadata) as {
 				provider_type: string;
 				provider_name: string;
-				sections?: { schema_path: string[]; type?: string; nesting?: string | null }[];
+				sections?: { schema_path: string[]; type?: string; nesting?: string | null; flags?: string[] }[];
 			};
 			for (const section of metadata.sections ?? []) {
 				const row = destinations.get(
@@ -90,6 +90,12 @@ export function populatePropertyIndex(
 						throw new Error("Conflicting property shape metadata");
 					row.type = section.type ?? null;
 					row.nesting = section.nesting ?? null;
+					if (
+						row.flags !== undefined &&
+						JSON.stringify(row.flags.toSorted()) !== JSON.stringify((section.flags ?? []).toSorted())
+					)
+						throw new Error("Conflicting property flag metadata");
+					row.flags = section.flags;
 				}
 			}
 		}
@@ -103,7 +109,7 @@ export function populatePropertyIndex(
 	}
 	const insertScope = db.prepare("INSERT INTO property_scopes VALUES(?,?,?)"),
 		insertWeight = db.prepare("INSERT INTO property_scope_terms VALUES(?,?,?,?)"),
-		insertTerm = db.prepare("INSERT INTO property_terms VALUES(?,?,?,?,?,?,?,?,?,?,?,?)"),
+		insertTerm = db.prepare("INSERT INTO property_terms VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"),
 		insertSearch = db.prepare("INSERT INTO property_search VALUES(?,?,?,?)");
 	db.transaction(() => {
 		for (const group of groups.values()) {
@@ -126,6 +132,7 @@ export function populatePropertyIndex(
 					JSON.stringify(row.aliasTerms),
 					row.type ?? null,
 					row.nesting ?? null,
+					row.flags === undefined ? null : JSON.stringify(row.flags),
 				);
 				insertSearch.run(
 					[...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms].join(" "),
@@ -245,7 +252,8 @@ export function searchPropertyIndex(
 				`SELECT term,weight FROM property_scope_terms WHERE provider_type=? AND provider_name=? AND term IN (${terms.map(() => "?").join(",")}) ORDER BY term`,
 			)
 			.all(type!, name!, ...terms) as { term: string; weight: number }[];
-		const rows = prepared.map(({ leaf, context, description_terms, alias_terms, ...row }) => ({
+		const rows = prepared.map(({ leaf, context, description_terms, alias_terms, flags, ...row }) => ({
+			...(flags == null ? {} : { flags: JSON.parse(flags as unknown as string) as string[] }),
 			...row,
 			...(row.type === null ? { type: undefined } : {}),
 			...(row.nesting === null && row.type === null ? { nesting: undefined } : {}),
