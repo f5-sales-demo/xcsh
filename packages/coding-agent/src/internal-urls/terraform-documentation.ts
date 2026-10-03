@@ -831,7 +831,9 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
 	const fieldRequest =
-		/\b(?:fields?|attributes?|property|properties|parameters?|schema path|match rules|inside|under)\b/i.test(query);
+		/\b(?:fields?|attributes?|property|properties|parameters?|schema path|match rules|inside|under)\b|\b(?:declare|configure|specify|set)\b.*\b(?:address|port|name|value|prefix|status|header|timeout|number)\b/i.test(
+			query,
+		);
 	const scopedLookup =
 		/\b(?:query(?:ing)?|look(?:ing)? up|read(?:ing)?|inspect(?:ing)?)\b[^,]*\bdata[ -]source\b[^,]*,\s*(?:where|which|what)\b/i.test(
 			query,
@@ -1016,6 +1018,9 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
 	const competingRoles =
+		/\b(?:read|retrieve|inspect|lookup|query|check)\b[^.!?]*\bor\b[^.!?]*\b(?:declare|define|configure|specify|set|create)\b|\b(?:declare|define|configure|specify|set|create)\b[^.!?]*\bor\b[^.!?]*\b(?:read|retrieve|inspect|lookup|query|check)\b/i.test(
+			search,
+		) ||
 		/\b(?:configure|set|specify)\b.*\bor\b.*\b(?:reference|inspect|read)\b|\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(
 			search,
 		);

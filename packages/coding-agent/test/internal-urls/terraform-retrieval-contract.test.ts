@@ -661,3 +661,22 @@ test("health check monitor terminology identifies its provider owner", () => {
 		]),
 	).toBe("healthcheck");
 });
+
+test("alternative read and declaration workflows do not force a provider role", () => {
+	for (const query of [
+		"Retrieve or declare domains for a load balancer",
+		"Inspect or configure a rate limiter",
+		"Read or define a BGP peer",
+		"Configure or check application firewall blocking",
+	]) {
+		expect(terraformQueryIdentity(query).providerType).toBeUndefined();
+	}
+	expect(terraformQueryIdentity("Configure a rate limiter resource").providerType).toBe("resources");
+});
+test("concrete value requests do not route to declaration examples", () => {
+	expect(terraformTaskDestination("Declare the external route next-hop IPv6 address on xcsh_fixture")).toBeUndefined();
+	expect(terraformTaskDestination("Declare xcsh_fixture resource")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
