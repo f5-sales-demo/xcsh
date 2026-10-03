@@ -1471,3 +1471,9 @@ Provider #2382 merges as d5b8be9545984e92e2f81bcd3c4878d38d65f07b.
 Normal On Merge run 37091576861 waits behind the earlier release build; timeout
 merge run was superseded. Both fixes are now in main. Consumer remains pinned
 to v12.3.1 and draft; no qualification or release claim.
+
+Negated trailing-alternative alias experiment passes unit check but does not
+improve complete development retrieval: 10/14 original,47/48 audited, with
+automatic certificate query still returning existing-certificate branches.
+Rejected; production source restored. Exact patch/raw receipts retained in
+positive-alias-rejection-receipt.json. No held-out or production promotion.
