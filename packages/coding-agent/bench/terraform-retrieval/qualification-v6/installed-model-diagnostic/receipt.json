@@ -1,0 +1,17 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "candidate_commit": "90a280a58f1fc079e004ee5c597b83e4269332ed",
+  "model": "openai-codex/gpt-6.1-sol",
+  "cases": 40,
+  "automated_passes": 23,
+  "complete_trace_hashes_recorded": true,
+  "content_review_sha256": "48ade2aa0d90309eb4a4807e38468a6de3ecd2d785681764acabd18e12cea5f6",
+  "limitations": [
+    "Every content_acceptance_passed remains false because overall model/schema/value/citation/clarification acceptance is not established.",
+    "Frozen subset had18activation failures; derived diagnostics never qualify.",
+    "Additional answerable/required-field label defects found after results, scores remain unchanged.",
+    "Candidate predates current role/block/prompt changes.",
+    "No published install/model qualification."
+  ]
+}
