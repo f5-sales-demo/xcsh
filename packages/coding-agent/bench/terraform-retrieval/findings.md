@@ -1231,3 +1231,10 @@ pass; audited/original development remains 47/48 and 9/14 with zero answerable
 wrong leaves. 497 internal URL tests and workspace checks pass. Raw evidence
 is retained in field-intent-development-receipt.json. Frozen v4 is regression
 only; post-run source audit and activation development model UAT remain active.
+
+Post-run source audit reported 22 label defects but its 31 alternatives contain
+27 nonexistent pinned destinations. Review rejected as evidence; no labels or
+frozen results changed. Same reviewer is correcting the file against verified
+39,565 source destinations and Markdown, with file-based digest validation.
+Receipt: v4-postrun-audit-status.json. Signed Mac arm64 candidate artifact is
+available from run 37079682221; download and installed verification underway.
