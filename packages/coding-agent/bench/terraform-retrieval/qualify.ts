@@ -110,11 +110,11 @@ for (const c of suite) {
 		results.push({ id: c.id, passed: null, behavior: c.behavior, requires_model_uat: true });
 		continue;
 	}
-	
+
     if (trees[c.id]) {
         const tree=trees[c.id]!;
         if (new URL(tree.root.request).searchParams.get("search")!==c.prompt) throw new Error("Frozen clarification prompt mismatch");
-        
+
         const db=await repo.database();
         const targets:string[]=[];
         const auditTree=(node: FrozenClarificationTree["root"],parentNode?: string)=>{
