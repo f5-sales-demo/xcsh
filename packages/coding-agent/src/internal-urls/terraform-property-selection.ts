@@ -163,7 +163,18 @@ export function selectPropertyDestination(
 		blockLeaf.length > 0 &&
 		blockLeaf.length === blockTerms.length &&
 		blockLeaf.every(term => blockTerms.includes(term));
-	if ((first.coverage < 0.35 && !blockNamedExplicit && !filterInput) || first.score <= 0)
+	const rootRequest = propertyRequestsRootField(queryText)
+		? propertyQueryTerms(propertyRequestedText(queryText) ?? "")
+		: [];
+	const rootLocal = new Set([
+		...propertyTerms(`${first.schema_path} ${first.description}`),
+		...(first.documentation_terms ?? []),
+	]);
+	const rootValueSupported =
+		!first.schema_path.includes(".") &&
+		rootRequest.length > 0 &&
+		rootRequest.filter(term => rootLocal.has(term)).length / rootRequest.length >= 0.35;
+	if ((first.coverage < 0.35 && !blockNamedExplicit && !filterInput && !rootValueSupported) || first.score <= 0)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient query coverage" };
 	let requestedTerms: string[] = [];
 	const intent =

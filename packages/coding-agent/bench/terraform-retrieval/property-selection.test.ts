@@ -375,3 +375,11 @@ test("whole response criteria keep their section rather than forcing a child fie
  const unsupported={...row("login.credentials",48),anchor:"section",description:"Credentials.",type:"object",nesting:"list"};
  expect(selectPropertyDestination("Where do I define HTTP response criteria indicating login failure?",[unsupported,status]).kind).toBe("choices");
 });
+
+
+test("an explicit root scope uses requested value evidence without resource-purpose dilution", () => {
+ const domains={...row("domains",30),coverage:0.15,type:"list",description:"Domain names matched by the load balancer."};
+ expect(selectPropertyDestination("Which top-level attribute accepts the list of domain names that the proxy will service?",[domains]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Which top-level attribute accepts a Helm repository URL?",[domains]).kind).toBe("choices");
+ expect(selectPropertyDestination("Which attribute accepts the list of domain names that the proxy will service?",[domains]).kind).toBe("choices");
+});
