@@ -1,8 +1,8 @@
 {
   "qualification_passed": false,
   "development_only": true,
-  "source_commit": "185a9cce51be2821b4096d95a00759e39b8e353e",
-  "combined_tests": 588,
+  "source_commit": "15cc3f973",
+  "combined_tests": 599,
   "workspace_checks": "passed",
   "development_selected": 43,
   "development_answerable": 43,
@@ -19,5 +19,12 @@
   "provider_release": "v12.4.0",
   "documentation_release": "documentation-v12.4.0",
   "consumer_draft": true,
-  "auto_merge": false
+  "auto_merge": false,
+  "property_index_version": 3,
+  "index_sha256": "a94b4fe7c7f520c0fe46d51ad206d8b027a6538944fe79c206f90e92574d888d",
+  "latest_exposed_regression_top5": 98,
+  "source_only_collision_cases_pending_review": 122,
+  "development_mac_p95_ms": 39.68604200000027,
+  "development_linux_p95_ms": 37.82539999999972,
+  "current_source_offline_parity": true
 }
