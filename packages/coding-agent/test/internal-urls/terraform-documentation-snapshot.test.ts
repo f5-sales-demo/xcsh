@@ -1221,6 +1221,11 @@ Idle connection timeout.
 		expect(configured).toContain("Selected leaf;");
 		expect(configured).toContain("#schema-idle_timeout");
 		expect(response).toContain("#schema-listen_port");
+		const continuation = new URL([...response.matchAll(/^Refine: (.+)$/gm)][0]![1]!);
+		expect(continuation.searchParams.get("category")).toBe("networking");
+		expect(continuation.searchParams.get("capability")).toBe("tls");
+		expect(continuation.searchParams.get("task")).toBe("configuration");
+
 		expect(Buffer.byteLength(response)).toBeLessThanOrEqual(4096);
 		expect((await read("?search=fixture%20resource%20property%20listen_port&limit=1")).content).toContain(
 			"Selected leaf;",

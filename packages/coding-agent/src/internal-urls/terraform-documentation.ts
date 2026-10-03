@@ -1666,6 +1666,8 @@ export class TerraformDocumentationRepository {
 					}
 				}
 				const shown = decision.kind === "leaf" ? decision.destinations : decision.destinations.slice(0, limit);
+				const continuation = new URL(url.href);
+				continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
 				const prepared = boundedTerraformResponse(
 					`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\nReason: ${decision.reason}\nScores are ranking values, not probabilities.`,
 					shown.map(
@@ -1673,7 +1675,7 @@ export class TerraformDocumentationRepository {
 							`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
 					),
 					4096,
-					`Refine: xcsh://terraform-documentation/?search=${encodeURIComponent(search)}&node=${encodeURIComponent(node ?? "xcsh-docs:provider:xcsh:navigation")}`,
+					`Refine: ${continuation.href}`,
 				);
 				return {
 					url: url.href,
@@ -2305,6 +2307,8 @@ export class TerraformDocumentationRepository {
 				search,
 			);
 			const prefix = `${provenance}\n\n# Terraform search: ${search}\n${selection === "leaf" ? "Selected leaf; read its complete section before drafting." : rows.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\n${broadened ? "Broader word matching was needed; verify candidates.\n" : ""}Scores are ranking values, not probabilities.`;
+			const continuation = new URL(url.href);
+			continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
 			content = boundedTerraformResponse(
 				prefix,
 				rows.map(r => {
@@ -2312,7 +2316,7 @@ export class TerraformDocumentationRepository {
 					return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\nRead: ${uri(r.path, r.anchor, "context")}\n${prerequisites(r.path, r.anchor)}\n${rewriteTerraformLinks(r.markdown, r.path).replace(/\s+/g, " ").slice(0, 100)}`;
 				}),
 				4096,
-				`Refine: xcsh://terraform-documentation/?search=${encodeURIComponent(search)}&node=${encodeURIComponent(node ?? "xcsh-docs:provider:xcsh:navigation")}`,
+				`Refine: ${continuation.href}`,
 			);
 		} else if (node) {
 			const selected = db.query("SELECT id,summary,path FROM terraform_documents WHERE id=?").get(node) as {
