@@ -1576,3 +1576,11 @@ cdf0be846daba6bd0560e697a1707020fc63ba48. Combined patch SHA-256
 verifies. Full canonical Markdown metadata/timeout-alias audit retained in
 provider-current-generation-coverage.json. PR CI pending; not a published snapshot.
 Consumer remains draft and independent qualification unmet.
+
+Generated PR #2395 becomes behind after upstream spec v9.0.2 pending delivery
+merges (#2393). Branch update preserves history but does not attest new inputs.
+Auto-merge disabled and draft requested; normal delivery closes it as superseded.
+Prior artifact remains preserved; metadata source fixes remain merged. New
+source d9c5894a963f6a744161db79ac5a54da968f234e On Merge run 37101784378
+is actively building/testing current spec pin. No stale output released.
+Consumer #4687 remains draft, qualification unmet, pin still v12.3.1.
