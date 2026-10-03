@@ -271,3 +271,10 @@ test("field scope and trailing usage clauses remain separate from requested valu
  expect(propertyRequestedText("Which property under retry_settings sets the retry count when handling connection failures?")).toBe("the retry count");
  expect(propertyRequestedText("Which attribute provides the expiration timestamp at which the token will expire?")).toBe("the expiration timestamp");
 });
+
+test("field function verbs identify the returned or described value",()=>{
+ expect(propertyRequestedText("Which computed attribute exposes the bearer token string?")).toBe("the bearer token string?");
+ expect(propertyRequestedText("Which attribute returns the rendered manifest payload?")).toBe("the rendered manifest payload?");
+ expect(propertyRequestedText("Which argument filters the region list?")).toBe("the region list?");
+ expect(propertyRequestedText("Which attribute describes the hardware category?")).toBe("the hardware category?");
+});

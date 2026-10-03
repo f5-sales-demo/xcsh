@@ -107,11 +107,11 @@ export function propertyRequestsBlock(text: string): boolean {
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
 	const fieldText = text.replace(
-		/\b(field|attribute|property|parameter|argument|flag)\b\s+(?:in|under|inside|within)\s+.+?\s+((?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?)\b)/i,
+		/\b(field|attribute|property|parameter|argument|flag)\b\s+(?:in|under|inside|within)\s+.+?\s+((?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\b)/i,
 		"$1 $2",
 	);
 	const field = fieldText.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
 	const operation =
 		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
