@@ -109,7 +109,11 @@ export function propertyRequestedText(text: string): string | undefined {
 						propertyTerms(value.replace(/\bxcsh_[a-z0-9_]+\b/gi, "").replace(/data[ -]source/gi, "")).length > 0,
 				)
 		: undefined;
-	return (field ?? operation ?? lookup)
+	const passive =
+		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
+			text,
+		)?.[1];
+	return (field ?? operation ?? lookup ?? passive)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
 		.split(
 			/\bfor\b(?!\s+[a-z]*(?:tion|sion|ing)\b)|\breferenced in\b|\bto\s+(?:handle|match|configure|enable|provide)\b|\bwhen\s+(?:declaring|configuring|reading)\b|\bof\s+(?:an? |the )?(?:existing |managed )?(?:resource|load balancer|site|object)\b/i,

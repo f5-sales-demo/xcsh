@@ -206,3 +206,7 @@ test("enabling configuration choices remains distinct from explicit boolean fiel
  expect(propertyRequestsBlock("Disable CRL validation in xcsh_fixture")).toBe(true);
  expect(propertyRequestsBlock("Which boolean field disables xcsh_fixture?")).toBe(false);
 });
+
+test("passive field wording retains requested value without choosing a role",()=>{
+ expect(propertyRequestedText("Where in BGP configuration is the autonomous system number specified for an external peer?")).toBe("the autonomous system number");
+});
