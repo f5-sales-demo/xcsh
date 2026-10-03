@@ -357,3 +357,9 @@ test("explicit block targets do not require selecting incidental child fields",(
  const peer={...parent,schema_path:"alternate.routes",path:"peer",score:1};
  expect(selectPropertyDestination("Where is the definition of the routes list block?",[parent],[peer]).kind).toBe("choices");
 });
+
+test("a filter criterion selects a documented input rather than computed output",()=>{
+ const field={...row("regions",40),description:"Regions to include.",flags:["optional","computed"],coverage:0.15};const output={...row("cidr_blocks_by_region",15),description:"CIDRs grouped by region.",flags:["computed"],coverage:0.8};
+ expect(selectPropertyDestination("Which argument filters CIDR blocks by geographic region?",[field,output]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Which argument filters CIDR blocks by unsupported vendor account?",[field,output]).kind).toBe("choices");
+});

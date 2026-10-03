@@ -136,6 +136,10 @@ export function propertyRequestedText(text: string): string | undefined {
 		/\b(field|attribute|property|parameter|argument|flag)\b\s+(?:in|under|inside|within)\s+.+?\s+((?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\b)/i,
 		"$1 $2",
 	);
+	const filterCriterion = fieldText
+		.match(/\b(?:field|attribute|property|parameter|argument)\b\s+filters?\s+.+?\s+by\s+(.+)/i)?.[1]
+		?.split(/\bin\b|\busing\b/i)[0]
+		?.trim();
 	const field = fieldText.match(
 		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
@@ -157,7 +161,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
 			text,
 		)?.[1];
-	return (field ?? operation ?? lookup ?? passive)
+	return (filterCriterion ?? field ?? operation ?? lookup ?? passive)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
 		.split(/\bused\s+to\b|\bat\s+which\b|\bwhen\s+(?:handling|processing|matching)\b/i)[0]
 		?.split(

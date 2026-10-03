@@ -143,6 +143,17 @@ export function selectPropertyDestination(
 		);
 	const first = ranked[0];
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
+	const filterTerms = /\b(?:field|attribute|property|parameter|argument)\b\s+filters?\s+.+?\s+by\b/i.test(queryText)
+		? propertyQueryTerms(propertyRequestedText(queryText) ?? "")
+		: [];
+	const filterLocal = new Set(propertyTerms(`${first.schema_path.split(".").at(-1)} ${first.description}`));
+	const filterLeaf = propertyTerms(first.schema_path.split(".").at(-1) ?? "");
+	const filterInput =
+		first.flags?.some(flag => flag === "optional" || flag === "required") === true &&
+		filterTerms.length > 0 &&
+		filterLeaf.length > 0 &&
+		filterLeaf.every(term => filterTerms.includes(term)) &&
+		filterTerms.filter(term => filterLocal.has(term)).length / filterTerms.length >= 0.5;
 	const blockTarget = propertyRequestedBlockText(queryText);
 	const blockTerms = propertyQueryTerms(blockTarget ?? "");
 	const blockLeaf = propertyTerms(first.schema_path.split(".").at(-1) ?? "");
@@ -152,7 +163,7 @@ export function selectPropertyDestination(
 		blockLeaf.length > 0 &&
 		blockLeaf.length === blockTerms.length &&
 		blockLeaf.every(term => blockTerms.includes(term));
-	if ((first.coverage < 0.35 && !blockNamedExplicit) || first.score <= 0)
+	if ((first.coverage < 0.35 && !blockNamedExplicit && !filterInput) || first.score <= 0)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Insufficient query coverage" };
 	let requestedTerms: string[] = [];
 	const intent =
@@ -286,6 +297,8 @@ export function selectPropertyDestination(
 			other.provider_name === first.provider_name &&
 			other.schema_path.startsWith(`${first.schema_path}.`)
 		)
+			return false;
+		if (filterInput && other.flags?.length && !other.flags.some(flag => flag === "optional" || flag === "required"))
 			return false;
 		if (
 			propertyRequestsDirectObjectField(queryText, first) &&

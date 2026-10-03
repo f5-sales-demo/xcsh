@@ -321,3 +321,11 @@ test("served hostnames mean domains while backend hostnames retain DNS identity"
  expect(propertyQueryTerms("hostnames served by the load balancer")).toContain("domain");
  expect(propertyQueryTerms("backend hostname")).toContain("dns");
 });
+
+test("filter argument requests distinguish criterion from returned collection",()=>{
+ expect(propertyRequestedText("Which argument filters the CIDR block list by geographic region?")).toBe("geographic region?");
+ expect(propertyRequestedText("Which field filters object results by namespace in xcsh_fixture?")).toBe("namespace");
+ const scope=preparePropertyScope([row("regions","Regions to include when compiling the allowlist."),row("cidr_blocks","Compiled CIDR block list."),row("cidr_blocks_by_region","CIDR block list grouped by region.")]);
+ expect(rankPropertyScope("Which argument filters CIDR blocks by regions?",scope)[0]?.schema_path).toBe("regions");
+ expect(rankPropertyScope("Which attribute returns CIDR blocks grouped by region?",scope)[0]?.schema_path).toBe("cidr_blocks_by_region");
+});
