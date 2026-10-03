@@ -123,3 +123,12 @@ class ModelTraceTests(unittest.TestCase):
         self.assertFalse(
             required_read_coverage(["xcsh://terraform-documentation/a.md"], required)
         )
+
+    def test_hint_does_not_count_as_complete_property_read(self) -> None:
+        """Hints identify a leaf but do not contain its complete section."""
+        self.assertFalse(
+            required_read_coverage(
+                ["xcsh://terraform-documentation/a.md?view=hint#one"],
+                ["xcsh://terraform-documentation/a.md#one"],
+            )
+        )

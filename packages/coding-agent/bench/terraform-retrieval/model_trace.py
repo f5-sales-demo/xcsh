@@ -3,7 +3,7 @@
 
 import re
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 
 def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
@@ -63,7 +63,11 @@ def required_read_coverage(successful_reads: list[str], required: list[str]) -> 
             (parsed.scheme, parsed.netloc, parsed.path, "", parsed.fragment)
         )
 
-    actual = {normalize(uri) for uri in successful_reads}
+    actual = {
+        normalize(uri)
+        for uri in successful_reads
+        if parse_qs(urlsplit(uri).query).get("view", ["full"])[0] in ("context", "full")
+    }
     return all(normalize(uri) in actual for uri in required)
 
 
