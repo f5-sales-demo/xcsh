@@ -329,3 +329,10 @@ test("filter argument requests distinguish criterion from returned collection",(
  expect(rankPropertyScope("Which argument filters CIDR blocks by regions?",scope)[0]?.schema_path).toBe("regions");
  expect(rankPropertyScope("Which attribute returns CIDR blocks grouped by region?",scope)[0]?.schema_path).toBe("cidr_blocks_by_region");
 });
+
+test("identifier arguments retain their value type and exclude invocation context",()=>{
+ expect(propertyRequestedText("Which identifier argument specifies which object to remove when calling xcsh_fixture action?")).toBe("identifier which object to remove");
+ expect(propertyRequestedText("Which field specifies retry count when invoking xcsh_fixture?")).toBe("retry count");
+ const scope=preparePropertyScope([row("key_id","Unique identifier for this key."),row("zone_name","Name of the zone.")]);
+ expect(rankPropertyScope("Which identifier argument specifies which key to remove when calling xcsh_fixture action?",scope)[0]?.schema_path).toBe("key_id");
+});
