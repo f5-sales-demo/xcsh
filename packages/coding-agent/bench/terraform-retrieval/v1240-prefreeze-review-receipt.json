@@ -1,0 +1,27 @@
+{
+  "qualification_passed": false,
+  "heldout_evaluated": false,
+  "freeze_approved": false,
+  "first_source_review_verdict": "revise",
+  "anchor_correction_applied_by_independent_author": true,
+  "tree_identity_review_pending": true,
+  "original_suite_sha256": "c6242a9d6872565a6f021f85ca8b0e827943f0facc808f8d7653c3e8a4eb170e",
+  "corrected_suite_sha256": "235b694bdf3320526d1a4cd5f81291a039f3201c457ac8b7a5796e9a7b080f72",
+  "artifacts": {
+    "independent-review.json": {
+      "file": "v1240-prefreeze-independent-review.json.gz",
+      "sha256": "78c39ebaa1a527e93059b62588e80ec7c71bf30a7d6a4bbc909a7792116969da",
+      "gzip_sha256": "67f5bce3105c18a213c625eaf8ff68dd6e803209909364ae5f3af9ee3dd2f476"
+    },
+    "corrections.json": {
+      "file": "v1240-prefreeze-corrections.json.gz",
+      "sha256": "5e53d5620629920ae4430f7ec1a05ef033bab916b94be66fae49e5420667a4c9",
+      "gzip_sha256": "70f8c6e31eba6d4a93e3ca87affb547bac87929cef5337e2a7b25b7d7ae39df8"
+    },
+    "tree-identity-audit.json": {
+      "file": "v1240-prefreeze-tree-identity-audit.json.gz",
+      "sha256": "b5c0bb14cef5c3161de231944a288ecb94e5fd1d479f12f5a8f6ea654a34fa66",
+      "gzip_sha256": "a7fd755b9439de6fc1553bafd6e5d4390a65c2cc3e16b92db7c3f9e5c15b9fae"
+    }
+  }
+}
