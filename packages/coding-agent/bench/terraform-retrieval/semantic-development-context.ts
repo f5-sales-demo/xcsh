@@ -52,7 +52,8 @@ export function encodeDevelopmentResponse(content: string, budget: number, uri: 
   uri,
   full_uri: full.toString(),
  };
- if (/^Oversized section:/m.test(content)) return { ...result, status: "oversized" as const };
+ const consumerOversized = /^Oversized section:/m.test(content);
+ if (consumerOversized) result.status = "oversized";
  if (bytes(result) <= budget - reserve) return result;
  const notice = { ...result, status: "oversized" as const, content: "Indivisible response exceeds the development envelope budget; read the full destination separately." };
  if (bytes(notice) > budget - reserve) throw new Error("Oversized notice exceeds envelope budget");
@@ -65,4 +66,16 @@ export function encodeDiscoveryResponse(content: string, uri: string) {
  const notice = { ...result, status: "oversized" as const, content: `Discovery envelope exceeds budget. Continue with discover ${uri}` };
  if (bytes(notice) > 4096 - reserve) throw new Error("Discovery continuation exceeds budget");
  return notice;
+}
+
+export async function resolveDiscoveryResponse(url: URL, resolve: (url: URL) => Promise<string>) {
+ const attempt = new URL(url);
+ for (;;) {
+  const result = encodeDiscoveryResponse(await resolve(attempt), attempt.toString());
+  if(result.status === "complete") return result;
+  const limit = Number(attempt.searchParams.get("limit") ?? "5");
+  if(!Number.isSafeInteger(limit) || limit < 1) throw new Error("Invalid discovery limit");
+  if(limit === 1) return { ...result, continuation_uri: null, content: "Indivisible discovery response exceeds envelope budget. Reformulate the query or read an exact destination." };
+  attempt.searchParams.set("limit", String(Math.max(1, Math.floor(limit / 2))));
+ }
 }

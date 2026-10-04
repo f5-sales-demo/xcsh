@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { candidatePage, encodeDevelopmentResponse, type DevelopmentCandidate, encodeDiscoveryResponse } from "./semantic-development-context";
+import { candidatePage, encodeDevelopmentResponse, type DevelopmentCandidate, encodeDiscoveryResponse, resolveDiscoveryResponse } from "./semantic-development-context";
 
 const rows: DevelopmentCandidate[] = Array.from({ length: 20 }, (_, i) => ({
  uri: `xcsh://terraform-documentation/documentation/resources/fixture/properties/index.md#schema-field_${i}`,
@@ -62,4 +62,27 @@ test("oversized discovery retains an executable query continuation", () => {
  expect(result.status).toBe("oversized");
  expect(result.continuation_uri).toBe(uri);
  expect(result.content).toContain(uri);
+});
+
+test("discovery adapts result limit while preserving filter and cursor state", async () => {
+ const seen: string[] = [];
+ const initial = "xcsh://terraform-documentation/?search=hostnames&provider_type=resources&node=root&cursor=next";
+ const result = await resolveDiscoveryResponse(new URL(initial), async url => {
+  seen.push(url.toString());
+  return url.searchParams.get("limit") === "1" ? "Complete candidate and exact destination" : "x".repeat(5000);
+ });
+ expect(result.status).toBe("complete");
+ expect(seen).toHaveLength(3);
+ for(const uri of seen) {
+  const url = new URL(uri);
+  expect(url.searchParams.get("search")).toBe("hostnames");
+  expect(url.searchParams.get("provider_type")).toBe("resources");
+  expect(url.searchParams.get("node")).toBe("root");
+  expect(url.searchParams.get("cursor")).toBe("next");
+ }
+});
+test("oversized consumer notice is itself bounded without section read credit", () => {
+ const result = encodeDevelopmentResponse("Oversized section: " + "x".repeat(20000), 16384, rows[0]!.uri);
+ expect(result.status).toBe("oversized");
+ expect(Buffer.byteLength(JSON.stringify({aggregated_output:JSON.stringify(result)}))).toBeLessThan(16384);
 });

@@ -42,7 +42,20 @@ def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
             and result.get("isError") is False
             and result_index > call_index
         ):
-            paths.append(call.get("arguments", {}).get("path", ""))
+            path = call.get("arguments", {}).get("path", "")
+            if isinstance(path, str) and re.match(
+                r"^xcsh://terraform-documentation(?:[/?#]|$)", path, re.IGNORECASE
+            ):
+                text = "\n".join(
+                    part.get("text", "")
+                    for part in result.get("content", [])
+                    if part.get("type") == "text"
+                )
+                if not text.strip() or re.search(
+                    r"^Oversized section:", text, re.MULTILINE
+                ):
+                    continue
+            paths.append(path)
     return paths
 
 

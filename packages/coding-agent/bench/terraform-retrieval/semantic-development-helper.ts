@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { TerraformDocumentationRepository, terraformProviderMention, terraformQueryIdentity } from "../../src/internal-urls/terraform-documentation";
 import { searchPropertyIndex } from "../../src/internal-urls/terraform-property-index";
-import { candidatePage, encodeDevelopmentResponse, encodeDiscoveryResponse } from "./semantic-development-context";
+import { candidatePage, encodeDevelopmentResponse, resolveDiscoveryResponse } from "./semantic-development-context";
 
 const [configPath, operation, value, offset = "0"] = process.argv.slice(2);
 if (!configPath || !value || !["candidates", "read", "search", "discover"].includes(operation ?? ""))
@@ -33,9 +33,11 @@ try {
   const assets = await Bun.file(config.assets).json();
   const repo = new TerraformDocumentationRepository(assets, "unused");
   repo.database = async () => db;
-  const result = await repo.resolve(Object.assign(url, { rawHost: "terraform-documentation" }));
-  const content = "Unpublished development corpus; pin fields do not certify this preview.\n" + result.content;
-  process.stdout.write(JSON.stringify(encodeDiscoveryResponse(content, url.toString())) + "\n");
+  const result = await resolveDiscoveryResponse(url, async attempt => {
+   const resource = await repo.resolve(Object.assign(attempt, { rawHost: "terraform-documentation" }));
+   return "Unpublished development corpus; pin fields do not certify this preview.\n" + resource.content;
+  });
+  process.stdout.write(JSON.stringify(result) + "\n");
  } else {
   const url = new URL(value);
   if (url.protocol !== "xcsh:" || url.hostname !== "terraform-documentation" || !url.pathname.endsWith(".md") || !url.hash)

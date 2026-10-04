@@ -46,6 +46,45 @@ class ModelTraceTests(unittest.TestCase):
         messages[1]["isError"] = False
         self.assertEqual(successful_read_paths(messages), ["leaf"])
 
+    def test_terraform_oversized_notice_and_empty_result_are_not_complete_reads(
+        self,
+    ) -> None:
+        """A navigation notice cannot establish reading an exact leaf section."""
+        uri = "xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=context#schema-name"
+        call = {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "toolCall",
+                    "id": "read-1",
+                    "name": "read",
+                    "arguments": {"path": uri},
+                }
+            ],
+        }
+        result = {
+            "role": "toolResult",
+            "toolCallId": "read-1",
+            "toolName": "read",
+            "isError": False,
+            "content": [],
+        }
+        self.assertEqual(successful_read_paths([call, result]), [])
+        result["content"] = [
+            {
+                "type": "text",
+                "text": "Provider: v1.0.0\nOversized section: name. Complete section: full-uri",
+            }
+        ]
+        self.assertEqual(successful_read_paths([call, result]), [])
+        result["content"] = [
+            {
+                "type": "text",
+                "text": "### name property\nComplete documented name section.",
+            }
+        ]
+        self.assertEqual(successful_read_paths([call, result]), [uri])
+
     def test_missing_result_does_not_count(self) -> None:
         """An attempted read needs a completed result."""
         self.assertEqual(

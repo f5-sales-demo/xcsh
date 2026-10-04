@@ -112,7 +112,12 @@ class ModelContinuationTests(unittest.TestCase):
 
     def test_stale_completion_without_current_acknowledgement_rejects(self) -> None:
         """Duplicate prior events never complete the next prompt."""
-        child = "import sys,json,time; c=json.loads(sys.stdin.readline()); print(json.dumps({'type':'response','id':c['id'],'success':True}),flush=True); print(json.dumps({'type':'agent_end','messages':[]}),flush=True); print(json.dumps({'type':'agent_end','messages':[]}),flush=True); time.sleep(5)"
+        child = (
+            "import sys,json,time; c=json.loads(sys.stdin.readline()); print(json.dumps({'type':'r"
+            "esponse','id':c['id'],'success':True}),flush=True); print(json.dumps({'type':'agent_e"
+            "nd','messages':[]}),flush=True); print(json.dumps({'type':'agent_end','messages':[]})"
+            ",flush=True); time.sleep(5)"
+        )
         with self.assertRaisesRegex(ValueError, "acknowledgement"):
             run_rpc_turns([sys.executable, "-u", "-c", child], ["first", "second"], 1)
 
@@ -169,7 +174,8 @@ class ModelContinuationTests(unittest.TestCase):
             "for line in sys.stdin:\n"
             " c=json.loads(line); count+=1\n"
             " print(json.dumps({'type':'response','id':c['id'],'success':True}),flush=True)\n"
-            " print(json.dumps({'type':'agent_end','messages':[{'role':'assistant','text':c['message'],'count':count,'content':[]}]}),flush=True)\n"
+            " print(json.dumps({'type':'agent_end','messages':[{'role':'assistant','text':c['messa"
+            "ge'],'count':count,'content':[]}]}),flush=True)\n"
         )
         prompts = [
             'Terraform query "quoted"\nnext line',
@@ -185,7 +191,10 @@ class ModelContinuationTests(unittest.TestCase):
 
     def test_rejected_or_incomplete_turn_cannot_pass(self) -> None:
         """Acknowledgement and EOF never stand in for model completion."""
-        child = "import sys,json; c=json.loads(sys.stdin.readline()); print(json.dumps({'type':'response','id':c['id'],'success':False}),flush=True)"
+        child = (
+            "import sys,json; c=json.loads(sys.stdin.readline()); print(json.dumps({'type':'respon"
+            "se','id':c['id'],'success':False}),flush=True)"
+        )
         with self.assertRaisesRegex(ValueError, "prompt rejected"):
             run_rpc_turns([sys.executable, "-u", "-c", child], ["Terraform query"], 5)
         with self.assertRaisesRegex(ValueError, "ended before"):
@@ -521,6 +530,7 @@ class ContinuationPlanTests(unittest.TestCase):
                 "toolName": "read",
                 "toolCallId": "read-1",
                 "isError": False,
+                "content": [{"type": "text", "text": "### name property\nDocumented name section."}],
             },
         ]
         expected = {
