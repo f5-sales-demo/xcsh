@@ -1,0 +1,484 @@
+{
+  "model": "openai-codex/gpt-6.1-sol",
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "input_sha256": {
+    "binary": "d13d5c86a64310288583957a4018eae83b146d020e1d65336c27af1838de21ad",
+    "freeze": "91b86764d4b1415efe15b5e9148a1ba6242868029b78d62f03de88c33175b339",
+    "heldout.json": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+    "model-subset.json": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+    "model-continuations.json": "eed8adc60bce1db510e0372afbc51ca66716075313ced0458b16167030bbdbc5",
+    "independent-review.json": "8e782e5840e243dbc86a0dc5a33e96b933a9d1ba641a61214bdab22870821341",
+    "eligibility.json": "f1d8fc60c47f813ea34c97104e66ee7448db59e09fa36bfc12303115855e8c4e"
+  },
+  "binary": "/tmp/terraform-907ebc6ff-installed/xcsh",
+  "provider_version": "v12.4.0",
+  "suite_sha256": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+  "automated_trace_accuracy": 0.3,
+  "manual_review_required": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "complete": true,
+  "partition_index": 2,
+  "partition_count": 4,
+  "hcl_review_required": false,
+  "results": [
+    {
+      "id": "A006",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 4323,
+        "max_bytes": 2621,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 46408.590890001506,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=I%20need%20the%20PEM%20chain%20location%20for%20a%20standalone%20managed%20certificate%20resource%20in%20Terraform.%20Point%20me%20to%20its%20certificate%20URL%20field%3B%20I%20have%20not%20supplied%20the%20file%20location%20yet.",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url",
+        "xcsh://branding/terraform"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=I%20need%20the%20PEM%20chain%20location%20for%20a%20standalone%20managed%20certificate%20resource%20in%20Terraform.%20Point%20me%20to%20its%20certificate%20URL%20field%3B%20I%20have%20not%20supplied%20the%20file%20location%20yet.",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url",
+        "xcsh://branding/terraform"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "01482f9e7574835d55658cf6e562751a182c096cc2c4a111d57a0a14a85afcba",
+      "raw_trace_sha256": "0621ff847f84a693ca055a6d087e37e4d2d1bb811c8bb0ab314281b4accf9e92"
+    },
+    {
+      "id": "A020",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 8689,
+        "max_bytes": 4023,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 56745.18613400869,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20an%20app_firewall%20resource%20in%20Terraform%2C%20where%20do%20I%20write%20the%20custom%20block-page%20body%20that%20can%20include%20the%20request%20ID%20placeholder%3F",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking_page/index.md?view=context#schema-blocking_page--blocking_page",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking_page/index.md?view=full#schema-blocking_page--blocking_page"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20an%20app_firewall%20resource%20in%20Terraform%2C%20where%20do%20I%20write%20the%20custom%20block-page%20body%20that%20can%20include%20the%20request%20ID%20placeholder%3F",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking_page/index.md?view=context#schema-blocking_page--blocking_page",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking_page/index.md?view=full#schema-blocking_page--blocking_page"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking_page/index.md#schema-blocking_page--blocking_page"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "7c75ce123a79f3d3d7be4611d4648529fa5f58cc662a3fc10cba3d0a68d642c8",
+      "raw_trace_sha256": "32490c2caf78e248ea82fd0b435070056247851243587cd738b4e7b08f3a3ef1"
+    },
+    {
+      "id": "A037",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 3693,
+        "max_bytes": 2257,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 41617.39083298016,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20DNS%20load%20balancer%20resource%3A%20which%20field%20chooses%20the%20DNS%20resource-record%20type%3F",
+        "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/index.md?view=context#schema-record_type"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20DNS%20load%20balancer%20resource%3A%20which%20field%20chooses%20the%20DNS%20resource-record%20type%3F",
+        "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/index.md?view=context#schema-record_type"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/index.md?view=context#schema-record_type"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "fd732fae3e6df0a5f45412c00f9b4673b021dd142fb94d40c20f6057cf5a9435",
+      "raw_trace_sha256": "55195a0db15fff7d06de235b93cb15520aa930ce71ebf953adf6816587e0af70"
+    },
+    {
+      "id": "A053",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2642,
+        "max_bytes": 1580,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 42014.7590120323,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20Bot%20Defense%20network%20allowlist%20data%20source%3A%20locate%20the%20published%20domain%20output%20that%20preserves%20leading%20dots",
+        "xcsh://terraform-documentation/documentation/data-sources/network_bot_defense/properties/index.md?view=context#schema-domains"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20Bot%20Defense%20network%20allowlist%20data%20source%3A%20locate%20the%20published%20domain%20output%20that%20preserves%20leading%20dots",
+        "xcsh://terraform-documentation/documentation/data-sources/network_bot_defense/properties/index.md?view=context#schema-domains"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_bot_defense/properties/index.md?view=context#schema-domains"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "45e8fa0f88325a6515705496adc34aed5d98b545a087db9cb5267cfbeb9f7db4",
+      "raw_trace_sha256": "82f6c82402556128955205a52a0a494f5af327c07e40145416f59449e3dc364b"
+    },
+    {
+      "id": "A085",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 5313,
+        "max_bytes": 3358,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 48916.670227074064,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Locate%20the%20case-insensitive%20header%20name%20used%20to%20detect%20failed%20logins%20in%20the%20Bot%20Defense%20protected%20endpoint%20login%20flow%20on%20a%20Terraform%20HTTP%20load%20balancer%20resource",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md?view=context#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Locate%20the%20case-insensitive%20header%20name%20used%20to%20detect%20failed%20logins%20in%20the%20Bot%20Defense%20protected%20endpoint%20login%20flow%20on%20a%20Terraform%20HTTP%20load%20balancer%20resource",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md?view=context#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md?view=context#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--name"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "1fbacf2f13dde0ae4e1843c4e125e1c0e366c4b603c9058c3d038205fbf45b02",
+      "raw_trace_sha256": "4d6975dcf866471c8bc92e58d886d9477bd1e1d571e1efcdf6866d5b8111e31b"
+    },
+    {
+      "id": "A113",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 139451,
+        "max_bytes": 110900,
+        "measured_results": 16,
+        "violations": []
+      },
+      "model_ms": 109149.27152101882,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20Secure%20Mesh%20v2%20resource%20with%20unmanaged%20GCP%20nodes%20interface%20IPv6%20router%20stateful%20allocation%20choice%20that%20starts%20at%20the%20beginning",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/index.md?view=context#section",
+        "xcsh://terraform-documentation/?search=Terraform%20xcsh_securemesh_site_v2%20resource%20gcp.not_managed%20interface%20IPv6%20router%20stateful%20allocation%20from%20start&provider_type=resources&provider_name=xcsh_securemesh_site_v2",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/index.md?view=full#section",
+        "xcsh://terraform-documentation/?search=Secure%20Mesh%20v2%20resource%20unmanaged%20GCP%20nodes%20IPv6%20stateful%20allocation%20beginning",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/index.md",
+        "xcsh://terraform-documentation/?search=GCP%20not_managed%20nodes%20interfaces%20IPv6%20router%20stateful%20allocation%20start&provider_type=resources&provider_name=securemesh_site_v2",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/index.md?view=context#section",
+        "xcsh://terraform-documentation/?search=gcp.not_managed%20ipv6%20stateful%20allocate%20from%20start&provider_type=resources&provider_name=securemesh_site_v2&node=xcsh-docs%3Aresources%3Asecuremesh_site_v2%3Aproperties%3Agcp%3Anot_managed",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md?view=context#section"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20Secure%20Mesh%20v2%20resource%20with%20unmanaged%20GCP%20nodes%20interface%20IPv6%20router%20stateful%20allocation%20choice%20that%20starts%20at%20the%20beginning",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/index.md?view=context#section",
+        "xcsh://terraform-documentation/?search=Terraform%20xcsh_securemesh_site_v2%20resource%20gcp.not_managed%20interface%20IPv6%20router%20stateful%20allocation%20from%20start&provider_type=resources&provider_name=xcsh_securemesh_site_v2",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/index.md?view=full#section",
+        "xcsh://terraform-documentation/?search=Secure%20Mesh%20v2%20resource%20unmanaged%20GCP%20nodes%20IPv6%20stateful%20allocation%20beginning",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/index.md",
+        "xcsh://terraform-documentation/?search=GCP%20not_managed%20nodes%20interfaces%20IPv6%20router%20stateful%20allocation%20start&provider_type=resources&provider_name=securemesh_site_v2",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/index.md?view=context#section",
+        "xcsh://terraform-documentation/?search=gcp.not_managed%20ipv6%20stateful%20allocate%20from%20start&provider_type=resources&provider_name=securemesh_site_v2&node=xcsh-docs%3Aresources%3Asecuremesh_site_v2%3Aproperties%3Agcp%3Anot_managed",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md?view=hint",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md?view=context#section"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md?view=context#section"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "29f77407519f4b9d5ef6768ddafaf29b53fb5c6259a6bbd3e00b69226cad01c5",
+      "raw_trace_sha256": "7eb7607797b1a102161945f7f5216b6890d3c60e5aa75d58511148b06aa80a74"
+    },
+    {
+      "id": "A137",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2797,
+        "max_bytes": 1632,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 51013.3064519614,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20the%20xcsh%20Terraform%20provider%2C%20locate%20authentication%20with%20separate%20PEM%20certificate%20and%20private-key%20files.%20Their%20actual%20locations%20are%20not%20yet%20provided.",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+        "xcsh://branding/terraform"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20the%20xcsh%20Terraform%20provider%2C%20locate%20authentication%20with%20separate%20PEM%20certificate%20and%20private-key%20files.%20Their%20actual%20locations%20are%20not%20yet%20provided.",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+        "xcsh://branding/terraform"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "93aaeb48959e86943d58e2d6d006f27297782c02edb5995a76e8236b2f8f0bdd",
+      "raw_trace_sha256": "5f9661fc31a125af8ed1e328219195b62094a08062dd6326b752427dd099c23e"
+    },
+    {
+      "id": "M008",
+      "kind": "ambiguous",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 11590,
+        "max_bytes": 4108,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 46200.24343300611,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20origin_pool%20advanced%20options%3A%20locate%20the%20timeout%20for%20a%20new%20endpoint%20connection",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/index.md?view=context#schema-advanced_options--connection_timeout",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/advanced_options/index.md?view=context#schema-advanced_options--connection_timeout",
+        "xcsh://branding/terraform"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20origin_pool%20advanced%20options%3A%20locate%20the%20timeout%20for%20a%20new%20endpoint%20connection",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/index.md?view=context#schema-advanced_options--connection_timeout",
+        "xcsh://terraform-documentation/documentation/data-sources/origin_pool/properties/advanced_options/index.md?view=context#schema-advanced_options--connection_timeout",
+        "xcsh://branding/terraform"
+      ],
+      "citation_uris": [],
+      "exact_leaf_read": true,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": true,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": false,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "814d43b894cac4998d33a0b65282b600634b7aba1ce51ee689fce87ecd3f73f4",
+      "raw_trace_sha256": "9c1f80df74f55fb653a5495fd9a41e5a3388d821c644ef503730722de989efda"
+    },
+    {
+      "id": "M034",
+      "kind": "ambiguous",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 9199,
+        "max_bytes": 3084,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 49057.78960301541,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20a%20Terraform%20authentication%20resource%2C%20find%20the%20clear-secret%20URL%20for%20a%20cookie%20HMAC%20key%3B%20I%20have%20not%20provided%20the%20URL.",
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/prim_key/clear_secret_info/index.md?view=context#schema-cookie_params--auth_hmac--prim_key--clear_secret_info--url",
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/sec_key/clear_secret_info/index.md?view=context#schema-cookie_params--auth_hmac--sec_key--clear_secret_info--url"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20a%20Terraform%20authentication%20resource%2C%20find%20the%20clear-secret%20URL%20for%20a%20cookie%20HMAC%20key%3B%20I%20have%20not%20provided%20the%20URL.",
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/prim_key/clear_secret_info/index.md?view=context#schema-cookie_params--auth_hmac--prim_key--clear_secret_info--url",
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/sec_key/clear_secret_info/index.md?view=context#schema-cookie_params--auth_hmac--sec_key--clear_secret_info--url"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/prim_key/clear_secret_info/index.md?view=context#schema-cookie_params--auth_hmac--prim_key--clear_secret_info--url",
+        "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/sec_key/clear_secret_info/index.md?view=context#schema-cookie_params--auth_hmac--sec_key--clear_secret_info--url"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": true,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "65beaacf49584f1ef4a55384440e1272b98466eec72a49c9aed3b6016466a2a8",
+      "raw_trace_sha256": "6312941cd48140466a31f1382102c20e53cb65ad9317325189b4ddfc200e839d"
+    },
+    {
+      "id": "C011",
+      "kind": "control",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 0,
+        "max_bytes": 0,
+        "measured_results": 0,
+        "violations": []
+      },
+      "model_ms": 60471.224042004906,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://about",
+        "https://f5-sales-demo.github.io/llms.txt",
+        "https://f5-sales-demo.github.io/xcsh/llms.txt",
+        "https://f5-sales-demo.github.io/xcsh/",
+        "https://f5-sales-demo.github.io/xcsh/en/"
+      ],
+      "successful_read_uris": [
+        "xcsh://about",
+        "https://f5-sales-demo.github.io/llms.txt",
+        "https://f5-sales-demo.github.io/xcsh/llms.txt",
+        "https://f5-sales-demo.github.io/xcsh/",
+        "https://f5-sales-demo.github.io/xcsh/en/"
+      ],
+      "citation_uris": [],
+      "exact_leaf_read": false,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": false,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "dff2059d13c977af9b390a2baf954128e763cc6537905a653441a965487f0a3f",
+      "raw_trace_sha256": "ceb79725493d8b8eb5964989a826bb5b4ce939a353f2a1123a7c3f704e6885c4"
+    }
+  ]
+}

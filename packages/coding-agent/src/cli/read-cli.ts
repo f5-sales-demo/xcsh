@@ -9,6 +9,8 @@ import { t } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { Settings } from "../config/settings";
 import { formatChunkedRead, resolveAnchorStyle } from "../edit/modes/chunk";
+import { InternalUrlRouter } from "../internal-urls/router";
+import { InternalDocsProtocolHandler } from "../internal-urls/xcsh-protocol";
 import { getLanguageFromPath } from "../modes/theme/theme";
 import type { ToolSession } from "../tools";
 import { parseReadUrlTarget } from "../tools/fetch";
@@ -20,7 +22,10 @@ export interface ReadCommandArgs {
 }
 
 function createCliReadSession(cwd: string, settings: Settings): ToolSession {
+	const internalRouter = new InternalUrlRouter();
+	internalRouter.register(new InternalDocsProtocolHandler());
 	return {
+		internalRouter,
 		cwd,
 		hasUI: false,
 		hasEditTool: true,
@@ -33,7 +38,7 @@ function createCliReadSession(cwd: string, settings: Settings): ToolSession {
 export async function runReadCommand(cmd: ReadCommandArgs): Promise<void> {
 	const cwd = process.cwd();
 	const parsedUrlTarget = parseReadUrlTarget(cmd.path, cmd.sel);
-	if (parsedUrlTarget) {
+	if (parsedUrlTarget || cmd.path.startsWith("xcsh://")) {
 		const settings = await Settings.init({ cwd });
 		const tool = new ReadTool(createCliReadSession(cwd, settings));
 		const result = await tool.execute("cli-read", { path: cmd.path, sel: cmd.sel });

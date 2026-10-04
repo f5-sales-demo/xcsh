@@ -1,0 +1,11 @@
+Approve the narrow route fix. No blocking findings from static review.
+
+- Ordinary files retain the unchanged filesystem branch. HTTP retains its existing parsing, selectors, fetch settings, and execution path.
+- `xcsh://` requests reach the registered handler through `ReadTool`, preserving query parameters and fragments.
+- Raw paths reach Terraform validation before normalization can conceal traversal. Existing checks reject traversal, encoded separators, invalid parameters, and unsupported views.
+- Source identity remains the internal URI; rendered Terraform content retains pinned provider, snapshot, commit, and receipt provenance.
+- Bundled Terraform uses local embedded assets and checksum-verified SQLite data, without authentication, model invocation, or network retrieval. Settings and cache initialization still require local filesystem access.
+
+The added test verifies dispatch and printed output, but mocks resolution, so it does not independently prove validation, provenance, or offline behavior.
+
+`git diff --check` passed. No tests or CLI reads were run: initialization can write local settings/caches, outside this read-only review.

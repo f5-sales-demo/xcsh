@@ -1,0 +1,485 @@
+{
+  "model": "openai-codex/gpt-6.1-sol",
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "input_sha256": {
+    "binary": "d13d5c86a64310288583957a4018eae83b146d020e1d65336c27af1838de21ad",
+    "freeze": "91b86764d4b1415efe15b5e9148a1ba6242868029b78d62f03de88c33175b339",
+    "heldout.json": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+    "model-subset.json": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+    "model-continuations.json": "eed8adc60bce1db510e0372afbc51ca66716075313ced0458b16167030bbdbc5",
+    "independent-review.json": "8e782e5840e243dbc86a0dc5a33e96b933a9d1ba641a61214bdab22870821341",
+    "eligibility.json": "f1d8fc60c47f813ea34c97104e66ee7448db59e09fa36bfc12303115855e8c4e"
+  },
+  "binary": "/tmp/terraform-907ebc6ff-installed/xcsh",
+  "provider_version": "v12.4.0",
+  "suite_sha256": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+  "automated_trace_accuracy": 0.3,
+  "manual_review_required": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "complete": true,
+  "partition_index": 3,
+  "partition_count": 4,
+  "hcl_review_required": false,
+  "results": [
+    {
+      "id": "A007",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 7937,
+        "max_bytes": 2943,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 53382.82128702849,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20a%20Terraform%20certificate%20resource%2C%20locate%20the%20unencrypted%20private-key%20secret%20URL%2C%20rather%20than%20the%20certificate%20chain%20URL.%20I%20still%20need%20to%20provide%20the%20secret%20location.",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md?view=context#schema-private_key--clear_secret_info--url",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/index.md?view=context"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20a%20Terraform%20certificate%20resource%2C%20locate%20the%20unencrypted%20private-key%20secret%20URL%2C%20rather%20than%20the%20certificate%20chain%20URL.%20I%20still%20need%20to%20provide%20the%20secret%20location.",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md?view=context#schema-private_key--clear_secret_info--url",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/index.md?view=context"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md?view=context#schema-private_key--clear_secret_info--url"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "6ae0e6ce9606d369a0c11907ff69d8e456544990c7f0a5197a76b6cdc750ca5e",
+      "raw_trace_sha256": "2df6076af99aebfcac3c502fd0145790271c7f048ef8d9d7504401054e726882"
+    },
+    {
+      "id": "A028",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 5429,
+        "max_bytes": 2353,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 47774.649893981405,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20resource%20for%20a%20workload%20sizing%20flavor%3A%20where%20do%20I%20specify%20scratch%20storage%20in%20mebibytes%3F",
+        "xcsh://terraform-documentation/?search=resource%20workload%20flavor%20scratch%20storage%20MiB&provider_type=resources",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20resource%20for%20a%20workload%20sizing%20flavor%3A%20where%20do%20I%20specify%20scratch%20storage%20in%20mebibytes%3F",
+        "xcsh://terraform-documentation/?search=resource%20workload%20flavor%20scratch%20storage%20MiB&provider_type=resources",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "e7997033ab5b2490352f613b2e068f680b6d3b1cb8d65704b41792087ffc80c0",
+      "raw_trace_sha256": "2d38893573892ce937a12418d444e168af123c28f5d8e01fd618003bb3999057"
+    },
+    {
+      "id": "A043",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 20622,
+        "max_bytes": 11492,
+        "measured_results": 5,
+        "violations": []
+      },
+      "model_ms": 60593.378909048624,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=I%20am%20configuring%20an%20HTTP%20load%20balancer%20resource%20in%20Terraform.%20Find%20the%20option%20that%20adds%20the%20serving%20Regional%20Edge%20location%20header%20to%20responses.",
+        "xcsh://terraform-documentation/?search=HTTP%20load%20balancer%20resource%20option%20add%20serving%20Regional%20Edge%20location%20response%20header&provider_type=resources&provider_name=xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md?view=context",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-add_location"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=I%20am%20configuring%20an%20HTTP%20load%20balancer%20resource%20in%20Terraform.%20Find%20the%20option%20that%20adds%20the%20serving%20Regional%20Edge%20location%20header%20to%20responses.",
+        "xcsh://terraform-documentation/?search=HTTP%20load%20balancer%20resource%20option%20add%20serving%20Regional%20Edge%20location%20response%20header&provider_type=resources&provider_name=xcsh_http_loadbalancer",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md?view=context",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-add_location"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-add_location"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "0c613fcbc224f6c9520c61e001dfee8c867b5ecb1fa25c2e62e2aaef1158c9d2",
+      "raw_trace_sha256": "eb4ce738c2bf46e1fb12819136b1a47174be6f39431b05ce8efa50f7a8977795"
+    },
+    {
+      "id": "A057",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2522,
+        "max_bytes": 1456,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 44827.43551698513,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20Data%20Intelligence%20allowlist%20data%20source%3A%20locate%20normalized%20CIDRs%20keyed%20by%20region",
+        "xcsh://terraform-documentation/documentation/data-sources/network_data_intelligence/properties/index.md?view=context#schema-cidr_blocks_by_region"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20Data%20Intelligence%20allowlist%20data%20source%3A%20locate%20normalized%20CIDRs%20keyed%20by%20region",
+        "xcsh://terraform-documentation/documentation/data-sources/network_data_intelligence/properties/index.md?view=context#schema-cidr_blocks_by_region"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_data_intelligence/properties/index.md?view=context#schema-cidr_blocks_by_region"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "4345654bf19c88f080f9d5b29df9d2e93b1fa314dbe138ae8f996da607e8f51e",
+      "raw_trace_sha256": "d1f927784b630f09591330de7746157e95c75fb5fc1785af09d0ede78a1ac9fc"
+    },
+    {
+      "id": "A086",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 5039,
+        "max_bytes": 3034,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 46325.07045194507,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Where%20are%20the%20regular%20expressions%20that%20match%20failed-login%20response%20input%20in%20the%20Bot%20Defense%20protected%20endpoint%20login%20flow%20on%20a%20Terraform%20HTTP%20load%20balancer%20resource",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md?view=context#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--regex_values"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Where%20are%20the%20regular%20expressions%20that%20match%20failed-login%20response%20input%20in%20the%20Bot%20Defense%20protected%20endpoint%20login%20flow%20on%20a%20Terraform%20HTTP%20load%20balancer%20resource",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md?view=context#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--regex_values"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/failure_conditions/index.md?view=context#schema-bot_defense--policy--protected_app_endpoints--flow_label--authentication--login--transaction_result--failure_conditions--regex_values"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "8cc748150cab7292e08e63226314997acd189100128524c3dd654fefa0398649",
+      "raw_trace_sha256": "3a0ee6b91e490315801bc6bb110893fbc9de82b887f4e6dbdd64b82dd6bf0dc9"
+    },
+    {
+      "id": "A114",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 12234,
+        "max_bytes": 3339,
+        "measured_results": 5,
+        "violations": []
+      },
+      "model_ms": 61309.25666098483,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20workload%20resource%2C%20stateful%20service%20on%20multiple%20public%20ports%20with%20automatic-certificate%20HTTPS%3A%20locate%20the%20server%20response-header%20value%20setting",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https--server_name",
+        "xcsh://terraform-documentation/?search=Terraform%20xcsh_workload%20resource%20stateful_service%20advertise_on_public%20multi_ports%20http_loadbalancer%20automatic%20certificate%20HTTPS%20server%20response%20header%20value&provider_type=resources&provider_name=xcsh_workload",
+        "xcsh://terraform-documentation/?search=workload%20resource%20stateful_service%20multi_ports%20https_auto_cert%20server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20workload%20resource%2C%20stateful%20service%20on%20multiple%20public%20ports%20with%20automatic-certificate%20HTTPS%3A%20locate%20the%20server%20response-header%20value%20setting",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https--server_name",
+        "xcsh://terraform-documentation/?search=Terraform%20xcsh_workload%20resource%20stateful_service%20advertise_on_public%20multi_ports%20http_loadbalancer%20automatic%20certificate%20HTTPS%20server%20response%20header%20value&provider_type=resources&provider_name=xcsh_workload",
+        "xcsh://terraform-documentation/?search=workload%20resource%20stateful_service%20multi_ports%20https_auto_cert%20server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name"
+      ],
+      "exact_leaf_read": false,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "d1d7f9013bac7d4dd66dff8b67adb37eb6c75042658106e9b121736462b1cbc4",
+      "raw_trace_sha256": "717cf37fee839b9ab8d9cf8f960eda090ca0fc5243687084049ae5c94cea25a7"
+    },
+    {
+      "id": "A138",
+      "kind": "answerable",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2049,
+        "max_bytes": 1054,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 42221.977232955396,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20Terraform%2C%20locate%20the%20import%20format%20for%20an%20existing%20standalone%20certificate%20resource.",
+        "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+        "xcsh://branding/terraform"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20Terraform%2C%20locate%20the%20import%20format%20for%20an%20existing%20standalone%20certificate%20resource.",
+        "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+        "xcsh://branding/terraform"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "25f014a6148a4bdb532f2d3e00912e28190485b8ae344fad298d81a32632dc38",
+      "raw_trace_sha256": "d3939f20287147700519b64196e0c10c56bd869f4a6bb762f03a3d40c5b1a7ce"
+    },
+    {
+      "id": "M016",
+      "kind": "ambiguous",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 55034,
+        "max_bytes": 22452,
+        "measured_results": 10,
+        "violations": []
+      },
+      "model_ms": 70176.35319102556,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=In%20Terraform%20workload_flavor%20documentation%2C%20where%20is%20ephemeral%20storage%20in%20MiB%3F",
+        "xcsh://terraform-documentation/?search=workload_flavor%20ephemeral%20storage%20MiB&node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation",
+        "xcsh://terraform-documentation/?search=workload_flavor",
+        "xcsh://terraform-documentation/?search=ephemeral%20storage%20MiB",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/index.md?view=context#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/data-sources/workload_flavor/index.md?view=context#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/index.md?view=full#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/data-sources/workload_flavor/index.md?view=full#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md",
+        "xcsh://terraform-documentation/documentation/data-sources/workload_flavor/properties/index.md"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=In%20Terraform%20workload_flavor%20documentation%2C%20where%20is%20ephemeral%20storage%20in%20MiB%3F",
+        "xcsh://terraform-documentation/?search=workload_flavor%20ephemeral%20storage%20MiB&node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation",
+        "xcsh://terraform-documentation/?search=workload_flavor",
+        "xcsh://terraform-documentation/?search=ephemeral%20storage%20MiB",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/index.md?view=context#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/data-sources/workload_flavor/index.md?view=context#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/index.md?view=full#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/data-sources/workload_flavor/index.md?view=full#xcsh_workload_flavor",
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md",
+        "xcsh://terraform-documentation/documentation/data-sources/workload_flavor/properties/index.md"
+      ],
+      "citation_uris": [],
+      "exact_leaf_read": false,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": true,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "0e3613c24dafaf17524b1f20d2579994ffbdec9bce2df057e925495190dd3770",
+      "raw_trace_sha256": "b5df6f782809e0d6eb67fc8ae612ffa3839d32570167a77cef36adc0f4f82210"
+    },
+    {
+      "id": "M037",
+      "kind": "ambiguous",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 13206,
+        "max_bytes": 2869,
+        "measured_results": 6,
+        "violations": []
+      },
+      "model_ms": 65035.83917801734,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20workload%20resource%2C%20stateless%20service%20advertised%20on%20a%20single%20public%20port%20using%20an%20HTTPS%20HTTP%20load%20balancer%3A%20find%20the%20minimum%20TLS%20version%20in%20custom%20security",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/index.md?view=hint#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_custom/index.md?view=hint#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/index.md?view=context#section",
+        "xcsh://terraform-documentation/?search=Terraform%20workload%20resource%20stateless%20service%20advertise_on_public%20port%20http_loadbalancer%20https%20custom%20security%20minimum%20TLS%20version&node=xcsh-docs%3Aresources%3Aworkload%3Aproperties%3Aservice%3Aadvertise_options%3Aadvertise_on_public%3Aport&provider_type=resources&provider_name=workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/tls_parameters/tls_config/custom_security/index.md?view=context#schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--https--tls_parameters--tls_config--custom_security--min_version"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20workload%20resource%2C%20stateless%20service%20advertised%20on%20a%20single%20public%20port%20using%20an%20HTTPS%20HTTP%20load%20balancer%3A%20find%20the%20minimum%20TLS%20version%20in%20custom%20security",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/index.md?view=hint#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_custom/index.md?view=hint#section",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/index.md?view=context#section",
+        "xcsh://terraform-documentation/?search=Terraform%20workload%20resource%20stateless%20service%20advertise_on_public%20port%20http_loadbalancer%20https%20custom%20security%20minimum%20TLS%20version&node=xcsh-docs%3Aresources%3Aworkload%3Aproperties%3Aservice%3Aadvertise_options%3Aadvertise_on_public%3Aport&provider_type=resources&provider_name=workload",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/tls_parameters/tls_config/custom_security/index.md?view=context#schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--https--tls_parameters--tls_config--custom_security--min_version"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https/tls_parameters/tls_config/custom_security/index.md?view=context#schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--https--tls_parameters--tls_config--custom_security--min_version"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": true,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "866cf3bd0b7a205b6baa5c6e4aa6f6bb91139bedf0b00fd6ce05a9f92456da23",
+      "raw_trace_sha256": "0abd732fe66b518e84aaa477480dcb3d6cce43760f0cb0c991577b7cf23b0316"
+    },
+    {
+      "id": "C013",
+      "kind": "control",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 0,
+        "max_bytes": 0,
+        "measured_results": 0,
+        "violations": []
+      },
+      "model_ms": 49374.72694402095,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://documentation/?search=release-pinned%20network%20allowlists",
+        "xcsh://documentation/?search=network%20allowlist",
+        "xcsh://api-spec/network-allowlist"
+      ],
+      "successful_read_uris": [
+        "xcsh://documentation/?search=release-pinned%20network%20allowlists",
+        "xcsh://documentation/?search=network%20allowlist",
+        "xcsh://api-spec/network-allowlist"
+      ],
+      "citation_uris": [],
+      "exact_leaf_read": false,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": false,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "917fe3de5b5e19068cd665b6ff9a81578817fb1eea6a56fbed7fb69c40bc1125",
+      "raw_trace_sha256": "3491066e4bdd270abbb022b4eeb29d75a6d4b964fa5ea5c69e55a475beabf44e"
+    }
+  ]
+}
