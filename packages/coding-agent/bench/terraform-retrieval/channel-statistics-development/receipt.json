@@ -1,0 +1,7 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_changed": false,
+  "decision": "Reject flattened prose and ancestor statistics. Prose channels retain46/48development and97/140exposed top-one. Ancestor channels reduce development44/48 and exposed96/140; baseline46/48 and98/140."
+}

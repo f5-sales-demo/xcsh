@@ -1,0 +1,17 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "destinations": 39565,
+  "build_ms": 1454.247684,
+  "index_bytes": 96649216,
+  "answerable_destinations": 134,
+  "non_property_destinations": 6,
+  "totalPeers": 982,
+  "maxPeers": 154,
+  "peer_lookup_p95_ms": 0.06447700000012446,
+  "complete_response_latency_measured": false,
+  "structural_scope": "Property destinations and property-to-property constraints only;44 document-level advisories remain in existing navigation index",
+  "next_step": "Use ordered per-segment evidence and structural peers in development selection. Missing schema context, close competing destinations and insufficient operation evidence remain; no qualification gain established."
+}
