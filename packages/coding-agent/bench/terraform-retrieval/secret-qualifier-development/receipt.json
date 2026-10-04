@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 98,
+  "v7_top5": 124,
+  "type_lint_pass": true,
+  "focused_pass": 182,
+  "prior_package_pass": 9698,
+  "source_findings_preserved_and_covered": true,
+  "change": "Secret representation qualifier tied to explicit field clause; matching branch required; corrections, examples and conflicting requests retain choices"
+}

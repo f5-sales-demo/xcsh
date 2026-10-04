@@ -822,3 +822,23 @@ test("incomplete retrieval cannot establish a unique leaf",()=>{
  expect(limited.destinations).toEqual(ordinary.destinations);
  expect(limited.reason).toContain("candidate limit");
 });
+
+test("explicit secret representation qualifies the requested destination",()=>{
+ const clear={...row("api_token.clear_secret_info.provider_ref",39),description:"Secret store reference."};
+ const blind={...row("api_token.blindfold_secret_info.store_provider",40),description:"Secret store provider."};
+ const query="Locate the store reference for a clear API-token secret";
+ expect(selectPropertyDestination(query,[blind,clear],[],{identityResolved:true}).kind).toBe("leaf");
+ expect(selectPropertyDestination(query,[blind,clear],[],{identityResolved:true}).destinations[0]?.schema_path).toBe(clear.schema_path);
+ expect(selectPropertyDestination(query+"; no restart required",[blind,clear],[],{identityResolved:true}).kind).toBe("leaf");
+ for(const q of ["Find the value to clear secrets","Find clear secrets and encrypted secrets","Find clear secrets. Find encrypted secrets.","Find the value, such as clear secrets","Find the value, e.g., clear secrets","Find the value ‘clear secrets’","Find clear secrets value","Locate store reference for clear or encrypted secret"])expect(selectPropertyDestination(q,[blind,clear]).kind).toBe("choices");
+ const unrelated={...row("other.value",60),description:"Unrelated value."};
+ const r=selectPropertyDestination(query,[blind,unrelated],[clear],{identityResolved:true});
+ expect(r.kind).not.toBe("leaf");
+});
+
+test("later secret representation corrections and examples retain ambiguity",()=>{
+ const a={...row("api_token.clear_secret_info.provider_ref",40),description:"Secret store reference."};
+ const b={...row("api_token.blindfold_secret_info.provider_ref",39),description:"Secret store reference."};
+ for(const q of ["Find the store reference for clear secrets. Do not use clear secrets.","Find the store reference for clear secrets; or encrypted secrets","Locate the store reference for clear secrets, e.g. production","Locate the store reference for clear secrets, for instance production"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("Find the store reference for clear secrets; no restart required",[a,b]).kind).toBe("leaf");
+});
