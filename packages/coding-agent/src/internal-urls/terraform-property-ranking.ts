@@ -411,7 +411,21 @@ export function propertyValueLookup(text: string): string | undefined {
 		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
 		if (!lookup) continue;
 		if (/\b(?:example|usage|guidance)\b/i.test(clause)) return undefined;
-		const target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		let target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		const labeled =
+			/^(?:(?:the|a|an)\s+)?data[ -]source\s+((?:(?:input|output|field|attribute|property)\s+)+)(.+)/i.exec(target);
+		if (labeled) {
+			const explicitField = /^(?:field|attribute|property)\s+$/i.test(labeled[1]!);
+			target = labeled[2]!.split(/\b(?:for|from|using|via)\b|\bof\s+xcsh_/i)[0]!.trim();
+			const literal = explicitField && /^`?[a-z][a-z0-9_]*`?$/i.test(target);
+			if (/^(?:of|for|from|using|via)\b/i.test(target)) return undefined;
+			if (
+				!literal &&
+				(!propertyTerms(target).length ||
+					/^(?:(?:the|a|an)\s+)?(?:input|output|field|attribute|property)\s*$/i.test(target))
+			)
+				return undefined;
+		}
 		if (/^I need\b/i.test(lookup[0]) && /\b(?:resource|data[ -]source|provider|action)\s*$/.test(target)) continue;
 		if (!target || /^(?:(?:an?|the)\s+)?(?:resource\b|data[ -]source\b|provider\b|action\b|xcsh_)/i.test(target))
 			return undefined;

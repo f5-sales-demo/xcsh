@@ -1122,3 +1122,30 @@ test("abbreviated provider examples cannot capture identity", () => {
 			]),
 		).toBe("http_loadbalancer");
 });
+test("data source value lookup labels require a substantive property target", () => {
+	expect(propertyRequestedText("Find data source output addresses")).toBe("addresses");
+	expect(propertyRequestedText("Find the data-source input name")).toBe("name");
+	expect(propertyRequestedText("Find data source output field addresses")).toBe("addresses");
+	expect(propertyRequestedText("Find the data-source output preserving IPv4 entries")).toBe("preserving IPv4 entries");
+	for (const q of [
+		"Find data source output for CDN",
+		"Find data source output of xcsh_network_cdn",
+		"Find data source output using xcsh_network_cdn",
+		"Find data source output",
+		"Find data source",
+	])
+		expect(propertyRequestedText(q)).toBeUndefined();
+	expect(propertyRequestedText("Find data source output addresses for CDN")).toBe("addresses");
+});
+
+test("data source labels preserve collections and literal fields", () => {
+	expect(propertyRequestedText("Find data source output list of addresses")).toBe("list of addresses");
+	expect(propertyRequestedText("Find data source field output")).toBe("output");
+	expect(propertyRequestedText("Find data source field `output`")).toBe("`output`");
+	for (const q of [
+		"Find data source output input",
+		"Find data source output the input from CDN",
+		"Find data source output field",
+	])
+		expect(propertyRequestedText(q)).toBeUndefined();
+});
