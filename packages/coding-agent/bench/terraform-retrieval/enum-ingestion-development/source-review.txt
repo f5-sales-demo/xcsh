@@ -1,0 +1,12 @@
+Approved for narrow ingestion-validation source only. No concrete bugs found.
+
+- Record version, validator identity, case sensitivity, and provenance are checked consistently.
+- Values require strict UTF-8 byte ordering and reject duplicates; incomplete records require empty values.
+- Evidence and coverage must appear together; complete coverage rejects unresolved records.
+- Evaluation remains conjunctive, preserves Unicode case-fold uncertainty, and permits definitive rejection from another rule.
+- Legacy metadata without enum fields remains accepted. Snapshot verification and index construction both invoke validation.
+- The development re-export preserves the existing implementation. No pin or ranking changes.
+
+Independently reran the focused tests: **9 passed, 0 failed, 38 assertions**. `git diff --check` passed.
+
+This is source approval only, not snapshot qualification or release approval. No files changed or benchmark prompts inspected.

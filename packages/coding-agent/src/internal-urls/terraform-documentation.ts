@@ -10,6 +10,7 @@ import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
 import { terraformChoiceResponse } from "./terraform-choice-response";
+import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
 import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle } from "./terraform-lifecycle";
 import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
@@ -47,6 +48,8 @@ export interface TerraformRelationship {
 	group?: string;
 }
 export interface TerraformSection {
+	enum_validators?: EnumValidatorEvidence[];
+	enum_extraction_complete?: boolean;
 	schema_path: string[];
 	document_id: string;
 	anchor: string;
@@ -117,6 +120,14 @@ export function validateTerraformRetrievalMetadata(m: TerraformMetadata): void {
 			!Array.isArray(section.relationships)
 		)
 			throw new Error("Invalid Terraform retrieval section");
+	for (const section of m.sections) {
+		if (section.enum_validators === undefined && section.enum_extraction_complete === undefined) continue;
+		if (typeof section.enum_extraction_complete !== "boolean" || !Array.isArray(section.enum_validators))
+			throw new Error("Invalid Terraform enum coverage");
+		const evidence = validateEnumEvidence(section.enum_validators);
+		if (section.enum_extraction_complete && evidence.some(rule => !rule.complete))
+			throw new Error("Unresolved Terraform enum with complete coverage");
+	}
 	for (const r of [...m.relationships, ...m.sections.flatMap(v => v.relationships)])
 		if (
 			!r ||
