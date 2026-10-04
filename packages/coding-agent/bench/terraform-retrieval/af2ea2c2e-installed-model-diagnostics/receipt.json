@@ -1,0 +1,20 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "binary_source": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+  "model": "openai-codex/gpt-6.1-sol",
+  "model_cases": 40,
+  "automated_pass": 11,
+  "answerable_exact_leaf_reads": 26,
+  "answerable_total": 28,
+  "continuation_branches": 16,
+  "initial_question_pass": 10,
+  "terminal_destination_pass": 14,
+  "terminal_complete_leaf_reads": 12,
+  "unsupported_field_claims_in_continuations": 0,
+  "false_live_apply_claims_in_continuations": 0,
+  "continuation_hcl_emitted": 0,
+  "all_trace_hashes_verified": true,
+  "raw_traces": "Task-local, unchanged",
+  "limitations": "Frozen companion-read obligations fail; benchmark audit found overbroad reads and no mandatory drafting coverage; artifacts predate latest parser fixes"
+}
