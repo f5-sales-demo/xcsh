@@ -1,0 +1,18 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 97,
+  "v7_top5": 123,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "v7_route_p95_ms": 64.729839,
+  "v6_route_p95_ms": 95.73965,
+  "focused_pass": 157,
+  "type_lint_pass": true,
+  "synthetic_differential_comparisons": 1152,
+  "candidate_limit": 2000,
+  "completeness_checks_retained": true,
+  "limit_validation_retained": true,
+  "optimization": "Precompute supported ancestor keys; remove quadratic section-to-candidate scans",
+  "scratch_index_regression_not_adopted": true
+}

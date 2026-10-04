@@ -1714,7 +1714,7 @@ export class TerraformDocumentationRepository {
 						filters,
 						node: node ?? undefined,
 					},
-					500,
+					2000,
 					poolStatus,
 				).filter(row => lifecycle?.field || !propertyRequestsBlock(search) || row.anchor === "section");
 				const genericConfigure =

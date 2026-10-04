@@ -231,6 +231,22 @@ function selectPropertyDestinationInternal(
 		const key = `${row.path}#${row.anchor}`;
 		if (!unique.has(key) || unique.get(key)!.score < row.score) unique.set(key, row);
 	}
+	const supportedAncestors = new Set<string>();
+	for (const other of unique.values()) {
+		const terms = propertyTerms(other.schema_path.split(".").at(-1) ?? "");
+		if (
+			!other.anchor.startsWith("schema-") ||
+			!terms.length ||
+			!terms.every(term => query.has(term)) ||
+			contradicts(query, other)
+		)
+			continue;
+		const parts = other.schema_path.split(".");
+		for (let depth = 1; depth < parts.length; depth++)
+			supportedAncestors.add(
+				JSON.stringify([other.provider_type, other.provider_name, parts.slice(0, depth).join(".")]),
+			);
+	}
 	const ranked = [...unique.values()]
 		.filter(row => !contradicts(query, row))
 		.filter(
@@ -241,18 +257,7 @@ function selectPropertyDestinationInternal(
 					(/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) ||
 						Boolean(propertyRequestedText(queryText))) &&
 					!propertyRequestsBlock(queryText) &&
-					[...unique.values()].some(other => {
-						const terms = propertyTerms(other.schema_path.split(".").at(-1) ?? "");
-						return (
-							other.provider_type === row.provider_type &&
-							other.provider_name === row.provider_name &&
-							other.anchor.startsWith("schema-") &&
-							other.schema_path.startsWith(`${row.schema_path}.`) &&
-							terms.length > 0 &&
-							terms.every(term => query.has(term)) &&
-							!contradicts(query, other)
-						);
-					})
+					supportedAncestors.has(JSON.stringify([row.provider_type, row.provider_name, row.schema_path]))
 				),
 		)
 		.sort(
