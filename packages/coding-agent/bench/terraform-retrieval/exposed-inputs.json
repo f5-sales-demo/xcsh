@@ -12,6 +12,18 @@
       "kind": "model-subset",
       "source": "semantic-selection-development/installed-40-mixed-development-summary.json",
       "reason": "Installed diagnostics and implementation analysis exposed all40 model prompts."
+    },
+    {
+      "sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+      "kind": "heldout",
+      "source": "v8-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "9c2ec71da89748bc31b9b147b832ac7a934e5aafad6fbf2847251f4d32b027a0",
+      "kind": "model-subset",
+      "source": "v8-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
     }
   ]
 }
