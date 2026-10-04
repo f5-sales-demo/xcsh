@@ -40,6 +40,13 @@ class ModelContinuationTests(unittest.TestCase):
             {"role": "assistant", "content": []},
         ]
         self.assertEqual(final_assistant_text(messages), "")
+        messages[-1]["stopReason"] = "stop"
+        messages[0]["stopReason"] = "toolUse"
+        self.assertFalse(
+            transcript_summary([{"type": "agent_end", "messages": messages}], {})[
+                "completed_successfully"
+            ]
+        )
         messages[-1]["content"] = [{"type": "text", "text": "Final answer"}]
         self.assertEqual(final_assistant_text(messages), "Final answer")
 

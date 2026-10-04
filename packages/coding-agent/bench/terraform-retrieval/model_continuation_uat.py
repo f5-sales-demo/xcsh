@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from model_continuation import run_rpc_turns, turn_messages
+from model_continuation import final_assistant_text, run_rpc_turns, turn_messages
 from model_trace import (
     has_clarification_question,
     required_read_coverage,
@@ -151,6 +151,7 @@ def transcript_summary(
     assistants = [message for message in messages if message.get("role") == "assistant"]
     successful = (
         bool(assistants)
+        and bool(final_assistant_text(messages).strip())
         and assistants[-1].get("stopReason") == "stop"
         and all(
             message.get("stopReason") in {"stop", "toolUse"}
