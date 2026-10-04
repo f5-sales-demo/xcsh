@@ -1,0 +1,9 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "combined_correct": 102,
+  "hostname_only_correct": 103,
+  "baseline_correct": 103,
+  "decision": "Reject query-only plural normalization; mismatches prepared schema terms and loses DNS branch correctness. Hostname-only yields no correct-leaf improvement."
+}
