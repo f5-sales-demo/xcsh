@@ -268,8 +268,16 @@ export function propertyRequestsRootField(text: string): boolean {
 		text,
 	);
 }
+export function propertyBreadcrumbText(text: string): string {
+	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*>\s*)+[a-z][a-z0-9_]*\b/gi, value => value.replace(/\s*>\s*/g, "."));
+}
+export function propertyWithoutBreadcrumbs(text: string): string {
+	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*>\s*)+[a-z][a-z0-9_]*\b/gi, " ");
+}
 function schemaPathMentions(text: string) {
-	const query = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	const query = propertyBreadcrumbText(text)
+		.toLowerCase()
+		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	return [
 		...query.matchAll(
 			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to|where is|where are|where do i put|where do|where does|i need)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
@@ -353,7 +361,9 @@ export function propertyInvalidExcludedScope(text: string): boolean {
 	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*(?:[-/:])[a-z0-9_/-]*/.test(propertyScopeText(text));
 }
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
-	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	let request = propertyBreadcrumbText(text)
+		.toLowerCase()
+		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	request = request.replace(/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?(?:`[^`]+`|"[^"]+"|[a-z][a-z0-9_-]*)/gi, " ");
 	const requiredPaths = propertyExplicitSchemaPaths(text);
 	const excluded = new Set([

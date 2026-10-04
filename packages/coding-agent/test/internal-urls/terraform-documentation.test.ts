@@ -109,3 +109,17 @@ test("common protocol wording does not choose a certificate architecture", () =>
 	expect(terraformNamedChoice("Use existing certificates for HTTPS", choices)).toBe(0);
 	expect(terraformNamedChoice("Configure https_auto_cert", choices)).toBe(1);
 });
+
+test("schema breadcrumb component cannot masquerade as provider identity", () => {
+	const names = ["workload", "http_loadbalancer", "origin_pool"];
+	expect(
+		terraformProviderMention(
+			"data source under service > advertise_options > http_loadbalancer > https > certificates. Field name",
+			names,
+		),
+	).toBeUndefined();
+	expect(
+		terraformProviderMention("xcsh_workload under service > advertise_options > http_loadbalancer > https", names),
+	).toBe("workload");
+	expect(terraformProviderMention("HTTP load balancer under https > certificates", names)).toBe("http_loadbalancer");
+});

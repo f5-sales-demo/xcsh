@@ -27,6 +27,7 @@ import {
 	propertyRequestedText,
 	propertyRequestsBlock,
 	propertyRequestsCollection,
+	propertyWithoutBreadcrumbs,
 } from "./terraform-property-ranking";
 import { refineRankedProperty } from "./terraform-property-refinement";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
@@ -1078,6 +1079,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 	];
 	if (exact.length === 1 && names.includes(exact[0]!)) return exact[0];
 	if (exact.length > 1) return undefined;
+	search = propertyWithoutBreadcrumbs(search);
 	const literalNames = names.filter(name => name.includes("_") && new RegExp(`\\b${name}\\b`, "i").test(search));
 	if (literalNames.length === 1) return literalNames[0];
 	if (literalNames.length > 1) return undefined;
