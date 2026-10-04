@@ -1,9 +1,13 @@
 # ruff: noqa: INP001
 """Match completed successful read results to their exact requested paths."""
 
+import json
 import re
 from typing import Any
 from urllib.parse import parse_qs, urlsplit, urlunsplit
+
+SURROGATE_START = 0xD800
+SURROGATE_END = 0xDFFF
 
 
 def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
@@ -210,3 +214,102 @@ def hcl_code_blocks(text: str) -> list[str]:
 def emitted_hcl(text: str) -> bool:
     """Only a nonempty HCL/terraform fence establishes a drafting attempt."""
     return any(code.strip() for code in hcl_code_blocks(text))
+
+
+def terraform_tool_response_budget(messages: list[dict[str, Any]]) -> dict[str, Any]:
+    """Audit complete UTF-8 tool envelopes, pairing every Terraform read result."""
+    calls: dict[str, list[tuple[int, str | None]]] = {}
+    results: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    violations: list[dict[str, Any]] = []
+    for index, message in enumerate(messages):
+        if message.get("role") == "assistant":
+            for part in message.get("content", []):
+                if part.get("type") != "toolCall":
+                    continue
+                identity = part.get("id")
+                if not isinstance(identity, str) or not identity:
+                    violations.append({"reason": "invalid-tool-call-id"})
+                    continue
+                uri = part.get("arguments", {}).get("path", "")
+                terraform = (
+                    part.get("name") == "read"
+                    and isinstance(uri, str)
+                    and re.match(
+                        r"^xcsh://terraform-documentation(?:[/?#]|$)",
+                        uri,
+                        re.IGNORECASE,
+                    )
+                )
+                calls.setdefault(identity, []).append(
+                    (index, uri if terraform else None)
+                )
+        elif message.get("role") == "toolResult":
+            identity = message.get("toolCallId")
+            if not isinstance(identity, str) or not identity:
+                violations.append({"reason": "invalid-tool-result-id"})
+                continue
+            results.setdefault(identity, []).append((index, message))
+    violations.extend(
+        {"tool_call_id": identity, "reason": "orphan-tool-result"}
+        for identity in results
+        if identity not in calls
+    )
+    total_bytes = maximum = measured = 0
+    for identity, matching in calls.items():
+        completed = results.get(identity, [])
+        if (
+            not identity
+            or len(matching) != 1
+            or len(completed) != 1
+            or completed[0][0] <= matching[0][0]
+        ):
+            violations.append(
+                {"tool_call_id": identity, "reason": "unpaired-or-duplicate-result"}
+            )
+            continue
+        uri = matching[0][1]
+        if uri is None:
+            continue
+        result = completed[0][1]
+        if result.get("toolName") != "read":
+            violations.append(
+                {"tool_call_id": identity, "reason": "mismatched-tool-result"}
+            )
+            continue
+        serialized = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+        serialized = "".join(
+            f"\\u{ord(character):04x}"
+            if SURROGATE_START <= ord(character) <= SURROGATE_END
+            else character
+            for character in serialized
+        )
+        size = len(serialized.encode("utf-8"))
+        total_bytes += size
+        maximum = max(maximum, size)
+        measured += 1
+        parsed = urlsplit(uri)
+        view = parse_qs(parsed.query).get("view", ["full"])[0]
+        budget = (
+            4096
+            if parsed.path in ("", "/") or view == "hint"
+            else 16384
+            if view == "context"
+            else None
+        )
+        if budget is not None and size > budget:
+            violations.append(
+                {
+                    "tool_call_id": identity,
+                    "uri": uri,
+                    "response_bytes": size,
+                    "budget_bytes": budget,
+                    "reason": "response-budget-exceeded",
+                }
+            )
+    return {
+        "passed": not violations,
+        "total_bytes": total_bytes,
+        "max_bytes": maximum,
+        "measured_results": measured,
+        "violations": violations,
+    }

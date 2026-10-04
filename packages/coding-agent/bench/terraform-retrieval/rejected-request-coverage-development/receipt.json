@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "correct": 104,
+  "top5": 126,
+  "baseline_correct": 104,
+  "baseline_top5": 128,
+  "decision": "Reject missing-target-term penalty: no correct-leaf improvement and two expected top-five losses."
+}

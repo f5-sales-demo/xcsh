@@ -11,6 +11,7 @@ from model_trace import (
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
+    terraform_tool_response_budget,
     validate_hcl_drafting_coverage,
     validate_model_activation,
     validate_model_subset_identity,
@@ -278,3 +279,110 @@ class HclDraftingCoverageTests(unittest.TestCase):
         case["model_expectations"]["requires_hcl"] = None
         with self.assertRaises(TypeError):
             validate_hcl_drafting_coverage([case])
+
+
+class TerraformResponseBudgetTests(unittest.TestCase):
+    """Measure bounded views at the complete tool-result boundary."""
+
+    def messages(self, uri: str, text: str) -> list[dict[str, Any]]:
+        """Create one completed read call and result."""
+        return [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "toolCall",
+                        "id": "a",
+                        "name": "read",
+                        "arguments": {"path": uri},
+                    }
+                ],
+            },
+            {
+                "role": "toolResult",
+                "toolName": "read",
+                "toolCallId": "a",
+                "isError": False,
+                "content": [{"type": "text", "text": text}],
+            },
+        ]
+
+    def test_complete_tool_envelope_discovery_and_context_budgets(self) -> None:
+        """Count result metadata as part of the view budget."""
+        for uri, limit in [
+            ("xcsh://terraform-documentation/?search=port", 4096),
+            (
+                "xcsh://terraform-documentation/documentation/resources/f/index.md?view=hint#schema-x",
+                4096,
+            ),
+            (
+                "xcsh://terraform-documentation/documentation/resources/f/index.md?view=context#schema-x",
+                16384,
+            ),
+        ]:
+            self.assertTrue(
+                terraform_tool_response_budget(self.messages(uri, "ok"))["passed"]
+            )
+            result = terraform_tool_response_budget(self.messages(uri, "x" * limit))
+            self.assertFalse(result["passed"])
+            self.assertEqual(result["violations"][0]["budget_bytes"], limit)
+
+    def test_exact_reads_are_measured_without_imposing_context_budget(self) -> None:
+        """Complete exact reads retain unrestricted payload size."""
+        result = terraform_tool_response_budget(
+            self.messages(
+                "xcsh://terraform-documentation/documentation/resources/f/index.md#schema-x",
+                "x" * 20000,
+            )
+        )
+        self.assertTrue(result["passed"])
+        self.assertGreater(result["total_bytes"], 20000)
+
+    def test_utf8_and_multiple_blocks_count_in_complete_envelope(self) -> None:
+        """Count UTF-8 bytes across all returned blocks."""
+        messages = self.messages(
+            "xcsh://terraform-documentation/?search=port", "é" * 1900
+        )
+        messages[1]["content"].append({"type": "text", "text": "é" * 1900})
+        self.assertFalse(terraform_tool_response_budget(messages)["passed"])
+
+    def test_unmatched_or_duplicate_terraform_tool_results_fail_audit(self) -> None:
+        """Missing or repeated results cannot establish measured acceptance."""
+        messages = self.messages("xcsh://terraform-documentation/?search=port", "ok")
+        self.assertFalse(
+            terraform_tool_response_budget([*messages, messages[1]])["passed"]
+        )
+        self.assertFalse(terraform_tool_response_budget(messages[:-1])["passed"])
+
+    def test_slashless_discovery_is_measured(self) -> None:
+        """The router accepts discovery hosts without a trailing slash."""
+        result = terraform_tool_response_budget(
+            self.messages("xcsh://terraform-documentation?search=port", "x" * 5000)
+        )
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["measured_results"], 1)
+
+    def test_call_ids_are_strings_and_unique_across_all_tools(self) -> None:
+        """Other calls cannot reuse a Terraform read identity."""
+        for invalid in [7, [], {}, None, ""]:
+            messages = self.messages(
+                "xcsh://terraform-documentation/?search=port", "ok"
+            )
+            messages[0]["content"][0]["id"] = invalid
+            messages[1]["toolCallId"] = invalid
+            self.assertFalse(terraform_tool_response_budget(messages)["passed"])
+        messages = self.messages("xcsh://terraform-documentation/?search=port", "ok")
+        messages[0]["content"].append(
+            {"type": "toolCall", "id": "a", "name": "bash", "arguments": {}}
+        )
+        self.assertFalse(terraform_tool_response_budget(messages)["passed"])
+        self.assertFalse(terraform_tool_response_budget([messages[1]])["passed"])
+
+    def test_lone_surrogate_json_is_escaped_without_crashing(self) -> None:
+        """Valid escaped JSON strings must remain measurable."""
+        messages = self.messages(
+            "xcsh://terraform-documentation/?search=port", "\ud800"
+        )
+        result = terraform_tool_response_budget(messages)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["measured_results"], 1)

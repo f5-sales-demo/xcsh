@@ -31,6 +31,7 @@ from model_trace import (
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
+    terraform_tool_response_budget,
     validate_hcl_drafting_coverage,
     validate_model_activation,
     validate_model_subset_identity,
@@ -206,6 +207,7 @@ for case in cases:
             """Remove view parameters while retaining exact property anchors."""
             return re.sub(r"\?[^#]*", "", uri).rstrip(".,;")
 
+        response_budget = terraform_tool_response_budget(messages)
         successful_reads = successful_read_paths(messages)
         expected = case["expected"]
         required_reads = case.get("model_expectations", {}).get("must_read", [])
@@ -323,13 +325,19 @@ for case in cases:
             )
         )
         final_text = final_assistant_text(messages)
-        passed = passed and completed_successfully and bool(final_text.strip())
+        passed = (
+            passed
+            and completed_successfully
+            and bool(final_text.strip())
+            and response_budget["passed"]
+        )
         results.append(
             {
                 "id": case["id"],
                 "kind": case["kind"],
                 "passed": passed,
                 "completed_successfully": completed_successfully,
+                "tool_response_budget": response_budget,
                 "model_ms": (time.perf_counter() - start) * 1000,
                 "exit_code": result.returncode,
                 "read_uris": reads,

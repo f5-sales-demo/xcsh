@@ -18,6 +18,7 @@ from model_trace import (
     has_clarification_question,
     required_read_coverage,
     successful_read_paths,
+    terraform_tool_response_budget,
     validate_model_activation,
     validate_model_subset_identity,
 )
@@ -176,6 +177,8 @@ def transcript_summary(
         for part in message.get("content", [])
         if part.get("type") == "text"
     )
+    response_budget = terraform_tool_response_budget(messages)
+    successful = successful and response_budget["passed"]
     reads = successful_read_paths(messages)
     citations = re.findall(r"xcsh://terraform-documentation/[^\s)\]`]+", text)
 
@@ -187,6 +190,7 @@ def transcript_summary(
     return {
         "completed": True,
         "completed_successfully": successful,
+        "tool_response_budget": response_budget,
         "successful_reads": reads,
         "citations": citations,
         "required_reads_verified": successful
