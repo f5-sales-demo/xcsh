@@ -151,6 +151,10 @@ export function propertyQueryTerms(text: string): string[] {
 			index % 2
 				? part
 				: part
+						.replace(
+							/\b(primary|secondary)(?=\s+(?:(?:cookie|HMAC)\s+){1,3}keys?\b)/gi,
+							term => `${term} ${term.toLowerCase() === "primary" ? "prim" : "sec"}`,
+						)
 						.replace(/\bautonomous[-\u2010-\u2015]system number\b/gi, "autonomous system number")
 						.replace(/\bregular[-\u2010-\u2015]expressions?\b/gi, value =>
 							value.replace(/[-\u2010-\u2015]/, " "),

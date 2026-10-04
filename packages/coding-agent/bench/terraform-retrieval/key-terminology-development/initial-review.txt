@@ -1,0 +1,8 @@
+**Do not approve as written.** Two issues in the [replacement](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:155):
+
+- **P2 — Original descriptive terms are lost.** `primary HMAC key` becomes `prim HMAC key`, removing `primary`; secondary behaves identically. Because schema-side `propertyTerms` stays unchanged, descriptions containing the full words lose that matching term. Preserve the original term when adding the abbreviation.
+- **P2 — Bare key meanings are conflated.** `{0,3}` permits plain `primary key` and `secondary key`, including database terminology. The replacement applies without evidence that the intended meaning is the existing `prim_key`/`sec_key` fields. Restrict abbreviation expansion to supported key contexts.
+
+The intended cookie/HMAC mapping reaches `prim_key` → `prim`, `key` and `sec_key` → `sec`, `key`. The added replacement preserves modifiers, quoted spans, dotted paths, schema `propertyTerms`, and polarity tokens.
+
+The four passing tests do not cover descriptive-term retention or unrelated key meanings. I reused the reported results; no tests or benchmark prompts were run. The reported **103/140 versus 101/140** is regression evidence only—not qualification or release approval.
