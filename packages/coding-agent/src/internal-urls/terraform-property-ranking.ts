@@ -145,6 +145,11 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 export function propertyQueryTerms(text: string): string[] {
 	text = text
 		.replace(/\bhow\s+long\b/gi, "duration")
+		.replace(/\bminimum\b/gi, "min minimum")
+		.replace(/\bmaximum\b/gi, "max maximum")
+		.replace(/\bdecrypt(?:s|ing)?\b/gi, "decryption decrypt")
+		.replace(/\bcredential(?:s)?\b/gi, "cred credential")
+		.replace(/\binactive\b|\bno[ -]traffic\b/gi, "idle")
 		.replace(/\b(?:lasts|lasting)\b/gi, "duration")
 		.replace(/\bcookie\s+(?:session\s+)?(?:persistence|stickiness)\b/gi, "cookie affinity")
 		.replace(/\b(?:session\s+)?persistence(?=[^,.!?;]*\bcookie\b)/gi, "affinity");

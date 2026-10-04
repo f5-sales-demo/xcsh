@@ -524,3 +524,17 @@ test("protocol slash forms share documented HTTP2 tokens", () => {
  expect(propertyRequestedText("Where do I write the custom block-page body?")).toBe("the custom block-page body?");
  expect(propertyRequestsBlock("Declare the response block")).toBe(true);
 });
+
+
+test("descriptive minimum version retains exact abbreviated field evidence", () => {
+ const scope=preparePropertyScope([row("tls.custom_security.min_version","Minimum protocol version."),row("tls.custom_security.version","Protocol version.")]);
+ expect(rankPropertyScope("Find the minimum TLS version",scope)[0]?.schema_path).toBe("tls.custom_security.min_version");
+ expect(propertyQueryTerms("minimum TLS version")).toContain("min");
+});
+
+
+test("query vocabulary supplements schema abbreviations without changing original terms", () => {
+ expect(propertyQueryTerms("credential maximum minimum decrypts inactive")).toEqual(expect.arrayContaining(["cred","credential","max","min","decryption","idle"]));
+ const scope=preparePropertyScope([row("secret.decryption_provider","Decryption provider name."),row("secret.store_provider","Store provider name.")]);
+ expect(rankPropertyScope("Locate the provider that decrypts secret bytes",scope)[0]?.schema_path).toBe("secret.decryption_provider");
+});
