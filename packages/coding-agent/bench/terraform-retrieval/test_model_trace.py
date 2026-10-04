@@ -140,12 +140,20 @@ class ModelSubsetIdentityTests(unittest.TestCase):
 
     def test_unchanged_subset_passes(self) -> None:
         """Object key order does not change a case."""
-        case: dict[str, object] = {"id": "one", "prompt": "Terraform name", "expected": ["leaf"]}
+        case: dict[str, object] = {
+            "id": "one",
+            "prompt": "Terraform name",
+            "expected": ["leaf"],
+        }
         validate_model_subset_identity([dict(case)], [case])
 
     def test_edited_prompt_or_expected_destination_rejects(self) -> None:
         """Selecting a case does not authorize editing its labels."""
-        case: dict[str, object] = {"id": "one", "prompt": "Terraform name", "expected": ["leaf"]}
+        case: dict[str, object] = {
+            "id": "one",
+            "prompt": "Terraform name",
+            "expected": ["leaf"],
+        }
         for edited in [
             dict(case, prompt="Terraform other"),
             dict(case, expected=["other"]),
@@ -155,7 +163,10 @@ class ModelSubsetIdentityTests(unittest.TestCase):
 
     def test_read_expectations_cannot_change(self) -> None:
         """A model case includes the same required reads as its frozen source."""
-        case: dict[str, object] = {"id": "one", "model_expectations": {"must_read": ["leaf"]}}
+        case: dict[str, object] = {
+            "id": "one",
+            "model_expectations": {"must_read": ["leaf"]},
+        }
         with self.assertRaisesRegex(ValueError, "changed frozen case"):
             validate_model_subset_identity(
                 [{"id": "one", "model_expectations": {"must_read": []}}], [case]
