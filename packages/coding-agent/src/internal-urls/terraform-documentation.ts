@@ -1040,7 +1040,16 @@ export function terraformProviderMention(search: string, names: readonly string[
 			["network_secondary_dns_zone_transfer", /\bsecondary[ -]dns\b/i],
 			["network_dnslb_health_checks", /\bdns[ -]load[ -]balancer\b.*\bhealth[ -]checks?\b/i],
 		];
-		const matching = families.filter(([name, expression]) => names.includes(name) && expression.test(search));
+		const aliasQuery = search.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+		const requestedAllowlist =
+			/\ballowlists?\s+data[ -]source\b|\bdata[ -]source\b[^.!?;]*\ballowlists?\b|\ballowlist\s+(?:discovery|input|output)\b/i.test(
+				aliasQuery,
+			);
+		const negated = /\b(?:not|no|never|without|excluding)\b[^.!?;]*\ballowlist/i.test(aliasQuery);
+		const matching =
+			requestedAllowlist && !negated
+				? families.filter(([name, expression]) => names.includes(name) && expression.test(aliasQuery))
+				: [];
 		if (matching.length === 1) return matching[0]![0];
 		if (matching.length > 1) return undefined;
 	}

@@ -112,7 +112,7 @@ export function propertyWorkloadArchitecture(text: string): "stateless" | "state
 export function propertyWorkloadPortCount(text: string): "single" | "multiple" | undefined {
 	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	if (
-		/\b(?:not|without|maybe|possibly)\b[^.!?;]*\b(?:one|single|multiple|multi)[ -]?(?:public[ -]?)?ports?\b/i.test(
+		/\b(?:not|no|never|without|maybe|possibly)\b[^.!?;]*\b(?:one|single|multiple|multi)[ -]?(?:public[ -]?)?ports?\b/i.test(
 			query,
 		)
 	)
@@ -274,7 +274,7 @@ export function propertyConflictingNamedScope(text: string): boolean {
 	);
 }
 export function propertyInvalidExcludedScope(text: string): boolean {
-	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*-[a-z0-9_-]+/.test(propertyScopeText(text));
+	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*(?:[-/:])[a-z0-9_/-]+/.test(propertyScopeText(text));
 }
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
 	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");

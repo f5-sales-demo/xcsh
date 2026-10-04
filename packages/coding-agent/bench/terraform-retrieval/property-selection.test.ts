@@ -644,3 +644,11 @@ test("public port count cannot be inferred from negation or alternative counts",
  for(const q of ["stateless workload port with one or multiple public ports","stateless workload port not necessarily on one public port","stateless workload port (for example one public port)"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
  expect(selectPropertyDestination("stateless workload TLS port with multiple public ports",[a,b]).destinations[0]?.schema_path).toBe(b.schema_path);
 });
+
+
+test("negated public port counts cannot select rejected workload architecture", () => {
+ const a={...row("service.advertise_on_public.port.tls.port",40),provider_name:"workload"};
+ const b={...row("service.advertise_on_public.multi_ports.ports.tls.port",100),provider_name:"workload"};
+ for(const q of ["stateless workload TLS port no single public port","stateless workload TLS port never on one public port"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
+ for(const token of ["detection_settings/foo","detection_settings:bogus"])expect(selectPropertyDestination("Find action outside "+token,[row("detection_settings.action",40)]).kind).toBe("none");
+});

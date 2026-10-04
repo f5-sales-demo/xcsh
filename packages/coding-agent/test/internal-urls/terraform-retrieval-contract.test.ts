@@ -1044,3 +1044,13 @@ test("allowlist product-role wording resolves the maintained network data source
 	expect(terraformProviderMention("dns_load_balancer reference to CDN allowlist", names)).toBe("dns_load_balancer");
 	expect(terraformProviderMention("Compare CDN allowlist with Regional Edge allowlist", names)).toBeUndefined();
 });
+
+test("allowlist references cannot capture a prose resource owner", () => {
+	const names = ["http_loadbalancer", "network_cdn"];
+	for (const q of [
+		"Find the field on an HTTP load balancer resource that references the CDN allowlist",
+		"HTTP load balancer resource without a CDN allowlist",
+		"HTTP load balancer resource (for example CDN allowlist)",
+	])
+		expect(terraformProviderMention(q, names)).toBe("http_loadbalancer");
+});
