@@ -133,6 +133,19 @@ export function selectPropertyDestination(
 	if (propertyUncertainGrouping(queryText))
 		return { kind: "choices", destinations: [...input].slice(0, 5), reason: "Uncertain or alternative grouping key" };
 	if (propertyGroupingKey(queryText)) {
+		const matched = input.filter(row => propertyMatchesGrouping(queryText, row));
+		if (
+			matched.some(row =>
+				identityPeers.some(
+					peer =>
+						peer.schema_path === row.schema_path &&
+						peer.description === row.description &&
+						(peer.provider_type !== row.provider_type || peer.provider_name !== row.provider_name),
+				),
+			)
+		)
+			return { kind: "choices", destinations: [...input].slice(0, 5), reason: "Missing provider identity or role" };
+
 		input = input.filter(row => propertyMatchesGrouping(queryText, row));
 		alternatives = alternatives.filter(row => propertyMatchesGrouping(queryText, row));
 		if (!input.length) return { kind: "choices", destinations: [], reason: "Unsupported requested grouping key" };

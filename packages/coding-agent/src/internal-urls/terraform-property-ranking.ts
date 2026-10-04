@@ -188,22 +188,34 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
-export function propertyUncertainGrouping(text: string): boolean {
+function groupingRequest(text: string): { key: string; uncertain: boolean } | undefined {
 	const request = propertyRequestedText(text) ?? text;
-	return /\b(?:not|no|without|maybe)\b[^.!?;]*\b(?:grouped|keyed)\s+by\b|\b(?:grouped|keyed)\s+by\s+[^.!?;]*\b(?:or|and)\b/i.test(
-		request,
-	);
+	const match =
+		/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?(?:(`|")([^`"]+)\1|([a-z][a-z0-9_-]*(?:\s+[a-z][a-z0-9_-]*)*))/i.exec(
+			request,
+		);
+	if (!match) return undefined;
+	const key = (match[2] ?? match[3] ?? "").split(/[,;.!?]|\b(?:for|in|under|within|on|with|or|and)\b/i)[0]!.trim();
+	return { key, uncertain: /\b(?:not|no|never|without|maybe|possibly|or|and)\b/i.test(request) };
+}
+export function propertyUncertainGrouping(text: string): boolean {
+	return groupingRequest(text)?.uncertain ?? false;
 }
 export function propertyGroupingKey(text: string): string | undefined {
-	const request = propertyRequestedText(text) ?? text;
-	return request.match(/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?([a-z][a-z0-9_-]*)/i)?.[1];
+	return groupingRequest(text)?.key;
 }
 export function propertyMatchesGrouping(text: string, candidate: PropertyCandidate): boolean {
 	const key = propertyGroupingKey(text);
 	if (!key) return true;
-	const terms = propertyQueryTerms(key);
-	const evidence = new Set(propertyTerms(`${candidate.schema_path} ${candidate.description}`));
-	return candidate.type === "map" && terms.length > 0 && terms.every(term => evidence.has(term));
+	const terms = propertyTerms(key);
+	const relations = [...candidate.description.matchAll(/\bkeyed\s+by\s+([^.;\n]+)/gi)].map(match =>
+		propertyTerms(match[1]!),
+	);
+	return (
+		candidate.type === "map" &&
+		terms.length > 0 &&
+		relations.some(relation => terms.every(term => relation.includes(term)))
+	);
 }
 export function propertyRequestedType(text: string): string | undefined {
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return undefined;
@@ -303,6 +315,7 @@ export function propertyInvalidExcludedScope(text: string): boolean {
 }
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
 	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	request = request.replace(/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?(?:`[^`]+`|"[^"]+"|[a-z][a-z0-9_-]*)/gi, " ");
 	const requiredPaths = propertyExplicitSchemaPaths(text);
 	const excluded = new Set([
 		...propertyExcludedSchemaIdentifiers(text),

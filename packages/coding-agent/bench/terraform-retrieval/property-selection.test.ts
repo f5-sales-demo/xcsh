@@ -680,3 +680,15 @@ test("grouping cannot hide an unresolved provider role", () => {
  const data={...resource,provider_type:"data-sources",path:"data",score:39};
  expect(selectPropertyDestination("Locate values grouped by region",[resource,data]).kind).toBe("choices");
 });
+
+
+test("grouping keys require exact documented relationships and preserve role ambiguity", () => {
+ const r={...row("values",40),type:"map",description:"Values keyed by region."};
+ for(const key of ["`region`","\"region\""])expect(selectPropertyDestination(`Locate values grouped by ${key}`,[r]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Locate values grouped by region code",[r]).kind).not.toBe("leaf");
+ expect(selectPropertyDestination("Locate values grouped by region_code",[{...r,description:"Values keyed by region code."}]).kind).toBe("leaf");
+ const other={...r,description:"Keyed by service name; values contain region information."};
+ expect(selectPropertyDestination("Locate values grouped by region",[other]).kind).not.toBe("leaf");
+ for(const q of ["Locate values never grouped by region","Locate values grouped by region, not region"])expect(selectPropertyDestination(q,[r]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate values grouped by region",[r,{...r,provider_type:"data-sources",type:"list",path:"data"}]).kind).toBe("choices");
+});
