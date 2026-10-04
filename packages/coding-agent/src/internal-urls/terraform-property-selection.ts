@@ -53,11 +53,11 @@ function rawContradicts(query: Set<string>, candidate: PropertyCandidate, proper
 			(query.has(b) && !query.has(a) && path.has(a) && !path.has(b)),
 	);
 }
-export function selectPropertyDestination(
+function selectPropertyDestinationInternal(
 	queryText: string,
 	input: readonly RankedProperty[],
 	alternatives: readonly RankedProperty[] = [],
-	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
+	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean; candidatePoolComplete?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
 	const termCache = new Map<string, string[]>(),
 		queryCache = new Map<string, string[]>();
@@ -640,4 +640,13 @@ export function selectPropertyDestination(
 	if (second && first.score < second.score * 1.3)
 		return { kind: "choices", destinations: ranked.slice(0, 5), reason: "Close competing destinations" };
 	return { kind: "leaf", destinations: [first], reason: "Separated candidate with supported branch context" };
+}
+
+export function selectPropertyDestination(
+	...args: Parameters<typeof selectPropertyDestinationInternal>
+): ReturnType<typeof selectPropertyDestinationInternal> {
+	const decision = selectPropertyDestinationInternal(...args);
+	return decision.kind === "leaf" && args[3]?.candidatePoolComplete === false
+		? { ...decision, kind: "choices", reason: "Retrieval candidate limit reached; narrow the scope" }
+		: decision;
 }

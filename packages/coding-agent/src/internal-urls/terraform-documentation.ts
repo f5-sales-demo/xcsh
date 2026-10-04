@@ -1703,13 +1703,20 @@ export class TerraformDocumentationRepository {
 						: ["timeouts"]
 					: [];
 
-				const ranked = searchPropertyIndex(db, search, {
-					providerType: role,
-					providerName: provider,
-					schemaPaths: timeoutPaths,
-					filters,
-					node: node ?? undefined,
-				}).filter(row => lifecycle?.field || !propertyRequestsBlock(search) || row.anchor === "section");
+				const poolStatus: { truncated?: boolean } = {};
+				const ranked = searchPropertyIndex(
+					db,
+					search,
+					{
+						providerType: role,
+						providerName: provider,
+						schemaPaths: timeoutPaths,
+						filters,
+						node: node ?? undefined,
+					},
+					500,
+					poolStatus,
+				).filter(row => lifecycle?.field || !propertyRequestsBlock(search) || row.anchor === "section");
 				const genericConfigure =
 					/\bconfigure\b/i.test(search) && !propertyRequestedText(search) && !propertyRequestedBlockText(search);
 				const aliasClauses = [
@@ -1789,6 +1796,7 @@ export class TerraformDocumentationRepository {
 					const decision = selectPropertyDestination(search, ranked, alternatives, {
 						lifecycle,
 						identityResolved: Boolean(provider && role),
+						candidatePoolComplete: poolStatus.truncated !== true,
 					});
 
 					if (decision.kind === "choices" && first) {

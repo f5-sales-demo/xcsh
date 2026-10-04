@@ -185,7 +185,10 @@ export function searchPropertyIndex(
 		schemaPaths?: string[];
 	},
 	limit = 500,
+	diagnostics?: { truncated?: boolean },
 ) {
+	if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000) throw new Error("Invalid property candidate limit");
+	if (diagnostics) diagnostics.truncated = false;
 	if (propertyInvalidExcludedScope(query)) return [];
 	const terms = propertyQueryTerms(query);
 	if (!terms.length) return [];
@@ -247,7 +250,7 @@ export function searchPropertyIndex(
 		.query(
 			`SELECT provider_type,provider_name,schema_path FROM property_search WHERE ${clauses.join(" AND ")} ORDER BY bm25(property_search),provider_type,provider_name,schema_path LIMIT ?`,
 		)
-		.all(...args, limit) as { provider_type: string; provider_name: string; schema_path: string }[];
+		.all(...args, limit + 1) as { provider_type: string; provider_name: string; schema_path: string }[];
 	const requested = propertyQueryTerms(propertyRequestedText(query) ?? query);
 	const leafKeys = [
 		...new Set(
@@ -264,10 +267,14 @@ export function searchPropertyIndex(
 				.query(
 					`SELECT provider_type,provider_name,schema_path FROM property_terms property_search WHERE ${clauses.slice(1).join(" AND ") || "1=1"} AND leaf IN (${leafKeys.map(() => "?").join(",")}) ORDER BY provider_type,provider_name,schema_path LIMIT ?`,
 				)
-				.all(...args.slice(1), ...leafKeys, limit) as typeof candidates);
+				.all(...args.slice(1), ...leafKeys, limit + 1) as typeof candidates);
+	if (diagnostics) diagnostics.truncated = candidates.length > limit || exact.length > limit;
 	const union = [
 		...new Map(
-			[...exact, ...candidates].map(row => [`${row.provider_type}:${row.provider_name}:${row.schema_path}`, row]),
+			[...exact.slice(0, limit), ...candidates.slice(0, limit)].map(row => [
+				`${row.provider_type}:${row.provider_name}:${row.schema_path}`,
+				row,
+			]),
 		).values(),
 	];
 	const groups = new Map<string, string[]>();

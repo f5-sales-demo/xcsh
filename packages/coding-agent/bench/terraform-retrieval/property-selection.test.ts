@@ -812,3 +812,13 @@ test("matching aliases cannot use parent paths or rejected operation and prose",
  for(const q of ["Which field specifies routing instead of matching?","Which field specifies matching or routing?"])expect(selectPropertyDestination(q,[d]).kind).toBe("choices");
  for(const description of ["Domain names are never matched to this load balancer","matched is only an example"])expect(selectPropertyDestination("Which field specifies matching?",[{...d,description}]).kind).toBe("choices");
 });
+
+test("incomplete retrieval cannot establish a unique leaf",()=>{
+ const r={...row("connection.port",40),description:"Listening port."};
+ const ordinary=selectPropertyDestination("Locate connection port",[r],[],{identityResolved:true});
+ expect(ordinary.kind).toBe("leaf");
+ const limited=selectPropertyDestination("Locate connection port",[r],[],{identityResolved:true,candidatePoolComplete:false});
+ expect(limited.kind).toBe("choices");
+ expect(limited.destinations).toEqual(ordinary.destinations);
+ expect(limited.reason).toContain("candidate limit");
+});

@@ -315,3 +315,27 @@ test("outside a named underscore branch excludes it before indexed ranking", () 
  expect(searchPropertyIndex(db,"Find the action inside detection_settings",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["detection_settings.policy.action"]);
  db.close();
 });
+
+test("indexed candidate limits report hidden matches before selection",()=>{
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");
+ const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(let i=0;i<8;i++)put.run("resources","fixture","branch"+i+".port","p"+i,"schema-port","Listening port.");
+ populatePropertyIndex(db);
+ const limited:{truncated?:boolean}={};
+ expect(searchPropertyIndex(db,"Listening port",{providerName:"fixture"},2,limited).length).toBeLessThanOrEqual(4);
+ expect(limited.truncated).toBe(true);
+ const complete:{truncated?:boolean}={};
+ searchPropertyIndex(db,"Listening port",{providerName:"fixture"},20,complete);
+ expect(complete.truncated).toBe(false);
+ db.close();
+});
+test("invalid candidate limits fail before diagnostics or SQL",()=>{
+ const db=new Database(":memory:");
+ for(const limit of [-2,0,1.5,NaN,Infinity]){
+ const status={truncated:true};
+ expect(()=>searchPropertyIndex(db,"port",{},limit,status)).toThrow("Invalid property candidate limit");
+ expect(status.truncated).toBe(true);
+ }
+ db.close();
+});
