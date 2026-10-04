@@ -1096,7 +1096,9 @@ export function terraformProviderMention(search: string, names: readonly string[
 				query.includes(` ${phrase} managed resource `) ||
 				["stateless", "stateful", "stateless service", "stateful service"].some(modifier => {
 					const ownership = ` ${phrase} ${modifier} resource `;
-					const affirmative = search.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+					const affirmative = search
+						.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
+						.replace(/\be\.g\./gi, "for example");
 					return affirmative
 						.split(/[.!?;,]+/)
 						.some(

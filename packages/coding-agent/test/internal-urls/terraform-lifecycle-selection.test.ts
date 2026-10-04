@@ -125,9 +125,40 @@ test("transport context cannot erase an explicit lifecycle operation in another 
 		expect(interpretTerraformLifecycle(q)).toBeUndefined();
 });
 
-test("later transport correction prevents lifecycle certainty", async () => {
+test("later transport correction preserves lifecycle uncertainty", async () => {
 	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
 	expect(
 		interpretTerraformLifecycle("Which timeout governs deletion? I mean the connection, not the resource."),
 	).toBeUndefined();
+});
+
+test("past-tense and implicit later transport corrections retain ambiguity", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const q of [
+		"Which timeout governs deletion? I meant the connection, not the resource.",
+		"Which timeout governs deletion? The connection, not the resource.",
+	])
+		expect(interpretTerraformLifecycle(q)).toBeUndefined();
+});
+
+test("a rejected transport correction preserves explicit resource lifecycle", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const q of [
+		"Which timeout governs deletion? I mean the resource, not the connection.",
+		"Which timeout governs deletion? I meant the resource instead of the connection.",
+	])
+		expect(interpretTerraformLifecycle(q)?.operations).toEqual(["delete"]);
+});
+
+test("reversed corrections retain the affirmative transport target", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const q of [
+		"Which timeout governs deletion? I mean not the resource but the connection.",
+		"Which timeout governs deletion? Not the resource, rather the connection.",
+	])
+		expect(interpretTerraformLifecycle(q)).toBeUndefined();
+	expect(
+		interpretTerraformLifecycle("Which timeout governs deletion? Not the connection, rather the resource.")
+			?.operations,
+	).toEqual(["delete"]);
 });

@@ -9,11 +9,17 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 	const transport = /\b(?:connection|idle|inactive|request|response|tls|handshake|probe|stream)\b|\bno[ -]traffic\b/i;
 	if (
 		!clauses.length ||
-		query
-			.split(/[.!?;]+/)
-			.some(
-				clause => transport.test(clause) && /\b(?:i mean|instead|rather|concerns?|refers? to)\b/i.test(clause),
-			) ||
+		query.split(/[.!?;]+/).some(clause => {
+			const replacement = clause.match(
+				/\bnot\s+(?:the\s+)?(?:resource|connection)\b[^.!?;]*?\b(?:but|rather)\s+(?:the\s+)?(resource|connection)\b/i,
+			)?.[1];
+			const affirmative = replacement ?? clause.split(/\b(?:not|rather than|instead of)\b/i)[0]!;
+			return (
+				transport.test(affirmative) &&
+				(/\b(?:i mean|i meant|instead|rather|concerns?|refers? to)\b/i.test(clause) ||
+					/\bnot\s+(?:the\s+)?resource\b/i.test(clause))
+			);
+		}) ||
 		clauses.some(clause =>
 			transport.test(clause.replace(/\binactive\s+(?:[a-z0-9_-]+\s+){0,2}resource\b/gi, "resource")),
 		)

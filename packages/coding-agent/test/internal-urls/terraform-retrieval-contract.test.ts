@@ -1112,3 +1112,13 @@ test("unparenthesized examples and rejected modifier owners preserve identity", 
 			]),
 		).toBe("http_loadbalancer");
 });
+
+test("abbreviated provider examples cannot capture identity", () => {
+	for (const modifier of ["stateless service", "stateful-service"])
+		expect(
+			terraformProviderMention("Locate HTTP load balancer TLS, e.g. a workload " + modifier + " resource", [
+				"http_loadbalancer",
+				"workload",
+			]),
+		).toBe("http_loadbalancer");
+});
