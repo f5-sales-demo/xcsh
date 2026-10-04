@@ -1,0 +1,11 @@
+**Reject the IP-inference experiment as written.** Retaining only the additive `beginning → beginning start` synonym is defensible; the diff does not justify treating inferred `IP` as field evidence.
+
+- **[P2] IP expansion exceeds the stated scope.** [terraform-property-ranking.ts:155](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:155) accepts `beginning of a server pool` without DHCP, network, or explicit IP context. Generic address ranges also need not be IP ranges. Injecting `ip` completes the `start_ip` leaf match and activates its ranking bonus, giving an assumption the weight of explicit intent.
+
+- **[P2] Negative and conditional mentions receive the same expansion.** [terraform-property-ranking.ts:156](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:156) adds `start IP` regardless of whether the phrase is negated or conditional. `affirmativeComparisonText` does not guard these cases; the ranker counts the inserted terms positively. Preserving words such as `not` does not preserve their relationship to the inferred field.
+
+- **[P2] The tests cannot establish correct field evidence.** [terraform-range-terminology.test.ts:19](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/test/internal-urls/terraform-range-terminology.test.ts:19) uses synthetic paths and descriptions with no source attribution, and checks only the winning path among three candidates. It does not establish the correct real schema branch or exclude plausible competing start fields. The first test’s `arrayContaining` also silently permits the added `ip`; negative, conditional, and unsupported-context cases are absent.
+
+The original `beginning` token survives. Quote/path shielding and `propertyTerms` are unchanged. The two replacements temporarily produce `beginning start start IP`, but `propertyTerms` deduplicates the returned terms, so this causes no duplicate scoring.
+
+Recommendation: drop the IP-injection replacement; retain only source-backed lexical expansion pending appropriate evidence. The reported three passing tests are **not qualification**. Static review only; no edits, contacts, subagents, or benchmark prompts.

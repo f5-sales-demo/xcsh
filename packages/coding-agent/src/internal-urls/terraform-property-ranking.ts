@@ -151,6 +151,7 @@ export function propertyQueryTerms(text: string): string[] {
 			index % 2
 				? part
 				: part
+						.replace(/\bbeginning\b/gi, word => `${word} start`)
 						.replace(
 							/\b(primary|secondary)(?=\s+(?:(?:cookie|HMAC)\s+){1,3}keys?\b)/gi,
 							term => `${term} ${term.toLowerCase() === "primary" ? "prim" : "sec"}`,

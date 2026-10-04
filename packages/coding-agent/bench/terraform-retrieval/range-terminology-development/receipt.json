@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "correct_leaf_count": 103,
+  "answerable": 140,
+  "top5_count": 127,
+  "baseline_top5": 126,
+  "ip_inference_rejected": true,
+  "pin_changed": false,
+  "remaining": "Lexical expansion does not qualify leaf accuracy. Frozen independent benchmark remains required."
+}

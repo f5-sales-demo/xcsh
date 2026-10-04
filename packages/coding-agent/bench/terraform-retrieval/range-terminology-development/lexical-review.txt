@@ -1,0 +1,7 @@
+The narrow lexical expansion is sound. No blocking findings.
+
+- [The change](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:154) adds `start` while retaining `beginning`, only outside the existing quote/path spans.
+- `propertyTerms` and polarity logic remain unchanged; the addition introduces no IP inference.
+- Focused tests passed: **3 tests, 7 assertions**, covering retained terms, backtick literals, dotted paths, absence of inferred `ip`, and preservation of `not`.
+
+This supports the lexical change’s correctness, without establishing broader retrieval improvement. No files changed.
