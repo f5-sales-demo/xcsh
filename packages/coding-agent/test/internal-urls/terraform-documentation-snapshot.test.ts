@@ -13,6 +13,7 @@ import {
 	terraformHash,
 	verifyTerraformSnapshot,
 } from "../../src/internal-urls/terraform-documentation";
+import { searchPropertyIndex } from "../../src/internal-urls/terraform-property-index";
 import type { InternalUrl } from "../../src/internal-urls/types";
 
 async function fixture(
@@ -563,6 +564,21 @@ test("selected property blocks refine to direct fields without changing explicit
 		expect((await read("specify public IP address for origin server")).content).toContain(
 			"#schema-origin_servers--public_ip--ip",
 		);
+		const materialized = (await repo.database()).filename;
+		const writable = new Database(materialized);
+		writable
+			.query("UPDATE property_terms SET leaf=?,context=?,description_terms=?,alias_terms=? WHERE anchor=?")
+			.run("[]", "[]", "[]", "[]", "schema-origin_servers--public_ip--ip");
+		writable.close();
+		const query = "specify public IP address for origin server";
+		const ranked = searchPropertyIndex(await repo.database(), query, {
+			providerName: "fixture",
+			providerType: "resources",
+		});
+		const field = ranked.find(row => row.anchor === "schema-origin_servers--public_ip--ip")!;
+		expect(field.score).toBe(0);
+		expect((await read(query)).content).toContain("Score: " + field.score);
+		expect((await read(query)).content).toContain("Narrowing choices");
 		expect((await read("configure public IP origin server block")).content).toContain("#section");
 		const selected = (await read("Select public IP origin server configuration")).content;
 		const enabled = (await read("Enable public IP origin server configuration")).content;

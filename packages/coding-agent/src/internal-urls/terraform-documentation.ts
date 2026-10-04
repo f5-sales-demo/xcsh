@@ -18,6 +18,7 @@ import {
 	propertyRequestsBlock,
 	propertyRequestsCollection,
 } from "./terraform-property-ranking";
+import { refineRankedProperty } from "./terraform-property-refinement";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -1746,12 +1747,8 @@ export class TerraformDocumentationRepository {
 						const metadata = JSON.parse(record.metadata) as TerraformMetadata;
 						const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);
 						if (refined[0]?.document_id === metadata.id) {
-							const field = db
-								.query(
-									"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE path=? AND anchor=?",
-								)
-								.get(ranked[0].path, refined[0].anchor) as RankedProperty | null;
-							if (field) ranked.splice(0, 1, { ...field, score: ranked[0].score, coverage: ranked[0].coverage });
+							const refinedRows = refineRankedProperty(ranked, ranked[0].path, refined[0].anchor);
+							ranked.splice(0, ranked.length, ...refinedRows);
 						}
 					}
 					const first = ranked[0];
