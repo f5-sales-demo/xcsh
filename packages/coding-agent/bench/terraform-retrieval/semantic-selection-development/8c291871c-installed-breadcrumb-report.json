@@ -1,0 +1,43 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-017",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 97423.5822709743,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "`name` holds the **referenced certificate object\u2019s name**\u2014not its domain name or Terraform label.\n\nFor the `xcsh_workload` data source in provider **v12.4.0**:\n- It is a **computed string** returned by the read-only lookup, not an input you set.\n- Documented upstream restrictions are **1\u2013128 bytes**.\n- This reference field documents **no character-pattern restriction**. Those limits are upstream metadata, not provider-enforced validators.\n\n[Exact field documentation](xcsh://terraform-documentation/documentation/data-sources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/https/tls_cert_params/certificates/index.md?view=context#schema-service--advertise_options--advertise_custom--ports--http_loadbalancer--https--tls_cert_params--certificates--name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 41426,
+        "max_bytes": 18283,
+        "measured_results": 13,
+        "violations": []
+      },
+      "trace_sha256": "0712647b22cdf75b20d3a64f9b8e36e48bf30089c0a36ff4b05ea12514fa1ee6",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "8c291871c0b7ba6baea588d89531ff7d365992db",
+    "binary_sha256": "54916eef40400b6fb9906a3a73bc6681b11b3678a17452408dac975bd8ec31a3",
+    "binary_bytes": 621934048,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "One exposed development case; no broad accuracy qualification.",
+    "Thirteen reads; efficiency still needs improvement."
+  ]
+}
