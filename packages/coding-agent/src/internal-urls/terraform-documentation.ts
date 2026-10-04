@@ -10,6 +10,7 @@ import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
 import { terraformChoiceResponse } from "./terraform-choice-response";
+import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle } from "./terraform-lifecycle";
 import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
 import {
@@ -1800,7 +1801,9 @@ export class TerraformDocumentationRepository {
 						candidatePoolComplete: poolStatus.truncated !== true,
 					});
 
-					const allowedAlternatives = filterSecretRepresentation(search, alternatives);
+					const allowedAlternatives = filterSecretRepresentation(search, alternatives).filter(row =>
+						matchesFieldAccess(row, requestedFieldAccess(search)),
+					);
 					if (decision.kind === "choices" && first) {
 						const equivalent = [
 							...new Map(

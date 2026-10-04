@@ -1,0 +1,6 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_changed": false,
+  "decision": "Reject cross-encoder:32/48topone41/48topfive compared lexical46/48,~650msCPUrerankp95 beforecomplete response. No exposed qualification suite model evaluation performed."
+}

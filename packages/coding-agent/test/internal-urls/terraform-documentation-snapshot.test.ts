@@ -1862,3 +1862,56 @@ test("generic configure requests retain ancestor context through indexed propert
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("explicit input and output requests use field flags through complete resolver", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-field-access-"));
+	try {
+		const pin = await fixture(root),
+			docs = await verifyTerraformSnapshot(root, pin),
+			doc = docs[0]!;
+		doc.metadata.role = "properties";
+		const fields = [
+			{ name: "regions", flags: ["optional", "computed"], description: "Published regions to include." },
+			{ name: "published_regions", flags: ["computed"], description: "Published regions included." },
+		];
+		const body = fields
+			.map(f => `<a id="schema-${f.name}"></a>\n### ${f.name}\nType: \`list\`.\n\n${f.description}\n`)
+			.join("\n");
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = fields.map(f => ({
+			schema_path: [f.name],
+			document_id: doc.metadata.id,
+			anchor: `schema-${f.name}`,
+			description: f.description,
+			aliases: [],
+			relationships: [],
+			flags: f.flags,
+			type: "list",
+		}));
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const read = async (q: string) =>
+			(
+				await repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?provider_type=resources&provider_name=fixture&search=" +
+								encodeURIComponent(q),
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				)
+			).content;
+		const input = await read("Locate the input argument for published regions on xcsh_fixture");
+		expect(input).toContain("#schema-regions");
+		expect(input).not.toContain("#schema-published_regions");
+		const output = await read("Find the output field published regions on xcsh_fixture");
+		expect(output).toContain("#schema-published_regions");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

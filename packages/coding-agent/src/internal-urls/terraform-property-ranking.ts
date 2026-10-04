@@ -1,3 +1,4 @@
+import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 // Deterministic indexed property ranking. Scores are ranking values, never probabilities.
 export interface PropertyCandidate {
 	provider_type: string;
@@ -617,7 +618,9 @@ export function rankPropertyScope(
 	const query = propertyQueryTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	const requestedType = propertyRequestedType(queryText);
+	const access = requestedFieldAccess(queryText);
 	return scope.rows
+		.filter(row => matchesFieldAccess(row, access))
 		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
 		.filter(row => propertyMatchesWorkloadPortCount(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)

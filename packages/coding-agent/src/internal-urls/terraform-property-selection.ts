@@ -1,3 +1,4 @@
+import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle, lifecycleEvidence, type TerraformLifecycleIntent } from "./terraform-lifecycle";
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
@@ -80,6 +81,9 @@ function selectPropertyDestinationInternal(
 	};
 	const contradicts = (query: Set<string>, candidate: PropertyCandidate) =>
 		rawContradicts(query, candidate, propertyTerms);
+	const access = requestedFieldAccess(queryText);
+	input = input.filter(row => matchesFieldAccess(row, access));
+	alternatives = alternatives.filter(row => matchesFieldAccess(row, access));
 	const identityPeers = [...input, ...alternatives];
 	const excludedIdentifiers = propertyExcludedSchemaIdentifiers(queryText);
 	const uncertainExcluded = propertyUncertainExcludedIdentifiers(queryText);

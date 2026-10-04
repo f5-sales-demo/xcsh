@@ -1,0 +1,7 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_changed": false,
+  "decision": "Reject literal binder integration: initial rank gain100/140camewithfalse nesting certainty; saferbinder97/140topone123/140topfive and89correct selections7wrong. Separate dev44correct0wrong46/48topone/topfive; insufficient gain and complete-route evaluation absent."
+}
