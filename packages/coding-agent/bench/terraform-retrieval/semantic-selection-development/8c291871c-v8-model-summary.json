@@ -1,0 +1,28 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "8c291871c0b7ba6baea588d89531ff7d365992db",
+  "binary_sha256": "54916eef40400b6fb9906a3a73bc6681b11b3678a17452408dac975bd8ec31a3",
+  "provider_version": "v12.4.0",
+  "model": "openai-codex/gpt-6.1-sol",
+  "execution_host": "Ubuntu",
+  "cases": 40,
+  "automated_passes": 35,
+  "failed_ids": [
+    "tf1240-003",
+    "tf1240-145",
+    "tf1240-147",
+    "tf1240-002",
+    "tf1240-004"
+  ],
+  "controls_passed": true,
+  "response_budgets_passed": true,
+  "limitations": [
+    "Exposed internally frozen suite; regression only.",
+    "Full HCL field and citation content review still required.",
+    "No same-session continuation qualification; original plan lacks terminal expected field.",
+    "Two ambiguity cases select a role without clarification.",
+    "Broad retrieval accuracy remains below retained >=95 percent gate."
+  ]
+}
