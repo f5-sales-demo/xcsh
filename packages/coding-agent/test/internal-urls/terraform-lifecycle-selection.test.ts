@@ -72,3 +72,13 @@ test("describing operation values does not turn block reads into field reads", a
 		).kind,
 	).toBe("choices");
 });
+
+test("refresh inflections keep documented read lifecycle operation", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	expect(
+		selectPropertyDestination("Which timeout governs refreshing a namespace resource?", rows).destinations[0]
+			?.schema_path,
+	).toBe("timeouts.read");
+	expect(selectPropertyDestination("Which timeout governs refreshing a namespace resource?", rows).kind).toBe("leaf");
+	expect(interpretTerraformLifecycle("Which connection timeout governs refreshing a request?")).toBeUndefined();
+});

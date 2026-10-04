@@ -27,7 +27,7 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 		);
 	const patterns: Array<[string, RegExp]> = [
 		["create", /\b(?:create|creation|creating)\b/i],
-		["read", /\brefresh\b|\bread\s+operation\b|\boperation\s+read\b|\bread\s+timeout\b/i],
+		["read", /\brefresh(?:ing|ed|es)?\b|\bread\s+operation\b|\boperation\s+read\b|\bread\s+timeout\b/i],
 		["update", /\b(?:update|modification|modify|modifying)\b/i],
 		["delete", /\b(?:delete|deletion|destroy|destruction|deleting)\b/i],
 	];
@@ -45,5 +45,5 @@ export function lifecycleEvidence(evidence: string): string {
 		.replace(/\b(?:creation|creating)\b/gi, "create")
 		.replace(/\b(?:destruction|deletion|destroy|deleting)\b/gi, "delete")
 		.replace(/\b(?:modification|modify|modifying)\b/gi, "update")
-		.replace(/\brefresh\b/gi, "read");
+		.replace(/\brefresh(?:ing|ed|es)?\b/gi, "read");
 }
