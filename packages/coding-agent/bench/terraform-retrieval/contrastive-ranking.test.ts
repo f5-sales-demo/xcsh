@@ -576,3 +576,6 @@ test("terminal rejected comparisons preserve trailing requirements and literals"
 test("comparison ranking cannot erase capability clauses or comparison intent",()=>{
  for(const q of ["Which field sets timeout rather than name but supports quantum acceleration?","Which field sets timeout rather than name while supporting encryption?","Which field sets timeout rather than name for latency?","Compare timeout rather than name.","Locate timeout rather than name rather than latency."])expect(propertyQueryTerms(q)).toEqual(propertyTerms(q));
 });
+test("rejected comparisons cannot cross sentences or swallow requirement modifiers",()=>{
+ for(const q of ["Which field sets timeout rather than name plus quantum acceleration?","Which field sets timeout rather than name requires encryption?","Which field sets timeout rather than name excluding encryption?","Which field sets timeout rather than name lacking encryption?","Which field sets timeout? Contrast public port rather than private port.","Which field sets timeout? Rather than private port.","Which field excludes public port rather than private port?"])expect(propertyQueryTerms(q)).toEqual(propertyTerms(q));
+});

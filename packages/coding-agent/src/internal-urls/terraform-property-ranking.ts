@@ -752,12 +752,18 @@ export function affirmativeComparisonText(text: string): string {
 	const match = /\brather than\s+([a-z][a-z0-9_ -]*?)[.!?]?\s*$/i.exec(text);
 	if (
 		!match ||
-		/\b(?:and|with|which|what|where|find|locate|required|mandatory|must|but|while|for|supports?|supporting|rather|than|can|should)\b/i.test(
+		/\b(?:and|with|which|what|where|find|locate|required|mandatory|must|but|while|for|supports?|supporting|rather|than|can|should|plus|requires?|excluding|lacking|except|unless)\b/i.test(
 			match[1]!,
 		)
 	)
 		return text;
 	const before = text.slice(0, match.index).trim().replace(/,$/, "").trim();
-	if (!before || !/\b(?:locate|find|where|which|what)\b/i.test(before) || /\bcompare\b/i.test(before)) return text;
+	if (
+		!before ||
+		/[.!?;]/.test(before) ||
+		!/\b(?:locate|find|where|which|what)\b/i.test(before) ||
+		/\b(?:compare|contrast|excludes?|excluding|avoid)\b/i.test(before)
+	)
+		return text;
 	return before;
 }
