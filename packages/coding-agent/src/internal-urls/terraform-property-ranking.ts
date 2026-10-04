@@ -275,7 +275,7 @@ export function propertyConflictingNamedScope(text: string): boolean {
 	);
 }
 export function propertyInvalidExcludedScope(text: string): boolean {
-	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*(?:[-/:])[a-z0-9_/-]+/.test(propertyScopeText(text));
+	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*(?:[-/:])[a-z0-9_/-]*/.test(propertyScopeText(text));
 }
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
 	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");

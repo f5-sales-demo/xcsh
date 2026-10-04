@@ -1060,3 +1060,8 @@ test("passing and writing values retain schema value intent", () => {
 	expect(propertyRequestedText("Where do I write the custom response body?")).toBe("the custom response body?");
 	expect(propertyRequestedText("How is the protocol enabled or disabled on the service?")).toBe("the protocol");
 });
+
+test("negated allowlist family mentions do not become product owners", () => {
+	for (const q of ["Find the allowlist data source, not CDN", "Find the allowlist data source without CDN"])
+		expect(terraformProviderMention(q, ["network_cdn"])).toBeUndefined();
+});

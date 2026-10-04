@@ -652,3 +652,9 @@ test("negated public port counts cannot select rejected workload architecture", 
  for(const q of ["stateless workload TLS port no single public port","stateless workload TLS port never on one public port"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
  for(const token of ["detection_settings/foo","detection_settings:bogus"])expect(selectPropertyDestination("Find action outside "+token,[row("detection_settings.action",40)]).kind).toBe("none");
 });
+
+
+test("trailing excluded branch punctuation cannot become positive scope", () => {
+ const field=row("detection_settings.action",40);
+ for(const q of ["Where do I write action outside detection_settings/","How do I pass action outside detection_settings:"])expect(selectPropertyDestination(q,[field]).kind).toBe("none");
+});

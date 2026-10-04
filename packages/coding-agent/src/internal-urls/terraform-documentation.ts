@@ -1045,7 +1045,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 			/\ballowlists?\s+data[ -]source\b|\bdata[ -]source\b[^.!?;]*\ballowlists?\b|\ballowlist\s+(?:discovery|input|output)\b/i.test(
 				aliasQuery,
 			);
-		const negated = /\b(?:not|no|never|without|excluding)\b[^.!?;]*\ballowlist/i.test(aliasQuery);
+		const negated = /\b(?:not|no|never|without|excluding)\b/i.test(aliasQuery);
 		const matching =
 			requestedAllowlist && !negated
 				? families.filter(([name, expression]) => names.includes(name) && expression.test(aliasQuery))
