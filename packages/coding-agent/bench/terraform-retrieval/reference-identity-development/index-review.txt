@@ -1,0 +1,10 @@
+Approved for the narrow indexed evidence foundation. No blocking findings.
+
+- Exact provider type/name and direct scope/member binding hold.
+- Equivalent duplicates deduplicate; conflicting identities reject.
+- Partial schemas and invalid versions reject; legacy absence remains compatible.
+- Results use deterministic ordering, validated limits, and `limit + 1` overflow detection.
+- Actual joined SQL uses the scope index plus property primary key; fully bound queries use composite primary-key indexes.
+- Public query behavior, ranking, and pin remain unchanged.
+
+Verified **6/6 index tests pass**, plus in-memory binding, limit, schema, and legacy checks. No files changed. This approval excludes qualification and release.

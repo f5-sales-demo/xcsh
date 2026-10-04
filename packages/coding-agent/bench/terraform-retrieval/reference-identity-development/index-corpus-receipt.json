@@ -1,0 +1,15 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "checks": 4688,
+  "mismatches": 0,
+  "indexed_fields": {
+    "n": 4688
+  },
+  "lookup_p95_ms": 0.9401259999995091,
+  "source_digest": "sha256:5d880f03fb22799b0a16dec62646de415d070a647d4e9e3d22a3481b8d1ba0fb",
+  "focused_tests": 63,
+  "workspace_check": true,
+  "query_changed": false,
+  "pin_changed": false
+}

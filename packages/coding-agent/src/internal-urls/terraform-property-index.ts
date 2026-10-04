@@ -17,6 +17,8 @@ import {
 	propertyTerms,
 	rankPropertyScope,
 } from "./terraform-property-ranking";
+import type { TerraformReferenceIdentity } from "./terraform-reference-evidence";
+import { indexReferenceIdentity, REFERENCE_INDEX_SQL, validateReferenceIndex } from "./terraform-reference-index";
 export interface PropertyIndexSource {
 	sourceCommit: string;
 	sourceIndexSha256: string;
@@ -28,6 +30,7 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 	if (row?.schema_version !== 7) throw new Error("Unsupported property index version");
 
 	validateEnumIndex(db);
+	validateReferenceIndex(db);
 
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
@@ -53,6 +56,7 @@ export function populatePropertyIndex(
  CREATE INDEX property_enum_exact ON property_enum_values(value,provider_name,provider_type);
  CREATE INDEX property_enum_fold ON property_enum_values(ascii_fold,provider_name,provider_type);
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
+	db.exec(REFERENCE_INDEX_SQL);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
 		7,
 		source?.sourceCommit ?? "",
@@ -97,6 +101,7 @@ export function populatePropertyIndex(
 					type?: string;
 					nesting?: string | null;
 					flags?: string[];
+					reference_identity?: TerraformReferenceIdentity;
 					enum_validators?: EnumValidatorEvidence[];
 					enum_extraction_complete?: boolean;
 				}[];
@@ -106,6 +111,8 @@ export function populatePropertyIndex(
 					`${metadata.provider_type}:${metadata.provider_name}:${section.schema_path.join(".")}`,
 				);
 				if (row) {
+					if (section.reference_identity !== undefined)
+						indexReferenceIdentity(db, row, section.reference_identity);
 					if (section.enum_validators !== undefined || section.enum_extraction_complete !== undefined) {
 						if (typeof section.enum_extraction_complete !== "boolean" || !Array.isArray(section.enum_validators))
 							throw new Error("Invalid enum index coverage");
