@@ -878,7 +878,12 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 		!/\b(?:resource|data[ -]source|action)\b\s+(?:is\s+)?(?:documented|defined|specification)\b|\b(?:minimal|root)\s+configuration\b|\b(?:example|usage|guidance)\b/i.test(
 			query,
 		);
-	if (valueLookup) return undefined;
+	if (
+		valueLookup ||
+		(/\bwhere\s+(?:is|are)\s+(?!(?:(?:an?|the)\s+)?(?:resource\b|data[ -]source\b|action\b|xcsh_))/i.test(query) &&
+			propertyRequestedText(query))
+	)
+		return undefined;
 	if (
 		/\bresource\b.*\b(?:documented|specification)\b/i.test(query) &&
 		!/\b(?:attributes?|fields?|property|properties|parameters?|schema path)\b/i.test(query)
@@ -1028,7 +1033,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 	const normalize = (value: string) =>
 		value
 			.toLowerCase()
-			.replace(/load\s+balancer/g, "loadbalancer")
+			.replace(/load[ _-]+balancer/g, "loadbalancer")
 			.replace(/health[ -]+check/g, "healthcheck")
 			.replace(/application[ _-]+firewall/g, "app firewall")
 			.replace(/transit[ _-]+gateway/g, "tgw")

@@ -1,0 +1,16 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 67,
+  "v7_top5": 98,
+  "improved": [
+    "A014",
+    "A033",
+    "A037",
+    "A038"
+  ],
+  "regressed": [],
+  "changes": "Consistentloadbalancerseparatornormalization;passivevaluedocumentationdoesnotpreemptfieldretrieval",
+  "source_tests": 63,
+  "first_scores_preserved": true
+}

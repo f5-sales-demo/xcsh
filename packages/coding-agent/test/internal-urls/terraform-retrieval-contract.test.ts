@@ -992,3 +992,22 @@ test("secure mesh product version identifies its documented site provider", () =
 	expect(terraformProviderMention("Compare secure mesh v2 and network interface", names)).toBeUndefined();
 	expect(terraformProviderMention("xcsh_network_interface with secure mesh v2", names)).toBe("network_interface");
 });
+
+test("provider names normalize load balancer separators consistently", () => {
+	expect(terraformProviderMention("Terraform DNS load balancer resource", ["dns_load_balancer", "dns_proxy"])).toBe(
+		"dns_load_balancer",
+	);
+	expect(
+		terraformProviderMention("Terraform HTTP load balancer resource", ["http_loadbalancer", "dns_load_balancer"]),
+	).toBe("http_loadbalancer");
+});
+
+test("passive value documentation queries are not resource declaration examples", () => {
+	expect(
+		terraformTaskDestination("Where is the email for a Terraform container registry resource documented?"),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Where is the resource documented for creating a registry?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
