@@ -390,6 +390,8 @@ def main() -> None:
     )
 
 
+# Provenance, frozen plans, model identity, output and regression status are distinct evidence inputs.
+# pylint: disable-next=too-many-arguments
 def run_branches(
     command: list[str],
     plans: list[dict[str, Any]],

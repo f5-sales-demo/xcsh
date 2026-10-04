@@ -500,14 +500,16 @@ class RegressionContinuationTests(unittest.TestCase):
         validate_continuation_review(
             freeze, review, cases, eligibility, "review", regression=True
         )
-        for bad_eligibility in [
+        invalid_eligibility_values: list[Any] = [None, "false", [], {}, 1]
+        invalid_eligibility_records: list[dict[str, Any]] = [
             *[
                 {"suite_sha256": "suite", "qualification_eligible": value}
-                for value in [None, "false", [], {}, 1]
+                for value in invalid_eligibility_values
             ],
             {"suite_sha256": "suite"},
             {"qualification_eligible": False, "suite_sha256": "changed"},
-        ]:
+        ]
+        for bad_eligibility in invalid_eligibility_records:
             with self.assertRaises(ValueError):
                 validate_continuation_review(
                     freeze, review, cases, bad_eligibility, "review", regression=True
