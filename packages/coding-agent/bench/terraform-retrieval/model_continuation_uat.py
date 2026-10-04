@@ -8,7 +8,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-from model_continuation import final_assistant_text, run_rpc_turns, turn_messages
+from model_continuation import (
+    configure_subscription_uat,
+    final_assistant_text,
+    run_rpc_turns,
+    turn_messages,
+)
 from model_trace import (
     has_clarification_question,
     required_read_coverage,
@@ -301,6 +306,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
     args = parser.parse_args()
+    configure_subscription_uat(args.model)
     input_paths = {"binary": Path(args.binary).resolve(), "freeze": args.freeze}
     input_paths.update(
         {

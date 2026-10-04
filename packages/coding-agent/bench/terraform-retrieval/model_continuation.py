@@ -8,9 +8,39 @@ import queue
 import select
 import signal
 import subprocess
+import sys
 import threading
 import time
 from typing import Any
+
+
+def configure_subscription_uat(model: str) -> dict[str, Any]:
+    """Keep iterative model UAT on Linux using the subscription provider."""
+    if sys.platform != "linux":
+        message = "Iterative model UAT must run on the Ubuntu workstation"
+        raise ValueError(message)
+    if not model.startswith("openai-codex/") or not model.split("/", 1)[1].strip():
+        message = "Iterative model UAT requires an explicit openai-codex model"
+        raise ValueError(message)
+    removed = []
+    for name in [
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "OPENAI_API_BASE",
+        "LITELLM_API_KEY",
+        "LITELLM_BASE_URL",
+        "LITELLM_API_BASE",
+        "PI_DEV",
+    ]:
+        if name in os.environ:
+            removed.append(name)
+            del os.environ[name]
+    return {
+        "platform": sys.platform,
+        "provider": "openai-codex",
+        "model": model,
+        "removed_environment_names": removed,
+    }
 
 
 def run_rpc_turns(

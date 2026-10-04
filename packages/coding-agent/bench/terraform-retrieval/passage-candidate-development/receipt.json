@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_changed": false,
+  "source_commit": "5762cc3d8dc0b8af4ca68a6477038aea0174b73f",
+  "suite_sha256": "742b830312a489a3115b5fb5376dd76c8ff7140b132e9f9b535cac85eb0ac46c",
+  "answerable": 48,
+  "top1": 28,
+  "top5": 44,
+  "decision": "Do not replace current ranker. Candidate-only experiment lacks safe final selection; prior current development baseline was 46/48 top-one and top-five."
+}

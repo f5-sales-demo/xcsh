@@ -9,7 +9,12 @@ import subprocess
 import time
 from pathlib import Path
 
-from model_continuation import final_assistant_text, run_json_process, turn_messages
+from model_continuation import (
+    configure_subscription_uat,
+    final_assistant_text,
+    run_json_process,
+    turn_messages,
+)
 from model_continuation_uat import (
     capture_provenance,
     create_evidence_directory,
@@ -41,6 +46,7 @@ parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
 parser.add_argument("--partition-index", type=int, default=0)
 parser.add_argument("--partition-count", type=int, default=1)
 args = parser.parse_args()
+execution_route = configure_subscription_uat(args.model)
 input_paths = {"binary": Path(args.binary).resolve(), "freeze": args.freeze}
 input_paths.update(
     {
@@ -353,6 +359,7 @@ for case in cases:
         json.dumps(
             {
                 "model": args.model,
+                "execution_route": execution_route,
                 "input_sha256": provenance,
                 "binary": args.binary,
                 "provider_version": args.provider_version,

@@ -4,6 +4,7 @@
 import copy
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,8 +12,10 @@ import time
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from model_continuation import (
+    configure_subscription_uat,
     final_assistant_text,
     run_json_process,
     run_rpc_turns,
@@ -33,6 +36,46 @@ from model_trace import successful_read_paths
 
 class ModelContinuationTests(unittest.TestCase):
     """Never send a reply before its predecessor reaches agent_end."""
+
+    def test_subscription_route_rejects_mac_before_environment_changes(self) -> None:
+        """A Mac invocation never reaches a model or changes its environment."""
+        with (
+            patch("model_continuation.sys.platform", "darwin"),
+            patch.dict(os.environ, {"OPENAI_API_KEY": "synthetic-key"}, clear=True),
+        ):
+            with self.assertRaisesRegex(ValueError, "Ubuntu"):
+                configure_subscription_uat("openai-codex/example")
+            self.assertEqual(os.environ["OPENAI_API_KEY"], "synthetic-key")
+
+    def test_subscription_route_rejects_api_provider(self) -> None:
+        """An explicit API model cannot bypass the subscription route."""
+        with patch("model_continuation.sys.platform", "linux"):
+            for model in ["openai/example", "litellm/example", "openai-codex/"]:
+                with self.assertRaisesRegex(ValueError, "openai-codex"):
+                    configure_subscription_uat(model)
+
+    def test_subscription_route_removes_endpoint_overrides_without_values(self) -> None:
+        """Inherited gateway credentials never reach the installed subprocess."""
+        names = [
+            "OPENAI_API_KEY",
+            "OPENAI_BASE_URL",
+            "OPENAI_API_BASE",
+            "LITELLM_API_KEY",
+            "LITELLM_BASE_URL",
+            "LITELLM_API_BASE",
+            "PI_DEV",
+        ]
+        environment = dict.fromkeys(names, "synthetic-private-value")
+        environment["PATH"] = "synthetic-path"
+        with (
+            patch("model_continuation.sys.platform", "linux"),
+            patch.dict(os.environ, environment, clear=True),
+        ):
+            receipt = configure_subscription_uat("openai-codex/example")
+            self.assertEqual(dict(os.environ), {"PATH": "synthetic-path"})
+            self.assertEqual(receipt["removed_environment_names"], names)
+            self.assertEqual(receipt["provider"], "openai-codex")
+            self.assertNotIn("synthetic-private-value", json.dumps(receipt))
 
     def test_intermediate_text_cannot_replace_final_answer(self) -> None:
         """A progress note is not terminal response evidence."""
