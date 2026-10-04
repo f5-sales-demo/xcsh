@@ -8,12 +8,41 @@ export function requestedSecretRepresentation(text: string): { branch?: string; 
 		/\b(?:for|of)\s+(?:(?:the|a|an)\s+)?(clear|unencrypted|encrypted|blindfolded)[ -](?:api[ -]token[ -])?secrets?\b/i.exec(
 			clause,
 		);
-	if (!match) return { uncertain: false };
-	const clear = /\b(?:clear|unencrypted)[ -](?:api[ -]token[ -])?secrets?\b/i.test(clause);
-	const encrypted = /\b(?:encrypted|blindfolded)[ -](?:api[ -]token[ -])?secrets?\b/i.test(clause);
+	const storagePhrase =
+		/\b(clear|unencrypted|encrypted|blindfolded)\s+((?:(?:authorization[ -]key|private[ -]key|client[ -]password|api[ -]token|key|password|token|credential)s?\s+))(?:store\s+reference|secret\s+url|secret\s+location|storage\s+location)\b/i.exec(
+			clause,
+		);
+	const storageMatch =
+		storagePhrase && /\b(?:key|password|token|credential)s?\b/i.test(storagePhrase[2]!.replaceAll("-", " "))
+			? storagePhrase
+			: null;
+	if (
+		storageMatch &&
+		!/\b(?:locate|find|where\s+is)\s+(?:(?:the|a|an)\s+)?$/i.test(clause.slice(0, storageMatch.index))
+	)
+		return { uncertain: true };
+	const representationMatch = match ?? storageMatch;
+	if (!representationMatch)
+		return {
+			uncertain:
+				/\b(?:clear|unencrypted|encrypted|blindfolded)\b/i.test(clause) &&
+				/\b(?:key|password|token|credential)[ -]|\bcredential\b/i.test(clause) &&
+				/\bstore\s+reference\b/i.test(clause),
+		};
+	const clear =
+		(storageMatch && /^(?:clear|unencrypted)$/i.test(storageMatch[1]!)) ||
+		/\b(?:clear|unencrypted)[ -](?:api[ -]token[ -])?secrets?\b/i.test(clause);
+	const encrypted =
+		(storageMatch && /^(?:encrypted|blindfolded)$/i.test(storageMatch[1]!)) ||
+		/\b(?:encrypted|blindfolded)[ -](?:api[ -]token[ -])?secrets?\b/i.test(clause);
 	const uncertain =
 		(clear && encrypted) ||
-		/[`"'‘’“”]|\b(?:not|no|never|without|or|and|either|versus|vs|example|avoid|excluding|instead|rather|such as|for instance|while|when)\b/i.test(
+		Boolean(
+			representationMatch &&
+				/\b(?:clear|unencrypted)\b/i.test(clause) &&
+				/\b(?:encrypted|blindfolded)\b/i.test(clause),
+		) ||
+		/[`"'‘’“”]|\b(?:not|no|never|without|or|and|either|versus|vs|example|avoid|excluding|instead|rather|such as|for instance|while|when|unless|but)\b/i.test(
 			clause,
 		) ||
 		clauses.some(
@@ -23,7 +52,7 @@ export function requestedSecretRepresentation(text: string): { branch?: string; 
 		);
 	if (uncertain) return { uncertain: true };
 	return {
-		branch: /^(?:clear|unencrypted)$/i.test(match[1]!) ? "clear_secret_info" : "blindfold_secret_info",
+		branch: /^(?:clear|unencrypted)$/i.test(representationMatch[1]!) ? "clear_secret_info" : "blindfold_secret_info",
 		uncertain: false,
 	};
 }

@@ -848,3 +848,25 @@ test("secret representation cannot override unsupported fields or restored branc
  for(const q of ["Locate the store reference for clear secrets. Actually use encrypted ones.","Locate the store reference for clear secrets versus encrypted ones","Locate the store reference while configuring a value for clear secrets","Locate the store reference for clear secrets; e.g. production"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
  expect(selectPropertyDestination("Locate invented_flag for clear secrets or encrypted secrets",[a,b]).kind).toBe("none");
 });
+
+test("secret storage noun phrases distinguish credential representation without changing field evidence",()=>{
+ const clear={...row("authorization_key.clear_secret_info.provider_ref",39),description:"Secret store reference."};
+ const blind={...row("authorization_key.blindfold_secret_info.store_provider",40),description:"Secret store provider."};
+ for(const noun of ["authorization-key","client password","API token","credential"]){
+  const decision=selectPropertyDestination(`Locate the clear ${noun} store reference`,[blind,clear],[],{identityResolved:true});
+  expect(decision.kind).toBe("leaf");expect(decision.destinations[0]?.schema_path).toBe(clear.schema_path);expect(decision.destinations[0]?.score).toBe(39);
+ }
+ for(const q of ["Find clear authorization-key store reference or encrypted secrets","Find clear client password store reference, for example production","Find the store reference. Use clear authorization-key secrets."]){expect(selectPropertyDestination(q,[blind,clear]).kind).not.toBe("leaf");}
+ expect(selectPropertyDestination("Locate invented_flag for clear authorization-key store reference",[blind,clear]).kind).toBe("none");
+});
+
+test("storage phrase binding cannot infer representation from an action or unrelated adjective",()=>{
+ const a={...row("token.clear_secret_info.provider_ref",40),description:"Secret store reference."};
+ const b={...row("token.blindfold_secret_info.store_provider",39),description:"Secret store provider."};
+ for(const q of ["Locate a clear description of the credential store reference","Locate the field to clear token store reference","Locate the field needed to safely clear token store reference","Locate the command that will clear token store reference","Locate a clear policy for the token store reference","Locate clear encrypted token store reference","Locate the clear authorization-key store reference, then use encrypted storage"]){expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");}
+});
+
+test("conditional and corrective storage qualifiers retain representation choices",()=>{
+ const clear={...row("token.clear_secret_info.provider_ref",40),description:"Secret store reference."};const encrypted={...row("token.blindfold_secret_info.store_provider",39),description:"Secret store provider."};
+ for(const query of ["Locate the store reference for clear secrets unless encrypted storage is required","Locate the store reference for clear secrets but use encrypted storage","Locate the store reference for clear secrets, then use encrypted storage","Locate the store reference for encrypted secrets, then use clear storage"]){expect(selectPropertyDestination(query,[clear,encrypted]).kind).toBe("choices");}
+});

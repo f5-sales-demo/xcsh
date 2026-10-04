@@ -1915,3 +1915,59 @@ test("explicit input and output requests use field flags through complete resolv
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("credential storage request heads select the documented clear representation", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-storage-head-"));
+	try {
+		const pin = await fixture(root),
+			docs = await verifyTerraformSnapshot(root, pin),
+			doc = docs[0]!;
+		const fields = [
+			{ schema_path: ["token", "clear_secret_info", "provider_ref"], description: "Secret store reference." },
+			{ schema_path: ["token", "blindfold_secret_info", "store_provider"], description: "Secret store provider." },
+		];
+		const body = fields
+			.map(
+				f =>
+					`<a id="schema-${f.schema_path.join("--")}"></a>\n### ${f.schema_path.at(-1)}\nType: \`string\`.\n\n${f.description}\n`,
+			)
+			.join("\n");
+		doc.metadata.role = "properties";
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = fields.map(f => ({
+			...f,
+			document_id: doc.metadata.id,
+			anchor: "schema-" + f.schema_path.join("--"),
+			aliases: [],
+			relationships: [],
+			flags: ["optional"],
+			type: "string",
+		}));
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const read = async (q: string) =>
+			(
+				await repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?provider_name=fixture&provider_type=resources&search=" +
+								encodeURIComponent(q),
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				)
+			).content;
+		const clear = await read("Locate the clear token store reference");
+		expect(clear).toContain("Selected leaf;");
+		expect(clear).toContain("#schema-token--clear_secret_info--provider_ref");
+		const conflict = await read("Locate the store reference for clear secrets, then use encrypted storage");
+		expect(conflict).not.toContain("Selected leaf;");
+		expect(conflict).toContain("Uncertain secret representation");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
