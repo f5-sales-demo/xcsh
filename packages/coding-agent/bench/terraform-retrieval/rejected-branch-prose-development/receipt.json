@@ -1,0 +1,7 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_changed": false,
+  "decision": "Reject broad ancestor-description filter:development33/48topone/topfive exposed81/140topone98/140topfive; unrelated branch evidence filters target leaves. Negative/examplelocalproseguard passes3tests but noaccuracygainestablished."
+}

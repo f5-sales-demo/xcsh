@@ -184,6 +184,12 @@ def turn_messages(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         raise ValueError(message)
     messages = completed[0]["messages"]
     for message in messages:
+        if (
+            isinstance(message, dict)
+            and message.get("role") == "custom"
+            and isinstance(message.get("content"), str)
+        ):
+            continue
         if not isinstance(message, dict) or not isinstance(
             message.get("content")
             if message.get("role") == "assistant"

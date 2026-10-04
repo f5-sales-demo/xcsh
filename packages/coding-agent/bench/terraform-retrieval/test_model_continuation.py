@@ -77,6 +77,22 @@ class ModelContinuationTests(unittest.TestCase):
             self.assertEqual(receipt["provider"], "openai-codex")
             self.assertNotIn("synthetic-private-value", json.dumps(receipt))
 
+    def test_custom_string_messages_preserve_trace_without_becoming_assistant_text(
+        self,
+    ) -> None:
+        """Appended prompt notices can have string content in completed messages."""
+        messages: list[dict[str, Any]] = [
+            {"role": "custom", "content": "Prompt notice"},
+            {"role": "assistant", "content": [{"type": "text", "text": "Final"}]},
+        ]
+        self.assertEqual(
+            turn_messages([{"type": "agent_end", "messages": messages}]), messages
+        )
+        self.assertEqual(final_assistant_text(messages), "Final")
+        messages[1]["content"] = "Invalid assistant string"
+        with self.assertRaises(TypeError):
+            turn_messages([{"type": "agent_end", "messages": messages}])
+
     def test_intermediate_text_cannot_replace_final_answer(self) -> None:
         """A progress note is not terminal response evidence."""
         messages: list[dict[str, Any]] = [

@@ -1,0 +1,6 @@
+{
+  "qualification_passed": false,
+  "failed_parser": "custom string message rejected",
+  "raw_trace_sha256": "71dd8e1564e06821d48b72666b01b02e3fd515a8f7f91c53f04c6421f6fbd413",
+  "source_instruction_predates_finalwording": true
+}
