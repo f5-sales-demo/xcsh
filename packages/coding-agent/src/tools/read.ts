@@ -1372,6 +1372,8 @@ export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 					throw new ToolError("Terraform bounded views use URI continuation parameters");
 				return terraformReadEnvelope(url, uri => internalRouter.resolve(uri));
 			}
+			if (offset === undefined && limit === undefined)
+				return terraformReadEnvelope(url, uri => internalRouter.resolve(uri));
 		}
 
 		// Resolve the internal URL

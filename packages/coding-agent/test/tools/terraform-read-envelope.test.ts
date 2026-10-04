@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { Settings } from "../../src/config/settings";
+import { ReadTool } from "../../src/tools/read";
 import { terraformReadEnvelope } from "../../src/tools/terraform-read-envelope";
 
 const text = (result: { content: Array<{ type: string; text?: string }> }) =>
@@ -77,5 +79,28 @@ test("first resolver call preserves malformed raw paths for canonical rejection"
 			}),
 		).rejects.toThrow("unsafe raw path");
 		expect(seen).toBe(request);
+	}
+});
+
+test("read tool returns complete unpaginated Terraform exact content beyond generic limits", async () => {
+	const content = "Complete property section\n".repeat(4000);
+	const tool = new ReadTool({
+		cwd: process.cwd(),
+		hasUI: false,
+		hasEditTool: true,
+		getSessionFile: () => null,
+		getSessionSpawns: () => null,
+		settings: Settings.isolated({}),
+		internalRouter: {
+			canHandle: () => true,
+			resolve: async (uri: string) => ({ url: uri, content, contentType: "text/markdown" }),
+		},
+	} as any);
+	for (const uri of [
+		"xcsh://terraform-documentation/documentation/resources/fixture/index.md#schema-name",
+		"xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=full#schema-name",
+	]) {
+		const result = await tool.execute("exact", { path: uri });
+		expect(text(result)).toBe(content);
 	}
 });

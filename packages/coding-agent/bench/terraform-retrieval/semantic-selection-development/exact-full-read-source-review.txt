@@ -1,0 +1,9 @@
+Approve the narrow exact-read completeness fix. No findings.
+
+- Default/full Terraform file and section reads bypass generic truncation.
+- Explicit caller pagination retains the existing path.
+- Other internal protocols are unaffected.
+- Original raw URIs reach resolver validation, preserving malformed-path rejection.
+- Context notices’ `view=full` destinations now return complete content.
+
+`git diff --check` passed. Runtime tests were blocked before execution by the logger attempting a write on the read-only filesystem (`EROFS`); approval is based on source review.
