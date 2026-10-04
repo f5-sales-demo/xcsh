@@ -1,0 +1,18 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "f6c9013dea1313bfcb3f957676bf2c9c66441cc4",
+  "automated_pass": 3,
+  "total": 10,
+  "answerable_exact_reads": 6,
+  "answerable_total": 7,
+  "role_clarifications_passed": [
+    "M001",
+    "M021"
+  ],
+  "missing_value_question": "A135",
+  "all_tool_budgets_passed": true,
+  "previous_automated_pass": 1,
+  "scores_and_suite_unchanged": true,
+  "remaining": "Ancillary read requirements fail lookup cases; A107 misses per-range exclusion distinction. Independent200/40 qualification, installed continuations and cross-platform artifact UAT remain unmet."
+}
