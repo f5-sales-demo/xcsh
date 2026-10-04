@@ -1,0 +1,24 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "production_imported": false,
+  "source_consumer": "b82a535a287361213e3a215e4452221753072b16",
+  "provider_version": "v12.4.0",
+  "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+  "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "model_runtime": "local_files_only",
+  "answerable": 48,
+  "lexical_top1": 46,
+  "lexical_top5": 46,
+  "hybrid_top1": 34,
+  "hybrid_top5": 46,
+  "semantic_route_p95_ms": 78.53085908573121,
+  "lexical_latency_excluded": true,
+  "rejected": true,
+  "reason": "Fusion demotes12correctfirstlexicaldestinationswithoutrecallgain;two guidance destinationsoutsidepropertycorpusretainedindenominator",
+  "file_sha256": {
+    "suite.json": "742b830312a489a3115b5fb5376dd76c8ff7140b132e9f9b535cac85eb0ac46c",
+    "lexical.json": "87bad572fc479317068dac01e764eae19f8099057733b27efe83787d9c3257c1",
+    "hybrid.json": "1b90b67dda14ec228747456f194c8428744f93fc04c3a171c6192edc7fbe60e7"
+  }
+}
