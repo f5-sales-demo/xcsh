@@ -330,7 +330,9 @@ def terraform_tool_response_budget(messages: list[dict[str, Any]]) -> dict[str, 
 
 def validate_known_suite_exposure(digest: str, regression: bool) -> None:
     """Historical exposure overrides stale eligibility metadata."""
-    ledger = json.loads(Path(__file__).with_name("exposed-inputs.json").read_text(encoding="utf-8"))
+    ledger = json.loads(
+        Path(__file__).with_name("exposed-inputs.json").read_text(encoding="utf-8")
+    )
     if not regression and any(
         record["sha256"] == digest for record in ledger["records"]
     ):
