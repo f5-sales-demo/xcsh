@@ -305,3 +305,13 @@ test("bare dotted lookup constrains indexed candidates and cannot invent child f
  expect(searchPropertyIndex(db,"Locate calibration.offset.",{providerName:"fixture"})[0]?.schema_path).toBe("calibration.offset");
  db.close();
 });
+
+
+test("outside a named underscore branch excludes it before indexed ranking", () => {
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); INSERT INTO terraform_destinations VALUES('resources','fixture','policy.action','direct','schema-policy--action','Action for requests'), ('resources','fixture','detection_settings.policy.action','nested','schema-detection--action','Action for requests');");
+ populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Find the action outside detection_settings.",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["policy.action"]);
+ expect(searchPropertyIndex(db,"Find the action inside detection_settings",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["detection_settings.policy.action"]);
+ db.close();
+});

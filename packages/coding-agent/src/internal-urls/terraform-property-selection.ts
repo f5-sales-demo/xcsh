@@ -2,7 +2,10 @@ import { interpretTerraformLifecycle, lifecycleEvidence, type TerraformLifecycle
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
 	type PropertyCandidate,
+	propertyConflictingNamedScope,
+	propertyExcludedSchemaIdentifiers,
 	propertyExplicitSchemaPaths,
+	propertyInvalidExcludedScope,
 	propertyMatchesExplicitPaths,
 	propertyMatchesWorkloadArchitecture,
 	propertyMentionedSchemaPaths,
@@ -16,6 +19,7 @@ import {
 	propertyRequestsRootField,
 	propertySchemaIdentifiers,
 	propertyTerms,
+	propertyUncertainExcludedIdentifiers,
 	propertyWorkloadArchitecture,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
@@ -51,6 +55,20 @@ export function selectPropertyDestination(
 	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
 	const identityPeers = [...input, ...alternatives];
+	const excludedIdentifiers = propertyExcludedSchemaIdentifiers(queryText);
+	const uncertainExcluded = propertyUncertainExcludedIdentifiers(queryText);
+	if (propertyInvalidExcludedScope(queryText))
+		return { kind: "none", destinations: [], reason: "Invalid literal excluded branch" };
+	if (uncertainExcluded.length || propertyConflictingNamedScope(queryText))
+		return {
+			kind: "choices",
+			destinations: [...input].slice(0, 5),
+			reason: "Uncertain or conflicting named branch scope",
+		};
+	const included = (row: PropertyCandidate) =>
+		!excludedIdentifiers.some(identifier => row.schema_path.split(".").includes(identifier));
+	input = input.filter(included);
+	alternatives = alternatives.filter(included);
 	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	input = input.filter(row => propertyMatchesExplicitPaths(queryText, row));

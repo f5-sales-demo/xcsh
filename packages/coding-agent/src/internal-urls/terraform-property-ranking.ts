@@ -202,9 +202,62 @@ export function propertyExplicitSchemaPaths(text: string): string[] {
 export function propertyMatchesExplicitPaths(text: string, candidate: PropertyCandidate): boolean {
 	return propertyExplicitSchemaPaths(text).every(path => `.${candidate.schema_path}.`.includes(`.${path}.`));
 }
+export function propertyScopeText(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
+		.replaceAll("`", "");
+}
+function excludedIdentifierMentions(text: string) {
+	const query = propertyScopeText(text).replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	return [
+		...query.matchAll(/\b(?:outside|excluding)\s+`?([a-z][a-z0-9]*_[a-z0-9_]+)`?(?=$|[\s,;!?]|\.(?:\s|$))/g),
+	].map(match => ({
+		identifier: match[1]!,
+		uncertain: /\b(?:not|no|without)\s+(?:(?:necessarily|always|usually|only)\s+)?$/.test(
+			query.slice(0, match.index),
+		),
+	}));
+}
+export function propertyExcludedSchemaIdentifiers(text: string): string[] {
+	return [
+		...new Set(
+			excludedIdentifierMentions(text)
+				.filter(match => !match.uncertain)
+				.map(match => match.identifier),
+		),
+	];
+}
+export function propertyUncertainExcludedIdentifiers(text: string): string[] {
+	return [
+		...new Set(
+			excludedIdentifierMentions(text)
+				.filter(match => match.uncertain)
+				.map(match => match.identifier),
+		),
+	];
+}
+export function propertyConflictingNamedScope(text: string): boolean {
+	const query = propertyScopeText(text);
+	return (
+		/\b(?:outside\s+and\s+(?:inside|under|within)|(?:inside|under|within)\s+and\s+outside)\s+[a-z][a-z0-9]*_[a-z0-9_]+\b/.test(
+			query,
+		) ||
+		propertyExcludedSchemaIdentifiers(text).some(identifier =>
+			new RegExp(`\\b(?:inside|under|within)\\s+${identifier}\\b`).test(query),
+		)
+	);
+}
+export function propertyInvalidExcludedScope(text: string): boolean {
+	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*-[a-z0-9_-]+/.test(propertyScopeText(text));
+}
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
 	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	const requiredPaths = propertyExplicitSchemaPaths(text);
+	const excluded = new Set([
+		...propertyExcludedSchemaIdentifiers(text),
+		...propertyUncertainExcludedIdentifiers(text),
+	]);
 	const mentions = schemaPathMentions(request).filter(mention => !requiredPaths.includes(mention.path));
 	for (const mention of mentions.reverse())
 		request = request.slice(0, mention.start) + " " + request.slice(mention.end);
@@ -213,6 +266,7 @@ export function propertySchemaIdentifiers(text: string, providerName?: string): 
 			(request.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
 				term =>
 					!term.startsWith("xcsh_") &&
+					!excluded.has(term) &&
 					!(
 						providerName === "workload" &&
 						term === "stateful_service" &&

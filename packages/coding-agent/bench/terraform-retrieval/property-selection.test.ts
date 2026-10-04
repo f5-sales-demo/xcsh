@@ -604,3 +604,27 @@ test("placement literal paths remain unsupported across question inflections", (
  const field={...row("calibration.offset",40),description:"Calibration offset."};
  for(const prefix of ["Where does","Where do"])expect(selectPropertyDestination(`${prefix} calibration.missing go?`,[field]).kind).toBe("none");
 });
+
+
+test("named negative branch scope cannot select an excluded identifier", () => {
+ const direct=row("policy.action",40), nested=row("detection_settings.policy.action",100);
+ expect(selectPropertyDestination("Find the action outside detection_settings",[nested,direct]).destinations[0]?.schema_path).toBe(direct.schema_path);
+ expect(selectPropertyDestination("Find the action inside detection_settings",[nested,direct]).destinations[0]?.schema_path).toBe(nested.schema_path);
+ expect(selectPropertyDestination("Find the action inside and outside detection_settings",[nested,direct]).kind).not.toBe("leaf");
+});
+
+
+test("negated exclusions and positive-negative branch conflicts cannot invent scope", () => {
+ const direct=row("policy.action",40), nested=row("detection_settings.policy.action",100);
+ expect(selectPropertyDestination("Find action not outside detection_settings",[nested,direct]).kind).toBe("choices");
+ expect(selectPropertyDestination("Find action inside detection_settings; excluding detection_settings",[nested,direct]).kind).toBe("choices");
+ expect(selectPropertyDestination("Find action (for example outside detection_settings)",[nested,direct]).kind).toBe("choices");
+});
+
+
+test("named exclusion scope shares quote example and coordination interpretation", () => {
+ const direct=row("policy.action",40), nested=row("detection_settings.policy.action",100);
+ for(const query of ["Find action inside `detection_settings`; excluding detection_settings","Find action outside and inside detection_settings","Find action not always outside detection_settings"])expect(selectPropertyDestination(query,[nested,direct]).kind).toBe("choices");
+ expect(selectPropertyDestination("Find action outside detection_settings (for example inside detection_settings)",[nested,direct]).destinations[0]?.schema_path).toBe(direct.schema_path);
+ expect(selectPropertyDestination("Find action outside detection_settings-bogus",[nested,direct]).kind).toBe("none");
+});

@@ -3,7 +3,10 @@ import type { Database } from "bun:sqlite";
 import {
 	type PropertyCandidate,
 	preparePropertyScope,
+	propertyConflictingNamedScope,
+	propertyExcludedSchemaIdentifiers,
 	propertyExplicitSchemaPaths,
+	propertyInvalidExcludedScope,
 	propertyQueryTerms,
 	propertyRequestedText,
 	propertyRequestedType,
@@ -183,6 +186,7 @@ export function searchPropertyIndex(
 	},
 	limit = 500,
 ) {
+	if (propertyInvalidExcludedScope(query)) return [];
 	const terms = propertyQueryTerms(query);
 	if (!terms.length) return [];
 	const clauses = ["property_search MATCH ?"];
@@ -211,6 +215,10 @@ export function searchPropertyIndex(
 	const identifiers = propertySchemaIdentifiers(query).filter(
 		term => !db.query("SELECT 1 FROM property_scopes WHERE provider_name=?").get(term),
 	);
+	for (const identifier of propertyConflictingNamedScope(query) ? [] : propertyExcludedSchemaIdentifiers(query)) {
+		clauses.push("instr('.' || schema_path || '.',?)=0");
+		args.push(`.${identifier}.`);
+	}
 	for (const path of propertyExplicitSchemaPaths(query)) {
 		clauses.push("instr('.' || schema_path || '.',?)>0");
 		args.push(`.${path}.`);
