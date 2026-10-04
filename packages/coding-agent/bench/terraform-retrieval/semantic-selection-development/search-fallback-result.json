@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "id": "A028",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage",
+      "clarification": null,
+      "reason": "ephemeral_storage specifies workload-flavor scratch storage in MiB. Container flavor selects predefined sizing; persistent storage_size uses GiB.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/job/containers/index.md?view=context#schema-job--containers--flavor",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/job/volumes/persistent_volume/storage/index.md?view=context#schema-job--volumes--persistent_volume--storage--storage_size"
+      ]
+    },
+    {
+      "id": "A044",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-domains",
+      "clarification": null,
+      "reason": "domains is the required list of strings matched against the host/authority header.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-domains",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md?view=context#root-configuration"
+      ]
+    },
+    {
+      "id": "A049",
+      "selected_uri": "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-source_entries",
+      "clarification": null,
+      "reason": "source_entries preserves IPv4 entries exactly as published, ordered by region name and source order. cidr_blocks instead normalizes individual addresses to /32.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-source_entries",
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-cidr_blocks"
+      ]
+    },
+    {
+      "id": "A135",
+      "selected_uri": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication",
+      "clarification": "Before filling in configuration, what tenant API URL and token variable or environment source should be used?",
+      "reason": "The API-token setup documents api_url and api_token, with XCSH_API_URL and XCSH_API_TOKEN environment alternatives. Missing values do not prevent selecting this section.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication"
+      ]
+    },
+    {
+      "id": "A136",
+      "selected_uri": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication",
+      "clarification": "What is the PKCS#12 bundle path, which variable or environment source supplies its password, and what tenant API URL should be used?",
+      "reason": "The P12 option explicitly supports a PKCS#12 bundle through api_p12_file and p12_password. No actual path or password source was supplied.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication"
+      ]
+    },
+    {
+      "id": "A137",
+      "selected_uri": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+      "clarification": "Before filling in configuration, what are the PEM certificate and private-key paths, and what tenant API URL should be used?",
+      "reason": "The PEM option documents separate api_cert and api_key files; api_ca_cert is optional. File locations remain unspecified.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication"
+      ]
+    },
+    {
+      "id": "A138",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+      "clarification": null,
+      "reason": "The certificate lifecycle import section explicitly specifies namespace/name. The certificate_url property describes certificate content, not the import identifier.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url"
+      ]
+    },
+    {
+      "id": "A139",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/namespace/lifecycle/import/index.md?view=context#import",
+      "clarification": null,
+      "reason": "A tenant-level namespace imports using its bare name without a namespace prefix. Its namespace argument is omitted.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/namespace/lifecycle/import/index.md?view=context#import",
+        "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md?view=context#schema-namespace"
+      ]
+    },
+    {
+      "id": "A140",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/timeouts/index.md?view=context#timeouts",
+      "clarification": null,
+      "reason": "The lifecycle guide specifies Terraform duration strings such as 30m and links to the optional timeouts block. No apply behavior was tested.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/timeouts/index.md?view=context#timeouts",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/timeouts/index.md?view=context#section"
+      ]
+    }
+  ]
+}

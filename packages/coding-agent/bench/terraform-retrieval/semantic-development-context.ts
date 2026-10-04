@@ -52,8 +52,17 @@ export function encodeDevelopmentResponse(content: string, budget: number, uri: 
   uri,
   full_uri: full.toString(),
  };
+ if (/^Oversized section:/m.test(content)) return { ...result, status: "oversized" as const };
  if (bytes(result) <= budget - reserve) return result;
  const notice = { ...result, status: "oversized" as const, content: "Indivisible response exceeds the development envelope budget; read the full destination separately." };
  if (bytes(notice) > budget - reserve) throw new Error("Oversized notice exceeds envelope budget");
+ return notice;
+}
+
+export function encodeDiscoveryResponse(content: string, uri: string) {
+ const result = { ...provenance, status: "complete" as "complete" | "oversized", content, uri, continuation_uri: uri };
+ if (bytes(result) <= 4096 - reserve) return result;
+ const notice = { ...result, status: "oversized" as const, content: `Discovery envelope exceeds budget. Continue with discover ${uri}` };
+ if (bytes(notice) > 4096 - reserve) throw new Error("Discovery continuation exceeds budget");
  return notice;
 }

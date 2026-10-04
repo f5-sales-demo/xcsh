@@ -1,0 +1,116 @@
+{
+  "results": [
+    {
+      "id": "A007",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md#schema-private_key--clear_secret_info--url",
+      "clarification": null,
+      "reason": "The parent identifies an unencrypted secret; its url leaf specifies the secret location. certificate_url contains the certificate chain. The actual secret location is unnecessary for this lookup.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md?view=context#schema-private_key--clear_secret_info--url",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url"
+      ]
+    },
+    {
+      "id": "A015",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/http1_config/header_transformation/preserve_case_header_transformation/index.md#section",
+      "clarification": null,
+      "reason": "This leaf preserves HTTP header-name case. Its parent distinguishes it from the mutually exclusive proper-case transformation.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/http1_config/header_transformation/preserve_case_header_transformation/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/http1_config/header_transformation/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/advanced_options/http1_config/header_transformation/proper_case_header_transformation/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A028",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "Retrieval gap: all candidate pages were exhausted without a scratch-storage field. The inspected workload flavor describes CPU and memory; storage_size describes persistent storage in GiB, not scratch storage in MiB.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/job/containers/index.md?view=context#schema-job--containers--flavor",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/job/volumes/persistent_volume/storage/index.md?view=context#schema-job--volumes--persistent_volume--storage--storage_size"
+      ]
+    },
+    {
+      "id": "A036",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+      "clarification": null,
+      "reason": "vsite_refs.namespace identifies each referenced virtual site's namespace. The top-level namespace identifies where the Virtual K8S resource is created.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#schema-vsite_refs--namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/index.md?view=context#schema-namespace"
+      ]
+    },
+    {
+      "id": "A043",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md#schema-add_location",
+      "clarification": null,
+      "reason": "add_location appends the serving Regional Edge site-name header to responses and is ignored on CE sites. The alternative secret location field identifies stored secret material.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-add_location",
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/more_option/response_headers_to_add/secret_value/blindfold_secret_info/index.md?view=context#schema-more_option--response_headers_to_add--secret_value--blindfold_secret_info--location"
+      ]
+    },
+    {
+      "id": "A044",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "Retrieval gap: all candidate pages were exhausted without exposing the load balancer hostname list. The inspected route headers section describes key/value header matching and does not establish the requested field.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/routes/simple_route/headers/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A049",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "Retrieval gap: all candidate pages returned Consul/Kubernetes discovery fields, not a Regional Edge allowlist output. The inspected api_server is a host:port string and does not preserve address-versus-CIDR entries.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/discovery/properties/discovery_consul/access_info/connection_info/index.md?view=context#schema-discovery_consul--access_info--connection_info--api_server"
+      ]
+    },
+    {
+      "id": "A070",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md#schema-tunnel_type",
+      "clarification": null,
+      "reason": "tunnel_type selects GRE or IPSEC_PSK. The params section configures encapsulation parameters, including the IPsec PSK.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md?view=context#schema-tunnel_type",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A093",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "clarification": null,
+      "reason": "start_ip specifies the beginning of a DHCP pool range under custom Ethernet networking. The pools parent contains ranges; pool_settings controls their inclusion or exclusion.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pool_settings"
+      ]
+    },
+    {
+      "id": "M001",
+      "selected_uri": null,
+      "clarification": "Do you mean the cloud_credentials resource input or the cloud_credentials data-source output?",
+      "reason": "Both expose aws_assume_role.duration_seconds. The resource field is optional and configurable; the data-source field is computed. The question does not distinguish them.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds"
+      ]
+    },
+    {
+      "id": "C002",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "The exposed development evidence does not establish a supported regions input. Candidate discovery ended without that field; mentioning selected regions in the computed id description does not establish configurable geography support.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-id",
+        "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_url"
+      ]
+    }
+  ]
+}

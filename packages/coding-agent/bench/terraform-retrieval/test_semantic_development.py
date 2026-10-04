@@ -2,6 +2,7 @@
 """Fail closed on incomplete or over-budget development command evidence."""
 
 import json
+import shlex
 import unittest
 from typing import Any
 
@@ -209,3 +210,38 @@ class SemanticDevelopmentTests(unittest.TestCase):
         self.assertFalse(
             audit_commands([event], ["bun", "helper.ts", "config.json"])["passed"]
         )
+
+    def test_bounded_search_is_audited_as_discovery_without_leaf_credit(self) -> None:
+        """Reformulation goes through bounded production discovery."""
+        event = self.event(
+            "bun helper.ts config.json search 'workload flavor storage'",
+            json.dumps(
+                {
+                    "status": "complete",
+                    "content": "candidates",
+                    "development_only": True,
+                    "qualification_passed": False,
+                }
+            ),
+        )
+        result = audit_commands([event], ["bun", "helper.ts", "config.json"])
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["successful_reads"], [])
+        self.assertEqual(result["outputs"][0]["budget_bytes"], 4096)
+
+    def test_quoted_ampersand_search_and_discovery_continuation_are_safe(self) -> None:
+        """Canonical quoting makes URI punctuation literal data."""
+        for operation, value in [
+            ("search", "name & namespace"),
+            (
+                "discover",
+                "xcsh://terraform-documentation/?search=name&provider_type=resources",
+            ),
+        ]:
+            event = self.event(
+                shlex.join(["bun", "helper.ts", "config.json", operation, value]),
+                json.dumps({"status": "complete", "content": "candidates"}),
+            )
+            self.assertTrue(
+                audit_commands([event], ["bun", "helper.ts", "config.json"])["passed"]
+            )

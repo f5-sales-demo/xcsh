@@ -1,11 +1,11 @@
 import { Database } from "bun:sqlite";
 import { TerraformDocumentationRepository, terraformProviderMention, terraformQueryIdentity } from "../../src/internal-urls/terraform-documentation";
 import { searchPropertyIndex } from "../../src/internal-urls/terraform-property-index";
-import { candidatePage, encodeDevelopmentResponse } from "./semantic-development-context";
+import { candidatePage, encodeDevelopmentResponse, encodeDiscoveryResponse } from "./semantic-development-context";
 
 const [configPath, operation, value, offset = "0"] = process.argv.slice(2);
-if (!configPath || !value || !["candidates", "read"].includes(operation ?? ""))
- throw new Error("Use CONFIG candidates CASE_ID [OFFSET] or CONFIG read EXACT_URI");
+if (!configPath || !value || !["candidates", "read", "search", "discover"].includes(operation ?? ""))
+ throw new Error("Use CONFIG candidates CASE_ID [OFFSET] or CONFIG read EXACT_URI or CONFIG search QUERY");
 const config = await Bun.file(configPath).json() as { index: string; assets: string; input: string };
 const db = new Database(config.index, { readonly: true });
 try {
@@ -26,6 +26,16 @@ try {
     description: row.description, parent_uri: parent ? `xcsh://terraform-documentation/${parent.path}#${parent.anchor}` : null };
   });
   process.stdout.write(JSON.stringify(candidatePage({ ...item, candidates }, Number(offset))) + "\n");
+ } else if(operation === "search" || operation === "discover") {
+  const url = new URL(operation === "search" ? "xcsh://terraform-documentation/" : value);
+  if(url.protocol!=="xcsh:" || url.hostname!=="terraform-documentation" || !["", "/"].includes(url.pathname) || url.hash) throw new Error("Root discovery URI required");
+  if(operation === "search") url.searchParams.set("search", value);
+  const assets = await Bun.file(config.assets).json();
+  const repo = new TerraformDocumentationRepository(assets, "unused");
+  repo.database = async () => db;
+  const result = await repo.resolve(Object.assign(url, { rawHost: "terraform-documentation" }));
+  const content = "Unpublished development corpus; pin fields do not certify this preview.\n" + result.content;
+  process.stdout.write(JSON.stringify(encodeDiscoveryResponse(content, url.toString())) + "\n");
  } else {
   const url = new URL(value);
   if (url.protocol !== "xcsh:" || url.hostname !== "terraform-documentation" || !url.pathname.endsWith(".md") || !url.hash)

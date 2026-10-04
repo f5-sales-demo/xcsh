@@ -54,3 +54,15 @@ semantic outcomes. Its original audit passed, but the final stricter re-audit re
 one missing-anchor helper error. Both receipts are preserved. No successful
 qualification is claimed. Final code requires canonical escaped command arguments,
 valid exact-read queries and successful structured responses.
+
+The expanded 11-case development run selected/read 6 of 9 answerable leaves,
+asked a justified role clarification and rejected an unsupported field. Three
+expected leaves were absent from its candidates. The strict audit rejected one
+missing-anchor read. The property-only top-20 candidate recall was 128/140.
+The development helper now supports bounded production search for model query
+reformulation; search results do not establish completed exact leaf reads.
+
+The nine-case search-fallback run selected and read every expected leaf, including
+provider setup, imports and timeout guidance. Its original audit passed. Review
+identified oversized-status, continuation, quoting and dependency-binding limits;
+those findings remain attached and the result is development-only.

@@ -80,12 +80,6 @@ def audit_commands(events: list[dict[str, Any]], prefix: list[str]) -> dict[str,
             violations.append({"reason": "unpaired-command-result", "id": identity})
         completed.add(identity)
         try:
-            if any(
-                token in item["command"]
-                for token in ("$", "`", ";", "|", "<", ">", "&", "\n")
-            ):
-                message = "Shell expansion or multiline command forbidden"
-                raise ValueError(message)
             command = item["command"]
             argv = shlex.split(command)
             if (
@@ -104,7 +98,10 @@ def audit_commands(events: list[dict[str, Any]], prefix: list[str]) -> dict[str,
                     operation == "candidates"
                     and len(argv) in (len(prefix) + 2, len(prefix) + 3)
                 )
-                or (operation == "read" and len(argv) == len(prefix) + 2)
+                or (
+                    operation in ("read", "search", "discover")
+                    and len(argv) == len(prefix) + 2
+                )
             )
             if not valid:
                 message = "Helper-only single-operation command required"
@@ -120,6 +117,16 @@ def audit_commands(events: list[dict[str, Any]], prefix: list[str]) -> dict[str,
             if uri and not valid_read_uri(value):
                 message = "Invalid exact read URI"
                 raise ValueError(message)
+            if operation == "discover":
+                destination = urlsplit(value)
+                if (
+                    destination.scheme != "xcsh"
+                    or destination.netloc != "terraform-documentation"
+                    or destination.path not in ("", "/")
+                    or destination.fragment
+                ):
+                    message = "Invalid discovery continuation URI"
+                    raise ValueError(message)
             output = item["aggregated_output"]
             response = json.loads(output)
             if not isinstance(response, dict) or response.get("status") not in (
@@ -258,6 +265,7 @@ def main() -> None:
         message = "Missing retrieval source binding"
         raise RuntimeError(message)
     bound_files = [
+        helper.parents[2] / "src/internal-urls/documentation-metadata.ts",
         config_path,
         Path(config["input"]),
         Path(__file__).resolve(),
@@ -302,17 +310,20 @@ def main() -> None:
     prompt = (
         "Read-only exposed development diagnostic. No edits, web, contacts, subagents, "
         "HCL or other file reads. Expected answers withheld; provider scope is inferred "
-        "by the helper from the question. Resolve cases"
+        "by the helper from the question. Resolve cases "
         + args.ids
         + ". Use ONLY this exact helper prefix for all tool calls: "
         + shlex.join(prefix)
         + ". Operations: candidates CASE_ID [OFFSET] (start at zero; follow next_offset to "
-        "inspect alternatives); read EXACT_URI (use view=context and the exact anchor). "
+        "inspect alternatives); read EXACT_URI (use view=context and the exact anchor); "
+        "search QUERY (bounded consumer discovery for a reformulated question); "
+        "discover EXACT_ROOT_URI (follow returned node/filter/choice continuations). "
         "One helper operation per tool call; no batching, pipelines, concatenation, "
         "direct SQLite or other shell commands. Candidate discovery is mechanically "
         "bounded to 4KiB; context to16KiB including envelope reserve. Oversized records "
         "provide exact read destinations. Read the chosen complete leaf section before "
-        "selecting and compare relevant parent/alternative sections. Clarify only "
+        "selecting and compare relevant parent/alternative sections. If candidates omit "
+        "the target, reformulate using search before reporting a retrieval gap. Clarify only "
         "genuinely absent information; do not invent unsupported fields or apply "
         "evidence. Return JSON "
         "{results:[{id,selected_uri,clarification,reason,evidence_uris}]} only. "

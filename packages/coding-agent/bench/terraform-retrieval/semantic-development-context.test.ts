@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { candidatePage, encodeDevelopmentResponse, type DevelopmentCandidate } from "./semantic-development-context";
+import { candidatePage, encodeDevelopmentResponse, type DevelopmentCandidate, encodeDiscoveryResponse } from "./semantic-development-context";
 
 const rows: DevelopmentCandidate[] = Array.from({ length: 20 }, (_, i) => ({
  uri: `xcsh://terraform-documentation/documentation/resources/fixture/properties/index.md#schema-field_${i}`,
@@ -49,4 +49,17 @@ test("quote-heavy descriptions fit the outer serialized command response", () =>
  const response = candidatePage({ id: "quotes", prompt: "Terraform", candidates: [quote] }, 0);
  const envelope = JSON.stringify({ aggregated_output: JSON.stringify(response) });
  expect(Buffer.byteLength(envelope)).toBeLessThanOrEqual(4096 - 512);
+});
+
+test("oversized consumer notice cannot claim a completed property section", () => {
+ const uri = rows[0]!.uri.replace("#", "?view=context#");
+ const result = encodeDevelopmentResponse("Oversized section: field. Complete section: " + uri.replace("context", "full"), 16384, uri);
+ expect(result.status).toBe("oversized");
+});
+test("oversized discovery retains an executable query continuation", () => {
+ const uri = "xcsh://terraform-documentation/?search=hostname&provider_type=resources&node=root";
+ const result = encodeDiscoveryResponse("x".repeat(5000), uri);
+ expect(result.status).toBe("oversized");
+ expect(result.continuation_uri).toBe(uri);
+ expect(result.content).toContain(uri);
 });
