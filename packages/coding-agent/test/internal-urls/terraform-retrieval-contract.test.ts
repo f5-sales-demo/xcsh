@@ -923,3 +923,22 @@ test("HTTP health-check purpose does not identify application balancer type", ()
 		]),
 	).toBeUndefined();
 });
+
+test("qualified value lookups retain property routing without field nouns", () => {
+	for (const query of [
+		"For the sensor resource, where is the calibration adjustment documented?",
+		"Locate the retry ceiling documented for the queue resource.",
+		"Find the deletion timeout documented for the sensor resource.",
+	])
+		expect(terraformTaskDestination(query)).toBeUndefined();
+	expect(terraformTaskDestination("Where is the resource documented for creating a sensor?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
+
+test("value lookup preserves explicit lifecycle guidance", () => {
+	expect(terraformTaskDestination("Find lifecycle guidance on writing operation timeout durations.")).toEqual({
+		role: "timeouts",
+	});
+});

@@ -873,6 +873,12 @@ export function terraformProviderSetupDestination(query: string): string | undef
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
 	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	const valueLookup =
+		/\b(?:find|locate|point me to)\b|\bwhere\s+(?:is|are|do I put)\b/i.test(query) &&
+		!/\b(?:resource|data[ -]source|action)\b\s+(?:is\s+)?(?:documented|defined|specification)\b|\b(?:minimal|root)\s+configuration\b|\b(?:example|usage|guidance)\b/i.test(
+			query,
+		);
+	if (valueLookup) return undefined;
 	if (
 		/\bresource\b.*\b(?:documented|specification)\b/i.test(query) &&
 		!/\b(?:attributes?|fields?|property|properties|parameters?|schema path)\b/i.test(query)
