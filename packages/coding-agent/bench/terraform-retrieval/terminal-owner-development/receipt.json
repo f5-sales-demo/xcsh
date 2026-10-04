@@ -1,0 +1,14 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 97,
+  "v7_top5": 123,
+  "route_p95_ms": 78.695661,
+  "focused_pass": 179,
+  "type_lint_pass": true,
+  "prior_package_pass": 9694,
+  "prior_package_source": "2a4ba93dfacf711395ab425f257712647b00fd52",
+  "source_findings_covered_by_tests": true,
+  "change": "Single terminal ownership suffix outside quoted/negative/alternative context; nesting and multiple lookups preserved",
+  "broad_label_cleanup_rejected": true
+}

@@ -412,6 +412,15 @@ export function propertyValueLookup(text: string): string | undefined {
 		if (!lookup) continue;
 		if (/\b(?:example|usage|guidance)\b/i.test(clause)) return undefined;
 		let target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		const owner = /\s+on\s+(?:the|a|an)\s+((?:[a-z][a-z0-9_-]*\s+){0,8})(?:data[ -]source|resource)[.?!]?$/i.exec(
+			target,
+		);
+		if (
+			owner &&
+			!/[`"']|\b(?:not|no|never|without|or|and|either|instead|rather)\b/i.test(clause) &&
+			!/\b(?:find|locate|where|under|within|inside|on|resource|source)\b/i.test(owner[1]!)
+		)
+			target = target.slice(0, owner.index).trim();
 		const labeled =
 			/^(?:(?:the|a|an)\s+)?data[ -]source\s+((?:(?:input|output|field|attribute|property)\s+)+)(.+)/i.exec(target);
 		if (labeled) {

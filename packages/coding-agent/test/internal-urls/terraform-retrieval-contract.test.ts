@@ -1171,3 +1171,18 @@ test("lookup negation is verb-local and literal location field names remain vali
 		"domains",
 	);
 });
+test("terminal ownership qualifiers preserve request and nesting structure", () => {
+	expect(propertyRequestedText("Find raw IPv4 entries on the network data source")).toBe("raw IPv4 entries");
+	for (const q of [
+		"find timeout on the compute resource and locate name on the other resource",
+		"find timeout on the resource under retry on the compute resource",
+		"do not find timeout on the compute resource",
+		"find timeout on the compute resource and its name or id",
+	])
+		expect(propertyRequestedText(q)).toContain("on the");
+	expect(propertyRequestedText("Which field holds on demand resource allocation policy?")).toBe(
+		"on demand resource allocation policy?",
+	);
+	expect(propertyRequestedText("Find input within transform")).toBe("input within transform");
+	expect(propertyRequestedText('Find "on the resource" label')).toBe('"on the resource" label');
+});
