@@ -12,6 +12,7 @@ import { lookupTerraformAlias } from "./terraform-alias-lookup";
 import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
 import { verifiedChoiceEdges } from "./terraform-choice-edges";
 import { terraformChoiceResponse } from "./terraform-choice-response";
+import { terraformConflictContext } from "./terraform-conflict-context";
 import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
 import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle } from "./terraform-lifecycle";
@@ -1768,6 +1769,7 @@ export class TerraformDocumentationRepository {
 					const ownership = ownershipHint(section.anchor);
 					const body = [
 						prerequisites(documentPath, section.anchor),
+						terraformConflictContext(db, documentPath, section.anchor),
 						ownership,
 						ownershipScope(section.anchor),
 						rewriteTerraformLinks(section.markdown, documentPath),
