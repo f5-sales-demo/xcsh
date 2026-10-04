@@ -19,6 +19,7 @@ from model_trace import (
     required_read_coverage,
     successful_read_paths,
     terraform_tool_response_budget,
+    validate_known_suite_exposure,
     validate_model_activation,
     validate_model_subset_identity,
 )
@@ -364,6 +365,7 @@ def main() -> None:
         message = "Independent reviewer did not approve the exact continuation plan"
         raise ValueError(message)
 
+    validate_known_suite_exposure(freeze["files"]["model-subset.json"], args.regression)
     cases = loaded["model-subset.json"]
     validate_model_activation(cases)
     validate_model_subset_identity(cases, loaded["heldout.json"])

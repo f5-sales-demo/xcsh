@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+      "kind": "heldout",
+      "source": "v7-first-untouched-result/exposure.json",
+      "reason": "First scored heldout run failed; implementation has seen and used these prompts."
+    },
+    {
+      "sha256": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+      "kind": "model-subset",
+      "source": "semantic-selection-development/installed-40-mixed-development-summary.json",
+      "reason": "Installed diagnostics and implementation analysis exposed all40 model prompts."
+    }
+  ]
+}

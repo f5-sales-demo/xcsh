@@ -33,6 +33,7 @@ from model_trace import (
     successful_read_paths,
     terraform_tool_response_budget,
     validate_hcl_drafting_coverage,
+    validate_known_suite_exposure,
     validate_model_activation,
     validate_model_subset_identity,
 )
@@ -68,6 +69,7 @@ input_paths.update(
 provenance = capture_provenance(input_paths)
 freeze = json.loads(args.freeze.read_text())
 suite_bytes = args.suite.read_bytes()
+validate_known_suite_exposure(hashlib.sha256(suite_bytes).hexdigest(), args.regression)
 if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json"]:
     HASH_MISMATCH = "Frozen model subset hash mismatch"
     raise ValueError(HASH_MISMATCH)

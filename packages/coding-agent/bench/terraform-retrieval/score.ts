@@ -1,3 +1,4 @@
+import exposedInputs from "./exposed-inputs.json";
 export function scoreDestinations(
 	kind: "answerable" | "ambiguous" | "control",
 	selected: boolean,
@@ -49,6 +50,8 @@ export function validateQualificationEligibility(
 	suiteHash: string,
 	regression: boolean,
 ): void {
+	if (!regression && exposedInputs.records.some(record => record.sha256 === suiteHash))
+		throw new Error("Known exposed input is regression only");
 	if (!audit) return;
 	if (audit.suite_sha256 !== suiteHash) throw new Error("Benchmark eligibility audit digest mismatch");
 	if (!audit.qualification_eligible && !regression) throw new Error("Benchmark cannot qualify: " + audit.reason);

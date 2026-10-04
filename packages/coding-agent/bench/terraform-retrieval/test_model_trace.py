@@ -13,6 +13,7 @@ from model_trace import (
     successful_read_paths,
     terraform_tool_response_budget,
     validate_hcl_drafting_coverage,
+    validate_known_suite_exposure,
     validate_model_activation,
     validate_model_subset_identity,
 )
@@ -84,6 +85,16 @@ class ModelTraceTests(unittest.TestCase):
             }
         ]
         self.assertEqual(successful_read_paths([call, result]), [uri])
+
+    def test_exposed_model_subset_requires_regression_despite_stale_freeze(
+        self,
+    ) -> None:
+        """Known exposed input hashes cannot certify a replacement candidate."""
+        digest = "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2"
+        with self.assertRaisesRegex(ValueError, "exposed"):
+            validate_known_suite_exposure(digest, False)
+        validate_known_suite_exposure(digest, True)
+        validate_known_suite_exposure("a" * 64, False)
 
     def test_missing_result_does_not_count(self) -> None:
         """An attempted read needs a completed result."""

@@ -124,3 +124,11 @@ test("HCL preflight rejects null declarations and raw traversal destinations",()
  expect(()=>validateHclDraftingCoverage([fixture])).not.toThrow();
  for(const e of [null,{...fixture.model_expectations,requires_hcl:null},{...fixture.model_expectations,must_read:["xcsh://terraform-documentation/documentation/../index.md#name"]},{...fixture.model_expectations,must_read:["xcsh://terraform-documentation/documentation/index.md#bad anchor"]}])expect(()=>validateHclDraftingCoverage([{...fixture,model_expectations:e}])).toThrow();
 });
+
+test("known exposed suite remains regression only despite a stale eligibility file", () => {
+ const hash="67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a";
+ const audit={suite_sha256:hash,qualification_eligible:true,reason:"Original untouched freeze"};
+ expect(()=>validateQualificationEligibility(audit,hash,false)).toThrow("exposed");
+ expect(()=>validateQualificationEligibility(undefined,hash,false)).toThrow("exposed");
+ expect(()=>validateQualificationEligibility(audit,hash,true)).not.toThrow();
+});

@@ -1,0 +1,10 @@
+Approve the narrow fail-closed preflight. No concrete defects found in the reviewed changes.
+
+- Known heldout `67b255f1…c9244c5a` and model-subset `9797fa4f…62ac6cc2` hashes require explicit regression mode despite stale eligibility/freeze metadata.
+- Explicit regressions remain allowed, subject to existing validation.
+- Fresh hashes pass the exposure gate and remain subject to unchanged freeze, digest, and independent-review checks.
+- The diff changes no frozen inputs, labels, scoring logic, or recorded scores.
+
+Validation: **11 TypeScript tests and 27 Python tests passed**; `git diff --check` passed. No suite contents read, edits, web access, subagents, or releases.
+
+`exposed-inputs.json` is currently untracked; include it when committing these changes.

@@ -3,6 +3,7 @@
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit, urlunsplit
 
@@ -325,3 +326,13 @@ def terraform_tool_response_budget(messages: list[dict[str, Any]]) -> dict[str, 
         "measured_results": measured,
         "violations": violations,
     }
+
+
+def validate_known_suite_exposure(digest: str, regression: bool) -> None:
+    """Historical exposure overrides stale eligibility metadata."""
+    ledger = json.loads(Path(__file__).with_name("exposed-inputs.json").read_text(encoding="utf-8"))
+    if not regression and any(
+        record["sha256"] == digest for record in ledger["records"]
+    ):
+        message = "Known exposed input is regression only"
+        raise ValueError(message)
