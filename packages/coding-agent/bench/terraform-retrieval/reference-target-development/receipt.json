@@ -1,0 +1,6 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "decision": "Reject textreferentguard:negatedreferentprosewrongobjectscopeandrequestordering createfalsechoices;alternativesnotcomplete. Needs structured source metadata rather than keywordproof."
+}
