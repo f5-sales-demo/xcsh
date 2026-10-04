@@ -1,0 +1,51 @@
+[
+  {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "packages/coding-agent/bench/terraform-retrieval",
+      "-p",
+      "test_model*.py"
+    ],
+    "exit_code": 0,
+    "output": "...................................\n----------------------------------------------------------------------\nRan 35 tests in 0.452s\n\nOK\n"
+  },
+  {
+    "command": [
+      "ruff",
+      "check",
+      "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+      "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+      "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+      "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+    ],
+    "exit_code": 0,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "mypy",
+      "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+      "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+      "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+      "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+    ],
+    "exit_code": 0,
+    "output": "Success: no issues found in 4 source files\n"
+  },
+  {
+    "command": [
+      "pylint",
+      "--rcfile=.python-lint",
+      "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+      "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+      "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+      "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+    ],
+    "exit_code": 0,
+    "output": "\n--------------------------------------------------------------------\nYour code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)\n\n"
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "post_analysis_regression": true,
+  "production_restored": true,
+  "ranking_changes": 16,
+  "decision": "No ranking gain; missing corpus weights prevent novel prose terms contributing. Need generated channel statistics and source-bound evidence, not runtime half-weight patch."
+}
