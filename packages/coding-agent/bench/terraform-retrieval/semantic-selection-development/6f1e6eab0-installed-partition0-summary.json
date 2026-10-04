@@ -15,5 +15,20 @@
     "A135 placeholders instead of missing-value question"
   ],
   "report_sha256": "e9a3af7e5094b1bf7104bc5795d8caaa066a9d61c2c29e920912f9b14fe805a7",
-  "manual_review_pending": true
+  "manual_review_pending": false,
+  "manual_review": {
+    "verified_citations": 13,
+    "false_live_apply_claims": 0,
+    "semantic_target_omission": "A107 per-range pools.exclude",
+    "missing_role_questions": [
+      "M001",
+      "M021"
+    ],
+    "ancillary_read_contract_issues": [
+      "Several lookup cases require unrelated configuration reads",
+      "A058 complete overview contains required sections without individual anchor reads"
+    ],
+    "A135": "Honest placeholder environment template; no invented credentials, but version constraint absent"
+  },
+  "scores_unchanged": true
 }

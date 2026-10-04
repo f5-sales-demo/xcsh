@@ -1,0 +1,40 @@
+The review confirms **1/10 automated accuracy and six of seven answerable exact reads**. Those scores remain unchanged. The [report](/tmp/terraform-6f1e6eab0-installed-model-partition0/report.json) remains failed qualification evidence; v7 remains exposed, regression-only.
+
+I inspected all ten completed `agent_end` records and queried [SQLite](/tmp/terraform-reviewed-index-rebuild-1.sqlite) using `mode=ro`. All ten trace hashes and response hashes match the report. **All 13 citations resolve to sections actually read completely**, matching SQLite after documentation-link rewriting. This establishes complete section reads, not complete-document reads.
+
+| Case | Source-backed finding |
+|---|---|
+| [A001](/tmp/terraform-6f1e6eab0-installed-model-partition0/A001.ndjson:177) | Correct `aws_assume_role.duration_seconds`, optional provider field, and 3,600–43,200-second validator. |
+| [A010](/tmp/terraform-6f1e6eab0-installed-model-partition0/A010.ndjson:170) | Correct `timeouts.delete`, duration examples, and requirement to save timeout changes into state before destruction. |
+| [A031](/tmp/terraform-6f1e6eab0-installed-model-partition0/A031.ndjson:136) | Correct required string `xcsh_container_registry.registry` and login-server meaning. |
+| [A047](/tmp/terraform-6f1e6eab0-installed-model-partition0/A047.ndjson:173) | Correct `regions`, optional/computed set of strings, and omission selecting all regions. |
+| [A058](/tmp/terraform-6f1e6eab0-installed-model-partition0/A058.ndjson:232) | Correct computed `cidr_blocks`, sorting/deduplication, `/32` normalization, pinned data/no network request, and absent port/direction metadata. The latter claims are supported by the additionally read overview, beyond the final leaf citation. |
+| [A107](/tmp/terraform-6f1e6eab0-installed-model-partition0/A107.ndjson:212) | Documented neighboring setting, but a genuine target omission; detailed below. |
+| [A135](/tmp/terraform-6f1e6eab0-installed-model-partition0/A135.ndjson:130) | Supported environment-based authentication template with explicitly missing credentials; limited HCL evidence. |
+| [M001](/tmp/terraform-6f1e6eab0-installed-model-partition0/M001.ndjson:191) | Correct resource/data-source alternatives and configurability distinction; no clarification question. |
+| [M021](/tmp/terraform-6f1e6eab0-installed-model-partition0/M021.ndjson:166) | Correct resource optional/computed versus data-source computed-only `email`; resource length validator correctly attributed. No clarification question. |
+| [C001](/tmp/terraform-6f1e6eab0-installed-model-partition0/C001.ndjson:160) | Explicit documentation supports absence of provider-defined functions. The additional `terraform fmt` advice is not established by that cited section. |
+
+**A107 is a semantic omission, not merely an ancillary-read failure.** SQLite documents the optional Boolean:
+
+`aws.not_managed.node_list.interface_list.dhcp_server.dhcp_networks.pools.exclude`
+
+Its meaning is “Exclude this address range from DHCP allocation.” The answer instead explains the network-level `pool_settings` enum, including a stateful IPv6 alternative. Those claims are supported, but neither cited section supplies the requested per-range field. The trace never follows the available `pools` subsection link. Describing the answer as fabricated would be unsupported; describing it as a complete answer would also be unsupported.
+
+**M001/M021 recognize ambiguity but do not resolve it interactively.** Both read and accurately label both roles, without silently choosing one or assigning a computed-only field. Their missing questions genuinely fail the suite’s explicit clarification requirement. For these narrow lookup requests, however, presenting both alternatives is useful and semantically sound. These traces do not demonstrate successful clarification continuations.
+
+**A135 handles missing values honestly.** Its HCL declares the documented provider source and uses an empty provider block with environment authentication. The placeholders are in the accompanying shell exports, and the answer explicitly requires replacing both. It invents neither a tenant nor a token. Asking for actual credentials is unnecessary to show this template.
+
+Its limitations remain material:
+
+- The cited authentication section and branding read support the configuration structure and environment names. Advice to unset other authentication variables is not established by the section it read; broader SQLite documentation specifies one authentication method.
+- It omits a provider-version constraint, so the snippet does not reproduce the reviewed v12.4.0 pin.
+- This is the only emitted HCL example. It provides no evidence of general resource-HCL drafting, successful initialization, validation, authentication, or apply.
+
+**Several automated failures reflect broader reading requirements than the questions need.** A001/A010/A031 require additional names, namespaces, enclosing sections, or minimal configurations despite asking only to locate a field. A047 similarly requires configuration sections. These omissions do not invalidate the supported answers.
+
+A058 is stronger evidence of a scoring limitation: its completed overview read contains **both entire minimal-configuration and root-configuration sections**, yet coverage remains false because the scorer requires their individually anchored URIs. That is an anchored-read accounting limitation, not absent content. I have not changed its score.
+
+Provenance is internally consistent: all Terraform results match SQLite’s provider v12.4.0, source commit `c0169b220fe41a707260a88378dfb4d0b339f9b3`, and receipt digest. The binary and six recorded suite-input hashes also match. The [build receipt](/tmp/terraform-6f1e6eab0-installed-diagnostic/build-receipt.json) explicitly identifies a local development diagnostic, not release qualification.
+
+I found **no false live-apply or tenant-verification claims** in the completed answers or commentary. No files, scores, or benchmark status were changed.
