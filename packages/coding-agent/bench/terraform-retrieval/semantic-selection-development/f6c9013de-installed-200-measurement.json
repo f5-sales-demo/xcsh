@@ -1,0 +1,39 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "installed_resolver": true,
+  "consumer_commit": "f6c9013dea1313bfcb3f957676bf2c9c66441cc4",
+  "binary_sha256": "e6da8268983e4d993c23ac5582441ac02ba71d63cdb90915dd0cc8f981ca6ff5",
+  "provider_index_sha256": "0f4fa5c7f752eca1c53b6cd085a59574007543665d2047c76170374e7dbbad00",
+  "request_file_sha256": "9a24e3579fd50e58891d71e5d0cac5444b55b8b93d53f4ea74de41cd248c0b87",
+  "network_disabled": true,
+  "network_disabled_execution": "sudo unshare --net, run as robin",
+  "responses_identical": true,
+  "normal": {
+    "route_p95_ms": 69.53325700000278,
+    "materialization_ms": 1800.474212,
+    "requests": 200,
+    "repetitions": 5,
+    "max_discovery_bytes": 4048,
+    "max_context_bytes": 10312,
+    "total_response_bytes": 2833835,
+    "tool_calls": 1560
+  },
+  "offline": {
+    "route_p95_ms": 67.725144,
+    "materialization_ms": 1875.221244,
+    "requests": 200,
+    "repetitions": 5,
+    "max_discovery_bytes": 4048,
+    "max_context_bytes": 10312,
+    "total_response_bytes": 2833835,
+    "tool_calls": 1560
+  },
+  "model_network_ms": null,
+  "measurement_validator_errors": [],
+  "raw_measurement_sha256": {
+    "normal": "6a8acf316d0b7cc61d0a3b48367173cade87e985db7aee95fa1a1397bcc49203",
+    "offline": "e9ee1654b27fe7648a4f645e047a9a8259317f654be9d03c51805be9568fe021"
+  },
+  "remaining": "Linux development performance only; no independent accuracy qualification, Mac artifact parity, final installed40 or release."
+}

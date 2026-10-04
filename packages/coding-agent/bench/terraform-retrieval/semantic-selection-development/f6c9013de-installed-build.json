@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "f6c9013dea1313bfcb3f957676bf2c9c66441cc4",
+  "binary_sha256": "e6da8268983e4d993c23ac5582441ac02ba71d63cdb90915dd0cc8f981ca6ff5",
+  "binary_bytes": 621520352,
+  "local_package_build": true,
+  "provider_version": "v12.4.0",
+  "provider_index_sha256": "0f4fa5c7f752eca1c53b6cd085a59574007543665d2047c76170374e7dbbad00"
+}
