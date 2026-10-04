@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "consumer_source_commit": "14005d4b2a9bac75a618d642047d7814d86f6bfa",
+  "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+  "provider_version": "v12.4.0",
+  "correct_leaf_count": 101,
+  "answerable": 140,
+  "top5_count": 126,
+  "complete_route_p95_ms": 62.31560399999944,
+  "max_discovery_bytes": 3949,
+  "max_context_bytes": 10312,
+  "compressed_report_sha256": "6c19f6d9378d74c1a25d837ab34ee9dfbb5f62a7286445f271d77745364ac43f",
+  "raw_report_sha256": "ff8a12e6669651b8a77eb35c26003f4b6e2ed17c3d5ffed6c9c56fa3a4a084b4",
+  "execution_host": "Ubuntu workstation",
+  "model_calls": 0,
+  "model_route_verified": "Ubuntu codex login status reports ChatGPT; no custom model provider or API environment names configured.",
+  "remaining": "Accuracy remains below 95 percent. New independently reviewed frozen suite and final installed model qualification remain required. No release."
+}
