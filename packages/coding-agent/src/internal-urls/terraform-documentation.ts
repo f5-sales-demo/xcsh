@@ -22,6 +22,7 @@ import {
 } from "./terraform-property-ranking";
 import { refineRankedProperty } from "./terraform-property-refinement";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
+import { type TerraformReferenceIdentity, validateReferenceIdentity } from "./terraform-reference-evidence";
 import { filterSecretRepresentation } from "./terraform-secret-representation";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -48,6 +49,7 @@ export interface TerraformRelationship {
 	group?: string;
 }
 export interface TerraformSection {
+	reference_identity?: TerraformReferenceIdentity;
 	enum_validators?: EnumValidatorEvidence[];
 	enum_extraction_complete?: boolean;
 	schema_path: string[];
@@ -121,6 +123,8 @@ export function validateTerraformRetrievalMetadata(m: TerraformMetadata): void {
 		)
 			throw new Error("Invalid Terraform retrieval section");
 	for (const section of m.sections) {
+		if (section.reference_identity !== undefined)
+			validateReferenceIdentity(section.reference_identity, section.schema_path);
 		if (section.enum_validators === undefined && section.enum_extraction_complete === undefined) continue;
 		if (typeof section.enum_extraction_complete !== "boolean" || !Array.isArray(section.enum_validators))
 			throw new Error("Invalid Terraform enum coverage");

@@ -1,0 +1,10 @@
+Approved for the narrow source scope. No blocking findings.
+
+- Exact `scope_path + member` binding enforced; root ownership rejected.
+- Only the two specified upstream messages and `receipt-pinned-schema-identity` accepted. Provenance relies on the existing pinned snapshot verification.
+- Malformed metadata rejected; absent legacy reference metadata remains valid.
+- No query, ranking, or pin changes.
+
+Focused tests: **3 passed**. Additional in-memory checks accepted all 10 message/member combinations and rejected 17 malformed cases plus root ownership.
+
+No edits or external contacts. This is source approval only, not qualification or release approval.
