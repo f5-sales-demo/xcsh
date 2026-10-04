@@ -65,8 +65,34 @@ def validate_continuation_receipt(
         for index, _ in enumerate(plan["branches"])
     }
     results = receipt.get("results", [])
+    if not isinstance(results, list) or any(
+        not isinstance(result, dict)
+        or (
+            not isinstance(result.get("branch"), int)
+            or isinstance(result.get("branch"), bool)
+        )
+        or not isinstance(result.get("id"), str)
+        or not isinstance(result.get("trace_sha256"), str)
+        or not re.fullmatch(r"[a-f0-9]{64}", result["trace_sha256"])
+        for result in results
+    ):
+        message = (
+            "Continuation evidence requires typed branches and exact trace digests"
+        )
+        raise ValueError(message)
     identities = [(result.get("id"), result.get("branch")) for result in results]
     reviews = manual_review.get("branches", [])
+    if not isinstance(reviews, list) or any(
+        not isinstance(result, dict)
+        or (
+            not isinstance(result.get("branch"), int)
+            or isinstance(result.get("branch"), bool)
+        )
+        or not isinstance(result.get("id"), str)
+        for result in reviews
+    ):
+        message = "Continuation review requires typed branch identities"
+        raise ValueError(message)
     reviewed = [(result.get("id"), result.get("branch")) for result in reviews]
     failures = [
         receipt.get("installed") is not True,

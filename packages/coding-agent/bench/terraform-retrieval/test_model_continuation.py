@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from model_continuation import run_rpc_turns, turn_messages
+from model_continuation import run_json_process, run_rpc_turns, turn_messages
 from model_continuation_uat import (
     capture_provenance,
     create_evidence_directory,
@@ -20,10 +20,56 @@ from model_continuation_uat import (
     validate_continuation_receipt,
     verify_provenance,
 )
+from model_trace import successful_read_paths
 
 
 class ModelContinuationTests(unittest.TestCase):
     """Never send a reply before its predecessor reaches agent_end."""
+
+    def test_stale_completion_without_current_acknowledgement_rejects(self) -> None:
+        """Duplicate prior events never complete the next prompt."""
+        child = "import sys,json,time; c=json.loads(sys.stdin.readline()); print(json.dumps({'type':'response','id':c['id'],'success':True}),flush=True); print(json.dumps({'type':'agent_end','messages':[]}),flush=True); print(json.dumps({'type':'agent_end','messages':[]}),flush=True); time.sleep(5)"
+        with self.assertRaisesRegex(ValueError, "acknowledgement"):
+            run_rpc_turns([sys.executable, "-u", "-c", child], ["first", "second"], 1)
+
+    def test_single_turn_timeout_contains_resistant_descendants(self) -> None:
+        """JSON and RPC routes use the same process-group boundary."""
+        child = "import os,signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); os.fork(); time.sleep(10)"
+        started = time.monotonic()
+        with self.assertRaises(subprocess.TimeoutExpired):
+            run_json_process([sys.executable, "-u", "-c", child], 0.1)
+        self.assertLess(time.monotonic() - started, 2)
+
+    def test_single_turn_json_returns_complete_output(self) -> None:
+        """The contained process preserves its result and stderr."""
+        result = run_json_process(
+            [
+                sys.executable,
+                "-u",
+                "-c",
+                "import sys;print(123);print(456,file=sys.stderr)",
+            ],
+            1,
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "123\n")
+        self.assertEqual(result.stderr, "456\n")
+
+    def test_missing_or_duplicate_read_ids_never_match(self) -> None:
+        """Both ends must identify exactly one call/result pair."""
+        call = {"type": "toolCall", "name": "read", "arguments": {"path": "leaf"}}
+        result = {"role": "toolResult", "toolName": "read", "isError": False}
+        messages: list[dict[str, Any]] = [
+            {"role": "assistant", "content": [call]},
+            result,
+        ]
+        self.assertEqual(successful_read_paths(messages), [])
+        call["id"] = "one"
+        result["toolCallId"] = "one"
+        self.assertEqual(successful_read_paths(messages), ["leaf"])
+        self.assertEqual(successful_read_paths([*messages, result]), [])
+        messages[0]["content"] = [call, call]
+        self.assertEqual(successful_read_paths(messages), [])
 
     def test_replies_share_process_and_preserve_exact_json_text(self) -> None:
         """The second prompt reaches the same child after first completion."""
@@ -32,7 +78,7 @@ class ModelContinuationTests(unittest.TestCase):
             "for line in sys.stdin:\n"
             " c=json.loads(line); count+=1\n"
             " print(json.dumps({'type':'response','id':c['id'],'success':True}),flush=True)\n"
-            " print(json.dumps({'type':'agent_end','messages':[{'role':'assistant','text':c['message'],'count':count}]}),flush=True)\n"
+            " print(json.dumps({'type':'agent_end','messages':[{'role':'assistant','text':c['message'],'count':count,'content':[]}]}),flush=True)\n"
         )
         prompts = [
             'Terraform query "quoted"\nnext line',
@@ -99,7 +145,12 @@ class ModelContinuationTests(unittest.TestCase):
 
     def test_malformed_completed_messages_reject(self) -> None:
         """Malformed nested messages cannot escape as positive evidence."""
-        for messages in [[None], [{"content": "text"}], [{"content": [7]}]]:
+        for messages in [
+            [None],
+            [{"role": "assistant"}],
+            [{"content": "text"}],
+            [{"content": [7]}],
+        ]:
             with self.subTest(messages=messages), self.assertRaises(TypeError):
                 turn_messages([{"type": "agent_end", "messages": messages}])
 
@@ -116,7 +167,12 @@ class ContinuationPlanTests(unittest.TestCase):
             "input_sha256": provenance,
             "model": "model",
             "results": [
-                {"id": "one", "branch": i, "automated_evidence_passed": True}
+                {
+                    "id": "one",
+                    "branch": i,
+                    "automated_evidence_passed": True,
+                    "trace_sha256": "a" * 64,
+                }
                 for i in range(2)
             ],
         }
@@ -149,6 +205,13 @@ class ContinuationPlanTests(unittest.TestCase):
             ),
             {"one"},
         )
+        for branch in [False, 0.0, "0"]:
+            invalid = copy.deepcopy(receipt)
+            invalid["results"][0]["branch"] = branch
+            with self.assertRaises(ValueError):
+                validate_continuation_receipt(
+                    invalid, review, "receipt-hash", provenance, "model", plans
+                )
         for target, key, value in [
             ("receipt", "results", receipt["results"][:1]),
             ("receipt", "input_sha256", {}),

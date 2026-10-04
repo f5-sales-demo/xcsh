@@ -94,6 +94,20 @@ def run_rpc_turns(
                         message = "Installed RPC prompt rejected"
                         raise ValueError(message)
                     if event.get("type") == "agent_end":
+                        if (
+                            len(
+                                [
+                                    item
+                                    for item in turn
+                                    if item.get("type") == "response"
+                                    and item.get("id") == request_id
+                                    and item.get("success") is True
+                                ]
+                            )
+                            != 1
+                        ):
+                            message = "Installed RPC completion lacks its prompt acknowledgement"
+                            raise ValueError(message)
                         turns.append(turn)
                         break
             return {"turns": turns, "stderr": "".join(stderr)}
@@ -141,7 +155,10 @@ def turn_messages(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     messages = completed[0]["messages"]
     for message in messages:
         if not isinstance(message, dict) or not isinstance(
-            message.get("content", []), list
+            message.get("content")
+            if message.get("role") == "assistant"
+            else message.get("content", []),
+            list,
         ):
             error = "Completed model messages must be objects with content arrays"
             raise TypeError(error)
@@ -149,3 +166,25 @@ def turn_messages(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
             error = "Completed model content parts must be objects"
             raise TypeError(error)
     return messages
+
+
+def run_json_process(
+    command: list[str], timeout_seconds: float = 180
+) -> subprocess.CompletedProcess[str]:
+    """Bound a single-turn JSON invocation and kill its complete process group."""
+    with subprocess.Popen(  # noqa: S603 - exact installed argv without shell evaluation
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    ) as process:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout_seconds)
+            return subprocess.CompletedProcess(
+                command, process.returncode, stdout, stderr
+            )
+        finally:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=1)

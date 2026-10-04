@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "verdict": "revise",
+  "candidate_retrieval_runs": 0,
+  "candidate_frozen": false,
+  "findings": [
+    "F005 Azure architecture discriminator",
+    "F006 exact map leaf",
+    "F007 frozen reply sequences"
+  ],
+  "review_sha256": "0396e6a81ea5a00a06de06f799a2df307280561a2fc74fddee106cca6836ca86"
+}

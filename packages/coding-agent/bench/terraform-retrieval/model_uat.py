@@ -9,7 +9,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from model_continuation import turn_messages
+from model_continuation import run_json_process, turn_messages
 from model_continuation_uat import (
     capture_provenance,
     create_evidence_directory,
@@ -162,9 +162,7 @@ for case in cases:
         case["prompt"],
     ]
     try:
-        result = subprocess.run(  # noqa: S603 - caller selects an installed binary; argv is never evaluated by a shell
-            command, capture_output=True, text=True, timeout=180, check=False
-        )
+        result = run_json_process(command)
         verify_provenance(input_paths, provenance)
         (args.output / (case["id"] + ".ndjson")).write_text(result.stdout)
         (args.output / (case["id"] + ".stderr.txt")).write_text(result.stderr)
@@ -208,6 +206,7 @@ for case in cases:
                 )
                 or (
                     case.get("match_document")
+                    and required_read_coverage([read], [read])
                     and normalized(read).split("#")[0] == normalized(want).split("#")[0]
                 )
                 for want in expected
@@ -306,7 +305,7 @@ for case in cases:
                 for message in assistant
             )
         )
-        passed = passed and completed_successfully
+        passed = passed and completed_successfully and bool(text.strip())
         results.append(
             {
                 "id": case["id"],
