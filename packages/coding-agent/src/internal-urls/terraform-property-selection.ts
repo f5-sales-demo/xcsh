@@ -2,6 +2,10 @@ import { interpretTerraformLifecycle, lifecycleEvidence, type TerraformLifecycle
 // Conservative indexed property selection policy. Scores express rank, never probability.
 import {
 	type PropertyCandidate,
+	propertyExplicitSchemaPaths,
+	propertyMatchesExplicitPaths,
+	propertyMatchesWorkloadArchitecture,
+	propertyMentionedSchemaPaths,
 	propertyNamesCollection,
 	propertyQueryTerms,
 	propertyRequestedBlockText,
@@ -12,6 +16,7 @@ import {
 	propertyRequestsRootField,
 	propertySchemaIdentifiers,
 	propertyTerms,
+	propertyWorkloadArchitecture,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
@@ -45,6 +50,13 @@ export function selectPropertyDestination(
 	alternatives: readonly RankedProperty[] = [],
 	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
+	const identityPeers = [...input, ...alternatives];
+	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
+	input = input.filter(row => propertyMatchesExplicitPaths(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesExplicitPaths(queryText, row));
+	if (propertyExplicitSchemaPaths(queryText).length && !input.length && !alternatives.length)
+		return { kind: "none", destinations: [], reason: "Unsupported explicit schema path" };
 	const requestedType = propertyRequestedType(queryText);
 	if (requestedType) {
 		input = input.filter(row => row.type == null || row.type === requestedType);
@@ -58,24 +70,48 @@ export function selectPropertyDestination(
 	const identifiers = propertySchemaIdentifiers(queryText).filter(
 		term => ![...input, ...alternatives].some(row => row.provider_name === term),
 	);
+	const identifiersFor = (row: PropertyCandidate) =>
+		identifiers.filter(id => propertySchemaIdentifiers(queryText, row.provider_name).includes(id));
+	const identifiersMatch = (row: PropertyCandidate) =>
+		identifiersFor(row).every(id => row.schema_path.split(".").includes(id));
 	if (
 		identifiers.some(
-			identifier => ![...input, ...alternatives].some(row => row.schema_path.split(".").includes(identifier)),
+			identifier =>
+				![...input, ...alternatives].some(
+					row => !identifiersFor(row).includes(identifier) || row.schema_path.split(".").includes(identifier),
+				),
 		)
 	)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
 
+	const pathMentions = propertyMentionedSchemaPaths(queryText);
+	if (pathMentions.length && !propertyExplicitSchemaPaths(queryText).length) {
+		const candidates = [
+			...new Map(
+				[...input, ...alternatives]
+					.filter(identifiersMatch)
+					.filter(row => !contradicts(query, row))
+					.map(row => [`${row.path}#${row.anchor}`, row]),
+			).values(),
+		].sort(
+			(a, b) =>
+				b.score - a.score ||
+				(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
+				(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
+		);
+		return {
+			kind: candidates.length ? "choices" : "none",
+			destinations: candidates.slice(0, 5),
+			reason: "Alternative or negated schema path intent",
+		};
+	}
 	const lifecycle = context?.lifecycle ?? interpretTerraformLifecycle(queryText);
 	if (lifecycle?.field) {
 		const operations = lifecycle.operations.length ? lifecycle.operations : ["create", "read", "update", "delete"];
 		const rows = [
 			...new Map(
 				[...alternatives, ...input]
-					.filter(
-						row =>
-							operations.some(op => row.schema_path === `timeouts.${op}`) &&
-							identifiers.every(id => row.schema_path.split(".").includes(id)),
-					)
+					.filter(row => operations.some(op => row.schema_path === `timeouts.${op}`) && identifiersMatch(row))
 					.map(row => [`${row.path}#${row.anchor}`, row]),
 			).values(),
 		];
@@ -105,9 +141,7 @@ export function selectPropertyDestination(
 	}
 
 	const unique = new Map<string, RankedProperty>();
-	for (const row of input.filter(row =>
-		identifiers.every(identifier => row.schema_path.split(".").includes(identifier)),
-	)) {
+	for (const row of input.filter(row => identifiersMatch(row))) {
 		const key = `${row.path}#${row.anchor}`;
 		if (!unique.has(key) || unique.get(key)!.score < row.score) unique.set(key, row);
 	}
@@ -141,8 +175,55 @@ export function selectPropertyDestination(
 				(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
 				(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
 		);
+	const polarity = /\benabl(?:e|ed|es|ing)\b/i.test(queryText)
+		? "enable"
+		: /\bdisabl(?:e|ed|es|ing)\b/i.test(queryText)
+			? "disable"
+			: undefined;
+	const choiceName = (row: PropertyCandidate) =>
+		row.schema_path
+			.split(".")
+			.at(-1)
+			?.match(/^(enable|disable)_(.+)$/);
+	const namedChoices = ranked.filter(row => {
+		const name = choiceName(row);
+		return row.anchor === "section" && name && propertyTerms(name[2]!).every(term => query.has(term));
+	});
+	const pair = namedChoices.find(row =>
+		namedChoices.some(peer => {
+			const a = choiceName(row)!,
+				b = choiceName(peer)!;
+			return (
+				row.provider_name === peer.provider_name &&
+				row.provider_type === peer.provider_type &&
+				a[1] !== b[1] &&
+				a[2] === b[2] &&
+				row.schema_path.split(".").slice(0, -1).join(".") === peer.schema_path.split(".").slice(0, -1).join(".")
+			);
+		}),
+	);
+	const scalarIntent =
+		ranked[0]?.anchor.startsWith("schema-") &&
+		ranked[0].coverage >= 0.35 &&
+		propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").length > 0 &&
+		propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").every(term => query.has(term));
+	if (
+		pair &&
+		!scalarIntent &&
+		(!polarity || (/\benabl(?:e|ed|es|ing)\b/i.test(queryText) && /\bdisabl(?:e|ed|es|ing)\b/i.test(queryText))) &&
+		!namedChoices.some(row => propertySchemaIdentifiers(queryText).includes(choiceName(row)![0]))
+	)
+		return { kind: "choices", destinations: namedChoices.slice(0, 5), reason: "Missing enable or disable choice" };
 	const first = ranked[0];
 	if (!first) return { kind: "none", destinations: [], reason: "No supported candidate" };
+	if (propertyRequestsDirectObjectField(queryText, first) && first.score > 0) {
+		const peers = identityPeers.filter(
+			row => row.schema_path === first.schema_path && row.anchor.startsWith("schema-"),
+		);
+		if (peers.some(row => row.provider_type !== first.provider_type || row.provider_name !== first.provider_name))
+			return { kind: "choices", destinations: peers.slice(0, 5), reason: "Missing provider identity or role" };
+		return { kind: "leaf", destinations: [first], reason: "Exact documented object identity field" };
+	}
 	const filterTerms = /\b(?:field|attribute|property|parameter|argument)\b\s+filters?\s+.+?\s+by\b/i.test(queryText)
 		? propertyQueryTerms(propertyRequestedText(queryText) ?? "")
 		: [];
@@ -210,7 +291,7 @@ export function selectPropertyDestination(
 		...ranked.slice(1),
 		...alternatives.filter(
 			row =>
-				identifiers.every(identifier => row.schema_path.split(".").includes(identifier)) &&
+				identifiersMatch(row) &&
 				!contradicts(query, row) &&
 				!ranked.some(r => r.path === row.path && r.anchor === row.anchor),
 		),
@@ -239,8 +320,10 @@ export function selectPropertyDestination(
 			(parts.includes("stateful_service") && otherParts.includes("service"));
 		if (
 			servicePair &&
-			!/\b(?:stateless|stateful|stateful_service)\b/i.test(queryText) &&
-			!/\bservice[./]|\b(?:under|branch|path)\s+`?service`?\b/i.test(queryText)
+			(first.provider_name === "workload"
+				? !propertyWorkloadArchitecture(queryText)
+				: !/\b(?:stateless|stateful|stateful_service)\b/i.test(queryText) &&
+					!/\bservice[./]|\b(?:under|branch|path)\s+`?service`?\b/i.test(queryText))
 		)
 			return {
 				kind: "choices",
@@ -362,8 +445,11 @@ export function selectPropertyDestination(
 
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name) return true;
 		if (requestedTerms.length && other.schema_path.split(".").at(-1) === parts.at(-1)) {
-			const ownContext = new Set(propertyTerms(parts.slice(0, -1).join(" ")));
-			const peerContext = new Set(propertyTerms(other.schema_path.split(".").slice(0, -1).join(" ")));
+			const leafTerms = new Set(propertyTerms(parts.at(-1) ?? ""));
+			const ownContext = new Set(propertyTerms(parts.slice(0, -1).join(" ")).filter(term => !leafTerms.has(term)));
+			const peerContext = new Set(
+				propertyTerms(other.schema_path.split(".").slice(0, -1).join(" ")).filter(term => !leafTerms.has(term)),
+			);
 			if (
 				requestedTerms.some(term => ownContext.has(term) && !peerContext.has(term)) &&
 				!requestedTerms.some(term => peerContext.has(term) && !ownContext.has(term))

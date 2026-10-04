@@ -1,0 +1,13 @@
+{
+  "qualification_passed": false,
+  "candidate_only": true,
+  "workflow_run": 37167620023,
+  "workflow_conclusion": "success",
+  "source_commit": "8f97af7f1489404d4576bd7f719bdf03165e4038",
+  "publishing_disabled": true,
+  "mac_and_ubuntu_offline_smoke_passed": true,
+  "limitations": [
+    "Candidate predates value-lookup draft fix",
+    "No95percentqualification or consumer release"
+  ]
+}

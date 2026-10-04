@@ -13,7 +13,11 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 	const question = query.replace(/\bproperty\s+(?:documentation|reference)\b/gi, "documentation");
 	const block =
 		/\btimeouts?\s+(?:configuration\s+)?block\b/i.test(question) &&
-		!/\b(?:field|attribute|property|parameter)\b/i.test(question);
+		!/\b(?:field|attribute|property|parameter)\b/i.test(question) &&
+		(!/\b(?:duration|value|limit)\b[^.!?]*\b(?:in|inside|under|within)\b[^.!?]*\btimeouts?\s+(?:configuration\s+)?block\b/i.test(
+			question,
+		) ||
+			/\b(?:entire|whole|complete)\b[^.!?]*\bblock\b/i.test(question));
 	const clauses = query.split(/[.!?;]+/).filter(clause => /\btimeouts?\b|\bduration\b/i.test(clause));
 	const evidence = clauses
 		.join(" ")

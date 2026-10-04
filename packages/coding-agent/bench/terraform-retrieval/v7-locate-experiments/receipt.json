@@ -1,0 +1,17 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "production_retained": false,
+  "reason": "Broad noun-light trigger improved aggregate selection but regressed existing Bot Defense/model cases; requires structured intent and confidence repair before adoption.",
+  "original_heldout_labels_scores_unchanged": true,
+  "unbounded_answerable_correct": 54,
+  "bounded_answerable_correct": 58,
+  "baseline_after_valuefix_correct": 34,
+  "bounded_regressed_ids": [
+    "A108",
+    "M028",
+    "M033"
+  ],
+  "v6_unbounded_correct": 79,
+  "v6_unbounded_top5": 98
+}

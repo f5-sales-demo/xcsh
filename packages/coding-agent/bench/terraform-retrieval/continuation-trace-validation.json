@@ -1,0 +1,94 @@
+{
+  "qualification_passed": false,
+  "model_calls": 0,
+  "source_sha256": {
+    "packages/coding-agent/bench/terraform-retrieval/model_continuation.py": "e83474330fa2656fff65d6e659531c59f8daad5afc8d8935c7927bd1ff5eef36",
+    "packages/coding-agent/bench/terraform-retrieval/model_trace.py": "e58ccd30558595137eaa47f793c212b5fc3c4278cd0294b3ea31002ca06b72fb",
+    "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py": "11414b5bebc63074b33b0eb18620011c2d8e12ba8b45222946d3b36becfac5b1",
+    "packages/coding-agent/bench/terraform-retrieval/model_uat.py": "aec1c47271e28cd23e8323ddb5e9d90c023cb47c8636b9eae93ded4de396103e",
+    "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py": "0202ef3312c5d656903f3563fecfae72d8250a6b33b9520c14a8491ae22e3566"
+  },
+  "checks": [
+    {
+      "command": [
+        "ruff",
+        "check",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_trace.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+      ],
+      "exit_code": 0,
+      "stdout": "All checks passed!\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "ruff",
+        "format",
+        "--check",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_trace.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+      ],
+      "exit_code": 0,
+      "stdout": "5 files already formatted\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "mypy",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_trace.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+      ],
+      "exit_code": 0,
+      "stdout": "Success: no issues found in 5 source files\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "pylint",
+        "--rcfile=.python-lint",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_trace.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_continuation_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/model_uat.py",
+        "packages/coding-agent/bench/terraform-retrieval/test_model_continuation.py"
+      ],
+      "exit_code": 0,
+      "stdout": "\n--------------------------------------------------------------------\nYour code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "packages/coding-agent/bench/terraform-retrieval",
+        "-p",
+        "test_model*.py"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "...............................\n----------------------------------------------------------------------\nRan 31 tests in 0.452s\n\nOK\n"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

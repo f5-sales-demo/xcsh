@@ -70,7 +70,55 @@ export function propertyTerms(text: string): string[] {
 		),
 	];
 }
+// Canonical workload service is stateless; stateful_service is its parallel architecture.
+// Apply this distinction only within the workload provider, preserving missing/conflicting intent.
+export function propertyWorkloadArchitecture(text: string): "stateless" | "stateful" | undefined {
+	text = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "").replaceAll("`", "");
+	const assertions = new Set<"stateless" | "stateful">();
+	const negative =
+		/\b(not|no|without)\s+([^,.!?;\n]*?)`?(stateless|stateful|stateful_service|service(?=[./]|\s+branch\b)|service(?=\s*$))\b/gi;
+	for (const match of text.matchAll(negative)) {
+		const between = match[2]!.replaceAll("`", "").trim().toLowerCase();
+		const tail = text.slice(match.index! + match[0].length);
+		if (
+			match[3]!.toLowerCase() === "service" &&
+			!/^[./]/.test(tail) &&
+			!/\b(?:under|in|within|branch|path)(?:\s+(?:a|an|the))?$/i.test(between)
+		)
+			continue;
+		const simpleOpposite =
+			match[1]!.toLowerCase() !== "without" &&
+			["", "a", "an", "the"].includes(between) &&
+			match[3]!.toLowerCase() !== "service" &&
+			!/^[./]/.test(tail);
+		if (!simpleOpposite) return undefined;
+		assertions.add(match[3]!.toLowerCase() === "stateless" ? "stateful" : "stateless");
+	}
+	const positiveText = text.replace(
+		/\b(?:not|no)\s+(?:(?:a|an|the)\s+)?(?:stateless|stateful|stateful_service)\b/gi,
+		"",
+	);
+	if (
+		/\bstateless\b|\bservice\s+branch\b|\bservice[./]|\b(?:under|in|within|branch|path)\s+(?:(?:a|an|the)\s+)?service\b/i.test(
+			positiveText,
+		)
+	)
+		assertions.add("stateless");
+	if (/\b(?:stateful|stateful_service)\b/i.test(positiveText)) assertions.add("stateful");
+	return assertions.size === 1 ? [...assertions][0] : undefined;
+}
+export function propertyMatchesWorkloadArchitecture(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const architecture = propertyWorkloadArchitecture(text);
+	if (!architecture) return true;
+	const stateless = architecture === "stateless";
+	const parts = candidate.schema_path.split(".");
+	return stateless ? !parts.includes("stateful_service") : !parts.includes("service");
+}
 export function propertyQueryTerms(text: string): string[] {
+	text = text
+		.replace(/\bcookie\s+(?:session\s+)?(?:persistence|stickiness)\b/gi, "cookie affinity")
+		.replace(/\b(?:session\s+)?persistence(?=[^,.!?;]*\bcookie\b)/gi, "affinity");
 	return propertyTerms(
 		text
 			.toLowerCase()
@@ -78,12 +126,13 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\b(?:arguments?|flags?)\b/g, "")
 			.replace(/\b(?:whether|should)\b/g, "")
 			.replace(/\b(?:criteria|criterion)\b/g, "conditions")
+			.replace(/\bregular expressions\b/g, "regex values")
 			.replace(
 				/\b(?:active\s+)?hostnames?\s+(?:routed|served)\s+by\s+(?:the\s+)?(?:proxy|load[ -]?balancer)\b/g,
 				"domains matched host authority",
 			)
 			.replace(/\b(?:active\s+)?hostnames?\s+(?:routed|served)\s+by\b/g, "domains matched by")
-			.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "")
+			.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
 			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
 			.replace(/mutual[ -]+tls/g, "mtls")
@@ -114,18 +163,81 @@ export function propertyRequestsRootField(text: string): boolean {
 		text,
 	);
 }
-export function propertySchemaIdentifiers(text: string): string[] {
-	const request = text.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "");
+function schemaPathMentions(text: string) {
+	const query = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	return [
+		...query.matchAll(
+			/\b(under|within|inside|schema path|branch|path|or|and)\s+(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
+		),
+	].map(match => {
+		const suffix = query.slice(match.index! + match[0].length);
+		const path = !match[2] && /^(?:\s+[a-z]|\s*[!?]|\s*$)/.test(suffix) ? match[3]!.replace(/\.$/, "") : match[3]!;
+		const clause =
+			query
+				.slice(0, match.index)
+				.split(/[;!?\n]|\.(?=\s)/)
+				.at(-1) ?? "";
+		return {
+			start: match.index!,
+			end: match.index! + match[0].length,
+			path,
+			qualifier: match[1]!,
+			negative: /\b(?:not|no|without)\s+(?:(?:necessarily|a|an|the)\s+){0,3}$/.test(clause),
+		};
+	});
+}
+export function propertyMentionedSchemaPaths(text: string): string[] {
+	return [...new Set(schemaPathMentions(text).map(match => match.path))];
+}
+export function propertyExplicitSchemaPaths(text: string): string[] {
+	const matches = schemaPathMentions(text);
+	if (matches.length !== 1) return [];
+	const match = matches[0]!;
+	return !match.negative && !["or", "and"].includes(match.qualifier) ? [match.path] : [];
+}
+export function propertyMatchesExplicitPaths(text: string, candidate: PropertyCandidate): boolean {
+	return propertyExplicitSchemaPaths(text).every(path => `.${candidate.schema_path}.`.includes(`.${path}.`));
+}
+export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
+	let request = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	const requiredPaths = propertyExplicitSchemaPaths(text);
+	const mentions = schemaPathMentions(request).filter(mention => !requiredPaths.includes(mention.path));
+	for (const mention of mentions.reverse())
+		request = request.slice(0, mention.start) + " " + request.slice(mention.end);
 	return [
 		...new Set(
 			(request.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
-				term => !term.startsWith("xcsh_"),
+				term =>
+					!term.startsWith("xcsh_") &&
+					!(
+						providerName === "workload" &&
+						term === "stateful_service" &&
+						propertyWorkloadArchitecture(text) !== "stateful"
+					),
 			),
 		),
 	];
 }
 export function propertyRequestsBlock(text: string): boolean {
-	if (/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return false;
+	text = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
+	if (
+		/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text) ||
+		/\b(?:which|what)\s+(?:fields|attributes|properties|parameters|arguments|flags)\b/i.test(text)
+	)
+		return false;
+	if (
+		/^\s*(?:specify|set|provide|supply|configure)\s+(?:(?:the|a|an)\s+)?(?:(?:listening|listener|target|cookie|session|idle)\s+)?(?:port|name|timeout|duration|value)\b/i.test(
+			text,
+		)
+	)
+		return false;
+	const intentText = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
+	if (
+		/\bcookie\b/i.test(intentText) &&
+		/\b(?:persistence|affinity|stickiness)\b/i.test(intentText) &&
+		/\b(?:configure|set up|enable|specify)\b/i.test(intentText)
+	)
+		return true;
 	if (/\b(?:select|choose|enable|disable)\b/i.test(text)) return true;
 	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
 }
@@ -137,6 +249,14 @@ export function propertyRequestedBlockText(text: string): string | undefined {
 	const after = text.match(/\b(?:which|what)\s+(?:configuration\s+|schema\s+)?block\s+(.+)/i)?.[1];
 	const definition = text.match(/\bdefinition\s+of\s+(?:the\s+)?(.+?)\s+(?:list\s+|configuration\s+)?block\b/i)?.[1];
 	return (definition ?? before ?? after)?.split(/\b(?:during|when|to|in|under|within|for)\b/i)[0]?.trim();
+}
+export function propertyHasNestedQualifier(text: string): boolean {
+	return (
+		/\b(?:within|inside|under)\b/i.test(text) ||
+		/\bin\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|terraform\b|resource\b|data[ -]source\b|provider\b|action\b))[a-z][a-z0-9_]*(?:\b|[./])/i.test(
+			text,
+		)
+	);
 }
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
@@ -167,12 +287,54 @@ export function propertyRequestedText(text: string): string | undefined {
 		text.match(
 			/\b(?:specify|set|provide|supply)\b\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|resource\b|data[ -]source\b|provider\b))(.+)/i,
 		)?.[1];
-	const lookup = /\bxcsh_[a-z0-9_]+\b/i.test(text)
-		? [...text.matchAll(/\b(?:read|fetch|retrieve|inspect|look up|lookup)\b\s+(.+)/gi)]
+	const rawLabeledField =
+		text.match(
+			/\b(?:with|using)\s+(?:the\s+)?([a-z][a-z0-9_]*)\s+(?:field|attribute|property|parameter|argument|flag)\b/i,
+		)?.[1] ??
+		text.match(
+			/\b(?:specify|set|provide|supply)\s+(?:the\s+)?([a-z][a-z0-9]*_[a-z0-9_]+)\s+(?:field|attribute|property|parameter|argument|flag)\b/i,
+		)?.[1] ??
+		text.match(
+			/\b(?:with|using)\s+([a-z][a-z0-9]*_[a-z0-9_]+)\s+when\s+(?:running|executing|adding|invoking)\b/i,
+		)?.[1];
+	const labeledField =
+		rawLabeledField &&
+		/\b(?:xcsh_[a-z0-9_]+\s+action|action\s+xcsh_[a-z0-9_]+)\b/i.test(text) &&
+		!/\b(?:resource|data[ -]source)\b/i.test(text) &&
+		!propertyHasNestedQualifier(text) &&
+		![
+			"numeric",
+			"number",
+			"string",
+			"boolean",
+			"bool",
+			"scalar",
+			"list",
+			"optional",
+			"required",
+			"computed",
+		].includes(rawLabeledField.toLowerCase())
+			? rawLabeledField
+			: undefined;
+	const queryProperty = text.match(
+		/\bquery\s+((?:(?:the|an?)\s+)?(?:[a-z][a-z0-9_-]*\s+){0,2}(?:name|id|status|address|port|token|value))\s+of\s+[^.!?]+/i,
+	)?.[1];
+	const lookup = /\bxcsh_[a-z0-9_]+\b|\bto\s+(?:read|fetch|retrieve|inspect|look up|lookup)\b/i.test(text)
+		? [
+				...text.matchAll(
+					/\b(?:read|fetch|retrieve|inspect|look up|lookup|query(?=\s+(?:(?:the|an?)\s+)?(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b))\b\s+(.+?)(?=\bto\s+(?:read|fetch|retrieve|inspect|look up|lookup)\b|\r?\n|$)/gi,
+				),
+			]
+				.filter(
+					(match, _index, matches) =>
+						!/^inspect\b/i.test(match[0]) ||
+						(!queryProperty && !matches.some(other => !/^inspect\b/i.test(other[0]))),
+				)
 				.map(match => match[1]!.split(/\b(?:from|using|via|for)\b/i)[0]!.trim())
+				.reverse()
 				.find(
 					value =>
-						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource)\b/i.test(value) &&
+						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource|existing)\b/i.test(value) &&
 						propertyTerms(value.replace(/\bxcsh_[a-z0-9_]+\b/gi, "").replace(/data[ -]source/gi, "")).length > 0,
 				)
 		: undefined;
@@ -180,7 +342,17 @@ export function propertyRequestedText(text: string): string | undefined {
 		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
 			text,
 		)?.[1];
-	return (filterCriterion ?? identifierField ?? classificationField ?? field ?? operation ?? lookup ?? passive)
+	return (
+		filterCriterion ??
+		identifierField ??
+		classificationField ??
+		field ??
+		labeledField ??
+		operation ??
+		lookup ??
+		queryProperty ??
+		passive
+	)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
 		.split(/\bused\s+to\b|\bat\s+which\b|\bwhen\s+(?:handling|processing|matching|calling|invoking|executing)\b/i)[0]
 		?.split(
@@ -206,7 +378,12 @@ export function propertyNamesCollection(text: string, candidate: PropertyCandida
 }
 export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
 	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
-	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText)) return false;
+	if (propertyHasNestedQualifier(queryText)) return false;
+	if (
+		!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) &&
+		!/\bquery\s+(?:(?:the|an?)\s+)?(?:name|id|status|address|port|token|value)\s+of\b/i.test(queryText)
+	)
+		return false;
 	const request = propertyRequestedText(queryText);
 	if (!request) return false;
 	const generic = new Set(["object", "configured", "assigned", "computed", "value"]);
@@ -246,6 +423,7 @@ export function rankPropertyScope(
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	const requestedType = propertyRequestedType(queryText);
 	return scope.rows
+		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
@@ -285,9 +463,27 @@ export function rankPropertyScope(
 				(local + context * 0.6) * (total ? (coverage / total) ** 2 : 0) +
 				precision * 1.5 +
 				(leafComplete ? 12 : requestedLeaf * 3);
+			const capabilityTerms = row.leaf.filter(term => !["enable", "disable"].includes(term));
+			const capabilityBlock =
+				row.anchor === "section" &&
+				row.leaf.some(term => ["enable", "disable"].includes(term)) &&
+				capabilityTerms.length >= 2 &&
+				capabilityTerms.every(term => target.includes(term)) &&
+				!scope.rows.some(
+					peer =>
+						peer.anchor.startsWith("schema-") &&
+						peer.schema_path
+							.replace(/(^|\.)(?:enable|disable)_/g, "$1")
+							.startsWith(`${row.schema_path.replace(/(^|\.)(?:enable|disable)_/g, "$1")}.`) &&
+						peer.leaf.length > 0 &&
+						peer.leaf.every(term => target.includes(term)),
+				) &&
+				/\b(?:configure|set|specify|enable|disable|select|choose)\b/i.test(queryText) &&
+				!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText);
+			if (capabilityBlock) score += 24;
 			if (propertyRequestsDirectObjectField(queryText, row)) score += 12;
 			if (propertyNamesCollection(queryText, row) && total > 0 && coverage / total >= 0.35) score += 36;
-			else if (asksField && row.anchor === "section") score -= 12;
+			else if (asksField && row.anchor === "section" && !capabilityBlock) score -= 12;
 			if (
 				row.anchor === "section" &&
 				row.leaf.length >= 2 &&

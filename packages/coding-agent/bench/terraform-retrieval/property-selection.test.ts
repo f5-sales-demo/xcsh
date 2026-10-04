@@ -383,3 +383,176 @@ test("an explicit root scope uses requested value evidence without resource-purp
  expect(selectPropertyDestination("Which top-level attribute accepts a Helm repository URL?",[domains]).kind).toBe("choices");
  expect(selectPropertyDestination("Which attribute accepts the list of domain names that the proxy will service?",[domains]).kind).toBe("choices");
 });
+
+test("workload architecture filters both ranked and indexed collision peers", () => {
+ const a={...row("service.port",50), provider_name:"workload"};
+ const b={...row("stateful_service.port",100), provider_name:"workload"};
+ expect(selectPropertyDestination("stateless workload port",[b,a],[b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("stateful workload port",[a,b],[a]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("workload port",[b,a]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateful or stateless workload port",[b,a]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port",[b],[]).kind).toBe("none");
+});
+
+test("workload architecture negation and identifier alternatives preserve intent", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("workload port, not stateful",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("workload port, not stateless",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("stateless or stateful_service workload port",[a,b]).kind).toBe("choices");
+ const other=[{...a,provider_name:"fixture"},{...b,provider_name:"fixture"}];
+ expect(selectPropertyDestination("stateless or stateful service.port",other).kind).toBe("leaf");
+});
+
+test("mixed-provider architecture identifier policy is order-independent", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ const other={...row("stateful_service.port",10),provider_name:"fixture"};
+ const query="stateless or stateful_service workload port";
+ expect(selectPropertyDestination(query,[other,a,b])).toEqual(selectPropertyDestination(query,[b,a,other]));
+ expect(selectPropertyDestination(query,[other,a,b]).kind).toBe("choices");
+});
+
+test("unresolved negative paths and examples remain architecture choices downstream", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not necessarily stateful", "workload port, not under stateful_service.public", "workload port, not stateful_service.public", "workload port without stateful", "workload port (e.g. stateful_service.public)", "workload port, not under service.public"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("explicit architecture alternatives and article-qualified uncertainty stay undecided", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port under service.public or stateful_service.public", "workload port, not necessarily a stateful service", "workload port without a stateful service", "workload port, not a stateful_service.public"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("negative and uncertain canonical paths preserve architecture alternatives", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not under a service.public path", "workload port, not under the stateful_service.public path", "workload port, not necessarily service.public", "workload port, not necessarily under service.public"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("architecture guards apply to architecture clauses rather than unrelated constraints", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not under service", "workload port, not under stateful_service", "workload port, not under `service`"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port without host rewriting",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("stateful workload port, not necessarily public",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+});
+
+test("negative architecture clauses accept varied prepositions without guessing", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not in service.public", "workload port, not in stateful_service.public", "workload port, not necessarily in stateful_service.public", "workload port, not within the service branch"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("negative architecture clauses preserve punctuation case and long scope", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port, not necessarily stateful, please", "workload port, not in the selected public listener configuration for stateful_service.public", "workload port WITHOUT stateful"])
+ expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port without host rewriting for the service",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+});
+
+test("architecture token quoting and clause boundaries preserve actual intent", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("workload port, not `stateful`",[a,b]).destinations[0]?.schema_path).toBe("service.port");
+ expect(selectPropertyDestination("workload port, not `stateless`",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("workload port without host rewriting, stateful",[a,b]).destinations[0]?.schema_path).toBe("stateful_service.port");
+ expect(selectPropertyDestination("workload port under the service branch or stateful_service branch",[a,b]).kind).toBe("choices");
+});
+
+test("conflicting positive and negative architecture assertions stay undecided", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("stateful workload port; not stateful",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload port; not stateless",[a,b]).kind).toBe("choices");
+});
+
+test("canonical architecture alternatives support in and within branch wording", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ for(const query of ["workload port in the service branch or stateful_service branch","workload port within the service branch or stateful_service branch"]) expect(selectPropertyDestination(query,[a,b]).kind).toBe("choices");
+});
+
+test("canonical branch nouns and descriptive negative architecture clauses remain ambiguous", () => {
+ const a={...row("service.port",50),provider_name:"workload"},b={...row("stateful_service.port",100),provider_name:"workload"};
+ expect(selectPropertyDestination("workload port: service branch or stateful_service branch",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("workload port, not a service that is stateful",[a,b]).kind).toBe("choices");
+});
+
+test("capability enable-disable requests preserve the caller's explicit choice", () => {
+ const a={...row("enable_feature_discovery",50),anchor:"section"},b={...row("disable_feature_discovery",90),anchor:"section"};
+ expect(selectPropertyDestination("set feature discovery",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("set enable_feature_discovery",[a,b]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("enable or disable feature discovery",[a,b]).kind).toBe("choices");
+});
+
+test("fully named scalar intent is not replaced by capability block choices", () => {
+ const field={...row("enable_feature_discovery.hostname",100),coverage:1};
+ const a={...row("enable_feature_discovery",1),anchor:"section"},b={...row("disable_feature_discovery",1),anchor:"section"};
+ expect(selectPropertyDestination("Configure xcsh_fixture feature discovery hostname",[field,a,b]).destinations[0]?.schema_path).toBe(field.schema_path);
+});
+
+test("capability pairs cannot cross provider identity or role", () => {
+ const a={...row("enable_feature_discovery",50),anchor:"section"},b={...row("disable_feature_discovery",49,"data-sources"),anchor:"section"};
+ expect(selectPropertyDestination("set feature discovery",[a,b]).reason).not.toBe("Missing enable or disable choice");
+ expect(selectPropertyDestination("set feature discovery",[a,{...b,provider_type:"resources",provider_name:"other"}]).reason).not.toBe("Missing enable or disable choice");
+});
+
+test("capability polarity recognizes enabling and disabling inflections", () => {
+ const a={...row("enable_feature_discovery",20),anchor:"section"},b={...row("disable_feature_discovery",100),anchor:"section"};
+ expect(selectPropertyDestination("Configure disabling feature discovery",[a,b]).reason).not.toBe("Missing enable or disable choice");
+ expect(selectPropertyDestination("Configure enabling feature discovery",[{...a,score:100},{...b,score:20}]).reason).not.toBe("Missing enable or disable choice");
+});
+
+test("an exact object identity query selects direct fields despite unrelated context", () => {
+ const root={...row("name",30,"data-sources"),description:"Configuration object name.",coverage:0.1};
+ const nested={...row("policy.query_parameter.query_param_name",29,"data-sources"),description:"Masks query parameter name."};
+ expect(selectPropertyDestination("Query the name of an existing policy using data source xcsh_fixture",[root,nested]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Query the service name of an existing policy using data source xcsh_fixture",[root,nested]).kind).not.toBe("leaf");
+ const resource={...root,provider_type:"resources"};
+ expect(selectPropertyDestination("Query the name of an existing object",[root,resource]).kind).toBe("choices");
+});
+
+test("explicit field labels preserve nested qualifiers and role peers before type filtering",()=>{
+ const root={...row("name",50,"data-sources"),type:"string"},nested={...row("service.name",49,"data-sources"),type:"string"};
+ expect(selectPropertyDestination("Specify the name within service with name attribute in xcsh_fixture data source",[root,nested]).kind).not.toBe("leaf");
+ const peer={...root,provider_type:"resources",type:"number"};
+ expect(selectPropertyDestination("Which string field specifies name?",[root,peer]).kind).toBe("choices");
+});
+
+test("in a named schema branch cannot select an unrelated root field",()=>{
+ const root={...row("name",50,"data-sources"),type:"string"},nested={...row("service.name",49,"data-sources"),type:"string"};
+ expect(selectPropertyDestination("Specify the name in service using name attribute in xcsh_fixture data source",[root,nested]).kind).not.toBe("leaf");
+});
+
+test("resource field labels retain noun-qualified nested scope",()=>{
+ const root={...row("name",50,"data-sources")},nested={...row("service.name",49,"data-sources")};
+ expect(selectPropertyDestination("Specify the service name using name attribute in xcsh_fixture data source",[root,nested]).kind).not.toBe("leaf");
+});
+
+test("incidental action narration cannot erase resource noun scope",()=>{
+ const root={...row("name",50)},nested={...row("service.name",49)};
+ expect(selectPropertyDestination("Specify the service name using name attribute in xcsh_fixture resource before executing an action",[root,nested]).kind).not.toBe("leaf");
+});
+
+test("explicit dotted schema scope excludes reordered peers and retains unsupported path rejection",()=>{
+ const a=row("alpha.beta.port",30),b=row("beta.alpha.port",100);
+ expect(selectPropertyDestination("Which field sets port under alpha.beta?",[b,a],[b]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("Which field sets port under alpha.missing?",[b,a]).kind).toBe("none");
+});
+
+test("alternative and negative dotted paths cannot decide a leaf by score gap",()=>{
+ const rows=[row("alpha_one.beta_two.port",100),row("gamma_three.delta_four.port",10)];
+ for(const q of ["port under alpha_one.beta_two or under gamma_three.delta_four","port under alpha_one.beta_two and under gamma_three.delta_four","port not under alpha_one.beta_two"])
+ expect(selectPropertyDestination(q,rows).kind).toBe("choices");
+});
+
+test("path alternatives retain ordinary contradiction exclusions",()=>{
+ const rows=[row("outside.ipv4.addr",100),row("outside.ipv6.addr",50),row("inside.ipv4.addr",40)];
+ expect(selectPropertyDestination("outside IPv4 address not under alpha.beta",rows).destinations.map(r=>r.schema_path)).toEqual(["outside.ipv4.addr"]);
+});
+
+test("repeated leaf words in ancestors cannot defeat explicit parent capability context",()=>{
+ const a={...row("protection.policy.mobile_sdk_config",100),anchor:"section",description:"Mobile SDK configuration."};
+ const b={...row("advanced_protection.both_web_and_mobile.mobile_sdk_config",95),anchor:"section",description:"Mobile identifier headers."};
+ expect(selectPropertyDestination("Configure mobile_sdk_config in protection policy on xcsh_fixture",[a,b]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Configure mobile_sdk_config in protection policy on xcsh_fixture",[a,b]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("Configure mobile_sdk_config on xcsh_fixture",[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("Configure mobile_sdk_config for policy and web on xcsh_fixture",[a,b]).kind).toBe("choices");
+});

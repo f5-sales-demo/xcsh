@@ -1,0 +1,15 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "first_result_unchanged": true,
+  "corrected_answerable": 34,
+  "original_answerable": 32,
+  "improved_ids": [
+    "A010",
+    "A118",
+    "M035"
+  ],
+  "regressed_ids": [],
+  "rejected_intermediate": "Explicit guidance fell through; corrected before retention.",
+  "source_tests": 56
+}

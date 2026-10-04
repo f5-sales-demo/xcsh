@@ -4,6 +4,7 @@ import {
 	validateIndependentFreeze,
 	validateModelActivation,
  validateModelSubsetPreflight,
+ validateModelSubsetIdentity,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -105,4 +106,12 @@ test("fresh retrieval qualification requires a complete activated model subset",
  expect(()=>validateModelSubsetPreflight([{...rows[0]!,prompt:"Which field?"},...rows.slice(1)],rows.map(c=>c.id),false)).toThrow("activation");
  expect(()=>validateModelSubsetPreflight(rows,[],false)).toThrow("IDs");
  expect(()=>validateModelSubsetPreflight([],[],true)).not.toThrow();
+});
+
+test("installed model cases cannot be edited after selecting the frozen subset",()=>{
+ const original={id:"one",kind:"answerable",prompt:"Terraform name",expected:["exact#anchor"],model_expectations:{must_read:["exact#anchor"]}};
+ expect(()=>validateModelSubsetIdentity([{expected:["exact#anchor"],prompt:"Terraform name",kind:"answerable",id:"one",model_expectations:{must_read:["exact#anchor"]}}],[original])).not.toThrow();
+ expect(()=>validateModelSubsetIdentity([{...original,prompt:"Terraform edited name"}],[original])).toThrow("changed frozen case");
+ expect(()=>validateModelSubsetIdentity([{...original,expected:["other#anchor"]}],[original])).toThrow("changed frozen case");
+ expect(()=>validateModelSubsetIdentity([{...original,model_expectations:{must_read:[]}}],[original])).toThrow("changed frozen case");
 });

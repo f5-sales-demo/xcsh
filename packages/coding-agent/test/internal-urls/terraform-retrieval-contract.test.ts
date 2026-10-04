@@ -810,3 +810,135 @@ test("on-a provider ownership outranks an incidental longer nested entity", () =
 	).toBe("cdn_loadbalancer");
 	expect(terraformProviderMention("Compare HTTP load balancer and protected application", names)).toBeUndefined();
 });
+
+test("documentation lookup does not imply the data-source role", () => {
+	expect(terraformQueryIdentity("Look up the schema and examples for xcsh_fixture").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Inspect documentation for xcsh_fixture").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Look up an existing xcsh_fixture object").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Inspect data source xcsh_fixture schema").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Read xcsh_fixture resource documentation").providerType).toBe("resources");
+});
+
+test("querying a schema identifier bypasses data-source root configuration", () => {
+	expect(terraformTaskDestination("Query auto_host_rewrite on a route in data source xcsh_fixture")).toBeUndefined();
+	expect(terraformTaskDestination("Query existing object using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("object query and nested value query have distinct routes", () => {
+	expect(terraformTaskDestination("Query data source xcsh_fixture to read served domains")).toBeUndefined();
+	expect(
+		terraformTaskDestination("Query the existing object using data source xcsh_fixture to read served domains"),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Query an existing certificate using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("query property phrases bypass root configuration without changing role", () => {
+	expect(
+		terraformTaskDestination("Query the name of an existing gateway using data source xcsh_fixture"),
+	).toBeUndefined();
+	expect(
+		terraformQueryIdentity("Query the name of an existing gateway using data source xcsh_fixture").providerType,
+	).toBe("data-sources");
+	expect(terraformTaskDestination("Query an existing certificate using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("provider environment variable names are setup vocabulary rather than resource identities", () => {
+	expect(
+		terraformProviderSetupDestination(
+			"How do I configure environment variables XCSH_API_URL and XCSH_API_TOKEN to authenticate the xcsh provider?",
+		),
+	).toBe("option-1-api-token-authentication");
+	expect(
+		terraformProviderSetupDestination("Configure xcsh_cloud_credentials provider authentication"),
+	).toBeUndefined();
+});
+
+test("HTTP application-balancer phrasing identifies documented HTTP provider without replacing explicit identities", () => {
+	expect(
+		terraformProviderMention("Set up HTTP cookie persistence in our application balancer", [
+			"http_loadbalancer",
+			"cdn_loadbalancer",
+		]),
+	).toBe("http_loadbalancer");
+	expect(
+		terraformProviderMention("Set up HTTP cookie persistence in xcsh_cdn_loadbalancer application balancer", [
+			"http_loadbalancer",
+			"cdn_loadbalancer",
+		]),
+	).toBe("cdn_loadbalancer");
+	expect(
+		terraformProviderMention("application balancer cookie persistence", ["http_loadbalancer", "cdn_loadbalancer"]),
+	).toBeUndefined();
+});
+
+test("negated HTTP qualification cannot identify an application balancer provider", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for TCP, not HTTP", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("literal provider names and HTTP purpose qualifiers remain authoritative", () => {
+	const names = ["http_loadbalancer", "cdn_loadbalancer"];
+	expect(
+		terraformProviderMention("Configure HTTP cookie persistence in cdn_loadbalancer application balancer", names),
+	).toBe("cdn_loadbalancer");
+	expect(terraformProviderMention("Configure application balancer to provide HTTP support", names)).toBeUndefined();
+	expect(terraformProviderMention("Configure application balancer without using HTTP", names)).toBeUndefined();
+});
+
+test("HTTP provider evidence excludes purpose-only HTTP but retains unrelated negation", () => {
+	const names = ["http_loadbalancer", "cdn_loadbalancer"];
+	expect(terraformProviderMention("Configure application balancer to enable HTTP support", names)).toBeUndefined();
+	expect(terraformProviderMention("Configure application balancer without cookies using HTTP", names)).toBe(
+		"http_loadbalancer",
+	);
+});
+
+test("HTTP in a separate health-check clause is not provider identity", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for TCP, and configure HTTP health checks", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("HTTP health-check purpose does not identify application balancer type", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for HTTP health checks", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("qualified value lookups retain property routing without field nouns", () => {
+	for (const query of [
+		"For the sensor resource, where is the calibration adjustment documented?",
+		"Locate the retry ceiling documented for the queue resource.",
+		"Find the deletion timeout documented for the sensor resource.",
+	])
+		expect(terraformTaskDestination(query)).toBeUndefined();
+	expect(terraformTaskDestination("Where is the resource documented for creating a sensor?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
+
+test("value lookup preserves explicit lifecycle guidance", () => {
+	expect(terraformTaskDestination("Find lifecycle guidance on writing operation timeout durations.")).toEqual({
+		role: "timeouts",
+	});
+});

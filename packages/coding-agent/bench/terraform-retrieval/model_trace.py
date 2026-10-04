@@ -8,22 +8,38 @@ from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
     """Require a successful result for each counted read call."""
-    successful = {
-        m.get("toolCallId")
-        for m in messages
-        if m.get("role") == "toolResult"
-        and m.get("toolName") == "read"
-        and m.get("isError") is False
-    }
-    return [
-        c.get("arguments", {}).get("path", "")
-        for m in messages
-        if m.get("role") == "assistant"
-        for c in m.get("content", [])
-        if c.get("type") == "toolCall"
-        and c.get("name") == "read"
-        and c.get("id") in successful
-    ]
+    calls: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    results: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    for index, message in enumerate(messages):
+        if message.get("role") == "assistant":
+            for part in message.get("content", []):
+                if (
+                    part.get("type") == "toolCall"
+                    and isinstance(part.get("id"), str)
+                    and part["id"]
+                ):
+                    calls.setdefault(part["id"], []).append((index, part))
+        if (
+            message.get("role") == "toolResult"
+            and isinstance(message.get("toolCallId"), str)
+            and message["toolCallId"]
+        ):
+            results.setdefault(message["toolCallId"], []).append((index, message))
+    paths = []
+    for identity, matching_calls in calls.items():
+        matching_results = results.get(identity, [])
+        if len(matching_calls) != 1 or len(matching_results) != 1:
+            continue
+        call_index, call = matching_calls[0]
+        result_index, result = matching_results[0]
+        if (
+            call.get("name") == "read"
+            and result.get("toolName") == "read"
+            and result.get("isError") is False
+            and result_index > call_index
+        ):
+            paths.append(call.get("arguments", {}).get("path", ""))
+    return paths
 
 
 def validate_model_activation(cases: list[dict[str, Any]]) -> None:
@@ -85,3 +101,14 @@ def missing_value_response_supported(text: str, expectation: str) -> bool:
             re.IGNORECASE,
         )
     )
+
+
+def validate_model_subset_identity(
+    subset: list[dict[str, object]], suite: list[dict[str, object]]
+) -> None:
+    """Require selected model cases to equal their frozen source objects."""
+    by_id = {case["id"]: case for case in suite}
+    for case in subset:
+        if case.get("id") not in by_id or case != by_id[case["id"]]:
+            message = f"Model subset changed frozen case {case.get('id')}"
+            raise ValueError(message)

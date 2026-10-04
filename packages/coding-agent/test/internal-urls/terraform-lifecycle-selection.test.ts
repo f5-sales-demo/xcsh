@@ -38,3 +38,37 @@ test("property documentation wording preserves an entire timeout block request",
 	).toBe(false);
 	expect(interpretTerraformLifecycle("Which property inside the timeouts block controls creation?")?.field).toBe(true);
 });
+
+test("operation duration requests inside a timeout block identify the direct lifecycle field", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const [word, op] of [
+		["creation", "create"],
+		["read", "read"],
+		["update", "update"],
+		["deletion", "delete"],
+	]) {
+		const query = `Configure the ${word} timeout duration in the timeouts block for xcsh_namespace.`;
+		expect(interpretTerraformLifecycle(query)?.field).toBe(true);
+		expect(selectPropertyDestination(query, rows).destinations[0]?.schema_path).toBe(`timeouts.${op}`);
+		expect(selectPropertyDestination(query, rows).kind).toBe("leaf");
+	}
+	expect(
+		interpretTerraformLifecycle("Read the entire timeouts block describing creation and deletion operations")?.field,
+	).toBe(false);
+});
+
+test("describing operation values does not turn block reads into field reads", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const noun of ["duration", "value", "limit"])
+		expect(interpretTerraformLifecycle(`Read the timeouts block describing creation ${noun}`)?.field).toBe(false);
+	for (const noun of ["request", "connection", "TLS"])
+		expect(
+			interpretTerraformLifecycle(`Configure the creation ${noun} timeout duration in the timeouts block`),
+		).toBeUndefined();
+	expect(
+		selectPropertyDestination(
+			"Configure the creation timeout duration rather than deletion in the timeouts block for xcsh_namespace",
+			rows,
+		).kind,
+	).toBe("choices");
+});

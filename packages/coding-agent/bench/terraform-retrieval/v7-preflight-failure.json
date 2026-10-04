@@ -1,0 +1,22 @@
+{
+  "qualification_passed": false,
+  "suite_sha256": "c8302f3abc77141ecbf230a6c2b15fc23d4572564163a4eb15167c0935d094ca",
+  "frozen_original_preserved": true,
+  "scored_query_count": 0,
+  "model_run_count": 0,
+  "failures": [
+    {
+      "stage": "clarification tree schema",
+      "result": "approved array contains model reply decisions, not indexed refinement URI trees; adapter added without changing candidate bytes"
+    },
+    {
+      "stage": "exact direct section evidence",
+      "case_ids": [
+        "A135",
+        "A136",
+        "A137"
+      ],
+      "result": "argument-reference direct section has heading only; quoted field descriptions belong to required and optional child headings; independent corrective review active"
+    }
+  ]
+}

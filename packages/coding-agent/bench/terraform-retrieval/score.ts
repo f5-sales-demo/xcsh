@@ -121,3 +121,15 @@ export function validateModelSubsetPreflight(cases:Array<{id:string;kind:string;
  if(new Set(cases.map(c=>c.id)).size!==40||cases.some(c=>!suiteIds.includes(c.id)))throw new Error("Frozen model subset IDs do not match suite");
  validateModelActivation(cases);
 }
+
+export function validateModelSubsetIdentity(
+ subset: readonly {id:string;[key:string]:unknown}[],
+ suite: readonly {id:string;[key:string]:unknown}[],
+): void {
+ const canonical=(value:unknown):string=>{
+ const normalize=(item:unknown):unknown=>Array.isArray(item)?item.map(normalize):item && typeof item === "object"?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,v])=>[key,normalize(v)])):item;
+ return JSON.stringify(normalize(value));
+ };
+ const byId=new Map(suite.map(c=>[c.id,c]));
+ for(const c of subset){const original=byId.get(c.id);if(!original || canonical(c)!==canonical(original))throw new Error(`Model subset changed frozen case ${c.id}`);}
+}

@@ -47,3 +47,41 @@ test("role choices precede branch choices when equivalent leaves exceed the resp
 		terraformRoleChoices(all.map((row, index) => (index ? row : { ...row, description: "Different meaning" }))),
 	).toEqual([]);
 });
+
+const architectures = ["service", "stateful_service"].flatMap(architecture =>
+	["public", "private", "custom"].map(destination => ({
+		provider_type: "resources",
+		provider_name: "workload",
+		description: "Empty choice.",
+		schema_path: `${architecture}.${destination}.disable_host_rewrite`,
+		path: `documentation/resources/workload/${architecture}/${destination}/index.md`,
+		anchor: "section",
+	})),
+);
+test("explicit workload architecture skips the decided branch but retains advertisement choices", () => {
+	expect(terraformBranchChoices(architectures, 2, "stateless workload disable_host_rewrite")).toEqual([]);
+	expect(terraformBranchChoices(architectures, 2, "stateful workload disable_host_rewrite")).toEqual([]);
+	expect(terraformBranchChoices(architectures, 2, "workload disable_host_rewrite")).toEqual([
+		"service",
+		"stateful_service",
+	]);
+	expect(terraformBranchChoices(architectures, 2, "stateful or stateless workload disable_host_rewrite")).toEqual([
+		"service",
+		"stateful_service",
+	]);
+});
+
+test("explicit canonical service path remains usable without an architecture adjective", () => {
+	expect(terraformBranchChoices(architectures, 2, "under service.public disable_host_rewrite")).toEqual([]);
+});
+
+test("unresolved negative and example architecture wording retains both branch choices", () => {
+	for (const query of [
+		"workload port, not necessarily stateful",
+		"workload port, not under stateful_service.public",
+		"workload port without stateful",
+		"workload port (e.g. stateful_service.public)",
+		"workload port, not under service.public",
+	])
+		expect(terraformBranchChoices(architectures, 2, query)).toEqual(["service", "stateful_service"]);
+});

@@ -9,12 +9,23 @@ import subprocess
 import time
 from pathlib import Path
 
+from model_continuation import final_assistant_text, run_json_process, turn_messages
+from model_continuation_uat import (
+    capture_provenance,
+    create_evidence_directory,
+    validate_continuation_plans,
+    validate_continuation_receipt,
+    validate_continuation_review,
+    verify_continuation_traces,
+    verify_provenance,
+)
 from model_trace import (
     has_clarification_question,
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
     validate_model_activation,
+    validate_model_subset_identity,
 )
 
 parser = argparse.ArgumentParser()
@@ -24,10 +35,27 @@ parser.add_argument("--freeze", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--provider-version", required=True)
 parser.add_argument("--regression", action="store_true")
+parser.add_argument("--continuation-receipt", type=Path)
+parser.add_argument("--continuation-review", type=Path)
 parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
 parser.add_argument("--partition-index", type=int, default=0)
 parser.add_argument("--partition-count", type=int, default=1)
 args = parser.parse_args()
+input_paths = {"binary": Path(args.binary).resolve(), "freeze": args.freeze}
+input_paths.update(
+    {
+        name: args.freeze.parent / name
+        for name in [
+            "heldout.json",
+            "model-subset.json",
+            "model-continuations.json",
+            "independent-review.json",
+            "eligibility.json",
+        ]
+        if (args.freeze.parent / name).exists()
+    }
+)
+provenance = capture_provenance(input_paths)
 freeze = json.loads(args.freeze.read_text())
 suite_bytes = args.suite.read_bytes()
 if hashlib.sha256(suite_bytes).hexdigest() != freeze["files"]["model-subset.json"]:
@@ -40,13 +68,87 @@ all_cases = json.loads(suite_bytes)
 INDEPENDENT_FREEZE_VERSION = 2
 if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
     validate_model_activation(all_cases)
+if not args.regression:
+    heldout_bytes = (args.freeze.parent / "heldout.json").read_bytes()
+    if hashlib.sha256(heldout_bytes).hexdigest() != freeze["files"]["heldout.json"]:
+        message = "Frozen heldout suite hash mismatch"
+        raise ValueError(message)
+    validate_model_subset_identity(all_cases, json.loads(heldout_bytes))
+    if freeze.get("schema_version") != INDEPENDENT_FREEZE_VERSION:
+        message = "Nonregression model UAT requires independently reviewed freeze"
+        raise ValueError(message)
+    for name in ["heldout.json", "model-subset.json", "independent-review.json"]:
+        if provenance.get(name) != freeze["files"].get(name):
+            message = f"Frozen input hash mismatch: {name}"
+            raise ValueError(message)
+    independent_review = json.loads(
+        (args.freeze.parent / "independent-review.json").read_bytes()
+    )
+    eligibility_record = json.loads(
+        (args.freeze.parent / "eligibility.json").read_bytes()
+    )
+    validate_continuation_review(
+        freeze,
+        independent_review,
+        json.loads(heldout_bytes),
+        eligibility_record,
+        provenance["independent-review.json"],
+    )
+continuation_verified: set[str] = set()
+if not args.regression and any(case["kind"] == "ambiguous" for case in all_cases):
+    if args.continuation_receipt is None or args.continuation_review is None:
+        message = (
+            "Ambiguous qualification requires reviewed installed continuation evidence"
+        )
+        raise ValueError(message)
+    plans_bytes = (args.freeze.parent / "model-continuations.json").read_bytes()
+    if hashlib.sha256(plans_bytes).hexdigest() != freeze["files"].get(
+        "model-continuations.json"
+    ):
+        message = "Frozen continuation plan hash mismatch"
+        raise ValueError(message)
+    for name, digest in freeze["files"].items():
+        if name in provenance and provenance[name] != digest:
+            message = f"Frozen input hash mismatch: {name}"
+            raise ValueError(message)
+    review = json.loads((args.freeze.parent / "independent-review.json").read_bytes())
+    eligibility = json.loads((args.freeze.parent / "eligibility.json").read_bytes())
+    validate_continuation_review(
+        freeze,
+        review,
+        json.loads(heldout_bytes),
+        eligibility,
+        provenance["independent-review.json"],
+    )
+    if (
+        freeze.get("schema_version") != INDEPENDENT_FREEZE_VERSION
+        or review.get("model_continuations_sha256")
+        != hashlib.sha256(plans_bytes).hexdigest()
+    ):
+        message = "Eligible independently approved continuation freeze required"
+        raise ValueError(message)
+    plans = json.loads(plans_bytes)
+    validate_continuation_plans(all_cases, plans)
+    receipt_bytes = args.continuation_receipt.read_bytes()
+    continuation_verified = validate_continuation_receipt(
+        json.loads(receipt_bytes),
+        json.loads(args.continuation_review.read_bytes()),
+        hashlib.sha256(receipt_bytes).hexdigest(),
+        provenance,
+        args.model,
+        plans,
+    )
+    verify_continuation_traces(
+        json.loads(receipt_bytes), args.continuation_receipt.parent
+    )
 cases = all_cases[args.partition_index :: args.partition_count]
-args.output.mkdir(parents=True, exist_ok=True)
+create_evidence_directory(args.output)
 results = []
 for case in cases:
+    verify_provenance(input_paths, provenance)
     start = time.perf_counter()
     command = [
-        args.binary,
+        str(input_paths["binary"]),
         "--mode",
         "json",
         "--no-session",
@@ -64,9 +166,8 @@ for case in cases:
         case["prompt"],
     ]
     try:
-        result = subprocess.run(  # noqa: S603 - caller selects an installed binary; argv is never evaluated by a shell
-            command, capture_output=True, text=True, timeout=180, check=False
-        )
+        result = run_json_process(command)
+        verify_provenance(input_paths, provenance)
         (args.output / (case["id"] + ".ndjson")).write_text(result.stdout)
         (args.output / (case["id"] + ".stderr.txt")).write_text(result.stderr)
         events = [
@@ -75,12 +176,7 @@ for case in cases:
         if not all(isinstance(event, dict) for event in events):
             message = "Unexpected non-object event in CLI JSON stream"
             raise ValueError(message)  # noqa: TRY301 - invalid event boundary is recorded as an explicit failed case
-        messages = [
-            message
-            for event in events
-            if event.get("type") == "agent_end"
-            for message in event.get("messages", [])
-        ]
+        messages = turn_messages(events)
         assistant = [m for m in messages if m.get("role") == "assistant"]
         text = "\n".join(
             c.get("text", "")
@@ -114,6 +210,7 @@ for case in cases:
                 )
                 or (
                     case.get("match_document")
+                    and required_read_coverage([read], [read])
                     and normalized(read).split("#")[0] == normalized(want).split("#")[0]
                 )
                 for want in expected
@@ -160,7 +257,12 @@ for case in cases:
                 and not false_live
             )
         elif case["kind"] == "ambiguous":
-            passed = result.returncode == 0 and clarification and not false_live
+            passed = (
+                result.returncode == 0
+                and clarification
+                and not false_live
+                and (args.regression or case["id"] in continuation_verified)
+            )
         elif case.get("behavior") == "ordinary-discovery":
             passed = result.returncode == 0 and not terraform_reads and not false_live
         elif case.get("behavior") == "unsupported":
@@ -198,11 +300,23 @@ for case in cases:
                 )
                 and not false_live
             )
+        completed_successfully = (
+            bool(assistant)
+            and assistant[-1].get("stopReason") == "stop"
+            and all(
+                message.get("stopReason") in {"stop", "toolUse"}
+                and not message.get("errorMessage")
+                for message in assistant
+            )
+        )
+        final_text = final_assistant_text(messages)
+        passed = passed and completed_successfully and bool(final_text.strip())
         results.append(
             {
                 "id": case["id"],
                 "kind": case["kind"],
                 "passed": passed,
+                "completed_successfully": completed_successfully,
                 "model_ms": (time.perf_counter() - start) * 1000,
                 "exit_code": result.returncode,
                 "read_uris": reads,
@@ -213,6 +327,7 @@ for case in cases:
                 "missing_value_review_required": case.get("behavior")
                 in ("missing-value", "missing_value"),
                 "clarification_review_required": case["kind"] == "ambiguous",
+                "continuation_verified": case["id"] in continuation_verified,
                 "expected_citation": cited,
                 "provider_version_cited": args.provider_version in text,
                 "clarification": clarification,
@@ -238,6 +353,7 @@ for case in cases:
         json.dumps(
             {
                 "model": args.model,
+                "input_sha256": provenance,
                 "binary": args.binary,
                 "provider_version": args.provider_version,
                 "suite_sha256": hashlib.sha256(suite_bytes).hexdigest(),

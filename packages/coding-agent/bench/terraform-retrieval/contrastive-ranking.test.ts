@@ -373,3 +373,126 @@ test("imperative property intent does not require a literal provider name",()=>{
  const scope=preparePropertyScope([row("login.failure_conditions.regex_values","Regular expressions to match the input."),row("login.failure_conditions","Failure conditions.","section")]);
  expect(rankPropertyScope("On a fixture proxy, specify regular expressions matching failed login responses",scope)[0]?.schema_path).toBe("login.failure_conditions.regex_values");
 });
+
+
+test("plural regular-expression values identify the scalar regex list",()=>{
+ expect(propertyQueryTerms("list of regular expressions")).toEqual(propertyQueryTerms("regex_values"));
+ expect(propertyQueryTerms("regular expression algorithm")).not.toContain("value");
+ const scope=preparePropertyScope([row("login.failure_conditions.regex_values","List of regular expressions matching the input."),row("login.failure_conditions","Failure Conditions.","section")]);
+ expect(rankPropertyScope("Specify regular expressions matching failed login responses",scope)[0]?.schema_path).toBe("login.failure_conditions.regex_values");
+});
+
+
+test("querying a named schema value retains field lookup intent",()=>{
+ expect(propertyRequestedText("Query auto_host_rewrite on a public route in data source xcsh_fixture")).toContain("auto_host_rewrite");
+ expect(propertyRequestedText("Query the existing object using data source xcsh_fixture")).toBeUndefined();
+ const scope=preparePropertyScope([row("routes.auto_host_rewrite","Automatic host rewriting."),row("routes","Default route.","section")]);
+ expect(rankPropertyScope("Query auto_host_rewrite on a public route in data source xcsh_fixture",scope)[0]?.schema_path).toBe("routes.auto_host_rewrite");
+});
+
+
+test("leading object queries preserve nested reads and remain object-level without a field",()=>{
+ expect(propertyRequestedText("Query data source xcsh_fixture to read served domains")).toContain("served domains");
+ expect(propertyRequestedText("Query the existing object using data source xcsh_fixture to read served domains")).toContain("served domains");
+ expect(propertyRequestedText("Query an existing certificate using data source xcsh_fixture")).toBeUndefined();
+});
+
+
+test("query property phrases preserve modifiers and exclude object lookup",()=>{
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture")).toBe("the name");
+ expect(propertyRequestedText("Query the status of an existing gateway using data source xcsh_fixture")).toBe("the status");
+ expect(propertyRequestedText("Query the service name of an existing gateway using data source xcsh_fixture")).toBe("the service name");
+ expect(propertyRequestedText("Query an existing certificate using data source xcsh_fixture")).toBeUndefined();
+ expect(propertyRequestedText("Query the existing object using data source xcsh_fixture to read served domains")).toContain("served domains");
+});
+
+
+test("nested explicit read wins over leading property lookup",()=>{expect(propertyRequestedText("Query the name of an existing object using data source xcsh_fixture to read served domains")).toContain("served domains");});
+
+
+test("nested reads survive intervening object inspections and caller-only scope", () => {
+ expect(propertyRequestedText("Query the name of an existing object using data source xcsh_fixture to inspect existing object to read served domains")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing object to read served domains")).toBe("served domains");
+});
+
+test("nested reads preserve line boundaries and typed-object inspections", () => {
+ expect(propertyRequestedText("Read served domains from data source xcsh_fixture.\nExplain the result.")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect existing certificate to read served domains")).toBe("served domains");
+});
+
+test("trailing object inspections preserve the property-bearing request", () => {
+ expect(propertyRequestedText("Read served domains from data source xcsh_fixture to inspect existing certificate")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect existing certificate")).toBe("the name");
+});
+
+test("object inspections with articles do not replace explicit read or query", () => {
+ expect(propertyRequestedText("Read served domains from data source xcsh_fixture to inspect the certificate")).toBe("served domains");
+ expect(propertyRequestedText("Query the name of an existing certificate using data source xcsh_fixture to inspect the certificate")).toBe("the name");
+ expect(propertyRequestedText("Inspect served domains using data source xcsh_fixture")).toBe("served domains");
+});
+
+test("explicit workload architecture excludes its parallel schema branch", () => {
+ const candidates=["service", "stateful_service"].map(architecture => ({...row(`${architecture}.port`, "Listener port."),provider_name:"workload"}));
+ expect(rankPropertyScope("stateless workload listener port",preparePropertyScope(candidates)).map(r=>r.schema_path)).toEqual(["service.port"]);
+ expect(rankPropertyScope("stateful workload listener port",preparePropertyScope(candidates)).map(r=>r.schema_path)).toEqual(["stateful_service.port"]);
+ expect(rankPropertyScope("workload listener port",preparePropertyScope(candidates))).toHaveLength(2);
+ expect(rankPropertyScope("stateful or stateless workload listener port",preparePropertyScope(candidates))).toHaveLength(2);
+});
+
+test("qualified negation and examples do not become positive workload architecture", () => {
+ const candidates=["service","stateful_service"].map(architecture=>({...row(`${architecture}.port`,"Listener port."),provider_name:"workload"}));
+ expect(rankPropertyScope("workload port, not a stateful service",preparePropertyScope(candidates)).map(r=>r.schema_path)).toEqual(["service.port"]);
+ expect(rankPropertyScope("workload port, not necessarily stateful",preparePropertyScope(candidates))).toHaveLength(2);
+ expect(rankPropertyScope("workload port (for example service.public)",preparePropertyScope(candidates))).toHaveLength(2);
+ expect(rankPropertyScope("workload port, not under service.public",preparePropertyScope(candidates))).toHaveLength(2);
+});
+
+test("configuration capability requests rank named blocks above incidental prose fields", () => {
+ const scope=preparePropertyScope([
+ row("enable_feature_discovery", "Settings for feature discovery.","section"),
+ row("disable_feature_discovery", "No values needed.","section"),
+ row("pool.connection_limit", "Maximum HTTP connections. Feature API details."),
+ ]);
+ const rows=rankPropertyScope("Set feature discovery on xcsh_fixture",scope);
+ expect(["enable_feature_discovery", "disable_feature_discovery"]).toContain(rows[0]?.schema_path);
+ expect(rows.find(x=>x.schema_path==="disable_feature_discovery")!.score).toBeGreaterThan(rows.find(x=>x.schema_path==="pool.connection_limit")!.score);
+});
+
+test("capability pairs cannot outrank a fully named scalar through the opposite block", () => {
+ const scope=preparePropertyScope([row("enable_feature_discovery","Settings.","section"),row("disable_feature_discovery","Empty option.","section"),row("enable_feature_discovery.hostname","Hostname for discovery.")]);
+ expect(rankPropertyScope("Configure xcsh_fixture feature discovery hostname",scope)[0]?.schema_path).toBe("enable_feature_discovery.hostname");
+});
+
+test("explicit field labels carry action value intent without operation narration", () => {
+ expect(propertyRequestedText("Specify the target site name with site attribute when executing xcsh_fixture action.")).toBe("site");
+ expect(propertyRequestedText("Specify the target release with software_version when running xcsh_fixture action.")).toBe("software_version");
+ expect(propertyRequestedText("Specify the key_type attribute when adding a key in xcsh_fixture action.")).toBe("key_type");
+});
+
+test("type descriptions are not mistaken for explicit field labels",()=>{
+ expect(propertyRequestedText("Specify the target port using numeric field in xcsh_fixture resource")).not.toBe("numeric");
+});
+
+test("cookie persistence configuration is a capability request, while explicit cookie fields stay scalar",()=>{
+ expect(propertyRequestsBlock("Set up passive session persistence using an incoming HTTP cookie name")).toBe(true);
+ expect(propertyRequestsBlock("Which field sets the cookie name for session persistence?")).toBe(false);
+ expect(propertyQueryTerms("Configure cookie session persistence")).toContain("affinity");
+});
+
+test("cookie-persistence purpose cannot turn requested scalar port into a block",()=>{
+ expect(propertyRequestsBlock("Specify the listening port to configure cookie persistence")).toBe(false);
+});
+
+test("cookie persistence does not swallow an explicit scalar or unrelated persistence terminology",()=>{
+ expect(propertyRequestsBlock("Specify the listening port for cookie persistence")).toBe(false);
+ expect(propertyQueryTerms("Configure database persistence")).toContain("persistence");
+});
+
+test("cookie terminology is local and purpose clauses cannot force block fallback",()=>{
+ expect(propertyQueryTerms("Configure database persistence, plus cookie affinity")).toContain("persistence");
+ expect(propertyRequestsBlock("Set the idle timeout to enable cookie persistence")).toBe(false);
+});
+
+test("idle timeout for cookie persistence stays scalar",()=>{expect(propertyRequestsBlock("Configure the idle timeout for cookie persistence")).toBe(false);});
+
+test("plural cookie field requests remain scalar intent",()=>{expect(propertyRequestsBlock("Which fields configure cookie persistence?")).toBe(false);});

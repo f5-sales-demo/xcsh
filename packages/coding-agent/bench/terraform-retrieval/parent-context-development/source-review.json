@@ -1,0 +1,8 @@
+{
+  "source_only": true,
+  "qualification_passed": false,
+  "verdict": "approved",
+  "sha256": "1eaa864422f987f8ef02c5c94cb878b5662062e6e96e5897e29a108f11908913",
+  "text": "Source approval: no concrete ambiguity, role, or purpose regressions found in the current diff.\n\nThe exclusion is symmetric and limited to identical leaf names. Provider identity/role checks and earlier purpose-evidence and collision guards remain intact. The added test covers explicit policy context, missing context, and both-parent context.\n\nMinor coverage gap: the positive assertion checks only `kind === \"leaf\"`, not the selected schema path.\n\nRead-only source review only. The 338 passes and pinned Bot Defense result are supplied evidence; I did not rerun qualification.",
+  "route": "Ubuntu Codex ChatGPT sign-in"
+}
