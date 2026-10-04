@@ -794,3 +794,21 @@ test("role choices retain local shape filters and first clause reference evidenc
  expect(selectPropertyDestination(q,[first,other],[rejected]).kind).toBe("leaf");
  expect(selectPropertyDestination("Which field specifies name of the default flavor reference; consult documentation",[first,other]).kind).toBe("leaf");
 });
+
+test("matching inflection supports local field prose without creating branch evidence",()=>{
+ const domains={...row("domains",40),description:"Domain names matched to this load balancer."};
+ const dns={...row("dns_name",10),description:"DNS hostname for a backend."};
+ expect(selectPropertyDestination("Where is the matching-domain list on a Terraform TCP load balancer resource?",[domains,dns]).kind).toBe("leaf");
+ const a={...row("matched_header.name",40),description:"Name of the header"};
+ const b={...row("request_header.name",39),description:"Name of the header"};
+ expect(selectPropertyDestination("Which field specifies the name, not matching?",[a,b]).kind).not.toBe("leaf");
+ expect(selectPropertyDestination("Which field specifies the name for header matching?",[a,b]).kind).toBe("choices");
+});
+
+test("matching aliases cannot use parent paths or rejected operation and prose",()=>{
+ const a={...row("matched_header.timeout",40),description:"Timeout in seconds."};
+ expect(selectPropertyDestination("Which field specifies matching?",[a]).kind).toBe("choices");
+ const d={...row("domains",40),description:"Domain names matched for routing."};
+ for(const q of ["Which field specifies routing instead of matching?","Which field specifies matching or routing?"])expect(selectPropertyDestination(q,[d]).kind).toBe("choices");
+ for(const description of ["Domain names are never matched to this load balancer","matched is only an example"])expect(selectPropertyDestination("Which field specifies matching?",[{...d,description}]).kind).toBe("choices");
+});

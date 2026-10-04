@@ -363,7 +363,17 @@ export function selectPropertyDestination(
 			...(first.evidence_terms ?? []),
 			...(first.documentation_terms ?? []),
 		]);
-		const matches = requestedTerms.filter(term => local.has(term)).length;
+		const matchingProse = first.description
+			.split(/[.!?;]+/)
+			.some(clause => /\bmatched\b/i.test(clause) && !/\b(?:not|no|never|without|example)\b/i.test(clause));
+		const matches = requestedTerms.filter(
+			term =>
+				local.has(term) ||
+				(term === "matching" &&
+					matchingProse &&
+					!/\b(?:not|no|never|without|excluding|instead of|rather than|or|either)\b/i.test(intent)),
+		).length;
+
 		if (requestedTerms.length && matches / requestedTerms.length < 0.35)
 			return {
 				kind: "choices",
