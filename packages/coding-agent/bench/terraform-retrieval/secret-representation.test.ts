@@ -12,3 +12,9 @@ test("representation parser preserves later correction and uncertainty",()=>{
  for(const q of ["Locate URL for clear secrets; or encrypted ones","Locate URL for clear secrets; e.g. production","Locate URL while setting value for clear secrets"])expect(requestedSecretRepresentation(q).uncertain).toBe(true);
  expect(requestedSecretRepresentation("Locate URL for clear secrets; no restart required").branch).toBe("clear_secret_info");
 });
+test("conflicting same-clause secret qualifiers preserve alternatives",()=>{
+ const q="Locate the encrypted secret store reference for clear secrets";
+ expect(requestedSecretRepresentation(q)).toEqual({uncertain:true});
+ const rows=[{schema_path:"token.clear_secret_info.provider_ref"},{schema_path:"token.blindfold_secret_info.provider_ref"}];
+ expect(filterSecretRepresentation(q,rows)).toEqual(rows);
+});

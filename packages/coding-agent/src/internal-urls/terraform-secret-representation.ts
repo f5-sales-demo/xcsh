@@ -9,7 +9,10 @@ export function requestedSecretRepresentation(text: string): { branch?: string; 
 			clause,
 		);
 	if (!match) return { uncertain: false };
+	const clear = /\b(?:clear|unencrypted)[ -](?:api[ -]token[ -])?secrets?\b/i.test(clause);
+	const encrypted = /\b(?:encrypted|blindfolded)[ -](?:api[ -]token[ -])?secrets?\b/i.test(clause);
 	const uncertain =
+		(clear && encrypted) ||
 		/[`"'‘’“”]|\b(?:not|no|never|without|or|and|either|versus|vs|example|avoid|excluding|instead|rather|such as|for instance|while|when)\b/i.test(
 			clause,
 		) ||
