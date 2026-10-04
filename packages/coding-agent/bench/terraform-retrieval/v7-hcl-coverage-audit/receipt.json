@@ -1,0 +1,8 @@
+{
+  "qualification_passed": false,
+  "post_result_audit": true,
+  "scores_and_labels_unchanged": true,
+  "mandatory_hcl_cases": 0,
+  "mandatory_hcl_branches": 0,
+  "finding": "Frozen prompts and replies do not establish positive HCL-emission coverage; future independently reviewed subset needs explicit drafting cases with synthetic values"
+}
