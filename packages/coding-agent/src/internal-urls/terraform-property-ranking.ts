@@ -264,19 +264,26 @@ export function propertyHasNestedQualifier(text: string): boolean {
 }
 export function propertyValueLookup(text: string): string | undefined {
 	const clauses = text.split(/;|[?!]|\.(?=\s|$)/);
+	let needValue: string | undefined;
 	for (const clause of clauses) {
 		const placement = /\bwhere\s+(?:do|does)\s+(.+?)\s+(?:go|belong)\b/i.exec(clause);
-		const lookup = /\b(?:find|locate|point me to|where do I put)\s+(.+)/i.exec(clause) ?? placement;
+		const lookup =
+			/\b(?:find|locate|point me to|where do I put|where is|where are|I need)\s+(.+)/i.exec(clause) ?? placement;
 		const operation = /\b(?:specify|set|provide|supply)\b/i.exec(clause);
 		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
 		if (!lookup) continue;
 		if (/\b(?:example|usage|guidance)\b/i.test(clause)) return undefined;
 		const target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		if (/^I need\b/i.test(lookup[0]) && /\b(?:resource|data[ -]source|provider|action)\s*$/.test(target)) continue;
 		if (!target || /^(?:(?:an?|the)\s+)?(?:resource\b|data[ -]source\b|provider\b|action\b|xcsh_)/i.test(target))
 			return undefined;
+		if (/^I need\b/i.test(lookup[0])) {
+			needValue = target;
+			continue;
+		}
 		return target;
 	}
-	return undefined;
+	return needValue;
 }
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
@@ -289,7 +296,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		?.split(/\bin\b|\busing\b/i)[0]
 		?.trim();
 	const field = fieldText.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting)\b\s+(?:(?:names?|sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
 	const identifierField =
 		field && /\bidentifier\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)

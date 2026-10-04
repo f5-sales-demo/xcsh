@@ -1011,3 +1011,20 @@ test("passive value documentation queries are not resource declaration examples"
 		anchor: "minimal-configuration",
 	});
 });
+
+test("passive placement and need statements extract values without provider-only intent", () => {
+	expect(propertyRequestedText("Where is the allowed response-code list?")).toBe("the allowed response-code list");
+	expect(propertyRequestedText("I need the upstream idle timeout.")).toBe("the upstream idle timeout");
+	expect(propertyRequestedText("I need an origin pool resource.")).toBeUndefined();
+	expect(propertyRequestedText("Where is the resource documented?")).toBe("the resource");
+	expect(propertyRequestedText("Which field names the receiver?")).toBe("the receiver?");
+});
+
+test("a specific lookup follows a general need statement without replacing its target", () => {
+	expect(propertyRequestedText("I need a storage location. Locate the certificate URL; I will supply it later.")).toBe(
+		"the certificate URL",
+	);
+	expect(propertyRequestedText("Locate the retry value in a queue resource.")).toBe(
+		"the retry value in a queue resource",
+	);
+});
