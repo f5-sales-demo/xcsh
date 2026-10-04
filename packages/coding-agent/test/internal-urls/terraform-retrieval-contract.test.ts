@@ -978,3 +978,17 @@ test("ordinary setting and placement questions identify requested schema values"
 		"how long the worker session lasts?",
 	);
 });
+
+test("placement questions retain the requested collection or field", () => {
+	expect(propertyRequestedText("Where do DNS server addresses go for the router?")).toBe("DNS server addresses");
+	expect(propertyRequestedText("Where does the retry ceiling belong?")).toBe("the retry ceiling");
+});
+
+test("secure mesh product version identifies its documented site provider", () => {
+	const names = ["securemesh_site", "securemesh_site_v2", "network_interface"];
+	expect(terraformProviderMention("Terraform secure mesh v2 resource router DNS servers", names)).toBe(
+		"securemesh_site_v2",
+	);
+	expect(terraformProviderMention("Compare secure mesh v2 and network interface", names)).toBeUndefined();
+	expect(terraformProviderMention("xcsh_network_interface with secure mesh v2", names)).toBe("network_interface");
+});

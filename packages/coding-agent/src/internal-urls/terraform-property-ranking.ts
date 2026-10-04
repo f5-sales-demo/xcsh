@@ -51,6 +51,8 @@ export function propertyTerms(text: string): string[] {
 			.replace(/fully qualified domain names/g, "domains")
 			.replace(/next[ -]hop/g, "nexthop")
 			.replace(/app stack/g, "voltstack")
+			.replace(/bare[ -]+metal/g, "baremetal")
+			.replace(/\bunmanaged\b/g, "not managed")
 			.replace(/flasharray/g, "flash array")
 			.replace(/flashblade/g, "flash blade")
 			.replace(/assisted routing/g, "ar")
@@ -263,7 +265,8 @@ export function propertyHasNestedQualifier(text: string): boolean {
 export function propertyValueLookup(text: string): string | undefined {
 	const clauses = text.split(/;|[?!]|\.(?=\s|$)/);
 	for (const clause of clauses) {
-		const lookup = /\b(?:find|locate|point me to|where do I put)\s+(.+)/i.exec(clause);
+		const placement = /\bwhere\s+(?:do|does)\s+(.+?)\s+(?:go|belong)\b/i.exec(clause);
+		const lookup = /\b(?:find|locate|point me to|where do I put)\s+(.+)/i.exec(clause) ?? placement;
 		const operation = /\b(?:specify|set|provide|supply)\b/i.exec(clause);
 		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
 		if (!lookup) continue;

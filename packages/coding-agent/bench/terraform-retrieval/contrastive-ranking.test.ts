@@ -502,3 +502,10 @@ test("duration paraphrases preserve session limit meaning over session labels", 
  const scope=preparePropertyScope([row("session.duration_seconds","Maximum session duration in seconds."),row("session.session_name","Session name.")]);
  expect(rankPropertyScope("Which setting controls how long the session lasts?",scope)[0]?.schema_path).toBe("session.duration_seconds");
 });
+
+
+test("bare metal and unmanaged prose retain the documented branch terminology", () => {
+ const scope=preparePropertyScope([row("baremetal.not_managed.node.dns_list","DNS server list."),row("aws.not_managed.node.dns_list","DNS server list.")]);
+ expect(rankPropertyScope("Unmanaged bare metal node DNS server list",scope)[0]?.schema_path).toBe("baremetal.not_managed.node.dns_list");
+ expect(propertyQueryTerms("unmanaged bare-metal nodes")).toEqual(expect.arrayContaining(["not","baremetal","node"]));
+});

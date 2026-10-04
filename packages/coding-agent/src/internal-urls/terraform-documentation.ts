@@ -1038,6 +1038,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 			.replace(/[^a-z0-9]+/g, " ")
 			.trim();
 	const providerSearch = search
+		.replace(/\bsecure[ _-]*mesh\s+v2\b/gi, "securemesh site v2")
 		.split(/[,;!?]|\.(?=\s)/)
 		.map(clause => {
 			const intent = clause.split(
