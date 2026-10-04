@@ -1,0 +1,13 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 95,
+  "v7_top5": 122,
+  "ambiguous_choice_regression_restored": true,
+  "focused_pass": 171,
+  "type_lint_pass": true,
+  "prior_package_pass": 9680,
+  "prior_package_source": "0392fad2d43ba3e117b17aa61b130a4e53312e54",
+  "source_findings_preserved": true,
+  "change": "Reference and leaf evidence use requested clause; unresolved role peers are deduplicated and retain ranked branch choices"
+}

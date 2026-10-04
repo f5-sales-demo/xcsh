@@ -759,3 +759,29 @@ test("reference context cannot come from examples or replace unsupported leaf ev
  expect(selectPropertyDestination("Locate the namespace field of the default flavor reference",[first,other]).kind).toBe("choices");
  expect(selectPropertyDestination("Locate the default flavor name; consult the API reference",[first,{...other,schema_path:"default_flavor.name"}]).kind).toBe("choices");
 });
+
+test("reference synonyms require requested clause evidence and preserve all role peers",()=>{
+ const first={...row("default_flavor_ref.name",40),description:"Referenced object name."};
+ const other={...row("vsite_refs.name",39),description:"Referenced object name."};
+ for(const q of [
+ "Locate the name field; for example default flavor reference",
+ "Locate the name field; consult the default flavor reference",
+ "Locate the name field, excluding the default flavor reference",
+ "Locate the name field of either default flavor reference versus vsite reference",
+ "Locate the namespace field of the default flavor reference; name is only an example",
+ ])expect(selectPropertyDestination(q,[first,other]).kind).toBe("choices");
+ const data={...first,provider_type:"data-sources",path:"data",score:1,description:"Name of referenced object."};
+ expect(selectPropertyDestination("Locate the name field of the default flavor reference",[first,other],[data]).kind).toBe("choices");
+});
+
+test("reference evidence stays within first clause and role choices deduplicate",()=>{
+ const first={...row("default_flavor_ref.name",40),description:"Referenced object name."};
+ const other={...row("vsite_refs.name",39),description:"Referenced object name."};
+ for(const q of ["Which field specifies namespace of the default flavor reference; name is documented elsewhere","Which field specifies name; e.g. default flavor reference"])expect(selectPropertyDestination(q,[first,other]).kind).toBe("choices");
+ const data={...first,provider_type:"data-sources",path:"data",score:1,description:"Name of referenced object."};
+ const q="Locate the name field of the default flavor reference";
+ const a=selectPropertyDestination(q,[first,other],[data,{...first,score:0}]);
+ const b=selectPropertyDestination(q,[first,other],[{...first,score:0},data]);
+ expect(a).toEqual(b);
+ expect(new Set(a.destinations.map(r=>r.path+"#"+r.anchor)).size).toBe(a.destinations.length);
+});

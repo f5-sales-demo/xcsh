@@ -92,18 +92,27 @@ export function selectPropertyDestination(
 		alternatives = alternatives.filter(row => !row.schema_path.includes("."));
 	}
 	const query = new Set(propertyQueryTerms(queryText));
+	const referenceRequest = propertyRequestedText(
+		queryText.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, ""),
+	);
+	const referenceClause = referenceRequest?.split(/[;!?]|\.(?=\s|$)/)[0];
+	const referenceTerms = new Set(propertyQueryTerms(referenceClause ?? ""));
 	const affirmativeReferenceContext = (terms: string[]) => {
-		if (/\b(?:not|no|never|without|or|rather than|instead of)\b/i.test(queryText)) return false;
-		const affirmative = queryText.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+		if (
+			!referenceClause ||
+			/\b(?:not|no|never|without|excluding|either|versus|vs|or|rather than|instead of|example|such as|consult)\b/i.test(
+				referenceRequest,
+			)
+		)
+			return false;
 		const qualifiers = terms.filter(term => term !== "ref");
 		if (!qualifiers.length) return false;
-		return [...affirmative.matchAll(/\b((?:[a-z][a-z0-9_-]*\s+){1,6})references?\b/gi)].some(match => {
+		return [...referenceClause.matchAll(/\b((?:[a-z][a-z0-9_-]*\s+){1,6})references?\b/gi)].some(match => {
 			if (/\b(?:in|under|within|terraform|documentation|docs)\b/i.test(match[1]!)) return false;
 			const context = propertyTerms(match[1]!);
 			return qualifiers.every(term => context.includes(term));
 		});
 	};
-
 	const identifiers = propertySchemaIdentifiers(queryText).filter(
 		term => ![...input, ...alternatives].some(row => row.provider_name === term),
 	);
@@ -357,6 +366,32 @@ export function selectPropertyDestination(
 			row.schema_path.split(".").at(-1) === parts.at(-1) &&
 			propertyTerms(row.description).join(" ") === propertyTerms(first.description).join(" "),
 	);
+	if (
+		context?.identityResolved !== true &&
+		identityPeers.some(
+			row =>
+				row.schema_path === first.schema_path &&
+				(row.provider_name !== first.provider_name || row.provider_type !== first.provider_type),
+		)
+	) {
+		const peers = new Map<string, RankedProperty>();
+		for (const row of [...ranked, ...identityPeers.filter(row => row.schema_path === first.schema_path)]) {
+			const key = `${row.path}#${row.anchor}`;
+			if (!peers.has(key) || peers.get(key)!.score < row.score) peers.set(key, row);
+		}
+		return {
+			kind: "choices",
+			destinations: [...peers.values()]
+				.sort(
+					(a, b) =>
+						b.score - a.score ||
+						(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
+						(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
+				)
+				.slice(0, 5),
+			reason: "Missing provider identity or role",
+		};
+	}
 	for (const other of collisions.slice(1)) {
 		if (other.provider_type !== first.provider_type || other.provider_name !== first.provider_name)
 			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing provider identity or role" };
@@ -447,7 +482,7 @@ export function selectPropertyDestination(
 						term =>
 							query.has(term) ||
 							(term === "ref" &&
-								propertyTerms(parts.at(-1) ?? "").every(leaf => query.has(leaf)) &&
+								propertyTerms(parts.at(-1) ?? "").every(leaf => referenceTerms.has(leaf)) &&
 								affirmativeReferenceContext(full)),
 					)
 				);
