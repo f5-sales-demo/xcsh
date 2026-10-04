@@ -2,6 +2,7 @@
 """Real subprocess protocol checks for model clarification continuation."""
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -11,13 +12,19 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from model_continuation import run_json_process, run_rpc_turns, turn_messages
+from model_continuation import (
+    final_assistant_text,
+    run_json_process,
+    run_rpc_turns,
+    turn_messages,
+)
 from model_continuation_uat import (
     capture_provenance,
     create_evidence_directory,
     transcript_summary,
     validate_continuation_plans,
     validate_continuation_receipt,
+    verify_continuation_traces,
     verify_provenance,
 )
 from model_trace import successful_read_paths
@@ -25,6 +32,16 @@ from model_trace import successful_read_paths
 
 class ModelContinuationTests(unittest.TestCase):
     """Never send a reply before its predecessor reaches agent_end."""
+
+    def test_intermediate_text_cannot_replace_final_answer(self) -> None:
+        """A progress note is not terminal response evidence."""
+        messages: list[dict[str, Any]] = [
+            {"role": "assistant", "content": [{"type": "text", "text": "Progress"}]},
+            {"role": "assistant", "content": []},
+        ]
+        self.assertEqual(final_assistant_text(messages), "")
+        messages[-1]["content"] = [{"type": "text", "text": "Final answer"}]
+        self.assertEqual(final_assistant_text(messages), "Final answer")
 
     def test_stale_completion_without_current_acknowledgement_rejects(self) -> None:
         """Duplicate prior events never complete the next prompt."""
@@ -70,6 +87,13 @@ class ModelContinuationTests(unittest.TestCase):
         self.assertEqual(successful_read_paths([*messages, result]), [])
         messages[0]["content"] = [call, call]
         self.assertEqual(successful_read_paths(messages), [])
+        messages[0]["content"] = [
+            call,
+            {"type": "toolCall", "name": "bash", "id": "one"},
+        ]
+        self.assertEqual(successful_read_paths(messages), [])
+        messages[0]["content"] = [call]
+        self.assertEqual(successful_read_paths([result, messages[0]]), [])
 
     def test_replies_share_process_and_preserve_exact_json_text(self) -> None:
         """The second prompt reaches the same child after first completion."""
@@ -157,6 +181,27 @@ class ModelContinuationTests(unittest.TestCase):
 
 class ContinuationPlanTests(unittest.TestCase):
     """A frozen plan covers every permitted exact destination."""
+
+    def test_missing_or_changed_branch_trace_rejects(self) -> None:
+        """A syntactically valid digest cannot stand in for recorded bytes."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            receipt = {
+                "results": [
+                    {
+                        "id": "one",
+                        "branch": 0,
+                        "trace_sha256": hashlib.sha256(b"trace").hexdigest(),
+                    }
+                ]
+            }
+            with self.assertRaisesRegex(ValueError, "trace bytes"):
+                verify_continuation_traces(receipt, root)
+            (root / "one-branch-0.json").write_bytes(b"trace")
+            verify_continuation_traces(receipt, root)
+            (root / "one-branch-0.json").write_bytes(b"changed")
+            with self.assertRaisesRegex(ValueError, "trace bytes"):
+                verify_continuation_traces(receipt, root)
 
     def test_question_only_or_partial_continuation_receipt_rejects(self) -> None:
         """Only every branch with independent manual content evidence qualifies."""

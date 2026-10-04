@@ -188,3 +188,17 @@ def run_json_process(
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=1)
+
+
+def final_assistant_text(messages: list[dict[str, Any]]) -> str:
+    """Only terminal assistant text supplies the final response evidence."""
+    assistants = [message for message in messages if message.get("role") == "assistant"]
+    return (
+        "\n".join(
+            part.get("text", "")
+            for part in assistants[-1].get("content", [])
+            if part.get("type") == "text"
+        )
+        if assistants
+        else ""
+    )

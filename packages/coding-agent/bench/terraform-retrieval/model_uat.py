@@ -9,13 +9,14 @@ import subprocess
 import time
 from pathlib import Path
 
-from model_continuation import run_json_process, turn_messages
+from model_continuation import final_assistant_text, run_json_process, turn_messages
 from model_continuation_uat import (
     capture_provenance,
     create_evidence_directory,
     validate_continuation_plans,
     validate_continuation_receipt,
     validate_continuation_review,
+    verify_continuation_traces,
     verify_provenance,
 )
 from model_trace import (
@@ -136,6 +137,9 @@ if not args.regression and any(case["kind"] == "ambiguous" for case in all_cases
         provenance,
         args.model,
         plans,
+    )
+    verify_continuation_traces(
+        json.loads(receipt_bytes), args.continuation_receipt.parent
     )
 cases = all_cases[args.partition_index :: args.partition_count]
 create_evidence_directory(args.output)
@@ -305,7 +309,8 @@ for case in cases:
                 for message in assistant
             )
         )
-        passed = passed and completed_successfully and bool(text.strip())
+        final_text = final_assistant_text(messages)
+        passed = passed and completed_successfully and bool(final_text.strip())
         results.append(
             {
                 "id": case["id"],

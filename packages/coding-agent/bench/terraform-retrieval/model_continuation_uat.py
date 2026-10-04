@@ -127,6 +127,22 @@ def validate_continuation_receipt(
     return {plan["id"] for plan in plans}
 
 
+def verify_continuation_traces(receipt: dict[str, Any], directory: Path) -> None:
+    """Verify every recorded branch digest against its actual transcript bytes."""
+    for result in receipt["results"]:
+        identity = result["id"]
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", identity):
+            message = "Unsafe continuation trace identity"
+            raise ValueError(message)
+        trace = directory / f"{identity}-branch-{result['branch']}.json"
+        if (
+            not trace.is_file()
+            or hashlib.sha256(trace.read_bytes()).hexdigest() != result["trace_sha256"]
+        ):
+            message = "Continuation trace bytes do not match receipt digest"
+            raise ValueError(message)
+
+
 def transcript_summary(
     events: list[dict[str, Any]], expected: dict[str, Any]
 ) -> dict[str, Any]:

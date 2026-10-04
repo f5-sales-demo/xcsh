@@ -2,51 +2,44 @@
 """Match completed successful read results to their exact requested paths."""
 
 import re
-from collections import Counter
 from typing import Any
 from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 
 def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
     """Require a successful result for each counted read call."""
-    successful = {
-        m.get("toolCallId")
-        for m in messages
-        if m.get("role") == "toolResult"
-        and m.get("toolName") == "read"
-        and m.get("isError") is False
-        and isinstance(m.get("toolCallId"), str)
-        and bool(m["toolCallId"])
-    }
-    calls = [
-        part
-        for message in messages
-        if message.get("role") == "assistant"
-        for part in message.get("content", [])
-        if part.get("type") == "toolCall" and part.get("name") == "read"
-    ]
-    call_counts = Counter(
-        part.get("id") for part in calls if isinstance(part.get("id"), str)
-    )
-    result_counts = Counter(
-        message.get("toolCallId")
-        for message in messages
-        if message.get("role") == "toolResult"
-        and isinstance(message.get("toolCallId"), str)
-    )
-    return [
-        c.get("arguments", {}).get("path", "")
-        for m in messages
-        if m.get("role") == "assistant"
-        for c in m.get("content", [])
-        if c.get("type") == "toolCall"
-        and c.get("name") == "read"
-        and isinstance(c.get("id"), str)
-        and bool(c["id"])
-        and call_counts[c["id"]] == 1
-        and result_counts[c["id"]] == 1
-        and c.get("id") in successful
-    ]
+    calls: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    results: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    for index, message in enumerate(messages):
+        if message.get("role") == "assistant":
+            for part in message.get("content", []):
+                if (
+                    part.get("type") == "toolCall"
+                    and isinstance(part.get("id"), str)
+                    and part["id"]
+                ):
+                    calls.setdefault(part["id"], []).append((index, part))
+        if (
+            message.get("role") == "toolResult"
+            and isinstance(message.get("toolCallId"), str)
+            and message["toolCallId"]
+        ):
+            results.setdefault(message["toolCallId"], []).append((index, message))
+    paths = []
+    for identity, matching_calls in calls.items():
+        matching_results = results.get(identity, [])
+        if len(matching_calls) != 1 or len(matching_results) != 1:
+            continue
+        call_index, call = matching_calls[0]
+        result_index, result = matching_results[0]
+        if (
+            call.get("name") == "read"
+            and result.get("toolName") == "read"
+            and result.get("isError") is False
+            and result_index > call_index
+        ):
+            paths.append(call.get("arguments", {}).get("path", ""))
+    return paths
 
 
 def validate_model_activation(cases: list[dict[str, Any]]) -> None:
