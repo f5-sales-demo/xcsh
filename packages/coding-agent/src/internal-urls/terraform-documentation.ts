@@ -22,7 +22,11 @@ import {
 } from "./terraform-property-ranking";
 import { refineRankedProperty } from "./terraform-property-refinement";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
-import { type TerraformReferenceIdentity, validateReferenceIdentity } from "./terraform-reference-evidence";
+import {
+	referenceOwnershipHint,
+	type TerraformReferenceIdentity,
+	validateReferenceIdentity,
+} from "./terraform-reference-evidence";
 import { filterSecretRepresentation } from "./terraform-secret-representation";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -1509,6 +1513,11 @@ export class TerraformDocumentationRepository {
 					} | null)
 				: null;
 			if (anchor && !selected) throw new Error(`Terraform anchor not found: ${anchor}`);
+			const metadata = JSON.parse(row.metadata) as TerraformMetadata;
+			const ownershipHint = (sectionAnchor: string) => {
+				const section = metadata.sections?.find(section => section.anchor === sectionAnchor);
+				return section ? referenceOwnershipHint(section.reference_identity, section.schema_path) : "";
+			};
 			if (view === "hint") {
 				const m = JSON.parse(row.metadata) as TerraformMetadata;
 				const children = db
@@ -1524,6 +1533,7 @@ export class TerraformDocumentationRepository {
 				content = boundedTerraformResponse(
 					`${provenance}\n\n${m.summary}\nRead: ${uri(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}`,
 					[
+						...(ownershipHint(anchor) ? [ownershipHint(anchor)] : []),
 						...children.map(c => `- ${c.summary}: ${uri(c.path, "", "hint")}`),
 						...sections.map(c => `- ${c.heading}: ${uri(documentPath, c.anchor, "context")}`),
 					],
@@ -1572,7 +1582,10 @@ export class TerraformDocumentationRepository {
 					const canonical = section.markdown.replace(/^\s*<a[^>]+><\/a>\s*\n/, "").trim();
 					if (seen.has(canonical)) continue;
 					seen.add(canonical);
-					const body = rewriteTerraformLinks(section.markdown, documentPath);
+					const ownership = ownershipHint(section.anchor);
+					const body = [ownership, rewriteTerraformLinks(section.markdown, documentPath)]
+						.filter(Boolean)
+						.join("\n\n");
 					const link = uri(documentPath, section.anchor, "full");
 					if (Buffer.byteLength(prefix + body) > 16384 - reserve) {
 						const notice = `Oversized section: ${section.heading}. Complete section: ${link}`;

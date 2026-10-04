@@ -1,0 +1,9 @@
+Narrow source approval withheld for one finding:
+
+- **P2 — Ownership can break valid hint reads** at [terraform-documentation.ts:1534](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1534). Ownership is appended to the mandatory prefix. An in-memory reproduction with a long anchor returns **3,955 bytes without ownership**, but throws `Terraform response envelope exceeds budget` with ordinary ownership metadata. Long schema paths also reproduce this. Budget ownership as a complete optional entry, preserving its source and existing navigation.
+
+Otherwise, focused checks confirmed exact metadata-anchor matching, source-bearing labels without prerequisite/target claims, unchanged full/default reads, unchanged bytes when identity is absent, complete fences, and no ownership inferred from heading aliases. Missing source/upstream provenance rejects.
+
+The two helper tests passed. Two selected integration tests were blocked during fixture creation by read-only `/tmp`; in-memory resolver checks ran successfully and reproduced the finding above.
+
+No edits, contacts, subagents, benchmark prompts, qualification, or release actions.

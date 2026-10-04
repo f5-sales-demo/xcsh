@@ -1971,3 +1971,70 @@ test("credential storage request heads select the documented clear representatio
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("verified reference ownership appears in compact and contextual anchored reads", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-reference-read-"));
+	try {
+		const pin = await fixture(root, manifest => {
+			manifest.documents[0].metadata.sections = [
+				{
+					schema_path: ["backend", "name"],
+					document_id: "fixture",
+					anchor: "schema-value",
+					description: "Referenced name",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+					reference_identity: {
+						version: 1,
+						scope_path: ["backend"],
+						member: "name",
+						upstream_message: "ves.io.schema.ObjectRefType",
+						source: "receipt-pinned-schema-identity",
+					},
+				},
+			];
+		});
+		const documents = await verifyTerraformSnapshot(root, pin);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(documents, pin, index);
+		const bytes = await readFile(index),
+			compressed = gzipSync(bytes);
+		const indexed = {
+			...pin,
+			index: {
+				sha256: terraformHash(bytes),
+				size_bytes: bytes.length,
+				gzip_sha256: terraformHash(compressed),
+				gzip_size_bytes: compressed.length,
+			},
+		};
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repo = new TerraformDocumentationRepository(
+			{ pin: indexed, indexGzipPath: gzipPath },
+			path.join(root, "cache"),
+		);
+		const read = (view: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=${view}#schema-value`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		const hint = await read("hint"),
+			context = await read("context"),
+			full = await read("full");
+		expect(hint.content).toContain("backend.name identifies the referenced object's name");
+		expect(context.content).toContain("receipt-pinned-schema-identity");
+		expect(context.content).toContain("Complete value.");
+		expect(full.content).not.toContain("Ownership:");
+		expect(hint.size).toBeLessThanOrEqual(4096);
+		expect(context.size).toBeLessThanOrEqual(16384);
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

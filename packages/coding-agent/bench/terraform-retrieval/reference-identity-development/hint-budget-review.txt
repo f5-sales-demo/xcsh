@@ -1,0 +1,9 @@
+Approved the narrow source fix. No remaining finding.
+
+- Original reproduction now returns **3,955 bytes** without throwing; ownership is omitted whole and `More` remains.
+- Long-schema-path reproduction stays within budget.
+- **24 comparisons against HEAD** confirm unchanged no-identity bytes.
+- Context preserves complete sections, fences, pagination, and oversized-section links within 16 KiB.
+- All **3 helper tests** and `git diff --check` passed.
+
+Verification was read-only, using in-memory resolver checks. This approves source only, not qualification or release.

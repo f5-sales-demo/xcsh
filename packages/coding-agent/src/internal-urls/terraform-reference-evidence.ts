@@ -24,3 +24,9 @@ export function validateReferenceIdentity(value: unknown, schemaPath: readonly s
 		throw new Error("Invalid Terraform reference identity");
 	return value as TerraformReferenceIdentity;
 }
+
+export function referenceOwnershipHint(value: unknown, schemaPath: readonly string[]): string {
+	if (value === undefined) return "";
+	const evidence = validateReferenceIdentity(value, schemaPath);
+	return `Ownership: ${schemaPath.join(".")} identifies the referenced object's ${evidence.member} within ${evidence.scope_path.join(".")}. Source: ${evidence.source} (${evidence.upstream_message}).`;
+}
