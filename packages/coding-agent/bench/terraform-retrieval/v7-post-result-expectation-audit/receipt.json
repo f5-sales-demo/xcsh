@@ -1,0 +1,13 @@
+{
+  "qualification_passed": false,
+  "post_result_audit": true,
+  "labels_and_scores_unchanged": true,
+  "frozen_inputs_verified": {
+    "heldout.json": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+    "model-subset.json": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+    "model-continuations.json": "eed8adc60bce1db510e0372afbc51ca66716075313ced0458b16167030bbdbc5",
+    "independent-review.json": "8e782e5840e243dbc86a0dc5a33e96b933a9d1ba641a61214bdab22870821341"
+  },
+  "finding": "Mandatory companion reads and citations often exceed property-identification task needs; future benchmark must review per-prompt necessity before execution",
+  "review_route": "Ubuntu Codex ChatGPT, no trace inspection or source tuning"
+}
