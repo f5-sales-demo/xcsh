@@ -1,0 +1,7 @@
+Approved for narrow integration. No blocking findings.
+
+- [Self-link guard](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1628) suppresses only matching path **and** anchor; distinct destinations remain linked.
+- [Source mapping](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-reference-index.ts:107) resolves indexed `scope_path` within the same provider type and name.
+- Verification: 8 focused tests passed, plus 7 in-memory checks exercising the extracted guard with the actual resolver.
+
+No files changed.

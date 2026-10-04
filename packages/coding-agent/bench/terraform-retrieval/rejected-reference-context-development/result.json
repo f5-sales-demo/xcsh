@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "correct": 103,
+  "answerable": 140,
+  "top5": 127,
+  "changes": [
+    {
+      "id": "A036",
+      "before": false,
+      "after": false,
+      "before_top5": false,
+      "after_top5": true,
+      "destinations": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/default_flavor_ref/index.md#schema-default_flavor_ref--namespace"
+      ]
+    }
+  ]
+}

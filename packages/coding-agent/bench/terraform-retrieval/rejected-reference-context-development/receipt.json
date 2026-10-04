@@ -1,0 +1,9 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "decision": "Reject parent prose as child selection proof; negated prose yields false leaf. Preserve exact source ownership and complete parent context links instead.",
+  "correct": 103,
+  "top5": 127,
+  "baseline_top5": 126
+}

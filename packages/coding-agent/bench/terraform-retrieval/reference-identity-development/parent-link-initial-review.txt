@@ -1,0 +1,7 @@
+One finding blocks approval:
+
+- **[P2: Suppress parent=self links]( /data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1628).** The integration emits the resolved destination without comparing it with the current `(documentPath, sectionAnchor)`. An in-memory fixture with validated identity reproduced a self-target. Omit that link when both match, and cover the case in a test.
+
+Otherwise, the narrow diff looks sound: exact verified-scope lookup, no word-based inference, parent prose excluded from selection, ranking unchanged, missing legacy evidence omitted, partial reference tables rejected, and links included within hint/context budgets. Default/full reads are unchanged.
+
+Verification: **8 tests passed**; diff check clean. The bundled index lacks reference tables, so it could not verify real parent-link destinations. No edits, contacts, subagents, benchmark prompts, qualification, or release work performed.

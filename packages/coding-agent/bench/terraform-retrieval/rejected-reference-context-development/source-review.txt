@@ -1,0 +1,27 @@
+**Reject the pending implementation as written. Retain exact-scope parent prose only as a retrieval/ranking experiment, separated from selection proof.**
+
+1. **[P1] Parent prose becomes unsupported leaf-selection evidence.**  
+   [terraform-property-ranking.ts:751](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts:751) copies all parent terms into `evidence_terms`. Selection consumes these for both requested-operation support and competing-candidate elimination ([selection:387](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-selection.ts:387), [selection:644](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-selection.ts:644)). Exact ownership establishes which parent applies; it does not establish that every statement supports the child.
+
+   Reproduced in memory using the existing test query:
+   - No parent prose → `choices`: “Insufficient requested operation evidence.”
+   - “Reference to virtual sites.” → `leaf`.
+   - **“Does not reference virtual sites.” → the same `leaf`, with the same score**, claiming “supported branch context.”
+
+   Keeping the displayed child description unchanged does not preserve the evidence boundary. I found no direct promotion into enum validators; the confirmed failure is selection proof.
+
+2. **[P2] The changed index contract retains version 7 and accepts missing context.**  
+   The new table is introduced at [index:51](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:51), but validation remains unchanged and loading treats its absence as optional ([index:403](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:403)). I confirmed that dropping `property_reference_context` still passes `validatePropertyIndex`.
+
+   Consequently, old version-7 indexes silently lack the feature; partially populated indexes can retain enriched description terms, weights and FTS entries while losing the corresponding evidence channel. The pending diff contains no regenerated/pinned artifact. Version and required-schema validation must distinguish these states.
+
+3. **[P2] The new test does not establish a ranking improvement or safe selection.**  
+   [terraform-reference-index.test.ts:148](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/test/internal-urls/terraform-reference-index.test.ts:148) compares only a reference child with a root namespace. Without parent prose, the expected child already ranks first through the tie-break. The test establishes term propagation and description preservation, but misses competing reference scopes, negative prose, selection behavior and stale-index rejection.
+
+Other focused checks:
+
+- Exact `scope_path` ownership validation is sound. Conflicting duplicate scope descriptions and reference identities reject; identical projections deduplicate. I found no demonstrated conflicting-evidence overwrite.
+- Parent terms enter **full-provider frequency weights and FTS before candidate limiting**, so they can improve recall. They also receive child-local description/precision credit. The two-row test cannot establish safe weighting or recall under truncation.
+- All **8 focused tests passed**. Additional checks used in-memory fixtures and the existing test query; no edits, contacts, subagents or benchmark runs.
+
+The reported development-clone result—one expected top-five improvement without leaf-accuracy improvement—is limited retrieval evidence, **not qualification**.

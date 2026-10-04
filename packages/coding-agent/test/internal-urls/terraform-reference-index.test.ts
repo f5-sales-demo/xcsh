@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
 import { populatePropertyIndex, validatePropertyIndex } from "../../src/internal-urls/terraform-property-index";
-import { lookupReferenceMembers } from "../../src/internal-urls/terraform-reference-index";
+import { lookupReferenceMembers, referenceScopeDestination } from "../../src/internal-urls/terraform-reference-index";
 
 const reference = {
 	version: 1,
@@ -138,5 +138,20 @@ test("reference scope respects AND facets and node descendants before limiting",
 		lookupReferenceMembers(db, { ...scope, filters: [...scope.filters, { key: "task", value: "troubleshooting" }] }),
 	).toEqual([]);
 	expect(() => lookupReferenceMembers(db, { ...scope, node: "missing" })).toThrow();
+	db.close();
+});
+
+test("verified reference members link to the exact parent destination only", () => {
+	const db = fixture();
+	db.exec(
+		"INSERT INTO terraform_destinations VALUES('resources','fixture','backend','parent','section','Parent reference')",
+	);
+	populatePropertyIndex(db);
+	expect(referenceScopeDestination(db, "resources", "fixture", "backend.namespace")).toEqual({
+		path: "parent",
+		anchor: "section",
+	});
+	expect(referenceScopeDestination(db, "resources", "fixture", "namespace")).toBeUndefined();
+	expect(referenceScopeDestination(db, "data-sources", "fixture", "backend.namespace")).toBeUndefined();
 	db.close();
 });

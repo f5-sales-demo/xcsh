@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "focused_tests": 40,
+  "workspace_check": true,
+  "ranking_changed": false,
+  "pin_changed": false,
+  "source_review": "approve complete parent context links",
+  "remaining": "Ordinary-query leaf accuracy remains103/140; fresh qualification required."
+}

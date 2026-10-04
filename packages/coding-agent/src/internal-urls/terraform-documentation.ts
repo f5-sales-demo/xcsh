@@ -32,7 +32,7 @@ import {
 	type TerraformReferenceIdentity,
 	validateReferenceIdentity,
 } from "./terraform-reference-evidence";
-import { lookupReferenceMembers } from "./terraform-reference-index";
+import { lookupReferenceMembers, referenceScopeDestination } from "./terraform-reference-index";
 import { filterSecretRepresentation } from "./terraform-secret-representation";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -1615,6 +1615,19 @@ export class TerraformDocumentationRepository {
 				: null;
 			if (anchor && !selected) throw new Error(`Terraform anchor not found: ${anchor}`);
 			const metadata = JSON.parse(row.metadata) as TerraformMetadata;
+			const ownershipScope = (sectionAnchor: string): string => {
+				const section = metadata.sections?.find(section => section.anchor === sectionAnchor);
+				if (!section?.reference_identity) return "";
+				const target = referenceScopeDestination(
+					db,
+					metadata.provider_type,
+					metadata.provider_name,
+					section.schema_path.join("."),
+				);
+				return target && !(target.path === documentPath && target.anchor === sectionAnchor)
+					? `Reference context: ${uri(target.path, target.anchor, "context")}`
+					: "";
+			};
 			const ownershipHint = (sectionAnchor: string) => {
 				const section = metadata.sections?.find(section => section.anchor === sectionAnchor);
 				return section ? referenceOwnershipHint(section.reference_identity, section.schema_path) : "";
@@ -1635,6 +1648,7 @@ export class TerraformDocumentationRepository {
 					`${provenance}\n\n${m.summary}\nRead: ${uri(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}`,
 					[
 						...(ownershipHint(anchor) ? [ownershipHint(anchor)] : []),
+						...(ownershipScope(anchor) ? [ownershipScope(anchor)] : []),
 						...children.map(c => `- ${c.summary}: ${uri(c.path, "", "hint")}`),
 						...sections.map(c => `- ${c.heading}: ${uri(documentPath, c.anchor, "context")}`),
 					],
@@ -1684,7 +1698,11 @@ export class TerraformDocumentationRepository {
 					if (seen.has(canonical)) continue;
 					seen.add(canonical);
 					const ownership = ownershipHint(section.anchor);
-					const body = [ownership, rewriteTerraformLinks(section.markdown, documentPath)]
+					const body = [
+						ownership,
+						ownershipScope(section.anchor),
+						rewriteTerraformLinks(section.markdown, documentPath),
+					]
 						.filter(Boolean)
 						.join("\n\n");
 					const link = uri(documentPath, section.anchor, "full");

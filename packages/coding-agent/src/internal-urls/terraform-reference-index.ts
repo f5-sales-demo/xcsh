@@ -103,3 +103,23 @@ export function lookupReferenceMembers(
 		...(flags == null ? {} : { flags: JSON.parse(flags) as string[] }),
 	}));
 }
+
+export function referenceScopeDestination(
+	db: Database,
+	providerType: string,
+	providerName: string,
+	schemaPath: string,
+): { path: string; anchor: string } | undefined {
+	if (!validateReferenceIndex(db)) return undefined;
+	const evidence = db
+		.query("SELECT scope_path FROM property_references WHERE provider_type=? AND provider_name=? AND schema_path=?")
+		.get(providerType, providerName, schemaPath) as { scope_path: string } | null;
+	if (!evidence) return undefined;
+	const scope = JSON.parse(evidence.scope_path) as string[];
+	const target = db
+		.query(
+			"SELECT path,anchor FROM terraform_destinations WHERE provider_type=? AND provider_name=? AND schema_path=?",
+		)
+		.get(providerType, providerName, scope.join(".")) as { path: string; anchor: string } | null;
+	return target ?? undefined;
+}

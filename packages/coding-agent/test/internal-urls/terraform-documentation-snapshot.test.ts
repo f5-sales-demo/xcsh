@@ -2184,3 +2184,72 @@ test("explicit enum value discovery never interprets literals as roles or paths"
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("reference context omits a resolved self destination", async () => {
+	const db = new Database(":memory:");
+	db.exec(
+		"CREATE TABLE terraform_documents(path,metadata,markdown,id,parent_id,summary);CREATE TABLE terraform_sections(path,anchor,heading,context_markdown,ordinal,context_alias);CREATE TABLE terraform_relationships(path,anchor,type,target_path,target_anchor,enforcement);CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor)",
+	);
+	db.exec(
+		"CREATE TABLE property_reference_provenance(schema_version);INSERT INTO property_reference_provenance VALUES(1);CREATE TABLE property_references(provider_type,provider_name,schema_path,scope_path,member,upstream_message,source);CREATE INDEX property_reference_scope ON property_references(scope_path,member,provider_name,provider_type)",
+	);
+	const path = "documentation/resources/fixture/index.md",
+		anchor = "schema-backend--name";
+	const identity = {
+		version: 1,
+		scope_path: ["backend"],
+		member: "name",
+		upstream_message: "ves.io.schema.ObjectRefType",
+		source: "receipt-pinned-schema-identity",
+	};
+	const metadata = {
+		id: "fixture",
+		summary: "Fixture",
+		provider_type: "resources",
+		provider_name: "fixture",
+		sections: [{ anchor, schema_path: ["backend", "name"], reference_identity: identity }],
+	};
+	db.prepare("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?)").run(
+		path,
+		JSON.stringify(metadata),
+		"Complete",
+		"fixture",
+		null,
+		"Fixture",
+	);
+	db.prepare("INSERT INTO terraform_sections VALUES(?,?,?,?,?,?)").run(path, anchor, "name", "Complete", 0, 0);
+	db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?)").run(
+		"resources",
+		"fixture",
+		"backend",
+		path,
+		anchor,
+	);
+	db.prepare("INSERT INTO property_references VALUES(?,?,?,?,?,?,?)").run(
+		"resources",
+		"fixture",
+		"backend.name",
+		JSON.stringify(["backend"]),
+		"name",
+		identity.upstream_message,
+		identity.source,
+	);
+	const pin = {
+		provider_version: "test",
+		release_tag: "test",
+		source_commit: "a".repeat(40),
+		receipt_sha256: "b".repeat(64),
+	} as TerraformPin;
+	const repo = new TerraformDocumentationRepository({ pin } as any, "unused");
+	repo.database = async () => db;
+	for (const view of ["hint", "context"]) {
+		const result = await repo.resolve(
+			Object.assign(new URL(`xcsh://terraform-documentation/${path}?view=${view}#${anchor}`), {
+				rawHost: "terraform-documentation",
+			}) as InternalUrl,
+		);
+		expect(result.content).toContain("Ownership:");
+		expect(result.content).not.toContain("Reference context:");
+	}
+	db.close();
+});
