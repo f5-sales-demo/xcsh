@@ -144,6 +144,7 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 }
 export function propertyQueryTerms(text: string): string[] {
 	text = text
+		.replace(/\bquery[ -]parameters?\b/gi, "query param")
 		.replace(/\bhow\s+long\b/gi, "duration")
 		.replace(/\bminimum\b/gi, "min minimum")
 		.replace(/\bmaximum\b/gi, "max maximum")
@@ -416,7 +417,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		?.split(/\bin\b|\busing\b/i)[0]
 		?.trim();
 	const field = fieldText.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting)\b\s+(?:(?:names?|sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting)\b\s+(?:(?:selects?|chooses?|names?|sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
 	const identifierField =
 		field && /\bidentifier\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)

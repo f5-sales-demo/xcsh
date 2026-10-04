@@ -554,3 +554,10 @@ test("grouped-by queries distinguish keyed maps from flat collections", () => {
  const scope=preparePropertyScope([flat,keyed]);
  expect(rankPropertyScope("Locate values grouped by region",scope)[0]?.schema_path).toBe(keyed.schema_path);
 });
+
+
+test("query parameter terminology retains its schema qualifier", () => {
+ expect(propertyQueryTerms("query parameter name")).toContain("param");
+ const scope=preparePropertyScope([row("anonymization.query_parameter.query_param_name","Query parameter name."),row("anonymization","Masks query values.","section")]);
+ expect(rankPropertyScope("Which field selects the query parameter name?",scope)[0]?.schema_path).toBe("anonymization.query_parameter.query_param_name");
+});

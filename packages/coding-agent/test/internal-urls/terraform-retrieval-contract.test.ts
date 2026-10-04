@@ -1065,3 +1065,10 @@ test("negated allowlist family mentions do not become product owners", () => {
 	for (const q of ["Find the allowlist data source, not CDN", "Find the allowlist data source without CDN"])
 		expect(terraformProviderMention(q, ["network_cdn"])).toBeUndefined();
 });
+
+test("field selection verbs describe scalar meaning rather than block selection", () => {
+	expect(propertyRequestedText("Which field selects the query parameter whose value is masked?")).toBe(
+		"the query parameter whose value is masked?",
+	);
+	expect(propertyRequestedText("Which field chooses the protocol version?")).toBe("the protocol version?");
+});
