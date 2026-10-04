@@ -1,5 +1,6 @@
 // Prepared property terms are generated with the immutable documentation index.
 import type { Database } from "bun:sqlite";
+import { type EnumValidatorEvidence, evaluateEnumValue, validateEnumEvidence } from "./terraform-enum-evidence";
 import {
 	type PropertyCandidate,
 	preparePropertyScope,
@@ -25,6 +26,9 @@ export function validatePropertyIndex(db: Database, source: PropertyIndexSource)
 		.query("SELECT schema_version,source_commit,source_index_sha256 FROM property_index_provenance")
 		.get() as { schema_version: number; source_commit: string; source_index_sha256: string } | null;
 	if (row?.schema_version !== 7) throw new Error("Unsupported property index version");
+
+	validateEnumIndex(db);
+
 	if (row.source_commit !== source.sourceCommit || row.source_index_sha256 !== source.sourceIndexSha256)
 		throw new Error("Property index source mismatch");
 }
@@ -41,6 +45,13 @@ export function populatePropertyIndex(
  CREATE TABLE property_scope_terms(provider_type TEXT,provider_name TEXT,term TEXT,weight REAL,PRIMARY KEY(provider_type,provider_name,term));
  CREATE TABLE property_terms(provider_type TEXT,provider_name TEXT,schema_path TEXT,path TEXT,anchor TEXT,description TEXT,leaf TEXT,context TEXT,description_terms TEXT,alias_terms TEXT,type TEXT,nesting TEXT,flags TEXT,documentation_terms TEXT,PRIMARY KEY(provider_type,provider_name,schema_path));
  CREATE INDEX property_leaf_lookup ON property_terms(leaf,provider_name,provider_type);
+ CREATE TABLE property_enum_provenance(schema_version INTEGER NOT NULL);
+ INSERT INTO property_enum_provenance VALUES(1);
+ CREATE TABLE property_enum_coverage(provider_type TEXT,provider_name TEXT,schema_path TEXT,complete INTEGER NOT NULL,PRIMARY KEY(provider_type,provider_name,schema_path));
+ CREATE TABLE property_enum_rules(provider_type TEXT,provider_name TEXT,schema_path TEXT,ordinal INTEGER,evidence TEXT NOT NULL,PRIMARY KEY(provider_type,provider_name,schema_path,ordinal));
+ CREATE TABLE property_enum_values(provider_type TEXT,provider_name TEXT,schema_path TEXT,ordinal INTEGER,value TEXT NOT NULL,ascii_fold TEXT,PRIMARY KEY(provider_type,provider_name,schema_path,ordinal,value));
+ CREATE INDEX property_enum_exact ON property_enum_values(value,provider_name,provider_type);
+ CREATE INDEX property_enum_fold ON property_enum_values(ascii_fold,provider_name,provider_type);
  CREATE VIRTUAL TABLE property_search USING fts5(terms,provider_type UNINDEXED,provider_name UNINDEXED,schema_path UNINDEXED);`);
 	db.prepare("INSERT INTO property_index_provenance VALUES(?,?,?)").run(
 		7,
@@ -81,13 +92,71 @@ export function populatePropertyIndex(
 			const metadata = JSON.parse(document.metadata) as {
 				provider_type: string;
 				provider_name: string;
-				sections?: { schema_path: string[]; type?: string; nesting?: string | null; flags?: string[] }[];
+				sections?: {
+					schema_path: string[];
+					type?: string;
+					nesting?: string | null;
+					flags?: string[];
+					enum_validators?: EnumValidatorEvidence[];
+					enum_extraction_complete?: boolean;
+				}[];
 			};
 			for (const section of metadata.sections ?? []) {
 				const row = destinations.get(
 					`${metadata.provider_type}:${metadata.provider_name}:${section.schema_path.join(".")}`,
 				);
 				if (row) {
+					if (section.enum_validators !== undefined || section.enum_extraction_complete !== undefined) {
+						if (typeof section.enum_extraction_complete !== "boolean" || !Array.isArray(section.enum_validators))
+							throw new Error("Invalid enum index coverage");
+						const evidence = validateEnumEvidence(section.enum_validators);
+						if (section.enum_extraction_complete && evidence.some(rule => !rule.complete))
+							throw new Error("Incomplete enum index evidence");
+						const existing = db
+							.prepare(
+								"SELECT complete FROM property_enum_coverage WHERE provider_type=? AND provider_name=? AND schema_path=?",
+							)
+							.all(row.provider_type, row.provider_name, row.schema_path);
+						if (existing.length) {
+							const prior = db
+								.prepare(
+									"SELECT evidence FROM property_enum_rules WHERE provider_type=? AND provider_name=? AND schema_path=? ORDER BY ordinal",
+								)
+								.all(row.provider_type, row.provider_name, row.schema_path) as { evidence: string }[];
+							if (
+								(existing[0] as { complete: number }).complete !== (section.enum_extraction_complete ? 1 : 0) ||
+								canonicalEnumRecords(prior.map(record => JSON.parse(record.evidence))) !==
+									canonicalEnumRecords(evidence)
+							)
+								throw new Error("Conflicting enum destination metadata");
+						}
+						if (!existing.length) {
+							db.prepare("INSERT INTO property_enum_coverage VALUES(?,?,?,?)").run(
+								row.provider_type,
+								row.provider_name,
+								row.schema_path,
+								section.enum_extraction_complete ? 1 : 0,
+							);
+							for (const [ordinal, rule] of evidence.entries()) {
+								db.prepare("INSERT INTO property_enum_rules VALUES(?,?,?,?,?)").run(
+									row.provider_type,
+									row.provider_name,
+									row.schema_path,
+									ordinal,
+									JSON.stringify(rule),
+								);
+								for (const value of rule.values)
+									db.prepare("INSERT INTO property_enum_values VALUES(?,?,?,?,?,?)").run(
+										row.provider_type,
+										row.provider_name,
+										row.schema_path,
+										ordinal,
+										value,
+										!rule.case_sensitive && /^[\x00-\x7F]*$/.test(value) ? value.toLowerCase() : null,
+									);
+							}
+						}
+					}
 					if (
 						row.type !== undefined &&
 						(row.type !== (section.type ?? null) || row.nesting !== (section.nesting ?? null))
@@ -321,5 +390,90 @@ export function searchPropertyIndex(
 			b.score - a.score ||
 			(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
 			(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
+	);
+}
+
+export function searchPropertyEnumValue(
+	db: Database,
+	value: string,
+	scope: {
+		providerType?: string;
+		providerName?: string;
+		filters?: Array<{ key: string; value: string }>;
+		node?: string;
+	},
+	limit = 500,
+): PropertyCandidate[] {
+	if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000) throw new Error("Invalid enum candidate limit");
+	if (!validateEnumIndex(db)) return [];
+	const clauses = ["c.complete=1"];
+	const args: Array<string | null> = [value, /^[\x00-\x7F]*$/.test(value) ? value.toLowerCase() : null];
+	if (scope.providerType) {
+		clauses.push("v.provider_type=?");
+		args.push(scope.providerType);
+	}
+	if (scope.providerName) {
+		clauses.push("v.provider_name=?");
+		args.push(scope.providerName);
+	}
+	for (const filter of scope.filters ?? []) {
+		clauses.push("EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=p.path AND f.facet=? AND f.value=?)");
+		args.push(filter.key, filter.value);
+	}
+	if (scope.node) {
+		if (!db.query("SELECT 1 FROM terraform_documents WHERE id=?").get(scope.node))
+			throw new Error("Property node not found");
+		clauses.push(
+			"p.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants parent ON d.parent_id=parent.id) SELECT path FROM descendants)",
+		);
+		args.push(scope.node);
+	}
+	const candidates = db
+		.query(`SELECT DISTINCT p.provider_type,p.provider_name,p.schema_path,p.path,p.anchor,p.description,p.type,p.nesting,p.flags
+ FROM (
+ SELECT provider_type,provider_name,schema_path FROM property_enum_values INDEXED BY property_enum_exact WHERE value=?
+ UNION
+ SELECT provider_type,provider_name,schema_path FROM property_enum_values INDEXED BY property_enum_fold WHERE ascii_fold=?
+ ) v JOIN property_enum_coverage c USING(provider_type,provider_name,schema_path)
+ JOIN property_terms p USING(provider_type,provider_name,schema_path)
+ WHERE ${clauses.join(" AND ")} ORDER BY p.provider_type,p.provider_name,p.schema_path LIMIT ?`)
+		.all(...args, limit + 1) as Array<PropertyCandidate & { flags: string | null }>;
+	if (candidates.length > limit) throw new Error("Enum candidate pool exceeds limit");
+	return candidates
+		.filter(row => {
+			const evidence = db
+				.query(
+					"SELECT evidence FROM property_enum_rules WHERE provider_type=? AND provider_name=? AND schema_path=? ORDER BY ordinal",
+				)
+				.all(row.provider_type, row.provider_name, row.schema_path) as { evidence: string }[];
+			return (
+				evaluateEnumValue(
+					value,
+					evidence.map(rule => JSON.parse(rule.evidence)),
+					true,
+				) === "allowed"
+			);
+		})
+		.map(({ flags, ...row }) => ({ ...row, ...(flags == null ? {} : { flags: JSON.parse(flags) as string[] }) }));
+}
+
+function validateEnumIndex(db: Database): boolean {
+	const names = ["property_enum_provenance", "property_enum_coverage", "property_enum_rules", "property_enum_values"];
+	const found = db.query("SELECT name FROM sqlite_master WHERE name IN (?,?,?,?)").all(...names) as { name: string }[];
+	if (!found.length) return false;
+	if (found.length !== names.length) throw new Error("Incomplete enum index schema");
+	const versions = db.query("SELECT schema_version FROM property_enum_provenance").all() as {
+		schema_version: number;
+	}[];
+	if (versions.length !== 1 || versions[0]?.schema_version !== 1) throw new Error("Unsupported enum index version");
+	for (const name of ["property_enum_exact", "property_enum_fold"])
+		if (!db.query("SELECT 1 FROM sqlite_master WHERE type='index' AND name=?").get(name))
+			throw new Error("Missing enum value index");
+	return true;
+}
+
+function canonicalEnumRecords(records: readonly EnumValidatorEvidence[]): string {
+	return JSON.stringify(
+		records.map(rule => [rule.version, rule.validator, rule.values, rule.case_sensitive, rule.complete, rule.source]),
 	);
 }

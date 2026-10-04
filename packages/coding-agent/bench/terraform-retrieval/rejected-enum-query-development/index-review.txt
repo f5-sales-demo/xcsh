@@ -1,0 +1,13 @@
+**I would withhold narrow index-source approval for three issues:**
+
+- **P2 — Identical projection metadata aborts indexing.** [Line 123](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:123) rejects every repeated destination, including identical coverage and evidence. I reproduced `Duplicate enum destination metadata` with two document projections referencing the same property. Deduplicate identical records; reject conflicting evidence or coverage.
+
+- **P2 — Fully scoped lookup bypasses the value indexes.** For `providerType + providerName`, the [actual query](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:421) used the enum primary-key prefix, scanning that provider’s values instead of seeking through `property_enum_exact`/`property_enum_fold`. Unscoped and name-only queries used both value indexes. The [test](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/test/internal-urls/terraform-enum-index.test.ts:84) explains a different, simple equality query, so it misses this. Exercise the complete scoped SQL and ensure value-driven retrieval.
+
+- **P2 — Partial enum schemas pass provenance validation.** [Validation](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:29) makes enum provenance optional independently of table presence. In-memory repros showed that removing provenance still permits results; removing `property_enum_rules` passes validation and subsequently fails lookup. Accept legacy indexes with no enum tables, but require a complete, versioned enum schema whenever any enum tables exist.
+
+Canonical evidence validation, coverage gating, conjunctive evaluation, ASCII case handling, conservative Unicode abstention, exact provider restrictions, AND facets, recursive descendants, and overflow rejection otherwise looked sound. In-memory probes confirmed Unicode and scope behavior.
+
+I independently ran the five new tests: **5 passed**. They lack regressions for the findings above; their facet/node test also lacks multiple simultaneous facets and actual descendants. Your reported 34-test result was not independently rerun.
+
+No edits, external contact, subagents, or benchmark-prompt inspection. This is solely an index-source review; no qualification or release approval.

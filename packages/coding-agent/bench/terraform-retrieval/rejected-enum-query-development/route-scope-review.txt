@@ -1,0 +1,11 @@
+Not approved yet: three reproducible P2 bugs remain.
+
+- **Dotted exclusions still reverse in common forms.** [terraform-enum-evidence.ts:77](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-enum-evidence.ts:77): `excluding value_scope.protocol` and sentence-ending `outside value_scope.protocol.` return the excluded branch. `not outside value_scope.protocol` instead becomes an unconditional exclusion. Preserve the exclusion’s punctuation and polarity before removing it from scope validation.
+
+- **Quoted literals bypass field-access filtering.** [terraform-documentation.ts:1707](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1707): with `value=GRE`, `Find input field that accepts "GRE"` returns a computed-only field; the unquoted equivalent correctly excludes it. Access inference still receives the original quoted search instead of the literal-exempt query.
+
+- **Literal text still changes provider/role scope.** [terraform-documentation.ts:1684](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1684): `accepts xcsh_missing` with that explicit value returns no destinations despite matching enum evidence. Likewise, `accepts RESOURCE` silently excludes data-source matches. Identity inference and the unknown-provider guard run before literal exemption.
+
+Verification: **15 tests passed**, plus in-memory route probes covering malformed requests, facets/node/type/path scope, canonical ordering, conjunctive evidence, Unicode uncertainty, and bounded-response fallback. No additional index defect found.
+
+No edits or benchmark-prompt inspection. Disk-writing snapshot tests, qualification, and release work were not run.

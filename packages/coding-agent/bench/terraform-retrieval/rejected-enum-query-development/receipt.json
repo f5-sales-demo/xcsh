@@ -1,0 +1,8 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_route_restored": true,
+  "decision": "Reject enum text adaptation after repeated negation, coordinated scope and quoted literal failures. Retain indexed typed value lookup; no new public route or prompt change.",
+  "index_lookup_real_corpus_checks": 5124,
+  "index_lookup_mismatches": 0
+}

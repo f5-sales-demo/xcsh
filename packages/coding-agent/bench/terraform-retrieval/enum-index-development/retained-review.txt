@@ -1,0 +1,14 @@
+**One P2 bug remains; I would withhold narrow index approval.**
+
+At [terraform-property-index.ts:128](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:128), duplicate evidence is compared using `JSON.stringify`. Identical validated evidence with different JSON object-key ordering throws `Conflicting enum destination metadata`. I reproduced this with two projections containing the same rule, reversing only its object keys. Valid equivalent metadata can therefore abort index generation.
+
+Compare normalized typed fields or use key-order-independent structural equality. Add a regression test while retaining rejection of genuine evidence, coverage, shape, and flag conflicts.
+
+Verification:
+
+- **9 index tests passed**, plus **23 additional in-memory assertions**.
+- Confirmed conjunctive rules, ASCII case handling, conservative Unicode behavior, exact provider scope, AND facets, node descendants, both indexed UNION branches, legacy absence, partial-table rejection, overflow handling, malformed evidence rejection, and provenance checks.
+- The retained tests lack several of those edge cases, including reordered evidence.
+- The reported **628-field / 5,124-check corpus result was not independently rerun**.
+
+No files changed, external contact, subagents, or benchmark-prompt inspection. This provides no production-route, qualification, pin, or release approval.

@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_query_route_changed": false,
+  "pin_changed": false,
+  "index_tests": 10,
+  "focused_regressions": 66,
+  "workspace_check": true,
+  "real_corpus_checks": 5124,
+  "real_corpus_mismatches": 0,
+  "source_review": "approve narrow retained index source",
+  "remaining": "Integrate with reviewed structured query intent and a new immutable producer snapshot; independently frozen qualification remains required."
+}

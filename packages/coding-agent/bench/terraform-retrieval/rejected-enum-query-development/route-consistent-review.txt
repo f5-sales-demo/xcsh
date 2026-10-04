@@ -1,0 +1,9 @@
+**Not approved yet: three reproducible scope bugs remain.** Each was confirmed through `resolve()` using an in-memory index.
+
+1. **[P2] Dotted negation still changes scope.** At [terraform-enum-evidence.ts:85](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-enum-evidence.ts:85), `not necessarily outside value_scope.protocol` becomes a hard exclusion. Plain `not outside value_scope.protocol` instead permits `value_scope.other`, losing the contiguous path constraint. Preserve the negation or reject unresolved scope.
+
+2. **[P2] Coordinated dotted exclusions lose the second path.** At [terraform-enum-evidence.ts:78](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-enum-evidence.ts:78), `outside value_scope.protocol and other_scope.protocol` excludes only the first path. The resolver returns a verified Read link for the explicitly excluded `other_scope.protocol`. Handle the complete exclusion list or fail closed.
+
+3. **[P2] Single-quoted literals still leak into identifier inference.** At [terraform-enum-evidence.ts:69](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-enum-evidence.ts:69), `Which field accepts 'ROUND_ROBIN'` with `value=ROUND_ROBIN` retains the literal. Identifier filtering then requires a `round_robin` schema segment and returns no destinations; the unquoted equivalent returns all three valid fixture destinations.
+
+Validation: **16 focused tests passed**, and `git diff --check` passed. The snapshot suite was not run because it writes files. No edits, contacts, subagents, benchmark-prompt inspection, qualification, or release activity occurred.
