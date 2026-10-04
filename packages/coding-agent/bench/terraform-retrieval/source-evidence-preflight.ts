@@ -7,14 +7,16 @@ export interface CaseSourceEvidence {
  peer_adjudications: { uri: string; disposition: "permitted" | "excluded"; reason: string; prompt_quote: string; source_quote: string }[];
 }
 export function validateSourceEvidenceBinding(
- freeze: { schema_version?: number; files?: Record<string,string>; independent_review_sha256?: string },
+ freeze: { schema_version?: number; files?: Record<string,string>; independent_review_sha256?: string; internal_review_sha256?: string; independent_review_waived_by_user?: boolean; retrieval_results_withheld?: boolean },
  review: { source_evidence_sha256?: string },
  evidenceHash: string,
  reviewHash: string,
 ): void {
- if(freeze.schema_version!==2) throw new Error("Qualification requires independently reviewed freeze schema v2");
+ const internal=freeze.schema_version===3;
+ if(freeze.schema_version!==2&&!internal) throw new Error("Qualification requires frozen source evidence schema v2 or v3");
+ if(internal&&(freeze.independent_review_waived_by_user!==true||freeze.retrieval_results_withheld!==true)) throw new Error("Internal freeze requires user waiver and withheld retrieval results");
  if(freeze.files?.["case-source-evidence.json"]!==evidenceHash) throw new Error("Frozen case source evidence hash mismatch");
- if(freeze.independent_review_sha256!==reviewHash) throw new Error("Frozen independent review digest mismatch");
+ if((internal?freeze.internal_review_sha256:freeze.independent_review_sha256)!==reviewHash) throw new Error("Frozen independent review digest mismatch");
  if(review.source_evidence_sha256!==evidenceHash) throw new Error("Independent reviewer did not bind the case source evidence");
 }
 export function validateSourceEvidenceUri(uri: string): boolean {

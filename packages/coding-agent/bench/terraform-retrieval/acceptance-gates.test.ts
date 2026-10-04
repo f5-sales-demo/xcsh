@@ -22,3 +22,11 @@ test("missing claims evidence, depth coverage, and malformed latency never pass"
  const offline=evidence();offline.platforms[0]!.offline_installed_verified=false;expect(evaluateAcceptanceGates(offline).passed).toBe(false);
  const model=evidence();model.model.results[0]!.trace_reviewed=false;expect(evaluateAcceptanceGates(model).passed).toBe(false);
 });
+
+ test("user-waived internal freeze retains accuracy and exposure gates",()=>{
+ const data={...evidence(),cases:cases.map((c,i)=>({...c,depth:i<50?8:1})),independent_freeze_verified:false,internal_freeze:{verified:true,user_waived_independent_review:true,retrieval_results_withheld:true}};
+ expect(evaluateAcceptanceGates(data).passed).toBe(true);
+ expect(evaluateAcceptanceGates(data).benchmark_review_mode).toBe("internal-user-waived");
+ data.internal_freeze.user_waived_independent_review=false;expect(evaluateAcceptanceGates(data).passed).toBe(false);
+ data.internal_freeze.user_waived_independent_review=true;data.retrieval.regression=true;expect(evaluateAcceptanceGates(data).passed).toBe(false);
+ });

@@ -84,7 +84,7 @@ const treeFile = path.join(path.dirname(suiteFile), "clarification-trees.json");
 let trees: Record<string, FrozenClarificationTree> = {};
 const modelDecisionIds = new Set<string>();
 if (await Bun.file(treeFile).exists()) {
-	if (freeze.schema_version !== 2) throw new Error("Clarification trees require an independently reviewed freeze");
+	if (![2,3].includes(freeze.schema_version)) throw new Error("Clarification trees require a verified freeze");
 	const treeBytes = await readFile(treeFile);
 	if (terraformHash(treeBytes) !== freeze.files?.["clarification-trees.json"])
 		throw new Error("Frozen clarification tree digest mismatch");
@@ -106,8 +106,8 @@ if (await Bun.file(treeFile).exists()) {
 		throw new Error("Frozen tree requires an ambiguous suite case");
 }
 
-if (freeze.schema_version === 2) {
-	const reviewBytes = await readFile(path.join(path.dirname(suiteFile), "independent-review.json"));
+if ([2,3].includes(freeze.schema_version)) {
+	const reviewBytes = await readFile(path.join(path.dirname(suiteFile), freeze.schema_version === 3 ? "internal-review.json" : "independent-review.json"));
 	const allCases = JSON.parse(await readFile(path.join(path.dirname(suiteFile), "heldout.json"), "utf8")) as Case[];
 	validateIndependentFreeze(
 		freeze,
@@ -126,7 +126,7 @@ const materializationMs = performance.now() - coldStart;
 if (!regression) {
  const evidenceName = "case-source-evidence.json";
  const evidenceBytes = await readFile(path.join(path.dirname(suiteFile), evidenceName));
- const sourceReviewBytes = await readFile(path.join(path.dirname(suiteFile), "independent-review.json"));
+ const sourceReviewBytes = await readFile(path.join(path.dirname(suiteFile), freeze.schema_version === 3 ? "internal-review.json" : "independent-review.json"));
  validateSourceEvidenceBinding(freeze,JSON.parse(sourceReviewBytes.toString()),terraformHash(evidenceBytes),terraformHash(sourceReviewBytes));
  const evidence = JSON.parse(evidenceBytes.toString()) as CaseSourceEvidence[];
  const db = await repo.database();
@@ -332,6 +332,7 @@ const answerable = results.filter(r => "kind" in r && r.kind === "answerable");
 const scored = results.filter(r => r.passed !== null);
 const report = {
 	schema_version: 2,
+	benchmark_review_mode: freeze.schema_version === 3 ? "internal-user-waived" : "independent",
 	complete_response_hashes_verified: true,
 	unpublished_preview: Boolean(preview),
 	preview_source_commit: preview?.source_commit ?? null,

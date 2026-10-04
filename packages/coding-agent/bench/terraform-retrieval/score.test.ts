@@ -132,3 +132,13 @@ test("known exposed suite remains regression only despite a stale eligibility fi
  expect(()=>validateQualificationEligibility(undefined,hash,false)).toThrow("exposed");
  expect(()=>validateQualificationEligibility(audit,hash,true)).not.toThrow();
 });
+
+ test("internal freeze preserves review hashes and requires explicit user waiver",()=>{
+ const freeze={schema_version:3,internal_review_sha256:"review",independent_review_waived_by_user:true,retrieval_results_withheld:true};
+ const review={verdict:"approve",findings:[],reviewed_case_ids:["case"]};
+ expect(()=>validateIndependentFreeze(freeze,review,"review",["case"])).not.toThrow();
+ expect(()=>validateIndependentFreeze({...freeze,independent_review_waived_by_user:false},review,"review",["case"])).toThrow();
+ expect(()=>validateIndependentFreeze({...freeze,retrieval_results_withheld:false},review,"review",["case"])).toThrow();
+ expect(()=>validateIndependentFreeze(freeze,review,"changed",["case"])).toThrow();
+ expect(()=>validateIndependentFreeze(freeze,review,"review",["other"])).toThrow();
+ });

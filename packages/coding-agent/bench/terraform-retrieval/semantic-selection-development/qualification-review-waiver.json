@@ -1,0 +1,8 @@
+{
+  "user_decision": "Skip independent review for this iteration",
+  "independent_review_required": false,
+  "accuracy_gate_retained": 0.95,
+  "draft_no_release_retained": true,
+  "exposed_suites_regression_only": true,
+  "replacement_freeze_label": "internally frozen, no independent review"
+}

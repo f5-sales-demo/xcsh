@@ -38,3 +38,10 @@ test("qualification source evidence must be bound to an independent v2 review",(
  expect(()=>validateSourceEvidenceBinding(freeze,{source_evidence_sha256:"a"},"a","changed")).toThrow("review digest");
  expect(()=>validateSourceEvidenceBinding(freeze,{source_evidence_sha256:"changed"},"a","b")).toThrow("did not bind");
 });
+
+ test("internal source freeze binds exact evidence with explicit user waiver",()=>{
+ const freeze={schema_version:3,files:{"case-source-evidence.json":"source"},internal_review_sha256:"review",independent_review_waived_by_user:true,retrieval_results_withheld:true};
+ expect(()=>validateSourceEvidenceBinding(freeze,{source_evidence_sha256:"source"},"source","review")).not.toThrow();
+ expect(()=>validateSourceEvidenceBinding({...freeze,retrieval_results_withheld:false},{source_evidence_sha256:"source"},"source","review")).toThrow();
+ expect(()=>validateSourceEvidenceBinding(freeze,{source_evidence_sha256:"other"},"source","review")).toThrow();
+ });

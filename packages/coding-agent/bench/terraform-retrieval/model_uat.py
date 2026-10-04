@@ -38,6 +38,9 @@ from model_trace import (
     validate_model_subset_identity,
 )
 
+INTERNAL_FREEZE_VERSION = 3
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
 parser.add_argument("--suite", type=Path, required=True)
@@ -51,6 +54,12 @@ parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
 parser.add_argument("--partition-index", type=int, default=0)
 parser.add_argument("--partition-count", type=int, default=1)
 args = parser.parse_args()
+freeze = json.loads(args.freeze.read_text())
+REVIEW_NAME = (
+    "internal-review.json"
+    if freeze.get("schema_version") == INTERNAL_FREEZE_VERSION
+    else "independent-review.json"
+)
 execution_route = configure_subscription_uat(args.model)
 input_paths = {"binary": Path(args.binary).resolve(), "freeze": args.freeze}
 input_paths.update(
@@ -60,7 +69,7 @@ input_paths.update(
             "heldout.json",
             "model-subset.json",
             "model-continuations.json",
-            "independent-review.json",
+            REVIEW_NAME,
             "eligibility.json",
         ]
         if (args.freeze.parent / name).exists()
@@ -78,7 +87,10 @@ if freeze.get("post_analysis_regression") and not args.regression:
     raise ValueError(REGRESSION_ERROR)
 all_cases = json.loads(suite_bytes)
 INDEPENDENT_FREEZE_VERSION = 2
-if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
+if freeze.get("schema_version") in (
+    INDEPENDENT_FREEZE_VERSION,
+    INTERNAL_FREEZE_VERSION,
+):
     validate_model_activation(all_cases)
 if not args.regression:
     validate_hcl_drafting_coverage(all_cases)
@@ -87,16 +99,17 @@ if not args.regression:
         message = "Frozen heldout suite hash mismatch"
         raise ValueError(message)
     validate_model_subset_identity(all_cases, json.loads(heldout_bytes))
-    if freeze.get("schema_version") != INDEPENDENT_FREEZE_VERSION:
-        message = "Nonregression model UAT requires independently reviewed freeze"
+    if freeze.get("schema_version") not in (
+        INDEPENDENT_FREEZE_VERSION,
+        INTERNAL_FREEZE_VERSION,
+    ):
+        message = "Nonregression model UAT requires verified freeze"
         raise ValueError(message)
-    for name in ["heldout.json", "model-subset.json", "independent-review.json"]:
+    for name in ["heldout.json", "model-subset.json", REVIEW_NAME]:
         if provenance.get(name) != freeze["files"].get(name):
             message = f"Frozen input hash mismatch: {name}"
             raise ValueError(message)
-    independent_review = json.loads(
-        (args.freeze.parent / "independent-review.json").read_bytes()
-    )
+    independent_review = json.loads((args.freeze.parent / REVIEW_NAME).read_bytes())
     eligibility_record = json.loads(
         (args.freeze.parent / "eligibility.json").read_bytes()
     )
@@ -105,7 +118,7 @@ if not args.regression:
         independent_review,
         json.loads(heldout_bytes),
         eligibility_record,
-        provenance["independent-review.json"],
+        provenance[REVIEW_NAME],
     )
 continuation_verified: set[str] = set()
 if not args.regression and any(case["kind"] == "ambiguous" for case in all_cases):
@@ -124,21 +137,22 @@ if not args.regression and any(case["kind"] == "ambiguous" for case in all_cases
         if name in provenance and provenance[name] != digest:
             message = f"Frozen input hash mismatch: {name}"
             raise ValueError(message)
-    review = json.loads((args.freeze.parent / "independent-review.json").read_bytes())
+    review = json.loads((args.freeze.parent / REVIEW_NAME).read_bytes())
     eligibility = json.loads((args.freeze.parent / "eligibility.json").read_bytes())
     validate_continuation_review(
         freeze,
         review,
         json.loads(heldout_bytes),
         eligibility,
-        provenance["independent-review.json"],
+        provenance[REVIEW_NAME],
     )
     if (
-        freeze.get("schema_version") != INDEPENDENT_FREEZE_VERSION
+        freeze.get("schema_version")
+        not in (INDEPENDENT_FREEZE_VERSION, INTERNAL_FREEZE_VERSION)
         or review.get("model_continuations_sha256")
         != hashlib.sha256(plans_bytes).hexdigest()
     ):
-        message = "Eligible independently approved continuation freeze required"
+        message = "Eligible approved continuation freeze required"
         raise ValueError(message)
     plans = json.loads(plans_bytes)
     validate_continuation_plans(all_cases, plans)

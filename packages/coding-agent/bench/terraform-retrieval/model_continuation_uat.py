@@ -57,6 +57,9 @@ def nonempty_strings(value: Any) -> bool:
     )
 
 
+INTERNAL_FREEZE_VERSION = 3
+
+
 def validate_continuation_receipt(
     receipt: dict[str, Any],
     manual_review: dict[str, Any],
@@ -279,26 +282,39 @@ def validate_continuation_review(
     regression: bool = False,
 ) -> None:
     """Bind independent approval, full case coverage, and untouched-suite eligibility."""
+    internal = freeze.get("schema_version") == INTERNAL_FREEZE_VERSION
+    if internal and (
+        freeze.get("independent_review_waived_by_user") is not True
+        or freeze.get("retrieval_results_withheld") is not True
+    ):
+        message = "Internal freeze requires user waiver and withheld retrieval results"
+        raise ValueError(message)
     expected_ids = {case["id"] for case in cases}
     reviewed_ids = review.get("reviewed_case_ids", [])
+    withheld = (
+        internal or freeze.get("implementation_and_retrieval_outputs_withheld") is True
+    )
     if (
-        review_hash != freeze.get("independent_review_sha256")
+        review_hash
+        != freeze.get(
+            "internal_review_sha256" if internal else "independent_review_sha256"
+        )
         or review.get("verdict") != "approve"
         or review.get("findings")
-        or freeze.get("implementation_and_retrieval_outputs_withheld") is not True
+        or not withheld
         or not (
             len(reviewed_ids) == len(set(reviewed_ids))
             and set(reviewed_ids) == expected_ids
         )
     ):
-        message = "Complete digest-bound independent continuation review required"
+        message = "Complete digest-bound frozen continuation review required"
         raise ValueError(message)
     if (
         not isinstance(eligibility.get("qualification_eligible"), bool)
         or (eligibility.get("qualification_eligible") is not True and not regression)
         or eligibility.get("suite_sha256") != freeze["files"]["heldout.json"]
     ):
-        message = "Continuation suite is not independently eligible"
+        message = "Continuation suite is not eligible"
         raise ValueError(message)
 
 
@@ -311,6 +327,12 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", default="openai-codex/gpt-6.1-sol")
     args = parser.parse_args()
+    freeze = json.loads(args.freeze.read_text())
+    review_name = (
+        "internal-review.json"
+        if freeze.get("schema_version") == INTERNAL_FREEZE_VERSION
+        else "independent-review.json"
+    )
     configure_subscription_uat(args.model)
     input_paths = {"binary": Path(args.binary).resolve(), "freeze": args.freeze}
     input_paths.update(
@@ -320,7 +342,7 @@ def main() -> None:
                 "heldout.json",
                 "model-subset.json",
                 "model-continuations.json",
-                "independent-review.json",
+                review_name,
                 "eligibility.json",
             ]
         }
@@ -328,31 +350,32 @@ def main() -> None:
     provenance = capture_provenance(input_paths)
     freeze = json.loads(args.freeze.read_text())
     independent_freeze_version = 2
-    if freeze.get("schema_version") != independent_freeze_version or (
-        freeze.get("post_analysis_regression") and not args.regression
-    ):
-        message = "Installed continuation qualification requires eligible independently reviewed freeze"
+    if freeze.get("schema_version") not in (
+        independent_freeze_version,
+        INTERNAL_FREEZE_VERSION,
+    ) or (freeze.get("post_analysis_regression") and not args.regression):
+        message = "Installed continuation qualification requires eligible verified freeze"
         raise ValueError(message)
     loaded: dict[str, Any] = {}
     for name in [
         "heldout.json",
         "model-subset.json",
         "model-continuations.json",
-        "independent-review.json",
+        review_name,
     ]:
         data = (args.freeze.parent / name).read_bytes()
         if hashlib.sha256(data).hexdigest() != freeze["files"].get(name):
             message = f"Frozen continuation input hash mismatch: {name}"
             raise ValueError(message)
         loaded[name] = json.loads(data)
-    review = loaded["independent-review.json"]
+    review = loaded[review_name]
     eligibility = json.loads((args.freeze.parent / "eligibility.json").read_text())
     validate_continuation_review(
         freeze,
         review,
         loaded["heldout.json"],
         eligibility,
-        freeze["files"]["independent-review.json"],
+        freeze["files"][review_name],
         regression=args.regression,
     )
 
@@ -362,7 +385,7 @@ def main() -> None:
         or review.get("model_continuations_sha256")
         != freeze["files"]["model-continuations.json"]
     ):
-        message = "Independent reviewer did not approve the exact continuation plan"
+        message = "Frozen source review did not approve the exact continuation plan"
         raise ValueError(message)
 
     validate_known_suite_exposure(freeze["files"]["model-subset.json"], args.regression)

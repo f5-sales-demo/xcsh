@@ -66,3 +66,18 @@ The nine-case search-fallback run selected and read every expected leaf, includi
 provider setup, imports and timeout guidance. Its original audit passed. Review
 identified oversized-status, continuation, quoting and dependency-binding limits;
 those findings remain attached and the result is development-only.
+
+
+## User-waived independent review
+
+The user waived independent benchmark review for this iteration. The accuracy gate remains
+95 percent overall and for uniquely answerable cases, with every answerable destination in the
+top five and zero unsupported-field or false live-apply claims. Draft/no-release remains in force.
+
+A new internal freeze uses schema version 3, `internal-review.json`, `internal_review_sha256`,
+`independent_review_waived_by_user: true`, and `retrieval_results_withheld: true`. Its internal
+source review still binds every case, exact source quotations, peer dispositions and continuation
+plans. It must not be represented as independent review. Existing schema version 2 freezes retain
+their independent review requirements. Known exposed inputs stay regression-only under either route.
+The internal route does not qualify old suites or waive installed reads, content review,
+cross-platform offline evidence, response budgets or latency.

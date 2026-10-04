@@ -601,3 +601,36 @@ class RegressionContinuationTests(unittest.TestCase):
                 "review",
                 regression=True,
             )
+
+
+class InternalFreezeTests(unittest.TestCase):
+    """User waiver changes review independence only."""
+
+    def test_internal_freeze_preserves_identity_and_eligibility(self) -> None:
+        """Reject missing waiver, changed digest and exposed eligibility."""
+        freeze = {
+            "schema_version": 3,
+            "files": {"heldout.json": "suite"},
+            "internal_review_sha256": "review",
+            "independent_review_waived_by_user": True,
+            "retrieval_results_withheld": True,
+        }
+        review = {"verdict": "approve", "findings": [], "reviewed_case_ids": ["one"]}
+        eligibility = {"qualification_eligible": True, "suite_sha256": "suite"}
+        cases = [{"id": "one"}]
+        validate_continuation_review(freeze, review, cases, eligibility, "review")
+        for key in ["independent_review_waived_by_user", "retrieval_results_withheld"]:
+            with self.assertRaises(ValueError):
+                validate_continuation_review(
+                    {**freeze, key: False}, review, cases, eligibility, "review"
+                )
+        with self.assertRaises(ValueError):
+            validate_continuation_review(freeze, review, cases, eligibility, "changed")
+        with self.assertRaises(ValueError):
+            validate_continuation_review(
+                freeze,
+                review,
+                cases,
+                {**eligibility, "qualification_eligible": False},
+                "review",
+            )

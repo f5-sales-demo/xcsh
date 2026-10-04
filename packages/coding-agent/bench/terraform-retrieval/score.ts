@@ -85,16 +85,23 @@ export function validateIndependentFreeze(
 	freeze: {
 		schema_version?: number;
 		independent_review_sha256?: string;
+		internal_review_sha256?: string;
+		independent_review_waived_by_user?: boolean;
+		retrieval_results_withheld?: boolean;
 		implementation_and_retrieval_outputs_withheld?: boolean;
 	},
 	review: { verdict: string; findings: unknown[]; reviewed_case_ids: string[] },
 	reviewHash: string,
 	caseIds: string[],
 ): void {
-	if (freeze.schema_version !== 2) return;
-	if (freeze.independent_review_sha256 !== reviewHash) throw new Error("Independent review digest mismatch");
+	if (freeze.schema_version !== 2 && freeze.schema_version !== 3) return;
+	const internal = freeze.schema_version === 3;
+	if (internal && (freeze.independent_review_waived_by_user !== true || freeze.retrieval_results_withheld !== true))
+		throw new Error("Internal freeze requires user review waiver and withheld retrieval results");
+	if ((internal ? freeze.internal_review_sha256 : freeze.independent_review_sha256) !== reviewHash)
+		throw new Error("Frozen review digest mismatch");
 	if (
-		freeze.implementation_and_retrieval_outputs_withheld !== true ||
+		(!internal && freeze.implementation_and_retrieval_outputs_withheld !== true) ||
 		review.verdict !== "approve" ||
 		review.findings.length
 	)
