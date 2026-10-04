@@ -96,6 +96,11 @@ def validate_continuation_receipt(
     reviewed = [(result.get("id"), result.get("branch")) for result in reviews]
     failures = [
         receipt.get("installed") is not True,
+        receipt.get("post_analysis_regression") is True,
+        (
+            "post_analysis_regression" in receipt
+            and not isinstance(receipt["post_analysis_regression"], bool)
+        ),
         receipt.get("input_sha256") != provenance,
         receipt.get("model") != model,
         len(identities) != len(set(identities)),
@@ -260,6 +265,8 @@ def validate_continuation_review(
     cases: list[dict[str, Any]],
     eligibility: dict[str, Any],
     review_hash: str,
+    *,
+    regression: bool = False,
 ) -> None:
     """Bind independent approval, full case coverage, and untouched-suite eligibility."""
     expected_ids = {case["id"] for case in cases}
@@ -277,7 +284,8 @@ def validate_continuation_review(
         message = "Complete digest-bound independent continuation review required"
         raise ValueError(message)
     if (
-        eligibility.get("qualification_eligible") is not True
+        not isinstance(eligibility.get("qualification_eligible"), bool)
+        or (eligibility.get("qualification_eligible") is not True and not regression)
         or eligibility.get("suite_sha256") != freeze["files"]["heldout.json"]
     ):
         message = "Continuation suite is not independently eligible"
@@ -287,6 +295,7 @@ def validate_continuation_review(
 def main() -> None:
     """Execute frozen clarification branches only after all digest checks pass."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("--regression", action="store_true")
     parser.add_argument("--binary", required=True)
     parser.add_argument("--freeze", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -308,8 +317,8 @@ def main() -> None:
     provenance = capture_provenance(input_paths)
     freeze = json.loads(args.freeze.read_text())
     independent_freeze_version = 2
-    if freeze.get("schema_version") != independent_freeze_version or freeze.get(
-        "post_analysis_regression"
+    if freeze.get("schema_version") != independent_freeze_version or (
+        freeze.get("post_analysis_regression") and not args.regression
     ):
         message = "Installed continuation qualification requires eligible independently reviewed freeze"
         raise ValueError(message)
@@ -333,6 +342,7 @@ def main() -> None:
         loaded["heldout.json"],
         eligibility,
         freeze["files"]["independent-review.json"],
+        regression=args.regression,
     )
 
     if (
@@ -369,7 +379,14 @@ def main() -> None:
         "read",
     ]
     run_branches(
-        command, plans, by_id, input_paths, provenance, args.output, args.model
+        command,
+        plans,
+        by_id,
+        input_paths,
+        provenance,
+        args.output,
+        args.model,
+        regression=args.regression,
     )
 
 
@@ -381,6 +398,8 @@ def run_branches(
     provenance: dict[str, str],
     output: Path,
     model: str,
+    *,
+    regression: bool = False,
 ) -> None:
     """Execute all reviewed branches and checkpoint digest-bound receipts."""
     results = []
@@ -417,6 +436,7 @@ def run_branches(
                 json.dumps(
                     {
                         "installed": True,
+                        "post_analysis_regression": regression,
                         "binary_sha256": provenance["binary"],
                         "freeze_sha256": provenance["freeze"],
                         "input_sha256": provenance,

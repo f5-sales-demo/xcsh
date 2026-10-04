@@ -1,0 +1,8 @@
+{
+  "qualification_passed": false,
+  "python_tests": 32,
+  "ruff_pass": true,
+  "workspace_check_pass": true,
+  "source_findings_covered": true,
+  "change": "Explicit regression continuation CLI retains approval/hash/identity/branch checks; boolean eligibility required; regression receipts reject qualification"
+}

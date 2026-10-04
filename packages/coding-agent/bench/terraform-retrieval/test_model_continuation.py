@@ -24,6 +24,7 @@ from model_continuation_uat import (
     transcript_summary,
     validate_continuation_plans,
     validate_continuation_receipt,
+    validate_continuation_review,
     verify_continuation_traces,
     verify_provenance,
 )
@@ -267,6 +268,11 @@ class ContinuationPlanTests(unittest.TestCase):
         for target, key, value in [
             ("receipt", "results", receipt["results"][:1]),
             ("receipt", "input_sha256", {}),
+            ("receipt", "post_analysis_regression", True),
+            *[
+                ("receipt", "post_analysis_regression", value)
+                for value in [1, "true", [], {}]
+            ],
             ("review", "receipt_sha256", "changed"),
             ("review", "branches", []),
             ("review", "findings", ["unsupported field"]),
@@ -473,3 +479,49 @@ class ContinuationPlanTests(unittest.TestCase):
             [{"type": "agent_end", "messages": messages}], expected
         )
         self.assertFalse(result["required_reads_verified"])
+
+
+class RegressionContinuationTests(unittest.TestCase):
+    """Keep diagnostic replay distinct from qualified continuation evidence."""
+
+    def test_regression_mode_never_waives_hash_or_review(self) -> None:
+        """Only eligibility can differ; exact inputs and approval stay mandatory."""
+        freeze = {
+            "files": {"heldout.json": "suite"},
+            "independent_review_sha256": "review",
+            "implementation_and_retrieval_outputs_withheld": True,
+            "post_analysis_regression": True,
+        }
+        review = {"verdict": "approve", "findings": [], "reviewed_case_ids": ["one"]}
+        cases = [{"id": "one"}]
+        eligibility = {"qualification_eligible": False, "suite_sha256": "suite"}
+        with self.assertRaises(ValueError):
+            validate_continuation_review(freeze, review, cases, eligibility, "review")
+        validate_continuation_review(
+            freeze, review, cases, eligibility, "review", regression=True
+        )
+        for bad_eligibility in [
+            *[
+                {"suite_sha256": "suite", "qualification_eligible": value}
+                for value in [None, "false", [], {}, 1]
+            ],
+            {"suite_sha256": "suite"},
+            {"qualification_eligible": False, "suite_sha256": "changed"},
+        ]:
+            with self.assertRaises(ValueError):
+                validate_continuation_review(
+                    freeze, review, cases, bad_eligibility, "review", regression=True
+                )
+        with self.assertRaises(ValueError):
+            validate_continuation_review(
+                freeze, review, cases, eligibility, "changed", regression=True
+            )
+        with self.assertRaises(ValueError):
+            validate_continuation_review(
+                freeze,
+                {**review, "verdict": "reject"},
+                cases,
+                eligibility,
+                "review",
+                regression=True,
+            )
