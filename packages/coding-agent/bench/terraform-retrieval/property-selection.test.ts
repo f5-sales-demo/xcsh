@@ -737,3 +737,25 @@ test("trailing numeric rejection preserves alternatives",async()=>{
  const {propertyRequestedType}=await import("../../src/internal-urls/terraform-property-ranking");
  expect(propertyRequestedType("Locate request limits, a numeric cap is not needed")).toBeUndefined();
 });
+
+test("qualified reference wording resolves matching branch suffixes without global query expansion",()=>{
+ const first={...row("default_flavor_ref.name",40),description:"Referenced object name."};
+ const other={...row("vsite_refs.name",39),description:"Referenced object name."};
+ expect(selectPropertyDestination("Locate the name field of the default flavor reference",[first,other]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Locate the reference name",[first,other]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate the default flavor name",[first,other]).kind).toBe("choices");
+});
+
+test("reference branch synonyms require affirmative local object wording",()=>{
+ const first={...row("default_flavor_ref.name",40),description:"Referenced object name."};
+ const other={...row("vsite_refs.name",39),description:"Referenced object name."};
+ for(const q of ["Locate the default flavor name in the Terraform reference","Locate the name field, not the default flavor reference","Locate the name field of the default flavor reference or vsite reference"])expect(selectPropertyDestination(q,[first,other]).kind).toBe("choices");
+});
+
+test("reference context cannot come from examples or replace unsupported leaf evidence",()=>{
+ const first={...row("default_flavor_ref.name",40),description:"Referenced object name."};
+ const other={...row("vsite_refs.name",39),description:"Referenced object name."};
+ for(const example of ["for example","such as","e.g."])expect(selectPropertyDestination("Locate the default flavor name ("+example+" default flavor reference)",[first,other]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate the namespace field of the default flavor reference",[first,other]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate the default flavor name; consult the API reference",[first,{...other,schema_path:"default_flavor.name"}]).kind).toBe("choices");
+});

@@ -92,6 +92,18 @@ export function selectPropertyDestination(
 		alternatives = alternatives.filter(row => !row.schema_path.includes("."));
 	}
 	const query = new Set(propertyQueryTerms(queryText));
+	const affirmativeReferenceContext = (terms: string[]) => {
+		if (/\b(?:not|no|never|without|or|rather than|instead of)\b/i.test(queryText)) return false;
+		const affirmative = queryText.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+		const qualifiers = terms.filter(term => term !== "ref");
+		if (!qualifiers.length) return false;
+		return [...affirmative.matchAll(/\b((?:[a-z][a-z0-9_-]*\s+){1,6})references?\b/gi)].some(match => {
+			if (/\b(?:in|under|within|terraform|documentation|docs)\b/i.test(match[1]!)) return false;
+			const context = propertyTerms(match[1]!);
+			return qualifiers.every(term => context.includes(term));
+		});
+	};
+
 	const identifiers = propertySchemaIdentifiers(queryText).filter(
 		term => ![...input, ...alternatives].some(row => row.provider_name === term),
 	);
@@ -429,7 +441,16 @@ export function selectPropertyDestination(
 				// Parallel equally deep segments can share descriptive boilerplate.
 				const otherVocabulary = new Set(propertyTerms(other.schema_path));
 				const terms = common.length >= 1 && difference.some(term => !otherVocabulary.has(term)) ? difference : full;
-				return terms.length > 0 && terms.every(term => query.has(term));
+				return (
+					terms.length > 0 &&
+					terms.every(
+						term =>
+							query.has(term) ||
+							(term === "ref" &&
+								propertyTerms(parts.at(-1) ?? "").every(leaf => query.has(leaf)) &&
+								affirmativeReferenceContext(full)),
+					)
+				);
 			})
 		)
 			return { kind: "choices", destinations: collisions.slice(0, 5), reason: "Missing schema branch context" };
