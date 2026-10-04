@@ -5,8 +5,10 @@ import {
 	propertyConflictingNamedScope,
 	propertyExcludedSchemaIdentifiers,
 	propertyExplicitSchemaPaths,
+	propertyGroupingKey,
 	propertyInvalidExcludedScope,
 	propertyMatchesExplicitPaths,
+	propertyMatchesGrouping,
 	propertyMatchesWorkloadArchitecture,
 	propertyMatchesWorkloadPortCount,
 	propertyMentionedSchemaPaths,
@@ -21,6 +23,7 @@ import {
 	propertySchemaIdentifiers,
 	propertyTerms,
 	propertyUncertainExcludedIdentifiers,
+	propertyUncertainGrouping,
 	propertyWorkloadArchitecture,
 	propertyWorkloadPortCount,
 } from "./terraform-property-ranking";
@@ -126,6 +129,13 @@ export function selectPropertyDestination(
 			destinations: candidates.slice(0, 5),
 			reason: "Alternative or negated schema path intent",
 		};
+	}
+	if (propertyUncertainGrouping(queryText))
+		return { kind: "choices", destinations: [...input].slice(0, 5), reason: "Uncertain or alternative grouping key" };
+	if (propertyGroupingKey(queryText)) {
+		input = input.filter(row => propertyMatchesGrouping(queryText, row));
+		alternatives = alternatives.filter(row => propertyMatchesGrouping(queryText, row));
+		if (!input.length) return { kind: "choices", destinations: [], reason: "Unsupported requested grouping key" };
 	}
 	const lifecycle = context?.lifecycle ?? interpretTerraformLifecycle(queryText);
 	if (lifecycle?.field) {

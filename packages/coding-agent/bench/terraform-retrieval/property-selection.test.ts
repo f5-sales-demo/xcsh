@@ -658,3 +658,25 @@ test("trailing excluded branch punctuation cannot become positive scope", () => 
  const field=row("detection_settings.action",40);
  for(const q of ["Where do I write action outside detection_settings/","How do I pass action outside detection_settings:"])expect(selectPropertyDestination(q,[field]).kind).toBe("none");
 });
+
+
+test("explicit grouping requires documented keyed-map evidence", () => {
+ const flat={...row("values",39),description:"Values across regions.",type:"list"};
+ const keyed={...row("values_by_region",40),description:"Values keyed by region.",type:"map"};
+ expect(selectPropertyDestination("Locate values grouped by region",[keyed,flat]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Locate values grouped by unknown category",[keyed,flat]).kind).not.toBe("leaf");
+});
+
+
+test("negated and alternative grouping keys require clarification", () => {
+ const a={...row("values_by_region",40),description:"Values keyed by region.",type:"map"};
+ const b={...row("values_by_zone",39),description:"Values keyed by zone.",type:"map"};
+ for(const q of ["Locate values not grouped by region","Locate values grouped by region or zone"])expect(selectPropertyDestination(q,[a,b]).kind).not.toBe("leaf");
+});
+
+
+test("grouping cannot hide an unresolved provider role", () => {
+ const resource={...row("values_by_region",40),type:"map",description:"Values keyed by region."};
+ const data={...resource,provider_type:"data-sources",path:"data",score:39};
+ expect(selectPropertyDestination("Locate values grouped by region",[resource,data]).kind).toBe("choices");
+});

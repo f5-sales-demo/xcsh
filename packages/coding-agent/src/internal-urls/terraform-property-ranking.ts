@@ -188,6 +188,23 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
+export function propertyUncertainGrouping(text: string): boolean {
+	const request = propertyRequestedText(text) ?? text;
+	return /\b(?:not|no|without|maybe)\b[^.!?;]*\b(?:grouped|keyed)\s+by\b|\b(?:grouped|keyed)\s+by\s+[^.!?;]*\b(?:or|and)\b/i.test(
+		request,
+	);
+}
+export function propertyGroupingKey(text: string): string | undefined {
+	const request = propertyRequestedText(text) ?? text;
+	return request.match(/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?([a-z][a-z0-9_-]*)/i)?.[1];
+}
+export function propertyMatchesGrouping(text: string, candidate: PropertyCandidate): boolean {
+	const key = propertyGroupingKey(text);
+	if (!key) return true;
+	const terms = propertyQueryTerms(key);
+	const evidence = new Set(propertyTerms(`${candidate.schema_path} ${candidate.description}`));
+	return candidate.type === "map" && terms.length > 0 && terms.every(term => evidence.has(term));
+}
 export function propertyRequestedType(text: string): string | undefined {
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return undefined;
 	if (/\b(?:boolean|bool)\s+(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return "bool";

@@ -546,3 +546,11 @@ test("inactive state terms expand to idle only for duration requests", () => {
  const scope=preparePropertyScope([row("inactive","Inactive state."),row("idle","Idle state.")]);
  expect(rankPropertyScope("Which field indicates inactive?",scope)[0]?.schema_path).toBe("inactive");
 });
+
+
+test("grouped-by queries distinguish keyed maps from flat collections", () => {
+ const flat={...row("values","Values across regions."),type:"list"};
+ const keyed={...row("values_by_region","Values keyed by region."),type:"map"};
+ const scope=preparePropertyScope([flat,keyed]);
+ expect(rankPropertyScope("Locate values grouped by region",scope)[0]?.schema_path).toBe(keyed.schema_path);
+});
