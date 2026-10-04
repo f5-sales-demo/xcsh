@@ -9,6 +9,7 @@ import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
+import { verifiedChoiceEdges } from "./terraform-choice-edges";
 import { terraformChoiceResponse } from "./terraform-choice-response";
 import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
 import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
@@ -624,6 +625,27 @@ export async function buildTerraformIndex(
 							r.group ?? null,
 						);
 					}
+				for (const edge of verifiedChoiceEdges(m.relationships ?? [])) {
+					const source = identities.get(edge.source_id),
+						target = identities.get(edge.target_id);
+					if (
+						!source ||
+						!target ||
+						!anchors.get(source)?.has(edge.source_anchor) ||
+						!anchors.get(target)?.has(edge.anchor)
+					)
+						throw new Error("Missing Terraform exact choice destination");
+					insertRelationship.run(
+						source,
+						edge.source_anchor,
+						edge.type,
+						target,
+						edge.anchor,
+						edge.enforcement,
+						edge.source,
+						edge.group ?? null,
+					);
+				}
 				const title = [
 					m.provider_name,
 					m.provider_name.replaceAll("_", " "),
@@ -1699,6 +1721,7 @@ export class TerraformDocumentationRepository {
 					seen.add(canonical);
 					const ownership = ownershipHint(section.anchor);
 					const body = [
+						prerequisites(documentPath, section.anchor),
 						ownership,
 						ownershipScope(section.anchor),
 						rewriteTerraformLinks(section.markdown, documentPath),

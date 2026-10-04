@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "correct_explicit_leaves": 2,
+  "explicit_cases": 2,
+  "justified_clarification": true,
+  "strict_audit_passed": true,
+  "same_immutable_provider_snapshot": true,
+  "relationship_rows": 27945,
+  "missing_nonempty_target_anchors": 0,
+  "missing_exact_choice_source_anchors": 0,
+  "remaining": "Development external Codex only; final installed binary and independent200/40 qualification not achieved."
+}

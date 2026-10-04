@@ -672,7 +672,21 @@ test("verified parent choice groups return storage alternatives instead of a fal
 				) as InternalUrl,
 			)
 		).content;
-		expect(explicit).not.toContain("private_key/blindfold_secret_info/index.md");
+		const hinted = await repo.resolve(
+			Object.assign(
+				new URL(
+					"xcsh://terraform-documentation/documentation/resources/fixture/properties/private_key/clear_secret_info/index.md?view=context#section",
+				),
+				{ rawHost: "terraform-documentation" },
+			) as InternalUrl,
+		);
+		expect(hinted.content).toContain("- conflicts (provider-schema):");
+		expect(hinted.content).toContain("private_key/blindfold_secret_info/index.md?view=hint#section");
+		expect(explicit).toContain("Selected leaf;");
+		expect(explicit).toContain("- conflicts (provider-schema):");
+		expect(explicit).not.toContain(
+			"Read: xcsh://terraform-documentation/documentation/resources/fixture/properties/private_key/blindfold_secret_info/index.md",
+		);
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });

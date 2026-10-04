@@ -1,0 +1,5 @@
+One concrete defect: **input-dependent ordering** in [terraform-choice-edges.ts:31](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-choice-edges.ts:31). Grouping distinguishes `type` and `source`, but sorting omits both. Two groups sharing endpoints and group ID but differing in source compare equal. Reversing input reproduced reversed output order. Include those fields in the comparator and add a permutation test.
+
+Otherwise, the narrow metadata consumption is sound: symmetric conflicts/choices only, no inferred requirements or advisory enforcement, exact endpoint anchors validated before insertion, and group boundaries preserved.
+
+All three focused tests passed; they miss the ordering case. No edits made.

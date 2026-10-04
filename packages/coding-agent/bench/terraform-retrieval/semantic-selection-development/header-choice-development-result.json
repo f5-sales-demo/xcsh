@@ -1,0 +1,37 @@
+{
+  "results": [
+    {
+      "id": "header-ambiguous",
+      "selected_uri": null,
+      "clarification": "Should an existing Server response-header value be preserved or overwritten?",
+      "reason": "The requested path contains two mutually exclusive value settings: append_server_name preserves existing values; server_name overwrites them. The question does not specify which behavior is required.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "header-preserve",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+      "clarification": null,
+      "reason": "append_server_name sets the Server header value while preserving an existing value, matching the requested behavior and stateful/public/multiple-port/automatic-certificate path. The alternative server_name overwrites existing values. Evidence is from the development corpus only.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "header-overwrite",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+      "clarification": null,
+      "reason": "server_name explicitly overwrites existing Server header values, matching the requested behavior and stateful/public/multiple-port/automatic-certificate path. The alternative append_server_name preserves existing values. Evidence is from the development corpus only.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section"
+      ]
+    }
+  ]
+}
