@@ -1028,3 +1028,19 @@ test("a specific lookup follows a general need statement without replacing its t
 		"the retry value in a queue resource",
 	);
 });
+
+test("allowlist product-role wording resolves the maintained network data source", () => {
+	const names = ["network_regional_edges", "network_cdn", "network_dnslb_health_checks", "dns_load_balancer"];
+	expect(terraformProviderMention("Regional Edge allowlist data source regions", names)).toBe(
+		"network_regional_edges",
+	);
+	expect(terraformProviderMention("CDN allowlist data source CIDRs", names)).toBe("network_cdn");
+	expect(terraformProviderMention("DNS load-balancer health-check ingress allowlist data source", names)).toBe(
+		"network_dnslb_health_checks",
+	);
+	expect(terraformProviderMention("xcsh_dns_load_balancer reference to CDN allowlist", names)).toBe(
+		"dns_load_balancer",
+	);
+	expect(terraformProviderMention("dns_load_balancer reference to CDN allowlist", names)).toBe("dns_load_balancer");
+	expect(terraformProviderMention("Compare CDN allowlist with Regional Edge allowlist", names)).toBeUndefined();
+});

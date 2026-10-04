@@ -1030,6 +1030,21 @@ export function terraformProviderMention(search: string, names: readonly string[
 	if (literalNames.length === 1) return literalNames[0];
 	if (literalNames.length > 1) return undefined;
 
+	if (/\ballowlists?\b|\bnetwork[ -]list\b/i.test(search) && !/\b(?:compare|versus|vs|between)\b/i.test(search)) {
+		const families: Array<[string, RegExp]> = [
+			["network_regional_edges", /\bregional[ -]edges?\b/i],
+			["network_cdn", /\bcdn\b/i],
+			["network_bot_defense", /\bbot[ -]defense\b/i],
+			["network_customer_edge_egress", /\bcustomer[ -]edge\b.*\begress\b|\bsecure[ -]mesh\s+v2\b/i],
+			["network_data_intelligence", /\bdata[ -]intelligence\b/i],
+			["network_secondary_dns_zone_transfer", /\bsecondary[ -]dns\b/i],
+			["network_dnslb_health_checks", /\bdns[ -]load[ -]balancer\b.*\bhealth[ -]checks?\b/i],
+		];
+		const matching = families.filter(([name, expression]) => names.includes(name) && expression.test(search));
+		if (matching.length === 1) return matching[0]![0];
+		if (matching.length > 1) return undefined;
+	}
+
 	const normalize = (value: string) =>
 		value
 			.toLowerCase()
