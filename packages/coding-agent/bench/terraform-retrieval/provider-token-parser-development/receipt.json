@@ -2,8 +2,8 @@
   "development_only": true,
   "qualification_passed": false,
   "production_imported": false,
-  "tests": 7,
-  "assertions": 36,
-  "status": "Prototype only;not integrationapproved",
-  "remaining": "Complete malformed/reference/call spans;quote matching and modifiers mustbind nounphrases;role plurals and scopednegation. Reviewpredates last environmentlabel/datareference corrections;allotherfindings unresolved."
+  "tests": 22,
+  "assertions": 106,
+  "status": "Lexer and identity phrase records developed;not integrated",
+  "remaining": "Modifier negation across arbitrary adjectives;role phrase interpretation; complete integration review and regression gates. V4 review repairs havefocusedcounterexamples but new phrase layernotyetindependentlyreviewed."
 }
