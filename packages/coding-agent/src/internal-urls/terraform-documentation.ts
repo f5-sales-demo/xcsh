@@ -8,6 +8,7 @@ import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
+import { lookupTerraformAlias } from "./terraform-alias-lookup";
 import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
 import { verifiedChoiceEdges } from "./terraform-choice-edges";
 import { terraformChoiceResponse } from "./terraform-choice-response";
@@ -1445,6 +1446,7 @@ export class TerraformDocumentationRepository {
 		const allowed = new Set([
 			"search",
 			"enum_value",
+			"alias",
 			"reference_scope",
 			"reference_member",
 			"choice_after",
@@ -1475,6 +1477,20 @@ export class TerraformDocumentationRepository {
 		const search = url.searchParams.get("search")?.trim();
 		if (search !== undefined && (!search || Buffer.byteLength(search) > 512))
 			throw new Error("Terraform search must contain 1 to 512 UTF-8 bytes");
+		const exactAlias = url.searchParams.get("alias");
+		if (
+			exactAlias !== null &&
+			(!exactAlias.trim() ||
+				Buffer.byteLength(exactAlias) > 512 ||
+				!url.searchParams.has("provider_type") ||
+				!url.searchParams.has("provider_name") ||
+				["search", "enum_value", "reference_scope", "reference_member", "cursor", "facet", "view", "after"].some(
+					key => url.searchParams.has(key),
+				) ||
+				documentPath ||
+				url.hash)
+		)
+			throw new Error("Invalid explicit alias discovery");
 		const enumValue = url.searchParams.get("enum_value");
 		if (
 			enumValue !== null &&
@@ -1512,7 +1528,10 @@ export class TerraformDocumentationRepository {
 			throw new Error("Terraform search limit must be 1 to 10");
 		const limit = limitValue === null ? 5 : Number(limitValue);
 		const choiceAfter = url.searchParams.get("choice_after");
-		if (choiceAfter !== null && (!search || documentPath || !/^(?:0|[1-9][0-9]*)$/.test(choiceAfter)))
+		if (
+			choiceAfter !== null &&
+			((!search && exactAlias === null) || documentPath || !/^(?:0|[1-9][0-9]*)$/.test(choiceAfter))
+		)
 			throw new Error("Invalid Terraform choice continuation");
 		const view = url.searchParams.get("view");
 		if (view !== null && !["hint", "context", "full"].includes(view)) throw new Error("Invalid Terraform view");
@@ -1539,6 +1558,7 @@ export class TerraformDocumentationRepository {
 			!facet &&
 			referenceScope === null &&
 			enumValue === null &&
+			exactAlias === null &&
 			url.searchParams.size
 		)
 			throw new Error("Terraform filters and limit require discovery");
@@ -1563,6 +1583,32 @@ export class TerraformDocumentationRepository {
 			)
 				.map(r => `- ${r.type} (${r.enforcement}): ${uri(r.target_path, r.target_anchor, "hint")}`)
 				.join("\n");
+		if (exactAlias !== null) {
+			const rows = lookupTerraformAlias(db, exactAlias, {
+				providerType: url.searchParams.get("provider_type")!,
+				providerName: url.searchParams.get("provider_name")!,
+				filters,
+				node: node ?? undefined,
+			});
+			const prefix = `${provenance}\n\nVerified alias destinations: ${exactAlias}\nCompare exact sections and the original request before selecting. Alias matches do not establish support or resolve missing branches.`;
+			const content = rows.length
+				? terraformChoiceResponse(
+						prefix,
+						rows.map(row => {
+							const refine = new URL("xcsh://terraform-documentation/");
+							refine.searchParams.set("node", row.id);
+							refine.searchParams.set("search", exactAlias);
+							for (const filter of filters) refine.searchParams.set(filter.key, filter.value);
+							return `Read: ${uri(row.path, row.anchor, "context")}\nRefine: ${refine.href}`;
+						}),
+						url,
+						choiceAfter,
+						3000,
+					)
+				: `${prefix}\nNo verified alias destinations within caller scope.`;
+			if (!rows.length && choiceAfter !== null) throw new Error("Invalid Terraform alias continuation");
+			return { url: url.href, content, contentType: "text/markdown", size: Buffer.byteLength(content) };
+		}
 		if (enumValue !== null) {
 			const rows = searchPropertyEnumValue(
 				db,

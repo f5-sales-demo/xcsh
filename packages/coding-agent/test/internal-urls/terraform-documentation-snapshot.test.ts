@@ -7,6 +7,7 @@ import { createGzip, gzipSync } from "node:zlib";
 import tar from "tar-stream";
 import {
 	buildTerraformIndex,
+	type TerraformDocument,
 	TerraformDocumentationRepository,
 	type TerraformMetadata,
 	type TerraformPin,
@@ -2266,4 +2267,68 @@ test("reference context omits a resolved self destination", async () => {
 		expect(result.content).not.toContain("Reference context:");
 	}
 	db.close();
+});
+
+test("explicit alias discovery returns complete verified destinations and rejects mixed requests", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-alias-route-"));
+	const pin = await fixture(root);
+	pin.document_count = 2;
+	const docs = ["a", "b"].map(name => {
+		const documentPath = `documentation/resources/fixture/properties/${name}/index.md`;
+		const body = `<a id="section"></a>\n# ${name}\nComplete branch ${name}.\n`;
+		return {
+			path: documentPath,
+			body,
+			markdown: body,
+			size_bytes: Buffer.byteLength(body),
+			sha256: terraformHash(body),
+			body_sha256: terraformHash(body),
+			metadata: {
+				id: name,
+				canonical_id: name,
+				path: documentPath,
+				provider_type: "resources",
+				provider_name: "fixture",
+				role: "properties",
+				schema_path: [name],
+				summary: name,
+				aliases: ["automatic certificates"],
+				parent_id: null,
+				child_ids: [],
+			},
+		} as TerraformDocument;
+	});
+	try {
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?${query}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const scope = "alias=automatic%20certificates&provider_type=resources&provider_name=fixture";
+		const response = await read(scope);
+		expect(response.content).toContain("Verified alias destinations");
+		expect(response.content).not.toContain("Selected leaf;");
+		expect(response.content).toContain("/a/index.md?view=context#section");
+		expect(response.content).toContain("/b/index.md?view=context#section");
+		expect(response.size).toBeLessThanOrEqual(3000);
+		expect((await read(`${scope}&category=dns`)).content).toContain("No verified alias destinations");
+		expect((await read(`${scope}&node=a`)).content).not.toContain("/b/index.md");
+		for (const query of [
+			"alias=x",
+			`${scope}&search=question`,
+			`${scope}&enum_value=value`,
+			`${scope}&reference_scope=ref`,
+			`${scope}&view=hint`,
+			`${scope}&facet=category`,
+			`${scope}&choice_after=99`,
+		])
+			await expect(read(query)).rejects.toThrow();
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });

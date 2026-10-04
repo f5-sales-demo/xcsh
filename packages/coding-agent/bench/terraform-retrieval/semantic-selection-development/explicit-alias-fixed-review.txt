@@ -1,0 +1,11 @@
+Approve the narrow explicit-alias route. No blocking findings.
+
+- Exact indexed lookup; no prose inference or selected leaf.
+- Provider identity required; 32 malformed combinations rejected.
+- AND facets and node scope retained.
+- 40 destinations paginated across five pages without duplicates or omissions; maximum 2,977/3,000 bytes.
+- Every returned destination resolved; missing documents/anchors excluded.
+- UTF-8 limits, candidate cap, and existing hint/context/full reads passed.
+- Both prompt paragraphs preserve explicit discovery semantics.
+
+Five focused tests passed. The appended integration test was reviewed statically because it writes temporary files; additional route checks ran entirely in memory. No files changed.
