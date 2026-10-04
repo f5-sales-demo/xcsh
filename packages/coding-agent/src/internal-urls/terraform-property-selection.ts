@@ -27,6 +27,7 @@ import {
 	propertyQueryTerms as rawPropertyQueryTerms,
 	propertyTerms as rawPropertyTerms,
 } from "./terraform-property-ranking";
+import { requestedSecretRepresentation } from "./terraform-secret-representation";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
 	coverage: number;
@@ -103,50 +104,6 @@ function selectPropertyDestinationInternal(
 	if (propertyExplicitSchemaPaths(queryText).length && !input.length && !alternatives.length)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit schema path" };
 
-	const representationText = queryText.replace(/\be\.g\./gi, "for example");
-	const representationClauses = representationText
-		.split(/[;!?]|\.(?=\s|$)/)
-		.filter(clause => /\b(?:locate|find|which\s+field|where\s+is)\b/i.test(clause));
-	const secretClause = representationClauses.length === 1 ? representationClauses[0] : "";
-	const clearSecret = /\b(?:clear|unencrypted)[ -](?:api[ -]token[ -])?secrets?\b/i.test(secretClause ?? "");
-	const blindSecret = /\b(?:encrypted|blindfolded)[ -](?:api[ -]token[ -])?secrets?\b/i.test(secretClause ?? "");
-	const conflictingRepresentation = representationText
-		.split(/[;!?]|\.(?=\s|$)/)
-		.some(clause => clause !== secretClause && /\bsecrets?\b/i.test(clause));
-	const adjective =
-		/\b(?:for|of)\s+(?:(?:the|a|an)\s+)?(?:clear|unencrypted|encrypted|blindfolded)[ -](?:api[ -]token[ -])?secrets?\b/i.test(
-			secretClause ?? "",
-		);
-	if (
-		adjective &&
-		(conflictingRepresentation ||
-			clearSecret === blindSecret ||
-			/[`"'‘’“”]|\b(?:not|no|never|without|or|and|either|example|avoid|excluding|instead|rather|such as|for instance)\b/i.test(
-				secretClause ?? "",
-			))
-	)
-		return { kind: "choices", destinations: input.slice(0, 5), reason: "Uncertain secret representation" };
-	if (
-		adjective &&
-		!conflictingRepresentation &&
-		clearSecret !== blindSecret &&
-		!/[`"'‘’“”]|\b(?:not|no|never|without|or|and|either|example|avoid|excluding|instead|rather|such as|for instance)\b|\be\.g\./i.test(
-			secretClause ?? "",
-		)
-	) {
-		const branch = clearSecret ? "clear_secret_info" : "blindfold_secret_info";
-		const represented = (row: PropertyCandidate) => row.schema_path.split(".").includes(branch);
-		const matched = input.filter(represented);
-		if (matched.length) {
-			input = matched;
-			alternatives = alternatives.filter(represented);
-		} else
-			return {
-				kind: "choices",
-				destinations: input.slice(0, 5),
-				reason: "Requested secret representation not retrieved",
-			};
-	}
 	const requestedType = propertyRequestedType(queryText);
 	if (requestedType) {
 		input = input.filter(row => row.type == null || row.type === requestedType);
@@ -195,6 +152,21 @@ function selectPropertyDestinationInternal(
 	)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit field identifier" };
 
+	const representation = requestedSecretRepresentation(queryText);
+	if (representation.uncertain)
+		return { kind: "choices", destinations: input.slice(0, 5), reason: "Uncertain secret representation" };
+	if (representation.branch) {
+		const matches = (row: PropertyCandidate) => row.schema_path.split(".").includes(representation.branch!);
+		const represented = input.filter(matches);
+		if (!represented.length)
+			return {
+				kind: "choices",
+				destinations: input.slice(0, 5),
+				reason: "Requested secret representation not retrieved",
+			};
+		input = represented;
+		alternatives = alternatives.filter(matches);
+	}
 	const pathMentions = propertyMentionedSchemaPaths(queryText);
 	if (pathMentions.length && !propertyExplicitSchemaPaths(queryText).length) {
 		const candidates = [

@@ -20,6 +20,7 @@ import {
 } from "./terraform-property-ranking";
 import { refineRankedProperty } from "./terraform-property-refinement";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
+import { filterSecretRepresentation } from "./terraform-secret-representation";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
 
@@ -1799,10 +1800,11 @@ export class TerraformDocumentationRepository {
 						candidatePoolComplete: poolStatus.truncated !== true,
 					});
 
+					const allowedAlternatives = filterSecretRepresentation(search, alternatives);
 					if (decision.kind === "choices" && first) {
 						const equivalent = [
 							...new Map(
-								[...decision.destinations, ...alternatives]
+								[...decision.destinations, ...allowedAlternatives]
 									.filter(
 										row => row.provider_name === first.provider_name && row.description === first.description,
 									)
@@ -1849,7 +1851,7 @@ export class TerraformDocumentationRepository {
 					) {
 						const equivalent = [
 							...new Map(
-								[...decision.destinations, ...alternatives]
+								[...decision.destinations, ...allowedAlternatives]
 									.filter(
 										row =>
 											row.provider_type === first.provider_type &&

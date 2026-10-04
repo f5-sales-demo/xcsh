@@ -842,3 +842,9 @@ test("later secret representation corrections and examples retain ambiguity",()=
  for(const q of ["Find the store reference for clear secrets. Do not use clear secrets.","Find the store reference for clear secrets; or encrypted secrets","Locate the store reference for clear secrets, e.g. production","Locate the store reference for clear secrets, for instance production"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
  expect(selectPropertyDestination("Find the store reference for clear secrets; no restart required",[a,b]).kind).toBe("leaf");
 });
+test("secret representation cannot override unsupported fields or restored branches",()=>{
+ const a={...row("api_token.clear_secret_info.provider_ref",40),description:"Secret store reference."};
+ const b={...row("api_token.blindfold_secret_info.provider_ref",39),description:"Secret store reference."};
+ for(const q of ["Locate the store reference for clear secrets. Actually use encrypted ones.","Locate the store reference for clear secrets versus encrypted ones","Locate the store reference while configuring a value for clear secrets","Locate the store reference for clear secrets; e.g. production"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate invented_flag for clear secrets or encrypted secrets",[a,b]).kind).toBe("none");
+});

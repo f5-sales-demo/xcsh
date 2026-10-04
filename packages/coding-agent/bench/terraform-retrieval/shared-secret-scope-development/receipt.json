@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 98,
+  "v7_top5": 124,
+  "type_lint_pass": true,
+  "focused_pass": 209,
+  "prior_package_pass": 9700,
+  "source_findings_covered": true,
+  "change": "Shared representation parser preserves corrections and qualifier binding, unsupported field validation precedes shortcut, hydration retains excluded branches"
+}
