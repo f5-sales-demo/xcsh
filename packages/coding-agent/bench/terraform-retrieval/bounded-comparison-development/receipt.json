@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 99,
+  "v7_top5": 125,
+  "type_lint_pass": true,
+  "focused_pass": 213,
+  "prior_package_pass": 9704,
+  "source_findings_covered": true,
+  "change": "Bounded affirmative terminal rejected comparison operands excluded from query terms; quotes/negation/alternatives and trailing constraints retain original text"
+}

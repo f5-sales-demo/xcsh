@@ -561,3 +561,18 @@ test("query parameter terminology retains its schema qualifier", () => {
  const scope=preparePropertyScope([row("anonymization.query_parameter.query_param_name","Query parameter name."),row("anonymization","Masks query values.","section")]);
  expect(rankPropertyScope("Which field selects the query parameter name?",scope)[0]?.schema_path).toBe("anonymization.query_parameter.query_param_name");
 });
+
+test("terminal rejected comparisons preserve trailing requirements and literals",()=>{
+ expect(propertyQueryTerms("Locate data interface MTU rather than dedicated management")).not.toContain("management");
+ for(const q of [
+ "Which field sets timeout rather than name, and latency is required?",
+ "Which field sets name rather than timeout, with mandatory quantum acceleration?",
+ "Which field sets not public port rather than private port?",
+ "Rather than private port, which field sets public port?",
+ 'Which field contains "public rather than private" and latency?',
+ "Which field sets timeout rather than private.port and latency",
+ ])expect(propertyQueryTerms(q)).toEqual(propertyTerms(q));
+});
+test("comparison ranking cannot erase capability clauses or comparison intent",()=>{
+ for(const q of ["Which field sets timeout rather than name but supports quantum acceleration?","Which field sets timeout rather than name while supporting encryption?","Which field sets timeout rather than name for latency?","Compare timeout rather than name.","Locate timeout rather than name rather than latency."])expect(propertyQueryTerms(q)).toEqual(propertyTerms(q));
+});

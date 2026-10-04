@@ -143,6 +143,7 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 	return stateless ? !parts.includes("stateful_service") : !parts.includes("service");
 }
 export function propertyQueryTerms(text: string): string[] {
+	text = affirmativeComparisonText(text);
 	text = text
 		.replace(/\bquery[ -]parameters?\b/gi, "query param")
 		.replace(/\bhow\s+long\b/gi, "duration")
@@ -745,4 +746,18 @@ export function rankPropertyScope(
 				(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
 				(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
 		);
+}
+export function affirmativeComparisonText(text: string): string {
+	if (/[`"'‘’“”()]|\b(?:not|no|never|without|or|either)\b/i.test(text)) return text;
+	const match = /\brather than\s+([a-z][a-z0-9_ -]*?)[.!?]?\s*$/i.exec(text);
+	if (
+		!match ||
+		/\b(?:and|with|which|what|where|find|locate|required|mandatory|must|but|while|for|supports?|supporting|rather|than|can|should)\b/i.test(
+			match[1]!,
+		)
+	)
+		return text;
+	const before = text.slice(0, match.index).trim().replace(/,$/, "").trim();
+	if (!before || !/\b(?:locate|find|where|which|what)\b/i.test(before) || /\bcompare\b/i.test(before)) return text;
+	return before;
 }
