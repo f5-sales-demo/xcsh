@@ -7,7 +7,7 @@ export interface TerraformLifecycleIntent {
 export function interpretTerraformLifecycle(query: string): TerraformLifecycleIntent | undefined {
 	if (
 		!/\btimeouts?\b|\bduration\b/i.test(query) ||
-		/\b(?:connection|idle|request|response|tls|handshake|probe)\b/i.test(query)
+		/\b(?:connection|idle|inactive|request|response|tls|handshake|probe|stream)\b|\bno[ -]traffic\b/i.test(query)
 	)
 		return undefined;
 	const question = query.replace(/\bproperty\s+(?:documentation|reference)\b/gi, "documentation");

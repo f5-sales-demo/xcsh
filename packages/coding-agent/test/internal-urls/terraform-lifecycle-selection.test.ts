@@ -96,3 +96,12 @@ test("plural timeout documentation preserves absent lifecycle operation", () => 
 			selectPropertyDestination(`${verb} the timeouts documentation for a namespace resource`, rows).kind,
 		).not.toBe("leaf");
 });
+
+test("traffic inactivity timeouts are transport properties rather than lifecycle operations", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const q of ["Locate the no-traffic stream timeout", "Where is the timeout for an inactive session?"])
+		expect(interpretTerraformLifecycle(q)).toBeUndefined();
+	expect(interpretTerraformLifecycle("Which timeout governs deletion of the session resource?")?.operations).toEqual([
+		"delete",
+	]);
+});
