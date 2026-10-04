@@ -1,0 +1,15 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "b8d5c3a3e3dfd2021c60f50fc14c4f9ffe9109a6595b7398933ad95c12302df9",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 97,
+  "answerable_total": 140,
+  "answerable_top5": 117,
+  "route_p95_ms": 92.34659199999805,
+  "change": "Use one sentence-boundary quoted field label as explicit requested scalar; multiple and rejected labels do not choose first.",
+  "limitations": [
+    "Exposed regression only; below95 percent."
+  ]
+}

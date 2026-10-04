@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	propertyBreadcrumbText,
 	propertyExplicitSchemaPaths,
+	propertyRequestedText,
 } from "../../src/internal-urls/terraform-property-ranking";
 
 test("explicit schema breadcrumbs retain adjacency and negation", () => {
@@ -18,4 +19,15 @@ test("complete schema scope survives contextual sentence positions", () => {
 			"service.tls.certificates",
 		]);
 	expect(propertyExplicitSchemaPaths("not at service > tls > certificates. Field name")).toEqual([]);
+});
+
+test("explicit quoted field labels retain exact scalar identity", () => {
+	expect(propertyRequestedText("What namespace does this reference use? Field: `namespace`.")).toBe("namespace");
+	expect(propertyRequestedText("How is this match inverted? Field: `not`.")).toBe("not");
+	expect(propertyRequestedText("Field: `name`. Field: `namespace`.")).not.toBe("name");
+});
+
+test("rejected field labels do not become an explicit target", () => {
+	expect(propertyRequestedText("Not field: `name`. Find namespace")).not.toBe("name");
+	expect(propertyRequestedText("Example field: `name`. Find namespace")).not.toBe("name");
 });

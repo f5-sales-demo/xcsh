@@ -478,6 +478,12 @@ export function propertyValueLookup(text: string): string | undefined {
 	return needValue;
 }
 export function propertyRequestedText(text: string): string | undefined {
+	const labels = [
+		...text.matchAll(
+			/(?:^|[.!?;]\s*)\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`([a-z][a-z0-9_]*)`(?=\s*(?:[.!?;]|$))/gi,
+		),
+	];
+	if (labels.length === 1) return labels[0]![1];
 	const passiveToggle = /\bhow\s+is\s+(.+?)\s+enabled\s+or\s+disabled\b/i.exec(text)?.[1];
 	if (passiveToggle) return passiveToggle.trim();
 	if (propertyRequestsBlock(text)) return undefined;
