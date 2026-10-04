@@ -517,3 +517,10 @@ test("explicit workload public port count constrains candidates before ranking",
  expect(rankPropertyScope("stateless workload TLS port with one public port",preparePropertyScope([a,b])).map(r=>r.schema_path)).toEqual([a.schema_path]);
  expect(rankPropertyScope("stateless workload TLS port with public ports",preparePropertyScope([a,b]))).toHaveLength(2);
 });
+
+
+test("protocol slash forms share documented HTTP2 tokens", () => {
+ expect(propertyQueryTerms("HTTP/2")).toContain("http2");
+ expect(propertyRequestedText("Where do I write the custom block-page body?")).toBe("the custom block-page body?");
+ expect(propertyRequestsBlock("Declare the response block")).toBe(true);
+});

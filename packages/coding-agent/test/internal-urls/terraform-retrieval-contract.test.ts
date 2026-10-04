@@ -1054,3 +1054,9 @@ test("allowlist references cannot capture a prose resource owner", () => {
 	])
 		expect(terraformProviderMention(q, names)).toBe("http_loadbalancer");
 });
+
+test("passing and writing values retain schema value intent", () => {
+	expect(propertyRequestedText("How do I pass session tags into the worker?")).toBe("session tags into the worker?");
+	expect(propertyRequestedText("Where do I write the custom response body?")).toBe("the custom response body?");
+	expect(propertyRequestedText("How is the protocol enabled or disabled on the service?")).toBe("the protocol");
+});

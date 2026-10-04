@@ -1,0 +1,17 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 84,
+  "v7_top5": 115,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "improved": [
+    "A004",
+    "A017",
+    "A020"
+  ],
+  "regressed": [],
+  "focused_tests": 224,
+  "changes": "Pass/writevalueintent;passiveenable-disablevaluequestion;HTTP2normalization;blockpagebodyisscalarintent",
+  "firstscorespreserved": true
+}

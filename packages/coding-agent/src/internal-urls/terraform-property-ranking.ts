@@ -167,6 +167,7 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/mutual[ -]+tls/g, "mtls")
 			.replace(/\badvertised\b/g, "advertise")
 			.replace(/http\/1\.1/g, "http v1")
+			.replace(/http\/2(?:\.0)?/g, "http2")
 			.replace(/\b(?:listening|listener)\b/g, "listen")
 			.replace(/\bdestination\s+port\b/g, "endpoint port")
 			.replace(/\bprefixes\b/g, "prefix")
@@ -314,6 +315,7 @@ export function propertyRequestsBlock(text: string): boolean {
 		)
 	)
 		return false;
+	if (/\bblock[ -]page\s+(?:body|content)\b/i.test(text)) return false;
 	const intentText = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
 	if (
 		/\bcookie\b/i.test(intentText) &&
@@ -365,6 +367,8 @@ export function propertyValueLookup(text: string): string | undefined {
 	return needValue;
 }
 export function propertyRequestedText(text: string): string | undefined {
+	const passiveToggle = /\bhow\s+is\s+(.+?)\s+enabled\s+or\s+disabled\b/i.exec(text)?.[1];
+	if (passiveToggle) return passiveToggle.trim();
 	if (propertyRequestsBlock(text)) return undefined;
 	const fieldText = text.replace(
 		/\b(field|attribute|property|parameter|argument|flag)\b\s+(?:in|under|inside|within)\s+.+?\s+((?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\b)/i,
@@ -386,7 +390,7 @@ export function propertyRequestedText(text: string): string | undefined {
 			? `type ${field}`
 			: undefined;
 	const operation =
-		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
+		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define|pass|write)\b\s+(.+)/i)?.[1] ??
 		(/\bxcsh_[a-z0-9_]+\b/i.test(text)
 			? text.match(/\b(?:declare|configure|specify|set)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+)/i)?.[1]
 			: undefined) ??
