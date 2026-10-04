@@ -534,7 +534,15 @@ test("descriptive minimum version retains exact abbreviated field evidence", () 
 
 
 test("query vocabulary supplements schema abbreviations without changing original terms", () => {
- expect(propertyQueryTerms("credential maximum minimum decrypts inactive")).toEqual(expect.arrayContaining(["cred","credential","max","min","decryption","idle"]));
+ expect(propertyQueryTerms("credential maximum minimum decrypts inactive timeout")).toEqual(expect.arrayContaining(["cred","credential","max","min","decryption","idle"]));
  const scope=preparePropertyScope([row("secret.decryption_provider","Decryption provider name."),row("secret.store_provider","Store provider name.")]);
  expect(rankPropertyScope("Locate the provider that decrypts secret bytes",scope)[0]?.schema_path).toBe("secret.decryption_provider");
+});
+
+
+test("inactive state terms expand to idle only for duration requests", () => {
+ expect(propertyQueryTerms("inactive")).not.toContain("idle");
+ expect(propertyQueryTerms("inactive timeout")).toEqual(expect.arrayContaining(["inactive","idle"]));
+ const scope=preparePropertyScope([row("inactive","Inactive state."),row("idle","Idle state.")]);
+ expect(rankPropertyScope("Which field indicates inactive?",scope)[0]?.schema_path).toBe("inactive");
 });

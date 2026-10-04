@@ -149,7 +149,9 @@ export function propertyQueryTerms(text: string): string[] {
 		.replace(/\bmaximum\b/gi, "max maximum")
 		.replace(/\bdecrypt(?:s|ing)?\b/gi, "decryption decrypt")
 		.replace(/\bcredential(?:s)?\b/gi, "cred credential")
-		.replace(/\binactive\b|\bno[ -]traffic\b/gi, "idle")
+		.replace(/\b(inactive|no[ -]traffic)\b/gi, value =>
+			/\b(?:timeout|duration|period|interval)\b/i.test(text) ? `${value} idle` : value,
+		)
 		.replace(/\b(?:lasts|lasting)\b/gi, "duration")
 		.replace(/\bcookie\s+(?:session\s+)?(?:persistence|stickiness)\b/gi, "cookie affinity")
 		.replace(/\b(?:session\s+)?persistence(?=[^,.!?;]*\bcookie\b)/gi, "affinity");
