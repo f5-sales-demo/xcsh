@@ -1,0 +1,21 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "index_sha256": "78b74970e92fadfb45cf073428c98b7207b4eb0a8c7797235ddaba50eb5b8b55",
+  "provider_version": "v12.4.0",
+  "query": "SELECT provider_type,provider_name,COUNT(*) FROM terraform_documents WHERE provider_name IN (workload,xcsh_workload) GROUP BY provider_type,provider_name",
+  "rows": [
+    [
+      "data-sources",
+      "workload",
+      909
+    ],
+    [
+      "resources",
+      "workload",
+      912
+    ]
+  ],
+  "prefixed_name_documents": 0,
+  "exact_resources_workload_automatic_certificates_aliases": 6
+}
