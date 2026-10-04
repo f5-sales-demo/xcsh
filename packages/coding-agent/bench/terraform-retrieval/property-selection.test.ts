@@ -708,3 +708,32 @@ test("negated numeric cap wording cannot discard the object alternative", () => 
  const unlimited={...row("no_request_limit",39),type:"object"};
  expect(selectPropertyDestination("Locate request limits, not a numeric cap",[number,unlimited]).kind).not.toBe("leaf");
 });
+
+test("numeric type evidence must be affirmative rather than optional or rejected", async () => {
+ const { propertyRequestedType } = await import("../../src/internal-urls/terraform-property-ranking");
+ const number={...row("max_requests_per_connection",40),type:"number",description:"Maximum requests per connection."};
+ const unlimited={...row("no_request_limit_per_connection",39),type:"object",description:"No limit on requests per connection."};
+ for(const q of [
+  "Locate request limits instead of a numeric cap on requests per connection",
+  "Locate request limits, never a numeric cap",
+  "Locate a numeric cap or an unlimited choice on requests per connection",
+  "Locate request limits (for example a numeric cap on requests per connection)",
+  "Maybe locate a numeric cap",
+  "Locate the numeric cap or boolean flag",
+ ]) {
+  expect(propertyRequestedType(q)).toBeUndefined();
+  expect(selectPropertyDestination(q,[number,unlimited]).destinations.some(r=>r.type==="object")).toBe(true);
+ }
+ expect(propertyRequestedType("Locate the numeric cap on requests per connection")).toBe("number");
+});
+
+test("numeric assertions isolate examples and unrelated conjunctions", async () => {
+ const {propertyRequestedType}=await import("../../src/internal-urls/terraform-property-ranking");
+ for(const q of ["Locate request limits, for example a numeric cap","Locate an optional numeric cap","Locate request limits, such as a numeric cap","Locate a numeric cap or a boolean flag"])expect(propertyRequestedType(q)).toBeUndefined();
+ for(const q of ["Locate a numeric cap on requests and connections","Locate a numeric cap. No TLS configuration needed.","Locate a numeric cap on requests or connections"])expect(propertyRequestedType(q)).toBe("number");
+});
+
+test("trailing numeric rejection preserves alternatives",async()=>{
+ const {propertyRequestedType}=await import("../../src/internal-urls/terraform-property-ranking");
+ expect(propertyRequestedType("Locate request limits, a numeric cap is not needed")).toBeUndefined();
+});

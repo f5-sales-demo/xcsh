@@ -105,3 +105,29 @@ test("traffic inactivity timeouts are transport properties rather than lifecycle
 		"delete",
 	]);
 });
+
+test("transport context cannot erase an explicit lifecycle operation in another clause", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	for (const q of [
+		"Which timeout governs deletion of the namespace resource? Stream traffic is unrelated.",
+		"Stream traffic is unrelated. Which timeout governs deletion of the namespace resource?",
+		"Which timeout governs deletion of an inactive namespace resource?",
+	]) {
+		expect(interpretTerraformLifecycle(q)?.operations).toEqual(["delete"]);
+		expect(selectPropertyDestination(q, rows).destinations[0]?.schema_path).toBe("timeouts.delete");
+		expect(selectPropertyDestination(q, rows).kind).toBe("leaf");
+	}
+	for (const q of [
+		"Which timeout governs deletion of the namespace resource and the stream timeout?",
+		"Which timeout governs deletion of the namespace resource? Which stream timeout should I set?",
+		"Which inactive connection timeout governs creating requests?",
+	])
+		expect(interpretTerraformLifecycle(q)).toBeUndefined();
+});
+
+test("later transport correction prevents lifecycle certainty", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	expect(
+		interpretTerraformLifecycle("Which timeout governs deletion? I mean the connection, not the resource."),
+	).toBeUndefined();
+});

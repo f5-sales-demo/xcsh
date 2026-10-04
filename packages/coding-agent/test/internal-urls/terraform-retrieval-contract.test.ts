@@ -1072,3 +1072,43 @@ test("field selection verbs describe scalar meaning rather than block selection"
 	);
 	expect(propertyRequestedText("Which field chooses the protocol version?")).toBe("the protocol version?");
 });
+
+test("provider ownership preserves stateful and stateless resource modifiers", () => {
+	const names = ["http_loadbalancer", "workload"];
+	for (const modifier of ["stateless-service", "stateless service", "stateful-service", "stateful service"]) {
+		expect(
+			terraformProviderMention(
+				"Find HTTP load balancer TLS on a Terraform workload " + modifier + " resource",
+				names,
+			),
+		).toBe("workload");
+		expect(
+			terraformProviderMention("For a workload " + modifier + " resource, locate HTTP load balancer TLS", names),
+		).toBe("workload");
+	}
+	expect(
+		terraformProviderMention("Compare workload stateless service resource and HTTP load balancer resource", names),
+	).toBeUndefined();
+	expect(
+		terraformProviderMention("xcsh_http_loadbalancer referencing a workload stateless service resource", names),
+	).toBe("http_loadbalancer");
+});
+
+test("resource modifier examples and rejected owners cannot capture identity", () => {
+	for (const q of [
+		"Locate HTTP load balancer TLS, not a workload stateless service resource",
+		"Locate HTTP load balancer TLS (for example a workload stateless service resource)",
+		"Locate HTTP load balancer TLS. A workload stateless service resource is unrelated.",
+	])
+		expect(terraformProviderMention(q, ["http_loadbalancer", "workload"])).toBe("http_loadbalancer");
+});
+
+test("unparenthesized examples and rejected modifier owners preserve identity", () => {
+	for (const word of ["for example", "instead of", "rather than", "such as"])
+		expect(
+			terraformProviderMention("Locate HTTP load balancer TLS, " + word + " a workload stateless service resource", [
+				"http_loadbalancer",
+				"workload",
+			]),
+		).toBe("http_loadbalancer");
+});

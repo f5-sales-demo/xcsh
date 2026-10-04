@@ -1094,6 +1094,19 @@ export function terraformProviderMention(search: string, names: readonly string[
 			return (
 				query.includes(` ${phrase} resource `) ||
 				query.includes(` ${phrase} managed resource `) ||
+				["stateless", "stateful", "stateless service", "stateful service"].some(modifier => {
+					const ownership = ` ${phrase} ${modifier} resource `;
+					const affirmative = search.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+					return affirmative
+						.split(/[.!?;,]+/)
+						.some(
+							clause =>
+								` ${normalize(clause)} `.includes(ownership) &&
+								!/\b(?:not|no|never|without|excluding|unrelated|for example|such as|instead of|rather than)\b/i.test(
+									clause,
+								),
+						);
+				}) ||
 				query.includes(` ${phrase} data source `) ||
 				query.includes(` ${phrase} action `)
 			);

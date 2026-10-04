@@ -5,9 +5,18 @@ export interface TerraformLifecycleIntent {
 	evidence: string;
 }
 export function interpretTerraformLifecycle(query: string): TerraformLifecycleIntent | undefined {
+	const clauses = query.split(/[.!?;]+/).filter(clause => /\btimeouts?\b|\bduration\b/i.test(clause));
+	const transport = /\b(?:connection|idle|inactive|request|response|tls|handshake|probe|stream)\b|\bno[ -]traffic\b/i;
 	if (
-		!/\btimeouts?\b|\bduration\b/i.test(query) ||
-		/\b(?:connection|idle|inactive|request|response|tls|handshake|probe|stream)\b|\bno[ -]traffic\b/i.test(query)
+		!clauses.length ||
+		query
+			.split(/[.!?;]+/)
+			.some(
+				clause => transport.test(clause) && /\b(?:i mean|instead|rather|concerns?|refers? to)\b/i.test(clause),
+			) ||
+		clauses.some(clause =>
+			transport.test(clause.replace(/\binactive\s+(?:[a-z0-9_-]+\s+){0,2}resource\b/gi, "resource")),
+		)
 	)
 		return undefined;
 	const question = query.replace(/\bproperty\s+(?:documentation|reference)\b/gi, "documentation");
@@ -18,7 +27,6 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 			question,
 		) ||
 			/\b(?:entire|whole|complete)\b[^.!?]*\bblock\b/i.test(question));
-	const clauses = query.split(/[.!?;]+/).filter(clause => /\btimeouts?\b|\bduration\b/i.test(clause));
 	const evidence = clauses
 		.join(" ")
 		.replace(

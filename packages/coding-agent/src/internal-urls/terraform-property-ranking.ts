@@ -219,12 +219,25 @@ export function propertyMatchesGrouping(text: string, candidate: PropertyCandida
 	);
 }
 export function propertyRequestedType(text: string): string | undefined {
-	const requested = propertyRequestedText(text) ?? text;
-	if (
-		!/\b(?:not|no|without|rather than)\b/i.test(requested) &&
-		/\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.test(requested)
-	)
+	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	const requested = propertyRequestedText(query) ?? query;
+	if (/\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.test(requested)) {
+		const clause =
+			query.split(/[.!?;]+/).find(value => /\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.test(value)) ?? requested;
+		const assertion = /\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.exec(clause)!;
+		const before = clause.slice(0, assertion.index);
+		const after = clause.slice(assertion.index + assertion[0].length);
+		const tail = requested.slice(requested.search(/\b(?:numeric|number)\s+(?:cap|limit|value)\b/i));
+		if (
+			/\b(?:not|no|never|without|rather than|instead of|except|maybe|possibly|optional|for example|such as)\b/i.test(
+				before,
+			) ||
+			/\b(?:or|and)\s+(?:(?:an?|the)\s+)?(?:unlimited|numeric|number|boolean|bool|object)\b/i.test(after) ||
+			/\b(?:is|are)\s+(?:not|never)\s+(?:needed|required|wanted)\b/i.test(tail)
+		)
+			return undefined;
 		return "number";
+	}
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return undefined;
 	if (/\b(?:boolean|bool)\s+(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return "bool";
 	if (/\bscalar\s+list\b/i.test(text)) return "list";
