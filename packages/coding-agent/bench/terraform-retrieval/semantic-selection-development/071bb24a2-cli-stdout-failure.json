@@ -1,0 +1,23 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "network_disabled": true,
+  "results": [
+    {
+      "view": "context",
+      "exit_code": 0,
+      "bytes": 570,
+      "oversized_notice": true,
+      "sha256": "19348948a40f6bc2c88e940e45e69495f0f2fad39213d6e58d7558079b9dad45",
+      "stderr": ""
+    },
+    {
+      "view": "full",
+      "exit_code": 0,
+      "bytes": 65536,
+      "oversized_notice": false,
+      "sha256": "4ce74c3853c55d19a236983b85dbdf1bb50f175ce35d7d02533bf38a684932a6",
+      "stderr": ""
+    }
+  ]
+}

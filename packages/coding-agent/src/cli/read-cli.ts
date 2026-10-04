@@ -43,7 +43,9 @@ export async function runReadCommand(cmd: ReadCommandArgs): Promise<void> {
 		const tool = new ReadTool(createCliReadSession(cwd, settings));
 		const result = await tool.execute("cli-read", { path: cmd.path, sel: cmd.sel });
 		const text = result.content.find((content): content is { type: "text"; text: string } => content.type === "text");
-		console.log(text?.text ?? "");
+		await new Promise<void>((resolve, reject) => {
+			process.stdout.write(`${text?.text ?? ""}\n`, error => (error ? reject(error) : resolve()));
+		});
 		return;
 	}
 
