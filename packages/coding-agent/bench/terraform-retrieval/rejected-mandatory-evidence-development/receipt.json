@@ -1,0 +1,8 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "focused_tests": 106,
+  "decision": "Reject vocabulary mandatory guard:negated/example/providernames/ancestorpaths manufacture support; scopednegation hides real requirements; schema declarations falsely rejected. Need typed requirement spans and affirmative leaf evidence."
+}

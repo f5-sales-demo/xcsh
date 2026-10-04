@@ -1,6 +1,18 @@
-{
-  "terraform-field-access.ts": "4b5798652a5cf23a15c71b933667ac543ae2b25c17e673c4efa124bf455bee28",
-  "terraform-property-ranking.ts": "9e1565e2d8584bd92abfa9b56fa690d99e05f24ddefc7523cd0ac398e42dea3b",
-  "terraform-property-selection.ts": "c83965d83388fff30640450664314ff10c64ab22fea8c535750ac6b04448861a",
-  "terraform-documentation.ts": "3210affb5b48c4ab9e10c15e1a5d9ef5fd55c668e3a4f6b7454001809364e68a"
-}
+[
+  {
+    "path": "terraform-field-access.ts",
+    "digest": "sha256:4b5798652a5cf23a15c71b933667ac543ae2b25c17e673c4efa124bf455bee28"
+  },
+  {
+    "path": "terraform-property-ranking.ts",
+    "digest": "sha256:9e1565e2d8584bd92abfa9b56fa690d99e05f24ddefc7523cd0ac398e42dea3b"
+  },
+  {
+    "path": "terraform-property-selection.ts",
+    "digest": "sha256:c83965d83388fff30640450664314ff10c64ab22fea8c535750ac6b04448861a"
+  },
+  {
+    "path": "terraform-documentation.ts",
+    "digest": "sha256:3210affb5b48c4ab9e10c15e1a5d9ef5fd55c668e3a4f6b7454001809364e68a"
+  }
+]
