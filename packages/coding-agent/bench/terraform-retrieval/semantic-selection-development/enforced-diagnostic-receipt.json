@@ -1,0 +1,19 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "exit_code": 0,
+  "model_network_wall_ms": 138882.49344797805,
+  "scope_supplied": true,
+  "expected_answers_withheld": true,
+  "events_sha256": "ead3b75b2628e929c08d2b1cebcc3beaf0159c3d0771d529deb0dd20a3470c1e",
+  "helper_sha256": "8a2f2fde8870f2b179d4212c7207aa1a6b647e207699ef49e5ce1298905c0a51",
+  "correct_selections": 3,
+  "selected_leaf_reads": 3,
+  "tool_calls": 18,
+  "total_stdout_bytes": 59865,
+  "max_stdout_bytes": 13763,
+  "diagnostic_16k_stdout_audit_passed": true,
+  "production_discovery_budget_passed": false,
+  "installed_uat": false,
+  "limitations": "Scope supplied; candidate discovery packets use 16KiB diagnostic allowance. This does not pass production 4KiB discovery or independently reviewed qualification."
+}

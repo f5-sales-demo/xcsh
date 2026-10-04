@@ -1,0 +1,21 @@
+Found six issues in the five scoped files:
+
+1. **P1 — Shell substitutions bypass the helper-only audit.** [semantic_development.py:51](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py:51)
+   `shlex.split()` checks argument shape without rejecting executable shell syntax. A command such as `… candidates "$(…; printf example)"` passes validation while executing arbitrary commands before the helper. A synthetic substitution-bearing command returned `passed: true`. Validate shell syntax or enforce execution through structured arguments.
+
+2. **P1 — Non-command tools escape the audit entirely.** [semantic_development.py:34](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py:34)
+   Every event except `command_execution` is ignored. Adding a synthetic web-search event to an otherwise accepted trace still returns `passed: true`. Consequently, forbidden web/MCP activity or reads through other tools cannot invalidate the audit, and the unconditional `expected_answers_withheld: true` receipt claim is unsupported by this audit.
+
+3. **P2 — The fixed reserve does not bound serialized command envelopes.** [semantic-development-context.ts:15](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic-development-context.ts:15)
+   Both encoders measure the response JSON, but that JSON is subsequently escaped inside `aggregated_output`. A synthetic quote-heavy response measured **3,428 bytes**, satisfying the 3,584-byte helper threshold, while its command envelope measured **6,881 bytes**, exceeding 4 KiB. The post-run audit detects this only after delivery. Budget the outer serialization rather than assuming 512 bytes covers it.
+
+4. **P2 — Invalid evidence can still produce `selected_leaf_read: true`.** [semantic_development.py:109](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py:109)
+   A zero-exit response containing only `{"status":"complete"}` counts as a successful read, without content, provenance, or destination validation. An over-budget context response also enters `successful_reads` despite its violation. Line 261 then derives leaf evidence directly from that list. Require a validated response bound to the requested destination, and exclude failed-budget evidence.
+
+5. **P2 — Command lifecycle completeness is checked in only one direction.** [semantic_development.py:123](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py:123)
+   Completions without starts pass; matching IDs with different start/completion commands also pass. Both were reproduced synthetically. This permits incomplete or inconsistent traces to receive a passing audit. Require paired, ordered events with matching command identity.
+
+6. **P2 — Provenance does not bind the executed development source.** [semantic_development.py:185](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py:185)
+   The receipt hashes the helper and context module, but the helper also imports retrieval implementations at lines 2–3. Their working-tree contents are represented only by `HEAD`, which cannot identify uncommitted changes. The Python evaluator itself is also unbound. Different retrieval or scoring implementations can therefore produce receipts with identical recorded source bindings.
+
+All five existing Python tests passed. Verification used synthetic in-memory probes; no edits, suite reads, web access, or subagents. The explicit `qualification_passed: false` labeling is appropriate; this review provides no independent benchmark approval.

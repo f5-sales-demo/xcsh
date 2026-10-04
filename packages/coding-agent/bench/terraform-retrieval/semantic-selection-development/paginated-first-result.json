@@ -1,0 +1,63 @@
+{
+  "results": [
+    {
+      "id": "A036",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+      "clarification": null,
+      "reason": "vsite_refs.namespace identifies each referenced virtual site's namespace. The top-level namespace belongs to the Virtual K8s object; default_flavor_ref.namespace belongs to the flavor reference.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#schema-vsite_refs--namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/index.md?view=context#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/default_flavor_ref/index.md?view=context#schema-default_flavor_ref--namespace"
+      ]
+    },
+    {
+      "id": "A070",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md#schema-tunnel_type",
+      "clarification": null,
+      "reason": "tunnel_type selects GRE or IPSEC_PSK and defaults to IPSEC_PSK. params.ipsec configures IPsec parameters rather than selecting encapsulation.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md?view=context#schema-tunnel_type",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/ipsec/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A093",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "clarification": null,
+      "reason": "This start_ip leaf defines the beginning of an IPv4 DHCP pool under custom networking on Ethernet interfaces. The storage-interface and IPv6 auto-configuration alternatives have different owning paths.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_interface_list/storage_interfaces/storage_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_storage_config--storage_interface_list--storage_interfaces--storage_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip"
+      ]
+    },
+    {
+      "id": "M001",
+      "selected_uri": null,
+      "clarification": "Do you mean the managed cloud_credentials resource or the cloud_credentials data source?",
+      "reason": "Both expose aws_assume_role.duration_seconds. The resource field is configurable and required within the assume-role block; the data-source field is computed. The question does not identify which surface is intended.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "C002",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "The exposed development corpus provides no regions input for network_cdn. All four returned fields are computed outputs; the mention of selected regions in id's description does not establish input support. The properties #section anchor was unavailable. This is development evidence only, not installed UAT or qualification.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-id",
+        "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-manifest_generated_at",
+        "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_sha256",
+        "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_url"
+      ]
+    }
+  ]
+}

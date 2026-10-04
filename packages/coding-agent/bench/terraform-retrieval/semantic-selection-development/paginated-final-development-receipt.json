@@ -1,0 +1,21 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "scope_supplied": false,
+  "answerable_correct": 3,
+  "answerable_selected_leaf_reads": 3,
+  "ambiguous_role_clarification": true,
+  "unsupported_field_rejected": true,
+  "strict_audit_passed": false,
+  "strict_audit_violations": [
+    {
+      "reason": "invalid-helper-result",
+      "id": "item_39",
+      "detail": "Helper returned an error or unsupported status"
+    }
+  ],
+  "tool_calls": 40,
+  "model_network_wall_ms": 275268.1654660264,
+  "raw_trace_sha256": "d59384eb36569b9b55f091d5ddf4037cd270f47afe232146ee7aca3bbee18580",
+  "remaining": "Missing-anchor error keeps final diagnostic failed. Exposed five cases cannot qualify independent 200/40 suite or installed UAT."
+}

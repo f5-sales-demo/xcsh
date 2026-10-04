@@ -1,0 +1,437 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "scope_supplied": false,
+  "expected_answers_withheld": true,
+  "execution_route": "Ubuntu Codex ChatGPT login",
+  "exit_code": 0,
+  "model_network_wall_ms": 329904.44708708674,
+  "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+  "index_sha256": "7d453adc095c16eb2ce391d7956d1f6e02e4ab731d68ff4701362396733bdc60",
+  "assets_sha256": "5a1c54a5afc424c4196834d77c6ea55fbe3811524ed3de913d501f8444cbae39",
+  "helper_sha256": "2903afe04cc166cc1f1e62b7358918555b20f47a7cfadaccbeb441ca9246700f",
+  "context_sha256": "731d465b3852c56ec423ee880fa4dfe8baed937450c84d720062fa900c7f2ef0",
+  "consumer_commit": "dae893cb637fdbaf24447089949734a2ac9501d4",
+  "source_files_sha256": {
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py": "4b3054bde57355045b6cba0826da4f4b0dc19f5e89ef69a098f982ffd971f5f7",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic-development-helper.ts": "2903afe04cc166cc1f1e62b7358918555b20f47a7cfadaccbeb441ca9246700f",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic-development-context.ts": "731d465b3852c56ec423ee880fa4dfe8baed937450c84d720062fa900c7f2ef0",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-branch-choices.ts": "16e52e922594ecb11b8a74b10cbe3700903aa890ddaf5f2135696062532abc16",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-choice-response.ts": "47566e80112f5f05f3e6a98ddda5a7aafc33de76b88a7165903337c51102efdb",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation-assets.generated.ts": "8bf46569ccbe20f6e6b722083173d4e70f6b08b36ec58e44c68a20636824f073",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts": "7ceb5ea7a330080c0407cf1f3b76852b6b0b6e06369159075dc05e111d7895a7",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-enum-evidence.ts": "563cd4e3b484013e4613baff62bef6a063f1a56cb4d3ee665337359cf59778a8",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-field-access.ts": "4b5798652a5cf23a15c71b933667ac543ae2b25c17e673c4efa124bf455bee28",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-index.generated.ts": "5dd5d36bf41fb9a2442659768c8c24c5cee66231efcd1582d05ca8f704bd4f0f",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-lifecycle.ts": "678419c3879b5724dcf6a2db8e5375c202717f5e0ecb014c3b8f697a51d15c11",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts": "65eb1362f5e9d62db15beb2ea0df3e6f7f3cc940af12f44018a837143814c4dd",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "95af0ea28e550e12de711bc00e59dde59193d54287dadd3b13336f9e71a3e864",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-refinement.ts": "63ecb4f9b95fe1140af7d41ba0bb3fad5c3b17169b2496a8ec9a98f6cc58286e",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-selection.ts": "c83965d83388fff30640450664314ff10c64ab22fea8c535750ac6b04448861a",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-reference-evidence.ts": "271efbfbbf1d36c9be5faffd511d58805fc49ae68eb9c18140d3072a306633c1",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-reference-index.ts": "4193255c148e9a15fb91294a36be093f63df638beec539bdcf2dd71a4b59fbba",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-resolve.ts": "207e6ae66943d95ef216580545d1aed0205936ed1d4826729ef9d323bd186132",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-secret-representation.ts": "9c332f80a5d7a860f967fec5c44b2ada205193aa5d5240b4de4668d0723837ce",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-task-route.ts": "d0d3e9afa9b987aafdd22a93fc9bd73713f6612891f91857b65d9334ebaccf69",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-types.ts": "d829692cfcabb6ee480ee34eb426a83a5b74df7cbbc58ab0c0d6530461c9e63a",
+    "/tmp/terraform-bgp-generated-preview-index.sqlite": "7d453adc095c16eb2ce391d7956d1f6e02e4ab731d68ff4701362396733bdc60",
+    "/tmp/terraform-bgp-generated-preview-assets.json": "5a1c54a5afc424c4196834d77c6ea55fbe3811524ed3de913d501f8444cbae39",
+    "/tmp/terraform-v1240-qualification-v7-corrected-frozen/heldout.json": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a"
+  },
+  "evaluator_sha256": "4b3054bde57355045b6cba0826da4f4b0dc19f5e89ef69a098f982ffd971f5f7",
+  "retrieval_sources_sha256": "87c316506b8464b9f007b6010c0d72519c0d17011815015c3fc26c705f2d151a",
+  "events_sha256": "5017f3f7e551c483ae514229e47e04b9486a9cd1eff94572ca448e2cb312579b",
+  "audit": {
+    "passed": false,
+    "successful_reads": [
+      "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#schema-vsite_refs--namespace",
+      "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/index.md?view=context#schema-namespace",
+      "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md?view=context#schema-tunnel_type",
+      "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/ipsec/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_interface_list/storage_interfaces/storage_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_storage_config--storage_interface_list--storage_interfaces--storage_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+      "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+      "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-id",
+      "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-manifest_generated_at",
+      "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_sha256",
+      "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_url"
+    ],
+    "tool_calls": 39,
+    "outputs": [
+      {
+        "id": "item_1",
+        "operation": "candidates",
+        "value": "A036",
+        "output_bytes": 2925,
+        "envelope_bytes": 3419,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_2",
+        "operation": "candidates",
+        "value": "A036",
+        "output_bytes": 2715,
+        "envelope_bytes": 3209,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_3",
+        "operation": "candidates",
+        "value": "A036",
+        "output_bytes": 640,
+        "envelope_bytes": 1053,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_4",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#schema-vsite_refs--namespace",
+        "output_bytes": 2967,
+        "envelope_bytes": 3740,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_5",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#section",
+        "output_bytes": 2325,
+        "envelope_bytes": 2999,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_6",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/index.md?view=context#schema-namespace",
+        "output_bytes": 2669,
+        "envelope_bytes": 3414,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_7",
+        "operation": "candidates",
+        "value": "A070",
+        "output_bytes": 2706,
+        "envelope_bytes": 3206,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_8",
+        "operation": "candidates",
+        "value": "A070",
+        "output_bytes": 2487,
+        "envelope_bytes": 2949,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_9",
+        "operation": "candidates",
+        "value": "A070",
+        "output_bytes": 2638,
+        "envelope_bytes": 3117,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_10",
+        "operation": "candidates",
+        "value": "A070",
+        "output_bytes": 1202,
+        "envelope_bytes": 1634,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_11",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md?view=context#schema-tunnel_type",
+        "output_bytes": 1923,
+        "envelope_bytes": 2594,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_12",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/index.md?view=context#section",
+        "output_bytes": 1510,
+        "envelope_bytes": 2093,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_13",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/ipsec/index.md?view=context#section",
+        "output_bytes": 1403,
+        "envelope_bytes": 1973,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_14",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2927,
+        "envelope_bytes": 3374,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_16",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2159,
+        "envelope_bytes": 2590,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_17",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2242,
+        "envelope_bytes": 2673,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_18",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2725,
+        "envelope_bytes": 3172,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_19",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2672,
+        "envelope_bytes": 3120,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_20",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2596,
+        "envelope_bytes": 3044,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_21",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 2442,
+        "envelope_bytes": 2890,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_22",
+        "operation": "candidates",
+        "value": "A093",
+        "output_bytes": 906,
+        "envelope_bytes": 1322,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_23",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "output_bytes": 3020,
+        "envelope_bytes": 3906,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_24",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#section",
+        "output_bytes": 2285,
+        "envelope_bytes": 3071,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_25",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md?view=context#section",
+        "output_bytes": 3015,
+        "envelope_bytes": 3882,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_26",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_interface_list/storage_interfaces/storage_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_storage_config--storage_interface_list--storage_interfaces--storage_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "output_bytes": 3140,
+        "envelope_bytes": 4056,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_27",
+        "operation": "candidates",
+        "value": "M001",
+        "output_bytes": 2889,
+        "envelope_bytes": 3384,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_28",
+        "operation": "candidates",
+        "value": "M001",
+        "output_bytes": 2570,
+        "envelope_bytes": 3065,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_29",
+        "operation": "candidates",
+        "value": "M001",
+        "output_bytes": 2444,
+        "envelope_bytes": 2924,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_30",
+        "operation": "candidates",
+        "value": "M001",
+        "output_bytes": 2188,
+        "envelope_bytes": 2636,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_31",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "output_bytes": 2522,
+        "envelope_bytes": 3258,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_32",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "output_bytes": 2362,
+        "envelope_bytes": 3092,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_33",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#section",
+        "output_bytes": 3006,
+        "envelope_bytes": 3709,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_34",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#section",
+        "output_bytes": 2355,
+        "envelope_bytes": 3002,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_35",
+        "operation": "candidates",
+        "value": "C002",
+        "output_bytes": 1307,
+        "envelope_bytes": 1762,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_37",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-id",
+        "output_bytes": 981,
+        "envelope_bytes": 1505,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_38",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#section",
+        "output_bytes": 237,
+        "envelope_bytes": 730,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_39",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-manifest_generated_at",
+        "output_bytes": 1053,
+        "envelope_bytes": 1596,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_40",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_sha256",
+        "output_bytes": 1008,
+        "envelope_bytes": 1543,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_41",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_cdn/properties/index.md?view=context#schema-source_url",
+        "output_bytes": 966,
+        "envelope_bytes": 1498,
+        "budget_bytes": 16384
+      }
+    ],
+    "max_envelope_bytes": 4056,
+    "total_envelope_bytes": 106204,
+    "violations": [
+      {
+        "reason": "source-changed-during-run",
+        "path": "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py"
+      },
+      {
+        "reason": "source-changed-during-run",
+        "path": "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation-assets.generated.ts"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "A036",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A070",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md#schema-tunnel_type",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A093",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "M001",
+      "kind": "ambiguous",
+      "selected_uri": null,
+      "expected_destination_match": false,
+      "selected_leaf_read": false,
+      "clarification": "Do you mean the managed cloud_credentials resource or the cloud_credentials data source?"
+    },
+    {
+      "id": "C002",
+      "kind": "control",
+      "selected_uri": null,
+      "expected_destination_match": false,
+      "selected_leaf_read": false,
+      "clarification": null
+    }
+  ],
+  "remaining": "Independent benchmark, installed UAT and publication gates remain unmet; ambiguous/control semantic correctness requires review."
+}
