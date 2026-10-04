@@ -339,3 +339,11 @@ test("invalid candidate limits fail before diagnostics or SQL",()=>{
  }
  db.close();
 });
+
+test("indexed leaf prefilter preserves exact terminal alternatives despite normalized collisions",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const insert=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const [role,field] of [["resources","a.addr"],["resources","b.addr"],["resources","a.address"],["data-sources","b.addr"]])insert.run(role,"fixture",field,field,"schema-"+field,"Address");populatePropertyIndex(db);
+ const leaf=(db.query("SELECT leaf FROM property_terms WHERE provider_type=? AND provider_name=? AND schema_path=?").get("resources","fixture","a.addr") as {leaf:string}).leaf;
+ const old=db.query("SELECT provider_type,schema_path FROM property_terms WHERE provider_name=? AND (schema_path=? OR substr(schema_path,-length(?))=?) ORDER BY provider_type,schema_path").all("fixture","addr",".addr",".addr");
+ const next=db.query("SELECT provider_type,schema_path FROM property_terms WHERE provider_name=? AND leaf=? AND (schema_path=? OR substr(schema_path,-length(?))=?) ORDER BY provider_type,schema_path").all("fixture",leaf,"addr",".addr",".addr");expect(next).toEqual(old);expect(next).toHaveLength(3);db.close();
+});

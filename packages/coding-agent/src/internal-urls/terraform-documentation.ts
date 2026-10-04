@@ -1765,14 +1765,23 @@ export class TerraformDocumentationRepository {
 					const clauses = filters.map(
 						() => "EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
 					);
+
+					const preparedLeaf =
+						first && !lifecycle
+							? (db
+									.query(
+										"SELECT leaf FROM property_terms WHERE provider_type=? AND provider_name=? AND schema_path=?",
+									)
+									.get(first.provider_type, first.provider_name, first.schema_path) as { leaf: string } | null)
+							: null;
 					const alternativeScope = lifecycle
 						? `dest.schema_path IN (${timeoutPaths.map(() => "?").join(",")})`
-						: "(schema_path=? OR substr(schema_path,-length(?))=?)";
+						: "leaf=? AND (schema_path=? OR substr(schema_path,-length(?))=?)";
 					const values: Array<string | null> = [
 						first?.provider_name ?? null,
 						role ?? null,
 						role ?? null,
-						...(lifecycle ? timeoutPaths : [leaf ?? null, `.${leaf}`, `.${leaf}`]),
+						...(lifecycle ? timeoutPaths : [preparedLeaf?.leaf ?? null, leaf ?? null, `.${leaf}`, `.${leaf}`]),
 						...filters.flatMap(f => [f.key, f.value]),
 					];
 					if (node) {
