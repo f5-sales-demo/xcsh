@@ -8,7 +8,7 @@ import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
-import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
+import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
 import { terraformChoiceResponse } from "./terraform-choice-response";
 import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
 import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
@@ -2066,7 +2066,7 @@ export class TerraformDocumentationRepository {
 					const continuation = new URL(url.href);
 					continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
 					const prepared = boundedTerraformResponse(
-						`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; compare these candidates with the full request. Clarify only an unspecified role or branch." : "No results."}\nReason: ${decision.reason}\nScores are ranking values, not probabilities.`,
+						`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; compare these candidates with the full request. Clarify only an unspecified role or branch." : "No results."}\nReason: ${decision.reason}${decision.kind === "choices" && !role && provider ? `\n${terraformLeadingRoleHint(shown)}` : ""}\nScores are ranking values, not probabilities.`,
 						shown.map(
 							row =>
 								`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}${row.flags?.length ? `\nDocumented flags: ${row.flags.join(", ")}` : ""}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,

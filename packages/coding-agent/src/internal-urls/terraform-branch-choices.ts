@@ -73,7 +73,6 @@ export function terraformRoleChoices(rows: readonly PropertyCandidate[], limit =
 	const first = rows[0];
 	if (
 		!first ||
-		rows.length <= limit ||
 		rows.some(
 			row =>
 				row.provider_name !== first.provider_name ||
@@ -84,4 +83,20 @@ export function terraformRoleChoices(rows: readonly PropertyCandidate[], limit =
 		return [];
 	const roles = [...new Set(rows.map(row => row.provider_type))].sort();
 	return roles.length > 1 && roles.length <= limit ? roles : [];
+}
+
+export function terraformLeadingRoleHint(rows: readonly PropertyCandidate[]): string {
+	const first = rows[0],
+		second = rows[1];
+	if (
+		!first ||
+		!second ||
+		first.provider_name !== second.provider_name ||
+		first.schema_path !== second.schema_path ||
+		first.description !== second.description ||
+		new Set([first.provider_type, second.provider_type]).size !== 2 ||
+		![first.provider_type, second.provider_type].every(role => ["resources", "data-sources"].includes(role))
+	)
+		return "";
+	return "Provider role is unresolved for the leading equivalent field. Compare its meaning with the request, then ask whether the user means a resource input or a data-source output. Listing both roles does not resolve that choice.";
 }

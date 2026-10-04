@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { terraformBranchChoices, terraformRoleChoices } from "../../src/internal-urls/terraform-branch-choices";
+import {
+	terraformBranchChoices,
+	terraformLeadingRoleHint,
+	terraformRoleChoices,
+} from "../../src/internal-urls/terraform-branch-choices";
 
 const rows = Array.from({ length: 9 }, (_, index) => ({
 	provider_type: "resources",
@@ -84,4 +88,20 @@ test("unresolved negative and example architecture wording retains both branch c
 		"workload port, not under service.public",
 	])
 		expect(terraformBranchChoices(architectures, 2, query)).toEqual(["service", "stateful_service"]);
+});
+
+test("two equivalent leaves still require a provider role choice", () => {
+	const pair = [rows[0]!, { ...rows[0]!, provider_type: "data-sources" }];
+	expect(terraformRoleChoices(pair)).toEqual(["data-sources", "resources"]);
+	expect(terraformRoleChoices([...pair].reverse())).toEqual(["data-sources", "resources"]);
+	expect(terraformRoleChoices(pair, 1)).toEqual([]);
+	expect(terraformRoleChoices([pair[0]!, { ...pair[1]!, provider_name: "different" }])).toEqual([]);
+});
+
+test("leading equivalent role fields add a hint without hiding other field candidates", () => {
+	const pair = [rows[0]!, { ...rows[0]!, provider_type: "data-sources" }, rows[1]!];
+	expect(terraformLeadingRoleHint(pair)).toContain("resource input or a data-source output");
+	expect(terraformLeadingRoleHint([pair[0]!, { ...pair[1]!, description: "Other meaning" }])).toBe("");
+	expect(terraformLeadingRoleHint([pair[0]!, { ...pair[1]!, schema_path: "different.name" }])).toBe("");
+	expect(terraformLeadingRoleHint([pair[0]!])).toBe("");
 });
