@@ -1,0 +1,12 @@
+{
+  "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+  "rows": 39565,
+  "differences": {
+    "leaf": 0,
+    "description": 0,
+    "context": 0,
+    "alias": 0,
+    "documentation": 0
+  },
+  "scope": "Pinned prepared channels recomputed under symmetricseparatorproposal; sharedtokenizerrestored unchanged. Noimmutableindexmutation."
+}

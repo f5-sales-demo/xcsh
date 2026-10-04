@@ -146,6 +146,18 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 export function propertyQueryTerms(text: string): string[] {
 	text = affirmativeComparisonText(text);
 	text = text
+		.split(/(`[^`]*`|"[^"]*"|\x27[^\x27]*\x27|‘[^’]*’|“[^”]*”|[a-z0-9_-]+(?:[./][a-z0-9_.-]+)+)/gi)
+		.map((part, index) =>
+			index % 2
+				? part
+				: part
+						.replace(/\bautonomous[-\u2010-\u2015]system number\b/gi, "autonomous system number")
+						.replace(/\bregular[-\u2010-\u2015]expressions?\b/gi, value =>
+							value.replace(/[-\u2010-\u2015]/, " "),
+						),
+		)
+		.join("");
+	text = text
 		.replace(/\bquery[ -]parameters?\b/gi, "query param")
 		.replace(/\bhow\s+long\b/gi, "duration")
 		.replace(/\bminimum\b/gi, "min minimum")

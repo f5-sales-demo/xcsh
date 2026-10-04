@@ -579,3 +579,11 @@ test("comparison ranking cannot erase capability clauses or comparison intent",(
 test("rejected comparisons cannot cross sentences or swallow requirement modifiers",()=>{
  for(const q of ["Which field sets timeout rather than name plus quantum acceleration?","Which field sets timeout rather than name requires encryption?","Which field sets timeout rather than name excluding encryption?","Which field sets timeout rather than name lacking encryption?","Which field sets timeout? Contrast public port rather than private port.","Which field sets timeout? Rather than private port.","Which field excludes public port rather than private port?"])expect(propertyQueryTerms(q)).toEqual(propertyTerms(q));
 });
+
+test("query spelling variants use pinned vocabulary without changing schema tokenizer",()=>{for(const q of ["autonomous system number","autonomous-system number","autonomous–system number"]){expect(propertyQueryTerms(q)).toEqual(["asn"]);}expect(propertyTerms("autonomous_system_number")).toEqual(["autonomou","system","number"]);expect(propertyQueryTerms("regular-expression list")).toEqual(["regex"]);});
+
+test("spelling normalization cannot manufacture comparison operators",()=>{const q="Find timeout rather-than name";expect(propertyQueryTerms(q)).toContain("name");expect(propertyQueryTerms("Find timeout rather–than name")).toContain("name");});
+
+test("reviewed spelling changes preserve quoted literals paths and clause dashes",()=>{expect(propertyQueryTerms("`autonomous-system number`")).not.toEqual(["asn"]);expect(propertyQueryTerms("root.regular-expression")).toEqual(["root","regular","expression"]);expect(propertyQueryTerms("Which field sets timeout rather than name—encryption?")).toContain("encryption");});
+
+test("quoted hyphenated terminology and multiple path segments retain literal vocabulary",()=>{expect(propertyQueryTerms("\x27regular-expression\x27")).toEqual(["regular","expression"]);expect(propertyQueryTerms("root/foo-bar/regular-expression")).toEqual(["root","foo","bar","regular","expression"]);});
