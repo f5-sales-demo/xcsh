@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "producer_commit": "caa275fd1b7a60260ddb9fc2c403b664d3839c94",
+  "consumer_commit": "29df2005870adb038ca35fd2b3a82039de6b31b8",
+  "preview_index_sha256": "sha256:7d453adc095c16eb2ce391d7956d1f6e02e4ab731d68ff4701362396733bdc60",
+  "correct": 104,
+  "answerable": 140,
+  "top5": 128,
+  "route_p95_ms": 89.58677300000272,
+  "pin_changed": false,
+  "prototype_gain_reproduced": true
+}
