@@ -101,7 +101,7 @@ export function selectPropertyDestination(
 		if (
 			!referenceClause ||
 			/\b(?:not|no|never|without|excluding|either|versus|vs|or|rather than|instead of|example|such as|consult)\b/i.test(
-				referenceRequest,
+				referenceClause,
 			)
 		)
 			return false;
@@ -368,14 +368,17 @@ export function selectPropertyDestination(
 	);
 	if (
 		context?.identityResolved !== true &&
-		identityPeers.some(
+		[...input, ...alternatives].some(
 			row =>
 				row.schema_path === first.schema_path &&
 				(row.provider_name !== first.provider_name || row.provider_type !== first.provider_type),
 		)
 	) {
 		const peers = new Map<string, RankedProperty>();
-		for (const row of [...ranked, ...identityPeers.filter(row => row.schema_path === first.schema_path)]) {
+		for (const row of [
+			...ranked,
+			...[...input, ...alternatives].filter(row => row.schema_path === first.schema_path),
+		]) {
 			const key = `${row.path}#${row.anchor}`;
 			if (!peers.has(key) || peers.get(key)!.score < row.score) peers.set(key, row);
 		}

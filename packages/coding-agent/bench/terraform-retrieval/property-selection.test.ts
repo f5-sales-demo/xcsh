@@ -785,3 +785,12 @@ test("reference evidence stays within first clause and role choices deduplicate"
  expect(a).toEqual(b);
  expect(new Set(a.destinations.map(r=>r.path+"#"+r.anchor)).size).toBe(a.destinations.length);
 });
+
+test("role choices retain local shape filters and first clause reference evidence",()=>{
+ const first={...row("default_flavor_ref.name",40),type:"number",description:"Referenced object name."};
+ const other={...row("vsite_refs.name",39),type:"number",description:"Referenced object name."};
+ const rejected={...first,provider_type:"data-sources",path:"data",type:"object",score:1};
+ const q="Locate the numeric field name of the default flavor reference";
+ expect(selectPropertyDestination(q,[first,other],[rejected]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Which field specifies name of the default flavor reference; consult documentation",[first,other]).kind).toBe("leaf");
+});

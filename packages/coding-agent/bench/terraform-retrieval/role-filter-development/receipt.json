@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 95,
+  "v7_top5": 122,
+  "focused_pass": 185,
+  "type_lint_pass": true,
+  "prior_package_pass": 9682,
+  "prior_package_source": "15f0fa444fec26b70bdcf65ca13f60d7f62e69c5",
+  "source_review_findings_covered": true
+}
