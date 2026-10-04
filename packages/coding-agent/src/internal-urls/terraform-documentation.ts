@@ -1786,7 +1786,7 @@ export class TerraformDocumentationRepository {
 								coverage: 0,
 							}))
 						: [];
-					const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives, {
+					const decision = selectPropertyDestination(search, ranked, alternatives, {
 						lifecycle,
 						identityResolved: Boolean(provider && role),
 					});

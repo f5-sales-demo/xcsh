@@ -13,7 +13,6 @@ import {
 	propertyMatchesWorkloadPortCount,
 	propertyMentionedSchemaPaths,
 	propertyNamesCollection,
-	propertyQueryTerms,
 	propertyRequestedBlockText,
 	propertyRequestedText,
 	propertyRequestedType,
@@ -21,11 +20,12 @@ import {
 	propertyRequestsDirectObjectField,
 	propertyRequestsRootField,
 	propertySchemaIdentifiers,
-	propertyTerms,
 	propertyUncertainExcludedIdentifiers,
 	propertyUncertainGrouping,
 	propertyWorkloadArchitecture,
 	propertyWorkloadPortCount,
+	propertyQueryTerms as rawPropertyQueryTerms,
+	propertyTerms as rawPropertyTerms,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
@@ -37,7 +37,7 @@ const contradictoryPairs = [
 	["public", "private"],
 	["success", "failure"],
 ] as const;
-function contradicts(query: Set<string>, candidate: PropertyCandidate) {
+function rawContradicts(query: Set<string>, candidate: PropertyCandidate, propertyTerms: (text: string) => string[]) {
 	const path = new Set(propertyTerms(candidate.schema_path));
 	if (
 		query.has("custom") &&
@@ -59,6 +59,26 @@ export function selectPropertyDestination(
 	alternatives: readonly RankedProperty[] = [],
 	context?: { lifecycle?: TerraformLifecycleIntent; identityResolved?: boolean },
 ): { kind: "leaf" | "choices" | "none"; destinations: RankedProperty[]; reason: string } {
+	const termCache = new Map<string, string[]>(),
+		queryCache = new Map<string, string[]>();
+	const propertyTerms = (text: string) => {
+		let terms = termCache.get(text);
+		if (!terms) {
+			terms = rawPropertyTerms(text);
+			termCache.set(text, terms);
+		}
+		return [...terms];
+	};
+	const propertyQueryTerms = (text: string) => {
+		let terms = queryCache.get(text);
+		if (!terms) {
+			terms = rawPropertyQueryTerms(text);
+			queryCache.set(text, terms);
+		}
+		return [...terms];
+	};
+	const contradicts = (query: Set<string>, candidate: PropertyCandidate) =>
+		rawContradicts(query, candidate, propertyTerms);
 	const identityPeers = [...input, ...alternatives];
 	const excludedIdentifiers = propertyExcludedSchemaIdentifiers(queryText);
 	const uncertainExcluded = propertyUncertainExcludedIdentifiers(queryText);

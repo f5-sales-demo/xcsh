@@ -1,0 +1,14 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 95,
+  "v7_top5": 122,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "v7_route_p95_ms": 78.634878,
+  "v6_route_p95_ms": 93.069366,
+  "cache_differential_comparisons": 576,
+  "type_lint_pass": true,
+  "source_review_no_actionable_findings": true,
+  "remaining_limit": "Retrieval capped per query at 500; passing full retrieved pool does not prove all possible competitors were retrieved"
+}
