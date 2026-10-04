@@ -85,3 +85,14 @@ def missing_value_response_supported(text: str, expectation: str) -> bool:
             re.IGNORECASE,
         )
     )
+
+
+def validate_model_subset_identity(
+    subset: list[dict[str, object]], suite: list[dict[str, object]]
+) -> None:
+    """Require selected model cases to equal their frozen source objects."""
+    by_id = {case["id"]: case for case in suite}
+    for case in subset:
+        if case.get("id") not in by_id or case != by_id[case["id"]]:
+            message = f"Model subset changed frozen case {case.get('id')}"
+            raise ValueError(message)

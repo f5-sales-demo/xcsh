@@ -20,6 +20,7 @@ import {
 	type TerraformPreviewEvidence,
 	validateIndependentFreeze,
  validateModelSubsetPreflight,
+ validateModelSubsetIdentity,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -71,7 +72,11 @@ if(!regression){
  const modelFile=path.join(path.dirname(suiteFile),"model-subset.json");
  const modelBytes=await readFile(modelFile);
  if(terraformHash(modelBytes)!==freeze.files?.["model-subset.json"])throw new Error("Frozen model subset hash mismatch");
- validateModelSubsetPreflight(JSON.parse(modelBytes.toString()),suite.map(c=>c.id),false);
+ const modelCases=JSON.parse(modelBytes.toString());
+ validateModelSubsetPreflight(modelCases,suite.map(c=>c.id),false);
+ const heldoutBytes=await readFile(path.join(path.dirname(suiteFile),"heldout.json"));
+ if(terraformHash(heldoutBytes)!==freeze.files?.["heldout.json"])throw new Error("Frozen heldout suite hash mismatch");
+ validateModelSubsetIdentity(modelCases,JSON.parse(heldoutBytes.toString()));
 }
 
 const treeFile = path.join(path.dirname(suiteFile), "clarification-trees.json");

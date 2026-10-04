@@ -15,6 +15,7 @@ from model_trace import (
     required_read_coverage,
     successful_read_paths,
     validate_model_activation,
+    validate_model_subset_identity,
 )
 
 parser = argparse.ArgumentParser()
@@ -40,6 +41,12 @@ all_cases = json.loads(suite_bytes)
 INDEPENDENT_FREEZE_VERSION = 2
 if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
     validate_model_activation(all_cases)
+if not args.regression:
+    heldout_bytes = (args.freeze.parent / "heldout.json").read_bytes()
+    if hashlib.sha256(heldout_bytes).hexdigest() != freeze["files"]["heldout.json"]:
+        message = "Frozen heldout suite hash mismatch"
+        raise ValueError(message)
+    validate_model_subset_identity(all_cases, json.loads(heldout_bytes))
 cases = all_cases[args.partition_index :: args.partition_count]
 args.output.mkdir(parents=True, exist_ok=True)
 results = []
