@@ -530,7 +530,12 @@ class ContinuationPlanTests(unittest.TestCase):
                 "toolName": "read",
                 "toolCallId": "read-1",
                 "isError": False,
-                "content": [{"type": "text", "text": "### name property\nDocumented name section."}],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "### name property\nDocumented name section.",
+                    }
+                ],
             },
         ]
         expected = {
