@@ -1,0 +1,3 @@
+Approve the narrow production boundary fix. Static review found no concrete defects in serialized 4 KiB/16 KiB limits, the 512-byte reserve, discovery parameter preservation, complete content/fences, fallback notices/destinations, unchanged exact-read routing, or malformed-request handling.
+
+Focused tests could not execute: import-time logging hit the read-only filesystem (`EROFS`); zero tests ran. No files changed.

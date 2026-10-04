@@ -78,6 +78,7 @@ import {
 	renderTableList,
 	resolveTableRowLookup,
 } from "./sqlite-reader";
+import { terraformReadEnvelope } from "./terraform-read-envelope";
 import { ToolAbortError, ToolError, throwIfAborted } from "./tool-errors";
 import { toolResult } from "./tool-result";
 
@@ -1361,6 +1362,16 @@ export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 		// Reject offset/limit with query extraction
 		if (hasExtraction && (offset !== undefined || limit !== undefined)) {
 			throw new ToolError("Cannot combine query extraction with offset/limit");
+		}
+
+		if (scheme === "xcsh" && parsed.hostname === "terraform-documentation") {
+			const bounded =
+				["", "/"].includes(parsed.pathname) || ["hint", "context"].includes(parsed.searchParams.get("view") ?? "");
+			if (bounded) {
+				if (offset !== undefined || limit !== undefined)
+					throw new ToolError("Terraform bounded views use URI continuation parameters");
+				return terraformReadEnvelope(url, uri => internalRouter.resolve(uri));
+			}
 		}
 
 		// Resolve the internal URL
