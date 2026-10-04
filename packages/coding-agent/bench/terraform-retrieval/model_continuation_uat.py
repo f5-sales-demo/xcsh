@@ -354,7 +354,9 @@ def main() -> None:
         independent_freeze_version,
         INTERNAL_FREEZE_VERSION,
     ) or (freeze.get("post_analysis_regression") and not args.regression):
-        message = "Installed continuation qualification requires eligible verified freeze"
+        message = (
+            "Installed continuation qualification requires eligible verified freeze"
+        )
         raise ValueError(message)
     loaded: dict[str, Any] = {}
     for name in [
