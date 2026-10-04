@@ -1,0 +1,11 @@
+{
+  "conclusion": "success",
+  "event": "workflow_dispatch",
+  "headSha": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+  "status": "completed",
+  "url": "https://github.com/f5-sales-demo/xcsh/actions/runs/37190608097",
+  "full_native_matrix": true,
+  "skip_npm": true,
+  "published": false,
+  "qualification_passed": false
+}

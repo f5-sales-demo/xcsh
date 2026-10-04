@@ -1,0 +1,38 @@
+{
+  "verified": true,
+  "manifest": {
+    "schemaVersion": 1,
+    "version": "22.9.1",
+    "platform": "linux",
+    "arch": "x64",
+    "source": {
+      "repository": "f5-sales-demo/xcsh",
+      "commit": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+      "workflow": "ci.yml",
+      "runId": "37190608097",
+      "runAttempt": "1",
+      "buildPlatform": "linux-x64"
+    },
+    "binary": {
+      "name": "xcsh-linux-x64",
+      "sha256": "5aaf209a2123d0e6052102f4d19daa9ecb3788543b2e4eb90d7ae72f9e810ac0",
+      "size": 714450400
+    },
+    "natives": {
+      "mode": "embedded",
+      "files": [
+        {
+          "name": "pi_natives.linux-x64-baseline.node",
+          "sha256": "5e36d3a84bf4566dfed752ceec01f506212d464f72acf71c8d6d221b4b25a966",
+          "size": 104548528
+        },
+        {
+          "name": "pi_natives.linux-x64-modern.node",
+          "sha256": "fb346525a28dd193007e3bc21ffea4b05d525304255dba1da785cfd4e0dc58b6",
+          "size": 104569000
+        }
+      ]
+    }
+  },
+  "qualification_passed": false
+}

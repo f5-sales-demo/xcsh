@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "seconds": 25.38253927230835,
+  "strict_json": true,
+  "sentinel_present": true,
+  "assistant_models": [
+    [
+      "openai-codex",
+      "gpt-6.1-sol"
+    ]
+  ],
+  "qualification_passed": false
+}
