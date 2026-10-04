@@ -496,3 +496,9 @@ test("cookie terminology is local and purpose clauses cannot force block fallbac
 test("idle timeout for cookie persistence stays scalar",()=>{expect(propertyRequestsBlock("Configure the idle timeout for cookie persistence")).toBe(false);});
 
 test("plural cookie field requests remain scalar intent",()=>{expect(propertyRequestsBlock("Which fields configure cookie persistence?")).toBe(false);});
+
+
+test("duration paraphrases preserve session limit meaning over session labels", () => {
+ const scope=preparePropertyScope([row("session.duration_seconds","Maximum session duration in seconds."),row("session.session_name","Session name.")]);
+ expect(rankPropertyScope("Which setting controls how long the session lasts?",scope)[0]?.schema_path).toBe("session.duration_seconds");
+});

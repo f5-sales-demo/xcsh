@@ -967,3 +967,14 @@ test("lookup clauses preserve order and isolate sentence-local requests", () => 
 	expect(propertyRequestedText("Locate calibration.offset; show a usage example.")).toBe("calibration.offset");
 	expect(propertyRequestedText("Locate memory allocation and   its unit.")).toBe("memory allocation");
 });
+
+test("ordinary setting and placement questions identify requested schema values", () => {
+	expect(propertyRequestedText("Which setting controls the sensor calibration interval?")).toBe(
+		"the sensor calibration interval?",
+	);
+	expect(propertyRequestedText("Where do I put the retry ceiling?")).toBe("the retry ceiling");
+	expect(propertyRequestedText("Where do I put the resource declaration?")).toBeUndefined();
+	expect(propertyRequestedText("Which setting controls how long the worker session lasts?")).toBe(
+		"how long the worker session lasts?",
+	);
+});

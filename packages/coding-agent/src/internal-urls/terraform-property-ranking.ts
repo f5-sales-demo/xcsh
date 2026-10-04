@@ -117,6 +117,8 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 }
 export function propertyQueryTerms(text: string): string[] {
 	text = text
+		.replace(/\bhow\s+long\b/gi, "duration")
+		.replace(/\b(?:lasts|lasting)\b/gi, "duration")
 		.replace(/\bcookie\s+(?:session\s+)?(?:persistence|stickiness)\b/gi, "cookie affinity")
 		.replace(/\b(?:session\s+)?persistence(?=[^,.!?;]*\bcookie\b)/gi, "affinity");
 	return propertyTerms(
@@ -261,7 +263,7 @@ export function propertyHasNestedQualifier(text: string): boolean {
 export function propertyValueLookup(text: string): string | undefined {
 	const clauses = text.split(/;|[?!]|\.(?=\s|$)/);
 	for (const clause of clauses) {
-		const lookup = /\b(?:find|locate|point me to)\s+(.+)/i.exec(clause);
+		const lookup = /\b(?:find|locate|point me to|where do I put)\s+(.+)/i.exec(clause);
 		const operation = /\b(?:specify|set|provide|supply)\b/i.exec(clause);
 		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
 		if (!lookup) continue;
@@ -284,7 +286,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		?.split(/\bin\b|\busing\b/i)[0]
 		?.trim();
 	const field = fieldText.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
 	const identifierField =
 		field && /\bidentifier\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)
