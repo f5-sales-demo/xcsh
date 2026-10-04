@@ -14,6 +14,7 @@ import {
 	type FrozenClarificationTree,
 } from "./clarification-tree";
 import { validateCaseSourceEvidence, type CaseSourceEvidence, type EvidenceDestination, validateSourceEvidenceUri, validateSourceEvidenceBinding } from "./source-evidence-preflight";
+import { validateModelDecisionRecords } from "./model-decision-records";
 import { measureCompleteRetrieval } from "./complete-measurement";
 import {
 	scoreDestinations,
@@ -81,6 +82,7 @@ if(!regression){
 
 const treeFile = path.join(path.dirname(suiteFile), "clarification-trees.json");
 let trees: Record<string, FrozenClarificationTree> = {};
+const modelDecisionIds = new Set<string>();
 if (await Bun.file(treeFile).exists()) {
 	if (freeze.schema_version !== 2) throw new Error("Clarification trees require an independently reviewed freeze");
 	const treeBytes = await readFile(treeFile);
@@ -89,8 +91,12 @@ if (await Bun.file(treeFile).exists()) {
 	const protocolFile = path.join(root, "clarification-qualification-protocol.md");
 	if (terraformHash(await readFile(protocolFile)) !== freeze.clarification_protocol_sha256)
 		throw new Error("Frozen clarification scoring protocol mismatch");
-	trees = Object.fromEntries(
-		Object.entries(JSON.parse(treeBytes.toString())).map(([id, tree]) => [
+	const authoredTrees = JSON.parse(treeBytes.toString());
+	if (Array.isArray(authoredTrees)) {
+		const heldout = JSON.parse(await readFile(path.join(path.dirname(suiteFile), "heldout.json"), "utf8")) as Case[];
+		for (const id of validateModelDecisionRecords(authoredTrees, heldout)) modelDecisionIds.add(id);
+	} else trees = Object.fromEntries(
+		Object.entries(authoredTrees).map(([id, tree]) => [
 			id,
 			normalizeClarificationTree(tree as Parameters<typeof normalizeClarificationTree>[0]),
 		]),
@@ -314,7 +320,7 @@ for (const c of suite) {
 		response_bytes: Buffer.byteLength(content),
 		approx_response_tokens: Math.ceil(Buffer.byteLength(content) / 4),
 		leaf_read_bytes: leafReadBytes,
-		requires_model_uat: passed === null,
+		requires_model_uat: passed === null || modelDecisionIds.has(c.id),
 	});
 }
 const p95 = (values: number[]) => {
