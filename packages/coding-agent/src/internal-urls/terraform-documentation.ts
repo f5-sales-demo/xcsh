@@ -1223,7 +1223,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 								? "actions"
 								: /\bresource\b/i.test(search) ||
 										/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-										/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|(?:specify|specifying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+										/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|(?:specify|specifying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set|setting(?=\s+(?:up|the|a|an|my|our|your)\b)|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
 											search,
 										)
 									? "resources"

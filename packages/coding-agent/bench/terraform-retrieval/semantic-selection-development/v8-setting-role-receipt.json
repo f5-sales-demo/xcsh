@@ -1,0 +1,15 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "eb363bcec0768e377cf1472ba388312ea9f89cf71a144fc11a69ca0f41c7dc45",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 82,
+  "answerable_total": 140,
+  "answerable_top5": 107,
+  "change": "Do not treat noun setting as resource configuration intent; prompt preserves omitted role across reformulation.",
+  "limitations": [
+    "Exposed regression only.",
+    "Prompt runtime role preservation still needs installed verification."
+  ]
+}

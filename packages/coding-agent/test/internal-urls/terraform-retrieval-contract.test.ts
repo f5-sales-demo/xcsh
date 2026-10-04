@@ -1186,3 +1186,17 @@ test("terminal ownership qualifiers preserve request and nesting structure", () 
 	expect(propertyRequestedText("Find input within transform")).toBe("input within transform");
 	expect(propertyRequestedText('Find "on the resource" label')).toBe('"on the resource" label');
 });
+
+test("a value-setting noun does not infer managed-resource intent", () => {
+	expect(
+		terraformQueryIdentity("For xcsh_advertise_policy. Which setting lists allowed TLS ciphers?").providerType,
+	).toBeUndefined();
+	expect(
+		terraformQueryIdentity("For xcsh_advertise_policy. How is the ordered hash-algorithm list represented?")
+			.providerType,
+	).toBeUndefined();
+	expect(terraformQueryIdentity("I am setting up xcsh_advertise_policy").providerType).toBe("resources");
+	expect(terraformQueryIdentity("I am setting the allowed TLS ciphers on xcsh_advertise_policy").providerType).toBe(
+		"resources",
+	);
+});
