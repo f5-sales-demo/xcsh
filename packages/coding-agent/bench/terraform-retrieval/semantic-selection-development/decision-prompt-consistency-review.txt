@@ -1,0 +1,9 @@
+Approve the narrow consistency fix. No concrete findings in [system-prompt.md](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/prompts/system/system-prompt.md:543) or [progressive-system-prompt.md](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/prompts/system/progressive-system-prompt.md:111).
+
+- Both changed policy paragraphs match across prompts.
+- Outcome clarification requires another documented field in the same verified conflict group that also answers the requested meaning, with a different outcome and no user-supplied distinction. Uniquely answered requests remain actionable.
+- Alternatives may contextualize the required question but no longer substitute for it.
+- Grounded retrieval, complete reads, exact citations, and missing-value handling remain intact.
+- No benchmark-specific answers or live-apply inference introduced.
+
+Static review only; no edits, web, subagents, suite reads, or releases.
