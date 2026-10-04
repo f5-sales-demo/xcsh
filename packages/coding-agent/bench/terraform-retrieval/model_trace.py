@@ -287,11 +287,10 @@ def terraform_tool_response_budget(messages: list[dict[str, Any]]) -> dict[str, 
         total_bytes += size
         maximum = max(maximum, size)
         measured += 1
-        parsed = urlsplit(uri)
-        view = parse_qs(parsed.query).get("view", ["full"])[0]
+        view = parse_qs(urlsplit(uri).query).get("view", ["full"])[0]
         budget = (
             4096
-            if parsed.path in ("", "/") or view == "hint"
+            if urlsplit(uri).path in ("", "/") or view == "hint"
             else 16384
             if view == "context"
             else None
