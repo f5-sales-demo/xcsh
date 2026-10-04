@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "b618608f90ea69adf68c046c4feb6f12ac4077f4",
-  "fingerprint": "49e2fe6e1efe65faccd334a18df5a7697f110e23d0089e75312500a5846bd510",
+  "revision": "89ab6ad82716d97b439df9def9e297c6bb447a1d",
+  "fingerprint": "38ab645c135ffde304366a4a2bb30377909ca5153f2be486ebdccc879759facb",
   "counts": {
     "total": 238,
     "components": 96,
@@ -66,11 +66,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/autoresearch/index.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -281,11 +281,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/debug/index.ts is individually classified as reviewed-mutation-adapter in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1039,11 +1039,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/acp/index.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1429,11 +1429,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1710,11 +1710,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1988,11 +1988,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugins/index.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2639,11 +2639,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/status-line/index.ts is individually classified as read-only-renderer in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3627,9 +3627,9 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts",
-        "packages/coding-agent/test/connected-provider-reload.test.ts"
+        "packages/coding-agent/test/config-spacing.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3947,11 +3947,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/defaults/index.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5171,7 +5171,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "230fa6795dffb8c78d68e57088c1c8682ea7bed2b29bba97d86d3bd94cdbd49d",
+      "sha256": "3b089b01bda1aa0bdeeaf971f1ed3391741effa304415e02819caef86d393dc5",
       "exports": [
         "ReadTool",
         "ReadToolDetails",
@@ -6119,6 +6119,7 @@
       "directTests": [
         "packages/coding-agent/test/browser/chat-handler.test.ts",
         "packages/coding-agent/test/browser/extract-references.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
         "packages/coding-agent/test/core/hashline.test.ts",
@@ -6135,8 +6136,7 @@
         "packages/coding-agent/test/internal-urls/console-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-metadata.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-repository.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts"
+        "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6441,11 +6441,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/tui/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6975,11 +6975,11 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/stealth-bundle.test.ts",
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config-spacing.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts"
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
       ],
       "classification": "packages/typescript-edit-benchmark/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     }
