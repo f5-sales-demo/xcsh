@@ -415,11 +415,12 @@ export function propertyValueLookup(text: string): string | undefined {
 		const labeled =
 			/^(?:(?:the|a|an)\s+)?data[ -]source\s+((?:(?:input|output|field|attribute|property)\s+)+)(.+)/i.exec(target);
 		if (labeled) {
-			if (/\b(?:not|never|without)\b/i.test(clause.slice(0, lookup.index))) return undefined;
+			if (/\b(?:not|never|without)\s+(?:(?:ever|necessarily|also|please)\s+)*$/i.test(clause.slice(0, lookup.index)))
+				continue;
 			const explicitField = /^(?:field|attribute|property)\s+$/i.test(labeled[1]!);
 			target = labeled[2]!.split(/\b(?:for|from|using|via)\b|\bof\s+xcsh_/i)[0]!.trim();
 			const literal = explicitField && /^`?[a-z][a-z0-9_]*`?$/i.test(target);
-			if (/^(?:of|for|from|using|via|in|within|under|inside)\b/i.test(target)) return undefined;
+			if (!literal && /^(?:of|for|from|using|via|in|within|under|inside)\b/i.test(target)) return undefined;
 			if (
 				!literal &&
 				(!propertyTerms(target).length ||

@@ -1161,3 +1161,13 @@ test("data source label requests retain negation and reject location-only target
 		expect(propertyRequestedText(q)).toBeUndefined();
 	expect(propertyRequestedText("Find data source output addresses in CDN")).toBe("addresses in CDN");
 });
+
+test("lookup negation is verb-local and literal location field names remain valid", () => {
+	expect(propertyRequestedText("Without changing the resource, find data source output addresses")).toBe("addresses");
+	expect(propertyRequestedText("Do not use CDN, but find data source output addresses")).toBe("addresses");
+	for (const field of ["inside", "in", "within", "under"])
+		expect(propertyRequestedText("Find data source attribute " + field)).toBe(field);
+	expect(propertyRequestedText("Do not find data source output addresses. Find data source output domains")).toBe(
+		"domains",
+	);
+});
