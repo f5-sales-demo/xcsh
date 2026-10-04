@@ -1,0 +1,8 @@
+{
+  "exit_code": 0,
+  "seconds": 1.7051067352294922,
+  "network_disabled": true,
+  "source_commit": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+  "output": "{\"event\":\"terraform-inventory\",\"providerVersion\":\"v12.4.0\",\"sourceCommit\":\"c0169b220fe41a707260a88378dfb4d0b339f9b3\",\"documentCount\":18958}\n{\"event\":\"terraform-filtered-search\",\"outcome\":\"top-five\"}\n{\"event\":\"terraform-bounded-hint-facets\",\"outcome\":\"within-4096-bytes\"}\n{\"event\":\"terraform-explicit-anchor\",\"outcome\":\"complete-property\"}\n{\"event\":\"terraform-deep-leaf\",\"path\":\"documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md\",\"outcome\":\"read-and-navigation\"}\n{\"event\":\"terraform-missing\",\"outcome\":\"no-match-no-fetch\"}\nXCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK\n",
+  "qualification_passed": false
+}

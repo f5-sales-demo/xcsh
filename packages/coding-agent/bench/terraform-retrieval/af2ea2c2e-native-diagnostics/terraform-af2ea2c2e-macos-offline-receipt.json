@@ -1,0 +1,8 @@
+{
+  "exit_code": 1,
+  "seconds": 1.8977069854736328,
+  "network_disabled": true,
+  "source_commit": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+  "output": "ENOSPC: no space left on device, write\n",
+  "qualification_passed": false
+}

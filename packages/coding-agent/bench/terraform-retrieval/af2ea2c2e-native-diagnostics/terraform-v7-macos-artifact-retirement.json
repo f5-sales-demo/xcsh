@@ -1,0 +1,62 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "arch": "arm64",
+    "version": "22.9.1",
+    "teamIdentifier": "97ZYL78T5F",
+    "files": [
+      {
+        "role": "cli",
+        "name": "xcsh-darwin-arm64",
+        "sha256": "7d22e4abf9166e641f7702e7202bdb2333146d045ea7078b38b3537a17eb9c3f",
+        "size": 591306976,
+        "signature": {
+          "authority": "Developer ID Application",
+          "teamIdentifier": "97ZYL78T5F",
+          "hardenedRuntime": true,
+          "trustedTimestamp": true,
+          "notarized": true,
+          "entitlements": [
+            "com.apple.security.cs.allow-jit",
+            "com.apple.security.cs.allow-unsigned-executable-memory"
+          ],
+          "architectures": [
+            "arm64"
+          ]
+        }
+      },
+      {
+        "role": "native-addon",
+        "name": "pi_natives.darwin-arm64.node",
+        "sha256": "125cb81330bfec5c0da241b7a8a583cee3d8ee298e70dbdf0ad45954645a420a",
+        "size": 100976848,
+        "signature": {
+          "authority": "Developer ID Application",
+          "teamIdentifier": "97ZYL78T5F",
+          "hardenedRuntime": true,
+          "trustedTimestamp": true,
+          "notarized": true,
+          "entitlements": [],
+          "architectures": [
+            "arm64"
+          ]
+        }
+      }
+    ]
+  },
+  "reason": "Reproducible earlier task artifact copies retired to free materialization space; signed manifest retained",
+  "paths": [
+    {
+      "name": "pi_natives.darwin-arm64.node",
+      "size": 100976848
+    },
+    {
+      "name": "xcsh-darwin-arm64",
+      "size": 591306976
+    },
+    {
+      "name": "xcsh-darwin-arm64.pkg",
+      "size": 336016331
+    }
+  ]
+}
