@@ -1149,3 +1149,15 @@ test("data source labels preserve collections and literal fields", () => {
 	])
 		expect(propertyRequestedText(q)).toBeUndefined();
 });
+
+test("data source label requests retain negation and reject location-only targets", () => {
+	for (const q of [
+		"Do not find data source field name",
+		"Never locate data source output addresses",
+		"Find data source output in CDN",
+		"Find data source output within xcsh_network_cdn",
+		"Find data source output under xcsh_network_cdn",
+	])
+		expect(propertyRequestedText(q)).toBeUndefined();
+	expect(propertyRequestedText("Find data source output addresses in CDN")).toBe("addresses in CDN");
+});
