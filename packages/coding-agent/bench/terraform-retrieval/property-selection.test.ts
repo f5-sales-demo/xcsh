@@ -592,3 +592,9 @@ test("bare dotted lookup targets reject unsupported paths before ranking certain
  expect(selectPropertyDestination("Locate calibration.missing.",[field]).kind).toBe("none");
  expect(selectPropertyDestination("Locate calibration.offset.",[field]).kind).toBe("leaf");
 });
+
+
+test("all direct lookup forms retain unsupported literal path rejection", () => {
+ const field={...row("calibration.offset",40),description:"Calibration offset."};
+ for(const prefix of ["Where is","Where do I put","I need","Locate"]) expect(selectPropertyDestination(`${prefix} calibration.missing.`,[field]).kind).toBe("none");
+});

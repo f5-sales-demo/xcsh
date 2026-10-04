@@ -171,7 +171,7 @@ function schemaPathMentions(text: string) {
 	const query = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	return [
 		...query.matchAll(
-			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
+			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to|where is|where are|where do i put|i need)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
 		),
 	].map(match => {
 		const suffix = query.slice(match.index! + match[0].length);

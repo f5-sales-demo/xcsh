@@ -1,0 +1,10 @@
+{
+  "qualification_passed": false,
+  "source_review_findings_fixed": [
+    "newliterallookupforms",
+    "refreshdocumentationverbforms"
+  ],
+  "full_package_failure": "oneTUIinventoryfreshnessfailurecausedbytesttitlenounmatching;renamedtestandcheckpassed",
+  "focused_checks": 83,
+  "firstheldoutscoresunchanged": true
+}

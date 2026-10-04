@@ -993,7 +993,7 @@ test("secure mesh product version identifies its documented site provider", () =
 	expect(terraformProviderMention("xcsh_network_interface with secure mesh v2", names)).toBe("network_interface");
 });
 
-test("provider names normalize load balancer separators consistently", () => {
+test("provider names normalize load balancer spaces and underscores consistently", () => {
 	expect(terraformProviderMention("Terraform DNS load balancer resource", ["dns_load_balancer", "dns_proxy"])).toBe(
 		"dns_load_balancer",
 	);

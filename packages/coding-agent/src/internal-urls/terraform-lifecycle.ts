@@ -22,7 +22,7 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 	const evidence = clauses
 		.join(" ")
 		.replace(
-			/\b(?:read|refresh|inspect|update|modify|create|delete)\s+(?:the\s+)?(?:timeout\s+)?(?:documentation|docs|guide|page)\b/gi,
+			/\b(?:read|refresh(?:ing|ed|es)?|inspect|update|modify|create|delete)\s+(?:the\s+)?(?:timeout\s+)?(?:documentation|docs|guide|page)\b/gi,
 			"documentation",
 		);
 	const patterns: Array<[string, RegExp]> = [

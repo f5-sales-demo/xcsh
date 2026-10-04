@@ -82,3 +82,10 @@ test("refresh inflections keep documented read lifecycle operation", async () =>
 	expect(selectPropertyDestination("Which timeout governs refreshing a namespace resource?", rows).kind).toBe("leaf");
 	expect(interpretTerraformLifecycle("Which connection timeout governs refreshing a request?")).toBeUndefined();
 });
+
+test("refreshing documentation does not assert a read lifecycle operation", () => {
+	for (const verb of ["Refresh", "Refreshing", "Refreshed"])
+		expect(
+			selectPropertyDestination(`${verb} the timeout documentation for a namespace resource`, rows).kind,
+		).not.toBe("leaf");
+});
