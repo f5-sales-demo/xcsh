@@ -1,0 +1,16 @@
+{
+  "source_commit": "6c08ebb5e96f9f3b2724dae08680023109b02e23",
+  "exit_code": 1,
+  "seconds": 495.97531723976135,
+  "log_sha256": "a22e937fa8bf5a527de325b1cee839760bd1f15c00ee4fdc358adfbd97c4c09b",
+  "qualification_passed": false,
+  "environment_failure": "Ignored pinned Terraform gzip removed by candidate build cleanup; exact verified restoration resolves without source edits.",
+  "subsequent_clean_run": {
+    "source_commit": "6c08ebb5e96f9f3b2724dae08680023109b02e23",
+    "exit_code": 0,
+    "seconds": 492.0287160873413,
+    "log_sha256": "3a1ceaab6c28dac637bef87cfc274a5085b7114b4528192b1c58a5635a7f08e8",
+    "qualification_passed": false,
+    "repair": "Verified pinned gzip restored; no source changes"
+  }
+}
