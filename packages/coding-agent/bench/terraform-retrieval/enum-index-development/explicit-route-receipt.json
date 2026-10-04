@@ -1,0 +1,12 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "checks": 2484,
+  "mismatches": 0,
+  "max_response_bytes": 3184,
+  "route_p95_ms": 21.01899599999888,
+  "limitations": "In-memory source-backed explicit scope route; not immutable installed qualification",
+  "focused_tests": 44,
+  "workspace_check": true,
+  "pin_changed": false
+}

@@ -2106,3 +2106,81 @@ test("explicit reference scope uses verified ownership and preserves all caller 
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("explicit enum value discovery never interprets literals as roles or paths", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-enum-explicit-"));
+	try {
+		const pin = await fixture(root, manifest => {
+			manifest.documents[0].metadata.sections = [
+				{
+					schema_path: ["mode"],
+					document_id: "fixture",
+					anchor: "schema-value",
+					description: "Mode",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+					enum_extraction_complete: true,
+					enum_validators: [
+						{
+							version: 1,
+							validator: "OneOf",
+							values: ["RESOURCE", "ROUND_ROBIN", "xcsh_missing"],
+							complete: true,
+							case_sensitive: true,
+							source:
+								"ast-validator:github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator.OneOf",
+						},
+					],
+				},
+			];
+		});
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const bytes = await readFile(index),
+			compressed = gzipSync(bytes);
+		const indexed = {
+			...pin,
+			index: {
+				sha256: terraformHash(bytes),
+				size_bytes: bytes.length,
+				gzip_sha256: terraformHash(compressed),
+				gzip_size_bytes: compressed.length,
+			},
+		};
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repo = new TerraformDocumentationRepository(
+			{ pin: indexed, indexGzipPath: gzipPath },
+			path.join(root, "cache"),
+		);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?${query}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const scope = "provider_type=resources&provider_name=fixture";
+		for (const value of ["RESOURCE", "ROUND_ROBIN", "xcsh_missing"]) {
+			const result = await read(`${scope}&enum_value=${value}`);
+			expect(result.content).toContain("schema-value");
+			expect(result.content).toContain("Verified enum");
+			expect(result.content).not.toContain("Selected leaf;");
+			expect(result.size).toBeLessThanOrEqual(4096);
+		}
+		expect((await read(scope + "&enum_value=unsupported")).content).toContain("No verified enum");
+		expect((await read(scope + "&enum_value=RESOURCE&task=troubleshooting")).content).toContain("No verified enum");
+		await expect(read("enum_value=RESOURCE")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=RESOURCE&enum_value=ROUND_ROBIN")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=" + encodeURIComponent("x".repeat(513)))).rejects.toThrow();
+		await expect(read(scope + "&enum_value=RESOURCE&view=hint")).rejects.toThrow();
+
+		await expect(read(scope + "&enum_value=RESOURCE&search=question")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=RESOURCE&reference_scope=backend")).rejects.toThrow();
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

@@ -1,0 +1,15 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "895c25b4d063cd8789b627181cc55a18eb8ba623",
+  "producer_commit": "fc803a0a53c3d5022e81d4cc4d06291d33cb7c27",
+  "preview_index_sha256": "sha256:3b1ffc0c1986a2b412520e700cfbb7980df732cc97b142272d7d77d508495846",
+  "preview_gzip_sha256": "sha256:dbc7e84d49a74176ec181b197db5ce795e09b4adb0d53b6ed7a6f44ceaa182be",
+  "suite_sha256": "sha256:67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+  "correct": 101,
+  "answerable": 140,
+  "top5": 126,
+  "route_p95_ms": 65.38763699999981,
+  "ordinary_query_accuracy_improved": false,
+  "immutable_pin_changed": false
+}

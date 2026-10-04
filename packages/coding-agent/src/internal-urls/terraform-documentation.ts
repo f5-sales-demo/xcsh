@@ -13,7 +13,12 @@ import { terraformChoiceResponse } from "./terraform-choice-response";
 import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
 import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle } from "./terraform-lifecycle";
-import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
+import {
+	populatePropertyIndex,
+	searchPropertyEnumValue,
+	searchPropertyIndex,
+	validatePropertyIndex,
+} from "./terraform-property-index";
 import {
 	propertyRequestedBlockText,
 	propertyRequestedText,
@@ -1417,6 +1422,7 @@ export class TerraformDocumentationRepository {
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const allowed = new Set([
 			"search",
+			"enum_value",
 			"reference_scope",
 			"reference_member",
 			"choice_after",
@@ -1447,6 +1453,20 @@ export class TerraformDocumentationRepository {
 		const search = url.searchParams.get("search")?.trim();
 		if (search !== undefined && (!search || Buffer.byteLength(search) > 512))
 			throw new Error("Terraform search must contain 1 to 512 UTF-8 bytes");
+		const enumValue = url.searchParams.get("enum_value");
+		if (
+			enumValue !== null &&
+			(!enumValue ||
+				Buffer.byteLength(enumValue) > 512 ||
+				!url.searchParams.has("provider_type") ||
+				!url.searchParams.has("provider_name") ||
+				["search", "reference_scope", "reference_member", "choice_after", "cursor", "facet", "view", "after"].some(
+					key => url.searchParams.has(key),
+				) ||
+				documentPath ||
+				url.hash)
+		)
+			throw new Error("Invalid explicit enum discovery");
 		const referenceScope = url.searchParams.get("reference_scope");
 		const referenceMember = url.searchParams.get("reference_member");
 		if (referenceMember !== null && referenceScope === null)
@@ -1490,7 +1510,15 @@ export class TerraformDocumentationRepository {
 			throw new Error("Terraform view requires a document path");
 		if (!facet && !node && url.searchParams.has("cursor"))
 			throw new Error("Terraform cursor requires facets or navigation");
-		if (!documentPath && !search && !node && !facet && referenceScope === null && url.searchParams.size)
+		if (
+			!documentPath &&
+			!search &&
+			!node &&
+			!facet &&
+			referenceScope === null &&
+			enumValue === null &&
+			url.searchParams.size
+		)
 			throw new Error("Terraform filters and limit require discovery");
 		const filters: Array<{ key: string; value: string }> = [];
 		for (const key of facetNames) {
@@ -1513,6 +1541,31 @@ export class TerraformDocumentationRepository {
 			)
 				.map(r => `- ${r.type} (${r.enforcement}): ${uri(r.target_path, r.target_anchor, "hint")}`)
 				.join("\n");
+		if (enumValue !== null) {
+			const rows = searchPropertyEnumValue(
+				db,
+				enumValue,
+				{
+					providerType: filters.find(f => f.key === "provider_type")!.value,
+					providerName: filters.find(f => f.key === "provider_name")!.value,
+					filters,
+					node: node ?? undefined,
+				},
+				10000,
+			);
+			const content = boundedTerraformResponse(
+				`${provenance}\n\nEnum value: ${JSON.stringify(enumValue)}\n${rows.length ? "Verified enum destinations; compare exact field sections before selecting a destination." : "No verified enum destinations in caller scope. Coverage may be unresolved; this does not establish unsupported input."}`,
+				rows
+					.slice(0, limit)
+					.map(
+						row =>
+							`Read: ${uri(row.path, row.anchor, "context")}\nVerified enum field: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
+					),
+				4096,
+				"If destinations are omitted by count or byte budget, narrow node/facets.",
+			);
+			return { url: url.href, content, contentType: "text/markdown", size: Buffer.byteLength(content) };
+		}
 		if (referenceScope !== null) {
 			const rows = lookupReferenceMembers(
 				db,

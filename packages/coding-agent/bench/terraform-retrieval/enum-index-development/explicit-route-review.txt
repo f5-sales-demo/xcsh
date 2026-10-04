@@ -1,0 +1,8 @@
+Approve the narrow source diff against HEAD `895c25b4d063`. No blocking findings.
+
+- Requires exact provider scope; rejects duplicate/unknown parameters and prohibited search/reference/read/view/cursor combinations.
+- Uses verified indexed lookup with AND facets/node scope; no literal interpretation or ranking-based selection.
+- Preserves conjunctive validators, case sensitivity, conservative Unicode handling, and legacy no-table empty results.
+- Enforces the 512-byte value limit; preserves provenance, complete read links, omission notice, and the 4 KiB response budget.
+
+The added end-to-end test covers basic routing but lacks boundary-case assertions. Reviewed statically; not executed because its fixture writes files. `git diff --check` passed. Approval is source-only, with no qualification or release claim.
