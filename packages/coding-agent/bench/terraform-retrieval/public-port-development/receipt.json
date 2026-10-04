@@ -1,0 +1,15 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 76,
+  "v7_top5": 104,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "improved": [
+    "A115"
+  ],
+  "regressed": [],
+  "focused_tests": 252,
+  "change": "Documentedworkloadsinglepublicportvsmultiplepublicportsarchitecture;omittednegatedoralternativecountsremainchoices",
+  "originalfirstscorespreserved": true
+}

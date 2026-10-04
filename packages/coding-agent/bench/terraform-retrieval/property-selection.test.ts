@@ -628,3 +628,19 @@ test("named exclusion scope shares quote example and coordination interpretation
  expect(selectPropertyDestination("Find action outside detection_settings (for example inside detection_settings)",[nested,direct]).destinations[0]?.schema_path).toBe(direct.schema_path);
  expect(selectPropertyDestination("Find action outside detection_settings-bogus",[nested,direct]).kind).toBe("none");
 });
+
+
+test("one public port retains single-port architecture against multi-port peers", () => {
+ const a={...row("service.advertise_on_public.port.https.certificate_url",40),provider_name:"workload"};
+ const b={...row("service.advertise_on_public.multi_ports.ports.https.certificate_url",100),provider_name:"workload"};
+ expect(selectPropertyDestination("stateless workload HTTPS certificate URL on one public port",[b,a]).destinations[0]?.schema_path).toBe(a.schema_path);
+ expect(selectPropertyDestination("stateless workload HTTPS certificate URL on public ports",[b,a]).kind).toBe("choices");
+});
+
+
+test("public port count cannot be inferred from negation or alternative counts", () => {
+ const a={...row("service.advertise_on_public.port.tls.port",40),provider_name:"workload"};
+ const b={...row("service.advertise_on_public.multi_ports.ports.tls.port",100),provider_name:"workload"};
+ for(const q of ["stateless workload port with one or multiple public ports","stateless workload port not necessarily on one public port","stateless workload port (for example one public port)"])expect(selectPropertyDestination(q,[a,b]).kind).toBe("choices");
+ expect(selectPropertyDestination("stateless workload TLS port with multiple public ports",[a,b]).destinations[0]?.schema_path).toBe(b.schema_path);
+});

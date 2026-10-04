@@ -509,3 +509,11 @@ test("bare metal and unmanaged prose retain the documented branch terminology", 
  expect(rankPropertyScope("Unmanaged bare metal node DNS server list",scope)[0]?.schema_path).toBe("baremetal.not_managed.node.dns_list");
  expect(propertyQueryTerms("unmanaged bare-metal nodes")).toEqual(expect.arrayContaining(["not","baremetal","node"]));
 });
+
+
+test("explicit workload public port count constrains candidates before ranking", () => {
+ const a={...row("service.advertise_on_public.port.tls.port","Port."),provider_name:"workload"};
+ const b={...row("service.advertise_on_public.multi_ports.ports.tls.port","Port."),provider_name:"workload"};
+ expect(rankPropertyScope("stateless workload TLS port with one public port",preparePropertyScope([a,b])).map(r=>r.schema_path)).toEqual([a.schema_path]);
+ expect(rankPropertyScope("stateless workload TLS port with public ports",preparePropertyScope([a,b]))).toHaveLength(2);
+});

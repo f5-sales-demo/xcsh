@@ -109,6 +109,31 @@ export function propertyWorkloadArchitecture(text: string): "stateless" | "state
 	if (/\b(?:stateful|stateful_service)\b/i.test(positiveText)) assertions.add("stateful");
 	return assertions.size === 1 ? [...assertions][0] : undefined;
 }
+export function propertyWorkloadPortCount(text: string): "single" | "multiple" | undefined {
+	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	if (
+		/\b(?:not|without|maybe|possibly)\b[^.!?;]*\b(?:one|single|multiple|multi)[ -]?(?:public[ -]?)?ports?\b/i.test(
+			query,
+		)
+	)
+		return undefined;
+	if (
+		/\b(?:one|single)\s+(?:or|and)\s+(?:multiple|multi)\b|\b(?:multiple|multi)\s+(?:or|and)\s+(?:one|single)\b/i.test(
+			query,
+		)
+	)
+		return undefined;
+	const single = /\b(?:one|single)[ -](?:public[ -])?port\b/i.test(query);
+	const multiple = /\b(?:multiple|multi)[ -](?:public[ -])?ports?\b/i.test(query);
+	return single === multiple ? undefined : single ? "single" : "multiple";
+}
+export function propertyMatchesWorkloadPortCount(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const count = propertyWorkloadPortCount(text);
+	if (!count || !candidate.schema_path.split(".").includes("advertise_on_public")) return true;
+	const multi = candidate.schema_path.split(".").includes("multi_ports");
+	return count === "multiple" ? multi : !multi;
+}
 export function propertyMatchesWorkloadArchitecture(text: string, candidate: PropertyCandidate): boolean {
 	if (candidate.provider_name !== "workload") return true;
 	const architecture = propertyWorkloadArchitecture(text);
@@ -507,6 +532,7 @@ export function rankPropertyScope(
 	const requestedType = propertyRequestedType(queryText);
 	return scope.rows
 		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
+		.filter(row => propertyMatchesWorkloadPortCount(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {

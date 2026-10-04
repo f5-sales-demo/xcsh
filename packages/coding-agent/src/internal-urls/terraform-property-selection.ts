@@ -8,6 +8,7 @@ import {
 	propertyInvalidExcludedScope,
 	propertyMatchesExplicitPaths,
 	propertyMatchesWorkloadArchitecture,
+	propertyMatchesWorkloadPortCount,
 	propertyMentionedSchemaPaths,
 	propertyNamesCollection,
 	propertyQueryTerms,
@@ -21,6 +22,7 @@ import {
 	propertyTerms,
 	propertyUncertainExcludedIdentifiers,
 	propertyWorkloadArchitecture,
+	propertyWorkloadPortCount,
 } from "./terraform-property-ranking";
 export interface RankedProperty extends PropertyCandidate {
 	score: number;
@@ -70,6 +72,8 @@ export function selectPropertyDestination(
 	input = input.filter(included);
 	alternatives = alternatives.filter(included);
 	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
+	input = input.filter(row => propertyMatchesWorkloadPortCount(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesWorkloadPortCount(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	input = input.filter(row => propertyMatchesExplicitPaths(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesExplicitPaths(queryText, row));
@@ -333,6 +337,18 @@ export function selectPropertyDestination(
 			b--;
 		}
 		if (a < 0 && b < 0) continue;
+		if (
+			first.provider_name === "workload" &&
+			parts.includes("advertise_on_public") &&
+			otherParts.includes("advertise_on_public") &&
+			parts.includes("multi_ports") !== otherParts.includes("multi_ports") &&
+			!propertyWorkloadPortCount(queryText)
+		)
+			return {
+				kind: "choices",
+				destinations: collisions.slice(0, 5),
+				reason: "Missing public port count architecture",
+			};
 		const servicePair =
 			(parts.includes("service") && otherParts.includes("stateful_service")) ||
 			(parts.includes("stateful_service") && otherParts.includes("service"));
