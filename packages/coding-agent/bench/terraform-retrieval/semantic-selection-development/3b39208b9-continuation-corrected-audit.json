@@ -1,0 +1,86 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "complete": true,
+  "original_report_preserved": true,
+  "results": [
+    {
+      "id": "tf1240-145",
+      "branch": 0,
+      "initial_clarification": true,
+      "session_exact_leaf_read": true,
+      "terminal_clarification": false,
+      "expected_citation": true,
+      "text": "The field is **`tls_parameters.common_params.cipher_suites`** \u2014 a computed, read-only list of strings in the `xcsh_advertise_policy` data source.\n\nVerified in provider **v12.4.0**: [field reference](xcsh://terraform-documentation/documentation/data-sources/advertise_policy/properties/tls_parameters/common_params/index.md?view=context#schema-tls_parameters--common_params--cipher_suites).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 13208,
+        "max_bytes": 5290,
+        "measured_results": 3,
+        "violations": []
+      },
+      "trace_sha256": "aac01da0c832a4df83f02a09c1f6fd442342153ced416a6b9fa9ac4828374b91",
+      "passed": true
+    },
+    {
+      "id": "tf1240-145",
+      "branch": 1,
+      "initial_clarification": true,
+      "session_exact_leaf_read": true,
+      "terminal_clarification": false,
+      "expected_citation": true,
+      "text": "The setting is **`tls_parameters.common_params.cipher_suites`** in the managed `xcsh_advertise_policy` resource.\n\nIt is an optional list of strings specifying allowed TLS cipher suites. If omitted, the documented default list is used.\n\nVerified in provider **v12.4.0**: [field reference](xcsh://terraform-documentation/documentation/resources/advertise_policy/properties/tls_parameters/common_params/index.md?view=context#schema-tls_parameters--common_params--cipher_suites).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 18452,
+        "max_bytes": 5290,
+        "measured_results": 4,
+        "violations": []
+      },
+      "trace_sha256": "2d886b464bb4007982e847ada7ec7c8eeca845451bb1a6661c7887aa5fdaf0ca",
+      "passed": true
+    },
+    {
+      "id": "tf1240-147",
+      "branch": 0,
+      "initial_clarification": true,
+      "session_exact_leaf_read": true,
+      "terminal_clarification": false,
+      "expected_citation": true,
+      "text": "In bundled provider **v12.4.0**, `tls_parameters.common_params.tls_certificates.custom_hash_algorithms.hash_algorithms` is a **computed `list(string)`**\u2014an ordered list, not a set. The data source returns it; you don\u2019t configure it.\n\nDocumented values: `INVALID_HASH_ALGORITHM`, `SHA256`, `SHA1`. Upstream constraints specify **1\u20134 unique entries**; these are not documented as local data-source validators.\n\n[Exact field reference](xcsh://terraform-documentation/documentation/data-sources/advertise_policy/properties/tls_parameters/common_params/tls_certificates/custom_hash_algorithms/index.md?view=context#schema-tls_parameters--common_params--tls_certificates--custom_hash_algorithms--hash_algorithms)",
+      "budget": {
+        "passed": true,
+        "total_bytes": 14433,
+        "max_bytes": 2907,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "9e29191737944ee7da1b46f624dd9ecf01c4b2d2797eae0b206295aed751f31f",
+      "passed": true
+    },
+    {
+      "id": "tf1240-147",
+      "branch": 1,
+      "initial_clarification": true,
+      "session_exact_leaf_read": true,
+      "terminal_clarification": false,
+      "expected_citation": true,
+      "text": "In provider **v12.4.0**, `hash_algorithms` is an **optional ordered list of strings** (`list(string)`), not a set or repeated block.\n\n- Documented values: `SHA256`, `SHA1`, `INVALID_HASH_ALGORITHM`.\n- Provider validation: **1\u20134 entries** when supplied.\n- Upstream constraints additionally require unique entries.\n\n[Exact field documentation](xcsh://terraform-documentation/documentation/resources/advertise_policy/properties/tls_parameters/common_params/tls_certificates/custom_hash_algorithms/index.md?view=context#schema-tls_parameters--common_params--tls_certificates--custom_hash_algorithms--hash_algorithms)",
+      "budget": {
+        "passed": true,
+        "total_bytes": 14717,
+        "max_bytes": 3164,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "9365cb8ea8ef79ab6ee17fcb8ab256abab83093cd418d4fd0de506969dee6f82",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Initial local diagnostic passed raw events to message helpers; this corrected audit reads unchanged stored trace bytes.",
+    "Exact leaf read may occur in initial or terminal turn in same session.",
+    "Frozen qualification plan remains unchanged and ineligible."
+  ]
+}

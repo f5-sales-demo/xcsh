@@ -1,0 +1,82 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-145",
+      "branch": 0,
+      "initial_clarification": false,
+      "exact_leaf_read": false,
+      "terminal_clarification": false,
+      "text": "",
+      "budget": {
+        "passed": true,
+        "total_bytes": 0,
+        "max_bytes": 0,
+        "measured_results": 0,
+        "violations": []
+      },
+      "trace_sha256": "aac01da0c832a4df83f02a09c1f6fd442342153ced416a6b9fa9ac4828374b91",
+      "passed": false
+    },
+    {
+      "id": "tf1240-145",
+      "branch": 1,
+      "initial_clarification": false,
+      "exact_leaf_read": false,
+      "terminal_clarification": false,
+      "text": "",
+      "budget": {
+        "passed": true,
+        "total_bytes": 0,
+        "max_bytes": 0,
+        "measured_results": 0,
+        "violations": []
+      },
+      "trace_sha256": "2d886b464bb4007982e847ada7ec7c8eeca845451bb1a6661c7887aa5fdaf0ca",
+      "passed": false
+    },
+    {
+      "id": "tf1240-147",
+      "branch": 0,
+      "initial_clarification": false,
+      "exact_leaf_read": false,
+      "terminal_clarification": false,
+      "text": "",
+      "budget": {
+        "passed": true,
+        "total_bytes": 0,
+        "max_bytes": 0,
+        "measured_results": 0,
+        "violations": []
+      },
+      "trace_sha256": "9e29191737944ee7da1b46f624dd9ecf01c4b2d2797eae0b206295aed751f31f",
+      "passed": false
+    },
+    {
+      "id": "tf1240-147",
+      "branch": 1,
+      "initial_clarification": false,
+      "exact_leaf_read": false,
+      "terminal_clarification": false,
+      "text": "",
+      "budget": {
+        "passed": true,
+        "total_bytes": 0,
+        "max_bytes": 0,
+        "measured_results": 0,
+        "violations": []
+      },
+      "trace_sha256": "9365cb8ea8ef79ab6ee17fcb8ab256abab83093cd418d4fd0de506969dee6f82",
+      "passed": false
+    }
+  ],
+  "complete": true
+}
